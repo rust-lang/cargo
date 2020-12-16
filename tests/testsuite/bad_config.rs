@@ -851,11 +851,12 @@ fn ambiguous_git_reference() {
 
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[WARNING] dependency (bar) specification is ambiguous. \
-Only one of `branch`, `tag` or `rev` is allowed. \
-This will be considered an error in future versions
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  dependency (bar) specification is ambiguous. Only one of `branch`, `tag` or `rev` is allowed.
 ",
         )
         .run();

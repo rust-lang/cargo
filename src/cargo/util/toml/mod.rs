@@ -1692,13 +1692,11 @@ impl DetailedTomlDependency {
                     .count();
 
                 if n_details > 1 {
-                    let msg = format!(
+                    bail!(
                         "dependency ({}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed. \
-                         This will be considered an error in future versions",
+                         Only one of `branch`, `tag` or `rev` is allowed.",
                         name_in_toml
                     );
-                    cx.warnings.push(msg)
                 }
 
                 let reference = self
