@@ -473,7 +473,7 @@ pub trait ArgMatchesExt {
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
-        build_config.cfg = self._is_present("cfg");
+        build_config.cfg = self._is_present("cfg") || self._is_present("rustc-cfg");
         if build_config.build_plan {
             config
                 .cli_unstable()
