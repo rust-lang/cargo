@@ -103,10 +103,11 @@ issue][3].
 
 ### Why do binaries have `Cargo.lock` in version control, but not libraries?
 
-The purpose of a `Cargo.lock` is to describe the state of the world at the time
-of a successful build. It is then used to provide deterministic builds across
-whatever machine is building the package by ensuring that the exact same
-dependencies are being compiled.
+The purpose of a `Cargo.lock` lockfile is to describe the state of the world at
+the time of a successful build. Cargo uses the lockfile to provide
+deterministic builds on different times and different systems, by ensuring that
+the exact same dependencies and versions are used as when the `Cargo.lock` file
+was originally generated.
 
 This property is most desirable from applications and packages which are at the
 very end of the dependency chain (binaries). As a result, it is recommended that
