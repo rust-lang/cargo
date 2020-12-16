@@ -28,6 +28,21 @@ const VERSION: u32 = 1;
 // ]
 // }
 
+// {
+//     "version": 1,
+//     "host": {
+//         "names": ["windows", "debug_assertions"],
+//         "arch":"x86_64",
+//         "endian":"little",
+//         "env":"msvc",
+//         "family":"windows",
+//         "features":["fxsr","sse","sse2"],
+//         "os":"windows",
+//         "pointer_width":"64",
+//         "vendor":"pc"
+//     }
+// }
+
 #[derive(serde::Serialize)]
 struct SerializedRustcCfg<'a> {
     version: u32,

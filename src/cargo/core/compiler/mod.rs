@@ -19,7 +19,7 @@ mod timings;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
-pub mod cfg;
+pub mod rustc_cfg;
 
 use std::env;
 use std::ffi::{OsStr, OsString};
