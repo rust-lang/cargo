@@ -682,8 +682,8 @@ fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
         return Ok(Some(s.clone()));
     }
     if let Ok(cfg) = git2::Config::open_default() {
-        if let Ok(s) = cfg.get_str("http.proxy") {
-            return Ok(Some(s.to_string()));
+        if let Ok(s) = cfg.get_string("http.proxy") {
+            return Ok(Some(s));
         }
     }
     Ok(None)
