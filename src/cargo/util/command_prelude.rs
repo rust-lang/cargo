@@ -484,6 +484,16 @@ pub trait ArgMatchesExt {
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
+        if self._is_present("cfg") {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--cfg", 8923)?;
+        }
+        if self._is_present("rustc-cfg") {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--rustc-cfg", 8923)?;
+        }
 
         let opts = CompileOptions {
             build_config,
