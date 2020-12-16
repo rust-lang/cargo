@@ -30,7 +30,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
-        .arg_rustc_cfg()
+        .arg(opt("cfg", "Output the compiler configuration in JSON (unstable)"))
         .after_help("Run `cargo help rustc` for more detailed information.\n")
 }
 
