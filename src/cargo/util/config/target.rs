@@ -34,6 +34,7 @@ pub struct TargetConfig {
     /// running its build script and instead use the given output from the
     /// config file.
     pub links_overrides: BTreeMap<String, BuildOutput>,
+    pub triple: String,
 }
 
 /// Loads all of the `target.'cfg()'` tables.
@@ -85,6 +86,7 @@ pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<T
         rustflags,
         linker,
         links_overrides,
+        triple: triple.to_string(),
     })
 }
 

@@ -75,6 +75,7 @@ mod metabuild;
 mod metadata;
 mod minimal_versions;
 mod multitarget;
+mod natvis;
 mod net_config;
 mod new;
 mod offline;

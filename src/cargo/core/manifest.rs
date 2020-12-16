@@ -50,6 +50,7 @@ pub struct Manifest {
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    natvis_files: Vec<String>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -384,6 +385,7 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        natvis_files: Vec<String>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -407,6 +409,7 @@ impl Manifest {
             publish_lockfile,
             metabuild,
             resolve_behavior,
+            natvis_files,
         }
     }
 
@@ -538,6 +541,10 @@ impl Manifest {
             .into_path_unlocked()
             .join(".metabuild")
             .join(format!("metabuild-{}-{}.rs", self.name(), hash))
+    }
+
+    pub fn natvis_files(&self) -> &[String] {
+        &self.natvis_files
     }
 }
 

@@ -836,6 +836,8 @@ pub struct TomlProject {
     repository: Option<String>,
     metadata: Option<toml::Value>,
     resolver: Option<String>,
+    #[serde(rename = "natvis-files")]
+    natvis_files: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -867,7 +869,7 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
-    /// Prepares the manfiest for publishing.
+    /// Prepares the manifest for publishing.
     // - Path and git components of dependency specifications are removed.
     // - License path is updated to point within the package.
     pub fn prepare_for_publish(
@@ -1297,6 +1299,15 @@ impl TomlManifest {
             }
         }
 
+        // Handle NatVis files. If the TomlManifest specifies a set of NatVis files, then we use
+        // exactly that set and we do not inspect the filesystem. (We do require that the paths
+        // specified in the manifest be relative paths.) If the manifest does not specify any
+        // NatVis files, then we look for `natvis/*.natvis` files.
+        let natvis_files = resolve_natvis_files(
+            project.natvis_files.as_ref().map(|s| s.as_slice()),
+            package_root,
+        )?;
+
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,
@@ -1319,6 +1330,7 @@ impl TomlManifest {
             Rc::clone(me),
             project.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            natvis_files,
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(
@@ -1891,4 +1903,58 @@ impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
+}
+
+fn resolve_natvis_files(
+    toml_natvis_files: Option<&[String]>,
+    package_root: &Path,
+) -> CargoResult<Vec<String>> {
+    if let Some(toml_natvis_files) = toml_natvis_files {
+        let mut natvis_files = Vec::with_capacity(toml_natvis_files.len());
+        for toml_natvis_file in toml_natvis_files.iter() {
+            let natvis_file_path = Path::new(toml_natvis_file);
+            if !natvis_file_path.is_relative() {
+                bail!(
+                    "`natvis-files` contains absolute path `{}`; \
+                     all paths in `natvis-files` are required to be relative paths.",
+                    toml_natvis_file
+                );
+            }
+            natvis_files.push(
+                package_root
+                    .join(natvis_file_path)
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            );
+        }
+        Ok(natvis_files)
+    } else {
+        // The manifest file did not specify any natvis files.
+        // By convention, we look for `natvis\*.natvis` files.
+        if let Ok(nv) = find_natvis_files(package_root) {
+            Ok(nv)
+        } else {
+            Ok(Vec::new())
+        }
+    }
+}
+
+fn find_natvis_files(package_root: &Path) -> std::io::Result<Vec<String>> {
+    use std::ffi::OsStr;
+
+    let mut natvis_files = Vec::new();
+    let natvis_dir = package_root.join("natvis");
+    for entry in std::fs::read_dir(&natvis_dir)? {
+        let entry = entry?;
+        let filename = PathBuf::from(entry.file_name().to_str().unwrap());
+        if filename.extension() == Some(OsStr::new("natvis")) {
+            if let Ok(md) = entry.metadata() {
+                if md.is_file() {
+                    natvis_files.push(entry.path().to_str().unwrap().to_string());
+                }
+            }
+        }
+    }
+    Ok(natvis_files)
 }

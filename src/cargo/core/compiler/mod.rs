@@ -943,6 +943,15 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
+    // If the target is using the MSVC toolchain, then pass any NatVis files to it.
+    let target_config = bcx.target_data.target_config(unit.kind);
+    let is_msvc = target_config.triple.ends_with("-msvc");
+    if is_msvc {
+        for natvis_file in unit.pkg.manifest().natvis_files().iter() {
+            cmd.arg(format!("-Clink-arg=/natvis:{}", natvis_file));
+        }
+    }
+
     // Add `CARGO_BIN_` environment variables for building tests.
     if unit.target.is_test() || unit.target.is_bench() {
         for bin_target in unit

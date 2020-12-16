@@ -102,6 +102,8 @@ pub struct SerializedPackage {
     links: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    natvis_files: Vec<String>,
 }
 
 impl Package {
@@ -259,7 +261,12 @@ impl Package {
             links: self.manifest().links().map(|s| s.to_owned()),
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
+            natvis_files: self.natvis_files().to_vec(),
         }
+    }
+
+    pub fn natvis_files(&self) -> &[String] {
+        self.inner.manifest.natvis_files()
     }
 }
 
