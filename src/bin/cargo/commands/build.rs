@@ -42,6 +42,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_build_plan()
         .arg_unit_graph()
+        .arg_rustc_cfg()
         .after_help("Run `cargo help build` for more detailed information.\n")
 }
 
