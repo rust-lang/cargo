@@ -158,7 +158,7 @@ dependencies will also be forced to built with the `unwind` strategy.
 
 The `incremental` setting controls the [`-C incremental` flag] which controls
 whether or not incremental compilation is enabled. Incremental compilation
-causes `rustc` to to save additional information to disk which will be reused
+causes `rustc` to save additional information to disk which will be reused
 when recompiling the crate, improving re-compile times. The additional
 information is stored in the `target` directory.
 
@@ -282,6 +282,24 @@ codegen-units = 16
 rpath = false
 ```
 
+#### Build Dependencies
+
+All profiles, by default, do not optimize build dependencies (build scripts,
+proc macros, and their dependencies). The default settings for build overrides
+are:
+
+```toml
+[profile.dev.build-override]
+opt-level = 0
+codegen-units = 256
+
+[profile.release.build-override]
+opt-level = 0
+codegen-units = 256
+```
+
+Build dependencies otherwise inherit settings from the active profile in use, as
+described below.
 
 ### Profile selection
 

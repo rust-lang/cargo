@@ -37,17 +37,17 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [target.{host}.dependencies]
-            d1 = "1.2.3"
+                    [target.{host}.dependencies]
+                    d1 = "1.2.3"
 
-            [target.{target}.dependencies]
-            d2 = "0.1.2"
-        "#,
+                    [target.{target}.dependencies]
+                    d2 = "0.1.2"
+                "#,
                 host = host,
                 target = target
             ),
@@ -84,17 +84,17 @@ fn fetch_platform_specific_dependencies() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [target.{host}.dependencies]
-            d1 = "1.2.3"
+                    [target.{host}.dependencies]
+                    d1 = "1.2.3"
 
-            [target.{target}.dependencies]
-            d2 = "0.1.2"
-        "#,
+                    [target.{target}.dependencies]
+                    d2 = "0.1.2"
+                "#,
                 host = host,
                 target = target
             ),

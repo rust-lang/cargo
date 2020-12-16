@@ -6,12 +6,6 @@ use std::env;
 
 #[cargo_test]
 fn rustc_info_cache() {
-    // Needs `-Cbitcode-in-rlib` to ride to stable before this can be enabled
-    // everywhere.
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
@@ -50,17 +44,17 @@ fn rustc_info_cache() {
             .file(
                 "src/main.rs",
                 r#"
-            use std::process::Command;
-            use std::env;
+                    use std::process::Command;
+                    use std::env;
 
-            fn main() {
-                let mut cmd = Command::new("rustc");
-                for arg in env::args_os().skip(1) {
-                    cmd.arg(arg);
-                }
-                std::process::exit(cmd.status().unwrap().code().unwrap());
-            }
-        "#,
+                    fn main() {
+                        let mut cmd = Command::new("rustc");
+                        for arg in env::args_os().skip(1) {
+                            cmd.arg(arg);
+                        }
+                        std::process::exit(cmd.status().unwrap().code().unwrap());
+                    }
+                "#,
             )
             .build();
         p.cargo("build").run();

@@ -1,4 +1,4 @@
-use crate::core::compiler::{CompileMode, Context, CrateType, Unit};
+use crate::core::compiler::{BuildContext, CompileMode, CrateType, Unit};
 use crate::core::profiles;
 use crate::util::interning::InternedString;
 
@@ -40,9 +40,9 @@ pub enum Lto {
     OnlyObject,
 }
 
-pub fn generate(cx: &mut Context<'_, '_>) -> CargoResult<()> {
+pub fn generate(bcx: &BuildContext<'_, '_>) -> CargoResult<HashMap<Unit, Lto>> {
     let mut map = HashMap::new();
-    for unit in cx.bcx.roots.iter() {
+    for unit in bcx.roots.iter() {
         let root_lto = match unit.profile.lto {
             // LTO not requested, no need for bitcode.
             profiles::Lto::Bool(false) | profiles::Lto::Off => Lto::OnlyObject,
@@ -60,10 +60,9 @@ pub fn generate(cx: &mut Context<'_, '_>) -> CargoResult<()> {
                 }
             }
         };
-        calculate(cx, &mut map, unit, root_lto)?;
+        calculate(bcx, &mut map, unit, root_lto)?;
     }
-    cx.lto = map;
-    Ok(())
+    Ok(map)
 }
 
 /// Whether or not any of these crate types need object code.
@@ -73,21 +72,21 @@ fn needs_object(crate_types: &[CrateType]) -> bool {
 
 /// Lto setting to use when this unit needs object code.
 fn lto_when_needs_object(crate_types: &[CrateType]) -> Lto {
-    if crate_types.iter().any(CrateType::can_lto) {
-        // A mixed rlib/cdylib whose parent is running LTO. This
-        // needs both, for bitcode in the rlib (for LTO) and the
-        // cdylib requires object code.
-        Lto::ObjectAndBitcode
-    } else {
+    if crate_types.iter().all(|ct| *ct == CrateType::Dylib) {
         // A dylib whose parent is running LTO. rustc currently
         // doesn't support LTO with dylibs, so bitcode is not
         // needed.
         Lto::OnlyObject
+    } else {
+        // Mixed rlib with a dylib or cdylib whose parent is running LTO. This
+        // needs both: bitcode for the rlib (for LTO) and object code for the
+        // dylib.
+        Lto::ObjectAndBitcode
     }
 }
 
 fn calculate(
-    cx: &Context<'_, '_>,
+    bcx: &BuildContext<'_, '_>,
     map: &mut HashMap<Unit, Lto>,
     unit: &Unit,
     parent_lto: Lto,
@@ -185,8 +184,8 @@ fn calculate(
         }
     };
 
-    for dep in cx.unit_deps(unit) {
-        calculate(cx, map, &dep.unit, merged_lto)?;
+    for dep in &bcx.unit_graph[unit] {
+        calculate(bcx, map, &dep.unit, merged_lto)?;
     }
     Ok(())
 }

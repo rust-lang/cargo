@@ -655,3 +655,18 @@ fn different_features() {
         .target_host()
         .run();
 }
+
+#[cargo_test]
+fn no_roots() {
+    // Checks for a bug where it would panic if there are no roots.
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project().file("tests/t1.rs", "").build();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[FINISHED] [..]")
+        .run();
+}

@@ -19,17 +19,32 @@
 //! We do, however, want to change `Cargo.lock` over time. (and we have!). To do
 //! this the rules that we currently have are:
 //!
-//! * Add support for the new format to Cargo
-//! * Continue to, by default, generate the old format
-//! * Preserve the new format if found
-//! * Wait a "long time" (e.g. 6 months or so)
-//! * Change Cargo to by default emit the new format
+//! * Add support for the new format to Cargo. This involves code changes in
+//!   Cargo itself, likely by adding a new variant of `ResolveVersion` and
+//!   branching on that where necessary. This is accompanied with tests in the
+//!   `lockfile_compat` module.
+//!
+//!   * Do not update `ResolveVersion::default()`. The new lockfile format will
+//!     not be used yet.
+//!
+//!   * Preserve the new format if found. This means that if Cargo finds the new
+//!     version it'll keep using it, but otherwise it continues to use whatever
+//!     format it previously found.
+//!
+//! * Wait a "long time". This is at least until the changes here hit stable
+//!   Rust. Often though we wait a little longer to let the changes percolate
+//!   into one or two older stable releases.
+//!
+//! * Change the return value of `ResolveVersion::default()` to the new format.
+//!   This will cause new lock files to use the latest encoding as well as
+//!   causing any operation which updates the lock file to update to the new
+//!   format.
 //!
 //! This migration scheme in general means that Cargo we'll get *support* for a
-//! new format into Cargo ASAP, but it won't really be exercised yet (except in
-//! Cargo's own tests really). Eventually when stable/beta/nightly all have
-//! support for the new format (and maybe a few previous stable versions) we
-//! flip the switch. Projects on nightly will quickly start seeing changes, but
+//! new format into Cargo ASAP, but it won't be exercised yet (except in Cargo's
+//! own tests). Eventually when stable/beta/nightly all have support for the new
+//! format (and maybe a few previous stable versions) we flip the switch.
+//! Projects on nightly will quickly start seeing changes, but
 //! stable/beta/nightly will all understand this new format and will preserve
 //! it.
 //!
@@ -41,6 +56,13 @@
 //!
 //! Listed from most recent to oldest, these are some of the changes we've made
 //! to `Cargo.lock`'s serialization format:
+//!
+//! * A `version` marker is now at the top of the lock file which is a way for
+//!   super-old Cargos (at least since this was implemented) to give a formal
+//!   error if they see a lock file from a super-future Cargo. Additionally as
+//!   part of this change the encoding of `git` dependencies in lock files
+//!   changed where `branch = "master"` is now encoded with `branch=master`
+//!   instead of with nothing at all.
 //!
 //! * The entries in `dependencies` arrays have been shortened and the
 //!   `checksum` field now shows up directly in `[[package]]` instead of always
@@ -89,25 +111,24 @@
 //!   special fashion to make sure we have strict control over the on-disk
 //!   format.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt;
-use std::str::FromStr;
-
+use super::{Resolve, ResolveVersion};
+use crate::core::{Dependency, GitReference, Package, PackageId, SourceId, Workspace};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
+use crate::util::{internal, Graph};
+use anyhow::bail;
 use log::debug;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
-
-use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::interning::InternedString;
-use crate::util::{internal, Graph};
-
-use super::{Resolve, ResolveVersion};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt;
+use std::str::FromStr;
 
 /// The `Cargo.lock` structure.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
+    version: Option<u32>,
     package: Option<Vec<EncodableDependency>>,
     /// `root` is optional to allow backward compatibility.
     root: Option<EncodableDependency>,
@@ -136,8 +157,19 @@ impl EncodableResolve {
         let path_deps = build_path_deps(ws);
         let mut checksums = HashMap::new();
 
-        // We assume an older format is being parsed until we see so otherwise.
-        let mut version = ResolveVersion::V1;
+        let mut version = match self.version {
+            Some(3) => ResolveVersion::V3,
+            Some(n) => bail!(
+                "lock file version `{}` was found, but this version of Cargo \
+                 does not understand this lock file, perhaps Cargo needs \
+                 to be updated?",
+                n,
+            ),
+            // Historically Cargo did not have a version indicator in lock
+            // files, so this could either be the V1 or V2 encoding. We assume
+            // an older format is being parsed until we see so otherwise.
+            None => ResolveVersion::V1,
+        };
 
         let packages = {
             let mut packages = self.package.unwrap_or_default();
@@ -176,7 +208,7 @@ impl EncodableResolve {
                 // that here, and we also bump our version up to 2 since V1
                 // didn't ever encode this field.
                 if let Some(cksum) = &pkg.checksum {
-                    version = ResolveVersion::V2;
+                    version = version.max(ResolveVersion::V2);
                     checksums.insert(id, Some(cksum.clone()));
                 }
 
@@ -213,7 +245,7 @@ impl EncodableResolve {
             let by_source = match &enc_id.version {
                 Some(version) => by_version.get(version)?,
                 None => {
-                    version = ResolveVersion::V2;
+                    version = version.max(ResolveVersion::V2);
                     if by_version.len() == 1 {
                         by_version.values().next().unwrap()
                     } else {
@@ -245,7 +277,7 @@ impl EncodableResolve {
                     // the lock file
                     } else if by_source.len() == 1 {
                         let id = by_source.values().next().unwrap();
-                        version = ResolveVersion::V2;
+                        version = version.max(ResolveVersion::V2);
                         Some(*id)
 
                     // ... and failing that we probably had a bad git merge of
@@ -317,7 +349,7 @@ impl EncodableResolve {
         // If `checksum` was listed in `[metadata]` but we were previously
         // listed as `V2` then assume some sort of bad git merge happened, so
         // discard all checksums and let's regenerate them later.
-        if !to_remove.is_empty() && version == ResolveVersion::V2 {
+        if !to_remove.is_empty() && version >= ResolveVersion::V2 {
             checksums.drain();
         }
         for k in to_remove {
@@ -468,7 +500,7 @@ impl fmt::Display for EncodablePackageId {
             write!(f, " {}", s)?;
         }
         if let Some(s) = &self.source {
-            write!(f, " ({})", s.into_url())?;
+            write!(f, " ({})", s.as_url())?;
         }
         Ok(())
     }
@@ -539,13 +571,13 @@ impl<'a> ser::Serialize for Resolve {
 
         let mut metadata = self.metadata().clone();
 
-        if *self.version() == ResolveVersion::V1 {
+        if self.version() == ResolveVersion::V1 {
             for &id in ids.iter().filter(|id| !id.source_id().is_path()) {
                 let checksum = match self.checksums()[&id] {
                     Some(ref s) => &s[..],
                     None => "<none>",
                 };
-                let id = encodable_package_id(id, &state);
+                let id = encodable_package_id(id, &state, self.version());
                 metadata.insert(format!("checksum {}", id.to_string()), checksum.to_string());
             }
         }
@@ -566,9 +598,10 @@ impl<'a> ser::Serialize for Resolve {
                     source: encode_source(id.source_id()),
                     dependencies: None,
                     replace: None,
-                    checksum: match self.version() {
-                        ResolveVersion::V2 => self.checksums().get(id).and_then(|x| x.clone()),
-                        ResolveVersion::V1 => None,
+                    checksum: if self.version() >= ResolveVersion::V2 {
+                        self.checksums().get(id).and_then(|x| x.clone())
+                    } else {
+                        None
                     },
                 })
                 .collect(),
@@ -578,6 +611,10 @@ impl<'a> ser::Serialize for Resolve {
             root: None,
             metadata,
             patch,
+            version: match self.version() {
+                ResolveVersion::V3 => Some(3),
+                ResolveVersion::V2 | ResolveVersion::V1 => None,
+            },
         }
         .serialize(s)
     }
@@ -589,7 +626,7 @@ pub struct EncodeState<'a> {
 
 impl<'a> EncodeState<'a> {
     pub fn new(resolve: &'a Resolve) -> EncodeState<'a> {
-        let counts = if *resolve.version() == ResolveVersion::V2 {
+        let counts = if resolve.version() >= ResolveVersion::V2 {
             let mut map = HashMap::new();
             for id in resolve.iter() {
                 let slot = map
@@ -613,11 +650,14 @@ fn encodable_resolve_node(
     state: &EncodeState<'_>,
 ) -> EncodableDependency {
     let (replace, deps) = match resolve.replacement(id) {
-        Some(id) => (Some(encodable_package_id(id, state)), None),
+        Some(id) => (
+            Some(encodable_package_id(id, state, resolve.version())),
+            None,
+        ),
         None => {
             let mut deps = resolve
                 .deps_not_replaced(id)
-                .map(|(id, _)| encodable_package_id(id, state))
+                .map(|(id, _)| encodable_package_id(id, state, resolve.version()))
                 .collect::<Vec<_>>();
             deps.sort();
             (None, Some(deps))
@@ -630,16 +670,30 @@ fn encodable_resolve_node(
         source: encode_source(id.source_id()),
         dependencies: deps,
         replace,
-        checksum: match resolve.version() {
-            ResolveVersion::V2 => resolve.checksums().get(&id).and_then(|s| s.clone()),
-            ResolveVersion::V1 => None,
+        checksum: if resolve.version() >= ResolveVersion::V2 {
+            resolve.checksums().get(&id).and_then(|s| s.clone())
+        } else {
+            None
         },
     }
 }
 
-pub fn encodable_package_id(id: PackageId, state: &EncodeState<'_>) -> EncodablePackageId {
+pub fn encodable_package_id(
+    id: PackageId,
+    state: &EncodeState<'_>,
+    resolve_version: ResolveVersion,
+) -> EncodablePackageId {
     let mut version = Some(id.version().to_string());
-    let mut source = encode_source(id.source_id()).map(|s| s.with_precise(None));
+    let mut id_to_encode = id.source_id();
+    if resolve_version <= ResolveVersion::V2 {
+        if let Some(GitReference::Branch(b)) = id_to_encode.git_reference() {
+            if b == "master" {
+                id_to_encode =
+                    SourceId::for_git(id_to_encode.url(), GitReference::DefaultBranch).unwrap();
+            }
+        }
+    }
+    let mut source = encode_source(id_to_encode).map(|s| s.with_precise(None));
     if let Some(counts) = &state.counts {
         let version_counts = &counts[&id.name()];
         if version_counts[&id.version()] == 1 {

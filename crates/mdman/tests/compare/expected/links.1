@@ -1,0 +1,45 @@
+'\" t
+.TH "LINKS" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.SH "NAME"
+links \- Test of different link kinds
+.SH "DESCRIPTION"
+Inline link: \fIinline link\fR <https://example.com/inline>
+.sp
+Reference link: \fIthis is a link\fR <https://example.com/bar>
+.sp
+Collapsed: \fIcollapsed\fR <https://example.com/collapsed>
+.sp
+Shortcut: \fIshortcut\fR <https://example.com/shortcut>
+.sp
+Autolink: <https://example.com/auto>
+.sp
+Email: <foo@example.com>
+.sp
+Relative link: \fIrelative link\fR <https://example.org/foo/bar.html>
+.sp
+Collapsed unknown: [collapsed unknown][]
+.sp
+Reference unknown: [foo][unknown]
+.sp
+Shortcut unknown: [shortcut unknown]
+.sp
+\fBother\-cmd\fR(1)
+.sp
+\fBlocal\-cmd\fR(1)
+.sp
+\fISome link\fR <https://example.org/foo.html>
+.sp
+\fB\-\-include\fR
+.RS 4
+Testing an \fIincluded link\fR <https://example.org/included_link.html>\&.
+.RE
+.SH "OPTIONS"
+.sp
+\fB\-\-foo\-bar\fR
+.RS 4
+Example \fIlink\fR <https://example.org/bar.html>\&.
+See \fBother\-cmd\fR(1), \fBlocal\-cmd\fR(1)
+.RE

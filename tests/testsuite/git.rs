@@ -5,6 +5,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
+use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -29,10 +30,10 @@ fn cargo_compile_simple_git_dep() {
             .file(
                 "src/dep1.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "hello world"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
             )
     });
 
@@ -41,16 +42,16 @@ fn cargo_compile_simple_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            git = '{}'
-        "#,
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -91,10 +92,10 @@ fn cargo_compile_git_dep_branch() {
             .file(
                 "src/dep1.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "hello world"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
             )
     });
 
@@ -109,18 +110,18 @@ fn cargo_compile_git_dep_branch() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            git = '{}'
-            branch = "branchy"
+                    git = '{}'
+                    branch = "branchy"
 
-        "#,
+                "#,
                 git_project.url()
             ),
         )
@@ -161,10 +162,10 @@ fn cargo_compile_git_dep_tag() {
             .file(
                 "src/dep1.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "hello world"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
             )
     });
 
@@ -185,17 +186,17 @@ fn cargo_compile_git_dep_tag() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            git = '{}'
-            tag = "v0.1.0"
-        "#,
+                    git = '{}'
+                    tag = "v0.1.0"
+                "#,
                 git_project.url()
             ),
         )
@@ -236,40 +237,40 @@ fn cargo_compile_with_nested_paths() {
             .file(
                 "Cargo.toml",
                 r#"
-                [project]
+                    [project]
 
-                name = "dep1"
-                version = "0.5.0"
-                authors = ["carlhuda@example.com"]
+                    name = "dep1"
+                    version = "0.5.0"
+                    authors = ["carlhuda@example.com"]
 
-                [dependencies.dep2]
+                    [dependencies.dep2]
 
-                version = "0.5.0"
-                path = "vendor/dep2"
+                    version = "0.5.0"
+                    path = "vendor/dep2"
 
-                [lib]
+                    [lib]
 
-                name = "dep1"
-            "#,
+                    name = "dep1"
+                "#,
             )
             .file(
                 "src/dep1.rs",
                 r#"
-                extern crate dep2;
+                    extern crate dep2;
 
-                pub fn hello() -> &'static str {
-                    dep2::hello()
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        dep2::hello()
+                    }
+                "#,
             )
             .file("vendor/dep2/Cargo.toml", &basic_lib_manifest("dep2"))
             .file(
                 "vendor/dep2/src/dep2.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "hello world"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
             )
     });
 
@@ -278,21 +279,21 @@ fn cargo_compile_with_nested_paths() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            version = "0.5.0"
-            git = '{}'
+                    version = "0.5.0"
+                    git = '{}'
 
-            [[bin]]
+                    [[bin]]
 
-            name = "foo"
-        "#,
+                    name = "foo"
+                "#,
                 git_project.url()
             ),
         )
@@ -317,10 +318,10 @@ fn cargo_compile_with_malformed_nested_paths() {
             .file(
                 "src/dep1.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "hello world"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
             )
             .file("vendor/dep2/Cargo.toml", "!INVALID!")
             .file(
@@ -330,7 +331,8 @@ fn cargo_compile_with_malformed_nested_paths() {
                 name = "dep3"
                 version = "0.5.0"
                 [dependencies]
-                subdep1 = { path = "../require-extra-build-step" }"#,
+                subdep1 = { path = "../require-extra-build-step" }
+                "#,
             )
             .file("vendor/dep3/src/lib.rs", "")
     });
@@ -340,21 +342,21 @@ fn cargo_compile_with_malformed_nested_paths() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            version = "0.5.0"
-            git = '{}'
+                    version = "0.5.0"
+                    git = '{}'
 
-            [[bin]]
+                    [[bin]]
 
-            name = "foo"
-        "#,
+                    name = "foo"
+                "#,
                 git_project.url()
             ),
         )
@@ -379,19 +381,19 @@ fn cargo_compile_with_meta_package() {
             .file(
                 "dep1/src/dep1.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "this is dep1"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "this is dep1"
+                    }
+                "#,
             )
             .file("dep2/Cargo.toml", &basic_lib_manifest("dep2"))
             .file(
                 "dep2/src/dep2.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "this is dep2"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "this is dep2"
+                    }
+                "#,
             )
     });
 
@@ -400,26 +402,26 @@ fn cargo_compile_with_meta_package() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            version = "0.5.0"
-            git = '{}'
+                    version = "0.5.0"
+                    git = '{}'
 
-            [dependencies.dep2]
+                    [dependencies.dep2]
 
-            version = "0.5.0"
-            git = '{}'
+                    version = "0.5.0"
+                    git = '{}'
 
-            [[bin]]
+                    [[bin]]
 
-            name = "foo"
-        "#,
+                    name = "foo"
+                "#,
                 git_project.url(),
                 git_project.url()
             ),
@@ -451,20 +453,20 @@ fn cargo_compile_with_short_ssh_git() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep]
+                    [dependencies.dep]
 
-            git = "{}"
+                    git = "{}"
 
-            [[bin]]
+                    [[bin]]
 
-            name = "foo"
-        "#,
+                    name = "foo"
+                "#,
                 url
             ),
         )
@@ -510,18 +512,18 @@ fn two_revs_same_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
 
-            [dependencies.bar]
-            git = '{}'
-            rev = "{}"
+                    [dependencies.bar]
+                    git = '{}'
+                    rev = "{}"
 
-            [dependencies.baz]
-            path = "../baz"
-        "#,
+                    [dependencies.baz]
+                    path = "../baz"
+                "#,
                 bar.url(),
                 rev1
             ),
@@ -529,14 +531,14 @@ fn two_revs_same_deps() {
         .file(
             "src/main.rs",
             r#"
-            extern crate bar;
-            extern crate baz;
+                extern crate bar;
+                extern crate baz;
 
-            fn main() {
-                assert_eq!(bar::bar(), 1);
-                assert_eq!(baz::baz(), 2);
-            }
-        "#,
+                fn main() {
+                    assert_eq!(bar::bar(), 1);
+                    assert_eq!(baz::baz(), 2);
+                }
+            "#,
         )
         .build();
 
@@ -546,15 +548,15 @@ fn two_revs_same_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "baz"
-            version = "0.0.0"
-            authors = []
+                    [package]
+                    name = "baz"
+                    version = "0.0.0"
+                    authors = []
 
-            [dependencies.bar]
-            git = '{}'
-            rev = "{}"
-        "#,
+                    [dependencies.bar]
+                    git = '{}'
+                    rev = "{}"
+                "#,
                 bar.url(),
                 rev2
             ),
@@ -562,9 +564,9 @@ fn two_revs_same_deps() {
         .file(
             "src/lib.rs",
             r#"
-            extern crate bar;
-            pub fn baz() -> i32 { bar::bar() }
-        "#,
+                extern crate bar;
+                pub fn baz() -> i32 { bar::bar() }
+            "#,
         )
         .build();
 
@@ -586,17 +588,17 @@ fn recompilation() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.bar]
+                    [dependencies.bar]
 
-            version = "0.5.0"
-            git = '{}'
-        "#,
+                    version = "0.5.0"
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -686,40 +688,40 @@ fn update_with_shared_deps() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
-            path = "dep1"
-            [dependencies.dep2]
-            path = "dep2"
-        "#,
+                [dependencies.dep1]
+                path = "dep1"
+                [dependencies.dep2]
+                path = "dep2"
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[allow(unused_extern_crates)]
-            extern crate dep1;
-            #[allow(unused_extern_crates)]
-            extern crate dep2;
-            fn main() {}
-        "#,
+                #[allow(unused_extern_crates)]
+                extern crate dep1;
+                #[allow(unused_extern_crates)]
+                extern crate dep2;
+                fn main() {}
+            "#,
         )
         .file(
             "dep1/Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "dep1"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    [package]
+                    name = "dep1"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.bar]
-            version = "0.5.0"
-            git = '{}'
-        "#,
+                    [dependencies.bar]
+                    version = "0.5.0"
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -728,15 +730,15 @@ fn update_with_shared_deps() {
             "dep2/Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "dep2"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    [package]
+                    name = "dep2"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.bar]
-            version = "0.5.0"
-            git = '{}'
-        "#,
+                    [dependencies.bar]
+                    version = "0.5.0"
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -847,16 +849,16 @@ fn dep_with_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            git = '{}'
-        "#,
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -913,16 +915,16 @@ fn dep_with_bad_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            git = '{}'
-        "#,
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -978,17 +980,17 @@ fn two_deps_only_update_one() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
-            git = '{}'
-            [dependencies.dep2]
-            git = '{}'
-        "#,
+                    [dependencies.dep1]
+                    git = '{}'
+                    [dependencies.dep2]
+                    git = '{}'
+                "#,
                 git1.url(),
                 git2.url()
             ),
@@ -1050,24 +1052,24 @@ fn stale_cached_version() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
 
-            [dependencies.bar]
-            git = '{}'
-        "#,
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
                 bar.url()
             ),
         )
         .file(
             "src/main.rs",
             r#"
-            extern crate bar;
+                extern crate bar;
 
-            fn main() { assert_eq!(bar::bar(), 1) }
-        "#,
+                fn main() { assert_eq!(bar::bar(), 1) }
+            "#,
         )
         .build();
 
@@ -1145,13 +1147,13 @@ fn dep_with_changed_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            [dependencies.dep1]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+                    [dependencies.dep1]
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -1241,8 +1243,8 @@ fn dev_deps_with_testing() {
             .file(
                 "src/lib.rs",
                 r#"
-            pub fn gimme() -> &'static str { "zoidberg" }
-        "#,
+                    pub fn gimme() -> &'static str { "zoidberg" }
+                "#,
             )
     });
 
@@ -1251,30 +1253,30 @@ fn dev_deps_with_testing() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dev-dependencies.bar]
-            version = "0.5.0"
-            git = '{}'
-        "#,
+                    [dev-dependencies.bar]
+                    version = "0.5.0"
+                    git = '{}'
+                "#,
                 p2.url()
             ),
         )
         .file(
             "src/main.rs",
             r#"
-            fn main() {}
+                fn main() {}
 
-            #[cfg(test)]
-            mod tests {
-                extern crate bar;
-                #[test] fn foo() { bar::gimme(); }
-            }
-        "#,
+                #[cfg(test)]
+                mod tests {
+                    extern crate bar;
+                    #[test] fn foo() { bar::gimme(); }
+                }
+            "#,
         )
         .build();
 
@@ -1312,12 +1314,12 @@ fn git_build_cmd_freshness() {
             .file(
                 "Cargo.toml",
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-            build = "build.rs"
-        "#,
+                    [package]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
+                    build = "build.rs"
+                "#,
             )
             .file("build.rs", "fn main() {}")
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
@@ -1354,8 +1356,8 @@ fn git_name_not_always_needed() {
             .file(
                 "src/lib.rs",
                 r#"
-            pub fn gimme() -> &'static str { "zoidberg" }
-        "#,
+                    pub fn gimme() -> &'static str { "zoidberg" }
+                "#,
             )
     });
 
@@ -1369,14 +1371,14 @@ fn git_name_not_always_needed() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
 
-            [dev-dependencies.bar]
-            git = '{}'
-        "#,
+                    [dev-dependencies.bar]
+                    git = '{}'
+                "#,
                 p2.url()
             ),
         )
@@ -1412,14 +1414,14 @@ fn git_repo_changing_no_rebuild() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "p1"
-            version = "0.5.0"
-            authors = []
-            build = 'build.rs'
-            [dependencies.bar]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "p1"
+                    version = "0.5.0"
+                    authors = []
+                    build = 'build.rs'
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
                 bar.url()
             ),
         )
@@ -1452,13 +1454,13 @@ fn git_repo_changing_no_rebuild() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "p2"
-            version = "0.5.0"
-            authors = []
-            [dependencies.bar]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "p2"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
                 bar.url()
             ),
         )
@@ -1488,52 +1490,52 @@ fn git_dep_build_cmd() {
             .file(
                 "Cargo.toml",
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.bar]
+                    [dependencies.bar]
 
-            version = "0.5.0"
-            path = "bar"
+                    version = "0.5.0"
+                    path = "bar"
 
-            [[bin]]
+                    [[bin]]
 
-            name = "foo"
-        "#,
+                    name = "foo"
+                "#,
             )
             .file("src/foo.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
             .file(
                 "bar/Cargo.toml",
                 r#"
-            [project]
+                    [project]
 
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            build = "build.rs"
+                    name = "bar"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+                    build = "build.rs"
 
-            [lib]
-            name = "bar"
-            path = "src/bar.rs"
-        "#,
+                    [lib]
+                    name = "bar"
+                    path = "src/bar.rs"
+                "#,
             )
             .file(
                 "bar/src/bar.rs.in",
                 r#"
-            pub fn gimme() -> i32 { 0 }
-        "#,
+                    pub fn gimme() -> i32 { 0 }
+                "#,
             )
             .file(
                 "bar/build.rs",
                 r#"
-            use std::fs;
-            fn main() {
-                fs::copy("src/bar.rs.in", "src/bar.rs").unwrap();
-            }
-        "#,
+                    use std::fs;
+                    fn main() {
+                        fs::copy("src/bar.rs.in", "src/bar.rs").unwrap();
+                    }
+                "#,
             )
     });
 
@@ -1564,13 +1566,13 @@ fn fetch_downloads() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.bar]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
                 bar.url()
             ),
         )
@@ -1599,13 +1601,13 @@ fn warnings_in_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.bar]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
                 bar.url()
             ),
         )
@@ -1642,14 +1644,14 @@ fn update_ambiguous() {
                 "Cargo.toml",
                 &format!(
                     r#"
-            [package]
-            name = "baz"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                        [package]
+                        name = "baz"
+                        version = "0.5.0"
+                        authors = ["wycats@example.com"]
 
-            [dependencies.bar]
-            git = '{}'
-        "#,
+                        [dependencies.bar]
+                        git = '{}'
+                    "#,
                     bar2.url()
                 ),
             )
@@ -1661,15 +1663,15 @@ fn update_ambiguous() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.bar]
-            git = '{}'
-            [dependencies.baz]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.bar]
+                    git = '{}'
+                    [dependencies.baz]
+                    git = '{}'
+                "#,
                 bar1.url(),
                 baz.url()
             ),
@@ -1708,15 +1710,15 @@ fn update_one_dep_in_repo_with_many_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.bar]
-            git = '{}'
-            [dependencies.a]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.bar]
+                    git = '{}'
+                    [dependencies.a]
+                    git = '{}'
+                "#,
                 bar.url(),
                 bar.url()
             ),
@@ -1743,14 +1745,14 @@ fn switch_deps_does_not_update_transitive() {
                 "Cargo.toml",
                 &format!(
                     r#"
-            [package]
-            name = "dep"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                        [package]
+                        name = "dep"
+                        version = "0.5.0"
+                        authors = ["wycats@example.com"]
 
-            [dependencies.transitive]
-            git = '{}'
-        "#,
+                        [dependencies.transitive]
+                        git = '{}'
+                    "#,
                     transitive.url()
                 ),
             )
@@ -1762,14 +1764,14 @@ fn switch_deps_does_not_update_transitive() {
                 "Cargo.toml",
                 &format!(
                     r#"
-            [package]
-            name = "dep"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                        [package]
+                        name = "dep"
+                        version = "0.5.0"
+                        authors = ["wycats@example.com"]
 
-            [dependencies.transitive]
-            git = '{}'
-        "#,
+                        [dependencies.transitive]
+                        git = '{}'
+                    "#,
                     transitive.url()
                 ),
             )
@@ -1781,13 +1783,13 @@ fn switch_deps_does_not_update_transitive() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.dep]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.dep]
+                    git = '{}'
+                "#,
                 dep1.url()
             ),
         )
@@ -1846,14 +1848,14 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             .file(
                 "Cargo.toml",
                 r#"
-            [package]
-            name = "dep"
-            version = "0.5.0"
-            authors = []
+                    [package]
+                    name = "dep"
+                    version = "0.5.0"
+                    authors = []
 
-            [dependencies.a]
-            path = "a"
-        "#,
+                    [dependencies.a]
+                    path = "a"
+                "#,
             )
             .file("src/lib.rs", "")
             .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
@@ -1865,13 +1867,13 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.dep]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.dep]
+                    git = '{}'
+                "#,
                 dep.url()
             ),
         )
@@ -1915,26 +1917,26 @@ fn switch_sources() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.b]
-            path = "b"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                [dependencies.b]
+                path = "b"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "b/Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "b"
-            version = "0.5.0"
-            authors = []
-            [dependencies.a]
-            git = '{}'
-        "#,
+                    [project]
+                    name = "b"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.a]
+                    git = '{}'
+                "#,
                 a1.url()
             ),
         )
@@ -1988,12 +1990,12 @@ fn dont_require_submodules_are_checked_out() {
         p.file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            build = "build.rs"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                build = "build.rs"
+            "#,
         )
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
@@ -2026,13 +2028,13 @@ fn doctest_same_name() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "a"
-            version = "0.5.0"
-            authors = []
-            [dependencies]
-            a = {{ git = '{}' }}
-        "#,
+                    [project]
+                    name = "a"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
                 a2.url()
             ),
         )
@@ -2044,23 +2046,23 @@ fn doctest_same_name() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            a = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
                 a1.url()
             ),
         )
         .file(
             "src/lib.rs",
             r#"
-            #[macro_use]
-            extern crate a;
-        "#,
+                #[macro_use]
+                extern crate a;
+            "#,
         )
         .build();
 
@@ -2083,14 +2085,14 @@ fn lints_are_suppressed() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            a = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
                 a.url()
             ),
         )
@@ -2126,14 +2128,14 @@ fn denied_lints_are_allowed() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            a = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
                 a.url()
             ),
         )
@@ -2164,15 +2166,15 @@ fn add_a_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            a = {{ path = 'a' }}
-            git = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    a = {{ path = 'a' }}
+                    git = {{ git = '{}' }}
+                "#,
                 git.url()
             ),
         )
@@ -2228,15 +2230,15 @@ fn two_at_rev_instead_of_tag() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            git1 = {{ git = '{0}', rev = 'v0.1.0' }}
-            git2 = {{ git = '{0}', rev = 'v0.1.0' }}
-        "#,
+                    [dependencies]
+                    git1 = {{ git = '{0}', rev = 'v0.1.0' }}
+                    git2 = {{ git = '{0}', rev = 'v0.1.0' }}
+                "#,
                 git.url()
             ),
         )
@@ -2254,19 +2256,19 @@ fn include_overrides_gitignore() {
         repo.file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.5.0"
-            include = ["src/lib.rs", "ignored.txt", "Cargo.toml"]
-        "#,
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                include = ["src/lib.rs", "ignored.txt", "Cargo.toml"]
+            "#,
         )
         .file(
             ".gitignore",
             r#"
-            /target
-            Cargo.lock
-            ignored.txt
-        "#,
+                /target
+                Cargo.lock
+                ignored.txt
+            "#,
         )
         .file("src/lib.rs", "")
         .file("ignored.txt", "")
@@ -2305,26 +2307,26 @@ fn invalid_git_dependency_manifest() {
             .file(
                 "Cargo.toml",
                 r#"
-                [project]
+                    [project]
 
-                name = "dep1"
-                version = "0.5.0"
-                authors = ["carlhuda@example.com"]
-                categories = ["algorithms"]
-                categories = ["algorithms"]
+                    name = "dep1"
+                    version = "0.5.0"
+                    authors = ["carlhuda@example.com"]
+                    categories = ["algorithms"]
+                    categories = ["algorithms"]
 
-                [lib]
+                    [lib]
 
-                name = "dep1"
-            "#,
+                    name = "dep1"
+                "#,
             )
             .file(
                 "src/dep1.rs",
                 r#"
-                pub fn hello() -> &'static str {
-                    "hello world"
-                }
-            "#,
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
             )
     });
 
@@ -2333,16 +2335,16 @@ fn invalid_git_dependency_manifest() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
+                    [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
 
-            [dependencies.dep1]
+                    [dependencies.dep1]
 
-            git = '{}'
-        "#,
+                    git = '{}'
+                "#,
                 git_project.url()
             ),
         )
@@ -2375,7 +2377,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  duplicate key: `categories` for key `project` at line 10 column 17",
+  duplicate key: `categories` for key `project` at line 10 column 21",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -2429,14 +2431,14 @@ fn failed_submodule_checkout() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
 
-            [dependencies]
-            dep1 = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
                 git_project.url()
             ),
         )
@@ -2529,14 +2531,14 @@ fn templatedir_doesnt_cause_problems() {
             "Cargo.toml",
             &format!(
                 r#"
-                [project]
-                name = "fo"
-                version = "0.5.0"
-                authors = []
+                    [project]
+                    name = "fo"
+                    version = "0.5.0"
+                    authors = []
 
-                [dependencies]
-                dep1 = {{ git = '{}' }}
-            "#,
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
                 git_project.url()
             ),
         )
@@ -2789,19 +2791,23 @@ to proceed despite [..]
 fn default_not_master() {
     let project = project();
 
-    // Create a repository with a `master` branch ...
+    // Create a repository with a `master` branch, but switch the head to a
+    // branch called `main` at the same time.
     let (git_project, repo) = git::new_repo("dep1", |project| {
-        project.file("Cargo.toml", &basic_lib_manifest("dep1"))
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "pub fn foo() {}")
     });
-
-    // Then create a `main` branch with actual code, and set the head of the
-    // repository (default branch) to `main`.
-    git_project.change_file("src/lib.rs", "pub fn foo() {}");
-    git::add(&repo);
-    let rev = git::commit(&repo);
-    let commit = repo.find_commit(rev).unwrap();
-    repo.branch("main", &commit, false).unwrap();
+    let head_id = repo.head().unwrap().target().unwrap();
+    let head = repo.find_commit(head_id).unwrap();
+    repo.branch("main", &head, false).unwrap();
     repo.set_head("refs/heads/main").unwrap();
+
+    // Then create a commit on the new `main` branch so `master` and `main`
+    // differ.
+    git_project.change_file("src/lib.rs", "");
+    git::add(&repo);
+    git::commit(&repo);
 
     let project = project
         .file(
@@ -2826,9 +2832,397 @@ fn default_not_master() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
+warning: fetching `master` branch from `[..]` but the `HEAD` \
+    reference for this repository is not the \
+    `master` branch. This behavior will change \
+    in Cargo in the future and your build may \
+    break, so it's recommended to place \
+    `branch = \"master\"` in Cargo.toml when \
+    depending on this git repository to ensure \
+    that your build will continue to work.
 [COMPILING] dep1 v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
+}
+
+#[cargo_test]
+fn historical_lockfile_works() {
+    let project = project();
+
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let head_id = repo.head().unwrap().target().unwrap();
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = 'master' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    project.cargo("build").run();
+    project.change_file(
+        "Cargo.lock",
+        &format!(
+            r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+[[package]]
+name = "dep1"
+version = "0.5.0"
+source = "git+{}#{}"
+
+[[package]]
+name = "foo"
+version = "0.5.0"
+dependencies = [
+ "dep1",
+]
+"#,
+            git_project.url(),
+            head_id
+        ),
+    );
+    project
+        .cargo("build")
+        .with_stderr("[FINISHED] [..]\n")
+        .run();
+}
+
+#[cargo_test]
+fn historical_lockfile_works_with_vendor() {
+    let project = project();
+
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let head_id = repo.head().unwrap().target().unwrap();
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = 'master' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let output = project.cargo("vendor").exec_with_output().unwrap();
+    project.change_file(".cargo/config", str::from_utf8(&output.stdout).unwrap());
+    project.change_file(
+        "Cargo.lock",
+        &format!(
+            r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+[[package]]
+name = "dep1"
+version = "0.5.0"
+source = "git+{}#{}"
+
+[[package]]
+name = "foo"
+version = "0.5.0"
+dependencies = [
+ "dep1",
+]
+"#,
+            git_project.url(),
+            head_id
+        ),
+    );
+    project.cargo("build").run();
+}
+
+#[cargo_test]
+fn two_dep_forms() {
+    let project = project();
+
+    let (git_project, _repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = 'master' }}
+                    a = {{ path = 'a' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "a"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+warning: two git dependencies found for `[..]` where one uses `branch = \"master\"` \
+and the other doesn't; this will break in a future version of Cargo, so please \
+ensure the dependency forms are consistent
+warning: [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn metadata_master_consistency() {
+    // SourceId consistency in the `cargo metadata` output when `master` is
+    // explicit or implicit, using new or old Cargo.lock.
+    let (git_project, git_repo) = git::new_repo("bar", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+    let bar_hash = git_repo.head().unwrap().target().unwrap().to_string();
+
+    // Explicit branch="master" with a lock file created before 1.47 (does not contain ?branch=master).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = {{ git = "{}", branch = "master" }}
+            "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "Cargo.lock",
+            &format!(
+                r#"
+                    [[package]]
+                    name = "bar"
+                    version = "1.0.0"
+                    source = "git+{}#{}"
+
+                    [[package]]
+                    name = "foo"
+                    version = "0.1.0"
+                    dependencies = [
+                     "bar",
+                    ]
+                "#,
+                git_project.url(),
+                bar_hash,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let metadata = |bar_source| -> String {
+        r#"
+            {
+              "packages": [
+                {
+                  "name": "bar",
+                  "version": "1.0.0",
+                  "id": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "__BAR_SOURCE__#__BAR_HASH__",
+                  "dependencies": [],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "publish": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "homepage": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "links": null
+                },
+                {
+                  "name": "foo",
+                  "version": "0.1.0",
+                  "id": "foo 0.1.0 [..]",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": null,
+                  "dependencies": [
+                    {
+                      "name": "bar",
+                      "source": "__BAR_SOURCE__",
+                      "req": "*",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": null
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "publish": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "homepage": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "links": null
+                }
+              ],
+              "workspace_members": [
+                "foo 0.1.0 [..]"
+              ],
+              "resolve": {
+                "nodes": [
+                  {
+                    "id": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
+                    "dependencies": [],
+                    "deps": [],
+                    "features": []
+                  },
+                  {
+                    "id": "foo 0.1.0 [..]",
+                    "dependencies": [
+                      "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)"
+                    ],
+                    "deps": [
+                      {
+                        "name": "bar",
+                        "pkg": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
+                        "dep_kinds": [
+                          {
+                            "kind": null,
+                            "target": null
+                          }
+                        ]
+                      }
+                    ],
+                    "features": []
+                  }
+                ],
+                "root": "foo 0.1.0 [..]"
+              },
+              "target_directory": "[..]",
+              "version": 1,
+              "workspace_root": "[..]",
+              "metadata": null
+            }
+        "#
+        .replace("__BAR_SOURCE__", bar_source)
+        .replace("__BAR_HASH__", &bar_hash)
+    };
+
+    let bar_source = format!("git+{}?branch=master", git_project.url());
+    p.cargo("metadata").with_json(&metadata(&bar_source)).run();
+
+    // Conversely, remove branch="master" from Cargo.toml, but use a new Cargo.lock that has ?branch=master.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = {{ git = "{}" }}
+            "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "Cargo.lock",
+            &format!(
+                r#"
+                    [[package]]
+                    name = "bar"
+                    version = "1.0.0"
+                    source = "git+{}?branch=master#{}"
+
+                    [[package]]
+                    name = "foo"
+                    version = "0.1.0"
+                    dependencies = [
+                     "bar",
+                    ]
+                "#,
+                git_project.url(),
+                bar_hash
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // No ?branch=master!
+    let bar_source = format!("git+{}", git_project.url());
+    p.cargo("metadata").with_json(&metadata(&bar_source)).run();
 }

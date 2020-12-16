@@ -238,12 +238,8 @@ fn rustdoc() {
         .file(
             "src/lib.rs",
             "
-            #![warn(private_doc_tests)]
-            /// asdf
-            /// ```
-            /// let x = 1;
-            /// ```
-            fn f() {}
+            #![warn(missing_docs)]
+            pub fn f() {}
             ",
         )
         .build();
@@ -254,7 +250,7 @@ fn rustdoc() {
         .expect("rustdoc to run");
     assert!(rustdoc_output.status.success());
     let rustdoc_stderr = as_str(&rustdoc_output.stderr);
-    assert!(rustdoc_stderr.contains("private"));
+    assert!(rustdoc_stderr.contains("missing"));
     assert!(rustdoc_stderr.contains("\x1b["));
     assert_eq!(
         p.glob("target/debug/.fingerprint/foo-*/output-*").count(),

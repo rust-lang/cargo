@@ -120,27 +120,27 @@ fn multiple_registry_fetches() {
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.0"
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("a/src/main.rs", "fn main() {}")
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.0"
+                [package]
+                name = "bar"
+                authors = []
+                version = "0.0.0"
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
@@ -195,14 +195,14 @@ fn git_same_repo_different_tags() {
             "a/Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
+                    [package]
+                    name = "foo"
+                    authors = []
+                    version = "0.0.0"
 
-            [dependencies]
-            dep = {{ git = '{}', tag = 'tag1' }}
-        "#,
+                    [dependencies]
+                    dep = {{ git = '{}', tag = 'tag1' }}
+                "#,
                 a.url()
             ),
         )
@@ -214,14 +214,14 @@ fn git_same_repo_different_tags() {
             "b/Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.0"
+                    [package]
+                    name = "bar"
+                    authors = []
+                    version = "0.0.0"
 
-            [dependencies]
-            dep = {{ git = '{}', tag = 'tag2' }}
-        "#,
+                    [dependencies]
+                    dep = {{ git = '{}', tag = 'tag2' }}
+                "#,
                 a.url()
             ),
         )
@@ -261,14 +261,14 @@ fn git_same_branch_different_revs() {
             "a/Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
+                    [package]
+                    name = "foo"
+                    authors = []
+                    version = "0.0.0"
 
-            [dependencies]
-            dep = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    dep = {{ git = '{}' }}
+                "#,
                 a.url()
             ),
         )
@@ -280,14 +280,14 @@ fn git_same_branch_different_revs() {
             "b/Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.0"
+                    [package]
+                    name = "bar"
+                    authors = []
+                    version = "0.0.0"
 
-            [dependencies]
-            dep = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    dep = {{ git = '{}' }}
+                "#,
                 a.url()
             ),
         )
@@ -359,27 +359,27 @@ fn killing_cargo_releases_the_lock() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.0"
+                build = "build.rs"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
-            use std::net::TcpStream;
+                use std::net::TcpStream;
 
-            fn main() {
-                if std::env::var("A").is_ok() {
-                    TcpStream::connect(&std::env::var("ADDR").unwrap()[..])
-                              .unwrap();
-                    std::thread::sleep(std::time::Duration::new(10, 0));
+                fn main() {
+                    if std::env::var("A").is_ok() {
+                        TcpStream::connect(&std::env::var("ADDR").unwrap()[..])
+                                  .unwrap();
+                        std::thread::sleep(std::time::Duration::new(10, 0));
+                    }
                 }
-            }
-        "#,
+            "#,
         );
     let p = p.build();
 
@@ -469,15 +469,15 @@ fn no_deadlock_with_git_dependencies() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
+                    [package]
+                    name = "foo"
+                    authors = []
+                    version = "0.0.0"
 
-            [dependencies]
-            dep1 = {{ git = '{}' }}
-            dep2 = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                    dep2 = {{ git = '{}' }}
+                "#,
                 dep1.url(),
                 dep2.url()
             ),

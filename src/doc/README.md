@@ -1,16 +1,16 @@
 # Cargo documentation
 
-This directory contains Cargo's documentation. There are two parts, [The Cargo Book]
-which is built with [mdbook] and the man pages, which are built with [Asciidoctor].
-The man pages are also included in The Cargo Book as HTML.
+This directory contains Cargo's documentation. There are two parts, [The Cargo
+Book] which is built with [mdbook] and the man pages, which are built with
+[mdman].
 
 [The Cargo Book]: https://doc.rust-lang.org/cargo/
+[mdBook]: https://github.com/rust-lang/mdBook
+[mdman]: https://github.com/rust-lang/cargo/tree/master/crates/mdman/
 
 ### Building the book
 
 Building the book requires [mdBook]. To get it:
-
-[mdBook]: https://github.com/rust-lang/mdBook
 
 ```console
 $ cargo install mdbook
@@ -35,26 +35,32 @@ every file must be linked there.
 
 ### Building the man pages
 
-Building the man pages requires [Asciidoctor]. See the linked page for
-installation instructions. It also requires the `make` build tool and `ruby`.
+The man pages use a tool called [mdman] to convert markdown to a man page
+format. Check out the documentation at
+[`mdman/doc/`](../../crates/mdman/doc/)
+for more details.
 
-[Asciidoctor]: https://asciidoctor.org/
+The man pages are converted from a templated markdown (located in the
+[`src/doc/man/`](man)
+directory) to three different formats:
 
-The source files are located in the [`src/doc/man`](man) directory. The
-[`Makefile`](Makefile) is used to rebuild the man pages. It outputs the man
-pages into [`src/etc/man`](../etc/man) and the HTML versions into
-[`src/doc/man/generated`](man/generated). The Cargo Book has some markdown
-stub files in [`src/doc/src/commands`](src/commands) which load the generated
-HTML files.
+1. Troff-style man pages, saved in [`src/etc/man/`](../etc/man).
+2. Markdown (with some HTML) for the Cargo Book, saved in
+   [`src/doc/src/commands/`](src/commands).
+3. Plain text (needed for embedded man pages on platforms without man such as
+   Windows), saved in [`src/doc/man/generated_txt/`](man/generated_txt).
 
-To build the man pages, run `make` in the `src/doc` directory:
+To rebuild the man pages, run the script `build-man.sh` in the `src/doc` directory.
 
 ```console
-$ make
+$ ./build-man.sh
 ```
 
-The build script uses a few Asciidoctor extensions. See
-[`asciidoc-extension.rb`](asciidoc-extension.rb) for details.
+### SemVer chapter tests
+
+There is a script to verify that the examples in the SemVer chapter work as
+intended. To run the tests, go into the `semver-check` directory and run
+`cargo run`.
 
 ## Contributing
 

@@ -1,7 +1,7 @@
 ## Cargo Home
 
 The "Cargo home" functions as a download and source cache.
-When building a crate, Cargo stores downloaded build dependencies in the Cargo home.
+When building a [crate][def-crate], Cargo stores downloaded build dependencies in the Cargo home.
 You can alter the location of the Cargo home by setting the `CARGO_HOME` [environmental variable][env].
 The [home](https://crates.io/crates/home) crate provides an API for getting this location if you need this information inside your Rust crate.
 By default, the Cargo home is located in `$HOME/.cargo/`.
@@ -16,15 +16,15 @@ The Cargo home consists of following components:
 	Cargo's global configuration file, see the [config entry in the reference][config].
 
 * `credentials.toml`
- 	Private login credentials from [`cargo login`] in order to log in to a registry.
+ 	Private login credentials from [`cargo login`] in order to log in to a [registry][def-registry].
 
 * `.crates.toml`
-	This hidden file contains package information of crates installed via [`cargo install`]. Do NOT edit by hand!
+	This hidden file contains [package][def-package] information of crates installed via [`cargo install`]. Do NOT edit by hand!
 
 ## Directories:
 
 * `bin`
-The bin directory contains executables of crates that were installed via [`cargo install`] or [`rustup`](https://github.com/rust-lang/rustup.rs).
+The bin directory contains executables of crates that were installed via [`cargo install`] or [`rustup`](https://rust-lang.github.io/rustup/).
 To be able to make these binaries accessible, add the path of the directory to your `$PATH` environment variable.
 
  *  `git`
@@ -83,4 +83,7 @@ Alternatively, the [cargo-cache](https://crates.io/crates/cargo-cache) crate pro
 [`cargo login`]: ../commands/cargo-login.md
 [`cargo vendor`]: ../commands/cargo-vendor.md
 [config]: ../reference/config.md
+[def-crate]:     ../appendix/glossary.md#crate     '"crate" (glossary entry)'
+[def-package]:   ../appendix/glossary.md#package   '"package" (glossary entry)'
+[def-registry]:  ../appendix/glossary.md#registry  '"registry" (glossary entry)'
 [env]: ../reference/environment-variables.md

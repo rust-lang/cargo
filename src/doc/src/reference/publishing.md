@@ -10,7 +10,7 @@ limit to the number of versions which can be published, however.
 
 ### Before your first publish
 
-First thing’s first, you’ll need an account on [crates.io] to acquire
+First things first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
 account (required for now). After this, visit your [Account
 Settings](https://crates.io/me) page and run the [`cargo login`] command
@@ -221,7 +221,9 @@ for permission if [crates.io] doesn’t have all the scopes it would like to.
 An additional barrier to querying GitHub is that the organization may be
 actively denying third party access. To check this, you can go to:
 
-    https://github.com/organizations/:org/settings/oauth_application_policy
+```text
+https://github.com/organizations/:org/settings/oauth_application_policy
+```
 
 where `:org` is the name of the organization (e.g., `rust-lang`). You may see
 something like:

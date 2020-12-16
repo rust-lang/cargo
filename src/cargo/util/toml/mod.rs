@@ -28,6 +28,14 @@ use crate::util::{self, paths, validate_package_name, Config, IntoUrl};
 mod targets;
 use self::targets::targets;
 
+/// Loads a `Cargo.toml` from a file on disk.
+///
+/// This could result in a real or virtual manifest being returned.
+///
+/// A list of nested paths is also returned, one for each path dependency
+/// within the manfiest. For virtual manifests, these paths can only
+/// come from patched or replaced dependencies. These paths are not
+/// canonicalized.
 pub fn read_manifest(
     path: &Path,
     source_id: SourceId,
@@ -121,6 +129,12 @@ fn do_read_manifest(
     }
 }
 
+/// Attempts to parse a string into a [`toml::Value`]. This is not specific to any
+/// particular kind of TOML file.
+///
+/// The purpose of this wrapper is to detect invalid TOML which was previously
+/// accepted and display a warning to the user in that case. The `file` and `config`
+/// parameters are only used by this fallback path.
 pub fn parse(toml: &str, file: &Path, config: &Config) -> CargoResult<toml::Value> {
     let first_error = match toml.parse() {
         Ok(ret) => return Ok(ret),
@@ -176,7 +190,12 @@ type TomlBenchTarget = TomlTarget;
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency {
+    /// In the simple format, only a version is specified, eg.
+    /// `package = "<version>"`
     Simple(String),
+    /// The simple format is equivalent to a detailed dependency
+    /// specifying only a version, eg.
+    /// `package = { version = "<version>" }`
     Detailed(DetailedTomlDependency),
 }
 
@@ -243,6 +262,7 @@ pub struct DetailedTomlDependency {
     public: Option<bool>,
 }
 
+/// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
@@ -262,7 +282,7 @@ pub struct TomlManifest {
     build_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build_dependencies")]
     build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
-    features: Option<BTreeMap<String, Vec<String>>>,
+    features: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     target: Option<BTreeMap<String, TomlPlatform>>,
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
@@ -800,8 +820,6 @@ pub struct TomlProject {
     autoexamples: Option<bool>,
     autotests: Option<bool>,
     autobenches: Option<bool>,
-    #[serde(rename = "namespaced-features")]
-    namespaced_features: Option<bool>,
     #[serde(rename = "default-run")]
     default_run: Option<String>,
 
@@ -849,6 +867,9 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
+    /// Prepares the manfiest for publishing.
+    // - Path and git components of dependency specifications are removed.
+    // - License path is updated to point within the package.
     pub fn prepare_for_publish(
         &self,
         ws: &Workspace<'_>,
@@ -1190,26 +1211,17 @@ impl TomlManifest {
 
         let exclude = project.exclude.clone().unwrap_or_default();
         let include = project.include.clone().unwrap_or_default();
-        if project.namespaced_features.is_some() {
-            features.require(Feature::namespaced_features())?;
-        }
+        let empty_features = BTreeMap::new();
 
-        let summary_features = me
-            .features
-            .as_ref()
-            .map(|x| {
-                x.iter()
-                    .map(|(k, v)| (k.as_str(), v.iter().collect()))
-                    .collect()
-            })
-            .unwrap_or_else(BTreeMap::new);
         let summary = Summary::new(
+            config,
             pkgid,
             deps,
-            &summary_features,
+            me.features.as_ref().unwrap_or(&empty_features),
             project.links.as_deref(),
-            project.namespaced_features.unwrap_or(false),
         )?;
+        let unstable = config.cli_unstable();
+        summary.unstable_gate(unstable.namespaced_features, unstable.weak_dep_features)?;
 
         let metadata = ManifestMetadata {
             description: project.description.clone(),
@@ -1500,6 +1512,7 @@ impl TomlManifest {
         Ok(patch)
     }
 
+    /// Returns the path to the build script if one exists for this crate.
     fn maybe_custom_build(
         &self,
         build: &Option<StringOrBool>,
@@ -1525,6 +1538,10 @@ impl TomlManifest {
 
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
+    }
+
+    pub fn features(&self) -> Option<&BTreeMap<InternedString, Vec<InternedString>>> {
+        self.features.as_ref()
     }
 }
 
@@ -1690,7 +1707,7 @@ impl DetailedTomlDependency {
                     .map(GitReference::Branch)
                     .or_else(|| self.tag.clone().map(GitReference::Tag))
                     .or_else(|| self.rev.clone().map(GitReference::Rev))
-                    .unwrap_or_else(|| GitReference::DefaultBranch);
+                    .unwrap_or(GitReference::DefaultBranch);
                 let loc = git.into_url()?;
 
                 if let Some(fragment) = loc.fragment() {

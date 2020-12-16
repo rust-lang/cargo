@@ -1,0 +1,108 @@
+'\" t
+.TH "TABLES" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.SH "DESCRIPTION"
+Testing tables.
+
+.TS
+allbox tab(:);
+lt.
+T{
+Single col
+T}
+T{
+Hi! :)
+T}
+.TE
+.sp
+
+.TS
+allbox tab(:);
+lt lt lt.
+T{
+Header content
+T}:T{
+With \fBformat\fR \fItext\fR
+T}:T{
+Another column
+T}
+T{
+Some data
+T}:T{
+More data
+T}:T{
+
+T}
+T{
+Extra long amount of text within a column
+T}:T{
+hi
+T}:T{
+there
+T}
+.TE
+.sp
+
+.TS
+allbox tab(:);
+lt ct rt.
+T{
+Left aligned
+T}:T{
+Center aligned
+T}:T{
+Right aligned
+T}
+T{
+abc
+T}:T{
+def
+T}:T{
+ghi
+T}
+.TE
+.sp
+
+.TS
+allbox tab(:);
+lt ct rt.
+T{
+Left aligned
+T}:T{
+Center aligned
+T}:T{
+Right aligned
+T}
+T{
+X
+T}:T{
+X
+T}:T{
+X
+T}
+T{
+Extra long text 123456789012 with mixed widths.
+T}:T{
+Extra long text 123456789012 with mixed widths.
+T}:T{
+Extra long text 123456789012 with mixed widths.
+T}
+.TE
+.sp
+
+.TS
+allbox tab(:);
+lt.
+T{
+Link check
+T}
+T{
+\fIfoo\fR <https://example.com/>
+T}
+T{
+<https://example.com/>
+T}
+.TE
+.sp

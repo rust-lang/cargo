@@ -25,7 +25,7 @@
 //! use core::{Feature, Features};
 //!
 //! let feature = Feature::launch_into_space();
-//! package.manifest().features().require(feature).chain_err(|| {
+//! package.manifest().unstable_features().require(feature).chain_err(|| {
 //!     "launching Cargo into space right now is unstable and may result in \
 //!      unintended damage to your codebase, use with caution"
 //! })?;
@@ -197,9 +197,6 @@ features! {
         // Overriding profiles for dependencies.
         [stable] profile_overrides: bool,
 
-        // Separating the namespaces for features and dependencies
-        [unstable] namespaced_features: bool,
-
         // "default-run" manifest option,
         [stable] default_run: bool,
 
@@ -356,11 +353,14 @@ pub struct CliUnstable {
     pub panic_abort_tests: bool,
     pub jobserver_per_rustc: bool,
     pub features: Option<Vec<String>>,
-    pub crate_versions: bool,
     pub separate_nightlies: bool,
     pub multitarget: bool,
     pub rustdoc_map: bool,
     pub terminal_width: Option<Option<usize>>,
+    pub namespaced_features: bool,
+    pub weak_dep_features: bool,
+    pub extra_link_arg: bool,
+    pub credential_process: bool,
 }
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
@@ -427,7 +427,7 @@ impl CliUnstable {
                 bail!("flag -Z{} does not take a value, found: `{}`", key, v);
             }
             Ok(true)
-        };
+        }
 
         fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
             Ok(match value {
@@ -462,11 +462,14 @@ impl CliUnstable {
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "features" => self.features = Some(parse_features(v)),
-            "crate-versions" => self.crate_versions = parse_empty(k, v)?,
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
+            "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
+            "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
+            "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
+            "credential-process" => self.credential_process = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

@@ -162,9 +162,9 @@ fn lock_file_and_workspace() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["foo"]
-        "#,
+                [workspace]
+                members = ["foo"]
+            "#,
         )
         .file("foo/Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
         .file("foo/src/main.rs", "fn main() {}")

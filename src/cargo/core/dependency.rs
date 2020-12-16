@@ -386,8 +386,16 @@ impl Dependency {
             self.source_id(),
             id
         );
-        self.set_version_req(VersionReq::exact(id.version()))
-            .set_source_id(id.source_id())
+        let me = Rc::make_mut(&mut self.inner);
+        me.req = VersionReq::exact(id.version());
+
+        // Only update the `precise` of this source to preserve other
+        // information about dependency's source which may not otherwise be
+        // tested during equality/hashing.
+        me.source_id = me
+            .source_id
+            .with_precise(id.source_id().precise().map(|s| s.to_string()));
+        self
     }
 
     /// Returns `true` if this is a "locked" dependency, basically whether it has
@@ -405,10 +413,7 @@ impl Dependency {
     }
 
     pub fn is_build(&self) -> bool {
-        match self.inner.kind {
-            DepKind::Build => true,
-            _ => false,
-        }
+        matches!(self.inner.kind, DepKind::Build)
     }
 
     pub fn is_optional(&self) -> bool {

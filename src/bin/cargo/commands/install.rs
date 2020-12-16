@@ -71,39 +71,7 @@ pub fn cli() -> App {
                 .requires("crate")
                 .conflicts_with_all(&["git", "path", "index"]),
         )
-        .after_help(
-            "\
-This command manages Cargo's local set of installed binary crates. Only
-packages which have executable [[bin]] or [[example]] targets can be
-installed, and all executables are installed into the installation root's
-`bin` folder. The installation root is determined, in order of precedence, by
-`--root`, `$CARGO_INSTALL_ROOT`, the `install.root` configuration key, and
-finally the home directory (which is either `$CARGO_HOME` if set or
-`$HOME/.cargo` by default).
-
-There are multiple sources from which a crate can be installed. The default
-location is crates.io but the `--git`, `--path`, and `--registry` flags can
-change this source. If the source contains more than one package (such as
-crates.io or a git repository with multiple crates) the `<crate>` argument is
-required to indicate which crate should be installed.
-
-Crates from crates.io can optionally specify the version they wish to install
-via the `--version` flags, and similarly packages from git repositories can
-optionally specify the branch, tag, or revision that should be installed. If a
-crate has multiple binaries, the `--bin` argument can selectively install only
-one of them, and if you'd rather install examples the `--example` argument can
-be used as well.
-
-If the package is already installed, Cargo will reinstall it if the installed
-version does not appear to be up-to-date. Installing with `--path` will always
-build and install, unless there are conflicting binaries from another package.
-
-If the source is crates.io or `--git` then by default the crate will be built
-in a temporary target directory. To avoid this, the target directory can be
-specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
-path. In particular, this can be useful for caching build artifacts on
-continuous integration systems.",
-        )
+        .after_help("Run `cargo help install` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
@@ -112,17 +80,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else {
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
     }
-
-    let workspace = args.workspace(config).ok();
-    let mut compile_opts = args.compile_options(
-        config,
-        CompileMode::Build,
-        workspace.as_ref(),
-        ProfileChecking::Checked,
-    )?;
-
-    compile_opts.build_config.requested_profile =
-        args.get_profile_name(config, "release", ProfileChecking::Checked)?;
 
     let krates = args
         .values_of("crate")
@@ -158,6 +115,26 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let version = args.value_of("version");
     let root = args.value_of("root");
+
+    // We only provide worksapce information for local crate installation from
+    // one of the following sources:
+    // - From current working directory (only work for edition 2015).
+    // - From a specific local file path.
+    let workspace = if from_cwd || args.is_present("path") {
+        args.workspace(config).ok()
+    } else {
+        None
+    };
+
+    let mut compile_opts = args.compile_options(
+        config,
+        CompileMode::Build,
+        workspace.as_ref(),
+        ProfileChecking::Checked,
+    )?;
+
+    compile_opts.build_config.requested_profile =
+        args.get_profile_name(config, "release", ProfileChecking::Checked)?;
 
     if args.is_present("list") {
         ops::install_list(root, config)?;

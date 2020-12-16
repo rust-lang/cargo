@@ -1,109 +1,6 @@
-/*
-# Introduction to `support`.
-
-Cargo has a wide variety of integration tests that execute the `cargo` binary
-and verify its behavior. The `support` module contains many helpers to make
-this process easy.
-
-The general form of a test involves creating a "project", running cargo, and
-checking the result. Projects are created with the `ProjectBuilder` where you
-specify some files to create. The general form looks like this:
-
-```
-let p = project()
-    .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
-    .build();
-```
-
-If you do not specify a `Cargo.toml` manifest using `file()`, one is
-automatically created with a project name of `foo` using `basic_manifest()`.
-
-To run cargo, call the `cargo` method and make assertions on the execution:
-
-```
-p.cargo("run --bin foo")
-    .with_stderr(
-        "\
-[COMPILING] foo [..]
-[FINISHED] [..]
-[RUNNING] `target/debug/foo`
-",
-    )
-    .with_stdout("hi!")
-    .run();
-```
-
-The project creates a mini sandbox under the "cargo integration test"
-directory with each test getting a separate directory such as
-`/path/to/cargo/target/cit/t123/`. Each project appears as a separate
-directory. There is also an empty `home` directory created that will be used
-as a home directory instead of your normal home directory.
-
-See `support::lines_match` for an explanation of the string pattern matching.
-
-Browse the `pub` functions in the `support` module for a variety of other
-helpful utilities.
-
-## Testing Nightly Features
-
-If you are testing a Cargo feature that only works on "nightly" cargo, then
-you need to call `masquerade_as_nightly_cargo` on the process builder like
-this:
-
-```
-p.cargo("build").masquerade_as_nightly_cargo()
-```
-
-If you are testing a feature that only works on *nightly rustc* (such as
-benchmarks), then you should exit the test if it is not running with nightly
-rust, like this:
-
-```
-if !is_nightly() {
-    // Add a comment here explaining why this is necessary.
-    return;
-}
-```
-
-## Platform-specific Notes
-
-When checking output, use `/` for paths even on Windows: the actual output
-of `\` on Windows will be replaced with `/`.
-
-Be careful when executing binaries on Windows. You should not rename, delete,
-or overwrite a binary immediately after running it. Under some conditions
-Windows will fail with errors like "directory not empty" or "failed to remove"
-or "access is denied".
-
-## Specifying Dependencies
-
-You should not write any tests that use the network such as contacting
-crates.io. Typically, simple path dependencies are the easiest way to add a
-dependency. Example:
-
-```
-let p = project()
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "1.0.0"
-
-        [dependencies]
-        bar = {path = "bar"}
-    "#)
-    .file("src/lib.rs", "extern crate bar;")
-    .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
-    .file("bar/src/lib.rs", "")
-    .build();
-```
-
-If you need to test with registry dependencies, see
-`support::registry::Package` for creating packages you can depend on.
-
-If you need to test git dependencies, see `support::git` to create a git
-dependency.
-
-*/
+//! # Cargo test support.
+//!
+//! See https://rust-lang.github.io/cargo/contrib/ for a guide on writing tests.
 
 #![allow(clippy::needless_doctest_main)] // according to @ehuss this lint is fussy
 #![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
@@ -1213,44 +1110,7 @@ impl Execs {
                     Ok(())
                 }
             }
-            MatchKind::Unordered => {
-                let mut a = actual.lines().collect::<Vec<_>>();
-                // match more-constrained lines first, although in theory we'll
-                // need some sort of recursive match here. This handles the case
-                // that you expect "a\n[..]b" and two lines are printed out,
-                // "ab\n"a", where technically we do match unordered but a naive
-                // search fails to find this. This simple sort at least gets the
-                // test suite to pass for now, but we may need to get more fancy
-                // if tests start failing again.
-                a.sort_by_key(|s| s.len());
-                let mut failures = Vec::new();
-
-                for e_line in out.lines() {
-                    match a.iter().position(|a_line| lines_match(e_line, a_line)) {
-                        Some(index) => {
-                            a.remove(index);
-                        }
-                        None => failures.push(e_line),
-                    }
-                }
-                if failures.len() > 0 {
-                    return Err(format!(
-                        "Did not find expected line(s):\n{}\n\
-                         Remaining available output:\n{}\n",
-                        failures.join("\n"),
-                        a.join("\n")
-                    ));
-                }
-                if !a.is_empty() {
-                    Err(format!(
-                        "Output included extra lines:\n\
-                         {}\n",
-                        a.join("\n")
-                    ))
-                } else {
-                    Ok(())
-                }
-            }
+            MatchKind::Unordered => lines_match_unordered(&out, &actual),
         }
     }
 
@@ -1358,7 +1218,7 @@ enum MatchKind {
 
 /// Compares a line with an expected pattern.
 /// - Use `[..]` as a wildcard to match 0 or more characters on the same line
-///   (similar to `.*` in a regex).
+///   (similar to `.*` in a regex). It is non-greedy.
 /// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
 ///   platforms).
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
@@ -1380,6 +1240,45 @@ pub fn lines_match(expected: &str, mut actual: &str) -> bool {
         }
     }
     actual.is_empty() || expected.ends_with("[..]")
+}
+
+pub fn lines_match_unordered(expected: &str, actual: &str) -> Result<(), String> {
+    let mut a = actual.lines().collect::<Vec<_>>();
+    // match more-constrained lines first, although in theory we'll
+    // need some sort of recursive match here. This handles the case
+    // that you expect "a\n[..]b" and two lines are printed out,
+    // "ab\n"a", where technically we do match unordered but a naive
+    // search fails to find this. This simple sort at least gets the
+    // test suite to pass for now, but we may need to get more fancy
+    // if tests start failing again.
+    a.sort_by_key(|s| s.len());
+    let mut failures = Vec::new();
+
+    for e_line in expected.lines() {
+        match a.iter().position(|a_line| lines_match(e_line, a_line)) {
+            Some(index) => {
+                a.remove(index);
+            }
+            None => failures.push(e_line),
+        }
+    }
+    if !failures.is_empty() {
+        return Err(format!(
+            "Did not find expected line(s):\n{}\n\
+                         Remaining available output:\n{}\n",
+            failures.join("\n"),
+            a.join("\n")
+        ));
+    }
+    if !a.is_empty() {
+        Err(format!(
+            "Output included extra lines:\n\
+                         {}\n",
+            a.join("\n")
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 /// Variant of `lines_match` that applies normalization to the strings.
@@ -1622,6 +1521,7 @@ fn substitute_macros(input: &str) -> String {
         ("[ERROR]", "error:"),
         ("[WARNING]", "warning:"),
         ("[NOTE]", "note:"),
+        ("[HELP]", "help:"),
         ("[DOCUMENTING]", " Documenting"),
         ("[FRESH]", "       Fresh"),
         ("[UPDATING]", "    Updating"),
@@ -1643,6 +1543,11 @@ fn substitute_macros(input: &str) -> String {
         ("[IGNORED]", "     Ignored"),
         ("[INSTALLED]", "   Installed"),
         ("[REPLACED]", "    Replaced"),
+        ("[BUILDING]", "    Building"),
+        ("[LOGIN]", "       Login"),
+        ("[LOGOUT]", "      Logout"),
+        ("[YANK]", "        Yank"),
+        ("[OWNER]", "       Owner"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {
@@ -1737,8 +1642,12 @@ impl ChannelChanger for cargo::util::ProcessBuilder {
 }
 
 fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
-    for arg in s.split_whitespace() {
-        if arg.contains('"') || arg.contains('\'') {
+    for mut arg in s.split_whitespace() {
+        if (arg.starts_with('"') && arg.ends_with('"'))
+            || (arg.starts_with('\'') && arg.ends_with('\''))
+        {
+            arg = &arg[1..(arg.len() - 1).max(1)];
+        } else if arg.contains(&['"', '\''][..]) {
             panic!("shell-style argument parsing is not supported")
         }
         p.arg(arg);

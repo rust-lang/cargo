@@ -6,6 +6,7 @@ use cargo_test_support::{is_nightly, project};
 #[cargo_test]
 fn exported_priv_warning() {
     if !is_nightly() {
+        // exported_private_dependencies lint is unstable
         return;
     }
     Package::new("priv_dep", "0.1.0")
@@ -16,15 +17,15 @@ fn exported_priv_warning() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
+                cargo-features = ["public-dependency"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            priv_dep = "0.1.0"
-        "#,
+                [dependencies]
+                priv_dep = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -39,8 +40,8 @@ fn exported_priv_warning() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "\
-src/lib.rs:3:13: warning: type `priv_dep::FromPriv` from private dependency 'priv_dep' in public interface
-"
+src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep' in public interface
+",
         )
         .run()
 }
@@ -48,6 +49,7 @@ src/lib.rs:3:13: warning: type `priv_dep::FromPriv` from private dependency 'pri
 #[cargo_test]
 fn exported_pub_dep() {
     if !is_nightly() {
+        // exported_private_dependencies lint is unstable
         return;
     }
     Package::new("pub_dep", "0.1.0")
@@ -58,15 +60,15 @@ fn exported_pub_dep() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
+                cargo-features = ["public-dependency"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            pub_dep = {version = "0.1.0", public = true}
-        "#,
+                [dependencies]
+                pub_dep = {version = "0.1.0", public = true}
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -98,8 +100,8 @@ pub fn requires_nightly_cargo() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
-        "#,
+                cargo-features = ["public-dependency"]
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -129,13 +131,13 @@ fn requires_feature() {
             "Cargo.toml",
             r#"
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            pub_dep = { version = "0.1.0", public = true }
-        "#,
+                [dependencies]
+                pub_dep = { version = "0.1.0", public = true }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -166,15 +168,15 @@ fn pub_dev_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
+                cargo-features = ["public-dependency"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dev-dependencies]
-            pub_dep = {version = "0.1.0", public = true}
-        "#,
+                [dev-dependencies]
+                pub_dep = {version = "0.1.0", public = true}
+            "#,
         )
         .file(
             "src/lib.rs",

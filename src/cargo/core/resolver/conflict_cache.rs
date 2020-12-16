@@ -19,7 +19,7 @@ enum ConflictStoreTrie {
 impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
     /// where all elements return some from `is_active` and contain `PackageId` specified.
-    /// If more then one are activated, then it will return
+    /// If more than one are activated, then it will return
     /// one that will allow for the most jump-back.
     fn find(
         &self,
@@ -167,7 +167,7 @@ impl ConflictCache {
     }
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and contain `PackageId` specified.
-    /// If more then one are activated, then it will return
+    /// If more than one are activated, then it will return
     /// one that will allow for the most jump-back.
     pub fn find_conflicting(
         &self,

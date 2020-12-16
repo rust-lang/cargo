@@ -42,17 +42,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_build_plan()
         .arg_unit_graph()
-        .after_help(
-            "\
-All packages in the workspace are built if the `--workspace` flag is supplied. The
-`--workspace` flag is automatically assumed for a virtual manifest.
-Note that `--exclude` has to be specified in conjunction with the `--workspace` flag.
-
-Compilation can be configured via the use of profiles which are configured in
-the manifest. The default profile for this command is `dev`, but passing
-the --release flag will use the `release` profile instead.
-",
-        )
+        .after_help("Run `cargo help build` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

@@ -8,24 +8,24 @@ fn net_retry_loads_from_config() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            git = "http://127.0.0.1:11/foo/bar"
-        "#,
+                [dependencies.bar]
+                git = "http://127.0.0.1:11/foo/bar"
+            "#,
         )
         .file("src/main.rs", "")
         .file(
             ".cargo/config",
             r#"
-        [net]
-        retry=1
-        [http]
-        timeout=1
-         "#,
+           [net]
+           retry=1
+           [http]
+           timeout=1
+            "#,
         )
         .build();
 
@@ -44,21 +44,21 @@ fn net_retry_git_outputs_warning() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            git = "http://127.0.0.1:11/foo/bar"
-        "#,
+                [dependencies.bar]
+                git = "http://127.0.0.1:11/foo/bar"
+            "#,
         )
         .file(
             ".cargo/config",
             r#"
-        [http]
-        timeout=1
-         "#,
+           [http]
+           timeout=1
+            "#,
         )
         .file("src/main.rs", "")
         .build();

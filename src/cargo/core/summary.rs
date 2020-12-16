@@ -1,17 +1,13 @@
-use std::borrow::Borrow;
-use std::collections::{BTreeMap, HashMap};
-use std::fmt::Display;
+use crate::core::{Dependency, PackageId, SourceId};
+use crate::util::interning::InternedString;
+use crate::util::{CargoResult, Config};
+use anyhow::bail;
+use semver::Version;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::rc::Rc;
-
-use serde::{Serialize, Serializer};
-
-use crate::core::{Dependency, PackageId, SourceId};
-use crate::util::interning::InternedString;
-use semver::Version;
-
-use crate::util::CargoResult;
 
 /// Subset of a `Manifest`. Contains only the most important information about
 /// a package.
@@ -27,39 +23,35 @@ struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
     features: Rc<FeatureMap>,
+    has_namespaced_features: bool,
+    has_overlapping_features: Option<InternedString>,
     checksum: Option<String>,
     links: Option<InternedString>,
-    namespaced_features: bool,
 }
 
 impl Summary {
-    pub fn new<K>(
+    pub fn new(
+        config: &Config,
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: &BTreeMap<K, Vec<impl AsRef<str>>>,
+        features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
-        namespaced_features: bool,
-    ) -> CargoResult<Summary>
-    where
-        K: Borrow<str> + Ord + Display,
-    {
+    ) -> CargoResult<Summary> {
+        let mut has_overlapping_features = None;
         for dep in dependencies.iter() {
-            let feature = dep.name_in_toml();
-            if !namespaced_features && features.get(&*feature).is_some() {
-                anyhow::bail!(
-                    "Features and dependencies cannot have the \
-                     same name: `{}`",
-                    feature
-                )
+            let dep_name = dep.name_in_toml();
+            if features.contains_key(&dep_name) {
+                has_overlapping_features = Some(dep_name);
             }
             if dep.is_optional() && !dep.is_transitive() {
-                anyhow::bail!(
-                    "Dev-dependencies are not allowed to be optional: `{}`",
-                    feature
+                bail!(
+                    "dev-dependencies are not allowed to be optional: `{}`",
+                    dep_name
                 )
             }
         }
-        let feature_map = build_feature_map(features, &dependencies, namespaced_features)?;
+        let (feature_map, has_namespaced_features) =
+            build_feature_map(config, pkg_id, features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -67,7 +59,8 @@ impl Summary {
                 features: Rc::new(feature_map),
                 checksum: None,
                 links: links.map(|l| l.into()),
-                namespaced_features,
+                has_namespaced_features,
+                has_overlapping_features,
             }),
         })
     }
@@ -90,14 +83,52 @@ impl Summary {
     pub fn features(&self) -> &FeatureMap {
         &self.inner.features
     }
+
+    /// Returns an error if this Summary is using an unstable feature that is
+    /// not enabled.
+    pub fn unstable_gate(
+        &self,
+        namespaced_features: bool,
+        weak_dep_features: bool,
+    ) -> CargoResult<()> {
+        if !namespaced_features {
+            if self.inner.has_namespaced_features {
+                bail!(
+                    "namespaced features with the `dep:` prefix are only allowed on \
+                     the nightly channel and requires the `-Z namespaced-features` flag on the command-line"
+                );
+            }
+            if let Some(dep_name) = self.inner.has_overlapping_features {
+                bail!(
+                    "features and dependencies cannot have the same name: `{}`",
+                    dep_name
+                )
+            }
+        }
+        if !weak_dep_features {
+            for (feat_name, features) in self.features() {
+                for fv in features {
+                    if matches!(fv, FeatureValue::DepFeature{weak: true, ..}) {
+                        bail!(
+                            "optional dependency features with `?` syntax are only \
+                             allowed on the nightly channel and requires the \
+                             `-Z weak-dep-features` flag on the command line\n\
+                             Feature `{}` had feature value `{}`.",
+                            feat_name,
+                            fv
+                        );
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn checksum(&self) -> Option<&str> {
         self.inner.checksum.as_deref()
     }
     pub fn links(&self) -> Option<InternedString> {
         self.inner.links
-    }
-    pub fn namespaced_features(&self) -> bool {
-        self.inner.namespaced_features
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
@@ -145,16 +176,18 @@ impl Hash for Summary {
     }
 }
 
-// Checks features for errors, bailing out a CargoResult:Err if invalid,
-// and creates FeatureValues for each feature.
-fn build_feature_map<K>(
-    features: &BTreeMap<K, Vec<impl AsRef<str>>>,
+/// Checks features for errors, bailing out a CargoResult:Err if invalid,
+/// and creates FeatureValues for each feature.
+///
+/// The returned `bool` indicates whether or not the `[features]` table
+/// included a `dep:` prefixed namespaced feature (used for gating on
+/// nightly).
+fn build_feature_map(
+    config: &Config,
+    pkg_id: PackageId,
+    features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
-    namespaced: bool,
-) -> CargoResult<FeatureMap>
-where
-    K: Borrow<str> + Ord + Display,
-{
+) -> CargoResult<(FeatureMap, bool)> {
     use self::FeatureValue::*;
     let mut dep_map = HashMap::new();
     for dep in dependencies.iter() {
@@ -164,54 +197,63 @@ where
             .push(dep);
     }
 
-    let mut map = BTreeMap::new();
-    for (feature, list) in features.iter() {
-        // If namespaced features is active and the key is the same as that of an
-        // optional dependency, that dependency must be included in the values.
-        // Thus, if a `feature` is found that has the same name as a dependency, we
-        // (a) bail out if the dependency is non-optional, and (b) we track if the
-        // feature requirements include the dependency `crate:feature` in the list.
-        // This is done with the `dependency_found` variable, which can only be
-        // false if features are namespaced and the current feature key is the same
-        // as the name of an optional dependency. If so, it gets set to true during
-        // iteration over the list if the dependency is found in the list.
-        let mut dependency_found = if namespaced {
-            match dep_map.get(feature.borrow()) {
-                Some(dep_data) => {
-                    if !dep_data.iter().any(|d| d.is_optional()) {
-                        anyhow::bail!(
-                            "Feature `{}` includes the dependency of the same name, but this is \
-                             left implicit in the features included by this feature.\n\
-                             Additionally, the dependency must be marked as optional to be \
-                             included in the feature definition.\n\
-                             Consider adding `crate:{}` to this feature's requirements \
-                             and marking the dependency as `optional = true`",
-                            feature,
-                            feature
-                        )
-                    } else {
-                        false
-                    }
-                }
-                None => true,
-            }
-        } else {
-            true
+    let mut map: FeatureMap = features
+        .iter()
+        .map(|(feature, list)| {
+            let fvs: Vec<_> = list
+                .iter()
+                .map(|feat_value| FeatureValue::new(*feat_value))
+                .collect();
+            (*feature, fvs)
+        })
+        .collect();
+    let has_namespaced_features = map.values().flatten().any(|fv| fv.has_dep_prefix());
+
+    // Add implicit features for optional dependencies if they weren't
+    // explicitly listed anywhere.
+    let explicitly_listed: HashSet<_> = map
+        .values()
+        .flatten()
+        .filter_map(|fv| match fv {
+            Dep { dep_name }
+            | DepFeature {
+                dep_name,
+                dep_prefix: true,
+                ..
+            } => Some(*dep_name),
+            _ => None,
+        })
+        .collect();
+    for dep in dependencies {
+        if !dep.is_optional() {
+            continue;
+        }
+        let dep_name_in_toml = dep.name_in_toml();
+        if features.contains_key(&dep_name_in_toml) || explicitly_listed.contains(&dep_name_in_toml)
+        {
+            continue;
+        }
+        let fv = Dep {
+            dep_name: dep_name_in_toml,
         };
+        map.insert(dep_name_in_toml, vec![fv]);
+    }
 
-        let mut values = vec![];
-        for dep in list {
-            let val = FeatureValue::build(
-                InternedString::new(dep.as_ref()),
-                |fs| features.contains_key(fs.as_str()),
-                namespaced,
+    // Validate features are listed properly.
+    for (feature, fvs) in &map {
+        if feature.starts_with("dep:") {
+            bail!(
+                "feature named `{}` is not allowed to start with `dep:`",
+                feature
             );
-
+        }
+        validate_feature_name(config, pkg_id, feature)?;
+        for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {
-                match val {
-                    Feature(ref dep_name) | Crate(ref dep_name) | CrateFeature(ref dep_name, _) => {
-                        dep_map.get(dep_name.as_str())
+                match fv {
+                    Feature(dep_name) | Dep { dep_name, .. } | DepFeature { dep_name, .. } => {
+                        dep_map.get(dep_name)
                     }
                 }
             };
@@ -219,200 +261,214 @@ where
                 .iter()
                 .flat_map(|d| d.iter())
                 .any(|d| d.is_optional());
-            if let FeatureValue::Crate(ref dep_name) = val {
-                // If we have a dependency value, check if this is the dependency named
-                // the same as the feature that we were looking for.
-                if !dependency_found && feature.borrow() == dep_name.as_str() {
-                    dependency_found = true;
-                }
-            }
-
-            match (&val, dep_data.is_some(), is_optional_dep) {
-                // The value is a feature. If features are namespaced, this just means
-                // it's not prefixed with `crate:`, so we have to check whether the
-                // feature actually exist. If the feature is not defined *and* an optional
-                // dependency of the same name exists, the feature is defined implicitly
-                // here by adding it to the feature map, pointing to the dependency.
-                // If features are not namespaced, it's been validated as a feature already
-                // while instantiating the `FeatureValue` in `FeatureValue::build()`, so
-                // we don't have to do so here.
-                (&Feature(feat), _, true) => {
-                    if namespaced && !features.contains_key(&*feat) {
-                        map.insert(feat, vec![FeatureValue::Crate(feat)]);
-                    }
-                }
-                // If features are namespaced and the value is not defined as a feature
-                // and there is no optional dependency of the same name, error out.
-                // If features are not namespaced, there must be an existing feature
-                // here (checked by `FeatureValue::build()`), so it will always be defined.
-                (&Feature(feat), dep_exists, false) => {
-                    if namespaced && !features.contains_key(&*feat) {
-                        if dep_exists {
-                            anyhow::bail!(
-                                "Feature `{}` includes `{}` which is not defined as a feature.\n\
-                                 A non-optional dependency of the same name is defined; consider \
-                                 adding `optional = true` to its definition",
+            let is_any_dep = dep_data.is_some();
+            match fv {
+                Feature(f) => {
+                    if !features.contains_key(f) {
+                        if !is_any_dep {
+                            bail!(
+                                "feature `{}` includes `{}` which is neither a dependency \
+                                 nor another feature",
                                 feature,
-                                feat
-                            )
+                                fv
+                            );
+                        }
+                        if is_optional_dep {
+                            if !map.contains_key(f) {
+                                bail!(
+                                    "feature `{}` includes `{}`, but `{}` is an \
+                                     optional dependency without an implicit feature\n\
+                                     Use `dep:{}` to enable the dependency.",
+                                    feature,
+                                    fv,
+                                    f,
+                                    f
+                                );
+                            }
                         } else {
-                            anyhow::bail!(
-                                "Feature `{}` includes `{}` which is not defined as a feature",
-                                feature,
-                                feat
-                            )
+                            bail!("feature `{}` includes `{}`, but `{}` is not an optional dependency\n\
+                                A non-optional dependency of the same name is defined; \
+                                consider adding `optional = true` to its definition.",
+                                feature, fv, f);
                         }
                     }
                 }
-                // The value is a dependency. If features are namespaced, it is explicitly
-                // tagged as such (`crate:value`). If features are not namespaced, any value
-                // not recognized as a feature is pegged as a `Crate`. Here we handle the case
-                // where the dependency exists but is non-optional. It branches on namespaced
-                // just to provide the correct string for the crate dependency in the error.
-                (&Crate(ref dep), true, false) => {
-                    if namespaced {
-                        anyhow::bail!(
-                            "Feature `{}` includes `crate:{}` which is not an \
-                             optional dependency.\nConsider adding \
-                             `optional = true` to the dependency",
+                Dep { dep_name } => {
+                    if !is_any_dep {
+                        bail!(
+                            "feature `{}` includes `{}`, but `{}` is not listed as a dependency",
                             feature,
-                            dep
-                        )
-                    } else {
-                        anyhow::bail!(
-                            "Feature `{}` depends on `{}` which is not an \
-                             optional dependency.\nConsider adding \
-                             `optional = true` to the dependency",
+                            fv,
+                            dep_name
+                        );
+                    }
+                    if !is_optional_dep {
+                        bail!(
+                            "feature `{}` includes `{}`, but `{}` is not an optional dependency\n\
+                             A non-optional dependency of the same name is defined; \
+                             consider adding `optional = true` to its definition.",
                             feature,
-                            dep
-                        )
+                            fv,
+                            dep_name
+                        );
                     }
                 }
-                // If namespaced, the value was tagged as a dependency; if not namespaced,
-                // this could be anything not defined as a feature. This handles the case
-                // where no such dependency is actually defined; again, the branch on
-                // namespaced here is just to provide the correct string in the error.
-                (&Crate(ref dep), false, _) => {
-                    if namespaced {
-                        anyhow::bail!(
-                            "Feature `{}` includes `crate:{}` which is not a known \
-                             dependency",
+                DepFeature { dep_name, weak, .. } => {
+                    // Validation of the feature name will be performed in the resolver.
+                    if !is_any_dep {
+                        bail!(
+                            "feature `{}` includes `{}`, but `{}` is not a dependency",
                             feature,
-                            dep
-                        )
-                    } else {
-                        anyhow::bail!(
-                            "Feature `{}` includes `{}` which is neither a dependency nor \
-                             another feature",
-                            feature,
-                            dep
-                        )
+                            fv,
+                            dep_name
+                        );
+                    }
+                    if *weak && !is_optional_dep {
+                        bail!("feature `{}` includes `{}` with a `?`, but `{}` is not an optional dependency\n\
+                            A non-optional dependency of the same name is defined; \
+                            consider removing the `?` or changing the dependency to be optional",
+                            feature, fv, dep_name);
                     }
                 }
-                (&Crate(_), true, true) => {}
-                // If the value is a feature for one of the dependencies, bail out if no such
-                // dependency is actually defined in the manifest.
-                (&CrateFeature(ref dep, _), false, _) => anyhow::bail!(
-                    "Feature `{}` requires a feature of `{}` which is not a \
-                     dependency",
-                    feature,
-                    dep
-                ),
-                (&CrateFeature(_, _), true, _) => {}
             }
-            values.push(val);
         }
-
-        if !dependency_found {
-            // If we have not found the dependency of the same-named feature, we should
-            // bail here.
-            anyhow::bail!(
-                "Feature `{}` includes the optional dependency of the \
-                 same name, but this is left implicit in the features \
-                 included by this feature.\nConsider adding \
-                 `crate:{}` to this feature's requirements.",
-                feature,
-                feature
-            )
-        }
-
-        map.insert(InternedString::new(feature.borrow()), values);
     }
-    Ok(map)
+
+    // Make sure every optional dep is mentioned at least once.
+    let used: HashSet<_> = map
+        .values()
+        .flatten()
+        .filter_map(|fv| match fv {
+            Dep { dep_name } | DepFeature { dep_name, .. } => Some(dep_name),
+            _ => None,
+        })
+        .collect();
+    if let Some(dep) = dependencies
+        .iter()
+        .find(|dep| dep.is_optional() && !used.contains(&dep.name_in_toml()))
+    {
+        bail!(
+            "optional dependency `{}` is not included in any feature\n\
+            Make sure that `dep:{}` is included in one of features in the [features] table.",
+            dep.name_in_toml(),
+            dep.name_in_toml(),
+        );
+    }
+
+    Ok((map, has_namespaced_features))
 }
 
-/// FeatureValue represents the types of dependencies a feature can have:
-///
-/// * Another feature
-/// * An optional dependency
-/// * A feature in a dependency
-///
-/// The selection between these 3 things happens as part of the construction of the FeatureValue.
+/// FeatureValue represents the types of dependencies a feature can have.
 #[derive(Clone, Debug)]
 pub enum FeatureValue {
+    /// A feature enabling another feature.
     Feature(InternedString),
-    Crate(InternedString),
-    CrateFeature(InternedString, InternedString),
+    /// A feature enabling a dependency with `dep:dep_name` syntax.
+    Dep { dep_name: InternedString },
+    /// A feature enabling a feature on a dependency with `crate_name/feat_name` syntax.
+    DepFeature {
+        dep_name: InternedString,
+        dep_feature: InternedString,
+        /// If this is true, then the feature used the `dep:` prefix, which
+        /// prevents enabling the feature named `dep_name`.
+        dep_prefix: bool,
+        /// If `true`, indicates the `?` syntax is used, which means this will
+        /// not automatically enable the dependency unless the dependency is
+        /// activated through some other means.
+        weak: bool,
+    },
 }
 
 impl FeatureValue {
-    fn build<T>(feature: InternedString, is_feature: T, namespaced: bool) -> FeatureValue
-    where
-        T: Fn(InternedString) -> bool,
-    {
-        match (feature.find('/'), namespaced) {
-            (Some(pos), _) => {
+    pub fn new(feature: InternedString) -> FeatureValue {
+        match feature.find('/') {
+            Some(pos) => {
                 let (dep, dep_feat) = feature.split_at(pos);
                 let dep_feat = &dep_feat[1..];
-                FeatureValue::CrateFeature(InternedString::new(dep), InternedString::new(dep_feat))
-            }
-            (None, true) if feature.starts_with("crate:") => {
-                FeatureValue::Crate(InternedString::new(&feature[6..]))
-            }
-            (None, true) => FeatureValue::Feature(feature),
-            (None, false) if is_feature(feature) => FeatureValue::Feature(feature),
-            (None, false) => FeatureValue::Crate(feature),
-        }
-    }
-
-    pub fn new(feature: InternedString, s: &Summary) -> FeatureValue {
-        Self::build(
-            feature,
-            |fs| s.features().contains_key(&fs),
-            s.namespaced_features(),
-        )
-    }
-
-    pub fn to_string(&self, s: &Summary) -> String {
-        use self::FeatureValue::*;
-        match *self {
-            Feature(ref f) => f.to_string(),
-            Crate(ref c) => {
-                if s.namespaced_features() {
-                    format!("crate:{}", &c)
+                let (dep, dep_prefix) = if let Some(dep) = dep.strip_prefix("dep:") {
+                    (dep, true)
                 } else {
-                    c.to_string()
+                    (dep, false)
+                };
+                let (dep, weak) = if let Some(dep) = dep.strip_suffix('?') {
+                    (dep, true)
+                } else {
+                    (dep, false)
+                };
+                FeatureValue::DepFeature {
+                    dep_name: InternedString::new(dep),
+                    dep_feature: InternedString::new(dep_feat),
+                    dep_prefix,
+                    weak,
                 }
             }
-            CrateFeature(ref c, ref f) => [c.as_ref(), f.as_ref()].join("/"),
+            None => {
+                if let Some(dep_name) = feature.strip_prefix("dep:") {
+                    FeatureValue::Dep {
+                        dep_name: InternedString::new(dep_name),
+                    }
+                } else {
+                    FeatureValue::Feature(feature)
+                }
+            }
         }
+    }
+
+    /// Returns `true` if this feature explicitly used `dep:` syntax.
+    pub fn has_dep_prefix(&self) -> bool {
+        matches!(self, FeatureValue::Dep{..} | FeatureValue::DepFeature{dep_prefix:true, ..})
     }
 }
 
-impl Serialize for FeatureValue {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+impl fmt::Display for FeatureValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::FeatureValue::*;
-        match *self {
-            Feature(ref f) => serializer.serialize_str(f),
-            Crate(ref c) => serializer.serialize_str(c),
-            CrateFeature(ref c, ref f) => {
-                serializer.serialize_str(&[c.as_ref(), f.as_ref()].join("/"))
+        match self {
+            Feature(feat) => write!(f, "{}", feat),
+            Dep { dep_name } => write!(f, "dep:{}", dep_name),
+            DepFeature {
+                dep_name,
+                dep_feature,
+                dep_prefix,
+                weak,
+            } => {
+                let dep_prefix = if *dep_prefix { "dep:" } else { "" };
+                let weak = if *weak { "?" } else { "" };
+                write!(f, "{}{}{}/{}", dep_prefix, dep_name, weak, dep_feature)
             }
         }
     }
 }
 
 pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
+
+fn validate_feature_name(config: &Config, pkg_id: PackageId, name: &str) -> CargoResult<()> {
+    let mut chars = name.chars();
+    const FUTURE: &str = "This was previously accepted but is being phased out; \
+        it will become a hard error in a future release.\n\
+        For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, \
+        and please leave a comment if this will be a problem for your project.";
+    if let Some(ch) = chars.next() {
+        if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
+            config.shell().warn(&format!(
+                "invalid character `{}` in feature `{}` in package {}, \
+                the first character must be a Unicode XID start character or digit \
+                (most letters or `_` or `0` to `9`)\n\
+                {}",
+                ch, name, pkg_id, FUTURE
+            ))?;
+        }
+    }
+    for ch in chars {
+        if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
+            config.shell().warn(&format!(
+                "invalid character `{}` in feature `{}` in package {}, \
+                characters must be Unicode XID characters, `+`, or `.` \
+                (numbers, `+`, `-`, `_`, `.`, or most letters)\n\
+                {}",
+                ch, name, pkg_id, FUTURE
+            ))?;
+        }
+    }
+    Ok(())
+}

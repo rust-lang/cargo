@@ -1,6 +1,6 @@
 //! Tests for the `cargo tree` command.
 
-use cargo_test_support::cross_compile::alternate;
+use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
 
@@ -78,16 +78,16 @@ fn virtual_workspace() {
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["a", "b", "c"]
+            members = ["a", "baz", "c"]
             "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "1.0.0"))
         .file("a/src/lib.rs", "")
         .file(
-            "b/Cargo.toml",
+            "baz/Cargo.toml",
             r#"
             [package]
-            name = "b"
+            name = "baz"
             version = "0.1.0"
 
             [dependencies]
@@ -95,7 +95,7 @@ fn virtual_workspace() {
             somedep = "1.0"
             "#,
         )
-        .file("b/src/lib.rs", "")
+        .file("baz/src/lib.rs", "")
         .file("c/Cargo.toml", &basic_manifest("c", "1.0.0"))
         .file("c/src/lib.rs", "")
         .build();
@@ -105,7 +105,7 @@ fn virtual_workspace() {
             "\
 a v1.0.0 ([..]/foo/a)
 
-b v0.1.0 ([..]/foo/b)
+baz v0.1.0 ([..]/foo/baz)
 ├── c v1.0.0 ([..]/foo/c)
 └── somedep v1.0.0
 
@@ -117,10 +117,43 @@ c v1.0.0 ([..]/foo/c)
     p.cargo("tree -p a").with_stdout("a v1.0.0 [..]").run();
 
     p.cargo("tree")
-        .cwd("b")
+        .cwd("baz")
         .with_stdout(
             "\
-b v0.1.0 ([..]/foo/b)
+baz v0.1.0 ([..]/foo/baz)
+├── c v1.0.0 ([..]/foo/c)
+└── somedep v1.0.0
+",
+        )
+        .run();
+
+    // exclude baz
+    p.cargo("tree --workspace --exclude baz")
+        .with_stdout(
+            "\
+a v1.0.0 ([..]/foo/a)
+
+c v1.0.0 ([..]/foo/c)
+",
+        )
+        .run();
+
+    // exclude glob '*z'
+    p.cargo("tree --workspace --exclude '*z'")
+        .with_stdout(
+            "\
+a v1.0.0 ([..]/foo/a)
+
+c v1.0.0 ([..]/foo/c)
+",
+        )
+        .run();
+
+    // include glob '*z'
+    p.cargo("tree -p '*z'")
+        .with_stdout(
+            "\
+baz v0.1.0 ([..]/foo/baz)
 ├── c v1.0.0 ([..]/foo/c)
 └── somedep v1.0.0
 ",
@@ -230,15 +263,15 @@ fn source_kinds() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [dependencies]
-            regdep = "1.0"
-            pathdep = {{ path = "pathdep" }}
-            gitdep = {{ git = "{}" }}
-            "#,
+                [dependencies]
+                regdep = "1.0"
+                pathdep = {{ path = "pathdep" }}
+                gitdep = {{ git = "{}" }}
+                "#,
                 git_project.url()
             ),
         )
@@ -324,6 +357,9 @@ a v0.1.0 ([..]/foo)
 #[cargo_test]
 fn filters_target() {
     // --target flag
+    if cross_compile::disabled() {
+        return;
+    }
     Package::new("targetdep", "1.0.0").publish();
     Package::new("hostdep", "1.0.0").publish();
     Package::new("devdep", "1.0.0").publish();
@@ -342,27 +378,27 @@ fn filters_target() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [target.'{alt}'.dependencies]
-            targetdep = "1.0"
-            pm_target = "1.0"
+                [target.'{alt}'.dependencies]
+                targetdep = "1.0"
+                pm_target = "1.0"
 
-            [target.'{host}'.dependencies]
-            hostdep = "1.0"
-            pm_host = "1.0"
+                [target.'{host}'.dependencies]
+                hostdep = "1.0"
+                pm_host = "1.0"
 
-            [target.'{alt}'.dev-dependencies]
-            devdep = "1.0"
+                [target.'{alt}'.dev-dependencies]
+                devdep = "1.0"
 
-            [target.'{alt}'.build-dependencies]
-            build_target_dep = "1.0"
+                [target.'{alt}'.build-dependencies]
+                build_target_dep = "1.0"
 
-            [target.'{host}'.build-dependencies]
-            build_host_dep = "1.0"
-            "#,
+                [target.'{host}'.build-dependencies]
+                build_host_dep = "1.0"
+                "#,
                 alt = alternate(),
                 host = rustc_host()
             ),
@@ -376,7 +412,7 @@ fn filters_target() {
             "\
 foo v0.1.0 ([..]/foo)
 ├── hostdep v1.0.0
-└── pm_host v1.0.0
+└── pm_host v1.0.0 (proc-macro)
 [build-dependencies]
 └── build_host_dep v1.0.0
     └── hostdep v1.0.0
@@ -389,7 +425,7 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── pm_target v1.0.0
+├── pm_target v1.0.0 (proc-macro)
 └── targetdep v1.0.0
 [build-dependencies]
 └── build_host_dep v1.0.0
@@ -406,7 +442,7 @@ foo v0.1.0 ([..]/foo)
             "\
 foo v0.1.0 ([..]/foo)
 ├── hostdep v1.0.0
-└── pm_host v1.0.0
+└── pm_host v1.0.0 (proc-macro)
 [build-dependencies]
 └── build_host_dep v1.0.0
     └── hostdep v1.0.0
@@ -419,8 +455,8 @@ foo v0.1.0 ([..]/foo)
             "\
 foo v0.1.0 ([..]/foo)
 ├── hostdep v1.0.0
-├── pm_host v1.0.0
-├── pm_target v1.0.0
+├── pm_host v1.0.0 (proc-macro)
+├── pm_target v1.0.0 (proc-macro)
 └── targetdep v1.0.0
 [build-dependencies]
 ├── build_host_dep v1.0.0
@@ -1208,7 +1244,7 @@ fn proc_macro_features() {
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── pm v1.0.0
+├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
 └── somedep v1.0.0 (*)
@@ -1222,7 +1258,7 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── pm v1.0.0
+├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
 └── somedep v1.0.0
@@ -1258,7 +1294,7 @@ somedep v1.0.0
             "\
 somedep v1.0.0
 ├── foo v0.1.0 ([..]/foo)
-└── pm v1.0.0
+└── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
 ",
         )
@@ -1272,7 +1308,7 @@ somedep v1.0.0
 └── foo v0.1.0 ([..]/foo)
 
 somedep v1.0.0
-└── pm v1.0.0
+└── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
 ",
         )

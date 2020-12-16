@@ -18,11 +18,12 @@ jobs:
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
     - run: cargo fmt --all -- --check
-    - run: cd crates/cargo-test-macro && cargo fmt --all -- --check
-    - run: cd crates/cargo-test-support && cargo fmt --all -- --check
-    - run: cd crates/crates-io && cargo fmt --all -- --check
-    - run: cd crates/resolver-tests && cargo fmt --all -- --check
-    - run: cd crates/cargo-platform && cargo fmt --all -- --check
+    - run: |
+        for manifest in `find crates -name Cargo.toml`
+        do
+          echo check fmt for $manifest
+          cargo fmt --all --manifest-path $manifest -- --check
+        done
 
   test:
     runs-on: ${{ matrix.os }}
@@ -57,21 +58,22 @@ jobs:
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
-    - run: sudo apt update -y && sudo apt install gcc-multilib -y
+    - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
       if: matrix.os == 'ubuntu-latest'
     - run: rustup component add rustfmt || echo "rustfmt not available"
 
-    # Deny warnings on CI to avoid warnings getting into the codebase, and note
-    # the `force-system-lib-on-osx` which is intended to fix compile issues on
-    # OSX where compiling curl from source on OSX yields linker errors on Azure.
-    #
-    # Note that the curl issue is traced back to alexcrichton/curl-rust#279
-    # where it looks like the OSX version we're actually running on is such that
-    # a symbol is emitted that's never worked. For now force the system library
-    # to be used to fix the link errors.
-    - run: cargo test --features 'deny-warnings curl/force-system-lib-on-osx'
-    - run: cargo test -p cargo-test-support
+    # Deny warnings on CI to avoid warnings getting into the codebase.
+    - run: cargo test --features 'deny-warnings'
+    - run: cargo test --features 'deny-warnings' -p cargo-test-support
     - run: cargo test -p cargo-platform
+    - run: cargo test --manifest-path crates/mdman/Cargo.toml
+    - run: cargo build --manifest-path crates/credential/cargo-credential-1password/Cargo.toml
+    - run: cargo build --manifest-path crates/credential/cargo-credential-gnome-secret/Cargo.toml
+      if: matrix.os == 'ubuntu-latest'
+    - run: cargo build --manifest-path crates/credential/cargo-credential-macos-keychain/Cargo.toml
+      if: matrix.os == 'macos-latest'
+    - run: cargo build --manifest-path crates/credential/cargo-credential-wincred/Cargo.toml
+      if: matrix.os == 'windows-latest'
 
   resolver:
     runs-on: ubuntu-latest
@@ -96,10 +98,13 @@ jobs:
     - uses: actions/checkout@v2
     - run: rustup update nightly && rustup default nightly
     - run: rustup component add rust-docs
+    - run: ci/validate-man.sh
+    # This requires rustfmt, use stable.
+    - run: cd src/doc/semver-check && cargo +stable run
     - run: |
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
-        echo ::add-path::`pwd`/mdbook
+        echo `pwd`/mdbook >> $GITHUB_PATH
     - run: cargo doc --no-deps
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
     - run: |

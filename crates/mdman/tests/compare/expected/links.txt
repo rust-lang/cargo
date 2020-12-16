@@ -1,0 +1,40 @@
+LINKS(1)
+
+NAME
+       links - Test of different link kinds
+
+DESCRIPTION
+       Inline link: inline link <https://example.com/inline>
+
+       Reference link: this is a link <https://example.com/bar>
+
+       Collapsed: collapsed <https://example.com/collapsed>
+
+       Shortcut: shortcut <https://example.com/shortcut>
+
+       Autolink: <https://example.com/auto>
+
+       Email: <foo@example.com>
+
+       Relative link: relative link <https://example.org/foo/bar.html>
+
+       Collapsed unknown: [collapsed unknown][]
+
+       Reference unknown: [foo][unknown]
+
+       Shortcut unknown: [shortcut unknown]
+
+       other-cmd(1)
+
+       local-cmd(1)
+
+       Some link <https://example.org/foo.html>
+
+       --include
+           Testing an included link <https://example.org/included_link.html>.
+
+OPTIONS
+       --foo-bar
+           Example link <https://example.org/bar.html>. See other-cmd(1),
+           local-cmd(1)
+

@@ -240,7 +240,7 @@ pub struct RegistryPackage<'a> {
     yanked: Option<bool>,
     /// Native library name this package links to.
     ///
-    /// Added early 2018 (see https://github.com/rust-lang/cargo/pull/4978),
+    /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
     links: Option<InternedString>,
 }
@@ -471,13 +471,6 @@ impl<'cfg> RegistrySource<'cfg> {
                 return Ok(unpack_dir.to_path_buf());
             }
         }
-        let mut ok = OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(&path)
-            .chain_err(|| format!("failed to open `{}`", path.display()))?;
-
         let gz = GzDecoder::new(tarball);
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
@@ -516,6 +509,15 @@ impl<'cfg> RegistrySource<'cfg> {
             }
             result.chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
+
+        // The lock file is created after unpacking so we overwrite a lock file
+        // which may have been extracted from the package.
+        let mut ok = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .chain_err(|| format!("failed to open `{}`", path.display()))?;
 
         // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;

@@ -2,7 +2,7 @@
 
 use cargo_test_support::git;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, lines_match, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, lines_match, project};
 
 #[cargo_test]
 fn oldest_lockfile_still_works() {
@@ -29,16 +29,14 @@ fn oldest_lockfile_still_works_with_command(cargo_command: &str) {
 name = "bar"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "[..]"
 
 [[package]]
 name = "foo"
 version = "0.0.1"
 dependencies = [
- "bar [..]",
+ "bar",
 ]
-
-[metadata]
-"[..]" = "[..]"
 "#;
 
     let old_lockfile = r#"
@@ -59,14 +57,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile)
@@ -105,14 +103,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", &old_lockfile)
@@ -132,14 +130,14 @@ fn totally_wild_checksums_works() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
@@ -175,16 +173,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "bar"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "[..]"
 
 [[package]]
 name = "foo"
 version = "0.0.1"
 dependencies = [
- "bar [..]",
+ "bar",
 ]
-
-[metadata]
-"[..]" = "[..]"
 "#,
         &lock,
     );
@@ -198,14 +194,14 @@ fn wrong_checksum_is_an_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
@@ -261,14 +257,14 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
@@ -327,14 +323,14 @@ fn listed_checksum_bad_if_we_cannot_compute() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            bar = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
                 git.url()
             ),
         )
@@ -393,14 +389,14 @@ fn current_lockfile_format() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "");
     let p = p.build();
@@ -451,14 +447,14 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
@@ -496,14 +492,14 @@ fn locked_correct_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "");
     let p = p.build();
@@ -547,14 +543,14 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", &lockfile)
@@ -635,4 +631,134 @@ dependencies = [
 
     let lock = p.read_lockfile();
     assert_lockfiles_eq(&lockfile, &lock);
+}
+
+#[cargo_test]
+fn v3_and_git() {
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let head_id = repo.head().unwrap().target().unwrap();
+
+    let lockfile = format!(
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "dep1"
+version = "0.5.0"
+source = "git+{}?branch=master#{}"
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "dep1",
+]
+"#,
+        git_project.url(),
+        head_id,
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = 'master' }}
+                "#,
+                git_project.url(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", "version = 3")
+        .build();
+
+    p.cargo("fetch").run();
+
+    let lock = p.read_lockfile();
+    assert_lockfiles_eq(&lockfile, &lock);
+}
+
+#[cargo_test]
+fn lock_from_the_future() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", "version = 10000000")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+error: failed to parse lock file at: [..]
+
+Caused by:
+  lock file version `10000000` was found, but this version of Cargo does not \
+  understand this lock file, perhaps Cargo needs to be updated?
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn preserve_old_format_if_no_update_needed() {
+    let cksum = Package::new("bar", "0.1.0").publish();
+    let lockfile = format!(
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[metadata]
+"checksum bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "{}"
+"#,
+        cksum
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", &lockfile)
+        .build();
+
+    p.cargo("build --locked").run();
 }

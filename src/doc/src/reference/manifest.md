@@ -1,7 +1,7 @@
 ## The Manifest Format
 
-The `Cargo.toml` file for each package is called its *manifest*. Every manifest
-file consists of the following sections:
+The `Cargo.toml` file for each package is called its *manifest*. It is written
+in the [TOML] format. Every manifest file consists of the following sections:
 
 * [`cargo-features`](unstable.md) — Unstable, nightly-only features.
 * [`[package]`](#the-package-section) — Defines a package.
@@ -41,7 +41,7 @@ file consists of the following sections:
   * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
   * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
   * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
-* [`[badges]`](#the-badges-section) — Badges to display on [crates.io].
+* [`[badges]`](#the-badges-section) — Badges to display on a registry.
 * [`[features]`](features.md) — Conditional compilation features.
 * [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
 * [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
@@ -95,6 +95,14 @@ Versioning](https://semver.org/), so make sure you follow some basic rules:
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
+See the [Resolver] chapter for more information on how Cargo uses versions to
+resolve dependencies, and for guidelines on setting your own version. See the
+[Semver compatibility] chapter for more details on exactly what constitutes a
+breaking change.
+
+[Resolver]: resolver.md
+[Semver compatibility]: semver.md
+
 <a id="the-authors-field-optional"></a>
 #### The `authors` field
 
@@ -110,21 +118,20 @@ brackets at the end of each author.
 <a id="the-edition-field-optional"></a>
 #### The `edition` field
 
-You can opt in to a specific [Rust Edition] for your package with the
-`edition` key in `Cargo.toml`. If you don't specify the edition, it will
-default to 2015.
+The `edition` key is an optional key that affects which edition your package
+is compiled with. [`cargo new`] will generate a package with the `edition` key
+set to the latest edition. Setting the `edition` key in
+`[package]` will affect all targets/crates in the package, including test
+suites, benchmarks, binaries, examples, etc.
+
+If the `edition` key is not set to a specific [Rust Edition] in your
+`Cargo.toml`, Cargo will default to 2015.
 
 ```toml
 [package]
 # ...
 edition = '2018'
 ```
-
-The `edition` key affects which edition your package is compiled with. Cargo
-will always generate packages via [`cargo new`] with the `edition` key set to the
-latest edition. Setting the `edition` key in `[package]` will affect all
-targets/crates in the package, including test suites, benchmarks, binaries,
-examples, etc.
 
 #### The `description` field
 
@@ -218,8 +225,8 @@ the user must comply with both licenses simultaneously. The `WITH` operator
 indicates a license with a special exception. Some examples:
 
 * `MIT OR Apache-2.0`
-* `LGPL-2.1 AND MIT AND BSD-2-Clause`
-* `GPL-2.0+ WITH Bison-exception-2.2`
+* `LGPL-2.1-only AND MIT AND BSD-2-Clause`
+* `GPL-2.0-or-later WITH Bison-exception-2.2`
 
 If a package is using a nonstandard license, then the `license-file` field may
 be specified in lieu of the `license` field.
@@ -406,6 +413,9 @@ allowed to be published to.
 publish = ["some-registry-name"]
 ```
 
+If publish array contains a single registry, `cargo publish` command will use
+it when `--registry` flag is not specified.
+
 <a id="the-metadata-table-optional"></a>
 #### The `metadata` table
 
@@ -448,66 +458,22 @@ default-run = "a"
 
 ### The `[badges]` section
 
-[crates.io] can display various badges for build status, test coverage, etc. for
-each crate. All badges are optional.
+The `[badges]` section is for specifying status badges that can be displayed
+on a registry website when the package is published.
 
-- The badges pertaining to build status that are currently available are
-  Appveyor, CircleCI, Cirrus CI, GitLab, Azure DevOps, Travis CI and Bitbucket
-  Pipelines.
-- Available badges pertaining to code test coverage are Codecov and Coveralls.
-- There are also maintenance-related badges based on isitmaintained.com
-  which state the issue resolution time, percent of open issues, and future
-  maintenance intentions.
-
-Most badge specifications require a `repository` key. It is expected to be in
-`user/repo` format.
+> Note: [crates.io] previously displayed badges next to a crate on its
+> website, but that functionality has been removed. Packages should place
+> badges in its README file which will be displayed on [crates.io] (see [the
+> `readme` field](#the-readme-field)).
 
 ```toml
 [badges]
-
-# Appveyor: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default), `bitbucket`, and
-# `gitlab`; `id` is optional; you can specify the appveyor project id if you
-# want to use that instead. `project_name` is optional; use when the repository
-# name differs from the appveyor project name.
-appveyor = { repository = "...", branch = "master", service = "github" }
-
-# Circle CI: `repository` is required. `branch` is optional; default is `master`
-circle-ci = { repository = "...", branch = "master" }
-
-# Cirrus CI: `repository` is required. `branch` is optional; default is `master`
-cirrus-ci = { repository = "...", branch = "master" }
-
-# GitLab: `repository` is required. `branch` is optional; default is `master`
-gitlab = { repository = "...", branch = "master" }
-
-# Azure DevOps: `project` is required. `pipeline` is required. `build` is optional; default is `1`
-# Note: project = `organization/project`, pipeline = `name_of_pipeline`, build = `definitionId`
-azure-devops = { project = "...", pipeline = "...", build="2" }
-
-# Travis CI: `repository` in format "<user>/<project>" is required.
-# `branch` is optional; default is `master`
-travis-ci = { repository = "...", branch = "master" }
-
-# Bitbucket Pipelines: `repository` is required. `branch` is required
-bitbucket-pipelines = { repository = "...", branch = "master" }
-
-# Codecov: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default), `bitbucket`, and
-# `gitlab`.
-codecov = { repository = "...", branch = "master", service = "github" }
-
-# Coveralls: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default) and `bitbucket`.
-coveralls = { repository = "...", branch = "master", service = "github" }
-
-# Is it maintained resolution time: `repository` is required.
-is-it-maintained-issue-resolution = { repository = "..." }
-
-# Is it maintained percentage of open issues: `repository` is required.
-is-it-maintained-open-issues = { repository = "..." }
-
-# Maintenance: `status` is required. Available options are:
+# The `maintenance` table indicates the status of the maintenance of
+# the crate. This may be used by a registry, but is currently not
+# used by crates.io. See https://github.com/rust-lang/crates.io/issues/2437
+# and https://github.com/rust-lang/crates.io/issues/2438 for more details.
+#
+# The `status` field is required. Available options are:
 # - `actively-developed`: New features are being added and bugs are being fixed.
 # - `passively-maintained`: There are no plans for new features, but the maintainer intends to
 #   respond to issues that get filed.
@@ -549,6 +515,7 @@ more detail.
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [SPDX site]: https://spdx.org/license-list
+[TOML]: https://toml.io/
 
 <script>
 (function() {

@@ -315,21 +315,20 @@ impl<'cfg> Workspace<'cfg> {
     /// That is, this returns the path of the directory containing the
     /// `Cargo.toml` which is the root of this workspace.
     pub fn root(&self) -> &Path {
-        match self.root_manifest {
-            Some(ref p) => p,
-            None => &self.current_manifest,
-        }
-        .parent()
-        .unwrap()
+        self.root_manifest().parent().unwrap()
+    }
+
+    /// Returns the path of the `Cargo.toml` which is the root of this
+    /// workspace.
+    pub fn root_manifest(&self) -> &Path {
+        self.root_manifest
+            .as_ref()
+            .unwrap_or(&self.current_manifest)
     }
 
     /// Returns the root Package or VirtualManifest.
     fn root_maybe(&self) -> &MaybePackage {
-        let root = self
-            .root_manifest
-            .as_ref()
-            .unwrap_or(&self.current_manifest);
-        self.packages.get(root)
+        self.packages.get(self.root_manifest())
     }
 
     pub fn target_dir(&self) -> Filesystem {
@@ -446,7 +445,7 @@ impl<'cfg> Workspace<'cfg> {
                 .join("Cargo.toml");
             debug!("find_root - pointer {}", path.display());
             Ok(paths::normalize_path(&path))
-        };
+        }
 
         {
             let current = self.packages.load(manifest_path)?;
@@ -538,14 +537,26 @@ impl<'cfg> Workspace<'cfg> {
             None
         };
 
-        for path in members_paths {
+        for path in &members_paths {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
         }
 
         if let Some(default) = default_members_paths {
             for path in default {
-                let manifest_path = paths::normalize_path(&path.join("Cargo.toml"));
+                let normalized_path = paths::normalize_path(&path);
+                let manifest_path = normalized_path.join("Cargo.toml");
                 if !self.members.contains(&manifest_path) {
+                    // default-members are allowed to be excluded, but they
+                    // still must be referred to by the original (unfiltered)
+                    // members list. Note that we aren't testing against the
+                    // manifest path, both because `members_paths` doesn't
+                    // include `/Cargo.toml`, and because excluded paths may not
+                    // be crates.
+                    let exclude = members_paths.contains(&normalized_path)
+                        && workspace_config.is_excluded(&normalized_path);
+                    if exclude {
+                        continue;
+                    }
                     anyhow::bail!(
                         "package `{}` is listed in workspace’s default-members \
                          but is not a member.",
@@ -614,10 +625,11 @@ impl<'cfg> Workspace<'cfg> {
         Ok(())
     }
 
-    pub fn features(&self) -> &Features {
+    /// Returns the unstable nightly-only features enabled via `cargo-features` in the manifest.
+    pub fn unstable_features(&self) -> &Features {
         match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().features(),
-            MaybePackage::Virtual(vm) => vm.features(),
+            MaybePackage::Package(p) => p.manifest().unstable_features(),
+            MaybePackage::Virtual(vm) => vm.unstable_features(),
         }
     }
 
@@ -1194,7 +1206,16 @@ impl WorkspaceRootConfig {
             if expanded_paths.is_empty() {
                 expanded_list.push(pathbuf);
             } else {
-                expanded_list.extend(expanded_paths);
+                // Some OS can create system support files anywhere.
+                // (e.g. macOS creates `.DS_Store` file if you visit a directory using Finder.)
+                // Such files can be reported as a member path unexpectedly.
+                // Check and filter out non-directory paths to prevent pushing such accidental unwanted path
+                // as a member.
+                for expanded_path in expanded_paths {
+                    if expanded_path.is_dir() {
+                        expanded_list.push(expanded_path);
+                    }
+                }
             }
         }
 

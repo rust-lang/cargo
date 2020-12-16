@@ -58,7 +58,7 @@ impl ser::Serialize for PackageId {
             "{} {} ({})",
             self.inner.name,
             self.inner.version,
-            self.inner.source_id.into_url()
+            self.inner.source_id.as_url()
         ))
     }
 }

@@ -179,7 +179,7 @@ impl<'cfg> Timings<'cfg> {
         let unit_time = UnitTime {
             unit,
             target,
-            start: d_as_f64(self.start.elapsed()),
+            start: self.start.elapsed().as_secs_f64(),
             duration: 0.0,
             rmeta_time: None,
             unlocked_units: Vec::new(),
@@ -200,7 +200,7 @@ impl<'cfg> Timings<'cfg> {
             Some(ut) => ut,
             None => return,
         };
-        let t = d_as_f64(self.start.elapsed());
+        let t = self.start.elapsed().as_secs_f64();
         unit_time.rmeta_time = Some(t - unit_time.start);
         assert!(unit_time.unlocked_rmeta_units.is_empty());
         unit_time
@@ -218,7 +218,7 @@ impl<'cfg> Timings<'cfg> {
             Some(ut) => ut,
             None => return,
         };
-        let t = d_as_f64(self.start.elapsed());
+        let t = self.start.elapsed().as_secs_f64();
         unit_time.duration = t - unit_time.start;
         assert!(unit_time.unlocked_units.is_empty());
         unit_time
@@ -262,7 +262,7 @@ impl<'cfg> Timings<'cfg> {
             return;
         }
         let c = Concurrency {
-            t: d_as_f64(self.start.elapsed()),
+            t: self.start.elapsed().as_secs_f64(),
             active,
             waiting,
             inactive,
@@ -305,7 +305,7 @@ impl<'cfg> Timings<'cfg> {
         let pct_idle = current.idle_since(prev);
         *prev = current;
         self.last_cpu_recording = now;
-        let dur = d_as_f64(now.duration_since(self.start));
+        let dur = now.duration_since(self.start).as_secs_f64();
         self.cpu_usage.push((dur, 100.0 - pct_idle));
     }
 
@@ -334,7 +334,7 @@ impl<'cfg> Timings<'cfg> {
         bcx: &BuildContext<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
-        let duration = d_as_f64(self.start.elapsed());
+        let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let filename = format!("cargo-timing-{}.html", timestamp);
         let mut f = BufWriter::new(paths::create(&filename)?);
@@ -614,11 +614,6 @@ impl UnitTime {
     fn name_ver(&self) -> String {
         format!("{} v{}", self.unit.pkg.name(), self.unit.pkg.version())
     }
-}
-
-// Replace with as_secs_f64 when 1.38 hits stable.
-fn d_as_f64(d: Duration) -> f64 {
-    (d.as_secs() as f64) + f64::from(d.subsec_nanos()) / 1_000_000_000.0
 }
 
 fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {

@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, CleanOptions};
+use cargo::util::print_available_packages;
 
 pub fn cli() -> App {
     subcommand("clean")
@@ -13,18 +14,16 @@ pub fn cli() -> App {
         .arg_release("Whether or not to clean release artifacts")
         .arg_profile("Clean artifacts of the specified profile")
         .arg_doc("Whether or not to clean just the documentation directory")
-        .after_help(
-            "\
-If the `--package` argument is given, then SPEC is a package ID specification
-which indicates which package's artifacts should be cleaned out. If it is not
-given, then all packages' artifacts are removed. For more information on SPEC
-and its format, see the `cargo help pkgid` command.
-",
-        )
+        .after_help("Run `cargo help clean` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
+
+    if args.is_present_with_zero_values("package") {
+        print_available_packages(&ws)?;
+    }
+
     let opts = CleanOptions {
         config,
         spec: values(args, "package"),

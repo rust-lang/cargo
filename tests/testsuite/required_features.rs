@@ -13,32 +13,32 @@ fn build_bin_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a"]
-            a = []
+                [features]
+                default = ["a"]
+                a = []
 
-            [[bin]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            extern crate foo;
+                extern crate foo;
 
-            #[cfg(feature = "a")]
-            fn test() {
-                foo::foo();
-            }
+                #[cfg(feature = "a")]
+                fn test() {
+                    foo::foo();
+                }
 
-            fn main() {}
-        "#,
+                fn main() {}
+            "#,
         )
         .file("src/lib.rs", r#"#[cfg(feature = "a")] pub fn foo() {}"#)
         .build();
@@ -68,18 +68,18 @@ fn build_bin_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
+                [features]
+                a = []
 
-            [[bin]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -94,27 +94,27 @@ fn build_bin_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a", "b"]
-            a = []
-            b = ["a"]
-            c = []
+                [features]
+                default = ["a", "b"]
+                a = []
+                b = ["a"]
+                c = []
 
-            [[bin]]
-            name = "foo_1"
-            path = "src/foo_1.rs"
-            required-features = ["b", "c"]
+                [[bin]]
+                name = "foo_1"
+                path = "src/foo_1.rs"
+                required-features = ["b", "c"]
 
-            [[bin]]
-            name = "foo_2"
-            path = "src/foo_2.rs"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "foo_2"
+                path = "src/foo_2.rs"
+                required-features = ["a"]
+            "#,
         )
         .file("src/foo_1.rs", "fn main() {}")
         .file("src/foo_2.rs", "fn main() {}")
@@ -139,19 +139,19 @@ fn build_example_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a"]
-            a = []
+                [features]
+                default = ["a"]
+                a = []
 
-            [[example]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[example]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("examples/foo.rs", "fn main() {}")
         .build();
@@ -176,18 +176,18 @@ fn build_example_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
+                [features]
+                a = []
 
-            [[example]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[example]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("examples/foo.rs", "fn main() {}")
         .build();
@@ -202,25 +202,25 @@ fn build_example_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a", "b"]
-            a = []
-            b = ["a"]
-            c = []
+                [features]
+                default = ["a", "b"]
+                a = []
+                b = ["a"]
+                c = []
 
-            [[example]]
-            name = "foo_1"
-            required-features = ["b", "c"]
+                [[example]]
+                name = "foo_1"
+                required-features = ["b", "c"]
 
-            [[example]]
-            name = "foo_2"
-            required-features = ["a"]
-        "#,
+                [[example]]
+                name = "foo_2"
+                required-features = ["a"]
+            "#,
         )
         .file("examples/foo_1.rs", "fn main() {}")
         .file("examples/foo_2.rs", "fn main() {}")
@@ -272,19 +272,19 @@ fn test_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a"]
-            a = []
+                [features]
+                default = ["a"]
+                a = []
 
-            [[test]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[test]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("tests/foo.rs", "#[test]\nfn test() {}")
         .build();
@@ -330,18 +330,18 @@ fn test_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
+                [features]
+                a = []
 
-            [[test]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[test]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("tests/foo.rs", "#[test]\nfn test() {}")
         .build();
@@ -363,25 +363,25 @@ fn test_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a", "b"]
-            a = []
-            b = ["a"]
-            c = []
+                [features]
+                default = ["a", "b"]
+                a = []
+                b = ["a"]
+                c = []
 
-            [[test]]
-            name = "foo_1"
-            required-features = ["b", "c"]
+                [[test]]
+                name = "foo_1"
+                required-features = ["b", "c"]
 
-            [[test]]
-            name = "foo_2"
-            required-features = ["a"]
-        "#,
+                [[test]]
+                name = "foo_2"
+                required-features = ["a"]
+            "#,
         )
         .file("tests/foo_1.rs", "#[test]\nfn test() {}")
         .file("tests/foo_2.rs", "#[test]\nfn test() {}")
@@ -417,6 +417,7 @@ fn test_multiple_required_features() {
 #[cargo_test]
 fn bench_default_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -424,19 +425,19 @@ fn bench_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a"]
-            a = []
+                [features]
+                default = ["a"]
+                a = []
 
-            [[bench]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[bench]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file(
             "benches/foo.rs",
@@ -446,7 +447,8 @@ fn bench_default_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#,
+            }
+            "#,
         )
         .build();
 
@@ -488,6 +490,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
 #[cargo_test]
 fn bench_arg_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -495,18 +498,18 @@ fn bench_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
+                [features]
+                a = []
 
-            [[bench]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[bench]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file(
             "benches/foo.rs",
@@ -516,7 +519,8 @@ fn bench_arg_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#,
+            }
+            "#,
         )
         .build();
 
@@ -534,6 +538,7 @@ fn bench_arg_features() {
 #[cargo_test]
 fn bench_multiple_required_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -541,25 +546,25 @@ fn bench_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a", "b"]
-            a = []
-            b = ["a"]
-            c = []
+                [features]
+                default = ["a", "b"]
+                a = []
+                b = ["a"]
+                c = []
 
-            [[bench]]
-            name = "foo_1"
-            required-features = ["b", "c"]
+                [[bench]]
+                name = "foo_1"
+                required-features = ["b", "c"]
 
-            [[bench]]
-            name = "foo_2"
-            required-features = ["a"]
-        "#,
+                [[bench]]
+                name = "foo_2"
+                required-features = ["a"]
+            "#,
         )
         .file(
             "benches/foo_1.rs",
@@ -569,7 +574,8 @@ fn bench_multiple_required_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#,
+            }
+            "#,
         )
         .file(
             "benches/foo_2.rs",
@@ -579,7 +585,8 @@ fn bench_multiple_required_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#,
+            }
+            "#,
         )
         .build();
 
@@ -616,23 +623,23 @@ fn install_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a"]
-            a = []
+                [features]
+                default = ["a"]
+                a = []
 
-            [[bin]]
-            name = "foo"
-            required-features = ["a"]
+                [[bin]]
+                name = "foo"
+                required-features = ["a"]
 
-            [[example]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[example]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
@@ -701,18 +708,18 @@ fn install_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
+                [features]
+                a = []
 
-            [[bin]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -728,27 +735,27 @@ fn install_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a", "b"]
-            a = []
-            b = ["a"]
-            c = []
+                [features]
+                default = ["a", "b"]
+                a = []
+                b = ["a"]
+                c = []
 
-            [[bin]]
-            name = "foo_1"
-            path = "src/foo_1.rs"
-            required-features = ["b", "c"]
+                [[bin]]
+                name = "foo_1"
+                path = "src/foo_1.rs"
+                required-features = ["b", "c"]
 
-            [[bin]]
-            name = "foo_2"
-            path = "src/foo_2.rs"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "foo_2"
+                path = "src/foo_2.rs"
+                required-features = ["a"]
+            "#,
         )
         .file("src/foo_1.rs", "fn main() {}")
         .file("src/foo_2.rs", "fn main() {}")
@@ -784,30 +791,30 @@ fn dep_feature_in_toml() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar", features = ["a"] }
+                [dependencies]
+                bar = { path = "bar", features = ["a"] }
 
-            [[bin]]
-            name = "foo"
-            required-features = ["bar/a"]
+                [[bin]]
+                name = "foo"
+                required-features = ["bar/a"]
 
-            [[example]]
-            name = "foo"
-            required-features = ["bar/a"]
+                [[example]]
+                name = "foo"
+                required-features = ["bar/a"]
 
-            [[test]]
-            name = "foo"
-            required-features = ["bar/a"]
+                [[test]]
+                name = "foo"
+                required-features = ["bar/a"]
 
-            [[bench]]
-            name = "foo"
-            required-features = ["bar/a"]
-        "#,
+                [[bench]]
+                name = "foo"
+                required-features = ["bar/a"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
@@ -820,19 +827,20 @@ fn dep_feature_in_toml() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#,
+            }
+            "#,
         )
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
-        "#,
+                [features]
+                a = []
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .build();
@@ -884,30 +892,30 @@ fn dep_feature_in_cmd_line() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
+                [dependencies]
+                bar = { path = "bar" }
 
-            [[bin]]
-            name = "foo"
-            required-features = ["bar/a"]
+                [[bin]]
+                name = "foo"
+                required-features = ["bar/a"]
 
-            [[example]]
-            name = "foo"
-            required-features = ["bar/a"]
+                [[example]]
+                name = "foo"
+                required-features = ["bar/a"]
 
-            [[test]]
-            name = "foo"
-            required-features = ["bar/a"]
+                [[test]]
+                name = "foo"
+                required-features = ["bar/a"]
 
-            [[bench]]
-            name = "foo"
-            required-features = ["bar/a"]
-        "#,
+                [[bench]]
+                name = "foo"
+                required-features = ["bar/a"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
@@ -930,19 +938,20 @@ fn dep_feature_in_cmd_line() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#,
+            }
+            "#,
         )
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
-        "#,
+                [features]
+                a = []
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .build();
@@ -1042,19 +1051,19 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            a = []
+                [features]
+                a = []
 
-            [[bin]]
-            name = "bin_foo"
-            path = "src/bin/foo.rs"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "bin_foo"
+                path = "src/bin/foo.rs"
+                required-features = ["a"]
+            "#,
         )
         .file("src/bin/foo.rs", "extern crate bar; fn main() {}")
         .file("tests/foo.rs", "")
@@ -1108,19 +1117,19 @@ fn run_default() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = []
-            a = []
+                [features]
+                default = []
+                a = []
 
-            [[bin]]
-            name = "foo"
-            required-features = ["a"]
-        "#,
+                [[bin]]
+                name = "foo"
+                required-features = ["a"]
+            "#,
         )
         .file("src/lib.rs", "")
         .file("src/main.rs", "extern crate foo; fn main() {}")
@@ -1145,26 +1154,26 @@ fn run_default_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["a"]
-            a = []
-            b = []
+                [features]
+                default = ["a"]
+                a = []
+                b = []
 
-            [[bin]]
-            name = "foo1"
-            path = "src/foo1.rs"
-            required-features = ["a"]
+                [[bin]]
+                name = "foo1"
+                path = "src/foo1.rs"
+                required-features = ["a"]
 
-            [[bin]]
-            name = "foo2"
-            path = "src/foo2.rs"
-            required-features = ["b"]
-        "#,
+                [[bin]]
+                name = "foo2"
+                path = "src/foo2.rs"
+                required-features = ["b"]
+            "#,
         )
         .file("src/lib.rs", "")
         .file("src/foo1.rs", "extern crate foo; fn main() {}")
@@ -1235,13 +1244,13 @@ fn renamed_required_features() {
         .file(
             "a2/Cargo.toml",
             r#"
-             [package]
-            name = "a"
-            version = "0.2.0"
+              [package]
+             name = "a"
+             version = "0.2.0"
 
-            [features]
-            f2 = []
-           "#,
+             [features]
+             f2 = []
+            "#,
         )
         .file(
             "a2/src/lib.rs",

@@ -121,13 +121,13 @@ fn set_cargo_config() {
         &config,
         format!(
             r#"
-[source.crates-io]
-registry = 'https://wut'
-replace-with = 'dummy-registry'
+            [source.crates-io]
+            registry = 'https://wut'
+            replace-with = 'dummy-registry'
 
-[source.dummy-registry]
-registry = '{reg}'
-"#,
+            [source.dummy-registry]
+            registry = '{reg}'
+            "#,
             reg = registry_url(),
         ),
     )
@@ -242,16 +242,5 @@ fn multiple_query_params() {
     cargo_process("search postgres sql --index")
         .arg(registry_url().to_string())
         .with_stdout_contains(SEARCH_RESULTS)
-        .run();
-}
-
-#[cargo_test]
-fn help() {
-    cargo_process("search -h").run();
-    cargo_process("help search").run();
-    // Ensure that help output goes to stdout, not stderr.
-    cargo_process("search --help").with_stderr("").run();
-    cargo_process("search --help")
-        .with_stdout_contains("[..] --frozen [..]")
         .run();
 }

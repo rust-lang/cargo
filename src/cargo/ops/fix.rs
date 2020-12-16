@@ -614,9 +614,8 @@ impl FixArgs {
                 continue;
             }
             if let Some(s) = path.to_str() {
-                let prefix = "--edition=";
-                if s.starts_with(prefix) {
-                    ret.enabled_edition = Some(s[prefix.len()..].to_string());
+                if let Some(edition) = s.strip_prefix("--edition=") {
+                    ret.enabled_edition = Some(edition.to_string());
                     continue;
                 }
                 if s.starts_with("--error-format=") || s.starts_with("--json=") {

@@ -91,12 +91,16 @@ impl FossilRepo {
             .cwd(cwd)
             .arg("settings")
             .arg("ignore-glob")
-            .arg("target");
+            .arg("target")
+            .exec()?;
+
         process("fossil")
             .cwd(cwd)
             .arg("settings")
             .arg("clean-glob")
-            .arg("target");
+            .arg("target")
+            .exec()?;
+
         Ok(FossilRepo)
     }
 }

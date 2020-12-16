@@ -1,7 +1,8 @@
 use crate::command_prelude::*;
-
+use crate::util::restricted_names::is_glob_pattern;
+use crate::util::ProcessError;
 use cargo::core::Verbosity;
-use cargo::ops::{self, CompileFilter};
+use cargo::ops::{self, CompileFilter, Packages};
 
 pub fn cli() -> App {
     subcommand("run")
@@ -25,18 +26,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
-        .after_help(
-            "\
-If neither `--bin` nor `--example` are given, then if the package only has one
-bin target it will be run. Otherwise `--bin` specifies the bin target to run,
-and `--example` specifies the example target to run. At most one of `--bin` or
-`--example` can be provided.
-
-All the arguments following the two dashes (`--`) are passed to the binary to
-run. If you're passing arguments to both Cargo and the binary, the ones after
-`--` go to the binary, the ones before go to Cargo.
-",
-        )
+        .after_help("Run `cargo help run` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
@@ -48,6 +38,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some(&ws),
         ProfileChecking::Checked,
     )?;
+
+    // Disallow `spec` to be an glob pattern
+    if let Packages::Packages(opt_in) = &compile_opts.spec {
+        if let Some(pattern) = opt_in.iter().find(|s| is_glob_pattern(s)) {
+            return Err(anyhow::anyhow!(
+                "`cargo run` does not support glob pattern `{}` on package selection",
+                pattern,
+            )
+            .into());
+        }
+    }
 
     if !args.is_present("example") && !args.is_present("bin") {
         let default_runs: Vec<_> = compile_opts
@@ -79,26 +80,29 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             };
         }
     };
-    match ops::run(&ws, &compile_opts, &values_os(args, "args"))? {
-        None => Ok(()),
-        Some(err) => {
-            // If we never actually spawned the process then that sounds pretty
-            // bad and we always want to forward that up.
-            let exit = match err.exit {
-                Some(exit) => exit,
-                None => return Err(CliError::new(err.into(), 101)),
-            };
 
-            // If `-q` was passed then we suppress extra error information about
-            // a failed process, we assume the process itself printed out enough
-            // information about why it failed so we don't do so as well
-            let exit_code = exit.code().unwrap_or(101);
-            let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
-            Err(if is_quiet {
-                CliError::code(exit_code)
-            } else {
-                CliError::new(err.into(), exit_code)
-            })
+    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| {
+        let proc_err = match err.downcast_ref::<ProcessError>() {
+            Some(e) => e,
+            None => return CliError::new(err, 101),
+        };
+
+        // If we never actually spawned the process then that sounds pretty
+        // bad and we always want to forward that up.
+        let exit = match proc_err.exit {
+            Some(exit) => exit,
+            None => return CliError::new(err, 101),
+        };
+
+        // If `-q` was passed then we suppress extra error information about
+        // a failed process, we assume the process itself printed out enough
+        // information about why it failed so we don't do so as well
+        let exit_code = exit.code().unwrap_or(101);
+        let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
+        if is_quiet {
+            CliError::code(exit_code)
+        } else {
+            CliError::new(err, exit_code)
         }
-    }
+    })
 }

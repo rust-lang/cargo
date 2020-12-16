@@ -15,6 +15,7 @@ pub fn builtin() -> Vec<App> {
         install::cli(),
         locate_project::cli(),
         login::cli(),
+        logout::cli(),
         metadata::cli(),
         new::cli(),
         owner::cli(),
@@ -52,6 +53,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "install" => install::exec,
         "locate-project" => locate_project::exec,
         "login" => login::exec,
+        "logout" => logout::exec,
         "metadata" => metadata::exec,
         "new" => new::exec,
         "owner" => owner::exec,
@@ -85,10 +87,12 @@ pub mod fetch;
 pub mod fix;
 pub mod generate_lockfile;
 pub mod git_checkout;
+pub mod help;
 pub mod init;
 pub mod install;
 pub mod locate_project;
 pub mod login;
+pub mod logout;
 pub mod metadata;
 pub mod new;
 pub mod owner;

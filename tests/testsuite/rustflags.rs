@@ -18,7 +18,8 @@ fn env_rustflags_normal_source() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .build();
 
@@ -59,20 +60,20 @@ fn env_rustflags_build_script() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
-            fn main() { }
-            #[cfg(not(foo))]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(not(foo))]
+                fn main() { }
+            "#,
         )
         .build();
 
@@ -88,14 +89,14 @@ fn env_rustflags_build_script_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
 
-            [build-dependencies.bar]
-            path = "../bar"
-        "#,
+                [build-dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
@@ -106,10 +107,10 @@ fn env_rustflags_build_script_dep() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(not(foo))]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(not(foo))]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -125,22 +126,22 @@ fn env_rustflags_plugin() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
-        "#,
+                [lib]
+                name = "foo"
+                plugin = true
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            fn main() { }
-            #[cfg(not(foo))]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(not(foo))]
+                fn main() { }
+            "#,
         )
         .build();
 
@@ -156,17 +157,17 @@ fn env_rustflags_plugin_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
+                [lib]
+                name = "foo"
+                plugin = true
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "fn foo() {}")
         .build();
@@ -176,10 +177,10 @@ fn env_rustflags_plugin_dep() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(not(foo))]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(not(foo))]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -198,7 +199,8 @@ fn env_rustflags_normal_source_with_target() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .build();
 
@@ -246,20 +248,20 @@ fn env_rustflags_build_script_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
-            fn main() { }
-            #[cfg(foo)]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(foo)]
+                fn main() { }
+            "#,
         )
         .build();
 
@@ -279,14 +281,14 @@ fn env_rustflags_build_script_dep_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
 
-            [build-dependencies.bar]
-            path = "../bar"
-        "#,
+                [build-dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
@@ -297,10 +299,10 @@ fn env_rustflags_build_script_dep_with_target() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(foo)]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(foo)]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -320,22 +322,22 @@ fn env_rustflags_plugin_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
-        "#,
+                [lib]
+                name = "foo"
+                plugin = true
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            fn main() { }
-            #[cfg(foo)]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(foo)]
+                fn main() { }
+            "#,
         )
         .build();
 
@@ -355,17 +357,17 @@ fn env_rustflags_plugin_dep_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
+                [lib]
+                name = "foo"
+                plugin = true
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "fn foo() {}")
         .build();
@@ -375,10 +377,10 @@ fn env_rustflags_plugin_dep_with_target() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(foo)]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(foo)]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -438,7 +440,8 @@ fn build_rustflags_normal_source() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -480,20 +483,20 @@ fn build_rustflags_build_script() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
-            fn main() { }
-            #[cfg(not(foo))]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(not(foo))]
+                fn main() { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -516,14 +519,14 @@ fn build_rustflags_build_script_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
 
-            [build-dependencies.bar]
-            path = "../bar"
-        "#,
+                [build-dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
@@ -541,10 +544,10 @@ fn build_rustflags_build_script_dep() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(not(foo))]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(not(foo))]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -560,22 +563,22 @@ fn build_rustflags_plugin() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
-        "#,
+                [lib]
+                name = "foo"
+                plugin = true
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            fn main() { }
-            #[cfg(not(foo))]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(not(foo))]
+                fn main() { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -598,17 +601,17 @@ fn build_rustflags_plugin_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
+                [lib]
+                name = "foo"
+                plugin = true
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "fn foo() {}")
         .file(
@@ -625,10 +628,10 @@ fn build_rustflags_plugin_dep() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(not(foo))]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(not(foo))]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -647,7 +650,8 @@ fn build_rustflags_normal_source_with_target() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -697,20 +701,20 @@ fn build_rustflags_build_script_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
-            fn main() { }
-            #[cfg(foo)]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(foo)]
+                fn main() { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -734,14 +738,14 @@ fn build_rustflags_build_script_dep_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
 
-            [build-dependencies.bar]
-            path = "../bar"
-        "#,
+                [build-dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
@@ -759,10 +763,10 @@ fn build_rustflags_build_script_dep_with_target() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(foo)]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(foo)]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -779,22 +783,22 @@ fn build_rustflags_plugin_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
-        "#,
+                [lib]
+                name = "foo"
+                plugin = true
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            fn main() { }
-            #[cfg(foo)]
-            fn main() { }
-        "#,
+                fn main() { }
+                #[cfg(foo)]
+                fn main() { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -818,17 +822,17 @@ fn build_rustflags_plugin_dep_with_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            name = "foo"
-            plugin = true
+                [lib]
+                name = "foo"
+                plugin = true
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/lib.rs", "fn foo() {}")
         .file(
@@ -845,10 +849,10 @@ fn build_rustflags_plugin_dep_with_target() {
         .file(
             "src/lib.rs",
             r#"
-            fn bar() { }
-            #[cfg(foo)]
-            fn bar() { }
-        "#,
+                fn bar() { }
+                #[cfg(foo)]
+                fn bar() { }
+            "#,
         )
         .build();
 
@@ -952,7 +956,8 @@ fn target_rustflags_normal_source() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             ".cargo/config",
@@ -1044,9 +1049,9 @@ fn cfg_rustflags_normal_source() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.'cfg({})']
-            rustflags = ["--cfg", "bar"]
-            "#,
+                [target.'cfg({})']
+                rustflags = ["--cfg", "bar"]
+                "#,
                 if rustc_host().contains("-windows-") {
                     "windows"
                 } else {
@@ -1123,12 +1128,12 @@ fn cfg_rustflags_precedence() {
             ".cargo/config",
             &format!(
                 r#"
-            [build]
-            rustflags = ["--cfg", "foo"]
+                [build]
+                rustflags = ["--cfg", "foo"]
 
-            [target.'cfg({})']
-            rustflags = ["--cfg", "bar"]
-            "#,
+                [target.'cfg({})']
+                rustflags = ["--cfg", "bar"]
+                "#,
                 if rustc_host().contains("-windows-") {
                     "windows"
                 } else {
@@ -1245,9 +1250,9 @@ fn target_rustflags_string_and_array_form2() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.{}]
-            rustflags = ["--cfg", "foo"]
-        "#,
+                    [target.{}]
+                    rustflags = ["--cfg", "foo"]
+                "#,
                 rustc_host()
             ),
         )
@@ -1269,9 +1274,9 @@ fn target_rustflags_string_and_array_form2() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.{}]
-            rustflags = "--cfg foo"
-        "#,
+                    [target.{}]
+                    rustflags = "--cfg foo"
+                "#,
                 rustc_host()
             ),
         )
@@ -1295,29 +1300,29 @@ fn two_matching_in_config() {
         .file(
             ".cargo/config",
             r#"
-            [target.'cfg(unix)']
-            rustflags = ["--cfg", 'foo="a"']
-            [target.'cfg(windows)']
-            rustflags = ["--cfg", 'foo="a"']
-            [target.'cfg(target_pointer_width = "32")']
-            rustflags = ["--cfg", 'foo="b"']
-            [target.'cfg(target_pointer_width = "64")']
-            rustflags = ["--cfg", 'foo="b"']
-        "#,
+                [target.'cfg(unix)']
+                rustflags = ["--cfg", 'foo="a"']
+                [target.'cfg(windows)']
+                rustflags = ["--cfg", 'foo="a"']
+                [target.'cfg(target_pointer_width = "32")']
+                rustflags = ["--cfg", 'foo="b"']
+                [target.'cfg(target_pointer_width = "64")']
+                rustflags = ["--cfg", 'foo="b"']
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                if cfg!(foo = "a") {
-                    println!("a");
-                } else if cfg!(foo = "b") {
-                    println!("b");
-                } else {
-                    panic!()
+                fn main() {
+                    if cfg!(foo = "a") {
+                        println!("a");
+                    } else if cfg!(foo = "b") {
+                        println!("b");
+                    } else {
+                        panic!()
+                    }
                 }
-            }
-        "#,
+            "#,
         )
         .build();
 
@@ -1343,11 +1348,11 @@ fn env_rustflags_misspelled_build_script() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() { }")

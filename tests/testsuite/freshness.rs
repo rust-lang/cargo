@@ -98,28 +98,28 @@ fn rebuild_sub_package_then_while_package() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.1"
 
-            [dependencies.a]
-            path = "a"
-            [dependencies.b]
-            path = "b"
-        "#,
+                [dependencies.a]
+                path = "a"
+                [dependencies.b]
+                path = "b"
+            "#,
         )
         .file("src/lib.rs", "extern crate a; extern crate b;")
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            authors = []
-            version = "0.0.1"
-            [dependencies.b]
-            path = "../b"
-        "#,
+                [package]
+                name = "a"
+                authors = []
+                version = "0.0.1"
+                [dependencies.b]
+                path = "../b"
+            "#,
         )
         .file("a/src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
@@ -177,14 +177,14 @@ fn changing_lib_features_caches_targets() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.1"
 
-            [features]
-            foo = []
-        "#,
+                [features]
+                foo = []
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -226,14 +226,14 @@ fn changing_profiles_caches_targets() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.1"
 
-            [profile.dev]
-            panic = "abort"
-        "#,
+                [profile.dev]
+                panic = "abort"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -282,80 +282,80 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .file(
             ".cargo/config",
             r#"
-            [build]
-            target-dir = "./target"
-        "#,
+                [build]
+                target-dir = "./target"
+            "#,
         )
         .file(
             "dep_crate/Cargo.toml",
             r#"
-            [package]
-            name    = "dep_crate"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name    = "dep_crate"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            ftest  = []
-        "#,
+                [features]
+                ftest  = []
+            "#,
         )
         .file(
             "dep_crate/src/lib.rs",
             r#"
-            #[cfg(feature = "ftest")]
-            pub fn yo() {
-                println!("ftest on")
-            }
-            #[cfg(not(feature = "ftest"))]
-            pub fn yo() {
-                println!("ftest off")
-            }
-        "#,
+                #[cfg(feature = "ftest")]
+                pub fn yo() {
+                    println!("ftest on")
+                }
+                #[cfg(not(feature = "ftest"))]
+                pub fn yo() {
+                    println!("ftest off")
+                }
+            "#,
         )
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name    = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name    = "a"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            dep_crate = {path = "../dep_crate", features = []}
-        "#,
+                [dependencies]
+                dep_crate = {path = "../dep_crate", features = []}
+            "#,
         )
         .file("a/src/lib.rs", "")
         .file(
             "a/src/main.rs",
             r#"
-            extern crate dep_crate;
-            use dep_crate::yo;
-            fn main() {
-                yo();
-            }
-        "#,
+                extern crate dep_crate;
+                use dep_crate::yo;
+                fn main() {
+                    yo();
+                }
+            "#,
         )
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name    = "b"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name    = "b"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            dep_crate = {path = "../dep_crate", features = ["ftest"]}
-        "#,
+                [dependencies]
+                dep_crate = {path = "../dep_crate", features = ["ftest"]}
+            "#,
         )
         .file("b/src/lib.rs", "")
         .file(
             "b/src/main.rs",
             r#"
-            extern crate dep_crate;
-            use dep_crate::yo;
-            fn main() {
-                yo();
-            }
-        "#,
+                extern crate dep_crate;
+                use dep_crate::yo;
+                fn main() {
+                    yo();
+                }
+            "#,
         )
         .build();
 
@@ -448,23 +448,23 @@ fn changing_bin_features_caches_targets() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.1"
 
-            [features]
-            foo = []
-        "#,
+                [features]
+                foo = []
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                let msg = if cfg!(feature = "foo") { "feature on" } else { "feature off" };
-                println!("{}", msg);
-            }
-        "#,
+                fn main() {
+                    let msg = if cfg!(feature = "foo") { "feature on" } else { "feature off" };
+                    println!("{}", msg);
+                }
+            "#,
         )
         .build();
 
@@ -517,10 +517,10 @@ fn rebuild_tests_if_lib_changes() {
         .file(
             "tests/foo.rs",
             r#"
-            extern crate foo;
-            #[test]
-            fn test() { foo::foo(); }
-        "#,
+                extern crate foo;
+                #[test]
+                fn test() { foo::foo(); }
+            "#,
         )
         .build();
 
@@ -543,43 +543,43 @@ fn no_rebuild_transitive_target_deps() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-            [dev-dependencies]
-            b = { path = "b" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+                [dev-dependencies]
+                b = { path = "b" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("tests/foo.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-            [target.foo.dependencies]
-            c = { path = "../c" }
-        "#,
+                [target.foo.dependencies]
+                c = { path = "../c" }
+            "#,
         )
         .file("a/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            c = { path = "../c" }
-        "#,
+                [dependencies]
+                c = { path = "../c" }
+            "#,
         )
         .file("b/src/lib.rs", "")
         .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
@@ -605,33 +605,33 @@ fn rerun_if_changed_in_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            build = "build.rs"
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
         )
         .file(
             "a/build.rs",
             r#"
-            fn main() {
-                println!("cargo:rerun-if-changed=build.rs");
-            }
-        "#,
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                }
+            "#,
         )
         .file("a/src/lib.rs", "")
         .build();
@@ -647,49 +647,49 @@ fn same_build_dir_cached_packages() {
         .file(
             "a1/Cargo.toml",
             r#"
-            [package]
-            name = "a1"
-            version = "0.0.1"
-            authors = []
-            [dependencies]
-            b = { path = "../b" }
-        "#,
+                [package]
+                name = "a1"
+                version = "0.0.1"
+                authors = []
+                [dependencies]
+                b = { path = "../b" }
+            "#,
         )
         .file("a1/src/lib.rs", "")
         .file(
             "a2/Cargo.toml",
             r#"
-            [package]
-            name = "a2"
-            version = "0.0.1"
-            authors = []
-            [dependencies]
-            b = { path = "../b" }
-        "#,
+                [package]
+                name = "a2"
+                version = "0.0.1"
+                authors = []
+                [dependencies]
+                b = { path = "../b" }
+            "#,
         )
         .file("a2/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-            [dependencies]
-            c = { path = "../c" }
-        "#,
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+                [dependencies]
+                c = { path = "../c" }
+            "#,
         )
         .file("b/src/lib.rs", "")
         .file(
             "c/Cargo.toml",
             r#"
-            [package]
-            name = "c"
-            version = "0.0.1"
-            authors = []
-            [dependencies]
-            d = { path = "../d" }
-        "#,
+                [package]
+                name = "c"
+                version = "0.0.1"
+                authors = []
+                [dependencies]
+                d = { path = "../d" }
+            "#,
         )
         .file("c/src/lib.rs", "")
         .file("d/Cargo.toml", &basic_manifest("d", "0.0.1"))
@@ -697,9 +697,9 @@ fn same_build_dir_cached_packages() {
         .file(
             ".cargo/config",
             r#"
-            [build]
-            target-dir = "./target"
-        "#,
+                [build]
+                target-dir = "./target"
+            "#,
         )
         .build();
 
@@ -733,14 +733,14 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
@@ -763,14 +763,14 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
@@ -800,20 +800,20 @@ fn rebuild_if_environment_changes() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            description = "old desc"
-            version = "0.0.1"
-            authors = []
-        "#,
+                [package]
+                name = "foo"
+                description = "old desc"
+                version = "0.0.1"
+                authors = []
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                println!("{}", env!("CARGO_PKG_DESCRIPTION"));
-            }
-        "#,
+                fn main() {
+                    println!("{}", env!("CARGO_PKG_DESCRIPTION"));
+                }
+            "#,
         )
         .build();
 
@@ -1134,16 +1134,16 @@ fn reuse_shared_build_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            shared = {path = "shared"}
+                [dependencies]
+                shared = {path = "shared"}
 
-            [workspace]
-            members = ["shared", "bar"]
-        "#,
+                [workspace]
+                members = ["shared", "bar"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("shared/Cargo.toml", &basic_manifest("shared", "0.0.1"))
@@ -1151,13 +1151,13 @@ fn reuse_shared_build_dep() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
+                [package]
+                name = "bar"
+                version = "0.0.1"
 
-            [build-dependencies]
-            shared = { path = "../shared" }
-        "#,
+                [build-dependencies]
+                shared = { path = "../shared" }
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .file("bar/build.rs", "fn main() {}")
@@ -1206,13 +1206,13 @@ fn update_dependency_mtime_does_not_rebuild() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -1281,16 +1281,16 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = { path = "bar" }
+                [dependencies]
+                bar = { path = "bar" }
 
-            [features]
-            a = []
-        "#,
+                [features]
+                a = []
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -1343,19 +1343,19 @@ fn reuse_panic_build_dep_test() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [build-dependencies]
-            bar = { path = "bar" }
+                [build-dependencies]
+                bar = { path = "bar" }
 
-            [dev-dependencies]
-            bar = { path = "bar" }
+                [dev-dependencies]
+                bar = { path = "bar" }
 
-            [profile.dev]
-            panic = "abort"
-        "#,
+                [profile.dev]
+                panic = "abort"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
@@ -1387,17 +1387,17 @@ fn reuse_panic_pm() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = { path = "bar" }
-            somepm = { path = "somepm" }
+                [dependencies]
+                bar = { path = "bar" }
+                somepm = { path = "somepm" }
 
-            [profile.dev]
-            panic = "abort"
-        "#,
+                [profile.dev]
+                panic = "abort"
+            "#,
         )
         .file("src/lib.rs", "extern crate bar;")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -1405,16 +1405,16 @@ fn reuse_panic_pm() {
         .file(
             "somepm/Cargo.toml",
             r#"
-            [package]
-            name = "somepm"
-            version = "0.0.1"
+                [package]
+                name = "somepm"
+                version = "0.0.1"
 
-            [lib]
-            proc-macro = true
+                [lib]
+                proc-macro = true
 
-            [dependencies]
-            bar = { path = "../bar" }
-        "#,
+                [dependencies]
+                bar = { path = "../bar" }
+            "#,
         )
         .file("somepm/src/lib.rs", "extern crate bar;")
         .build();
@@ -1448,16 +1448,16 @@ fn bust_patched_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            registry2 = "0.1.0"
+                [dependencies]
+                registry2 = "0.1.0"
 
-            [patch.crates-io]
-            registry1 = { path = "reg1new" }
-        "#,
+                [patch.crates-io]
+                registry1 = { path = "reg1new" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("reg1new/Cargo.toml", &basic_manifest("registry1", "0.1.0"))
@@ -1506,62 +1506,62 @@ fn rebuild_on_mid_build_file_modification() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["root", "proc_macro_dep"]
-        "#,
+                [workspace]
+                members = ["root", "proc_macro_dep"]
+            "#,
         )
         .file(
             "root/Cargo.toml",
             r#"
-            [package]
-            name = "root"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "root"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            proc_macro_dep = { path = "../proc_macro_dep" }
-        "#,
+                [dependencies]
+                proc_macro_dep = { path = "../proc_macro_dep" }
+            "#,
         )
         .file(
             "root/src/lib.rs",
             r#"
-            #[macro_use]
-            extern crate proc_macro_dep;
+                #[macro_use]
+                extern crate proc_macro_dep;
 
-            #[derive(Noop)]
-            pub struct X;
-        "#,
+                #[derive(Noop)]
+                pub struct X;
+            "#,
         )
         .file(
             "proc_macro_dep/Cargo.toml",
             r#"
-            [package]
-            name = "proc_macro_dep"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "proc_macro_dep"
+                version = "0.1.0"
+                authors = []
 
-            [lib]
-            proc-macro = true
-        "#,
+                [lib]
+                proc-macro = true
+            "#,
         )
         .file(
             "proc_macro_dep/src/lib.rs",
             &format!(
                 r#"
-                extern crate proc_macro;
+                    extern crate proc_macro;
 
-                use std::io::Read;
-                use std::net::TcpStream;
-                use proc_macro::TokenStream;
+                    use std::io::Read;
+                    use std::net::TcpStream;
+                    use proc_macro::TokenStream;
 
-                #[proc_macro_derive(Noop)]
-                pub fn noop(_input: TokenStream) -> TokenStream {{
-                    let mut stream = TcpStream::connect("{}").unwrap();
-                    let mut v = Vec::new();
-                    stream.read_to_end(&mut v).unwrap();
-                    "".parse().unwrap()
-                }}
-            "#,
+                    #[proc_macro_derive(Noop)]
+                    pub fn noop(_input: TokenStream) -> TokenStream {{
+                        let mut stream = TcpStream::connect("{}").unwrap();
+                        let mut v = Vec::new();
+                        stream.read_to_end(&mut v).unwrap();
+                        "".parse().unwrap()
+                    }}
+                "#,
                 addr
             ),
         )
@@ -1622,11 +1622,11 @@ fn dirty_both_lib_and_test() {
     let slib = |n| {
         format!(
             r#"
-            #[no_mangle]
-            pub extern "C" fn doit() -> i32 {{
-                return {};
-            }}
-        "#,
+                #[no_mangle]
+                pub extern "C" fn doit() -> i32 {{
+                    return {};
+                }}
+            "#,
             n
         )
     };
@@ -1635,43 +1635,43 @@ fn dirty_both_lib_and_test() {
         .file(
             "src/lib.rs",
             r#"
-            extern "C" {
-                fn doit() -> i32;
-            }
+                extern "C" {
+                    fn doit() -> i32;
+                }
 
-            #[test]
-            fn t1() {
-                assert_eq!(unsafe { doit() }, 1, "doit assert failure");
-            }
-        "#,
+                #[test]
+                fn t1() {
+                    assert_eq!(unsafe { doit() }, 1, "doit assert failure");
+                }
+            "#,
         )
         .file(
             "build.rs",
             r#"
-            use std::env;
-            use std::path::PathBuf;
-            use std::process::Command;
+                use std::env;
+                use std::path::PathBuf;
+                use std::process::Command;
 
-            fn main() {
-                let rustc = env::var_os("RUSTC").unwrap();
-                let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-                assert!(
-                    Command::new(rustc)
-                        .args(&[
-                            "--crate-type=staticlib",
-                            "--out-dir",
-                            out_dir.to_str().unwrap(),
-                            "slib.rs"
-                        ])
-                        .status()
-                        .unwrap()
-                        .success(),
-                    "slib build failed"
-                );
-                println!("cargo:rustc-link-lib=slib");
-                println!("cargo:rustc-link-search={}", out_dir.display());
-            }
-        "#,
+                fn main() {
+                    let rustc = env::var_os("RUSTC").unwrap();
+                    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+                    assert!(
+                        Command::new(rustc)
+                            .args(&[
+                                "--crate-type=staticlib",
+                                "--out-dir",
+                                out_dir.to_str().unwrap(),
+                                "slib.rs"
+                            ])
+                            .status()
+                            .unwrap()
+                            .success(),
+                        "slib build failed"
+                    );
+                    println!("cargo:rustc-link-lib=slib");
+                    println!("cargo:rustc-link-search={}", out_dir.display());
+                }
+            "#,
         )
         .file("slib.rs", &slib(2))
         .build();
@@ -2039,21 +2039,21 @@ fn move_target_directory_with_path_deps() {
         .file(
             "a/build.rs",
             r###"
-            use std::env;
-            use std::fs;
-            use std::path::Path;
+                use std::env;
+                use std::fs;
+                use std::path::Path;
 
-            fn main() {
-                println!("cargo:rerun-if-changed=build.rs");
-                let out_dir = env::var("OUT_DIR").unwrap();
-                let dest_path = Path::new(&out_dir).join("hello.rs");
-                fs::write(&dest_path, r#"
-                    pub fn message() -> &'static str {
-                        "Hello, World!"
-                    }
-                "#).unwrap();
-            }
-        "###,
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    let out_dir = env::var("OUT_DIR").unwrap();
+                    let dest_path = Path::new(&out_dir).join("hello.rs");
+                    fs::write(&dest_path, r#"
+                        pub fn message() -> &'static str {
+                            "Hello, World!"
+                        }
+                    "#).unwrap();
+                }
+            "###,
         )
         .file(
             "a/src/lib.rs",
@@ -2485,10 +2485,6 @@ fn lld_is_fresh() {
 
 #[cargo_test]
 fn env_in_code_causes_rebuild() {
-    // Only nightly 1.46 has support in dep-info files for this
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -2555,10 +2551,6 @@ fn env_in_code_causes_rebuild() {
 
 #[cargo_test]
 fn env_build_script_no_rebuild() {
-    // Only nightly 1.46 has support in dep-info files for this
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",

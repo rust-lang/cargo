@@ -42,21 +42,21 @@ fn profile_config_validate_warnings() {
         .file(
             ".cargo/config",
             r#"
-            [profile.test]
-            opt-level = 3
+                [profile.test]
+                opt-level = 3
 
-            [profile.asdf]
-            opt-level = 3
+                [profile.asdf]
+                opt-level = 3
 
-            [profile.dev]
-            bad-key = true
+                [profile.dev]
+                bad-key = true
 
-            [profile.dev.build-override]
-            bad-key-bo = true
+                [profile.dev.build-override]
+                bad-key-bo = true
 
-            [profile.dev.package.bar]
-            bad-key-bar = true
-        "#,
+                [profile.dev.package.bar]
+                bad-key-bar = true
+            "#,
         )
         .build();
 
@@ -82,9 +82,9 @@ fn profile_config_error_paths() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev]
-            opt-level = 3
-        "#,
+                [profile.dev]
+                opt-level = 3
+            "#,
         )
         .file(
             paths::home().join(".cargo/config"),
@@ -116,9 +116,9 @@ fn profile_config_validate_errors() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.package.foo]
-            panic = "abort"
-        "#,
+                [profile.dev.package.foo]
+                panic = "abort"
+            "#,
         )
         .build();
 
@@ -143,9 +143,9 @@ fn profile_config_syntax_errors() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev]
-            codegen-units = "foo"
-        "#,
+                [profile.dev]
+                codegen-units = "foo"
+            "#,
         )
         .build();
 
@@ -179,12 +179,12 @@ fn profile_config_override_spec_multiple() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.package.bar]
-            opt-level = 3
+                [profile.dev.package.bar]
+                opt-level = 3
 
-            [profile.dev.package."bar:0.5.0"]
-            opt-level = 3
-        "#,
+                [profile.dev.package."bar:0.5.0"]
+                opt-level = 3
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
@@ -211,17 +211,17 @@ fn profile_config_all_options() {
         .file(
             ".cargo/config",
             r#"
-        [profile.release]
-        opt-level = 1
-        debug = true
-        debug-assertions = true
-        overflow-checks = false
-        rpath = true
-        lto = true
-        codegen-units = 2
-        panic = "abort"
-        incremental = true
-        "#,
+            [profile.release]
+            opt-level = 1
+            debug = true
+            debug-assertions = true
+            overflow-checks = false
+            rpath = true
+            lto = true
+            codegen-units = 2
+            panic = "abort"
+            incremental = true
+            "#,
         )
         .build();
 
@@ -253,19 +253,19 @@ fn profile_config_override_precedence() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = {path = "bar"}
+                [dependencies]
+                bar = {path = "bar"}
 
-            [profile.dev]
-            codegen-units = 2
+                [profile.dev]
+                codegen-units = 2
 
-            [profile.dev.package.bar]
-            opt-level = 3
-        "#,
+                [profile.dev.package.bar]
+                opt-level = 3
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
@@ -273,9 +273,9 @@ fn profile_config_override_precedence() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.package.bar]
-            opt-level = 2
-        "#,
+                [profile.dev.package.bar]
+                opt-level = 2
+            "#,
         )
         .build();
 
@@ -299,9 +299,9 @@ fn profile_config_no_warn_unknown_override() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.package.bar]
-            codegen-units = 4
-        "#,
+                [profile.dev.package.bar]
+                codegen-units = 4
+            "#,
         )
         .build();
 
@@ -318,9 +318,9 @@ fn profile_config_mixed_types() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev]
-            opt-level = 3
-        "#,
+                [profile.dev]
+                opt-level = 3
+            "#,
         )
         .file(
             paths::home().join(".cargo/config"),

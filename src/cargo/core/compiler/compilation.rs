@@ -346,6 +346,7 @@ fn target_runner(
 
     // try target.{}.runner
     let key = format!("target.{}.runner", target);
+
     if let Some(v) = bcx.config.get::<Option<config::PathAndArgs>>(&key)? {
         let path = v.path.resolve_program(bcx.config);
         return Ok(Some((path, v.args)));

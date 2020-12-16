@@ -1,6 +1,6 @@
 //! Tests for the `cargo new` command.
 
-use cargo_test_support::paths;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{cargo_process, git_process};
 use std::env;
 use std::fs::{self, File};
@@ -116,7 +116,12 @@ fn existing() {
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)
-        .with_stderr("[ERROR] invalid character `.` in crate name: `foo.rs`, [..]")
+        .with_stderr(
+            "\
+[ERROR] invalid character `.` in crate name: `foo.rs`, [..]
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+        )
         .run();
 }
 
@@ -124,7 +129,12 @@ fn invalid_characters() {
 fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
-        .with_stderr("[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]")
+        .with_stderr(
+            "\
+[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+        )
         .run();
 }
 
@@ -133,7 +143,10 @@ fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
         .with_stderr(
-            "[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]",
+            "\
+[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 
@@ -153,7 +166,12 @@ it conflicts with cargo's build directory names
 fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
-        .with_stderr("[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword")
+        .with_stderr(
+            "\
+[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+        )
         .run();
 }
 
@@ -179,6 +197,37 @@ fn finds_author_user() {
     let toml = paths::root().join("foo/Cargo.toml");
     let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
+}
+
+#[cargo_test]
+fn author_without_user_or_email() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env_remove("USER")
+        .env_remove("USERNAME")
+        .env_remove("NAME")
+        .env_remove("EMAIL")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = []"#));
+}
+
+#[cargo_test]
+fn finds_author_email_only() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env_remove("USER")
+        .env_remove("USERNAME")
+        .env_remove("NAME")
+        .env_remove("EMAIL")
+        .env("EMAIL", "baz")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = ["<baz>"]"#));
 }
 
 #[cargo_test]
@@ -285,6 +334,47 @@ fn finds_git_author() {
     let toml = paths::root().join("foo/Cargo.toml");
     let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
+}
+
+#[cargo_test]
+fn finds_git_author_in_included_config() {
+    let included_gitconfig = paths::root().join("foo").join(".gitconfig");
+    included_gitconfig.parent().unwrap().mkdir_p();
+    fs::write(
+        &included_gitconfig,
+        r#"
+        [user]
+            name = foo
+            email = bar
+        "#,
+    )
+    .unwrap();
+
+    let gitconfig = paths::home().join(".gitconfig");
+    fs::write(
+        &gitconfig,
+        format!(
+            r#"
+            [includeIf "gitdir/i:{}"]
+                path = {}
+            "#,
+            included_gitconfig
+                .parent()
+                .unwrap()
+                .join("")
+                .display()
+                .to_string()
+                .replace("\\", "/"),
+            included_gitconfig.display().to_string().replace("\\", "/"),
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("new foo/bar").run();
+    let toml = paths::root().join("foo/bar/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = ["foo <bar>"]"#), contents,);
 }
 
 #[cargo_test]
@@ -522,7 +612,12 @@ fn restricted_windows_name() {
         cargo_process("new nul")
             .env("USER", "foo")
             .with_status(101)
-            .with_stderr("[ERROR] cannot use name `nul`, it is a reserved Windows filename")
+            .with_stderr(
+                "\
+[ERROR] cannot use name `nul`, it is a reserved Windows filename
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+            )
             .run();
     } else {
         cargo_process("new nul")
@@ -559,8 +654,11 @@ fn non_ascii_name_invalid() {
         .env("USER", "foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
-            the first character must be a Unicode XID start character (most letters or `_`)",
+            "\
+[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
+the first character must be a Unicode XID start character (most letters or `_`)
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 
@@ -568,8 +666,34 @@ fn non_ascii_name_invalid() {
         .env("USER", "foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] invalid character `¼` in crate name: `a¼`, \
-            characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)",
+            "\
+[ERROR] invalid character `¼` in crate name: `a¼`, \
+characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
+}
+
+#[cargo_test]
+fn git_default_branch() {
+    // Check for init.defaultBranch support.
+    create_empty_gitconfig();
+    cargo_process("new foo").env("USER", "foo").run();
+    let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
+    let head = repo.find_reference("HEAD").unwrap();
+    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/master");
+
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+        [init]
+            defaultBranch = hello
+        "#,
+    )
+    .unwrap();
+    cargo_process("new bar").env("USER", "foo").run();
+    let repo = git2::Repository::open(paths::root().join("bar")).unwrap();
+    let head = repo.find_reference("HEAD").unwrap();
+    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/hello");
 }

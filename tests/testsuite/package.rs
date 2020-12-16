@@ -6,8 +6,10 @@ use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
 };
+use flate2::read::GzDecoder;
 use std::fs::{self, read_to_string, File};
 use std::path::Path;
+use tar::Archive;
 
 #[cargo_test]
 fn simple() {
@@ -15,14 +17,14 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            exclude = ["*.txt"]
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("src/bar.txt", "") // should be ignored when packaging
@@ -83,12 +85,12 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -109,14 +111,14 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            repository = "bar"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                repository = "bar"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -225,23 +227,23 @@ fn vcs_file_collision() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            description = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            exclude = ["*.no-existe"]
-        "#,
+                [project]
+                name = "foo"
+                description = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                exclude = ["*.no-existe"]
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            fn main() {}
-        "#,
+                fn main() {}
+            "#,
         )
         .file(".cargo_vcs_info.json", "foo")
         .build();
@@ -263,16 +265,16 @@ fn path_dependency_no_version() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
+                [dependencies.bar]
+                path = "bar"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -299,38 +301,38 @@ fn exclude() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            exclude = [
-                "*.txt",
-                # file in root
-                "file_root_1",       # NO_CHANGE (ignored)
-                "/file_root_2",      # CHANGING (packaged -> ignored)
-                "file_root_3/",      # NO_CHANGE (packaged)
-                "file_root_4/*",     # NO_CHANGE (packaged)
-                "file_root_5/**",    # NO_CHANGE (packaged)
-                # file in sub-dir
-                "file_deep_1",       # CHANGING (packaged -> ignored)
-                "/file_deep_2",      # NO_CHANGE (packaged)
-                "file_deep_3/",      # NO_CHANGE (packaged)
-                "file_deep_4/*",     # NO_CHANGE (packaged)
-                "file_deep_5/**",    # NO_CHANGE (packaged)
-                # dir in root
-                "dir_root_1",        # CHANGING (packaged -> ignored)
-                "/dir_root_2",       # CHANGING (packaged -> ignored)
-                "dir_root_3/",       # CHANGING (packaged -> ignored)
-                "dir_root_4/*",      # NO_CHANGE (ignored)
-                "dir_root_5/**",     # NO_CHANGE (ignored)
-                # dir in sub-dir
-                "dir_deep_1",        # CHANGING (packaged -> ignored)
-                "/dir_deep_2",       # NO_CHANGE
-                "dir_deep_3/",       # CHANGING (packaged -> ignored)
-                "dir_deep_4/*",      # CHANGING (packaged -> ignored)
-                "dir_deep_5/**",     # CHANGING (packaged -> ignored)
-            ]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = [
+                    "*.txt",
+                    # file in root
+                    "file_root_1",       # NO_CHANGE (ignored)
+                    "/file_root_2",      # CHANGING (packaged -> ignored)
+                    "file_root_3/",      # NO_CHANGE (packaged)
+                    "file_root_4/*",     # NO_CHANGE (packaged)
+                    "file_root_5/**",    # NO_CHANGE (packaged)
+                    # file in sub-dir
+                    "file_deep_1",       # CHANGING (packaged -> ignored)
+                    "/file_deep_2",      # NO_CHANGE (packaged)
+                    "file_deep_3/",      # NO_CHANGE (packaged)
+                    "file_deep_4/*",     # NO_CHANGE (packaged)
+                    "file_deep_5/**",    # NO_CHANGE (packaged)
+                    # dir in root
+                    "dir_root_1",        # CHANGING (packaged -> ignored)
+                    "/dir_root_2",       # CHANGING (packaged -> ignored)
+                    "dir_root_3/",       # CHANGING (packaged -> ignored)
+                    "dir_root_4/*",      # NO_CHANGE (ignored)
+                    "dir_root_5/**",     # NO_CHANGE (ignored)
+                    # dir in sub-dir
+                    "dir_deep_1",        # CHANGING (packaged -> ignored)
+                    "/dir_deep_2",       # NO_CHANGE
+                    "dir_deep_3/",       # CHANGING (packaged -> ignored)
+                    "dir_deep_4/*",      # CHANGING (packaged -> ignored)
+                    "dir_deep_5/**",     # CHANGING (packaged -> ignored)
+                ]
+            "#,
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("bar.txt", "")
@@ -421,13 +423,13 @@ fn include() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            exclude = ["*.txt"]
-            include = ["foo.txt", "**/*.rs", "Cargo.toml", ".dotfile"]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                include = ["foo.txt", "**/*.rs", "Cargo.toml", ".dotfile"]
+            "#,
         )
         .file("foo.txt", "")
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -710,16 +712,16 @@ fn broken_symlink() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = 'foo'
-            documentation = 'foo'
-            homepage = 'foo'
-            repository = 'foo'
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = 'foo'
+                documentation = 'foo'
+                homepage = 'foo'
+                repository = 'foo'
+            "#,
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
@@ -770,15 +772,15 @@ fn do_not_package_if_repository_is_dirty() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -825,25 +827,25 @@ fn generated_manifest() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            exclude = ["*.txt"]
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
 
-            [project.metadata]
-            foo = 'bar'
+                [project.metadata]
+                foo = 'bar'
 
-            [workspace]
+                [workspace]
 
-            [dependencies]
-            bar = { path = "bar", version = "0.1" }
-            def = { version = "1.0", registry = "alternative" }
-            ghi = "1.0"
-            abc = "1.0"
-        "#,
+                [dependencies]
+                bar = { path = "bar", version = "0.1" }
+                def = { version = "1.0", registry = "alternative" }
+                ghi = "1.0"
+                abc = "1.0"
+            "#,
         )
         .file("src/main.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -896,28 +898,28 @@ fn ignore_workspace_specifier() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
+                [project]
+                name = "foo"
+                version = "0.0.1"
 
-            authors = []
+                authors = []
 
-            [workspace]
+                [workspace]
 
-            [dependencies]
-            bar = { path = "bar", version = "0.1" }
-        "#,
+                [dependencies]
+                bar = { path = "bar", version = "0.1" }
+            "#,
         )
         .file("src/main.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
-        "#,
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .build();
@@ -950,15 +952,15 @@ fn package_two_kinds_of_deps() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            other = "1.0"
-            other1 = { version = "1.0" }
-        "#,
+                [dependencies]
+                other = "1.0"
+                other1 = { version = "1.0" }
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -972,13 +974,13 @@ fn test_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2018"
-        "#,
+                cargo-features = ["edition"]
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2018"
+            "#,
         )
         .file("src/lib.rs", r#" "#)
         .build();
@@ -1089,18 +1091,18 @@ fn do_not_package_if_src_was_modified() {
         .file(
             "build.rs",
             r#"
-            use std::fs;
+                use std::fs;
 
-            fn main() {
-                fs::write("src/generated.txt",
-                    "Hello, world of generated files."
-                ).expect("failed to create file");
-                fs::remove_file("dir/foo.txt").expect("failed to remove file");
-                fs::remove_dir("dir").expect("failed to remove dir");
-                fs::write("bar.txt", "updated content").expect("failed to update");
-                fs::create_dir("new-dir").expect("failed to create dir");
-            }
-        "#,
+                fn main() {
+                    fs::write("src/generated.txt",
+                        "Hello, world of generated files."
+                    ).expect("failed to create file");
+                    fs::remove_file("dir/foo.txt").expect("failed to remove file");
+                    fs::remove_dir("dir").expect("failed to remove dir");
+                    fs::write("bar.txt", "updated content").expect("failed to update");
+                    fs::create_dir("new-dir").expect("failed to create dir");
+                }
+            "#,
         )
         .build();
 
@@ -1132,17 +1134,17 @@ fn package_with_select_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [features]
-            required = []
-            optional = []
-        "#,
+                [features]
+                required = []
+                optional = []
+            "#,
         )
         .file(
             "src/main.rs",
@@ -1161,17 +1163,17 @@ fn package_with_all_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [features]
-            required = []
-            optional = []
-        "#,
+                [features]
+                required = []
+                optional = []
+            "#,
         )
         .file(
             "src/main.rs",
@@ -1190,17 +1192,17 @@ fn package_no_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [features]
-            default = ["required"]
-            required = []
-        "#,
+                [features]
+                default = ["required"]
+                required = []
+            "#,
         )
         .file(
             "src/main.rs",
@@ -1757,16 +1759,16 @@ fn reserved_windows_name() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [dependencies]
-            bar = "1.0.0"
-        "#,
+                [dependencies]
+                bar = "1.0.0"
+            "#,
         )
         .file("src/main.rs", "extern crate bar;\nfn main() {  }")
         .build();
@@ -1870,6 +1872,8 @@ fn long_file_names() {
         test_path.mkdir_p();
         let test_path = test_path.join(long_name);
         if let Err(e) = File::create(&test_path) {
+            // write to stderr directly to avoid output from being captured
+            // and always display text, even without --nocapture
             use std::io::Write;
             writeln!(
                 std::io::stderr(),
@@ -1914,4 +1918,38 @@ src/main.rs
             long_name
         ))
         .run();
+}
+
+#[cargo_test]
+fn reproducible_output() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("package").run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let decoder = GzDecoder::new(f);
+    let mut archive = Archive::new(decoder);
+    for ent in archive.entries().unwrap() {
+        let ent = ent.unwrap();
+        let header = ent.header();
+        assert_eq!(header.mode().unwrap(), 0o644);
+        assert_eq!(header.mtime().unwrap(), 0);
+        assert_eq!(header.username().unwrap().unwrap(), "");
+        assert_eq!(header.groupname().unwrap().unwrap(), "");
+    }
 }

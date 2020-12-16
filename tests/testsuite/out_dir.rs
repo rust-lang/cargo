@@ -30,21 +30,21 @@ fn static_library_with_debug() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            crate-type = ["staticlib"]
-        "#,
+                [lib]
+                crate-type = ["staticlib"]
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #[no_mangle]
-            pub extern "C" fn foo() { println!("Hello, World!") }
-        "#,
+                #[no_mangle]
+                pub extern "C" fn foo() { println!("Hello, World!") }
+            "#,
         )
         .build();
 
@@ -66,21 +66,21 @@ fn dynamic_library_with_debug() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            crate-type = ["cdylib"]
-        "#,
+                [lib]
+                crate-type = ["cdylib"]
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #[no_mangle]
-            pub extern "C" fn foo() { println!("Hello, World!") }
-        "#,
+                #[no_mangle]
+                pub extern "C" fn foo() { println!("Hello, World!") }
+            "#,
         )
         .build();
 
@@ -102,20 +102,20 @@ fn rlib_with_debug() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            crate-type = ["rlib"]
-        "#,
+                [lib]
+                crate-type = ["rlib"]
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            pub fn foo() { println!("Hello, World!") }
-        "#,
+                pub fn foo() { println!("Hello, World!") }
+            "#,
         )
         .build();
 
@@ -137,27 +137,27 @@ fn include_only_the_binary_from_the_current_package() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [workspace]
+                [workspace]
 
-            [dependencies]
-            utils = { path = "./utils" }
-        "#,
+                [dependencies]
+                utils = { path = "./utils" }
+            "#,
         )
         .file("src/lib.rs", "extern crate utils;")
         .file(
             "src/main.rs",
             r#"
-            extern crate foo;
-            extern crate utils;
-            fn main() {
-                println!("Hello, World!")
-            }
-        "#,
+                extern crate foo;
+                extern crate utils;
+                fn main() {
+                    println!("Hello, World!")
+                }
+            "#,
         )
         .file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
         .file("utils/src/lib.rs", "")

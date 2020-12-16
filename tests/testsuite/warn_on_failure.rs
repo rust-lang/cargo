@@ -11,25 +11,25 @@ fn make_lib(lib_src: &str) {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.1"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "bar"
+                authors = []
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
         )
         .file(
             "build.rs",
             &format!(
                 r#"
-            fn main() {{
-                use std::io::Write;
-                println!("cargo:warning={{}}", "{}");
-                println!("hidden stdout");
-                write!(&mut ::std::io::stderr(), "hidden stderr");
-                println!("cargo:warning={{}}", "{}");
-            }}
-        "#,
+                    fn main() {{
+                        use std::io::Write;
+                        println!("cargo:warning={{}}", "{}");
+                        println!("hidden stdout");
+                        write!(&mut ::std::io::stderr(), "hidden stderr");
+                        println!("cargo:warning={{}}", "{}");
+                    }}
+                "#,
                 WARNING1, WARNING2
             ),
         )
@@ -42,14 +42,14 @@ fn make_upstream(main_src: &str) -> Project {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/main.rs", &format!("fn main() {{ {} }}", main_src))
         .build()

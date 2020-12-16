@@ -160,7 +160,7 @@ Similarly to tests:
 All of the  `[lib]`, `[[bin]]`, `[[example]]`, `[[test]]`, and `[[bench]]`
 sections in `Cargo.toml` support similar configuration for specifying how a
 target should be built. The double-bracket sections like `[[bin]]` are
-array-of-table of [TOML](https://github.com/toml-lang/toml#array-of-tables),
+[array-of-table of TOML](https://toml.io/en/v1.0.0-rc.3#array-of-tables),
 which means you can write more than one `[[bin]]` section to make several
 executables in your crate. You can only specify one library, so `[lib]` is a
 normal TOML table.
@@ -334,7 +334,7 @@ situations. For example, if you have a library where you want a *module* named
 compile anything in the `bin` directory as an executable. Here is a sample
 layout of this scenario:
 
-```
+```text
 ├── Cargo.toml
 └── src
     ├── lib.rs

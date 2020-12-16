@@ -133,7 +133,8 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
@@ -160,7 +161,7 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
-        ResolveVersion::default_for_new_lockfiles(),
+        ResolveVersion::default(),
         summaries,
     );
 
@@ -1071,7 +1072,7 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     let mut unique_pkg_ids = HashMap::new();
     let state = encode::EncodeState::new(resolve);
     for pkg_id in resolve.iter() {
-        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state);
+        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state, resolve.version());
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
             anyhow::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \

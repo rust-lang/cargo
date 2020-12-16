@@ -30,7 +30,7 @@ library call as part of the build script.
 
 First, let’s take a look at the directory structure of this package:
 
-```
+```text
 .
 ├── Cargo.toml
 ├── build.rs
@@ -128,7 +128,7 @@ a Rust library which calls into C to print “Hello, World!”.
 
 Like above, let’s first take a look at the package layout:
 
-```
+```text
 .
 ├── Cargo.toml
 ├── build.rs

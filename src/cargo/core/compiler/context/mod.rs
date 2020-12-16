@@ -125,10 +125,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
+        self.lto = super::lto::generate(self.bcx)?;
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
-        super::lto::generate(&mut self)?;
         self.check_collistions()?;
 
         for unit in &self.bcx.roots {
@@ -209,7 +209,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
                 let mut unstable_opts = false;
-                let args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
+                let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
+                args.extend(compiler::lto_args(&self, unit));
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     unit: unit.clone(),
                     args,

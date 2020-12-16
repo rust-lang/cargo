@@ -4,10 +4,11 @@ use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionCon
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
-    print_available_tests,
+    print_available_packages, print_available_tests,
 };
 use crate::CargoResult;
 use anyhow::bail;
@@ -51,11 +52,15 @@ pub trait AppExt: Sized {
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
-        self._arg(multi_opt("package", "SPEC", package).short("p"))
+        self._arg(optional_multi_opt("package", "SPEC", package).short("p"))
     }
 
     fn arg_package(self, package: &'static str) -> Self {
-        self._arg(opt("package", package).short("p").value_name("SPEC"))
+        self._arg(
+            optinal_opt("package", package)
+                .short("p")
+                .value_name("SPEC"),
+        )
     }
 
     fn arg_jobs(self) -> Self {
@@ -139,7 +144,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", target, "TRIPLE"))
+        self._arg(multi_opt("target", "TRIPLE", target))
     }
 
     fn arg_target_dir(self) -> Self {
@@ -217,6 +222,10 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn optinal_opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
+    opt(name, help).min_values(0)
 }
 
 pub fn optional_multi_opt(
@@ -308,7 +317,8 @@ pub trait ArgMatchesExt {
                 if self._is_present(flag) {
                     bail!(
                         "--{} is not allowed in the root of a virtual workspace\n\
-                         note: while this was previously accepted, it didn't actually do anything",
+                         note: while this was previously accepted, it didn't actually do anything\n\
+                         help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
                         flag
                     );
                 }
@@ -496,6 +506,14 @@ pub trait ArgMatchesExt {
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;
+        } else if self.is_present_with_zero_values("package") {
+            // As for cargo 0.50.0, this won't occur but if someone sneaks in
+            // we can still provide this informative message for them.
+            anyhow::bail!(
+                "\"--package <SPEC>\" requires a SPEC format value, \
+                which can be any package ID specifier in the dependency graph.\n\
+                Run `cargo help pkgid` for more information about SPEC format."
+            )
         }
 
         Ok(opts)
@@ -509,7 +527,11 @@ pub trait ArgMatchesExt {
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
         let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
-        compile_opts.spec = Packages::Packages(self._values_of("package"));
+        let spec = self._values_of("package");
+        if spec.iter().any(is_glob_pattern) {
+            anyhow::bail!("Glob patterns on package selection are not supported.")
+        }
+        compile_opts.spec = Packages::Packages(spec);
         Ok(compile_opts)
     }
 
@@ -582,6 +604,10 @@ about this warning.";
         workspace: &Workspace<'_>,
         compile_opts: &CompileOptions,
     ) -> CargoResult<()> {
+        if self.is_present_with_zero_values("package") {
+            print_available_packages(workspace)?
+        }
+
         if self.is_present_with_zero_values("example") {
             print_available_examples(workspace, compile_opts)?;
         }

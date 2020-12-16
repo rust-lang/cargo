@@ -147,7 +147,7 @@ similar configuration files in directory listings. Sorting files often puts
 capital letters before lowercase letters, ensuring files like `Makefile` and
 `Cargo.toml` are placed together. The trailing `.toml` was chosen to emphasize
 the fact that the file is in the [TOML configuration
-format](https://github.com/toml-lang/toml).
+format](https://toml.io/).
 
 Cargo does not allow other names such as `cargo.toml` or `Cargofile` to
 emphasize the ease of how a Cargo repository can be identified. An option of
@@ -199,3 +199,61 @@ replacement][replace].
 [replace]: reference/source-replacement.md
 [`cargo fetch`]: commands/cargo-fetch.md
 [offline config]: reference/config.md#netoffline
+
+### Why is Cargo rebuilding my code?
+
+Cargo is responsible for incrementally compiling crates in your project. This
+means that if you type `cargo build` twice the second one shouldn't rebuild you
+crates.io dependencies, for example. Nevertheless bugs arise and Cargo can
+sometimes rebuild code when you're not expecting it!
+
+We've long [wanted to provide better diagnostics about
+this](https://github.com/rust-lang/cargo/issues/2904) but unfortunately haven't
+been able to make progress on that issue in quite some time. In the meantime,
+however, you can debug a rebuild at least a little by setting the `CARGO_LOG`
+environment variable:
+
+```sh
+$ CARGO_LOG=cargo::core::compiler::fingerprint=info cargo build
+```
+
+This will cause Cargo to print out a lot of information about diagnostics and
+rebuilding. This can often contain clues as to why your project is getting
+rebuilt, although you'll often need to connect some dots yourself since this
+output isn't super easy to read just yet. Note that the `CARGO_LOG` needs to be
+set for the command that rebuilds when you think it should not. Unfortunately
+Cargo has no way right now of after-the-fact debugging "why was that rebuilt?"
+
+Some issues we've seen historically which can cause crates to get rebuilt are:
+
+* A build script prints `cargo:rerun-if-changed=foo` where `foo` is a file that
+  doesn't exist and nothing generates it. In this case Cargo will keep running
+  the build script thinking it will generate the file but nothing ever does. The
+  fix is to avoid printing `rerun-if-changed` in this scenario.
+
+* Two successive Cargo builds may differ in the set of features enabled for some
+  dependencies. For example if the first build command builds the whole
+  workspace and the second command builds only one crate, this may cause a
+  dependency on crates.io to have a different set of features enabled, causing
+  it and everything that depends on it to get rebuilt. There's unfortunately not
+  really a great fix for this, although if possible it's best to have the set of
+  features enabled on a crate constant regardless of what you're building in
+  your workspace.
+
+* Some filesystems exhibit unusual behavior around timestamps. Cargo primarily
+  uses timestamps on files to govern whether rebuilding needs to happen, but if
+  you're using a nonstandard filesystem it may be affecting the timestamps
+  somehow (e.g. truncating them, causing them to drift, etc). In this scenario,
+  feel free to open an issue and we can see if we can accomodate the filesystem
+  somehow.
+
+* A concurrent build process is either deleting artifacts or modifying files.
+  Sometimes you might have a background process that either tries to build or
+  check your project. These background processes might surprisingly delete some
+  build artifacts or touch files (or maybe just by accident), which can cause
+  rebuilds to look spurious! The best fix here would be to wrangle the
+  background process to avoid clashing with your work.
+
+If after trying to debug your issue, however, you're still running into problems
+then feel free to [open an
+issue](https://github.com/rust-lang/cargo/issuses/new)!

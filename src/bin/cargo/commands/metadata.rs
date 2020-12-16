@@ -26,6 +26,7 @@ pub fn cli() -> App {
                 .value_name("VERSION")
                 .possible_value("1"),
         )
+        .after_help("Run `cargo help metadata` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

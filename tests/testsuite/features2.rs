@@ -1,6 +1,7 @@
 //! Tests for the new feature resolver.
 
 use cargo_test_support::cross_compile::{self, alternate};
+use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
@@ -96,6 +97,7 @@ fn inactive_target_optional() {
 
             [features]
             foo1 = ["dep1/f2"]
+            foo2 = ["dep2"]
             "#,
         )
         .file(
@@ -103,6 +105,7 @@ fn inactive_target_optional() {
             r#"
             fn main() {
                 if cfg!(feature="foo1") { println!("foo1"); }
+                if cfg!(feature="foo2") { println!("foo2"); }
                 if cfg!(feature="dep1") { println!("dep1"); }
                 if cfg!(feature="dep2") { println!("dep2"); }
                 if cfg!(feature="common") { println!("common"); }
@@ -149,7 +152,7 @@ fn inactive_target_optional() {
         .build();
 
     p.cargo("run --all-features")
-        .with_stdout("foo1\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
+        .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
         .run();
     p.cargo("run --features dep1")
         .with_stdout("dep1\nf1\n")
@@ -166,7 +169,7 @@ fn inactive_target_optional() {
 
     p.cargo("run -Zfeatures=itarget --all-features")
         .masquerade_as_nightly_cargo()
-        .with_stdout("foo1\n")
+        .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon")
         .run();
     p.cargo("run -Zfeatures=itarget --features dep1")
         .masquerade_as_nightly_cargo()
@@ -1262,17 +1265,17 @@ fn build_dep_activated() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            # This should never be selected.
-            [target.'{}'.build-dependencies]
-            targetdep = "1.0"
+                # This should never be selected.
+                [target.'{}'.build-dependencies]
+                targetdep = "1.0"
 
-            [target.'{}'.build-dependencies]
-            hostdep = {{version="1.0", features=["feat1"]}}
-            "#,
+                [target.'{}'.build-dependencies]
+                hostdep = {{version="1.0", features=["feat1"]}}
+                "#,
                 alternate(),
                 rustc_host()
             ),
@@ -1364,7 +1367,7 @@ fn resolver_bad_setting() {
             [package]
             name = "foo"
             version = "0.1.0"
-            resolver = "1"
+            resolver = "foo"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1378,10 +1381,65 @@ fn resolver_bad_setting() {
 error: failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  `resolver` setting `1` is not valid, only valid option is \"2\"
+  `resolver` setting `foo` is not valid, valid options are \"1\" or \"2\"
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn resolver_original() {
+    // resolver="1" uses old unification behavior.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            #[cfg(feature = "f1")]
+            compile_error!("f1 should not activate");
+            "#,
+        )
+        .publish();
+
+    Package::new("bar", "1.0.0")
+        .add_dep(
+            Dependency::new("common", "1.0")
+                .target("cfg(whatever)")
+                .enable_features(&["f1"]),
+        )
+        .publish();
+
+    let manifest = |resolver| {
+        format!(
+            r#"
+                cargo-features = ["resolver"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                resolver = "{}"
+
+                [dependencies]
+                common = "1.0"
+                bar = "1.0"
+            "#,
+            resolver
+        )
+    };
+
+    let p = project()
+        .file("Cargo.toml", &manifest("1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]f1 should not activate[..]")
+        .run();
+
+    p.change_file("Cargo.toml", &manifest("2"));
+
+    p.cargo("check").masquerade_as_nightly_cargo().run();
 }
 
 #[cargo_test]
@@ -1748,4 +1806,491 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn shared_dep_same_but_dependencies() {
+    // Checks for a bug of nondeterminism. This scenario creates a shared
+    // dependency `dep` which needs to be built twice (once as normal, and
+    // once as a build dep). However, in both cases the flags to `dep` are the
+    // same, the only difference is what it links to. The normal dependency
+    // should link to `subdep` with the feature disabled, and the build
+    // dependency should link to it with it enabled. Crucially, the `--target`
+    // flag should not be specified, otherwise Unit.kind would be different
+    // and avoid the collision, and this bug won't manifest.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bin1", "bin2"]
+            "#,
+        )
+        .file(
+            "bin1/Cargo.toml",
+            r#"
+                [package]
+                name = "bin1"
+                version = "0.1.0"
+
+                [dependencies]
+                dep = { path = "../dep" }
+            "#,
+        )
+        .file("bin1/src/main.rs", "fn main() { dep::feat_func(); }")
+        .file(
+            "bin2/Cargo.toml",
+            r#"
+                [package]
+                name = "bin2"
+                version = "0.1.0"
+
+                [build-dependencies]
+                dep = { path = "../dep" }
+                subdep = { path = "../subdep", features = ["feat"] }
+            "#,
+        )
+        .file("bin2/build.rs", "fn main() { dep::feat_func(); }")
+        .file("bin2/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "0.1.0"
+
+                [dependencies]
+                subdep = { path = "../subdep" }
+            "#,
+        )
+        .file(
+            "dep/src/lib.rs",
+            "pub fn feat_func() { subdep::feat_func(); }",
+        )
+        .file(
+            "subdep/Cargo.toml",
+            r#"
+                [package]
+                name = "subdep"
+                version = "0.1.0"
+
+                [features]
+                feat = []
+            "#,
+        )
+        .file(
+            "subdep/src/lib.rs",
+            r#"
+                pub fn feat_func() {
+                    #[cfg(feature = "feat")] println!("cargo:warning=feat: enabled");
+                    #[cfg(not(feature = "feat"))] println!("cargo:warning=feat: not enabled");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build --bin bin1 --bin bin2 -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        // unordered because bin1 and bin2 build at the same time
+        .with_stderr_unordered(
+            "\
+[COMPILING] subdep [..]
+[COMPILING] dep [..]
+[COMPILING] bin2 [..]
+[COMPILING] bin1 [..]
+warning: feat: enabled
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.process(p.bin("bin1"))
+        .with_stdout("cargo:warning=feat: not enabled")
+        .run();
+
+    // Make sure everything stays cached.
+    p.cargo("build -v --bin bin1 --bin bin2 -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[FRESH] subdep [..]
+[FRESH] dep [..]
+[FRESH] bin1 [..]
+warning: feat: enabled
+[FRESH] bin2 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_proc_macro() {
+    // Running `cargo test` on a proc-macro, with a shared dependency that has
+    // different features.
+    //
+    // There was a bug where `shared` was built twice (once with feature "B"
+    // and once without), and both copies linked into the unit test. This
+    // would cause a type failure when used in an intermediate dependency
+    // (the-macro-support).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "runtime"
+                version = "0.1.0"
+                [dependencies]
+                the-macro = { path = "the-macro", features = ['a'] }
+                [build-dependencies]
+                shared = { path = "shared", features = ['b'] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "the-macro/Cargo.toml",
+            r#"
+                [package]
+                name = "the-macro"
+                version = "0.1.0"
+                [lib]
+                proc-macro = true
+                test = false
+                [dependencies]
+                the-macro-support = { path = "../the-macro-support" }
+                shared = { path = "../shared" }
+                [dev-dependencies]
+                runtime = { path = ".." }
+                [features]
+                a = []
+            "#,
+        )
+        .file(
+            "the-macro/src/lib.rs",
+            "
+                fn _test() {
+                    the_macro_support::foo(shared::Foo);
+                }
+            ",
+        )
+        .file(
+            "the-macro-support/Cargo.toml",
+            r#"
+                [package]
+                name = "the-macro-support"
+                version = "0.1.0"
+                [dependencies]
+                shared = { path = "../shared" }
+            "#,
+        )
+        .file(
+            "the-macro-support/src/lib.rs",
+            "
+                pub fn foo(_: shared::Foo) {}
+            ",
+        )
+        .file(
+            "shared/Cargo.toml",
+            r#"
+                [package]
+                name = "shared"
+                version = "0.1.0"
+                [features]
+                b = []
+            "#,
+        )
+        .file("shared/src/lib.rs", "pub struct Foo;")
+        .build();
+    p.cargo("test -Zfeatures=all --manifest-path the-macro/Cargo.toml")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn doc_optional() {
+    // Checks for a bug where `cargo doc` was failing with an inactive target
+    // that enables a shared optional dependency.
+    Package::new("spin", "1.0.0").publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("spin", "1.0").optional(true))
+        .publish();
+    // The enabler package enables the `spin` feature, which we don't want.
+    Package::new("enabler", "1.0.0")
+        .feature_dep("bar", "1.0", &["spin"])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [target.'cfg(whatever)'.dependencies]
+                enabler = "1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zfeatures=itarget")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] spin v1.0.0 [..]
+[DOWNLOADED] bar v1.0.0 [..]
+[DOCUMENTING] bar v1.0.0
+[CHECKING] bar v1.0.0
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn minimal_download() {
+    // Various checks that it only downloads the minimum set of dependencies
+    // needed in various situations.
+    //
+    // This checks several permutations of the different
+    // host_dep/dev_dep/itarget settings. These 3 are planned to be stabilized
+    // together, so there isn't much need to be concerned about how the behave
+    // independently. However, there are some cases where they do behave
+    // independently. Specifically:
+    //
+    // * `cargo test` forces dev_dep decoupling to be disabled.
+    // * `cargo tree --target=all` forces ignore_inactive_targets off and decouple_dev_deps off.
+    // * `cargo tree --target=all -e normal` forces ignore_inactive_targets off.
+    //
+    // However, `cargo tree` is a little weird because it downloads everything
+    // anyways.
+    //
+    // So to summarize the different permutations:
+    //
+    // dev_dep | host_dep | itarget | Notes
+    // --------|----------|---------|----------------------------
+    //         |          |         | -Zfeatures=compare (new resolver should behave same as old)
+    //         |          |    ✓    | This scenario should not happen.
+    //         |     ✓    |         | `cargo tree --target=all -Zfeatures=all`†
+    //         |     ✓    |    ✓    | `cargo test`
+    //    ✓    |          |         | This scenario should not happen.
+    //    ✓    |          |    ✓    | This scenario should not happen.
+    //    ✓    |     ✓    |         | `cargo tree --target=all -e normal -Z features=all`†
+    //    ✓    |     ✓    |    ✓    | A normal build.
+    //
+    // † — However, `cargo tree` downloads everything.
+    Package::new("normal", "1.0.0").publish();
+    Package::new("normal_pm", "1.0.0").publish();
+    Package::new("normal_opt", "1.0.0").publish();
+    Package::new("dev_dep", "1.0.0").publish();
+    Package::new("dev_dep_pm", "1.0.0").publish();
+    Package::new("build_dep", "1.0.0").publish();
+    Package::new("build_dep_pm", "1.0.0").publish();
+    Package::new("build_dep_opt", "1.0.0").publish();
+
+    Package::new("itarget_normal", "1.0.0").publish();
+    Package::new("itarget_normal_pm", "1.0.0").publish();
+    Package::new("itarget_dev_dep", "1.0.0").publish();
+    Package::new("itarget_dev_dep_pm", "1.0.0").publish();
+    Package::new("itarget_build_dep", "1.0.0").publish();
+    Package::new("itarget_build_dep_pm", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                normal = "1.0"
+                normal_pm = "1.0"
+                normal_opt = { version = "1.0", optional = true }
+
+                [dev-dependencies]
+                dev_dep = "1.0"
+                dev_dep_pm = "1.0"
+
+                [build-dependencies]
+                build_dep = "1.0"
+                build_dep_pm = "1.0"
+                build_dep_opt = { version = "1.0", optional = true }
+
+                [target.'cfg(whatever)'.dependencies]
+                itarget_normal = "1.0"
+                itarget_normal_pm = "1.0"
+
+                [target.'cfg(whatever)'.dev-dependencies]
+                itarget_dev_dep = "1.0"
+                itarget_dev_dep_pm = "1.0"
+
+                [target.'cfg(whatever)'.build-dependencies]
+                itarget_build_dep = "1.0"
+                itarget_build_dep_pm = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    let clear = || {
+        cargo_home().join("registry/cache").rm_rf();
+        cargo_home().join("registry/src").rm_rf();
+        p.build_dir().rm_rf();
+    };
+
+    // none
+    // Should be the same as `-Zfeatures=all`
+    p.cargo("check -Zfeatures=compare")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[COMPILING] build_dep v1.0.0
+[COMPILING] build_dep_pm v1.0.0
+[CHECKING] normal_pm v1.0.0
+[CHECKING] normal v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    clear();
+
+    // all
+    p.cargo("check -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[COMPILING] build_dep v1.0.0
+[COMPILING] build_dep_pm v1.0.0
+[CHECKING] normal v1.0.0
+[CHECKING] normal_pm v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    clear();
+
+    // This disables decouple_dev_deps.
+    p.cargo("test --no-run -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] dev_dep v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[COMPILING] build_dep v1.0.0
+[COMPILING] build_dep_pm v1.0.0
+[COMPILING] normal_pm v1.0.0
+[COMPILING] normal v1.0.0
+[COMPILING] dev_dep_pm v1.0.0
+[COMPILING] dev_dep v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    clear();
+
+    // This disables itarget, but leaves decouple_dev_deps enabled. However,
+    // `cargo tree` downloads everything anyways. Ideally `cargo tree` should
+    // be a little smarter, but that would make it a bit more complicated. The
+    // two "Downloading" lines are because `download_accessible` doesn't
+    // download enough (`cargo tree` really wants everything). Again, that
+    // could be cleaner, but is difficult.
+    p.cargo("tree -e normal --target=all -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] dev_dep v1.0.0 [..]
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[DOWNLOADED] dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_normal v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep v1.0.0 [..]
+[DOWNLOADED] itarget_normal_pm v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep_pm v1.0.0 [..]
+",
+        )
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+├── itarget_normal v1.0.0
+├── itarget_normal_pm v1.0.0
+├── normal v1.0.0
+└── normal_pm v1.0.0
+",
+        )
+        .run();
+    clear();
+
+    // This disables itarget and decouple_dev_deps.
+    p.cargo("tree --target=all -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] itarget_normal_pm v1.0.0 [..]
+[DOWNLOADED] itarget_normal v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep v1.0.0 [..]
+[DOWNLOADED] dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] dev_dep v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+",
+        )
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+├── itarget_normal v1.0.0
+├── itarget_normal_pm v1.0.0
+├── normal v1.0.0
+└── normal_pm v1.0.0
+[build-dependencies]
+├── build_dep v1.0.0
+├── build_dep_pm v1.0.0
+├── itarget_build_dep v1.0.0
+└── itarget_build_dep_pm v1.0.0
+[dev-dependencies]
+├── dev_dep v1.0.0
+├── dev_dep_pm v1.0.0
+├── itarget_dev_dep v1.0.0
+└── itarget_dev_dep_pm v1.0.0
+",
+        )
+        .run();
+    clear();
 }

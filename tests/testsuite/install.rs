@@ -5,14 +5,15 @@ use std::io::prelude::*;
 
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
-use cargo_test_support::install::{
-    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
-};
-use cargo_test_support::paths;
 use cargo_test_support::registry::{registry_path, registry_url, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
 };
+
+use cargo_test_support::install::{
+    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
+};
+use cargo_test_support::paths;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -412,14 +413,14 @@ fn multiple_crates_auto_binaries() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "a" }
-        "#,
+                [dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/main.rs", "extern crate bar; fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -436,14 +437,14 @@ fn multiple_crates_auto_examples() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "a" }
-        "#,
+                [dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "extern crate bar;")
         .file(
@@ -471,14 +472,14 @@ fn no_binaries_or_examples() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "a" }
-        "#,
+                [dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -660,7 +661,7 @@ fn compile_failure() {
     found at `[..]target`
 
 Caused by:
-  could not compile `foo`.
+  could not compile `foo`
 
 To learn more, run the command again with --verbose.
 ",
@@ -833,12 +834,12 @@ fn installs_from_cwd_with_2018_warnings() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            edition = "2018"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                edition = "2018"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -952,14 +953,14 @@ fn git_with_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -967,15 +968,15 @@ fn git_with_lockfile() {
         .file(
             "Cargo.lock",
             r#"
-            [[package]]
-            name = "foo"
-            version = "0.1.0"
-            dependencies = [ "bar 0.1.0" ]
+                [[package]]
+                name = "foo"
+                version = "0.1.0"
+                dependencies = [ "bar 0.1.0" ]
 
-            [[package]]
-            name = "bar"
-            version = "0.1.0"
-        "#,
+                [[package]]
+                name = "bar"
+                version = "0.1.0"
+            "#,
         )
         .build();
 
@@ -1016,27 +1017,27 @@ fn use_path_workspace() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [workspace]
-            members = ["baz"]
-        "#,
+                [workspace]
+                members = ["baz"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = "1"
-        "#,
+                [dependencies]
+                foo = "1"
+            "#,
         )
         .file("baz/src/lib.rs", "")
         .build();
@@ -1055,14 +1056,14 @@ fn dev_dependencies_no_check() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dev-dependencies]
-            baz = "1.0.0"
-        "#,
+                [dev-dependencies]
+                baz = "1.0.0"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1081,14 +1082,14 @@ fn dev_dependencies_lock_file_untouched() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dev-dependencies]
-            bar = { path = "a" }
-        "#,
+                [dev-dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -1177,6 +1178,19 @@ fn uninstall_multiple_and_specifying_bin() {
         .with_status(101)
         .with_stderr("\
 [ERROR] A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.")
+        .run();
+}
+
+#[cargo_test]
+fn uninstall_with_empty_pakcage_option() {
+    cargo_process("uninstall -p")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] \"--package <SPEC>\" requires a SPEC format value.
+Run `cargo help pkgid` for more information about SPEC format.
+",
+        )
         .run();
 }
 
@@ -1320,17 +1334,17 @@ fn lock_file_path_deps_ok() {
         .file(
             "Cargo.lock",
             r#"
-[[package]]
-name = "bar"
-version = "0.1.0"
+            [[package]]
+            name = "bar"
+            version = "0.1.0"
 
-[[package]]
-name = "foo"
-version = "0.1.0"
-dependencies = [
- "bar 0.1.0",
-]
-"#,
+            [[package]]
+            name = "foo"
+            version = "0.1.0"
+            dependencies = [
+             "bar 0.1.0",
+            ]
+            "#,
         )
         .publish();
 
@@ -1433,6 +1447,25 @@ fn install_ignores_local_cargo_config() {
 }
 
 #[cargo_test]
+fn install_ignores_unstable_table_in_local_cargo_config() {
+    pkg("bar", "0.0.1");
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [unstable]
+                build-std = ["core"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install bar").masquerade_as_nightly_cargo().run();
+    assert_has_installed_exe(cargo_home(), "bar");
+}
+
+#[cargo_test]
 fn install_global_cargo_config() {
     pkg("bar", "0.0.1");
 
@@ -1441,9 +1474,9 @@ fn install_global_cargo_config() {
 
     toml.push_str(
         r#"
-        [build]
-        target = 'nonexistent'
-    "#,
+            [build]
+            target = 'nonexistent'
+        "#,
     );
     fs::write(&config, toml).unwrap();
 
@@ -1554,4 +1587,81 @@ fn install_git_with_symlink_home() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn install_yanked_cargo_package() {
+    Package::new("baz", "0.0.1").yanked(true).publish();
+    cargo_process("install baz --version 0.0.1")
+        .with_status(101)
+        .with_stderr_contains(
+            "error: cannot install package `baz`, it has been yanked from registry \
+         `https://github.com/rust-lang/crates.io-index`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn install_cargo_package_in_a_patched_workspace() {
+    pkg("foo", "0.1.0");
+    pkg("fizz", "1.0.0");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                fizz = "1"
+
+                [patch.crates-io]
+                fizz = { version = "=1.0.0" }
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    let stderr = "\
+[WARNING] patch for the non root package will be ignored, specify patch at the workspace root:
+package:   [..]/foo/baz/Cargo.toml
+workspace: [..]/foo/Cargo.toml
+";
+    p.cargo("check").with_stderr_contains(&stderr).run();
+
+    // A crate installation must not emit any message from a workspace under
+    // current working directory.
+    // See https://github.com/rust-lang/cargo/issues/8619
+    p.cargo("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.1.0 (registry [..])
+[INSTALLING] foo v0.1.0
+[COMPILING] foo v0.1.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [..]foo[EXE]
+[INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
 }

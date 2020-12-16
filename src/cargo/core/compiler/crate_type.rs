@@ -58,16 +58,13 @@ impl CrateType {
     }
 
     pub fn requires_upstream_objects(&self) -> bool {
-        match self {
-            // "lib" == "rlib" and is a compilation that doesn't actually
-            // require upstream object files to exist, only upstream metadata
-            // files. As a result, it doesn't require upstream artifacts
-            CrateType::Lib | CrateType::Rlib => false,
+        // "lib" == "rlib" and is a compilation that doesn't actually
+        // require upstream object files to exist, only upstream metadata
+        // files. As a result, it doesn't require upstream artifacts
 
-            // Everything else, however, is some form of "linkable output" or
-            // something that requires upstream object files.
-            _ => true,
-        }
+        !matches!(self, CrateType::Lib | CrateType::Rlib)
+        // Everything else, however, is some form of "linkable output" or
+        // something that requires upstream object files.
     }
 }
 

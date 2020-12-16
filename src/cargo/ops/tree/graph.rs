@@ -305,7 +305,7 @@ fn add_pkg(
     };
     let node = Node::Package {
         package_id,
-        features: node_features.clone(),
+        features: node_features,
         kind: node_kind,
     };
     if let Some(idx) = graph.index.get(&node) {
@@ -340,7 +340,11 @@ fn add_pkg(
                 if dep.is_optional() {
                     // If the new feature resolver does not enable this
                     // optional dep, then don't use it.
-                    if !node_features.contains(&dep.name_in_toml()) {
+                    if !resolved_features.is_dep_activated(
+                        package_id,
+                        features_for,
+                        dep.name_in_toml(),
+                    ) {
                         return false;
                     }
                 }
@@ -542,10 +546,10 @@ fn add_feature_rec(
     };
     for fv in fvs {
         match fv {
-            FeatureValue::Feature(fv_name) | FeatureValue::Crate(fv_name) => {
+            FeatureValue::Feature(dep_name) => {
                 let feat_index = add_feature(
                     graph,
-                    *fv_name,
+                    *dep_name,
                     Some(from),
                     package_index,
                     EdgeKind::Feature,
@@ -553,13 +557,23 @@ fn add_feature_rec(
                 add_feature_rec(
                     graph,
                     resolve,
-                    *fv_name,
+                    *dep_name,
                     package_id,
                     feat_index,
                     package_index,
                 );
             }
-            FeatureValue::CrateFeature(dep_name, fv_name) => {
+            FeatureValue::Dep { .. } => {}
+            FeatureValue::DepFeature {
+                dep_name,
+                dep_feature,
+                dep_prefix,
+                // `weak` is ignored, because it will be skipped if the
+                // corresponding dependency is not found in the map, which
+                // means it wasn't activated. Skipping is handled by
+                // `is_dep_activated` when the graph was built.
+                weak: _,
+            } => {
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),
                     None => {
@@ -569,14 +583,14 @@ fn add_feature_rec(
                             feature_name,
                             package_id,
                             dep_name,
-                            fv_name
+                            dep_feature
                         );
                         continue;
                     }
                 };
                 for (dep_index, is_optional) in dep_indexes {
                     let dep_pkg_id = graph.package_id_for_index(dep_index);
-                    if is_optional {
+                    if is_optional && !dep_prefix {
                         // Activate the optional dep on self.
                         add_feature(
                             graph,
@@ -586,9 +600,21 @@ fn add_feature_rec(
                             EdgeKind::Feature,
                         );
                     }
-                    let feat_index =
-                        add_feature(graph, *fv_name, Some(from), dep_index, EdgeKind::Feature);
-                    add_feature_rec(graph, resolve, *fv_name, dep_pkg_id, feat_index, dep_index);
+                    let feat_index = add_feature(
+                        graph,
+                        *dep_feature,
+                        Some(from),
+                        dep_index,
+                        EdgeKind::Feature,
+                    );
+                    add_feature_rec(
+                        graph,
+                        resolve,
+                        *dep_feature,
+                        dep_pkg_id,
+                        feat_index,
+                        dep_index,
+                    );
                 }
             }
         }

@@ -59,7 +59,7 @@ _cargo()
 	local opt__help="$opt_help"
 	local opt__init="$opt_common $opt_lock --bin --lib --name --vcs --edition --registry"
 	local opt__install="$opt_common $opt_feat $opt_jobs $opt_lock $opt_force --bin --bins --branch --debug --example --examples --git --list --path --rev --root --tag --version --registry --target --profile --no-track"
-	local opt__locate_project="$opt_common $opt_mani $opt_lock"
+	local opt__locate_project="$opt_common $opt_mani $opt_lock --message-format --workspace"
 	local opt__login="$opt_common $opt_lock --registry"
 	local opt__metadata="$opt_common $opt_feat $opt_mani $opt_lock --format-version=1 --no-deps --filter-platform"
 	local opt__new="$opt_common $opt_lock --vcs --bin --lib --name --edition --registry"
@@ -155,9 +155,7 @@ complete -F _cargo cargo
 __cargo_commands=$(cargo --list 2>/dev/null | awk 'NR>1 {print $1}')
 
 _locate_manifest(){
-	local manifest=`cargo locate-project 2>/dev/null`
-	# regexp-replace manifest '\{"root":"|"\}' ''
-	echo ${manifest:9:${#manifest}-11}
+	cargo locate-project --message-format plain 2>/dev/null
 }
 
 # Extracts the values of "name" from the array given in $1 and shows them as

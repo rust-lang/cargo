@@ -20,6 +20,38 @@ timings = 'yes'
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
 
+### extra-link-arg
+* Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
+
+The `-Z extra-link-arg` flag makes the following two instructions available
+in build scripts:
+
+* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
+  flags to a linker for binaries.
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
+  linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
+
+<a id="rustc-link-arg-bins"></a>
+#### `cargo:rustc-link-arg-bins=FLAG`
+
+The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+binary target. Its usage is highly platform specific. It is useful
+to set a linker script or other linker options.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-link-arg"></a>
+#### `cargo:rustc-link-arg=FLAG`
+
+The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
+option][link-arg] to the compiler, but only when building supported targets
+(benchmarks, binaries, `cdylib` crates, examples, and tests). Its usage is
+highly platform specific. It is useful to set the shared library version or
+linker script.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
 * Tracking Issue: [#7404](https://github.com/rust-lang/cargo/issues/7404)
@@ -82,7 +114,7 @@ exact filename can be tricky since you need to parse JSON output. The
 that the artifacts are copied, so the originals are still in the `target`
 directory. Example:
 
-```
+```sh
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
@@ -105,7 +137,7 @@ while also passing it a `--target` option, as well as enabling
 `-Zunstable-features --enable-per-target-ignores` and passing along
 information from `.cargo/config.toml`. See the rustc issue for more information.
 
-```
+```sh
 cargo test --target foo -Zdoctest-xcompile
 ```
 
@@ -163,7 +195,7 @@ profiles from which the custom profile inherits are inherited too.
 
 For example, using `cargo build` with `--profile` and the manifest from above:
 
-```
+```sh
 cargo +nightly build --profile release-lto -Z unstable-options
 ```
 
@@ -191,29 +223,62 @@ lto = true
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
 * Tracking Issue: [#5565](https://github.com/rust-lang/cargo/issues/5565)
 
-Currently, it is not possible to have a feature and a dependency with the same
-name in the manifest. If you set `namespaced-features` to `true`, the namespaces
-for features and dependencies are separated. The effect of this is that, in the
-feature requirements, dependencies have to be prefixed with `crate:`. Like this:
+The `namespaced-features` option makes two changes to how features can be
+specified:
+
+* Features may now be defined with the same name as a dependency.
+* Optional dependencies can be explicitly enabled in the `[features]` table
+  with the `dep:` prefix, which enables the dependency without enabling a
+  feature of the same name.
+
+By default, an optional dependency `foo` will define a feature `foo =
+["dep:foo"]` *unless* `dep:foo` is mentioned in any other feature, or the
+`foo` feature is already defined. This helps prevent unnecessary boilerplate
+of listing every optional dependency, but still allows you to override the
+implicit feature.
+
+This allows two use cases that were previously not possible:
+
+* You can "hide" an optional dependency, so that external users cannot
+  explicitly enable that optional dependency.
+* There is no longer a need to create "funky" feature names to work around the
+  restriction that features cannot shadow dependency names.
+
+To enable namespaced-features, use the `-Z namespaced-features` command-line
+flag.
+
+An example of hiding an optional dependency:
 
 ```toml
-[package]
-namespaced-features = true
+[dependencies]
+regex = { version = "1.4.1", optional = true }
+lazy_static = { version = "1.4.0", optional = true }
 
 [features]
-bar = ["crate:baz", "foo"]
-foo = []
-
-[dependencies]
-baz = { version = "0.1", optional = true }
+regex = ["dep:regex", "dep:lazy_static"]
 ```
 
-To prevent unnecessary boilerplate from having to explicitly declare features
-for each optional dependency, implicit features get created for any optional
-dependencies where a feature of the same name is not defined. However, if
-a feature of the same name as a dependency is defined, that feature must
-include the dependency as a requirement, as `foo = ["crate:foo"]`.
+In this example, the "regex" feature enables both `regex` and `lazy_static`.
+The `lazy_static` feature does not exist, and a user cannot explicitly enable
+it. This helps hide internal details of how your package is implemented.
 
+An example of avoiding "funky" names:
+
+```toml
+[dependencies]
+bigdecimal = "0.1"
+chrono = "0.4"
+num-bigint = "0.2"
+serde = {version = "1.0", optional = true }
+
+[features]
+serde = ["dep:serde", "bigdecimal/serde", "chrono/serde", "num-bigint/serde"]
+```
+
+In this case, `serde` is a natural name to use for a feature, because it is
+relevant to your exported API. However, previously you would need to use a
+name like `serde1` to work around the naming limitation if you wanted to also
+enable other features.
 
 ### Build-plan
 * Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
@@ -223,7 +288,7 @@ information about which commands would be run without actually executing
 anything. This can be useful when integrating with another build tool.
 Example:
 
-```
+```sh
 cargo +nightly build --build-plan -Z unstable-options
 ```
 
@@ -296,7 +361,7 @@ need to have the source code for the standard library available, and at this
 time the only supported method of doing so is to add the `rust-src` rust rustup
 component:
 
-```
+```console
 $ rustup component add rust-src --toolchain nightly
 ```
 
@@ -306,7 +371,7 @@ just forced to pass `--target` in one form or another.
 
 Usage looks like:
 
-```
+```console
 $ cargo new foo
 $ cd foo
 $ cargo +nightly run -Z build-std --target x86_64-unknown-linux-gnu
@@ -326,7 +391,7 @@ Using `-Z build-std` will implicitly compile the stable crates `core`, `std`,
 `test` crate. If you're working with an environment which does not support some
 of these crates, then you can pass an argument to `-Zbuild-std` as well:
 
-```
+```console
 $ cargo +nightly build -Z build-std=core,alloc
 ```
 
@@ -373,7 +438,7 @@ override the default list of features enabled.
 The `timings` feature gives some information about how long each compilation
 takes, and tracks concurrency information over time.
 
-```
+```sh
 cargo +nightly build -Z timings
 ```
 
@@ -470,7 +535,7 @@ variables, which take precedence over config files.
 
 Some examples of what it looks like using Bourne shell syntax:
 
-```sh
+```console
 # Most shells will require escaping.
 cargo --config http.proxy=\"http://example.com\" …
 
@@ -628,9 +693,9 @@ version = "1.0.0"
 resolver = "2"
 ```
 
-Currently the only allowed value is `"2"`. This declaration enables all of the
-new feature behavior of [`-Zfeatures=all`](#features) and
-[`-Zpackage-features`](#package-features).
+The value `"1"` is the current resolver behavior on the stable channel. A
+value of `"2"` enables all of the new feature behavior of
+[`-Zfeatures=all`](#features) and [`-Zpackage-features`](#package-features).
 
 This flag is global for a workspace. If using a virtual workspace, the root
 definition should be in the `[workspace]` table like this:
@@ -645,13 +710,6 @@ resolver = "2"
 
 The `resolver` field is ignored in dependencies, only the top-level project or
 workspace can control the new behavior.
-
-### crate-versions
-* Tracking Issue: [#7907](https://github.com/rust-lang/cargo/issues/7907)
-
-The `-Z crate-versions` flag will make `cargo doc` include appropriate crate versions for the current crate and all of its dependencies (unless `--no-deps` was provided) in the compiled documentation.
-
-You can find an example screenshot for the cargo itself in the tracking issue.
 
 ### unit-graph
 * Tracking Issue: [#8002](https://github.com/rust-lang/cargo/issues/8002)
@@ -701,6 +759,7 @@ The following is a description of the JSON structure:
         "name": "my-package",
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
+        "test": true,
         "doctest": true
       },
       /* The profile settings for this unit.
@@ -879,3 +938,202 @@ error[E0308]: mismatched types
 
 error: aborting due to previous error
 ```
+
+### Weak dependency features
+* Tracking Issue: [#8832](https://github.com/rust-lang/cargo/issues/8832)
+
+The `-Z weak-dep-features` command-line options enables the ability to use
+`dep_name?/feat_name` syntax in the `[features]` table. The `?` indicates that
+the optional dependency `dep_name` will not be automatically enabled. The
+feature `feat_name` will only be added if something else enables the
+`dep_name` dependency.
+
+Example:
+
+```toml
+[dependencies]
+serde = { version = "1.0.117", optional = true, default-features = false }
+
+[features]
+std = ["serde?/std"]
+```
+
+In this example, the `std` feature enables the `std` feature on the `serde`
+dependency. However, unlike the normal `serde/std` syntax, it will not enable
+the optional dependency `serde` unless something else has included it.
+
+### credential-process
+* Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
+* RFC: [#2730](https://github.com/rust-lang/rfcs/pull/2730)
+
+The `credential-process` feature adds a config setting to fetch registry
+authentication tokens by calling an external process.
+
+Token authentication is used by the [`cargo login`], [`cargo publish`],
+[`cargo owner`], and [`cargo yank`] commands. Additionally, this feature adds
+a new `cargo logout` command.
+
+To use this feature, you must pass the `-Z credential-process` flag on the
+command-line. Additionally, you must remove any current tokens currently saved
+in the [`credentials` file] (which can be done with the new `logout` command).
+
+#### `credential-process` Configuration
+
+To configure which process to run to fetch the token, specify the process in
+the `registry` table in a [config file]:
+
+```toml
+[registry]
+credential-process = "/usr/bin/cargo-creds"
+```
+
+If you want to use a different process for a specific registry, it can be
+specified in the `registries` table:
+
+```toml
+[registries.my-registry]
+credential-process = "/usr/bin/cargo-creds"
+```
+
+The value can be a string with spaces separating arguments or it can be a TOML
+array of strings.
+
+Command-line arguments allow special placeholders which will be replaced with
+the corresponding value:
+
+* `{name}` — The name of the registry.
+* `{api_url}` — The base URL of the registry API endpoints.
+* `{action}` — The authentication action (described below).
+
+Process names with the prefix `cargo:` are loaded from the `libexec` directory
+next to cargo. Several experimental credential wrappers are included with
+Cargo, and this provides convenient access to them:
+
+```toml
+[registry]
+credential-process = "cargo:macos-keychain"
+```
+
+The current wrappers are:
+
+* `cargo:macos-keychain`: Uses the macOS Keychain to store the token.
+* `cargo:wincred`: Uses the Windows Credential Manager to store the token.
+* `cargo:1password`: Uses the 1password `op` CLI to store the token. You must
+  install the `op` CLI from the [1password
+  website](https://1password.com/downloads/command-line/). You must run `op
+  signin` at least once with the appropriate arguments (such as `op signin
+  my.1password.com user@example.com`), unless you provide the sign-in-address
+  and email arguments. The master password will be required on each request
+  unless the appropriate `OP_SESSION` environment variable is set. It supports
+  the following command-line arguments:
+  * `--account`: The account shorthand name to use.
+  * `--vault`: The vault name to use.
+  * `--sign-in-address`: The sign-in-address, which is a web address such as `my.1password.com`.
+  * `--email`: The email address to sign in with.
+
+A wrapper is available for GNOME
+[libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on
+Linux systems. Due to build limitations, this wrapper is not available as a
+pre-compiled binary. This can be built and installed manually. First, install
+libsecret using your system package manager (for example, `sudo apt install
+libsecret-1-dev`). Then build and install the wrapper with `cargo install
+--git https://github.com/rust-lang/cargo.git cargo-credential-gnome-secret`.
+In the config, use a path to the binary like this:
+
+```toml
+[registry]
+credential-process = "cargo-credential-gnome-secret {action}"
+```
+
+#### `credential-process` Interface
+
+There are two different kinds of token processes that Cargo supports. The
+simple "basic" kind will only be called by Cargo when it needs a token. This
+is intended for simple and easy integration with password managers, that can
+often use pre-existing tooling. The more advanced "Cargo" kind supports
+different actions passed as a command-line argument. This is intended for more
+pleasant integration experience, at the expense of requiring a Cargo-specific
+process to glue to the password manager. Cargo will determine which kind is
+supported by the `credential-process` definition. If it contains the
+`{action}` argument, then it uses the advanced style, otherwise it assumes it
+only supports the "basic" kind.
+
+##### Basic authenticator
+
+A basic authenticator is a process that returns a token on stdout. Newlines
+will be trimmed. The process inherits the user's stdin and stderr. It should
+exit 0 on success, and nonzero on error.
+
+With this form, [`cargo login`] and `cargo logout` are not supported and
+return an error if used.
+
+##### Cargo authenticator
+
+The protocol between the Cargo and the process is very basic, intended to
+ensure the credential process is kept as simple as possible. Cargo will
+execute the process with the `{action}` argument indicating which action to
+perform:
+
+* `store` — Store the given token in secure storage.
+* `get` — Get a token from storage.
+* `erase` — Remove a token from storage.
+
+The `cargo login` command uses `store` to save a token. Commands that require
+authentication, like `cargo publish`, uses `get` to retrieve a token. `cargo
+logout` uses the `erase` command to remove a token.
+
+The process inherits the user's stderr, so the process can display messages.
+Some values are passed in via environment variables (see below). The expected
+interactions are:
+
+* `store` — The token is sent to the process's stdin, terminated by a newline.
+  The process should store the token keyed off the registry name. If the
+  process fails, it should exit with a nonzero exit status.
+
+* `get` — The process should send the token to its stdout (trailing newline
+  will be trimmed). The process inherits the user's stdin, should it need to
+  receive input.
+
+  If the process is unable to fulfill the request, it should exit with a
+  nonzero exit code.
+
+* `erase` — The process should remove the token associated with the registry
+  name. If the token is not found, the process should exit with a 0 exit
+  status.
+
+##### Environment
+
+The following environment variables will be provided to the executed command:
+
+* `CARGO` — Path to the `cargo` binary executing the command.
+* `CARGO_REGISTRY_NAME` — Name of the registry the authentication token is for.
+* `CARGO_REGISTRY_API_URL` — The URL of the registry API.
+
+#### `cargo logout`
+
+A new `cargo logout` command has been added to make it easier to remove a
+token from storage. This supports both [`credentials` file] tokens and
+`credential-process` tokens.
+
+When used with `credentials` file tokens, it needs the `-Z unstable-options`
+command-line option:
+
+```console
+cargo logout -Z unstable-options`
+```
+
+When used with the `credential-process` config, use the `-Z
+credential-process` command-line option:
+
+
+```console
+cargo logout -Z credential-process`
+```
+
+[`cargo login`]: ../commands/cargo-login.md
+[`cargo publish`]: ../commands/cargo-publish.md
+[`cargo owner`]: ../commands/cargo-owner.md
+[`cargo yank`]: ../commands/cargo-yank.md
+[`credentials` file]: config.md#credentials
+[crates.io]: https://crates.io/
+[config file]: config.md

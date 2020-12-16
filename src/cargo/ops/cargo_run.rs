@@ -4,14 +4,18 @@ use std::path::Path;
 
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
-use crate::util::{CargoResult, ProcessError};
+use crate::util::CargoResult;
 
 pub fn run(
     ws: &Workspace<'_>,
     options: &ops::CompileOptions,
     args: &[OsString],
-) -> CargoResult<Option<ProcessError>> {
+) -> CargoResult<()> {
     let config = ws.config();
+
+    if options.filter.contains_glob_patterns() {
+        anyhow::bail!("`cargo run` does not support glob patterns on target selection")
+    }
 
     // We compute the `bins` here *just for diagnosis*. The actual set of
     // packages to be run is determined by the `ops::compile` call below.
@@ -87,13 +91,5 @@ pub fn run(
 
     config.shell().status("Running", process.to_string())?;
 
-    let result = process.exec_replace();
-
-    match result {
-        Ok(()) => Ok(None),
-        Err(e) => {
-            let err = e.downcast::<ProcessError>()?;
-            Ok(Some(err))
-        }
-    }
+    process.exec_replace()
 }

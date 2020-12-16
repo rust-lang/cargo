@@ -18,4 +18,6 @@ The reference covers the details of various areas of Cargo.
 * [Source Replacement](source-replacement.md)
 * [External Tools](external-tools.md)
 * [Registries](registries.md)
+* [Dependency Resolution](resolver.md)
+* [SemVer Compatibility](semver.md)
 * [Unstable Features](unstable.md)

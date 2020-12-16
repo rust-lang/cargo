@@ -12,6 +12,8 @@ fn manifest_output(readme_value: &str) -> String {
     "categories": [],
     "name":"foo",
     "readme": {},
+    "homepage": null,
+    "documentation": null,
     "repository": null,
     "version":"0.5.0",
     "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
@@ -26,7 +28,9 @@ fn manifest_output(readme_value: &str) -> String {
     "targets":[{{
         "kind":["bin"],
         "crate_types":["bin"],
+        "doc": true,
         "doctest": false,
+        "test": true,
         "edition": "2015",
         "name":"foo",
         "src_path":"[..]/foo/src/foo.rs"
@@ -47,17 +51,17 @@ fn manifest_output_no_readme() -> String {
 pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> String {
     format!(
         r#"
-        [package]
+            [package]
 
-        name = "{}"
-        version = "0.5.0"
-        authors = ["wycats@example.com"]
-        readme = {}
+            name = "{}"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            readme = {}
 
-        [[bin]]
+            [[bin]]
 
-        name = "{}"
-    "#,
+            name = "{}"
+        "#,
         name, readme_filename, name
     )
 }

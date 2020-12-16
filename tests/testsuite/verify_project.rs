@@ -51,12 +51,12 @@ fn cargo_verify_project_honours_unstable_features() {
         .file(
             "Cargo.toml",
             r#"
-        cargo-features = ["test-dummy-unstable"]
+                cargo-features = ["test-dummy-unstable"]
 
-        [package]
-        name = "foo"
-        version = "0.0.1"
-    "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

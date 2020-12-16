@@ -10,6 +10,11 @@ pub fn main(config: &mut Config) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
+
+    if commands::help::handle_embedded_help(config) {
+        return Ok(());
+    }
+
     let args = match cli().get_matches_safe() {
         Ok(args) => args,
         Err(e) => {
@@ -30,14 +35,15 @@ pub fn main(config: &mut Config) -> CliResult {
             "
 Available unstable (nightly-only) flags:
 
-    -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
-    -Z minimal-versions -- Install minimal dependency versions instead of maximum
-    -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
-    -Z unstable-options -- Allow the usage of unstable options
-    -Z timings          -- Display concurrency information
-    -Z doctest-xcompile -- Compile and run doctests for non-host target using runner config
-    -Z crate-versions   -- Add crate versions to generated docs
-    -Z terminal-width   -- Provide a terminal width to rustc for error truncation
+    -Z avoid-dev-deps      -- Avoid installing dev-dependencies if possible
+    -Z minimal-versions    -- Install minimal dependency versions instead of maximum
+    -Z no-index-update     -- Do not update the registry, avoids a network request for benchmarking
+    -Z unstable-options    -- Allow the usage of unstable options
+    -Z timings             -- Display concurrency information
+    -Z doctest-xcompile    -- Compile and run doctests for non-host target using runner config
+    -Z terminal-width      -- Provide a terminal width to rustc for error truncation
+    -Z namespaced-features -- Allow features with `dep:` prefix
+    -Z weak-dep-features   -- Allow `dep_name?/feature` feature syntax
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
@@ -114,7 +120,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
 pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
     let mut version_string = version.to_string();
-    version_string.push_str("\n");
+    version_string.push('\n');
     if is_verbose {
         version_string.push_str(&format!(
             "release: {}.{}.{}\n",

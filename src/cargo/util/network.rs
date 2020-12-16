@@ -36,7 +36,10 @@ impl<'a> Retry<'a> {
 fn maybe_spurious(err: &Error) -> bool {
     if let Some(git_err) = err.downcast_ref::<git2::Error>() {
         match git_err.class() {
-            git2::ErrorClass::Net | git2::ErrorClass::Os => return true,
+            git2::ErrorClass::Net
+            | git2::ErrorClass::Os
+            | git2::ErrorClass::Zlib
+            | git2::ErrorClass::Http => return true,
             _ => (),
         }
     }

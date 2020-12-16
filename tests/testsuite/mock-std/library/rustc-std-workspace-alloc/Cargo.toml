@@ -1,0 +1,11 @@
+[package]
+name = "rustc-std-workspace-alloc"
+version = "1.9.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+edition = "2018"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+alloc = { path = "../alloc" }

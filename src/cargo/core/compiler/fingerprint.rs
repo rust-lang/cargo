@@ -72,7 +72,7 @@
 //! -C incremental=… flag                      | ✓           |
 //! mtime of sources                           | ✓[^3]       |
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
-//! LTO flags                                  | ✓           |
+//! LTO flags                                  | ✓           | ✓
 //! config settings[^5]                        | ✓           |
 //! is_std                                     |             | ✓
 //!
@@ -313,6 +313,7 @@
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
 use std::collections::hash_map::{Entry, HashMap};
+use std::convert::TryInto;
 use std::env;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
@@ -333,13 +334,10 @@ use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{internal, profile, ProcessBuilder};
+use crate::util::{internal, path_args, profile, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
-use super::job::{
-    Freshness::{Dirty, Fresh},
-    Job, Work,
-};
+use super::job::{Job, Work};
 use super::{BuildContext, Context, FileFlavor, Unit};
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
@@ -395,7 +393,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     }
 
     if compare.is_ok() && !force {
-        return Ok(Job::new(Work::noop(), Fresh));
+        return Ok(Job::new_fresh());
     }
 
     // Clear out the old fingerprint file if it exists. This protects when
@@ -468,7 +466,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         Work::new(move |_| write_fingerprint(&loc, &fingerprint))
     };
 
-    Ok(Job::new(write_fingerprint, Dirty))
+    Ok(Job::new_dirty(write_fingerprint))
 }
 
 /// Dependency edge information for fingerprints. This is generated for each
@@ -1315,7 +1313,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(super::path_args(cx.bcx, unit).0),
+        path: util::hash_u64(path_args(cx.bcx.ws, unit).0),
         features: format!("{:?}", unit.features),
         deps,
         local: Mutex::new(local),
@@ -1702,7 +1700,7 @@ where
         let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
-                let mtime = match paths::mtime(path) {
+                let mtime = match paths::mtime_recursive(path) {
                     Ok(mtime) => mtime,
                     Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
                 };
@@ -1906,12 +1904,7 @@ impl EncodedDepInfo {
         fn read_usize(bytes: &mut &[u8]) -> Option<usize> {
             let ret = bytes.get(..4)?;
             *bytes = &bytes[4..];
-            Some(
-                ((ret[0] as usize) << 0)
-                    | ((ret[1] as usize) << 8)
-                    | ((ret[2] as usize) << 16)
-                    | ((ret[3] as usize) << 24),
-            )
+            Some(u32::from_le_bytes(ret.try_into().unwrap()) as usize)
         }
 
         fn read_u8(bytes: &mut &[u8]) -> Option<u8> {
@@ -1960,10 +1953,7 @@ impl EncodedDepInfo {
         }
 
         fn write_usize(dst: &mut Vec<u8>, val: usize) {
-            dst.push(val as u8);
-            dst.push((val >> 8) as u8);
-            dst.push((val >> 16) as u8);
-            dst.push((val >> 24) as u8);
+            dst.extend(&u32::to_le_bytes(val as u32));
         }
     }
 }
@@ -1975,9 +1965,7 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
     let mut found_deps = false;
 
     for line in contents.lines() {
-        let env_dep_prefix = "# env-dep:";
-        if line.starts_with(env_dep_prefix) {
-            let rest = &line[env_dep_prefix.len()..];
+        if let Some(rest) = line.strip_prefix("# env-dep:") {
             let mut parts = rest.splitn(2, '=');
             let env_var = match parts.next() {
                 Some(s) => s,
