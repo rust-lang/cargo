@@ -1770,57 +1770,57 @@ LLVM version: 9.0
         .as_str()
         .contains(String::from_utf8_lossy(&output.stdout).as_ref()));
 }
- 
+
 #[cargo_test]
 fn doc_test_in_workspace() {
-  let p = project()
-      .file(
-          "Cargo.toml",
-          r#"
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
               [workspace]
               members = [
                   "crate-a",
                   "crate-b",
               ]
           "#,
-      )
-      .file(
-          "crate-a/Cargo.toml",
-          r#"
+        )
+        .file(
+            "crate-a/Cargo.toml",
+            r#"
               [project]
               name = "crate-a"
               version = "0.1.0"
           "#,
-      )
-      .file(
-          "crate-a/src/lib.rs",
-          "\
+        )
+        .file(
+            "crate-a/src/lib.rs",
+            "\
               //! ```
               //! assert_eq!(1, 1);
               //! ```
           ",
-      )
-      .file(
-          "crate-b/Cargo.toml",
-          r#"
+        )
+        .file(
+            "crate-b/Cargo.toml",
+            r#"
               [project]
               name = "crate-b"
               version = "0.1.0"
           "#,
-      )
-      .file(
-          "crate-b/src/lib.rs",
-          "\
+        )
+        .file(
+            "crate-b/src/lib.rs",
+            "\
               //! ```
               //! assert_eq!(1, 1);
               //! ```
           ",
-      )
-      .build();
-  p.cargo("test --doc -vv")
-      .with_stderr_contains("[DOCTEST] crate-a")
-      .with_stdout_contains(
-          "
+        )
+        .build();
+    p.cargo("test --doc -vv")
+        .with_stderr_contains("[DOCTEST] crate-a")
+        .with_stdout_contains(
+            "
 running 1 test
 test crate-a/src/lib.rs - (line 1) ... ok
 
