@@ -21,7 +21,7 @@ const VERSION: u32 = 1;
 //         "pointer_width":"64",
 //         "vendor":"pc"
 //     },
-//     "targets": [
+//     "targets": {
 //         "x86_64-unknown-linux-gnu": {
 //             "names": ["debug_assertions", "unix"],
 //             "arch":"x86_64",
@@ -32,8 +32,19 @@ const VERSION: u32 = 1;
 //             "os":"linux",
 //             "pointer_width":"64",
 //             "vendor":"unknown"
+//         },
+//         "i686-pc-windows-msvc": {
+//             "names": ["windows", "debug_assertions"],
+//             "arch":"x86",
+//             "endian":"little",
+//             "env":"msvc",
+//             "family":"windows",
+//             "features":["fxsr","sse","sse2"],
+//             "os":"windows",
+//             "pointer_width":"32",
+//             "vendor":"pc"
 //         }
-//     ]
+//     }
 // }
 
 #[derive(serde::Serialize)]
