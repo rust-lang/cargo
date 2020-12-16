@@ -3,6 +3,7 @@ use std::env;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use anyhow::{bail, format_err};
 use serde::{Deserialize, Serialize};
@@ -537,7 +538,16 @@ where
         source.update()?;
     }
 
-    let deps = source.query_vec(&dep)?;
+    let deps = loop {
+        match source.query_vec(&dep)? {
+            Poll::Ready(deps) => {
+                break deps;
+            }
+            Poll::Pending => {
+                // TODO: dont hot loop for it to be Ready
+            }
+        }
+    };
     match deps.iter().map(|p| p.package_id()).max() {
         Some(pkgid) => {
             let pkg = Box::new(source).download_now(pkgid, config)?;

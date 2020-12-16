@@ -1,5 +1,6 @@
 use std::collections::hash_map::HashMap;
 use std::fmt;
+use std::task::Poll;
 
 use crate::core::package::PackageSet;
 use crate::core::{Dependency, Package, PackageId, Summary};
@@ -28,18 +29,21 @@ pub trait Source {
     fn requires_precise(&self) -> bool;
 
     /// Attempts to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>>;
 
     /// Attempts to find the packages that are close to a dependency request.
     /// Each source gets to define what `close` means for it.
     /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Index` source may return dependencies that have the same canonicalization.
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Poll<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s))?;
-        Ok(ret)
+        Ok(self.query(dep, &mut |s| ret.push(s))?.map(|_| ret))
     }
 
     /// Performs any network operations required to get the entire list of all names,
@@ -130,12 +134,16 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::query`.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>> {
         (**self).query(dep, f)
     }
 
     /// Forwards to `Source::query`.
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>> {
         (**self).fuzzy_query(dep, f)
     }
 
@@ -197,11 +205,15 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).requires_precise()
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>> {
         (**self).query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>> {
         (**self).fuzzy_query(dep, f)
     }
 

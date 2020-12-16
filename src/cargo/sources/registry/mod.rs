@@ -164,6 +164,7 @@ use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use flate2::read::GzDecoder;
 use log::debug;
@@ -657,7 +658,7 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>> {
         // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
@@ -665,15 +666,19 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         if dep.source_id().precise().is_some() && !self.updated {
             debug!("attempting query without update");
             let mut called = false;
-            self.index
-                .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                    if dep.matches(&s) {
-                        called = true;
-                        f(s);
-                    }
-                })?;
+            let pend =
+                self.index
+                    .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
+                        if dep.matches(&s) {
+                            called = true;
+                            f(s);
+                        }
+                    })?;
+            if pend.is_pending() {
+                return Ok(Poll::Pending);
+            }
             if called {
-                return Ok(());
+                return Ok(Poll::Ready(()));
             } else {
                 debug!("falling back to an update");
                 self.do_update()?;
@@ -688,7 +693,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             })
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>> {
         self.index
             .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, f)
     }

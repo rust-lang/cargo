@@ -22,6 +22,7 @@ use log::debug;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
+use std::task::Poll;
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
@@ -32,7 +33,7 @@ pub struct RegistryQueryer<'a> {
     /// specify minimum dependency versions to be used.
     minimal_versions: bool,
     /// a cache of `Candidate`s that fulfil a `Dependency`
-    registry_cache: HashMap<Dependency, Rc<Vec<Summary>>>,
+    registry_cache: HashMap<Dependency, Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
         (Option<PackageId>, Summary, ResolveOpts),
@@ -65,6 +66,10 @@ impl<'a> RegistryQueryer<'a> {
             config,
             warned_git_collisions: HashSet::new(),
         }
+    }
+
+    pub fn all_ready(&self) -> bool {
+        self.registry_cache.values().all(|r| r.is_ready())
     }
 
     pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
@@ -119,20 +124,24 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
+    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Poll<Rc<Vec<Summary>>>> {
         self.warn_colliding_git_sources(dep.source_id())?;
         if let Some(out) = self.registry_cache.get(dep).cloned() {
             return Ok(out);
         }
 
         let mut ret = Vec::new();
-        self.registry.query(
+        let ready = self.registry.query(
             dep,
             &mut |s| {
                 ret.push(s);
             },
             false,
         )?;
+        if ready.is_pending() {
+            self.registry_cache.insert(dep.clone(), Poll::Pending);
+            return Ok(Poll::Pending);
+        }
         for summary in ret.iter_mut() {
             let mut potential_matches = self
                 .replacements
@@ -149,7 +158,13 @@ impl<'a> RegistryQueryer<'a> {
                 dep.version_req()
             );
 
-            let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
+            let mut summaries = match self.registry.query_vec(dep, false)? {
+                Poll::Ready(s) => s.into_iter(),
+                Poll::Pending => {
+                    self.registry_cache.insert(dep.clone(), Poll::Pending);
+                    return Ok(Poll::Pending);
+                }
+            };
             let s = summaries.next().ok_or_else(|| {
                 anyhow::format_err!(
                     "no matching package for override `{}` found\n\
@@ -231,7 +246,7 @@ impl<'a> RegistryQueryer<'a> {
             }
         });
 
-        let out = Rc::new(ret);
+        let out = Poll::Ready(Rc::new(ret));
 
         self.registry_cache.insert(dep.clone(), out.clone());
 
@@ -267,15 +282,16 @@ impl<'a> RegistryQueryer<'a> {
         // which can satisfy that dependency.
         let mut deps = deps
             .into_iter()
-            .map(|(dep, features)| {
-                let candidates = self.query(&dep).chain_err(|| {
+            .filter_map(|(dep, features)| match self.query(&dep) {
+                Ok(Poll::Ready(candidates)) => Some(Ok((dep, candidates, features))),
+                Ok(Poll::Pending) => None, // we can ignore Pending deps, resolved will be repeatedly called until there are none to ignore
+                Err(x) => Some(Err(x).chain_err(|| {
                     anyhow::format_err!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),
                         describe_path(&cx.parents.path_to_bottom(&candidate.package_id())),
                     )
-                })?;
-                Ok((dep, candidates, features))
+                })),
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 

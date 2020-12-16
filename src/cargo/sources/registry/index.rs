@@ -78,6 +78,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::str;
+use std::task::Poll;
 
 /// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
 /// Therefore, the index must store uncanonicalized version of the name so old Cargo's can find it.
@@ -391,11 +392,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
-    ) -> CargoResult<()> {
+    ) -> CargoResult<Poll<()>> {
         if self.config.offline()
             && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0
         {
-            return Ok(());
+            return Ok(Poll::Ready(()));
             // If offline, and there are no matches, try again with online.
             // This is necessary for dependencies that are not used (such as
             // target-cfg or optional), but are not downloaded. Normally the
@@ -406,7 +407,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             // offline will be displayed.
         }
         self.query_inner_with_online(dep, load, yanked_whitelist, f, true)?;
-        Ok(())
+        Ok(Poll::Ready(()))
     }
 
     fn query_inner_with_online(

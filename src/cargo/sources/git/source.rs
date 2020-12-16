@@ -9,6 +9,7 @@ use crate::util::Config;
 use anyhow::Context;
 use log::trace;
 use std::fmt::{self, Debug, Formatter};
+use std::task::Poll;
 use url::Url;
 
 pub struct GitSource<'cfg> {
@@ -83,7 +84,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>> {
         let src = self
             .path_source
             .as_mut()
@@ -91,7 +92,11 @@ impl<'cfg> Source for GitSource<'cfg> {
         src.query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>> {
         let src = self
             .path_source
             .as_mut()

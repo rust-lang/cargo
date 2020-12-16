@@ -1,4 +1,5 @@
 use std::fmt;
+use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
@@ -214,9 +215,13 @@ pub(super) fn activation_error(
     let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
     new_dep.set_version_req(all_req);
-    let mut candidates = match registry.query_vec(&new_dep, false) {
-        Ok(candidates) => candidates,
-        Err(e) => return to_resolve_err(e),
+
+    let mut candidates = loop {
+        match registry.query_vec(&new_dep, false) {
+            Ok(Poll::Ready(candidates)) => break candidates,
+            Ok(Poll::Pending) => (), // TODO: dont hot loop for it to be Ready
+            Err(e) => return to_resolve_err(e),
+        }
     };
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 

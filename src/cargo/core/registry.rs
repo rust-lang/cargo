@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::task::Poll;
 
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
@@ -21,12 +22,11 @@ pub trait Registry {
         dep: &Dependency,
         f: &mut dyn FnMut(Summary),
         fuzzy: bool,
-    ) -> CargoResult<()>;
+    ) -> CargoResult<Poll<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
+    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Poll<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s), fuzzy)?;
-        Ok(ret)
+        Ok(self.query(dep, &mut |s| ret.push(s), fuzzy)?.map(|_| ret))
     }
 
     fn describe_source(&self, source: SourceId) -> String;
@@ -260,67 +260,85 @@ impl<'cfg> PackageRegistry<'cfg> {
         // Remember that each dependency listed in `[patch]` has to resolve to
         // precisely one package, so that's why we're just creating a flat list
         // of summaries which should be the same length as `deps` above.
-        let unlocked_summaries = deps
-            .iter()
-            .map(|(orig_patch, locked)| {
-                // Remove double reference in orig_patch. Is there maybe a
-                // magic pattern that could avoid this?
-                let orig_patch = *orig_patch;
-                // Use the locked patch if it exists, otherwise use the original.
-                let dep = match locked {
-                    Some((locked_patch, _locked_id)) => locked_patch,
-                    None => orig_patch,
-                };
-                debug!(
-                    "registering a patch for `{}` with `{}`",
-                    url,
-                    dep.package_name()
-                );
+        let unlocked_summaries = loop {
+            let try_summaries = deps
+                .iter()
+                .map(|(orig_patch, locked)| {
+                    // Remove double reference in orig_patch. Is there maybe a
+                    // magic pattern that could avoid this?
+                    let orig_patch = *orig_patch;
+                    // Use the locked patch if it exists, otherwise use the original.
+                    let dep = match locked {
+                        Some((locked_patch, _locked_id)) => locked_patch,
+                        None => orig_patch,
+                    };
+                    debug!(
+                        "registering a patch for `{}` with `{}`",
+                        url,
+                        dep.package_name()
+                    );
 
-                // Go straight to the source for resolving `dep`. Load it as we
-                // normally would and then ask it directly for the list of summaries
-                // corresponding to this `dep`.
-                self.ensure_loaded(dep.source_id(), Kind::Normal)
+                    // Go straight to the source for resolving `dep`. Load it as we
+                    // normally would and then ask it directly for the list of summaries
+                    // corresponding to this `dep`.
+                    self.ensure_loaded(dep.source_id(), Kind::Normal)
+                        .chain_err(|| {
+                            anyhow::format_err!(
+                                "failed to load source for dependency `{}`",
+                                dep.package_name()
+                            )
+                        })?;
+
+                    let source = self
+                        .sources
+                        .get_mut(dep.source_id())
+                        .expect("loaded source not present");
+                    let summaries = match source.query_vec(dep)? {
+                        Poll::Ready(deps) => deps,
+                        Poll::Pending => return Ok(Poll::Pending),
+                    };
+                    let (summary, should_unlock) = summary_for_patch(
+                        orig_patch, locked, summaries, source,
+                    )
                     .chain_err(|| {
-                        anyhow::format_err!(
-                            "failed to load source for dependency `{}`",
-                            dep.package_name()
-                        )
-                    })?;
-
-                let source = self
-                    .sources
-                    .get_mut(dep.source_id())
-                    .expect("loaded source not present");
-                let summaries = source.query_vec(dep)?;
-                let (summary, should_unlock) =
-                    summary_for_patch(orig_patch, locked, summaries, source).chain_err(|| {
                         format!(
                             "patch for `{}` in `{}` failed to resolve",
                             orig_patch.package_name(),
                             url,
                         )
                     })?;
-                debug!(
-                    "patch summary is {:?} should_unlock={:?}",
-                    summary, should_unlock
-                );
-                if let Some(unlock_id) = should_unlock {
-                    unlock_patches.push((orig_patch.clone(), unlock_id));
-                }
-
-                if *summary.package_id().source_id().canonical_url() == canonical {
-                    anyhow::bail!(
-                        "patch for `{}` in `{}` points to the same source, but \
-                         patches must point to different sources",
-                        dep.package_name(),
-                        url
+                    debug!(
+                        "patch summary is {:?} should_unlock={:?}",
+                        summary, should_unlock
                     );
-                }
-                Ok(summary)
-            })
-            .collect::<CargoResult<Vec<_>>>()
-            .chain_err(|| anyhow::format_err!("failed to resolve patches for `{}`", url))?;
+                    if let Some(unlock_id) = should_unlock {
+                        unlock_patches.push((orig_patch.clone(), unlock_id));
+                    }
+
+                    if *summary.package_id().source_id().canonical_url() == canonical {
+                        anyhow::bail!(
+                            "patch for `{}` in `{}` points to the same source, but \
+                         patches must point to different sources",
+                            dep.package_name(),
+                            url
+                        );
+                    }
+                    Ok(Poll::Ready(summary))
+                })
+                .collect::<CargoResult<Vec<_>>>()
+                .chain_err(|| anyhow::format_err!("failed to resolve patches for `{}`", url))?;
+            if try_summaries.iter().all(|p| p.is_ready()) {
+                break try_summaries
+                    .into_iter()
+                    .map(|p| match p {
+                        Poll::Ready(s) => s,
+                        Poll::Pending => unreachable!("we just check for this!"),
+                    })
+                    .collect::<Vec<_>>();
+            } else {
+                // TODO: dont hot loop for it to be Ready
+            }
+        };
 
         let mut name_and_version = HashSet::new();
         for summary in unlocked_summaries.iter() {
@@ -396,9 +414,13 @@ impl<'cfg> PackageRegistry<'cfg> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.package_name(), s);
-            let mut results = src.query_vec(&dep)?;
-            if !results.is_empty() {
-                return Ok(Some(results.remove(0)));
+            match src.query_vec(&dep)? {
+                Poll::Ready(mut results) => {
+                    if !results.is_empty() {
+                        return Ok(Some(results.remove(0)));
+                    }
+                }
+                Poll::Pending => bail!("overrides have to be on path deps, how did we get here?"),
             }
         }
         Ok(None)
@@ -487,7 +509,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         dep: &Dependency,
         f: &mut dyn FnMut(Summary),
         fuzzy: bool,
-    ) -> CargoResult<()> {
+    ) -> CargoResult<Poll<()>> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
@@ -521,7 +543,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     Some(summary) => (summary, 1, Some(patch)),
                     None => {
                         f(patch);
-                        return Ok(());
+                        return Ok(Poll::Ready(()));
                     }
                 }
             } else {
@@ -549,7 +571,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 let source = self.sources.get_mut(dep.source_id());
                 match (override_summary, source) {
                     (Some(_), None) => anyhow::bail!("override found but no real ones"),
-                    (None, None) => return Ok(()),
+                    (None, None) => return Ok(Poll::Ready(())),
 
                     // If we don't have an override then we just ship
                     // everything upstairs after locking the summary
@@ -597,10 +619,13 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                                 n += 1;
                                 to_warn = Some(summary);
                             };
-                            if fuzzy {
-                                source.fuzzy_query(dep, callback)?;
+                            let pend = if fuzzy {
+                                source.fuzzy_query(dep, callback)?
                             } else {
-                                source.query(dep, callback)?;
+                                source.query(dep, callback)?
+                            };
+                            if pend.is_pending() {
+                                return Ok(Poll::Pending);
                             }
                         }
                         (override_summary, n, to_warn)
@@ -615,7 +640,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
             self.warn_bad_override(&override_summary, &summary)?;
         }
         f(self.lock(override_summary));
-        Ok(())
+        Ok(Poll::Ready(()))
     }
 
     fn describe_source(&self, id: SourceId) -> String {
@@ -779,7 +804,20 @@ fn summary_for_patch(
     // No summaries found, try to help the user figure out what is wrong.
     if let Some((_locked_patch, locked_id)) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let orig_matches = source.query_vec(orig_patch).unwrap_or_else(|e| {
+        let orig_matches = loop {
+            match source.query_vec(orig_patch) {
+                Ok(Poll::Ready(deps)) => {
+                    break Ok(deps);
+                }
+                Ok(Poll::Pending) => {
+                    // TODO: dont hot loop for it to be Ready
+                }
+                Err(x) => {
+                    break Err(x);
+                }
+            }
+        }
+        .unwrap_or_else(|e| {
             log::warn!(
                 "could not determine unlocked summaries for dep {:?}: {:?}",
                 orig_patch,
@@ -794,7 +832,20 @@ fn summary_for_patch(
     }
     // Try checking if there are *any* packages that match this by name.
     let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
-    let name_summaries = source.query_vec(&name_only_dep).unwrap_or_else(|e| {
+    let name_summaries = loop {
+        match source.query_vec(&name_only_dep) {
+            Ok(Poll::Ready(deps)) => {
+                break Ok(deps);
+            }
+            Ok(Poll::Pending) => {
+                // TODO: dont hot loop for it to be Ready
+            }
+            Err(x) => {
+                break Err(x);
+            }
+        }
+    }
+    .unwrap_or_else(|e| {
         log::warn!(
             "failed to do name-only summary query for {:?}: {:?}",
             name_only_dep,

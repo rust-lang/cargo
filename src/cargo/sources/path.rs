@@ -1,6 +1,7 @@
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
@@ -469,20 +470,24 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>> {
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
                 f(s.clone())
             }
         }
-        Ok(())
+        Ok(Poll::Ready(()))
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        _dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>> {
         for s in self.packages.iter().map(|p| p.summary()) {
             f(s.clone())
         }
-        Ok(())
+        Ok(Poll::Ready(()))
     }
 
     fn supports_checksums(&self) -> bool {

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use serde::Deserialize;
 
@@ -42,21 +43,25 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<Poll<()>> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
         for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
-        Ok(())
+        Ok(Poll::Ready(()))
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        _dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> CargoResult<Poll<()>> {
         let packages = self.packages.values().map(|p| &p.0);
         for summary in packages.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
-        Ok(())
+        Ok(Poll::Ready(()))
     }
 
     fn supports_checksums(&self) -> bool {
