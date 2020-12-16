@@ -27,7 +27,7 @@ pub struct BuildConfig {
     /// Output the unit graph to stdout instead of actually compiling.
     pub unit_graph: bool,
     /// Output the rustc configuration to stdout instead of actually compiling.
-    pub cfg: bool,
+    pub rustc_cfg: bool,
     /// An optional override of the rustc process for primary units
     pub primary_unit_rustc: Option<ProcessBuilder>,
     /// A thread used by `cargo fix` to receive messages on a socket regarding
@@ -79,7 +79,7 @@ impl BuildConfig {
             force_rebuild: false,
             build_plan: false,
             unit_graph: false,
-            cfg: false,
+            rustc_cfg: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,

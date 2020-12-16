@@ -285,7 +285,7 @@ pub fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph)?;
         return Ok(Compilation::new(&bcx)?);
     }
-    if options.build_config.cfg {
+    if options.build_config.rustc_cfg {
         cfg::emit_serialized_rustc_cfg(&bcx.target_data, &bcx.build_config.requested_kinds)?;
         return Ok(Compilation::new(&bcx)?);
     }
