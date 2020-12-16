@@ -5,11 +5,6 @@ use std::sync::{Arc, Mutex};
 use filetime::FileTime;
 use jobserver::Client;
 
-use crate::core::compiler::{self, compilation, Unit};
-use crate::core::PackageId;
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::profile;
-
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
@@ -18,6 +13,10 @@ use super::layout::Layout;
 use super::lto::Lto;
 use super::unit_graph::UnitDep;
 use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
+use crate::core::compiler::{self, compilation, Unit};
+use crate::core::PackageId;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::profile;
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;

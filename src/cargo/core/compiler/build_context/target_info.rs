@@ -3,10 +3,14 @@ use crate::core::{Dependency, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
 use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
+use serde::{Deserialize, Serialize};
+use serde_json::{from_str, to_writer};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -751,5 +755,81 @@ impl RustcTargetData {
     /// Host or Target.
     pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
         self.target_config(kind).links_overrides.get(lib_name)
+    }
+}
+
+/// Structure used to deal with Rustdoc fingerprinting
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RustDocFingerprint {
+    _rustc_verbose_version: String,
+}
+
+impl RustDocFingerprint {
+    /// Returns the version contained by this `RustDocFingerprint` instance.
+    fn version(&self) -> &str {
+        self._rustc_verbose_version.as_str()
+    }
+
+    /// Given the `doc` dir, returns the path to the rustdoc fingerprint file.
+    fn path_to_fingerprint(doc_dir: &Path) -> PathBuf {
+        doc_dir.to_path_buf().join(".rustdoc_fingerprint.json")
+    }
+
+    /// Generate an instance of `RustDocFingerprint` from the fingerprint file.
+    fn from_file(file: &mut File) -> anyhow::Result<Self> {
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let rustdoc_target_data: Self = from_str(&contents)?;
+        Ok(rustdoc_target_data)
+    }
+
+    /// Write the `RustDocFingerprint` info into the fingerprint file.
+    pub fn write(&self, doc_dir: &Path) -> std::io::Result<()> {
+        let rustdoc_fingerprint_file =
+            File::create(RustDocFingerprint::path_to_fingerprint(doc_dir))?;
+        // We write the actual `Rustc` version to it so that we just need to compile it straight
+        // since there's no `doc/` folder to remove.
+        to_writer(&rustdoc_fingerprint_file, &self)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))
+    }
+
+    /// This function checks whether the latest version of `Rustc` used to compile this
+    /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
+    /// call, returning `(bool, Self)` where the `bool` says if the `doc` folder was removed.
+    ///
+    /// In case it's not, it takes care of removig the `doc/` folder as well as overwriting
+    /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
+    /// versions of the `js/html/css` files that `Rustc` autogenerates which do not have
+    /// any versioning.
+    pub fn check_rustdoc_fingerprint(
+        doc_dir: &Path,
+        rustc_verbose_ver: &str,
+    ) -> anyhow::Result<(Self, bool)> {
+        let actual_rustdoc_target_data = RustDocFingerprint {
+            _rustc_verbose_version: rustc_verbose_ver.to_string(),
+        };
+
+        // Check wether `.rustdoc_fingerprint.json exists
+        let mut fingerprint = match File::open(RustDocFingerprint::path_to_fingerprint(doc_dir)) {
+            Ok(file) => file,
+            // If the file does not exist, then we cannot assume that the docs were compiled
+            // with the actual Rustc instace version. Therefore, we try to remove the
+            // `doc` directory forcing the recompilation of the docs. If the directory doesn't
+            // exists neither, we simply do nothing and continue.
+            Err(_) => {
+                // We don't care if this suceeds as explained above.
+                let _ = std::fs::remove_dir_all(doc_dir);
+                return Ok((actual_rustdoc_target_data, true));
+            }
+        };
+
+        let previous_rustdoc_target_data = RustDocFingerprint::from_file(&mut fingerprint)?;
+        // Check if rustc_version matches the one we just used. Otherways,
+        // remove the `doc` folder to trigger a re-compilation of the docs.
+        if previous_rustdoc_target_data.version() != actual_rustdoc_target_data.version() {
+            std::fs::remove_dir_all(doc_dir)?;
+            return Ok((actual_rustdoc_target_data, true));
+        };
+        Ok((actual_rustdoc_target_data, false))
     }
 }
