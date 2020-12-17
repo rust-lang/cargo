@@ -142,6 +142,8 @@ fn build_resolve_graph(
     )?;
 
     // Download all Packages. This is needed to serialize the information for every package.
+    // Note that even with --filter-platform we end up downloading host dependencies as well,
+    // as that is the behavior of download_accessible.
     let package_map: BTreeMap<PackageId, Package> = ws_resolve
         .pkg_set
         .download_accessible(
