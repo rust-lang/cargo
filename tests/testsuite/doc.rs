@@ -4,8 +4,8 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
 use cargo_test_support::{is_nightly, rustc_host};
+use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::Read;
 use std::str;
 
 #[cargo_test]
@@ -1607,6 +1607,11 @@ fn crate_versions() {
 
 #[cargo_test]
 fn crate_versions_flag_is_overridden() {
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct RustDocFingerprint {
+        rustc_verbose_version: String,
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -1641,47 +1646,12 @@ fn crate_versions_flag_is_overridden() {
 }
 
 #[cargo_test]
-fn rustc_adds_doc_fingerprint() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "//! Hello")
-        .build();
-
-    p.cargo("doc").run();
-
-    // Read fingerprint rustc version and check it matches the expected one
-    let mut fingerprint = fs::File::open(
-        p.root()
-            .join("target")
-            .join("doc")
-            .join(".rustdoc_fingerprint.json"),
-    )
-    .expect("Failed to read fingerprint");
-
-    let mut rustc_verbose_version = String::new();
-    fingerprint
-        .read_to_string(&mut rustc_verbose_version)
-        .expect("Error reading the fingerprint contents");
-    let output = std::process::Command::new("rustc")
-        .arg("-vV")
-        .stdout(std::process::Stdio::inherit())
-        .output()
-        .expect("Failed to get actual rustc verbose version");
-    assert!(rustc_verbose_version
-        .as_str()
-        .contains(String::from_utf8_lossy(&output.stdout).as_ref()));
-}
-
-#[cargo_test]
 fn doc_fingerprint_versioning_consistent() {
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct RustDocFingerprint {
+        pub rustc_verbose_version: String,
+    }
+
     // Test that using different Rustc versions forces a
     // doc re-compilation producing new html, css & js files.
 
@@ -1704,21 +1674,47 @@ LLVM version: 9.0
         .file(
             "Cargo.toml",
             r#"
-        [package]
-        name = "foo"
-        version = "1.2.4"
-        authors = []
-    "#,
+                    [package]
+                    name = "foo"
+                    version = "1.2.4"
+                    authors = []
+                "#,
         )
         .file("src/lib.rs", "//! These are the docs!")
         .build();
 
     dummy_project.cargo("doc").run();
 
-    // As the test shows avobe. Now we have generated the `doc/` folder and inside
-    // the rustdoc fingerprint file is located.
+    let fingerprint: RustDocFingerprint = serde_json::from_str(
+        dummy_project
+            .read_file(
+                std::path::PathBuf::from("target")
+                    .join("doc")
+                    .join(".rustdoc_fingerprint.json")
+                    .to_str()
+                    .expect("Malformed path"),
+            )
+            .as_str(),
+    )
+    .expect("JSON Serde fail");
+
+    // Check that the fingerprint contains the actual rustc version
+    // which has been used to compile the docs.
+    let output = std::process::Command::new("rustc")
+        .arg("-vV")
+        .stdout(std::process::Stdio::piped())
+        .output()
+        .expect("Failed to get actual rustc verbose version");
+    assert_eq!(
+        fingerprint.rustc_verbose_version,
+        (String::from_utf8_lossy(&output.stdout).as_ref())
+    );
+
+    // As the test shows above. Now we have generated the `doc/` folder and inside
+    // the rustdoc fingerprint file is located with the correct rustc version.
     // So we will remove it and create a new fingerprint with an old rustc version
-    // inside it.
+    // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
+    // it gets removed as we expect on the next doc compilation.
     fs::remove_file(
         dummy_project
             .root()
@@ -1738,37 +1734,57 @@ LLVM version: 9.0
     )
     .expect("Error writing old rustc version");
 
+    fs::write(
+        dummy_project
+            .root()
+            .join("target")
+            .join("doc")
+            .join("bogus_file"),
+        String::from("This is a bogus file and should be removed!"),
+    )
+    .expect("Error writing test bogus file");
+
     // Now if we trigger another compilation, since the fingerprint contains an old version
     // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
     // and generating another one with the actual version.
+    // It should also remove the bogus file we created above
+    dummy_project.change_file("src/lib.rs", "//! These are the docs 2!");
     dummy_project.cargo("doc").run();
 
-    // Edit the fingerprint rustc version.
-    // Read fingerprint rustc version and return it as String
-    let get_fingerprint_version = |root_path: std::path::PathBuf| -> String {
-        let mut fingerprint = fs::File::open(
-            root_path
-                .join("target")
-                .join("doc")
-                .join(".rustdoc_fingerprint.json"),
-        )
-        .expect("Failed to read fingerprint on tests");
+    assert!(fs::File::open(
+        dummy_project
+            .root()
+            .join("target")
+            .join("doc")
+            .join("bogus_file")
+    )
+    .is_err());
 
-        let mut rustc_verbose_version = String::new();
-        fingerprint
-            .read_to_string(&mut rustc_verbose_version)
-            .expect("Error reading the fingerprint contents");
-        rustc_verbose_version
-    };
+    let fingerprint: RustDocFingerprint = serde_json::from_str(
+        dummy_project
+            .read_file(
+                std::path::PathBuf::from("target")
+                    .join("doc")
+                    .join(".rustdoc_fingerprint.json")
+                    .to_str()
+                    .expect("Malformed path"),
+            )
+            .as_str(),
+    )
+    .expect("JSON Serde fail");
 
+    // Check that the fingerprint contains the actual rustc version
+    // which has been used to compile the docs.
     let output = std::process::Command::new("rustc")
         .arg("-vV")
-        .stdout(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::piped())
         .output()
         .expect("Failed to get actual rustc verbose version");
-    assert!(get_fingerprint_version(dummy_project.root())
-        .as_str()
-        .contains(String::from_utf8_lossy(&output.stdout).as_ref()));
+
+    assert_eq!(
+        fingerprint.rustc_verbose_version,
+        (String::from_utf8_lossy(&output.stdout).as_ref())
+    );
 }
 
 #[cargo_test]
@@ -1777,44 +1793,44 @@ fn doc_test_in_workspace() {
         .file(
             "Cargo.toml",
             r#"
-              [workspace]
-              members = [
-                  "crate-a",
-                  "crate-b",
-              ]
-          "#,
+                [workspace]
+                members = [
+                    "crate-a",
+                    "crate-b",
+                ]
+            "#,
         )
         .file(
             "crate-a/Cargo.toml",
             r#"
-              [project]
-              name = "crate-a"
-              version = "0.1.0"
-          "#,
+                [project]
+                name = "crate-a"
+                version = "0.1.0"
+            "#,
         )
         .file(
             "crate-a/src/lib.rs",
             "\
-              //! ```
-              //! assert_eq!(1, 1);
-              //! ```
-          ",
+                //! ```
+                //! assert_eq!(1, 1);
+                //! ```
+            ",
         )
         .file(
             "crate-b/Cargo.toml",
             r#"
-              [project]
-              name = "crate-b"
-              version = "0.1.0"
-          "#,
+                [project]
+                name = "crate-b"
+                version = "0.1.0"
+            "#,
         )
         .file(
             "crate-b/src/lib.rs",
             "\
-              //! ```
-              //! assert_eq!(1, 1);
-              //! ```
-          ",
+                //! ```
+                //! assert_eq!(1, 1);
+                //! ```
+            ",
         )
         .build();
     p.cargo("test --doc -vv")

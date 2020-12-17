@@ -662,7 +662,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
                 false,
             )
-            .chain_err(|| format!("Could not document `{}`.", name))?;
+            .chain_err(|| format!("could not document `{}`.", name))?;
 
         if doc_dir_removed {
             fingerprint.write(&doc_dir)?
