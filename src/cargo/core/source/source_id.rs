@@ -443,6 +443,7 @@ thread_local! {
 }
 
 #[must_use]
+#[allow(dead_code)]
 pub fn disable_path_serialization() -> impl Drop {
     // Ensure that we reset the setting eventually.
     struct DropGuard;
