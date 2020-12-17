@@ -116,21 +116,18 @@ specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
 to \fBtarget\fR in the root of the workspace.
 .RE
 .SS "Feature Selection"
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fR is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the \fBdefault\fR feature is activated for every
+selected package.
 .sp
-When no feature options are given, the \fBdefault\fR feature is activated for
-every selected package.
+See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
+for more details.
 .sp
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
-Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
-specified multiple times, which enables all specified features.
+Space or comma separated list of features to activate. Features of workspace
+members may be enabled with \fBpackage\-name/feature\-name\fR syntax. This flag may
+be specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fR
@@ -140,7 +137,7 @@ Activate all available features of all selected packages.
 .sp
 \fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fR feature of the current directory's package.
+Do not activate the \fBdefault\fR feature of the selected packages.
 .RE
 .SS "Manifest Options"
 .sp

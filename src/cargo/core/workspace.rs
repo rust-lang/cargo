@@ -637,8 +637,15 @@ impl<'cfg> Workspace<'cfg> {
         self.resolve_behavior.unwrap_or(ResolveBehavior::V1)
     }
 
-    pub fn allows_unstable_package_features(&self) -> bool {
-        self.config().cli_unstable().package_features
+    /// Returns `true` if this workspace uses the new CLI features behavior.
+    ///
+    /// The old behavior only allowed choosing the features from the package
+    /// in the current directory, regardless of which packages were chosen
+    /// with the -p flags. The new behavior allows selecting features from the
+    /// packages chosen on the command line (with -p or --workspace flags),
+    /// ignoring whatever is in the current directory.
+    pub fn allows_new_cli_feature_behavior(&self) -> bool {
+        self.is_virtual()
             || match self.resolve_behavior() {
                 ResolveBehavior::V1 => false,
                 ResolveBehavior::V2 => true,
@@ -947,15 +954,16 @@ impl<'cfg> Workspace<'cfg> {
                 .map(|m| (m, RequestedFeatures::new_all(true)))
                 .collect());
         }
-        if self.allows_unstable_package_features() {
-            self.members_with_features_pf(specs, requested_features)
+        if self.allows_new_cli_feature_behavior() {
+            self.members_with_features_new(specs, requested_features)
         } else {
-            self.members_with_features_stable(specs, requested_features)
+            self.members_with_features_old(specs, requested_features)
         }
     }
 
-    /// New command-line feature selection with -Zpackage-features.
-    fn members_with_features_pf(
+    /// New command-line feature selection behavior with resolver = "2" or the
+    /// root of a virtual workspace. See `allows_new_cli_feature_behavior`.
+    fn members_with_features_new(
         &self,
         specs: &[PackageIdSpec],
         requested_features: &RequestedFeatures,
@@ -1053,30 +1061,69 @@ impl<'cfg> Workspace<'cfg> {
         Ok(members)
     }
 
-    /// This is the current "stable" behavior for command-line feature selection.
-    fn members_with_features_stable(
+    /// This is the "old" behavior for command-line feature selection.
+    /// See `allows_new_cli_feature_behavior`.
+    fn members_with_features_old(
         &self,
         specs: &[PackageIdSpec],
         requested_features: &RequestedFeatures,
     ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+        // Split off any features with the syntax `member-name/feature-name` into a map
+        // so that those features can be applied directly to those workspace-members.
+        let mut member_specific_features: HashMap<&str, BTreeSet<InternedString>> = HashMap::new();
+        // Features for the member in the current directory.
+        let mut cwd_features = BTreeSet::new();
+        for feature in requested_features.features.iter() {
+            if let Some(index) = feature.find('/') {
+                let name = &feature[..index];
+                if specs.iter().any(|spec| spec.name() == name) {
+                    member_specific_features
+                        .entry(name)
+                        .or_default()
+                        .insert(InternedString::new(&feature[index + 1..]));
+                } else {
+                    cwd_features.insert(*feature);
+                }
+            } else {
+                cwd_features.insert(*feature);
+            };
+        }
+
         let ms = self.members().filter_map(|member| {
             let member_id = member.package_id();
             match self.current_opt() {
                 // The features passed on the command-line only apply to
                 // the "current" package (determined by the cwd).
                 Some(current) if member_id == current.package_id() => {
-                    Some((member, requested_features.clone()))
+                    let feats = RequestedFeatures {
+                        features: Rc::new(cwd_features.clone()),
+                        all_features: requested_features.all_features,
+                        uses_default_features: requested_features.uses_default_features,
+                    };
+                    Some((member, feats))
                 }
                 _ => {
                     // Ignore members that are not enabled on the command-line.
                     if specs.iter().any(|spec| spec.matches(member_id)) {
-                        // -p for a workspace member that is not the
-                        // "current" one, don't use the local
-                        // `--features`, only allow `--all-features`.
-                        Some((
-                            member,
-                            RequestedFeatures::new_all(requested_features.all_features),
-                        ))
+                        // -p for a workspace member that is not the "current"
+                        // one.
+                        //
+                        // The odd behavior here is due to backwards
+                        // compatibility. `--features` and
+                        // `--no-default-features` used to only apply to the
+                        // "current" package. As an extension, this allows
+                        // member-name/feature-name to set member-specific
+                        // features, which should be backwards-compatible.
+                        let feats = RequestedFeatures {
+                            features: Rc::new(
+                                member_specific_features
+                                    .remove(member.name().as_str())
+                                    .unwrap_or_default(),
+                            ),
+                            uses_default_features: true,
+                            all_features: requested_features.all_features,
+                        };
+                        Some((member, feats))
                     } else {
                         // This member was not requested on the command-line, skip.
                         None

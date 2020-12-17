@@ -1,5 +1,6 @@
 //! Tests for the `cargo tree` command.
 
+use super::features2::switch_to_resolver_2;
 use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
@@ -1030,7 +1031,7 @@ foo v0.1.0 ([..]/foo) [bar,default,dep,foo]
 
 #[cargo_test]
 fn dev_dep_feature() {
-    // -Zfeatures=dev_dep with optional dep
+    // New feature resolver with optional dep
     Package::new("optdep", "1.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("optdep", "1.0").optional(true))
@@ -1053,6 +1054,7 @@ fn dev_dep_feature() {
         .file("src/lib.rs", "")
         .build();
 
+    // Old behavior.
     p.cargo("tree")
         .with_stdout(
             "\
@@ -1075,8 +1077,10 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -Zfeatures=dev_dep")
-        .masquerade_as_nightly_cargo()
+    // New behavior.
+    switch_to_resolver_2(&p);
+
+    p.cargo("tree")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -1088,8 +1092,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -e normal -Zfeatures=dev_dep")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e normal")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -1101,7 +1104,7 @@ foo v0.1.0 ([..]/foo)
 
 #[cargo_test]
 fn host_dep_feature() {
-    // -Zfeatures=host_dep with optional dep
+    // New feature resolver with optional build dep
     Package::new("optdep", "1.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("optdep", "1.0").optional(true))
@@ -1125,6 +1128,7 @@ fn host_dep_feature() {
         .file("build.rs", "fn main() {}")
         .build();
 
+    // Old behavior
     p.cargo("tree")
         .with_stdout(
             "\
@@ -1137,35 +1141,10 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-└── bar v1.0.0
-[build-dependencies]
-└── bar v1.0.0
-    └── optdep v1.0.0
-",
-        )
-        .run();
-
     // -p
     p.cargo("tree -p bar")
         .with_stdout(
             "\
-bar v1.0.0
-└── optdep v1.0.0
-",
-        )
-        .run();
-
-    p.cargo("tree -p bar -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-bar v1.0.0
-
 bar v1.0.0
 └── optdep v1.0.0
 ",
@@ -1185,8 +1164,33 @@ optdep v1.0.0
         )
         .run();
 
-    p.cargo("tree -i optdep -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
+    // New behavior.
+    switch_to_resolver_2(&p);
+
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── bar v1.0.0
+[build-dependencies]
+└── bar v1.0.0
+    └── optdep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -p bar")
+        .with_stdout(
+            "\
+bar v1.0.0
+
+bar v1.0.0
+└── optdep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -i optdep")
         .with_stdout(
             "\
 optdep v1.0.0
@@ -1198,8 +1202,7 @@ optdep v1.0.0
         .run();
 
     // Check that -d handles duplicates with features.
-    p.cargo("tree -d -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -d")
         .with_stdout(
             "\
 bar v1.0.0
@@ -1215,7 +1218,7 @@ bar v1.0.0
 
 #[cargo_test]
 fn proc_macro_features() {
-    // -Zfeatures=host_dep with a proc-macro
+    // New feature resolver with a proc-macro
     Package::new("optdep", "1.0.0").publish();
     Package::new("somedep", "1.0.0")
         .add_dep(Dependency::new("optdep", "1.0").optional(true))
@@ -1240,6 +1243,7 @@ fn proc_macro_features() {
         .file("src/lib.rs", "")
         .build();
 
+    // Old behavior
     p.cargo("tree")
         .with_stdout(
             "\
@@ -1252,36 +1256,10 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    // Note the missing (*)
-    p.cargo("tree -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-├── pm v1.0.0 (proc-macro)
-│   └── somedep v1.0.0
-│       └── optdep v1.0.0
-└── somedep v1.0.0
-",
-        )
-        .run();
-
     // -p
     p.cargo("tree -p somedep")
         .with_stdout(
             "\
-somedep v1.0.0
-└── optdep v1.0.0
-",
-        )
-        .run();
-
-    p.cargo("tree -p somedep -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-somedep v1.0.0
-
 somedep v1.0.0
 └── optdep v1.0.0
 ",
@@ -1300,8 +1278,34 @@ somedep v1.0.0
         )
         .run();
 
-    p.cargo("tree -i somedep -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
+    // New behavior.
+    switch_to_resolver_2(&p);
+
+    // Note the missing (*)
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── pm v1.0.0 (proc-macro)
+│   └── somedep v1.0.0
+│       └── optdep v1.0.0
+└── somedep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -p somedep")
+        .with_stdout(
+            "\
+somedep v1.0.0
+
+somedep v1.0.0
+└── optdep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -i somedep")
         .with_stdout(
             "\
 somedep v1.0.0
@@ -1317,7 +1321,7 @@ somedep v1.0.0
 
 #[cargo_test]
 fn itarget_opt_dep() {
-    // -Zfeatures=itarget with optional dep
+    // New feature resolver with optional target dep
     Package::new("optdep", "1.0.0").publish();
     Package::new("common", "1.0.0")
         .add_dep(Dependency::new("optdep", "1.0").optional(true))
@@ -1342,6 +1346,7 @@ fn itarget_opt_dep() {
         .file("src/lib.rs", "")
         .build();
 
+    // Old behavior
     p.cargo("tree")
         .with_stdout(
             "\
@@ -1352,14 +1357,16 @@ foo v1.0.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -Zfeatures=itarget")
+    // New behavior.
+    switch_to_resolver_2(&p);
+
+    p.cargo("tree")
         .with_stdout(
             "\
 foo v1.0.0 ([..]/foo)
 └── common v1.0.0
 ",
         )
-        .masquerade_as_nightly_cargo()
         .run();
 }
 

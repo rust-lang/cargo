@@ -479,6 +479,7 @@ fn proc_macro_built_once() {
             r#"
                 [workspace]
                 members = ['a', 'b']
+                resolver = "2"
             "#,
         )
         .file(
@@ -522,8 +523,7 @@ fn proc_macro_built_once() {
         )
         .file("the-macro/src/lib.rs", "")
         .build();
-    p.cargo("build -Zfeatures=all --verbose")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --verbose")
         .with_stderr_unordered(
             "\
 [COMPILING] the-macro [..]
