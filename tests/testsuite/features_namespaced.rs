@@ -741,7 +741,7 @@ fn json_exposed() {
                       "description": null,
                       "homepage": null,
                       "documentation": null,
-                      "source": null,
+                      "source": "path+file://[..]/foo",
                       "dependencies": "{...}",
                       "targets": "{...}",
                       "features": {

@@ -5,6 +5,7 @@ use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
 use log::trace;
 use serde::de;
 use serde::ser;
+use std::cell::Cell;
 use std::cmp::{self, Ordering};
 use std::collections::HashSet;
 use std::fmt::{self, Formatter};
@@ -437,12 +438,29 @@ impl Ord for SourceId {
     }
 }
 
+thread_local! {
+    static SERIALIZE_STRIP_PATHS: Cell<bool> = Cell::new(false);
+}
+
+#[must_use]
+pub fn disable_path_serialization() -> impl Drop {
+    // Ensure that we reset the setting eventually.
+    struct DropGuard;
+    impl Drop for DropGuard {
+        fn drop(&mut self) {
+            SERIALIZE_STRIP_PATHS.with(|ssp| ssp.set(false));
+        }
+    }
+    SERIALIZE_STRIP_PATHS.with(|ssp| ssp.set(true));
+    DropGuard
+}
+
 impl ser::Serialize for SourceId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
-        if self.is_path() {
+        if self.is_path() && SERIALIZE_STRIP_PATHS.with(|ssp| ssp.get()) {
             None::<String>.serialize(s)
         } else {
             s.collect_str(&self.as_url())

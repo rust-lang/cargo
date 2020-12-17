@@ -24,7 +24,7 @@ fn cargo_metadata_simple() {
                 "version": "0.5.0",
                 "id": "foo[..]",
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "edition": "2015",
                 "license": null,
@@ -125,7 +125,7 @@ crate-type = ["lib", "staticlib"]
                 "version": "0.5.0",
                 "id": "foo[..]",
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "edition": "2015",
                 "license": null,
@@ -212,7 +212,7 @@ optional_feat = []
                 "version": "0.5.0",
                 "id": "foo[..]",
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "edition": "2015",
                 "license": null,
@@ -440,7 +440,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "repository": null,
                 "homepage": null,
                 "documentation": null,
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "targets": [
                     {
                         "crate_types": [
@@ -616,7 +616,7 @@ name = "ex"
                 "links": null,
                 "description": null,
                 "edition": "2015",
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "targets": [
                     {
@@ -709,7 +709,7 @@ crate-type = ["rlib", "dylib"]
                 "links": null,
                 "description": null,
                 "edition": "2015",
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "targets": [
                     {
@@ -804,7 +804,7 @@ fn workspace_metadata() {
                 "homepage": null,
                 "documentation": null,
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/bar",
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
@@ -841,7 +841,7 @@ fn workspace_metadata() {
                 "version": "0.5.0",
                 "id": "baz[..]",
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/baz",
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
@@ -933,7 +933,7 @@ fn workspace_metadata_no_deps() {
                 "version": "0.5.0",
                 "id": "bar[..]",
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/bar",
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
@@ -970,7 +970,7 @@ fn workspace_metadata_no_deps() {
                 "version": "0.5.0",
                 "id": "baz[..]",
                 "keywords": [],
-                "source": null,
+                "source": "path+file://[..]/baz",
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
@@ -1032,7 +1032,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "name":"foo",
         "version":"0.5.0",
         "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
-        "source":null,
+        "source":"path+file://[..]/foo",
         "dependencies":[],
         "keywords": [],
         "license": null,
@@ -1222,7 +1222,7 @@ fn package_metadata() {
                 "version": "0.1.0",
                 "id": "foo[..]",
                 "keywords": ["database"],
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "edition": "2015",
                 "license": null,
@@ -1299,7 +1299,7 @@ fn package_publish() {
                 "version": "0.1.0",
                 "id": "foo[..]",
                 "keywords": ["database"],
-                "source": null,
+                "source": "path+file://[..]/foo",
                 "dependencies": [],
                 "edition": "2015",
                 "license": null,
@@ -1382,7 +1382,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                     "repository": null,
                     "homepage": null,
                     "documentation": null,
-                    "source": null,
+                    "source": "path+file://[..]/bar-0.5.0",
                     "targets": [
                     {
                         "crate_types": [
@@ -1468,7 +1468,7 @@ fn package_edition_2018() {
                         "repository": null,
                         "homepage": null,
                         "documentation": null,
-                        "source": null,
+                        "source": "path+file://[..]/foo",
                         "targets": [
                             {
                                 "crate_types": [
@@ -1558,7 +1558,7 @@ fn target_edition_2018() {
                         "repository": null,
                         "homepage": null,
                         "documentation": null,
-                        "source": null,
+                        "source": "path+file://[..]/foo",
                         "targets": [
                             {
                                 "crate_types": [
@@ -1766,7 +1766,7 @@ fn rename_dependency() {
             "repository": null,
             "homepage": null,
             "documentation": null,
-            "source": null,
+            "source": "path+file://[..]/foo",
             "targets": [
                 {
                     "crate_types": [
@@ -1886,7 +1886,7 @@ fn metadata_links() {
                   "repository": null,
                   "homepage": null,
                   "documentation": null,
-                  "source": null,
+                  "source": "path+file://[..]/foo",
                   "targets": [
                     {
                       "crate_types": [
@@ -1974,11 +1974,11 @@ fn deps_with_bin_only() {
                   "license": null,
                   "license_file": null,
                   "description": null,
-                  "source": null,
+                  "source": "path+file://[..]/foo",
                   "dependencies": [
                     {
                       "name": "bdep",
-                      "source": null,
+                      "source": "path+file://[..]/bdep",
                       "req": "*",
                       "kind": null,
                       "rename": null,
@@ -2258,7 +2258,7 @@ fn filter_platform() {
       "license": null,
       "license_file": null,
       "description": null,
-      "source": null,
+      "source": "path+file://[..]/foo",
       "dependencies": [
         {
           "name": "normal-dep",

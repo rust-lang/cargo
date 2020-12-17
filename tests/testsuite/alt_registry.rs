@@ -783,7 +783,7 @@ fn alt_reg_metadata() {
                         "license": null,
                         "license_file": null,
                         "description": null,
-                        "source": null,
+                        "source": "path+file://[..]/foo",
                         "dependencies": [
                             {
                                 "name": "altdep",
@@ -936,7 +936,7 @@ fn alt_reg_metadata() {
                         "license": null,
                         "license_file": null,
                         "description": null,
-                        "source": null,
+                        "source": "path+file://[..]/foo",
                         "dependencies": [
                             {
                                 "name": "altdep",
@@ -1141,7 +1141,7 @@ fn unknown_registry() {
                   "license": null,
                   "license_file": null,
                   "description": null,
-                  "source": null,
+                  "source": "path+file://[..]/foo",
                   "dependencies": [
                     {
                       "name": "bar",

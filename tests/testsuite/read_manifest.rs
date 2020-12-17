@@ -23,7 +23,7 @@ fn manifest_output(readme_value: &str) -> String {
     "links": null,
     "description": null,
     "edition": "2015",
-    "source":null,
+    "source": "path+file://[..]/foo",
     "dependencies":[],
     "targets":[{{
         "kind":["bin"],

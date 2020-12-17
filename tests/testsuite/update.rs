@@ -463,7 +463,7 @@ fn update_precise_first_run() {
       "name": "bar",
       "readme": null,
       "repository": null,
-      "source": null,
+      "source": "path+file://[..]/foo",
       "targets": [
         {
           "crate_types": [

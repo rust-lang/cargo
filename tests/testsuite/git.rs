@@ -3106,7 +3106,7 @@ fn metadata_master_consistency() {
                   "license": null,
                   "license_file": null,
                   "description": null,
-                  "source": null,
+                  "source": "path+file://[..]/foo",
                   "dependencies": [
                     {
                       "name": "bar",
