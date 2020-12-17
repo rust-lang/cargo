@@ -33,7 +33,7 @@ use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{self, FeaturesFor};
+use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
@@ -336,7 +336,10 @@ pub fn create_bcx<'a, 'cfg>(
 
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
-    let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
+    let opts = ResolveOpts::new(
+        dev_deps,
+        RequestedFeatures::from_command_line(features, all_features, !no_default_features),
+    );
     let has_dev_units = if filter.need_dev_deps(build_config.mode) {
         HasDevUnits::Yes
     } else {

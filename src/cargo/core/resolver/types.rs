@@ -147,20 +147,8 @@ impl ResolveOpts {
         }
     }
 
-    pub fn new(
-        dev_deps: bool,
-        features: &[String],
-        all_features: bool,
-        uses_default_features: bool,
-    ) -> ResolveOpts {
-        ResolveOpts {
-            dev_deps,
-            features: RequestedFeatures::from_command_line(
-                features,
-                all_features,
-                uses_default_features,
-            ),
-        }
+    pub fn new(dev_deps: bool, features: RequestedFeatures) -> ResolveOpts {
+        ResolveOpts { dev_deps, features }
     }
 }
 

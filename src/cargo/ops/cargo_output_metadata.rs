@@ -120,12 +120,7 @@ fn build_resolve_graph(
         metadata_opts.all_features,
         !metadata_opts.no_default_features,
     );
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
-        &metadata_opts.features,
-        metadata_opts.all_features,
-        !metadata_opts.no_default_features,
-    );
+    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features.clone());
     let force_all = if metadata_opts.filter_platforms.is_empty() {
         crate::core::resolver::features::ForceAllTargets::Yes
     } else {
