@@ -63,9 +63,9 @@ struct SerializedDependency<'a> {
     /// If None, then it comes from the default registry (crates.io).
     registry: Option<&'a str>,
 
-    /// The path to the manifest for a local path dependency.
+    /// The file system path for a local path dependency.
     #[serde(skip_serializing_if = "Option::is_none")]
-    manifest_path: Option<PathBuf>,
+    path: Option<PathBuf>,
 }
 
 impl ser::Serialize for Dependency {
@@ -85,7 +85,7 @@ impl ser::Serialize for Dependency {
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
             registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
-            manifest_path: self.source_id().manifest_path(),
+            path: self.source_id().local_path(),
         }
         .serialize(s)
     }

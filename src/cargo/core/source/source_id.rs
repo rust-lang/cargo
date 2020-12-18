@@ -237,13 +237,13 @@ impl SourceId {
         self.inner.kind == SourceKind::Path
     }
 
-    /// Returns the manifest path if this is a path dependency.
-    pub fn manifest_path(self) -> Option<PathBuf> {
+    /// Returns the local path if this is a path dependency.
+    pub fn local_path(self) -> Option<PathBuf> {
         if self.inner.kind != SourceKind::Path {
             return None;
         }
 
-        Some(self.inner.url.to_file_path().unwrap().join("Cargo.toml"))
+        Some(self.inner.url.to_file_path().unwrap())
     }
 
     /// Returns `true` if this source is from a registry (either local or not).
