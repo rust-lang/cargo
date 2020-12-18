@@ -126,6 +126,9 @@ fn build_resolve_graph(
     } else {
         crate::core::resolver::features::ForceAllTargets::No
     };
+
+    // Note that even with --filter-platform we end up downloading host dependencies as well,
+    // as that is the behavior of download_accessible.
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
@@ -136,23 +139,9 @@ fn build_resolve_graph(
         force_all,
     )?;
 
-    // Download all Packages. This is needed to serialize the information for every package.
-    // Note that even with --filter-platform we end up downloading host dependencies as well,
-    // as that is the behavior of download_accessible.
     let package_map: BTreeMap<PackageId, Package> = ws_resolve
         .pkg_set
-        .download_accessible(
-            &ws_resolve.targeted_resolve,
-            &ws.members_with_features(&specs, &requested_features)?
-                .into_iter()
-                .map(|(p, _)| p.package_id())
-                .collect::<Vec<_>>(),
-            HasDevUnits::Yes,
-            &requested_kinds,
-            &target_data,
-            force_all,
-        )?
-        .into_iter()
+        .packages()
         // This is a little lazy, but serde doesn't handle Rc fields very well.
         .map(|pkg| (pkg.package_id(), Package::clone(pkg)))
         .collect();

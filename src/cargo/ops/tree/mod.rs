@@ -167,23 +167,9 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         force_all,
     )?;
 
-    // Download all Packages. Some display formats need to display package metadata.
-    // This may trigger some unnecessary downloads, but trying to figure out a
-    // minimal set would be difficult.
     let package_map: HashMap<PackageId, &Package> = ws_resolve
         .pkg_set
-        .download_accessible(
-            &ws_resolve.targeted_resolve,
-            &ws.members_with_features(&specs, &requested_features)?
-                .into_iter()
-                .map(|(p, _)| p.package_id())
-                .collect::<Vec<_>>(),
-            has_dev,
-            &requested_kinds,
-            &target_data,
-            force_all,
-        )?
-        .into_iter()
+        .packages()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 
