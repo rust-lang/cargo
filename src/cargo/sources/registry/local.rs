@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::Path;
+use std::task::Poll;
 
 /// A local registry is a registry that lives on the filesystem as a set of
 /// `.crate` files with an `index` directory in the same format as a remote
@@ -54,8 +55,8 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()> {
-        data(&paths::read_bytes(&root.join(path))?)
+    ) -> CargoResult<Poll<()>> {
+        Ok(Poll::Ready(data(&paths::read_bytes(&root.join(path))?)?))
     }
 
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {

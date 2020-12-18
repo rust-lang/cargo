@@ -19,6 +19,7 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
+use std::task::Poll;
 
 fn make_dep_prefix(name: &str) -> String {
     match name.len() {
@@ -175,7 +176,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         _root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()> {
+    ) -> CargoResult<Poll<()>> {
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
@@ -187,7 +188,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             Some(blob) => blob,
             None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
         };
-        data(blob.content())
+        Ok(Poll::Ready(data(blob.content())?))
     }
 
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
@@ -195,10 +196,19 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
         let mut config = None;
-        self.load(Path::new(""), Path::new("config.json"), &mut |json| {
-            config = Some(serde_json::from_slice(json)?);
-            Ok(())
-        })?;
+        loop {
+            match self.load(Path::new(""), Path::new("config.json"), &mut |json| {
+                config = Some(serde_json::from_slice(json)?);
+                Ok(())
+            })? {
+                Poll::Ready(_) => {
+                    break;
+                }
+                Poll::Pending => {
+                    // TODO: dont hot loop for it to be Ready
+                }
+            }
+        }
         trace!("config loaded");
         Ok(config)
     }

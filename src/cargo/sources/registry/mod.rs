@@ -407,12 +407,14 @@ pub trait RegistryData {
     /// * `root` is the root path to the index.
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
     /// * `data` is a callback that will receive the raw bytes of the index JSON file.
+    ///
+    /// If `load` returns a `Poll::Pending` then it must not have called data.
     fn load(
         &self,
         root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()>;
+    ) -> CargoResult<Poll<()>>;
 
     /// Loads the `config.json` file and returns it.
     ///
@@ -641,12 +643,17 @@ impl<'cfg> RegistrySource<'cfg> {
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
         let req = VersionReq::exact(package.version());
-        let summary_with_cksum = self
-            .index
-            .summaries(package.name(), &req, &mut *self.ops)?
-            .map(|s| s.summary.clone())
-            .next()
-            .expect("summary not found");
+        let summary_with_cksum = loop {
+            match self.index.summaries(package.name(), &req, &mut *self.ops)? {
+                Poll::Ready(summaries) => {
+                    break summaries;
+                }
+                Poll::Pending => (), // TODO: dont hot loop for it to be Ready
+            }
+        }
+        .map(|s| s.summary.clone())
+        .next()
+        .expect("summary not found");
         if let Some(cksum) = summary_with_cksum.checksum() {
             pkg.manifest_mut()
                 .summary_mut()
@@ -731,19 +738,37 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
-        match self.ops.download(package, hash)? {
-            MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
-            MaybeLock::Download { url, descriptor } => {
-                Ok(MaybePackage::Download { url, descriptor })
+        loop {
+            match self.index.hash(package, &mut *self.ops)? {
+                Poll::Ready(hash) => {
+                    return match self.ops.download(package, hash)? {
+                        MaybeLock::Ready(file) => {
+                            self.get_pkg(package, &file).map(MaybePackage::Ready)
+                        }
+                        MaybeLock::Download { url, descriptor } => {
+                            Ok(MaybePackage::Download { url, descriptor })
+                        }
+                    }
+                }
+                Poll::Pending => {
+                    // TODO: dont hot loop for it to be Ready
+                }
             }
         }
     }
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
-        let file = self.ops.finish_download(package, hash, &data)?;
-        self.get_pkg(package, &file)
+        loop {
+            match self.index.hash(package, &mut *self.ops)? {
+                Poll::Ready(hash) => {
+                    let file = self.ops.finish_download(package, hash, &data)?;
+                    return self.get_pkg(package, &file);
+                }
+                Poll::Pending => {
+                    // TODO: dont hot loop for it to be Ready
+                }
+            }
+        }
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
