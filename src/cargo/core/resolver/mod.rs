@@ -134,13 +134,13 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let (registry, cx) = loop {
-        let mut registry =
-            RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);
+    let cx = loop {
         let cx = Context::new(check_public_visible_dependencies);
         let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
-        if registry.all_ready() {
-            break (registry, cx);
+        if registry.reset_pending() {
+            break cx;
         } else {
             // TODO: dont hot loop for it to be Ready
         }

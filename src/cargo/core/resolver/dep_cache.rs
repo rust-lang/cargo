@@ -37,7 +37,7 @@ pub struct RegistryQueryer<'a> {
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
         (Option<PackageId>, Summary, ResolveOpts),
-        Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
+        (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
@@ -68,8 +68,21 @@ impl<'a> RegistryQueryer<'a> {
         }
     }
 
-    pub fn all_ready(&self) -> bool {
-        self.registry_cache.values().all(|r| r.is_ready())
+    pub fn reset_pending(&mut self) -> bool {
+        let mut all_ready = true;
+        self.registry_cache.retain(|_, r| {
+            if !r.is_ready() {
+                all_ready = false;
+            }
+            r.is_ready()
+        });
+        self.summary_cache.retain(|_, (_, r)| {
+            if !*r {
+                all_ready = false;
+            }
+            *r
+        });
+        all_ready
     }
 
     pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
@@ -269,9 +282,8 @@ impl<'a> RegistryQueryer<'a> {
         if let Some(out) = self
             .summary_cache
             .get(&(parent, candidate.clone(), opts.clone()))
-            .cloned()
         {
-            return Ok(out);
+            return Ok(out.0.clone());
         }
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
@@ -280,11 +292,15 @@ impl<'a> RegistryQueryer<'a> {
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
+        let mut all_ready = true;
         let mut deps = deps
             .into_iter()
             .filter_map(|(dep, features)| match self.query(&dep) {
                 Ok(Poll::Ready(candidates)) => Some(Ok((dep, candidates, features))),
-                Ok(Poll::Pending) => None, // we can ignore Pending deps, resolved will be repeatedly called until there are none to ignore
+                Ok(Poll::Pending) => {
+                    all_ready = false;
+                    None // we can ignore Pending deps, resolved will be repeatedly called until there are none to ignore
+                }
                 Err(x) => Some(Err(x).chain_err(|| {
                     anyhow::format_err!(
                         "failed to get `{}` as a dependency of {}",
@@ -305,8 +321,10 @@ impl<'a> RegistryQueryer<'a> {
 
         // If we succeed we add the result to the cache so we can use it again next time.
         // We don't cache the failure cases as they don't impl Clone.
-        self.summary_cache
-            .insert((parent, candidate.clone(), opts.clone()), out.clone());
+        self.summary_cache.insert(
+            (parent, candidate.clone(), opts.clone()),
+            (out.clone(), all_ready),
+        );
 
         Ok(out)
     }
