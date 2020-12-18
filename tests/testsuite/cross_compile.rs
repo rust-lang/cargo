@@ -1109,7 +1109,7 @@ fn doctest_xcompile_linker() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(&format!(
             "\
-[RUNNING] `rustdoc --crate-type lib --crate-name foo --test [..]\
+[RUNNING] `rustdoc --crate-type lib --test [..]\
     --target {target} [..] -C linker=my-linker-tool[..]
 ",
             target = target,
