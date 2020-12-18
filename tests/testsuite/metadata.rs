@@ -1984,7 +1984,7 @@ fn deps_with_bin_only() {
                       "rename": null,
                       "optional": false,
                       "uses_default_features": true,
-                      "manifest_path": "[..]/bdep/Cargo.toml",
+                      "manifest_path": "[..]/bdep",
                       "features": [],
                       "target": null,
                       "registry": null
