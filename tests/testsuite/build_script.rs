@@ -2753,7 +2753,7 @@ fn doctest_receives_build_link_args() {
 
     p.cargo("test -v")
         .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo --test [..]-L native=bar[..]`",
+            "[RUNNING] `rustdoc [..]--test [..] --crate-name foo [..]-L native=bar[..]`",
         )
         .run();
 }
