@@ -494,7 +494,7 @@ impl<'cfg> PackageSet<'cfg> {
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData,
         force_all_targets: ForceAllTargets,
-    ) -> CargoResult<Vec<&Package>> {
+    ) -> CargoResult<()> {
         fn collect_used_deps(
             used: &mut BTreeSet<PackageId>,
             resolve: &Resolve,
@@ -558,7 +558,8 @@ impl<'cfg> PackageSet<'cfg> {
                 force_all_targets,
             )?;
         }
-        self.get_many(to_download.into_iter())
+        self.get_many(to_download.into_iter())?;
+        Ok(())
     }
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
