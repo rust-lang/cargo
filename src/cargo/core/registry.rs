@@ -261,72 +261,76 @@ impl<'cfg> PackageRegistry<'cfg> {
         // precisely one package, so that's why we're just creating a flat list
         // of summaries which should be the same length as `deps` above.
         let unlocked_summaries = loop {
-            let try_summaries = deps
-                .iter()
-                .map(|(orig_patch, locked)| {
-                    // Remove double reference in orig_patch. Is there maybe a
-                    // magic pattern that could avoid this?
-                    let orig_patch = *orig_patch;
-                    // Use the locked patch if it exists, otherwise use the original.
-                    let dep = match locked {
-                        Some((locked_patch, _locked_id)) => locked_patch,
-                        None => orig_patch,
-                    };
-                    debug!(
-                        "registering a patch for `{}` with `{}`",
-                        url,
-                        dep.package_name()
-                    );
-
-                    // Go straight to the source for resolving `dep`. Load it as we
-                    // normally would and then ask it directly for the list of summaries
-                    // corresponding to this `dep`.
-                    self.ensure_loaded(dep.source_id(), Kind::Normal)
-                        .chain_err(|| {
-                            anyhow::format_err!(
-                                "failed to load source for dependency `{}`",
-                                dep.package_name()
-                            )
-                        })?;
-
-                    let source = self
-                        .sources
-                        .get_mut(dep.source_id())
-                        .expect("loaded source not present");
-                    let summaries = match source.query_vec(dep)? {
-                        Poll::Ready(deps) => deps,
-                        Poll::Pending => return Ok(Poll::Pending),
-                    };
-                    let (summary, should_unlock) = summary_for_patch(
-                        orig_patch, locked, summaries, source,
-                    )
-                    .chain_err(|| {
-                        format!(
-                            "patch for `{}` in `{}` failed to resolve",
-                            orig_patch.package_name(),
+            let try_summaries =
+                deps.iter()
+                    .map(|(orig_patch, locked)| {
+                        // Remove double reference in orig_patch. Is there maybe a
+                        // magic pattern that could avoid this?
+                        let orig_patch = *orig_patch;
+                        // Use the locked patch if it exists, otherwise use the original.
+                        let dep = match locked {
+                            Some((locked_patch, _locked_id)) => locked_patch,
+                            None => orig_patch,
+                        };
+                        debug!(
+                            "registering a patch for `{}` with `{}`",
                             url,
-                        )
-                    })?;
-                    debug!(
-                        "patch summary is {:?} should_unlock={:?}",
-                        summary, should_unlock
-                    );
-                    if let Some(unlock_id) = should_unlock {
-                        unlock_patches.push((orig_patch.clone(), unlock_id));
-                    }
-
-                    if *summary.package_id().source_id().canonical_url() == canonical {
-                        anyhow::bail!(
-                            "patch for `{}` in `{}` points to the same source, but \
-                         patches must point to different sources",
-                            dep.package_name(),
-                            url
+                            dep.package_name()
                         );
-                    }
-                    Ok(Poll::Ready(summary))
-                })
-                .collect::<CargoResult<Vec<_>>>()
-                .chain_err(|| anyhow::format_err!("failed to resolve patches for `{}`", url))?;
+
+                        // Go straight to the source for resolving `dep`. Load it as we
+                        // normally would and then ask it directly for the list of summaries
+                        // corresponding to this `dep`.
+                        self.ensure_loaded(dep.source_id(), Kind::Normal)
+                            .chain_err(|| {
+                                anyhow::format_err!(
+                                    "failed to load source for dependency `{}`",
+                                    dep.package_name()
+                                )
+                            })?;
+
+                        let source = self
+                            .sources
+                            .get_mut(dep.source_id())
+                            .expect("loaded source not present");
+                        let summaries = match source.query_vec(dep)? {
+                            Poll::Ready(deps) => deps,
+                            Poll::Pending => return Ok(Poll::Pending),
+                        };
+                        let (summary, should_unlock) =
+                            match summary_for_patch(orig_patch, locked, summaries, source)
+                                .chain_err(|| {
+                                    format!(
+                                        "patch for `{}` in `{}` failed to resolve",
+                                        orig_patch.package_name(),
+                                        url,
+                                    )
+                                })? {
+                                Poll::Ready(x) => x,
+                                Poll::Pending => {
+                                    return Ok(Poll::Pending);
+                                }
+                            };
+                        debug!(
+                            "patch summary is {:?} should_unlock={:?}",
+                            summary, should_unlock
+                        );
+                        if let Some(unlock_id) = should_unlock {
+                            unlock_patches.push((orig_patch.clone(), unlock_id));
+                        }
+
+                        if *summary.package_id().source_id().canonical_url() == canonical {
+                            anyhow::bail!(
+                                "patch for `{}` in `{}` points to the same source, but \
+                         patches must point to different sources",
+                                dep.package_name(),
+                                url
+                            );
+                        }
+                        Ok(Poll::Ready(summary))
+                    })
+                    .collect::<CargoResult<Vec<_>>>()
+                    .chain_err(|| anyhow::format_err!("failed to resolve patches for `{}`", url))?;
             if try_summaries.iter().all(|p| p.is_ready()) {
                 break try_summaries
                     .into_iter()
@@ -773,9 +777,9 @@ fn summary_for_patch(
     locked: &Option<(Dependency, PackageId)>,
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
-) -> CargoResult<(Summary, Option<PackageId>)> {
+) -> CargoResult<Poll<(Summary, Option<PackageId>)>> {
     if summaries.len() == 1 {
-        return Ok((summaries.pop().unwrap(), None));
+        return Ok(Poll::Ready((summaries.pop().unwrap(), None)));
     }
     if summaries.len() > 1 {
         // TODO: In the future, it might be nice to add all of these
@@ -825,25 +829,26 @@ fn summary_for_patch(
             );
             Vec::new()
         });
-        let (summary, _) = summary_for_patch(orig_patch, &None, orig_matches, source)?;
-        // The unlocked version found a match. This returns a value to
-        // indicate that this entry should be unlocked.
-        return Ok((summary, Some(*locked_id)));
+        return Ok(
+            match summary_for_patch(orig_patch, &None, orig_matches, source)? {
+                Poll::Ready((summary, _)) => {
+                    // The unlocked version found a match. This returns a value to
+                    // indicate that this entry should be unlocked.
+                    Poll::Ready((summary, Some(*locked_id)))
+                }
+                Poll::Pending => Poll::Pending,
+            },
+        );
     }
     // Try checking if there are *any* packages that match this by name.
     let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
-    let name_summaries = loop {
-        match source.query_vec(&name_only_dep) {
-            Ok(Poll::Ready(deps)) => {
-                break Ok(deps);
-            }
-            Ok(Poll::Pending) => {
-                // TODO: dont hot loop for it to be Ready
-            }
-            Err(x) => {
-                break Err(x);
-            }
+
+    let name_summaries = match source.query_vec(&name_only_dep) {
+        Ok(Poll::Ready(deps)) => Ok(deps),
+        Ok(Poll::Pending) => {
+            return Ok(Poll::Pending);
         }
+        Err(x) => Err(x),
     }
     .unwrap_or_else(|e| {
         log::warn!(
