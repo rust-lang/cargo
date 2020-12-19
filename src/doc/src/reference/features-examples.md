@@ -47,19 +47,24 @@ usually builds with the feature off.
 Some packages want to support both [`no_std`] and `std` environments. This is
 useful for supporting embedded and resource-constrained platforms, but still
 allowing extended capabilities for platforms that support the full standard
-library. The [`memchr`] package defines a [`std` feature] that is [enabled by
-default][memchr-default]. At the top of the library, it [conditionally enables
-the `no_std` attribute][memchr-nostd]. Then, in various places in the code, it
-uses `#[cfg(feature = "std")]` attributes to conditionally enable extra
-functionality. For example, when `std` is enabled, it can do [runtime CPU
-feature detection].
+library.
+
+The [`wasm-bindgen`] package defines a [`std` feature][wasm-bindgen-std] that
+is [enabled by default][wasm-bindgen-default]. At the top of the library, it
+[unconditionally enables the `no_std` attribute][wasm-bindgen-no_std]. This
+ensures that `std` and the [`std` prelude] are not automatically in scope.
+Then, in various places in the code ([example1][wasm-bindgen-cfg1],
+[example2][wasm-bindgen-cfg2]), it uses `#[cfg(feature = "std")]` attributes
+to conditionally enable extra functionality that requires `std`.
 
 [`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
-[`memchr`]: https://crates.io/crates/memchr
-[`std` feature]: https://github.com/BurntSushi/rust-memchr/blob/2.3.4/Cargo.toml#L21-L25
-[memchr-default]: https://github.com/BurntSushi/rust-memchr/blob/2.3.4/Cargo.toml#L19
-[memchr-nostd]: https://github.com/BurntSushi/rust-memchr/blob/2.3.4/src/lib.rs#L23
-[runtime CPU feature detection]: https://github.com/BurntSushi/rust-memchr/blob/2.3.4/src/x86/mod.rs#L62-L66
+[`wasm-bindgen`]: https://crates.io/crates/wasm-bindgen
+[`std` prelude]: ../../std/prelude/index.html
+[wasm-bindgen-std]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/Cargo.toml#L25
+[wasm-bindgen-default]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/Cargo.toml#L23
+[wasm-bindgen-no_std]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/src/lib.rs#L8
+[wasm-bindgen-cfg1]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/src/lib.rs#L270-L273
+[wasm-bindgen-cfg2]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/src/lib.rs#L67-L75
 
 ### Re-exporting dependency features
 

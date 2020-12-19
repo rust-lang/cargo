@@ -262,13 +262,19 @@ not** use a `no_std` feature. Instead, use a `std` feature that *enables*
 `std`. For example:
 
 ```rust
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
 
 #[cfg(feature = "std")]
 pub fn function_that_requires_std() {
     // ...
 }
 ```
+
+[`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
+[features section]: resolver.md#features
 
 #### Mutually exclusive features
 
@@ -294,9 +300,7 @@ Instead of using mutually exclusive features, consider some other options:
   command-line argument, or environment variable to choose which behavior to
   enable.
 
-[`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
 [`cfg-if`]: https://crates.io/crates/cfg-if
-[features section]: resolver.md#features
 [feature-precedence]: features-examples.md#feature-precedence
 
 #### Inspecting resolved features
