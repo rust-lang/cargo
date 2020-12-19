@@ -434,6 +434,10 @@ impl<'cfg> PackageSet<'cfg> {
         self.packages.keys().cloned()
     }
 
+    pub fn packages<'a>(&'a self) -> impl Iterator<Item = &'a Package> + 'a {
+        self.packages.values().filter_map(|p| p.borrow())
+    }
+
     pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'cfg>> {
         assert!(!self.downloading.replace(true));
         let timeout = ops::HttpTimeout::new(self.config)?;

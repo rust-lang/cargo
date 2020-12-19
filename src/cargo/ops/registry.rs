@@ -603,6 +603,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
 
     if let Some(true) = http.debug {
         handle.verbose(true)?;
+        log::debug!("{:#?}", curl::Version::get());
         handle.debug_function(|kind, data| {
             let (prefix, level) = match kind {
                 InfoType::Text => ("*", Level::Debug),

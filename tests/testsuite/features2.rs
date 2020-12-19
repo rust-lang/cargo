@@ -2214,29 +2214,19 @@ fn minimal_download() {
         .run();
     clear();
 
-    // This disables itarget, but leaves decouple_dev_deps enabled. However,
-    // `cargo tree` downloads everything anyways. Ideally `cargo tree` should
-    // be a little smarter, but that would make it a bit more complicated. The
-    // two "Downloading" lines are because `download_accessible` doesn't
-    // download enough (`cargo tree` really wants everything). Again, that
-    // could be cleaner, but is difficult.
+    // This disables itarget, but leaves decouple_dev_deps enabled.
     p.cargo("tree -e normal --target=all -Zfeatures=all")
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [DOWNLOADING] crates ...
-[DOWNLOADING] crates ...
 [DOWNLOADED] normal v1.0.0 [..]
-[DOWNLOADED] dev_dep v1.0.0 [..]
 [DOWNLOADED] normal_pm v1.0.0 [..]
 [DOWNLOADED] build_dep v1.0.0 [..]
-[DOWNLOADED] dev_dep_pm v1.0.0 [..]
 [DOWNLOADED] build_dep_pm v1.0.0 [..]
 [DOWNLOADED] itarget_normal v1.0.0 [..]
-[DOWNLOADED] itarget_dev_dep v1.0.0 [..]
 [DOWNLOADED] itarget_normal_pm v1.0.0 [..]
 [DOWNLOADED] itarget_build_dep v1.0.0 [..]
-[DOWNLOADED] itarget_dev_dep_pm v1.0.0 [..]
 [DOWNLOADED] itarget_build_dep_pm v1.0.0 [..]
 ",
         )

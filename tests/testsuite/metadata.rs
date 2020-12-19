@@ -1,5 +1,7 @@
 //! Tests for the `cargo metadata` command.
 
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
 
@@ -2343,8 +2345,27 @@ fn filter_platform() {
     .replace("$ALT_TRIPLE", alt_target)
     .replace("$HOST_TRIPLE", &rustc_host());
 
+    // We're going to be checking that we don't download excessively,
+    // so we need to ensure that downloads will happen.
+    let clear = || {
+        cargo_home().join("registry/cache").rm_rf();
+        cargo_home().join("registry/src").rm_rf();
+        p.build_dir().rm_rf();
+    };
+
     // Normal metadata, no filtering, returns *everything*.
     p.cargo("metadata")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] alt-dep v0.0.1 [..]
+[DOWNLOADED] cfg-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2454,10 +2475,20 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter on alternate, removes cfg and host.
     p.cargo("metadata --filter-platform")
         .arg(alt_target)
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] alt-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2526,10 +2557,19 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter on host, removes alt and cfg.
     p.cargo("metadata --filter-platform")
         .arg(rustc_host())
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2598,11 +2638,21 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter host with cfg, removes alt only
     p.cargo("metadata --filter-platform")
         .arg(rustc_host())
         .env("RUSTFLAGS", "--cfg=foobar")
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] cfg-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
