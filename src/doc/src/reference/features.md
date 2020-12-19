@@ -75,7 +75,7 @@ changed by specifying the `default` feature:
 
 ```toml
 [features]
-default = ["bmp", "png", "ico", "webp"]
+default = ["ico", "webp"]
 bmp = []
 png = []
 ico = ["bmp", "png"]
