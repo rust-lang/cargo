@@ -37,6 +37,32 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    /// Apply patches on path source. They will be kept as workdir changes.
+    pub fn apply_patch_files(&self, ws: &Workspace<'cfg>, base_rev: git2::Oid, patch_files: &Vec<String>) -> CargoResult<()> {
+        let mut repo = if let Ok(repo) = git2::Repository::open(&self.path) {
+            repo
+        } else {
+            anyhow::bail!("Cannot open git repo {}", self.path.display());
+        };
+
+        // Start with the revision base
+        let obj = repo.find_object(base_rev, None).unwrap();
+        repo.reset(&obj, git2::ResetType::Hard, None)?;
+        drop(obj);
+
+        // Use the Git machinary to apply working tree changes
+        for patch in patch_files {
+            let path = ws.root().join(patch);
+            super::git::utils::apply_patch(&mut repo, &path, self.config)?;
+        }
+
+        // Reset HEAD back to the base revision
+        let obj = repo.find_object(base_rev, None).unwrap();
+        repo.reset(&obj, git2::ResetType::Soft, None)?;
+
+        Ok(())
+    }
+
     /// Creates a new source which is walked recursively to discover packages.
     ///
     /// This is similar to the `new` method except that instead of requiring a

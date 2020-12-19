@@ -107,6 +107,7 @@
 //! That's the dream at least, we'll see how this plays out.
 
 use crate::core::GitReference;
+use crate::util::{ProcessBuilder};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
@@ -971,6 +972,20 @@ pub fn fetch(
     })
 }
 
+fn fix_git_env(cmd: &mut ProcessBuilder) {
+    // If cargo is run by git (for example, the `exec` command in `git
+    // rebase`), the GIT_DIR is set by git and will point to the wrong
+    // location (this takes precedence over the cwd). Make sure this is
+    // unset so git will look at cwd for the repo.
+    cmd.env_remove("GIT_DIR");
+    // The reset of these may not be necessary, but I'm including them
+    // just to be extra paranoid and avoid any issues.
+    cmd.env_remove("GIT_WORK_TREE");
+    cmd.env_remove("GIT_INDEX_FILE");
+    cmd.env_remove("GIT_OBJECT_DIRECTORY");
+    cmd.env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES");
+}
+
 fn fetch_with_cli(
     repo: &mut git2::Repository,
     url: &str,
@@ -979,6 +994,8 @@ fn fetch_with_cli(
     config: &Config,
 ) -> CargoResult<()> {
     let mut cmd = process("git");
+    fix_git_env(&mut cmd);
+    cmd.cwd(repo.path());
     cmd.arg("fetch");
     if tags {
         cmd.arg("--tags");
@@ -986,22 +1003,34 @@ fn fetch_with_cli(
     cmd.arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
         .arg(url)
-        .args(refspecs)
-        // If cargo is run by git (for example, the `exec` command in `git
-        // rebase`), the GIT_DIR is set by git and will point to the wrong
-        // location (this takes precedence over the cwd). Make sure this is
-        // unset so git will look at cwd for the repo.
-        .env_remove("GIT_DIR")
-        // The reset of these may not be necessary, but I'm including them
-        // just to be extra paranoid and avoid any issues.
-        .env_remove("GIT_WORK_TREE")
-        .env_remove("GIT_INDEX_FILE")
-        .env_remove("GIT_OBJECT_DIRECTORY")
-        .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
-        .cwd(repo.path());
+        .args(refspecs);
     config
         .shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
+    cmd.exec_with_output()?;
+    Ok(())
+}
+
+pub fn apply_patch(
+    repo: &mut git2::Repository,
+    path: &Path,
+    config: &Config,
+) -> CargoResult<()> {
+    let mut cmd = process("git");
+    fix_git_env(&mut cmd);
+    if let Some(workdir) = repo.workdir() {
+        cmd.cwd(workdir);
+    } else {
+        anyhow::bail!("not working directory");
+    }
+    cmd.arg("-c");
+    cmd.arg("user.email=automatic.applier@no-email.com");
+    cmd.arg("-c");
+    cmd.arg("user.name=Automatic applier");
+    cmd.arg("am");
+    cmd.arg(&path);
+
+    config.shell().verbose(|s| s.status("Patching", &cmd.to_string()))?;
     cmd.exec_with_output()?;
     Ok(())
 }

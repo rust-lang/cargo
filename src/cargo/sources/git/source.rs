@@ -111,7 +111,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.source_id
     }
 
-    fn update_ws<'a>(&mut self, _ws: Option<&Workspace<'a>>, _patch_files: &Vec<String>) -> CargoResult<()> {
+    fn update_ws<'a>(&mut self, ws: Option<&Workspace<'a>>, patch_files: &Vec<String>) -> CargoResult<()> {
         let git_path = self.config.git_path();
         let git_path = self.config.assert_package_cache_locked(&git_path);
         let db_path = git_path.join("db").join(&self.ident);
@@ -168,10 +168,18 @@ impl<'cfg> Source for GitSource<'cfg> {
         // <https://github.com/servo/servo/pull/14397>.
         let short_id = db.to_short_id(actual_rev)?;
 
+        let base_path = if patch_files.is_empty() {
+            std::path::PathBuf::from(git_path)
+        } else if let Some(ws) = ws {
+            ws.target_dir().to_owned().as_path_unlocked().to_owned()
+        } else {
+            anyhow::bail!("not from workspace")
+        };
+
         // Check out `actual_rev` from the database to a scoped location on the
         // filesystem. This will use hard links and such to ideally make the
         // checkout operation here pretty fast.
-        let checkout_path = git_path
+        let checkout_path = base_path
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
@@ -179,6 +187,12 @@ impl<'cfg> Source for GitSource<'cfg> {
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
+
+        if !patch_files.is_empty() {
+            if let Some(ws) = ws {
+                path_source.apply_patch_files(ws, actual_rev, &patch_files)?;
+            }
+        }
 
         self.path_source = Some(path_source);
         self.locked_rev = Some(actual_rev);
