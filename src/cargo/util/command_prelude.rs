@@ -173,7 +173,13 @@ pub trait AppExt: Sized {
     }
 
     fn arg_rustc_cfg(self) -> Self {
-        self._arg(opt("rustc-cfg", "Output the rustc configuration in JSON (unstable)").hidden(true))
+        self._arg(
+            opt(
+                "rustc-cfg",
+                "Output the rustc configuration in JSON (unstable)",
+            )
+            .hidden(true),
+        )
     }
 
     fn arg_new_opts(self) -> Self {
@@ -485,9 +491,7 @@ pub trait ArgMatchesExt {
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
         if self._is_present("cfg") {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--cfg", 8923)?;
+            config.cli_unstable().fail_if_stable_opt("--cfg", 8923)?;
         }
         if self._is_present("rustc-cfg") {
             config

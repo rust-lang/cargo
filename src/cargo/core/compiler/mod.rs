@@ -13,13 +13,13 @@ mod layout;
 mod links;
 mod lto;
 mod output_depinfo;
+pub mod rustc_cfg;
 pub mod rustdoc;
 pub mod standard_lib;
 mod timings;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
-pub mod rustc_cfg;
 
 use std::env;
 use std::ffi::{OsStr, OsString};

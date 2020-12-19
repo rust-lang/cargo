@@ -69,8 +69,10 @@ struct SerializedCfg<'a> {
 
 impl<'a> SerializedCfg<'a> {
     fn new(rtd: &'a RustcTargetData, kind: CompileKind) -> Self {
-        let features = rtd.cfg(kind).iter().filter_map(|c| {
-            match c {
+        let features = rtd
+            .cfg(kind)
+            .iter()
+            .filter_map(|c| match c {
                 Cfg::Name(..) => None,
                 Cfg::KeyPair(k, v) => {
                     if k == "target_feature" {
@@ -79,14 +81,16 @@ impl<'a> SerializedCfg<'a> {
                         None
                     }
                 }
-            }
-        }).collect();
-        let names = rtd.cfg(kind).iter().filter_map(|c| {
-            match c {
+            })
+            .collect();
+        let names = rtd
+            .cfg(kind)
+            .iter()
+            .filter_map(|c| match c {
                 Cfg::Name(s) => Some(s.as_str()),
                 Cfg::KeyPair(..) => None,
-            }
-        }).collect();
+            })
+            .collect();
         Self {
             arch: Self::find(rtd, kind, "target_arch"),
             endian: Self::find(rtd, kind, "target_endian"),
@@ -101,15 +105,14 @@ impl<'a> SerializedCfg<'a> {
     }
 
     fn find(rtd: &'a RustcTargetData, kind: CompileKind, key: &str) -> Option<&'a str> {
-         rtd.cfg(kind).iter().find_map(|c| {
-            match c {
-                Cfg::Name(..) => None,
-                Cfg::KeyPair(k, v) =>
-                    if k == key {
-                        Some(v.as_str())
-                    } else {
-                        None
-                    }
+        rtd.cfg(kind).iter().find_map(|c| match c {
+            Cfg::Name(..) => None,
+            Cfg::KeyPair(k, v) => {
+                if k == key {
+                    Some(v.as_str())
+                } else {
+                    None
+                }
             }
         })
     }
@@ -117,16 +120,17 @@ impl<'a> SerializedCfg<'a> {
 
 pub fn emit_serialized_rustc_cfg(rtd: &RustcTargetData, kinds: &[CompileKind]) -> CargoResult<()> {
     let host = SerializedCfg::new(rtd, CompileKind::Host);
-    let targets = kinds.iter().filter_map(|k| {
-         match k {
+    let targets = kinds
+        .iter()
+        .filter_map(|k| match k {
             CompileKind::Host => None,
             CompileKind::Target(ct) => Some((ct.short_name(), SerializedCfg::new(rtd, *k))),
-         }
-    }).collect();
+        })
+        .collect();
     let s = SerializedRustcCfg {
         version: VERSION,
         host,
-        targets
+        targets,
     };
     let stdout = std::io::stdout();
     let mut lock = stdout.lock();
