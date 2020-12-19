@@ -173,7 +173,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_rustc_cfg(self) -> Self {
-        self._arg(opt("rustc-cfg", "Output the rustc configuration in JSON (unstable)"))
+        self._arg(opt("rustc-cfg", "Output the rustc configuration in JSON (unstable)").hidden(true))
     }
 
     fn arg_new_opts(self) -> Self {
