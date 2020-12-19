@@ -44,7 +44,7 @@ Features can list other features to enable. For example, the ICO image format
 can contain BMP and PNG images, so when it is enabled, it should make sure
 those other features are enabled, too:
 
-```rust
+```toml
 [features]
 bmp = []
 png = []
