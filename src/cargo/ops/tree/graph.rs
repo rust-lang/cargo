@@ -351,6 +351,13 @@ fn add_pkg(
                 true
             })
             .collect();
+
+        // This dependency is eliminated from the dependency tree under
+        // the current target and feature set.
+        if deps.is_empty() {
+            continue;
+        }
+
         deps.sort_unstable_by_key(|dep| dep.name_in_toml());
         let dep_pkg = graph.package_map[&dep_id];
 

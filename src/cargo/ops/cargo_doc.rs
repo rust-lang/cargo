@@ -1,5 +1,5 @@
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::{HasDevUnits, ResolveOpts};
+use crate::core::resolver::{features::RequestedFeatures, HasDevUnits, ResolveOpts};
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
@@ -21,9 +21,11 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let specs = options.compile_opts.spec.to_package_id_specs(ws)?;
     let opts = ResolveOpts::new(
         /*dev_deps*/ true,
-        &options.compile_opts.features,
-        options.compile_opts.all_features,
-        !options.compile_opts.no_default_features,
+        RequestedFeatures::from_command_line(
+            &options.compile_opts.features,
+            options.compile_opts.all_features,
+            !options.compile_opts.no_default_features,
+        ),
     );
     let target_data = RustcTargetData::new(ws, &options.compile_opts.build_config.requested_kinds)?;
     let ws_resolve = ops::resolve_ws_with_opts(

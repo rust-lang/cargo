@@ -3,7 +3,9 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, ResolveOpts};
+use crate::core::resolver::{
+    features::RequestedFeatures, ForceAllTargets, HasDevUnits, ResolveOpts,
+};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
@@ -136,12 +138,12 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     let requested_kinds = CompileKind::from_requested_targets(ws.config(), &requested_targets)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let specs = opts.packages.to_package_id_specs(ws)?;
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
+    let requested_features = RequestedFeatures::from_command_line(
         &opts.features,
         opts.all_features,
         !opts.no_default_features,
     );
+    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features.clone());
     let has_dev = if opts
         .edge_kinds
         .contains(&EdgeKind::Dep(DepKind::Development))
@@ -164,13 +166,10 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         has_dev,
         force_all,
     )?;
-    // Download all Packages. Some display formats need to display package metadata.
-    // This may trigger some unnecessary downloads, but trying to figure out a
-    // minimal set would be difficult.
+
     let package_map: HashMap<PackageId, &Package> = ws_resolve
         .pkg_set
-        .get_many(ws_resolve.pkg_set.package_ids())?
-        .into_iter()
+        .packages()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 

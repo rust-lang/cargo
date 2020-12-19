@@ -1,7 +1,7 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
-use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
+use crate::core::resolver::{features::RequestedFeatures, HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
@@ -115,12 +115,20 @@ fn build_resolve_graph(
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
+    let requested_features = RequestedFeatures::from_command_line(
         &metadata_opts.features,
         metadata_opts.all_features,
         !metadata_opts.no_default_features,
     );
+    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features.clone());
+    let force_all = if metadata_opts.filter_platforms.is_empty() {
+        crate::core::resolver::features::ForceAllTargets::Yes
+    } else {
+        crate::core::resolver::features::ForceAllTargets::No
+    };
+
+    // Note that even with --filter-platform we end up downloading host dependencies as well,
+    // as that is the behavior of download_accessible.
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
@@ -128,15 +136,12 @@ fn build_resolve_graph(
         &resolve_opts,
         &specs,
         HasDevUnits::Yes,
-        crate::core::resolver::features::ForceAllTargets::No,
+        force_all,
     )?;
-    // Download all Packages. This is needed to serialize the information
-    // for every package. In theory this could honor target filtering,
-    // but that would be somewhat complex.
+
     let package_map: BTreeMap<PackageId, Package> = ws_resolve
         .pkg_set
-        .get_many(ws_resolve.pkg_set.package_ids())?
-        .into_iter()
+        .packages()
         // This is a little lazy, but serde doesn't handle Rc fields very well.
         .map(|pkg| (pkg.package_id(), Package::clone(pkg)))
         .collect();
