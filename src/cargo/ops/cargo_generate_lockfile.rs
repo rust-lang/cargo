@@ -113,7 +113,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
 
-        registry.add_sources(sources)?;
+        registry.add_sources(&ws, sources)?;
     }
 
     let mut resolve = ops::resolve_with_previous(

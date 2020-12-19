@@ -1,5 +1,5 @@
 use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 
 pub struct ReplacedSource<'cfg> {
@@ -63,9 +63,9 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         Ok(())
     }
 
-    fn update(&mut self) -> CargoResult<()> {
+    fn update_ws<'a>(&mut self, ws: Option<&Workspace<'a>>, patch_files: &Vec<String>) -> CargoResult<()> {
         self.inner
-            .update()
+            .update_ws(ws, patch_files)
             .chain_err(|| format!("failed to update replaced source {}", self.to_replace))?;
         Ok(())
     }

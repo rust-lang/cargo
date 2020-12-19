@@ -2,7 +2,7 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 
 use crate::core::package::PackageSet;
-use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::core::{Dependency, Package, PackageId, Summary, Workspace};
 use crate::util::{CargoResult, Config};
 
 mod source_id;
@@ -44,7 +44,11 @@ pub trait Source {
 
     /// Performs any network operations required to get the entire list of all names,
     /// versions and dependencies of packages managed by the `Source`.
-    fn update(&mut self) -> CargoResult<()>;
+    fn update(&mut self) -> CargoResult<()> {
+        self.update_ws(None, &vec![])
+    }
+
+    fn update_ws<'cfg>(&mut self, cfg: Option<&Workspace<'cfg>>, patch_files: &Vec<String>) -> CargoResult<()>;
 
     /// Fetches the full package for each name and version specified.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
@@ -144,6 +148,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).update()
     }
 
+    fn update_ws<'cfg>(&mut self, cfg: Option<&Workspace<'cfg>>, patch_files: &Vec<String>) -> CargoResult<()> {
+        (**self).update_ws(cfg, patch_files)
+    }
+
     /// Forwards to `Source::download`.
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
@@ -207,6 +215,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn update(&mut self) -> CargoResult<()> {
         (**self).update()
+    }
+
+    fn update_ws<'cfg>(&mut self, cfg: Option<&Workspace<'cfg>>, patch_files: &Vec<String>) -> CargoResult<()> {
+        (**self).update_ws(cfg, patch_files)
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {

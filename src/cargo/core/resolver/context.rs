@@ -1,7 +1,7 @@
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
-use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::core::{Dependency, PackageId, SourceId, Summary, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::Graph;
 use anyhow::format_err;
@@ -18,7 +18,8 @@ pub use super::resolve::Resolve;
 // risk of being cloned *a lot* so we want to make this as cheap to clone as
 // possible.
 #[derive(Clone)]
-pub struct Context {
+pub struct Context<'a, 'cfg> {
+    pub ws: &'a Workspace<'cfg>,
     pub age: ContextAge,
     pub activations: Activations,
     /// list the features that are activated for each package
@@ -76,9 +77,10 @@ impl PackageId {
     }
 }
 
-impl Context {
-    pub fn new(check_public_visible_dependencies: bool) -> Context {
+impl<'a, 'cfg> Context<'a, 'cfg> {
+    pub fn new(ws: &'a Workspace<'cfg>, check_public_visible_dependencies: bool) -> Context<'a, 'cfg> {
         Context {
+            ws,
             age: 0,
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
@@ -243,7 +245,7 @@ impl Context {
 
     pub fn resolve_replacements(
         &self,
-        registry: &RegistryQueryer<'_>,
+        registry: &RegistryQueryer<'_, '_>,
     ) -> HashMap<PackageId, PackageId> {
         self.activations
             .values()

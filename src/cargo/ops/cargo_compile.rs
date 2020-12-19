@@ -264,8 +264,8 @@ pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<
 
 /// Like `compile` but allows specifying a custom `Executor` that will be able to intercept build
 /// calls and add custom logic. `compile` uses `DefaultExecutor` which just passes calls through.
-pub fn compile_with_exec<'a>(
-    ws: &Workspace<'a>,
+pub fn compile_with_exec<'a, 'cfg: 'a>(
+    ws: &Workspace<'cfg>,
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
@@ -273,8 +273,8 @@ pub fn compile_with_exec<'a>(
     compile_ws(ws, options, exec)
 }
 
-pub fn compile_ws<'a>(
-    ws: &Workspace<'a>,
+pub fn compile_ws<'a, 'cfg: 'a>(
+    ws: &Workspace<'cfg>,
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
@@ -290,7 +290,7 @@ pub fn compile_ws<'a>(
     cx.compile(exec)
 }
 
-pub fn create_bcx<'a, 'cfg>(
+pub fn create_bcx<'a, 'cfg: 'a>(
     ws: &'a Workspace<'cfg>,
     options: &'a CompileOptions,
     interner: &'a UnitInterner,

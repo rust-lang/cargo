@@ -1,6 +1,6 @@
 use crate::core::source::{MaybePackage, Source, SourceId};
 use crate::core::GitReference;
-use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::core::{Dependency, Package, PackageId, Summary, Workspace};
 use crate::sources::git::utils::GitRemote;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
@@ -111,7 +111,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
+    fn update_ws<'a>(&mut self, _ws: Option<&Workspace<'a>>, _patch_files: &Vec<String>) -> CargoResult<()> {
         let git_path = self.config.git_path();
         let git_path = self.config.assert_package_cache_locked(&git_path);
         let db_path = git_path.join("db").join(&self.ident);

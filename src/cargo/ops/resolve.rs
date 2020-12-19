@@ -55,7 +55,7 @@ version. This may also occur with an optional dependency that is not enabled.";
 ///
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
-pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
+pub fn resolve_ws<'a, 'cfg: 'a>(ws: &'a Workspace<'cfg>) -> CargoResult<(PackageSet<'cfg>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry)?;
@@ -243,7 +243,7 @@ pub fn resolve_with_previous<'cfg>(
                 Some(r) => r,
                 None => {
                     let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
-                    let unlock_ids = registry.patch(url, &patches)?;
+                    let unlock_ids = registry.patch(url, ws, &patches)?;
                     // Since nothing is locked, this shouldn't possibly return anything.
                     assert!(unlock_ids.is_empty());
                     continue;
@@ -268,7 +268,7 @@ pub fn resolve_with_previous<'cfg>(
                 })
                 .collect::<Vec<_>>();
             let canonical = CanonicalUrl::new(url)?;
-            for (orig_patch, unlock_id) in registry.patch(url, &patches)? {
+            for (orig_patch, unlock_id) in registry.patch(url, ws, &patches)? {
                 // Avoid the locked patch ID.
                 avoid_patch_ids.insert(unlock_id);
                 // Also avoid the thing it is patching.
@@ -309,7 +309,7 @@ pub fn resolve_with_previous<'cfg>(
     }
 
     for member in ws.members() {
-        registry.add_sources(Some(member.package_id().source_id()))?;
+        registry.add_sources(ws, Some(member.package_id().source_id()))?;
     }
 
     let summaries: Vec<(Summary, ResolveOpts)> = ws
@@ -348,6 +348,7 @@ pub fn resolve_with_previous<'cfg>(
 
     ws.preload(registry);
     let mut resolved = resolver::resolve(
+        ws,
         &summaries,
         &replace,
         registry,

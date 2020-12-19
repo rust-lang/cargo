@@ -8,7 +8,7 @@ use ignore::Match;
 use log::{trace, warn};
 
 use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary, Workspace};
 use crate::ops;
 use crate::util::{internal, paths, CargoResult, CargoResultExt, Config};
 
@@ -497,7 +497,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
+    fn update_ws<'a>(&mut self, _ws: Option<&Workspace<'a>>, _patch_files: &Vec<String>) -> CargoResult<()> {
         if !self.updated {
             let packages = self.read_packages()?;
             self.packages.extend(packages.into_iter());

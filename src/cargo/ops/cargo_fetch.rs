@@ -5,17 +5,17 @@ use crate::util::CargoResult;
 use crate::util::Config;
 use std::collections::HashSet;
 
-pub struct FetchOptions<'a> {
-    pub config: &'a Config,
+pub struct FetchOptions<'cfg> {
+    pub config: &'cfg Config,
     /// The target arch triple to fetch dependencies for
     pub targets: Vec<String>,
 }
 
 /// Executes `cargo fetch`.
-pub fn fetch<'a>(
-    ws: &Workspace<'a>,
-    options: &FetchOptions<'a>,
-) -> CargoResult<(Resolve, PackageSet<'a>)> {
+pub fn fetch<'a, 'cfg: 'a>(
+    ws: &'a Workspace<'cfg>,
+    options: &'a FetchOptions<'cfg>,
+) -> CargoResult<(Resolve, PackageSet<'cfg>)> {
     ws.emit_warnings()?;
     let (packages, resolve) = ops::resolve_ws(ws)?;
 

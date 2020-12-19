@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::core::PackageSet;
+use crate::core::{PackageSet, Workspace};
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -14,18 +14,19 @@ use url::Url;
 /// Source of information about a group of packages.
 ///
 /// See also `core::Source`.
-pub trait Registry {
+pub trait Registry<'cfg> {
     /// Attempt to find the packages that match a dependency request.
     fn query(
         &mut self,
+        ws: &Workspace<'cfg>,
         dep: &Dependency,
         f: &mut dyn FnMut(Summary),
         fuzzy: bool,
     ) -> CargoResult<()>;
 
-    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
+    fn query_vec(&mut self, ws: &Workspace<'cfg>, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s), fuzzy)?;
+        self.query(ws, dep, &mut |s| ret.push(s), fuzzy)?;
         Ok(ret)
     }
 
@@ -129,7 +130,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         PackageSet::new(package_ids, self.sources, self.config)
     }
 
-    fn ensure_loaded(&mut self, namespace: SourceId, kind: Kind) -> CargoResult<()> {
+    fn ensure_loaded(&mut self, ws: &Workspace<'cfg>, patch_files: &Vec<String>, namespace: SourceId, kind: Kind) -> CargoResult<()> {
         match self.source_ids.get(&namespace) {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
@@ -161,13 +162,13 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
         }
 
-        self.load(namespace, kind)?;
+        self.load(ws, patch_files, namespace, kind)?;
         Ok(())
     }
 
-    pub fn add_sources(&mut self, ids: impl IntoIterator<Item = SourceId>) -> CargoResult<()> {
+    pub fn add_sources(&mut self, ws: &Workspace<'cfg>, ids: impl IntoIterator<Item = SourceId>) -> CargoResult<()> {
         for id in ids {
-            self.ensure_loaded(id, Kind::Locked)?;
+            self.ensure_loaded(ws, &vec![], id, Kind::Locked)?;
         }
         Ok(())
     }
@@ -240,6 +241,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     pub fn patch(
         &mut self,
         url: &Url,
+        ws: &Workspace<'cfg>,
         deps: &[(&Dependency, Option<(Dependency, PackageId)>)],
     ) -> CargoResult<Vec<(Dependency, PackageId)>> {
         // NOTE: None of this code is aware of required features. If a patch
@@ -280,7 +282,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 // Go straight to the source for resolving `dep`. Load it as we
                 // normally would and then ask it directly for the list of summaries
                 // corresponding to this `dep`.
-                self.ensure_loaded(dep.source_id(), Kind::Normal)
+                self.ensure_loaded(ws, dep.patch_files(), dep.source_id(), Kind::Normal)
                     .chain_err(|| {
                         anyhow::format_err!(
                             "failed to load source for dependency `{}`",
@@ -373,7 +375,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             .collect()
     }
 
-    fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
+    fn load(&mut self, ws: &Workspace<'cfg>, patch_files: &Vec<String>, source_id: SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
             debug!("loading source {}", source_id);
             let source = self.source_config.load(source_id, &self.yanked_whitelist)?;
@@ -386,7 +388,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
             // Ensure the source has fetched all necessary remote data.
             let _p = profile::start(format!("updating: {}", source_id));
-            self.sources.get_mut(source_id).unwrap().update()
+            self.sources.get_mut(source_id).unwrap().update_ws(Some(ws), patch_files)
         })()
         .chain_err(|| anyhow::format_err!("Unable to update {}", source_id))?;
         Ok(())
@@ -481,9 +483,10 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
     }
 }
 
-impl<'cfg> Registry for PackageRegistry<'cfg> {
+impl<'cfg> Registry<'cfg> for PackageRegistry<'cfg> {
     fn query(
         &mut self,
+        ws: &Workspace<'cfg>,
         dep: &Dependency,
         f: &mut dyn FnMut(Summary),
         fuzzy: bool,
@@ -538,7 +541,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 }
 
                 // Ensure the requested source_id is loaded
-                self.ensure_loaded(dep.source_id(), Kind::Normal)
+                self.ensure_loaded(ws, dep.patch_files(), dep.source_id(), Kind::Normal)
                     .chain_err(|| {
                         anyhow::format_err!(
                             "failed to load source for dependency `{}`",

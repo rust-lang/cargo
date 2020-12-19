@@ -54,7 +54,7 @@ use std::time::{Duration, Instant};
 
 use log::{debug, trace};
 
-use crate::core::PackageIdSpec;
+use crate::core::{Workspace, PackageIdSpec};
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
@@ -119,15 +119,16 @@ mod types;
 ///
 ///     When we have a decision for how to implement is without breaking existing functionality
 ///     this flag can be removed.
-pub fn resolve(
+pub fn resolve<'cfg>(
+    ws: &Workspace<'cfg>,
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut dyn Registry,
+    registry: &mut dyn Registry<'cfg>,
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new(check_public_visible_dependencies);
+    let cx = Context::new(ws, check_public_visible_dependencies);
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
@@ -177,12 +178,12 @@ pub fn resolve(
 ///
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph, `cx` is returned.
-fn activate_deps_loop(
-    mut cx: Context,
-    registry: &mut RegistryQueryer<'_>,
+fn activate_deps_loop<'a, 'cfg>(
+    mut cx: Context<'a, 'cfg>,
+    registry: &mut RegistryQueryer<'a, 'cfg>,
     summaries: &[(Summary, ResolveOpts)],
     config: Option<&Config>,
-) -> CargoResult<Context> {
+) -> CargoResult<Context<'a, 'cfg>> {
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
 
@@ -599,9 +600,9 @@ fn activate_deps_loop(
 /// the dependencies of the package will be determined by the `opts` provided.
 /// If `candidate` was activated, this function returns the dependency frame to
 /// iterate through next.
-fn activate(
-    cx: &mut Context,
-    registry: &mut RegistryQueryer<'_>,
+fn activate<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    registry: &mut RegistryQueryer<'a, 'cfg>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
     opts: ResolveOpts,
@@ -677,8 +678,8 @@ fn activate(
 }
 
 #[derive(Clone)]
-struct BacktrackFrame {
-    context: Context,
+struct BacktrackFrame<'a, 'cfg> {
+    context: Context<'a, 'cfg>,
     remaining_deps: RemainingDeps,
     remaining_candidates: RemainingCandidates,
     parent: Summary,
@@ -729,10 +730,10 @@ impl RemainingCandidates {
     /// returned. The error will contain a map of package ID to conflict reason,
     /// where each package ID caused a candidate to be filtered out from the
     /// original list for the reason listed.
-    fn next(
+    fn next<'a, 'cfg>(
         &mut self,
         conflicting_prev_active: &mut ConflictMap,
-        cx: &Context,
+        cx: &Context<'a, 'cfg>,
         dep: &Dependency,
         parent: PackageId,
     ) -> Option<(Summary, bool)> {
@@ -808,9 +809,9 @@ impl RemainingCandidates {
 /// It will add the new conflict to the cache if one is found.
 ///
 /// Panics if the input conflict is not all active in `cx`.
-fn generalize_conflicting(
-    cx: &Context,
-    registry: &mut RegistryQueryer<'_>,
+fn generalize_conflicting<'a, 'cfg>(
+    cx: &Context<'a, 'cfg>,
+    registry: &mut RegistryQueryer<'_, 'cfg>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
     parent: &Summary,
     dep: &Dependency,
@@ -853,7 +854,7 @@ fn generalize_conflicting(
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
-                .query(critical_parents_dep)
+                .query(cx.ws, critical_parents_dep)
                 .expect("an already used dep now error!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
@@ -924,13 +925,13 @@ fn generalize_conflicting(
 ///
 /// Read <https://github.com/rust-lang/cargo/pull/4834>
 /// For several more detailed explanations of the logic here.
-fn find_candidate(
-    cx: &Context,
-    backtrack_stack: &mut Vec<BacktrackFrame>,
+fn find_candidate<'a, 'cfg>(
+    cx: &Context<'a, 'cfg>,
+    backtrack_stack: &mut Vec<BacktrackFrame<'a, 'cfg>>,
     parent: &Summary,
     backtracked: bool,
     conflicting_activations: &ConflictMap,
-) -> Option<(Summary, bool, BacktrackFrame)> {
+) -> Option<(Summary, bool, BacktrackFrame<'a, 'cfg>)> {
     // When we're calling this method we know that `parent` failed to
     // activate. That means that some dependency failed to get resolved for
     // whatever reason. Normally, that means that all of those reasons

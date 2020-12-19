@@ -173,7 +173,7 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, Source, SourceId, Summary, Workspace};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
@@ -612,7 +612,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
+    fn update_ws<'a>(&mut self, _ws: Option<&Workspace<'a>>, _patch_files: &Vec<String>) -> CargoResult<()> {
         // If we have an imprecise version then we don't know what we're going
         // to look for, so we always attempt to perform an update here.
         //

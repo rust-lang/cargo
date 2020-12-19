@@ -14,7 +14,7 @@ use crate::core::resolver::errors::describe_path;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateError, ActivateResult, ResolveOpts};
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
-use crate::core::{GitReference, SourceId};
+use crate::core::{GitReference, SourceId, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::Config;
@@ -23,8 +23,8 @@ use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (dyn Registry + 'a),
+pub struct RegistryQueryer<'a, 'cfg> {
+    pub registry: &'a mut (dyn Registry<'cfg> + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
     /// If set the list of dependency candidates will be sorted by minimal
@@ -46,9 +46,9 @@ pub struct RegistryQueryer<'a> {
     warned_git_collisions: HashSet<SourceId>,
 }
 
-impl<'a> RegistryQueryer<'a> {
+impl<'a, 'cfg> RegistryQueryer<'a, 'cfg> {
     pub fn new(
-        registry: &'a mut dyn Registry,
+        registry: &'a mut dyn Registry<'cfg>,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,
@@ -119,7 +119,7 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
+    pub fn query(&mut self, ws: &Workspace<'cfg>, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
         self.warn_colliding_git_sources(dep.source_id())?;
         if let Some(out) = self.registry_cache.get(dep).cloned() {
             return Ok(out);
@@ -127,6 +127,7 @@ impl<'a> RegistryQueryer<'a> {
 
         let mut ret = Vec::new();
         self.registry.query(
+            ws,
             dep,
             &mut |s| {
                 ret.push(s);
@@ -149,7 +150,7 @@ impl<'a> RegistryQueryer<'a> {
                 dep.version_req()
             );
 
-            let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
+            let mut summaries = self.registry.query_vec(ws, dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
                 anyhow::format_err!(
                     "no matching package for override `{}` found\n\
@@ -244,7 +245,7 @@ impl<'a> RegistryQueryer<'a> {
     /// next obvious question.
     pub fn build_deps(
         &mut self,
-        cx: &Context,
+        cx: &Context<'a, 'cfg>,
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
@@ -268,7 +269,7 @@ impl<'a> RegistryQueryer<'a> {
         let mut deps = deps
             .into_iter()
             .map(|(dep, features)| {
-                let candidates = self.query(&dep).chain_err(|| {
+                let candidates = self.query(cx.ws, &dep).chain_err(|| {
                     anyhow::format_err!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),

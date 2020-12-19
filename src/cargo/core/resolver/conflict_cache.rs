@@ -169,9 +169,9 @@ impl ConflictCache {
     /// which are activated in `cx` and contain `PackageId` specified.
     /// If more than one are activated, then it will return
     /// one that will allow for the most jump-back.
-    pub fn find_conflicting(
+    pub fn find_conflicting<'a, 'cfg>(
         &self,
-        cx: &Context,
+        cx: &Context<'a, 'cfg>,
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&ConflictMap> {
@@ -186,7 +186,7 @@ impl ConflictCache {
         }
         out
     }
-    pub fn conflicting(&self, cx: &Context, dep: &Dependency) -> Option<&ConflictMap> {
+    pub fn conflicting<'a, 'cfg>(&self, cx: &Context<'a, 'cfg>, dep: &Dependency) -> Option<&ConflictMap> {
         self.find_conflicting(cx, dep, None)
     }
 

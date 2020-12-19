@@ -67,9 +67,9 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
     }
 }
 
-pub(super) fn activation_error(
-    cx: &Context,
-    registry: &mut dyn Registry,
+pub(super) fn activation_error<'a, 'cfg>(
+    cx: &Context<'a, 'cfg>,
+    registry: &mut dyn Registry<'cfg>,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
@@ -214,7 +214,7 @@ pub(super) fn activation_error(
     let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
     new_dep.set_version_req(all_req);
-    let mut candidates = match registry.query_vec(&new_dep, false) {
+    let mut candidates = match registry.query_vec(cx.ws, &new_dep, false) {
         Ok(candidates) => candidates,
         Err(e) => return to_resolve_err(e),
     };
@@ -269,7 +269,7 @@ pub(super) fn activation_error(
             // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
             // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
             let mut candidates = Vec::new();
-            if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s), true) {
+            if let Err(e) = registry.query(cx.ws, &new_dep, &mut |s| candidates.push(s), true) {
                 return to_resolve_err(e);
             };
             candidates.sort_unstable_by_key(|a| a.name());
