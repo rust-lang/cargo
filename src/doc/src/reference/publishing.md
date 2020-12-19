@@ -240,8 +240,23 @@ the “Grant Access” button next to its name:
 
 ![Authentication Access Control](../images/auth-level-acl.png)
 
+#### could not find the github team
+
+Or, when trying to add a GitHub team as crate owner, you may see an error like:
+
+```text
+error: failed to invite owners to crate <crate_name>: api errors (status 200 OK): could not find the github team org/repo
+```
+In that case, you should go to [the GitHub Application settings page] and
+check if crates.io is listed in the `Authorized OAuth Apps` tab.
+If it isn't, you should go to <https://crates.io/login> and authorize it.
+Then go to the crates.io app page, make sure you or your organization
+is granted the access (you should see a green checkmark next to the org name).
+If there's a button labeled `Grant` or `Request`, you should grant the access
+or request the org owner to do so.
+
 [RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
-[Rust API Guidelines]: https://rust-lang-nursery.github.io/api-guidelines/
+[Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
 [`authors`]: manifest.md#the-authors-field
 [`cargo login`]: ../commands/cargo-login.md
 [`cargo package`]: ../commands/cargo-package.md
@@ -256,3 +271,4 @@ the “Grant Access” button next to its name:
 [`repository`]: manifest.md#the-repository-field
 [crates.io]: https://crates.io/
 [oauth-scopes]: https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
+[the GitHub Application settings page]: https://github.com/settings/applications
