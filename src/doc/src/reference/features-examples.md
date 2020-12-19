@@ -11,11 +11,14 @@ the size of the crate and reduces compile time. Some examples are:
   is helpful to reduce compile times since it affects so many projects. It has
   a [clearly documented list][syn-features] of features which can be used to
   minimize the amount of code it contains.
-* [`winapi`] has [a large number][winapi-features] of features that
-  limit which Windows API bindings it supports.
 * [`regex`] has a [several features][regex-features] that are [well
   documented][regex-docs]. Cutting out Unicode support can reduce the
   resulting file size as it can remove some large tables.
+* [`winapi`] has [a large number][winapi-features] of features that
+  limit which Windows API bindings it supports.
+* [`web-sys`] is another example similar to `winapi` that provides a [huge
+  surface area][web-sys-features] of API bindings that are limited by using
+  features.
 
 [`winapi`]: https://crates.io/crates/winapi
 [winapi-features]: https://github.com/retep998/winapi-rs/blob/0.3.9/Cargo.toml#L25-L431
@@ -24,6 +27,8 @@ the size of the crate and reduces compile time. Some examples are:
 [syn-features]: https://docs.rs/syn/1.0.54/syn/#optional-features
 [regex-features]: https://github.com/rust-lang/regex/blob/1.4.2/Cargo.toml#L33-L101
 [regex-docs]: https://docs.rs/regex/1.4.2/regex/#crate-features
+[`web-sys`]: https://crates.io/crates/web-sys
+[web-sys-features]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/crates/web-sys/Cargo.toml#L32-L1395
 
 ### Extending behavior
 
