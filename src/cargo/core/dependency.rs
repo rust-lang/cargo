@@ -34,6 +34,7 @@ struct Inner {
     specified_req: bool,
     kind: DepKind,
     only_match_name: bool,
+    patch_files: Vec<String>,
     explicit_name_in_toml: Option<InternedString>,
 
     optional: bool,
@@ -217,6 +218,7 @@ impl Dependency {
                 specified_req: false,
                 platform: None,
                 explicit_name_in_toml: None,
+                patch_files: vec![],
             }),
         }
     }
@@ -247,6 +249,10 @@ impl Dependency {
     /// ```
     pub fn name_in_toml(&self) -> InternedString {
         self.explicit_name_in_toml().unwrap_or(self.inner.name)
+    }
+
+    pub fn patch_files(&self) -> &Vec<String> {
+        &self.inner.patch_files
     }
 
     /// The name of the package that this `Dependency` depends on.
@@ -326,6 +332,15 @@ impl Dependency {
             assert_eq!(kind, DepKind::Normal);
         }
         Rc::make_mut(&mut self.inner).kind = kind;
+        self
+    }
+
+    /// Sets the list of patch files
+    pub fn set_patch_files(
+        &mut self,
+        patch_files: impl IntoIterator<Item = impl Into<String>>,
+    ) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).patch_files = patch_files.into_iter().map(|s| s.into()).collect();
         self
     }
 

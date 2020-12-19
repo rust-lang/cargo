@@ -260,6 +260,7 @@ pub struct DetailedTomlDependency {
     default_features2: Option<bool>,
     package: Option<String>,
     public: Option<bool>,
+    patch_files: Option<Vec<String>>,
 }
 
 /// This type is used to deserialize `Cargo.toml` files.
@@ -1756,6 +1757,7 @@ impl DetailedTomlDependency {
             Some(id) => Dependency::parse(pkg_name, version, new_source_id, id, cx.config)?,
             None => Dependency::parse_no_deprecated(pkg_name, version, new_source_id)?,
         };
+        dep.set_patch_files(self.patch_files.iter().flatten());
         dep.set_features(self.features.iter().flatten())
             .set_default_features(
                 self.default_features
