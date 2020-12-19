@@ -202,28 +202,11 @@ enabled:
   `package-name/feature-name` syntax can be used to specify features for
   specific workspace members.
 
-  > **Note**: With the `resolver = "1"` option [described
-  > below](#feature-resolver-version-2), the features chosen are for the
-  > package in the current directory, not the packages selected with the `-p`
-  > flags. With the `resolver = "2"`, it will instead enable the listed
-  > features for the packages listed in the `-p` flags.
-  >
-  > For example, when `resolver = "2"` is enabled:
-  >
-  >     cargo build -p member1 -p member2 --features foo,bar
-  >
-  > In this situation, features "foo" and "bar" are enabled on the given
-  > members only if the member defines that feature. It is an error if none of
-  > the selected packages defines a given feature.
-
 * `--all-features`: Activates all features of all packages selected on the
   command-line.
 
 * `--no-default-features`: Does not activate the [`default`
   feature](#the-default-feature) of the selected packages.
-
-  > **Note**: With the `resolver = "1"` option, this only applies to the
-  > package in the current directory.
 
 [workspace]: workspaces.md
 
@@ -247,10 +230,6 @@ another dependency `bar` which enables the "std" and "winnt" features of
 
 [`winapi`]: https://crates.io/crates/winapi
 [winapi-features]: https://github.com/retep998/winapi-rs/blob/0.3.9/Cargo.toml#L25-L431
-
-> **Note**: Sometimes feature unification may be a little too aggressive. See
-> the `resolver = "2"` option [described below](#feature-resolver-version-2)
-> for improved behavior.
 
 A consequence of this is that features should be *additive*. That is, enabling
 a feature should not disable functionality, and it should usually be safe to
@@ -378,6 +357,10 @@ the command-line with `-p` flags. For example:
 # This command is now allowed, regardless of which directory you are in.
 cargo build -p foo -p bar --features foo-feat,bar-feat
 ```
+
+Additionally, with `resolver = "1"`, the `--no-default-features` flag only
+disables the default feature for the package in the current directory. With
+version "2", it will disable the default features for all workspace members.
 
 The resolver is a global option that affects the entire workspace. The
 `resolver` version in dependencies is ignored, only the value in the top-level
