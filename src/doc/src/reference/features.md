@@ -430,12 +430,14 @@ See the links for caveats and examples.
 ### Feature documentation and discovery
 
 You are encouraged to document which features are available in your package.
-Users can look at the `Cargo.toml` file, but sometimes it can be hard to track
-it down[^crate-source]. Placing the documentation in the crate root
-documentation can be more accessible, for example see the [regex crate
-features].
+This can be done by adding [doc comments] at the top of `lib.rs`. As an
+example, see the [regex crate source], which when rendered can be viewed on
+[docs.rs][regex-docs-rs]. If you have other documentation, such as a user
+guide, consider adding the documentation there (for example, see [serde.rs]).
+If you have a binary project, consider documenting the features in the README
+or other documentation for the project (for example, see [sccache]).
 
-Clearly documenting the features can also set expectations about features
+Clearly documenting the features can set expectations about features
 considered "unstable" or otherwise shouldn't be used. For example, if there is
 an optional dependency, but you don't want users to explicitly list that
 optional dependency as a feature, exclude it from the documented list.
@@ -450,14 +452,25 @@ control which features are enabled when the documentation is built. See
 > documentation], where you can see colored boxes which note which features
 > are required to use it.
 
-[regex crate features]: https://docs.rs/regex/1.4.2/regex/#crate-features
-[^crate-source]: The crate page on [crates.io] has a link to the source
-    repository if available. Tools like [`cargo vendor`] or
-    [cargo-clone-crate] can be used to download the source and inspect it.
+[docs.rs metadata documentation]: https://docs.rs/about/metadata
+[docs.rs]: https://docs.rs/
+[serde.rs]: https://serde.rs/feature-flags.html
+[doc comments]: ../../rustdoc/how-to-write-documentation.html
+[regex crate source]: https://github.com/rust-lang/regex/blob/1.4.2/src/lib.rs#L488-L583
+[regex-docs-rs]: https://docs.rs/regex/1.4.2/regex/#crate-features
+[sccache]: https://github.com/mozilla/sccache/blob/0.2.13/README.md#build-requirements
+[`doc_cfg`]: ../../unstable-book/language-features/doc-cfg.html
+[`syn` documentation]: https://docs.rs/syn/1.0.54/syn/#modules
+
+#### Discovering features
+
+When features are documented in the library API, this can make it easier for
+your users to discover which features are available and what they do. If the
+feature documentation for a package isn't readily available, you can look at
+the `Cargo.toml` file, but sometimes it can be hard to track it down. The
+crate page on [crates.io] has a link to the source repository if available.
+Tools like [`cargo vendor`] or [cargo-clone-crate] can be used to download the
+source and inspect it.
 
 [`cargo vendor`]: ../commands/cargo-vendor.md
 [cargo-clone-crate]: https://crates.io/crates/cargo-clone-crate
-[docs.rs]: https://docs.rs/
-[docs.rs metadata documentation]: https://docs.rs/about/metadata
-[`doc_cfg`]: ../../unstable-book/language-features/doc-cfg.html
-[`syn` documentation]: https://docs.rs/syn/1.0.54/syn/#modules
