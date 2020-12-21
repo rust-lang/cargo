@@ -237,11 +237,12 @@ optional dependency].
 
 #### Feature resolver version 2
 
-A new feature resolver can be enabled by specifying `resolver = "2"` in
-`Cargo.toml` (see [the features chapter][features-2]). This resolver has a
-different algorithm for unifying features. The version `"1"` resolver will
-unify features for a package no matter where it is specified. The version
-`"2"` resolver will avoid unifying features in the following situations:
+When `resolver = "2"` is specified in `Cargo.toml` (see [resolver
+versions](#resolver-versions) below), a different feature resolver is used
+which uses a different algorithm for unifying features. The version `"1"`
+resolver will unify features for a package no matter where it is specified.
+The version `"2"` resolver will avoid unifying features in the following
+situations:
 
 * Features for target-specific dependencies are not enabled if the target is
   not currently being built. For example:
@@ -295,7 +296,7 @@ unify features for a package no matter where it is specified. The version
 
 [build-dependencies]: specifying-dependencies.md#build-dependencies
 [dev-dependencies]: specifying-dependencies.md#development-dependencies
-[features-2]: features.md#feature-resolver-version-2
+[resolver-field]: features.md#resolver-versions
 
 ### `links`
 
@@ -394,6 +395,39 @@ types.
 
 If possible, try to split your package into multiple packages and restructure
 it so that it remains strictly acyclic.
+
+## Resolver versions
+
+A different feature resolver algorithm can be used by specifying the resolver
+version in `Cargo.toml` like this:
+
+```toml
+[package]
+name = "my-package"
+version = "1.0.0"
+resolver = "2"
+```
+
+The version `"1"` resolver is the original resolver that shipped with Cargo up
+to version 1.50, and is the default if the `resolver` is not specified.
+
+The version `"2"` resolver introduces changes in [feature
+unification](#features). See the [features chapter][features-2] for more
+details.
+
+The resolver is a global option that affects the entire workspace. The
+`resolver` version in dependencies is ignored, only the value in the top-level
+package will be used. If using a [virtual workspace], the version should be
+specified in the `[workspace]` table, for example:
+
+```toml
+[workspace]
+members = ["member1", "member2"]
+resolver = "2"
+```
+
+[virtual workspace]: workspaces.md#virtual-manifest
+[features-2]: features.md#feature-resolver-version-2
 
 ## Recommendations
 

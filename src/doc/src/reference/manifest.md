@@ -30,6 +30,7 @@ in the [TOML] format. Every manifest file consists of the following sections:
   * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
   * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
   * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
+  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
 * Target tables: (see [configuration](cargo-targets.md#configuring-a-target) for settings)
   * [`[lib]`](cargo-targets.md#library) — Library target settings.
   * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.

@@ -304,9 +304,8 @@ enabled. Some options to try:
 
 ### Feature resolver version 2
 
-Cargo has a new feature resolver which uses a different algorithm for
-resolving which features are enabled. This can be enabled by specifying the
-resolver version in `Cargo.toml` like this:
+A different feature resolver can be specified with the `resolver` field in
+`Cargo.toml`, like this:
 
 ```toml
 [package]
@@ -315,11 +314,16 @@ version = "1.0.0"
 resolver = "2"
 ```
 
-This new resolver avoids unifying features in a few situations where that
-unification can be unwanted. The exact situations are described in the
-[resolver chapter], but in short, it avoids unifying:
+See the [resolver versions] section for more detail on specifying resolver
+versions.
 
-* Target-specific dependencies for targets not currently being built.
+The version `"2"` resolver avoids unifying features in a few situations where
+that unification can be unwanted. The exact situations are described in the
+[resolver chapter][resolver-v2], but in short, it avoids unifying in these
+situations:
+
+* Features enabled on [platform-specific dependencies] for targets not
+  currently being built are ignored.
 * [Build-dependencies] and proc-macros do not share features with normal
   dependencies.
 * [Dev-dependencies] do not activate features unless building a target that
@@ -332,29 +336,38 @@ build.
 
 However, one drawback is that this can increase build times because the
 dependency is built multiple times (each with different features). When using
-the new resolver, it is recommended to check for dependencies that are built
-multiple times to reduce overall build time. If it is not *required* to build
-them with separate features, consider adding features to the `features` list
-in the [dependency declaration](#dependency-features) so that the duplicates
-end up with the same features (and thus Cargo will build it only once). You
-can detect these duplicate dependencies with the [`cargo tree
---duplicates`][`cargo tree`] command. It will show which packages are built
-multiple times; look for any entries listed with the same version. See
-[Inspecting resolved features](#inspecting-resolved-features) for more on
-fetching information on the resolved features. For build dependencies, this
-is not necessary if you are cross-compiling with the `--target` flag because
-build dependencies are always built separately from normal dependencies in
-that scenario.
+the version `"2"` resolver, it is recommended to check for dependencies that
+are built multiple times to reduce overall build time. If it is not *required*
+to build those duplicated packages with separate features, consider adding
+features to the `features` list in the [dependency
+declaration](#dependency-features) so that the duplicates end up with the same
+features (and thus Cargo will build it only once). You can detect these
+duplicate dependencies with the [`cargo tree --duplicates`][`cargo tree`]
+command. It will show which packages are built multiple times; look for any
+entries listed with the same version. See [Inspecting resolved
+features](#inspecting-resolved-features) for more on fetching information on
+the resolved features. For build dependencies, this is not necessary if you
+are cross-compiling with the `--target` flag because build dependencies are
+always built separately from normal dependencies in that scenario.
+
+#### Resolver version 2 command-line flags
 
 The `resolver = "2"` setting also changes the behavior of the `--features` and
 `--no-default-features` [command-line options](#command-line-feature-options).
-Previously, you could only enable features for the package in the current
-working directory, regardless of which `-p` flags were used. With `resolver =
-"2"`, the flags will enable the given features for the packages selected on
-the command-line with `-p` flags. For example:
+
+With version `"1"`, you can only enable features for the package in the
+current working directory. For example, in a workspace with packages `foo` and
+`bar`, and you are in the directory for package `foo`, and ran the command
+`cargo build -p bar --features bar-feat`, this would fail because the
+`--features` flag only allowed enabling features on `foo`.
+
+With `resolver = "2"`, the features flags allow enabling features for any of
+the packages selected on the command-line with `-p` and `--workspace` flags.
+For example:
 
 ```sh
-# This command is now allowed, regardless of which directory you are in.
+# This command is allowed with resolver = "2", regardless of which directory
+# you are in.
 cargo build -p foo -p bar --features foo-feat,bar-feat
 ```
 
@@ -362,24 +375,10 @@ Additionally, with `resolver = "1"`, the `--no-default-features` flag only
 disables the default feature for the package in the current directory. With
 version "2", it will disable the default features for all workspace members.
 
-The resolver is a global option that affects the entire workspace. The
-`resolver` version in dependencies is ignored, only the value in the top-level
-package will be used. If using a [virtual workspace], the version should be
-specified in the `[workspace]` table, for example:
-
-```toml
-[workspace]
-members = ["member1", "member2"]
-resolver = "2"
-```
-
-The default if the `resolver` is not specified is the value `"1"` which will
-use the original resolver behavior.
-
+[resolver versions]: resolver.md#resolver-versions
 [build-dependencies]: specifying-dependencies.md#build-dependencies
 [dev-dependencies]: specifying-dependencies.md#development-dependencies
-[resolver chapter]: resolver.md#feature-resolver-version-2
-[virtual workspace]: workspaces.md#virtual-manifest
+[resolver-v2]: resolver.md#feature-resolver-version-2
 
 ### Build scripts
 
