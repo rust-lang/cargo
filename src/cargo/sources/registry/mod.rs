@@ -787,6 +787,15 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         if !self.updated {
             self.do_update()?;
         }
-        self.index.is_yanked(pkg, &mut *self.ops)
+        loop {
+            match self.index.is_yanked(pkg, &mut *self.ops)? {
+                Poll::Ready(yanked) => {
+                    return Ok(yanked);
+                }
+                Poll::Pending => {
+                    // TODO: dont hot loop for it to be Ready
+                }
+            }
+        }
     }
 }

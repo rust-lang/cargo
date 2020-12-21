@@ -510,18 +510,14 @@ impl<'cfg> RegistryIndex<'cfg> {
         Ok(Poll::Ready(count))
     }
 
-    pub fn is_yanked(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<bool> {
-        let req = VersionReq::exact(pkg.version());
-        loop {
-            match self.summaries(pkg.name(), &req, load)? {
-                Poll::Ready(mut summaries) => {
-                    return Ok(summaries.any(|summary| summary.yanked));
-                }
-                Poll::Pending => {
-                    // TODO: dont hot loop for it to be Ready
-                }
-            }
-        }
+    pub fn is_yanked(
+        &mut self,
+        pkg: PackageId,
+        load: &mut dyn RegistryData,
+    ) -> CargoResult<Poll<bool>> {
+        Ok(self
+            .summaries(pkg.name(), &VersionReq::exact(pkg.version()), load)?
+            .map(|mut p| p.any(|summary| summary.yanked)))
     }
 }
 
