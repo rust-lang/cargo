@@ -643,17 +643,16 @@ impl<'cfg> RegistrySource<'cfg> {
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
         let req = VersionReq::exact(package.version());
-        let summary_with_cksum = loop {
+        let summary_with_cksum =
             match self.index.summaries(package.name(), &req, &mut *self.ops)? {
-                Poll::Ready(summaries) => {
-                    break summaries;
+                Poll::Ready(summaries) => summaries,
+                Poll::Pending => {
+                    unreachable!("a downloaded dep now pending!?")
                 }
-                Poll::Pending => (), // TODO: dont hot loop for it to be Ready
             }
-        }
-        .map(|s| s.summary.clone())
-        .next()
-        .expect("summary not found");
+            .map(|s| s.summary.clone())
+            .next()
+            .expect("summary not found");
         if let Some(cksum) = summary_with_cksum.checksum() {
             pkg.manifest_mut()
                 .summary_mut()
@@ -738,35 +737,29 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        loop {
-            match self.index.hash(package, &mut *self.ops)? {
-                Poll::Ready(hash) => {
-                    return match self.ops.download(package, hash)? {
-                        MaybeLock::Ready(file) => {
-                            self.get_pkg(package, &file).map(MaybePackage::Ready)
-                        }
-                        MaybeLock::Download { url, descriptor } => {
-                            Ok(MaybePackage::Download { url, descriptor })
-                        }
+        match self.index.hash(package, &mut *self.ops)? {
+            Poll::Ready(hash) => {
+                return match self.ops.download(package, hash)? {
+                    MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
+                    MaybeLock::Download { url, descriptor } => {
+                        Ok(MaybePackage::Download { url, descriptor })
                     }
                 }
-                Poll::Pending => {
-                    // TODO: dont hot loop for it to be Ready
-                }
+            }
+            Poll::Pending => {
+                unreachable!("we got to downloading a dep while pending!?")
             }
         }
     }
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        loop {
-            match self.index.hash(package, &mut *self.ops)? {
-                Poll::Ready(hash) => {
-                    let file = self.ops.finish_download(package, hash, &data)?;
-                    return self.get_pkg(package, &file);
-                }
-                Poll::Pending => {
-                    // TODO: dont hot loop for it to be Ready
-                }
+        match self.index.hash(package, &mut *self.ops)? {
+            Poll::Ready(hash) => {
+                let file = self.ops.finish_download(package, hash, &data)?;
+                return self.get_pkg(package, &file);
+            }
+            Poll::Pending => {
+                unreachable!("we got to downloading a dep while pending!?")
             }
         }
     }
