@@ -24,6 +24,12 @@ system:
   specified wrapper instead, passing as its commandline arguments the rustc
   invocation, with the first argument being `rustc`. Useful to set up a build
   cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
+* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will 
+  execute this specified wrapper instead for workspace members only, passing
+  as its commandline arguments the rustc invocation, with the first argument 
+  being `rustc`. It affects the filename hash so that artifacts produced by 
+  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`] 
+  to set via config.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
 * `RUSTDOCFLAGS` — A space-separated list of custom flags to pass to all `rustdoc`
@@ -63,6 +69,7 @@ supported environment variables are:
 * `CARGO_BUILD_JOBS` — Number of parallel jobs, see [`build.jobs`].
 * `CARGO_BUILD_RUSTC` — The `rustc` executable, see [`build.rustc`].
 * `CARGO_BUILD_RUSTC_WRAPPER` — The `rustc` wrapper, see [`build.rustc-wrapper`].
+* `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` — The `rustc` wrapper for workspace members only, see [`build.rustc-workspace-wrapper`].
 * `CARGO_BUILD_RUSTDOC` — The `rustdoc` executable, see [`build.rustdoc`].
 * `CARGO_BUILD_TARGET` — The default target platform, see [`build.target`].
 * `CARGO_BUILD_TARGET_DIR` — The default output directory, see [`build.target-dir`].
@@ -121,6 +128,7 @@ supported environment variables are:
 [`build.jobs`]: config.md#buildjobs
 [`build.rustc`]: config.md#buildrustc
 [`build.rustc-wrapper`]: config.md#buildrustc-wrapper
+[`build.rustc-workspace-wrapper`]: config.md#buildrustc-workspace-wrapper
 [`build.rustdoc`]: config.md#buildrustdoc
 [`build.target`]: config.md#buildtarget
 [`build.target-dir`]: config.md#buildtarget-dir

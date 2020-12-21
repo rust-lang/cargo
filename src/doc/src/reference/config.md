@@ -54,17 +54,18 @@ rr = "run --release"
 space_example = ["run", "--release", "--", "\"command list\""]
 
 [build]
-jobs = 1                  # number of parallel jobs, defaults to # of CPUs
-rustc = "rustc"           # the rust compiler tool
-rustc-wrapper = "…"       # run this wrapper instead of `rustc`
-rustdoc = "rustdoc"       # the doc generator tool
-target = "triple"         # build for the target triple (ignored by `cargo install`)
-target-dir = "target"     # path of where to place all generated artifacts
-rustflags = ["…", "…"]    # custom flags to pass to all compiler invocations
-rustdocflags = ["…", "…"] # custom flags to pass to rustdoc
-incremental = true        # whether or not to enable incremental compilation
-dep-info-basedir = "…"    # path for the base directory for targets in depfiles
-pipelining = true         # rustc pipelining
+jobs = 1                      # number of parallel jobs, defaults to # of CPUs
+rustc = "rustc"               # the rust compiler tool
+rustc-wrapper = "…"           # run this wrapper instead of `rustc`
+rustc-workspace-wrapper = "…" # run this wrapper instead of `rustc` for workspace members
+rustdoc = "rustdoc"           # the doc generator tool
+target = "triple"             # build for the target triple (ignored by `cargo install`)
+target-dir = "target"         # path of where to place all generated artifacts
+rustflags = ["…", "…"]        # custom flags to pass to all compiler invocations
+rustdocflags = ["…", "…"]     # custom flags to pass to rustdoc
+incremental = true            # whether or not to enable incremental compilation
+dep-info-basedir = "…"        # path for the base directory for targets in depfiles
+pipelining = true             # rustc pipelining
 
 [cargo-new]
 name = "Your Name"        # name to use in `authors` field
@@ -281,6 +282,15 @@ Sets the executable to use for `rustc`.
 
 Sets a wrapper to execute instead of `rustc`. The first argument passed to the
 wrapper is the path to the actual `rustc`.
+
+##### `build.rustc-workspace-wrapper`
+* Type: string (program path)
+* Default: none
+* Environment: `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER`
+
+Sets a wrapper to execute instead of `rustc`, for workspace members only.
+The first argument passed to the wrapper is the path to the actual `rustc`.
+It affects the filename hash so that artifacts produced by the wrapper are cached separately.
 
 ##### `build.rustdoc`
 * Type: string (program path)
