@@ -330,7 +330,7 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages.
 
        --color when
            Control when colored output is used. Valid values:
