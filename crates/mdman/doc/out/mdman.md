@@ -54,8 +54,8 @@ man page:
 
 <dl>
 
-<dt><code>-t</code> <em>type</em></dt>
-<dd>Specifies the output type. The following output types are supported:</p>
+<dt class="option-term" id="option-mdman--t"><a class="option-anchor" href="#option-mdman--t"></a><code>-t</code> <em>type</em></dt>
+<dd class="option-desc">Specifies the output type. The following output types are supported:</p>
 <ul>
 <li><code>man</code> — A troff-style man page. Outputs with a numbered extension (like
 <code>.1</code>) matching the man page section.</li>
@@ -66,24 +66,24 @@ available. Outputs with the <code>.txt</code> extension.</li>
 </ul></dd>
 
 
-<dt><code>-o</code> <em>outdir</em></dt>
-<dd>Specifies the directory where to save the output.</dd>
+<dt class="option-term" id="option-mdman--o"><a class="option-anchor" href="#option-mdman--o"></a><code>-o</code> <em>outdir</em></dt>
+<dd class="option-desc">Specifies the directory where to save the output.</dd>
 
 
-<dt><code>--url</code> <em>base_url</em></dt>
-<dd>Specifies a base URL to use for relative URLs within the document. Any
+<dt class="option-term" id="option-mdman---url"><a class="option-anchor" href="#option-mdman---url"></a><code>--url</code> <em>base_url</em></dt>
+<dd class="option-desc">Specifies a base URL to use for relative URLs within the document. Any
 relative URL will be joined with this URL.</dd>
 
 
-<dt><code>--man</code> <em>name</em><code>:</code><em>section</em><code>=</code><em>url</em></dt>
-<dd>Specifies a URL to use for the given man page. When the <code>{{man name section}}</code> expression is used, the given URL will be inserted as a link. This
+<dt class="option-term" id="option-mdman---man"><a class="option-anchor" href="#option-mdman---man"></a><code>--man</code> <em>name</em><code>:</code><em>section</em><code>=</code><em>url</em></dt>
+<dd class="option-desc">Specifies a URL to use for the given man page. When the <code>{{man name section}}</code> expression is used, the given URL will be inserted as a link. This
 may be specified multiple times. If a man page reference does not have a
 matching <code>--man</code> entry, then a relative link to a file named <em>name</em><code>.md</code> will
 be used.</dd>
 
 
-<dt><em>sources...</em></dt>
-<dd>The source input filename, may be specified multiple times.</dd>
+<dt class="option-term" id="option-mdman-sources..."><a class="option-anchor" href="#option-mdman-sources..."></a><em>sources...</em></dt>
+<dd class="option-desc">The source input filename, may be specified multiple times.</dd>
 
 
 </dl>
