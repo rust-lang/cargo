@@ -37,17 +37,24 @@ secure-password = ["bcrypt"]
 
 # Features can be used to reexport features of other packages. The `session`
 # feature of package `awesome` will ensure that the `session` feature of the
-# package `cookie` is also enabled.
+# package `cookie` is also enabled. This also enables the `cookie` dependency.
 session = ["cookie/session"]
+
+# With the unstable Cargo feature `-Z weak-dep-features`, Cargo allows a
+# feature to depend on a feature of an optional dependency, without necessarily
+# enabling the dependency. Here, the `simd` feature of package `awesome` will
+# enable the `simd` feature of `bcrypt` if `bcrypt` itself is enabled, but this
+# does not enable the `bcrypt` dependency.
+simd = ["bcrypt?/simd"]
 
 [dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
-cookie = "1.2.0"
 oauth = "1.1.0"
 route-recognizer = "=2.1.0"
 
 # A list of all of the optional dependencies, some of which are included in the
 # above `features`. They can be opted into by apps.
+cookie = { version = "1.2.0", optional = true }
 jquery = { version = "1.0.2", optional = true }
 uglifier = { version = "1.5.3", optional = true }
 bcrypt = { version = "*", optional = true }
