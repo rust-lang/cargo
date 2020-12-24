@@ -1037,7 +1037,7 @@ Linux systems. Due to build limitations, this wrapper is not available as a
 pre-compiled binary. This can be built and installed manually. First, install
 libsecret using your system package manager (for example, `sudo apt install
 libsecret-1-dev`). Then build and install the wrapper with `cargo install
---git https://github.com/rust-lang/cargo.git cargo-credential-gnome-secret`.
+cargo-credential-gnome-secret`.
 In the config, use a path to the binary like this:
 
 ```toml
