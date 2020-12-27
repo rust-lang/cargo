@@ -6,9 +6,10 @@ use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use crate::Config;
 use cargo_platform::Platform;
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 const VERSION: u32 = 1;
@@ -35,7 +36,10 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
     }
     let config = ws.config();
     let (packages, resolve) = if opt.no_deps {
-        let packages = ws.members().map(|pkg| pkg.serialized(config)).collect();
+        let packages = path_packages(ws)?
+            .into_iter()
+            .map(|pkg| pkg.serialized(config))
+            .collect();
         (packages, None)
     } else {
         let (packages, resolve) = build_resolve_graph(ws, opt)?;
@@ -101,6 +105,42 @@ impl From<&Dependency> for DepKindInfo {
             target: dep.platform().cloned(),
         }
     }
+}
+
+fn path_packages_r(
+    package: &Package,
+    config: &Config,
+    found: &mut BTreeSet<Package>,
+) -> CargoResult<()> {
+    if found.contains(package) {
+        return Ok(());
+    }
+    found.insert(package.clone());
+
+    for dependency in package.dependencies() {
+        let source_id = dependency.source_id();
+
+        if !source_id.is_path() {
+            continue;
+        }
+
+        if let Ok(mut path) = source_id.url().to_file_path() {
+            path.push("Cargo.toml");
+            path_packages_r(Workspace::new(&path, &config)?.current()?, config, found)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn path_packages(ws: &Workspace<'_>) -> CargoResult<BTreeSet<Package>> {
+    let mut found = BTreeSet::new();
+
+    for package in ws.members() {
+        path_packages_r(package, ws.config(), &mut found)?;
+    }
+
+    Ok(found)
 }
 
 /// Builds the resolve graph as it will be displayed to the user.

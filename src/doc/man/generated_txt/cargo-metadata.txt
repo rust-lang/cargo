@@ -21,7 +21,8 @@ OUTPUT FORMAT
 
            {
                /* Array of all packages in the workspace.
-                  It also includes all feature-enabled dependencies unless --no-deps is used.
+                  With --no-deps, includes all packages in local workspaces.
+                  Otherwise, all packages in current workspace, and all feature-enabled dependencies.
                */
                "packages": [
                    {
@@ -193,7 +194,7 @@ OUTPUT FORMAT
                        "links": null,
                    }
                ],
-               /* Array of members of the workspace.
+               /* Array of members of the current workspace.
                   Each entry is the Package ID for the package.
                */
                "workspace_members": [
@@ -282,8 +283,8 @@ OUTPUT FORMAT
 OPTIONS
    Output Options
        --no-deps
-           Output information only about the workspace members and don't fetch
-           dependencies.
+           Output information only about the members of local workspaces and
+           don't fetch dependencies.
 
        --format-version version
            Specify the version of the output format to use. Currently 1 is the

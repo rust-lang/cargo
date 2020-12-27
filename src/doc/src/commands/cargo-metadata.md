@@ -26,7 +26,8 @@ The output has the following format:
 ```javascript
 {
     /* Array of all packages in the workspace.
-       It also includes all feature-enabled dependencies unless --no-deps is used.
+       With --no-deps, includes all packages in local workspaces.
+       Otherwise, all packages in current workspace, and all feature-enabled dependencies.
     */
     "packages": [
         {
@@ -198,7 +199,7 @@ The output has the following format:
             "links": null,
         }
     ],
-    /* Array of members of the workspace.
+    /* Array of members of the current workspace.
        Each entry is the Package ID for the package.
     */
     "workspace_members": [
@@ -292,7 +293,7 @@ The output has the following format:
 <dl>
 
 <dt class="option-term" id="option-cargo-metadata---no-deps"><a class="option-anchor" href="#option-cargo-metadata---no-deps"></a><code>--no-deps</code></dt>
-<dd class="option-desc">Output information only about the workspace members and don't fetch
+<dd class="option-desc">Output information only about the members of local workspaces and don't fetch
 dependencies.</dd>
 
 

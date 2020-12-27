@@ -909,12 +909,26 @@ fn workspace_metadata_no_deps() {
             r#"
                 [workspace]
                 members = ["bar", "baz"]
+                exclude = ["qux"]
             "#,
         )
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
-        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies]
+                qux = { path = "../qux" }
+            "#,
+        )
         .file("baz/src/lib.rs", "")
+        .file("qux/Cargo.toml", &basic_lib_manifest("qux"))
+        .file("qux/src/lib.rs", "")
         .build();
 
     p.cargo("metadata --no-deps")
@@ -973,7 +987,20 @@ fn workspace_metadata_no_deps() {
                 "id": "baz[..]",
                 "keywords": [],
                 "source": null,
-                "dependencies": [],
+                "dependencies": [
+                  {
+                    "features": [],
+                    "kind": null,
+                    "name": "qux",
+                    "optional": false,
+                    "registry": null,
+                    "rename": null,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                  }
+                ],
                 "license": null,
                 "license_file": null,
                 "links": null,
@@ -993,6 +1020,43 @@ fn workspace_metadata_no_deps() {
                 ],
                 "features": {},
                 "manifest_path": "[..]baz/Cargo.toml",
+                "metadata": null,
+                "publish": null
+            },
+            {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
+                "name": "qux",
+                "readme": null,
+                "repository": null,
+                "homepage": null,
+                "documentation": null,
+                "version": "0.5.0",
+                "id": "qux[..]",
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "edition": "2015",
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": ["lib"],
+                        "doc": true,
+                        "doctest": true,
+                        "test": true,
+                        "edition": "2015",
+                        "name": "qux",
+                        "src_path": "[..]qux/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]qux/Cargo.toml",
                 "metadata": null,
                 "publish": null
             }
