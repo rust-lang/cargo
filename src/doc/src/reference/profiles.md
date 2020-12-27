@@ -42,7 +42,7 @@ rearrange the compiled code which may make it harder to use with a debugger.
 The valid options are:
 
 * `0`: no optimizations, also turns on [`cfg(debug_assertions)`](#debug-assertions).
-* `1`: basic optimizations
+* `1`: basic optimizations, also turns on [`cfg(debug_assertions)`](#debug-assertions).
 * `2`: some optimizations
 * `3`: all optimizations
 * `"s"`: optimize for binary size
