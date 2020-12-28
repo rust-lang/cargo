@@ -3140,6 +3140,7 @@ fn compiler_json_error_format() {
             {
                 "reason":"compiler-artifact",
                 "package_id":"foo 0.5.0 ([..])",
+                "manifest_path": "[..]",
                 "target":{
                     "kind":["custom-build"],
                     "crate_types":["bin"],
@@ -3166,6 +3167,7 @@ fn compiler_json_error_format() {
             {
                 "reason":"compiler-message",
                 "package_id":"bar 0.5.0 ([..])",
+                "manifest_path": "[..]",
                 "target":{
                     "kind":["lib"],
                     "crate_types":["lib"],
@@ -3191,6 +3193,7 @@ fn compiler_json_error_format() {
                 "executable": null,
                 "features": [],
                 "package_id":"bar 0.5.0 ([..])",
+                "manifest_path": "[..]",
                 "target":{
                     "kind":["lib"],
                     "crate_types":["lib"],
@@ -3221,6 +3224,7 @@ fn compiler_json_error_format() {
             {
                 "reason":"compiler-message",
                 "package_id":"foo 0.5.0 ([..])",
+                "manifest_path": "[..]",
                 "target":{
                     "kind":["bin"],
                     "crate_types":["bin"],
@@ -3237,6 +3241,7 @@ fn compiler_json_error_format() {
             {
                 "reason":"compiler-artifact",
                 "package_id":"foo 0.5.0 ([..])",
+                "manifest_path": "[..]",
                 "target":{
                     "kind":["bin"],
                     "crate_types":["bin"],
@@ -3307,6 +3312,7 @@ fn message_format_json_forward_stderr() {
                 {
                     "reason":"compiler-message",
                     "package_id":"foo 0.5.0 ([..])",
+                    "manifest_path": "[..]",
                     "target":{
                         "kind":["bin"],
                         "crate_types":["bin"],
@@ -3323,6 +3329,7 @@ fn message_format_json_forward_stderr() {
                 {
                     "reason":"compiler-artifact",
                     "package_id":"foo 0.5.0 ([..])",
+                    "manifest_path": "[..]",
                     "target":{
                         "kind":["bin"],
                         "crate_types":["bin"],

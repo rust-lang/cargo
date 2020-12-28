@@ -691,6 +691,7 @@ fn metabuild_json_artifact() {
               "filenames": "{...}",
               "fresh": false,
               "package_id": "foo [..]",
+              "manifest_path": "[..]",
               "profile": "{...}",
               "reason": "compiler-artifact",
               "target": {
@@ -743,6 +744,7 @@ fn metabuild_failed_build_json() {
                 "spans": "{...}"
               },
               "package_id": "foo [..]",
+              "manifest_path": "[..]",
               "reason": "compiler-message",
               "target": {
                 "crate_types": [
