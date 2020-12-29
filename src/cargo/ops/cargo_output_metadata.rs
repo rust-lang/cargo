@@ -11,6 +11,7 @@ use cargo_platform::Platform;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+use std::rc::Rc;
 
 const VERSION: u32 = 1;
 
@@ -107,10 +108,11 @@ impl From<&Dependency> for DepKindInfo {
     }
 }
 
-fn path_packages_r(
-    package: &Package,
-    config: &Config,
+fn path_packages_r<'p, 'cfg: 'p>(
+    package: &'p Package,
+    config: &'cfg Config,
     found: &mut BTreeSet<Package>,
+    workspace_cache: &mut BTreeMap<PathBuf, Rc<Workspace<'cfg>>>,
 ) -> CargoResult<()> {
     if found.contains(package) {
         return Ok(());
@@ -126,7 +128,20 @@ fn path_packages_r(
 
         if let Ok(mut path) = source_id.url().to_file_path() {
             path.push("Cargo.toml");
-            path_packages_r(Workspace::new(&path, &config)?.current()?, config, found)?;
+
+            let workspace = if let Some(workspace) = workspace_cache.get(&path) {
+                workspace
+            } else {
+                let workspace = Rc::new(Workspace::new(&path, config)?);
+                // Cache the workspace of every crate in this workspace, because Workspace::new
+                // does a full scan for members every time it's called, and so is slow.
+                for member in workspace.members() {
+                    workspace_cache.insert(member.manifest_path().to_path_buf(), workspace.clone());
+                }
+                workspace_cache.get(&path).unwrap()
+            };
+
+            path_packages_r(&workspace.load(&path)?, config, found, workspace_cache)?;
         }
     }
 
@@ -135,9 +150,10 @@ fn path_packages_r(
 
 fn path_packages(ws: &Workspace<'_>) -> CargoResult<BTreeSet<Package>> {
     let mut found = BTreeSet::new();
+    let mut workspace_cache = BTreeMap::new();
 
     for package in ws.members() {
-        path_packages_r(package, ws.config(), &mut found)?;
+        path_packages_r(package, ws.config(), &mut found, &mut workspace_cache)?;
     }
 
     Ok(found)
