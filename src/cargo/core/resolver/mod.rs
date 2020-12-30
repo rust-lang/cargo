@@ -58,6 +58,7 @@ use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
+use crate::util::network::PollExt;
 use crate::util::profile;
 
 use self::context::Context;
@@ -72,8 +73,6 @@ pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::features::{ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
-
-use std::task::Poll;
 
 mod conflict_cache;
 mod context;
@@ -861,34 +860,31 @@ fn generalize_conflicting(
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
-            if let Some(others) = match registry
+            if let Some(others) = registry
                 .query(critical_parents_dep)
                 .expect("an already used dep now error!?")
-            {
-                Poll::Ready(q) => q,
-                Poll::Pending => unreachable!("an already used dep now pending!?"),
-            }
-            .iter()
-            .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
-            .map(|other| {
-                past_conflicting_activations
-                    .find(
-                        dep,
-                        &|id| {
-                            if id == other.package_id() {
-                                // we are imagining that we used other instead
-                                Some(backtrack_critical_age)
-                            } else {
-                                cx.is_active(id)
-                            }
-                        },
-                        Some(other.package_id()),
-                        // we only care about things that are newer then critical_age
-                        backtrack_critical_age,
-                    )
-                    .map(|con| (other.package_id(), con))
-            })
-            .collect::<Option<Vec<(PackageId, &ConflictMap)>>>()
+                .expect("an already used dep now pending!?")
+                .iter()
+                .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
+                .map(|other| {
+                    past_conflicting_activations
+                        .find(
+                            dep,
+                            &|id| {
+                                if id == other.package_id() {
+                                    // we are imagining that we used other instead
+                                    Some(backtrack_critical_age)
+                                } else {
+                                    cx.is_active(id)
+                                }
+                            },
+                            Some(other.package_id()),
+                            // we only care about things that are newer then critical_age
+                            backtrack_critical_age,
+                        )
+                        .map(|con| (other.package_id(), con))
+                })
+                .collect::<Option<Vec<(PackageId, &ConflictMap)>>>()
             {
                 let mut con = conflicting_activations.clone();
                 // It is always valid to combine previously inserted conflicts.

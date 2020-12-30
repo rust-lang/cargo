@@ -180,6 +180,7 @@ use crate::util::errors::CargoResultExt;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
+use crate::util::network::PollExt;
 use crate::util::{restricted_names, CargoResult, Config, Filesystem};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
@@ -643,13 +644,10 @@ impl<'cfg> RegistrySource<'cfg> {
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
         let req = VersionReq::exact(package.version());
-        let summary_with_cksum =
-            match self.index.summaries(package.name(), &req, &mut *self.ops)? {
-                Poll::Ready(summaries) => summaries,
-                Poll::Pending => {
-                    unreachable!("a downloaded dep now pending!?")
-                }
-            }
+        let summary_with_cksum = self
+            .index
+            .summaries(package.name(), &req, &mut *self.ops)?
+            .expect("a downloaded dep now pending!?")
             .map(|s| s.summary.clone())
             .next()
             .expect("summary not found");
@@ -737,31 +735,25 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        match self.index.hash(package, &mut *self.ops)? {
-            Poll::Ready(hash) => {
-                return match self.ops.download(package, hash)? {
-                    MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
-                    MaybeLock::Download { url, descriptor } => {
-                        Ok(MaybePackage::Download { url, descriptor })
-                    }
-                }
-            }
-            Poll::Pending => {
-                unreachable!("we got to downloading a dep while pending!?")
+        let hash = self
+            .index
+            .hash(package, &mut *self.ops)?
+            .expect("we got to downloading a dep while pending!?");
+        match self.ops.download(package, hash)? {
+            MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
+            MaybeLock::Download { url, descriptor } => {
+                Ok(MaybePackage::Download { url, descriptor })
             }
         }
     }
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        match self.index.hash(package, &mut *self.ops)? {
-            Poll::Ready(hash) => {
-                let file = self.ops.finish_download(package, hash, &data)?;
-                return self.get_pkg(package, &file);
-            }
-            Poll::Pending => {
-                unreachable!("we got to downloading a dep while pending!?")
-            }
-        }
+        let hash = self
+            .index
+            .hash(package, &mut *self.ops)?
+            .expect("we got to downloading a dep while pending!?");
+        let file = self.ops.finish_download(package, hash, &data)?;
+        self.get_pkg(package, &file)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

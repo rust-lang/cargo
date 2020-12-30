@@ -6,6 +6,7 @@ use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
+use crate::util::network::PollExt;
 use crate::util::{profile, CanonicalUrl, Config};
 use anyhow::bail;
 use log::{debug, trace};
@@ -334,10 +335,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             if try_summaries.iter().all(|p| p.is_ready()) {
                 break try_summaries
                     .into_iter()
-                    .map(|p| match p {
-                        Poll::Ready(s) => s,
-                        Poll::Pending => unreachable!("we just check for this!"),
-                    })
+                    .map(|p| p.expect("we just checked for this!"))
                     .collect::<Vec<_>>();
             } else {
                 // TODO: dont hot loop for it to be Ready
