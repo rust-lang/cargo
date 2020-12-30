@@ -806,18 +806,12 @@ fn summary_for_patch(
     // No summaries found, try to help the user figure out what is wrong.
     if let Some((_locked_patch, locked_id)) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let orig_matches = loop {
-            match source.query_vec(orig_patch) {
-                Ok(Poll::Ready(deps)) => {
-                    break Ok(deps);
-                }
-                Ok(Poll::Pending) => {
-                    // TODO: dont hot loop for it to be Ready
-                }
-                Err(x) => {
-                    break Err(x);
-                }
+        let orig_matches = match source.query_vec(orig_patch) {
+            Ok(Poll::Ready(deps)) => Ok(deps),
+            Ok(Poll::Pending) => {
+                return Ok(Poll::Pending);
             }
+            Err(x) => Err(x),
         }
         .unwrap_or_else(|e| {
             log::warn!(
