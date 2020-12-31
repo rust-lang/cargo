@@ -153,6 +153,209 @@ fn simple_deps() {
     }
 }
 
+/// Always take care of setting these so that
+/// `cross_compile::alternate()` is the actually-picked target
+fn per_crate_target_test(
+    default_target: Option<&'static str>,
+    forced_target: Option<&'static str>,
+    arg_target: Option<&'static str>,
+) {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["per-package-target"]
+
+                    [package]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
+                    build = "build.rs"
+                    {}
+                    {}
+                "#,
+                default_target
+                    .map(|t| format!(r#"default-target = "{}""#, t))
+                    .unwrap_or(String::new()),
+                forced_target
+                    .map(|t| format!(r#"forced-target = "{}""#, t))
+                    .unwrap_or(String::new()),
+            ),
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                cross_compile::alternate()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &format!(
+                r#"
+                    use std::env;
+                    fn main() {{
+                        assert_eq!(env::consts::ARCH, "{}");
+                    }}
+                "#,
+                cross_compile::alternate_arch()
+            ),
+        )
+        .build();
+
+    let mut cmd = p.cargo("build -v");
+    if let Some(t) = arg_target {
+        cmd.arg("--target").arg(&t);
+    }
+    cmd.masquerade_as_nightly_cargo().run();
+    assert!(p.target_bin(cross_compile::alternate(), "foo").is_file());
+
+    if cross_compile::can_run_on_host() {
+        p.process(&p.target_bin(cross_compile::alternate(), "foo"))
+            .run();
+    }
+}
+
+#[cargo_test]
+fn per_crate_default_target_is_default() {
+    per_crate_target_test(Some(cross_compile::alternate()), None, None);
+}
+
+#[cargo_test]
+fn per_crate_default_target_gets_overridden() {
+    per_crate_target_test(
+        Some(cross_compile::unused()),
+        None,
+        Some(cross_compile::alternate()),
+    );
+}
+
+#[cargo_test]
+fn per_crate_forced_target_is_default() {
+    per_crate_target_test(None, Some(cross_compile::alternate()), None);
+}
+
+#[cargo_test]
+fn per_crate_forced_target_does_not_get_overridden() {
+    per_crate_target_test(
+        None,
+        Some(cross_compile::alternate()),
+        Some(cross_compile::unused()),
+    );
+}
+
+#[cargo_test]
+fn workspace_with_multiple_targets() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["native", "cross"]
+            "#,
+        )
+        .file(
+            "native/Cargo.toml",
+            r#"
+                cargo-features = ["per-package-target"]
+
+                [package]
+                name = "native"
+                version = "0.0.0"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "native/build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                cross_compile::native()
+            ),
+        )
+        .file(
+            "native/src/main.rs",
+            &format!(
+                r#"
+                    use std::env;
+                    fn main() {{
+                        assert_eq!(env::consts::ARCH, "{}");
+                    }}
+                "#,
+                cross_compile::native_arch()
+            ),
+        )
+        .file(
+            "cross/Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["per-package-target"]
+
+                    [package]
+                    name = "cross"
+                    version = "0.0.0"
+                    authors = []
+                    build = "build.rs"
+                    default-target = "{}"
+                "#,
+                cross_compile::alternate(),
+            ),
+        )
+        .file(
+            "cross/build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                cross_compile::alternate()
+            ),
+        )
+        .file(
+            "cross/src/main.rs",
+            &format!(
+                r#"
+                    use std::env;
+                    fn main() {{
+                        assert_eq!(env::consts::ARCH, "{}");
+                    }}
+                "#,
+                cross_compile::alternate_arch()
+            ),
+        )
+        .build();
+
+    let mut cmd = p.cargo("build -v");
+    cmd.masquerade_as_nightly_cargo().run();
+
+    assert!(p.bin("native").is_file());
+    assert!(p.target_bin(cross_compile::alternate(), "cross").is_file());
+
+    p.process(&p.bin("native")).run();
+    if cross_compile::can_run_on_host() {
+        p.process(&p.target_bin(cross_compile::alternate(), "cross"))
+            .run();
+    }
+}
+
 #[cargo_test]
 fn linker() {
     if cross_compile::disabled() {

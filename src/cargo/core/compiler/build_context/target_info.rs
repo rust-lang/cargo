@@ -655,9 +655,14 @@ fn env_args(
 }
 
 /// Collection of information about `rustc` and the host and target.
-pub struct RustcTargetData {
+pub struct RustcTargetData<'cfg> {
     /// Information about `rustc` itself.
     pub rustc: Rustc,
+
+    /// Config
+    config: &'cfg Config,
+    requested_kinds: Vec<CompileKind>,
+
     /// Build information for the "host", which is information about when
     /// `rustc` is invoked without a `--target` flag. This is used for
     /// procedural macros, build scripts, etc.
@@ -670,27 +675,17 @@ pub struct RustcTargetData {
     target_info: HashMap<CompileTarget, TargetInfo>,
 }
 
-impl RustcTargetData {
+impl<'cfg> RustcTargetData<'cfg> {
     pub fn new(
-        ws: &Workspace<'_>,
+        ws: &Workspace<'cfg>,
         requested_kinds: &[CompileKind],
-    ) -> CargoResult<RustcTargetData> {
+    ) -> CargoResult<RustcTargetData<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
         let host_config = config.target_cfg_triple(&rustc.host)?;
         let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
-        for kind in requested_kinds {
-            if let CompileKind::Target(target) = *kind {
-                let tcfg = config.target_cfg_triple(target.short_name())?;
-                target_config.insert(target, tcfg);
-                target_info.insert(
-                    target,
-                    TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
-                );
-            }
-        }
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
@@ -703,13 +698,56 @@ impl RustcTargetData {
             target_config.insert(ct, host_config.clone());
         }
 
-        Ok(RustcTargetData {
+        let mut res = RustcTargetData {
             rustc,
+            config,
+            requested_kinds: requested_kinds.into(),
             host_config,
             host_info,
             target_config,
             target_info,
-        })
+        };
+
+        // Get all kinds we currently know about.
+        //
+        // For now, targets can only ever come from the root workspace
+        // units as artifact dependencies are not a thing yet, so this
+        // correctly represents all the kinds that can happen. When we
+        // have artifact dependencies or other ways for targets to
+        // appear at places that are not the root units, we may have
+        // to revisit this.
+        let all_kinds = requested_kinds
+            .iter()
+            .copied()
+            .chain(ws.members().flat_map(|p| {
+                p.manifest()
+                    .default_kind()
+                    .into_iter()
+                    .chain(p.manifest().forced_kind())
+            }));
+        for kind in all_kinds {
+            if let CompileKind::Target(target) = kind {
+                match res.target_config.entry(target) {
+                    std::collections::hash_map::Entry::Occupied(_) => (),
+                    std::collections::hash_map::Entry::Vacant(place) => {
+                        place.insert(res.config.target_cfg_triple(target.short_name())?);
+                    }
+                }
+                match res.target_info.entry(target) {
+                    std::collections::hash_map::Entry::Occupied(_) => (),
+                    std::collections::hash_map::Entry::Vacant(place) => {
+                        place.insert(TargetInfo::new(
+                            res.config,
+                            &res.requested_kinds,
+                            &res.rustc,
+                            kind,
+                        )?);
+                    }
+                }
+            }
+        }
+
+        Ok(res)
     }
 
     /// Returns a "short" name for the given kind, suitable for keying off

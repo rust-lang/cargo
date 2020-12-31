@@ -5,6 +5,8 @@ authors = ["Alex Crichton <alex@alexcrichton.com>"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
 
+build = "build.rs"
+
 [lib]
 doctest = false
 

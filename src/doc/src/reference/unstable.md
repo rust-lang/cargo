@@ -895,6 +895,26 @@ In this example, the `std` feature enables the `std` feature on the `serde`
 dependency. However, unlike the normal `serde/std` syntax, it will not enable
 the optional dependency `serde` unless something else has included it.
 
+### per-package-target
+
+The `per-package-target` feature adds two keys to the manifest:
+`package.default-target` and `package.forced-target`. The first makes
+the package be compiled by default (ie. when no `--target` argument is
+passed) for some target. The second one makes the package always be
+compiled for the target.
+
+Example:
+
+```toml
+[package]
+forced-target = "wasm32-unknown-unknown"
+```
+
+In this example, the crate is always built for
+`wasm32-unknown-unknown`, for instance because it is going to be used
+as a plugin for a main program that runs on the host (or provided on
+the command line) target.
+
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
 * RFC: [#2730](https://github.com/rust-lang/rfcs/pull/2730)

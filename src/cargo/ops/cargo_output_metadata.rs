@@ -171,7 +171,7 @@ fn build_resolve_graph_r(
     pkg_id: PackageId,
     resolve: &Resolve,
     package_map: &BTreeMap<PackageId, Package>,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'_>,
     requested_kinds: &[CompileKind],
 ) {
     if node_map.contains_key(&pkg_id) {

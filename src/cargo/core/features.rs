@@ -390,6 +390,9 @@ features! {
 
     // Support for 2021 edition.
     (unstable, edition2021, "", "reference/unstable.html#edition-2021"),
+
+    // Allow to specify per-package targets (compile kinds)
+    (unstable, per_package_target, "", "reference/unstable.html#per-package-target"),
 }
 
 const PUBLISH_LOCKFILE_REMOVED: &str = "The publish-lockfile key in Cargo.toml \

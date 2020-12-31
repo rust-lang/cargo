@@ -39,7 +39,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub packages: PackageSet<'cfg>,
 
     /// Information about rustc and the target platform.
-    pub target_data: RustcTargetData,
+    pub target_data: RustcTargetData<'cfg>,
 
     /// The root units of `unit_graph` (units requested on the command-line).
     pub roots: Vec<Unit>,
@@ -58,7 +58,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         build_config: &'a BuildConfig,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
-        target_data: RustcTargetData,
+        target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
