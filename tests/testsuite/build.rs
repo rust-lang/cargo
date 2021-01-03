@@ -4330,8 +4330,6 @@ fn target_edition() {
         .build();
 
     p.cargo("build -v")
-        // Passes on nightly, fails on stable, since `--edition` is nightly-only.
-        .without_status()
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
