@@ -210,7 +210,7 @@ features! {
         [unstable] named_profiles: bool,
 
         // Opt-in new-resolver behavior.
-        [unstable] resolver: bool,
+        [stable] resolver: bool,
 
         // Allow to specify whether binaries should be stripped.
         [unstable] strip: bool,
@@ -338,7 +338,6 @@ pub struct CliUnstable {
     pub no_index_update: bool,
     pub avoid_dev_deps: bool,
     pub minimal_versions: bool,
-    pub package_features: bool,
     pub advanced_env: bool,
     pub config_include: bool,
     pub dual_proc_macros: bool,
@@ -445,7 +444,6 @@ impl CliUnstable {
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
-            "package-features" => self.package_features = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,

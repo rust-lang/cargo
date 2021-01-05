@@ -518,12 +518,12 @@ fn dep_build_script(
             // build.rs unit use the same features. This is because some
             // people use `cfg!` and `#[cfg]` expressions to check for enabled
             // features instead of just checking `CARGO_FEATURE_*` at runtime.
-            // In the case with `-Zfeatures=host_dep`, and a shared
-            // dependency has different features enabled for normal vs. build,
-            // then the build.rs script will get compiled twice. I believe it
-            // is not feasible to only build it once because it would break a
-            // large number of scripts (they would think they have the wrong
-            // set of features enabled).
+            // In the case with the new feature resolver (decoupled host
+            // deps), and a shared dependency has different features enabled
+            // for normal vs. build, then the build.rs script will get
+            // compiled twice. I believe it is not feasible to only build it
+            // once because it would break a large number of scripts (they
+            // would think they have the wrong set of features enabled).
             let script_unit_for = UnitFor::new_host(unit_for.is_for_host_features());
             new_unit_dep_with_profile(
                 state,

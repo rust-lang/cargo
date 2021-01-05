@@ -310,20 +310,6 @@ pub trait ArgMatchesExt {
         if config.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
-        if ws.is_virtual() && !ws.allows_unstable_package_features() {
-            // --all-features is actually honored. In general, workspaces and
-            // feature flags are a bit of a mess right now.
-            for flag in &["features", "no-default-features"] {
-                if self._is_present(flag) {
-                    bail!(
-                        "--{} is not allowed in the root of a virtual workspace\n\
-                         note: while this was previously accepted, it didn't actually do anything\n\
-                         help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
-                        flag
-                    );
-                }
-            }
-        }
         Ok(ws)
     }
 

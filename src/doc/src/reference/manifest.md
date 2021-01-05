@@ -30,6 +30,7 @@ in the [TOML] format. Every manifest file consists of the following sections:
   * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
   * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
   * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
+  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
 * Target tables: (see [configuration](cargo-targets.md#configuring-a-target) for settings)
   * [`[lib]`](cargo-targets.md#library) — Library target settings.
   * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.
@@ -532,9 +533,9 @@ more detail.
         "#virtual-manifest": "workspaces.html",
         "#package-selection": "workspaces.html#package-selection",
         "#the-features-section": "features.html#the-features-section",
-        "#rules": "features.html#rules",
-        "#usage-in-end-products": "features.html#usage-in-end-products",
-        "#usage-in-packages": "features.html#usage-in-packages",
+        "#rules": "features.html",
+        "#usage-in-end-products": "features.html",
+        "#usage-in-packages": "features.html",
         "#the-patch-section": "overriding-dependencies.html#the-patch-section",
         "#using-patch-with-multiple-versions": "overriding-dependencies.html#using-patch-with-multiple-versions",
         "#the-replace-section": "overriding-dependencies.html#the-replace-section",

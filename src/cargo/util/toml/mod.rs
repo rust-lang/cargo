@@ -883,19 +883,7 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
-        let mut cargo_features = self.cargo_features.clone();
         package.resolver = ws.resolve_behavior().to_manifest();
-        if package.resolver.is_some() {
-            // This should be removed when stabilizing.
-            match &mut cargo_features {
-                None => cargo_features = Some(vec!["resolver".to_string()]),
-                Some(feats) => {
-                    if !feats.iter().any(|feat| feat == "resolver") {
-                        feats.push("resolver".to_string());
-                    }
-                }
-            }
-        }
         if let Some(license_file) = &package.license_file {
             let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
@@ -977,7 +965,7 @@ impl TomlManifest {
             patch: None,
             workspace: None,
             badges: self.badges.clone(),
-            cargo_features,
+            cargo_features: self.cargo_features.clone(),
         });
 
         fn map_deps(

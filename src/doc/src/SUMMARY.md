@@ -25,6 +25,7 @@
         * [Cargo Targets](reference/cargo-targets.md)
     * [Workspaces](reference/workspaces.md)
     * [Features](reference/features.md)
+        * [Features Examples](reference/features-examples.md)
     * [Profiles](reference/profiles.md)
     * [Configuration](reference/config.md)
     * [Environment Variables](reference/environment-variables.md)
