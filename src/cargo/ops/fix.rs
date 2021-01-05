@@ -699,7 +699,7 @@ impl FixArgs {
     fn next_edition(&self) -> Edition {
         match self.enabled_edition {
             None | Some(Edition::Edition2015) => Edition::Edition2018,
-            Some(Edition::Edition2018) => Edition::Edition2021,
+            Some(Edition::Edition2018) => Edition::Edition2018, // TODO: Change to 2021 when rustc is ready for it.
             Some(Edition::Edition2021) => Edition::Edition2021,
         }
     }
