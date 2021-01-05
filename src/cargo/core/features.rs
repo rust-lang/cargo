@@ -66,6 +66,8 @@ pub enum Edition {
     Edition2015,
     /// The 2018 edition
     Edition2018,
+    /// The 2021 edition
+    Edition2021,
 }
 
 impl fmt::Display for Edition {
@@ -73,6 +75,7 @@ impl fmt::Display for Edition {
         match *self {
             Edition::Edition2015 => f.write_str("2015"),
             Edition::Edition2018 => f.write_str("2018"),
+            Edition::Edition2021 => f.write_str("2021"),
         }
     }
 }
@@ -82,14 +85,15 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            s if s.parse().map_or(false, |y: u16| y > 2020 && y < 2050) => bail!(
+            "2021" => Ok(Edition::Edition2021),
+            s if s.parse().map_or(false, |y: u16| y > 2021 && y < 2050) => bail!(
                 "this version of Cargo is older than the `{}` edition, \
-                 and only supports `2015` and `2018` editions.",
+                 and only supports `2015`, `2018`, and `2021` editions.",
                 s
             ),
             s => bail!(
-                "supported edition values are `2015` or `2018`, but `{}` \
-                 is unknown",
+                "supported edition values are `2015`, `2018`, or `2021`, \
+                 but `{}` is unknown",
                 s
             ),
         }
