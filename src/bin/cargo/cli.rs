@@ -88,10 +88,18 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
                     drop_println!(config, "    {:<20} {}", name, summary);
                 }
                 CommandInfo::External { name, path } => {
+                    let about = std::process::Command::new(&path)
+                        .arg("--cargo-short-description")
+                        .output()
+                        .map(|output| String::from_utf8(output.stdout).ok())
+                        .ok()
+                        .flatten();
+                    let summary = about.unwrap_or_default();
+                    let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
                     if is_verbose {
-                        drop_println!(config, "    {:<20} {}", name, path.display());
+                        drop_println!(config, "    {:<20} {} [{}]", name, summary, path.display());
                     } else {
-                        drop_println!(config, "    {}", name);
+                        drop_println!(config, "    {:<20} {}", name, summary);
                     }
                 }
             }
