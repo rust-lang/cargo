@@ -7,7 +7,7 @@ use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Rustc;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 mod target_info;
@@ -22,22 +22,31 @@ pub use self::target_info::{FileFlavor, FileType, RustcTargetData, TargetInfo};
 pub struct BuildContext<'a, 'cfg> {
     /// The workspace the build is for.
     pub ws: &'a Workspace<'cfg>,
+
     /// The cargo configuration.
     pub config: &'cfg Config,
     pub profiles: Profiles,
     pub build_config: &'a BuildConfig,
+
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit, Vec<String>>,
+
     /// Package downloader.
     ///
     /// This holds ownership of the `Package` objects.
     pub packages: PackageSet<'cfg>,
+
     /// Information about rustc and the target platform.
     pub target_data: RustcTargetData,
+
     /// The root units of `unit_graph` (units requested on the command-line).
     pub roots: Vec<Unit>,
+
     /// The dependency graph of units to compile.
     pub unit_graph: UnitGraph,
+
+    /// The list of all kinds that are involved in this build
+    pub all_kinds: HashSet<CompileKind>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
@@ -51,6 +60,13 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
+        let all_kinds = unit_graph
+            .keys()
+            .map(|u| u.kind)
+            .chain(build_config.requested_kinds.iter().copied())
+            .chain(std::iter::once(CompileKind::Host))
+            .collect();
+
         Ok(BuildContext {
             ws,
             config: ws.config(),
@@ -61,6 +77,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             target_data,
             roots,
             unit_graph,
+            all_kinds,
         })
     }
 
