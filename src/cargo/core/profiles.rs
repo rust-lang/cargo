@@ -100,7 +100,7 @@ impl Profiles {
             requested_profile,
         };
 
-        Self::add_root_profiles(&mut profile_makers, &profiles)?;
+        Self::add_root_profiles(&mut profile_makers, &profiles);
 
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
@@ -143,7 +143,7 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
-    ) -> CargoResult<()> {
+    )  {
         profile_makers.by_name.insert(
             InternedString::new("dev"),
             ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
@@ -153,7 +153,6 @@ impl Profiles {
             InternedString::new("release"),
             ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
         );
-        Ok(())
     }
 
     /// Returns the built-in profiles (not including dev/release, which are

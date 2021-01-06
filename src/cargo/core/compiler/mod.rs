@@ -24,7 +24,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -276,7 +276,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata)?;
+            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata);
         }
 
         for output in outputs.iter() {
@@ -396,17 +396,18 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         build_script_outputs: &BuildScriptOutputs,
         current_id: PackageId,
         metadata: Option<Metadata>,
-    ) -> CargoResult<()> {
+    ) {
         let metadata = match metadata {
             Some(metadata) => metadata,
-            None => return Ok(()),
+            None => {
+                return;
+            }
         };
         if let Some(output) = build_script_outputs.get(current_id, metadata) {
             for &(ref name, ref value) in output.env.iter() {
                 rustc.env(name, value);
             }
         }
-        Ok(())
     }
 }
 
@@ -603,7 +604,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format_and_color(cx, &mut rustdoc, false)?;
+    add_error_format_and_color(cx, &mut rustdoc, false);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -725,11 +726,7 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
-fn add_error_format_and_color(
-    cx: &Context<'_, '_>,
-    cmd: &mut ProcessBuilder,
-    pipelined: bool,
-) -> CargoResult<()> {
+fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pipelined: bool) {
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi");
     if pipelined {
@@ -764,8 +761,6 @@ fn add_error_format_and_color(
             _ => (),
         }
     }
-
-    Ok(())
 }
 
 fn build_base_args(
@@ -799,7 +794,7 @@ fn build_base_args(
     }
 
     add_path_args(bcx, unit, cmd);
-    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
+    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
 
     if !test {
         for crate_type in crate_types.iter() {

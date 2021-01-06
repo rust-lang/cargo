@@ -28,12 +28,12 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 
 /// Generate a toml String of Cargo.lock from a Resolve.
 pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<String> {
-    let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve)?;
+    let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve);
     Ok(out)
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<()> {
-    let (orig, mut out, ws_root) = resolve_to_string_orig(ws, resolve)?;
+    let (orig, mut out, ws_root) = resolve_to_string_orig(ws, resolve);
 
     // If the lock file contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
@@ -87,7 +87,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
 fn resolve_to_string_orig(
     ws: &Workspace<'_>,
     resolve: &mut Resolve,
-) -> CargoResult<(Option<String>, String, Filesystem)> {
+) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
     let ws_root = Filesystem::new(ws.root().to_path_buf());
     let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
@@ -97,7 +97,7 @@ fn resolve_to_string_orig(
         Ok(s)
     });
     let out = serialize_resolve(resolve, orig.as_ref().ok().map(|s| &**s));
-    Ok((orig.ok(), out, ws_root))
+    (orig.ok(), out, ws_root)
 }
 
 fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
