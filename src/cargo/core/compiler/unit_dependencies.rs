@@ -44,7 +44,7 @@ struct State<'a, 'cfg> {
     /// library.
     is_std: bool,
     global_mode: CompileMode,
-    target_data: &'a RustcTargetData,
+    target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
 }
@@ -58,7 +58,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
-    target_data: &'a RustcTargetData,
+    target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
 ) -> CargoResult<UnitGraph> {
@@ -230,7 +230,7 @@ fn compute_deps(
 
     let id = unit.pkg.package_id();
     let filtered_deps = state
-        .deps(unit, unit_for)
+        .deps(unit, unit_for)?
         .into_iter()
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| {
@@ -364,7 +364,7 @@ fn compute_deps_custom_build(
     if let Some(links) = unit.pkg.manifest().links() {
         if state
             .target_data
-            .script_override(links, unit.kind)
+            .script_override(links, unit.kind)?
             .is_some()
         {
             // Overridden build scripts don't have any dependencies.
@@ -400,7 +400,7 @@ fn compute_deps_custom_build(
 /// Returns the dependencies necessary to document a package.
 fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<UnitDep>> {
     let deps = state
-        .deps(unit, UnitFor::new_normal())
+        .deps(unit, UnitFor::new_normal())?
         .into_iter()
         .filter(|&(_id, deps)| deps.iter().any(|dep| dep.kind() == DepKind::Normal));
 
@@ -746,32 +746,40 @@ impl<'a, 'cfg> State<'a, 'cfg> {
     }
 
     /// Returns a filtered set of dependencies for the given unit.
-    fn deps(&self, unit: &Unit, unit_for: UnitFor) -> Vec<(PackageId, &HashSet<Dependency>)> {
+    fn deps(
+        &self,
+        unit: &Unit,
+        unit_for: UnitFor,
+    ) -> CargoResult<Vec<(PackageId, &HashSet<Dependency>)>> {
         let pkg_id = unit.pkg.package_id();
         let kind = unit.kind;
-        self.resolve()
-            .deps(pkg_id)
-            .filter(|&(_id, deps)| {
-                assert!(!deps.is_empty());
-                deps.iter().any(|dep| {
-                    // If this dependency is only available for certain platforms,
-                    // make sure we're only enabling it for that platform.
-                    if !self.target_data.dep_platform_activated(dep, kind) {
-                        return false;
-                    }
+        let mut res = Vec::new();
+        for (id, deps) in self.resolve().deps(pkg_id) {
+            assert!(!deps.is_empty());
+            let mut accepted = false;
+            for dep in deps {
+                // If this dependency is only available for certain platforms,
+                // make sure we're only enabling it for that platform.
+                if !self.target_data.dep_platform_activated(dep, kind)? {
+                    continue;
+                }
 
-                    // If this is an optional dependency, and the new feature resolver
-                    // did not enable it, don't include it.
-                    if dep.is_optional() {
-                        let features_for = unit_for.map_to_features_for();
-                        if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {
-                            return false;
-                        }
+                // If this is an optional dependency, and the new feature resolver
+                // did not enable it, don't include it.
+                if dep.is_optional() {
+                    let features_for = unit_for.map_to_features_for();
+                    if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {
+                        continue;
                     }
+                }
 
-                    true
-                })
-            })
-            .collect()
+                accepted = true;
+                break;
+            }
+            if accepted {
+                res.push((id, deps));
+            }
+        }
+        Ok(res)
     }
 }

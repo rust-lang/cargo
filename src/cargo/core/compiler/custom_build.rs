@@ -198,7 +198,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {
+    if let Some(linker) = &bcx.target_data.target_config(unit.kind)?.linker {
         cmd.env(
             "RUSTC_LINKER",
             linker.val.clone().resolve_program(bcx.config),
@@ -216,7 +216,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     }
 
     let mut cfg_map = HashMap::new();
-    for cfg in bcx.target_data.cfg(unit.kind) {
+    for cfg in bcx.target_data.cfg(unit.kind)? {
         match *cfg {
             Cfg::Name(ref n) => {
                 cfg_map.insert(n.clone(), None);
@@ -727,7 +727,7 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
         // If there is a build script override, pre-fill the build output.
         if unit.mode.is_run_custom_build() {
             if let Some(links) = unit.pkg.manifest().links() {
-                if let Some(output) = cx.bcx.target_data.script_override(links, unit.kind) {
+                if let Some(output) = cx.bcx.target_data.script_override(links, unit.kind)? {
                     let metadata = cx.get_run_build_script_metadata(unit);
                     cx.build_script_outputs.lock().unwrap().insert(
                         unit.pkg.package_id(),

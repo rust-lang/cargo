@@ -243,13 +243,13 @@ impl<'a> Graph<'a> {
 }
 
 /// Builds the graph.
-pub fn build<'a>(
-    ws: &Workspace<'_>,
+pub fn build<'a, 'cfg>(
+    ws: &Workspace<'cfg>,
     resolve: &Resolve,
     resolved_features: &ResolvedFeatures,
     specs: &[PackageIdSpec],
     requested_features: &RequestedFeatures,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'cfg>,
     requested_kinds: &[CompileKind],
     package_map: HashMap<PackageId, &'a Package>,
     opts: &TreeOptions,
@@ -270,7 +270,7 @@ pub fn build<'a>(
                 target_data,
                 *kind,
                 opts,
-            );
+            )?;
             if opts.graph_features {
                 let fmap = resolve.summary(member_id).features();
                 add_cli_features(&mut graph, member_index, &requested_features, fmap);
@@ -294,10 +294,10 @@ fn add_pkg(
     resolved_features: &ResolvedFeatures,
     package_id: PackageId,
     features_for: FeaturesFor,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'_>,
     requested_kind: CompileKind,
     opts: &TreeOptions,
-) -> usize {
+) -> CargoResult<usize> {
     let node_features = resolved_features.activated_features(package_id, features_for);
     let node_kind = match features_for {
         FeaturesFor::HostDep => CompileKind::Host,
@@ -309,7 +309,7 @@ fn add_pkg(
         kind: node_kind,
     };
     if let Some(idx) = graph.index.get(&node) {
-        return *idx;
+        return Ok(*idx);
     }
     let from_index = graph.add_node(node);
     // Compute the dep name map which is later used for foo/bar feature lookups.
@@ -317,40 +317,35 @@ fn add_pkg(
     let mut deps: Vec<_> = resolve.deps(package_id).collect();
     deps.sort_unstable_by_key(|(dep_id, _)| *dep_id);
     let show_all_targets = opts.target == super::Target::All;
-    for (dep_id, deps) in deps {
-        let mut deps: Vec<_> = deps
-            .iter()
+    for (dep_id, dep_deps) in deps {
+        let mut deps = Vec::new();
+        for dep in dep_deps {
             // This filter is *similar* to the one found in `unit_dependencies::compute_deps`.
             // Try to keep them in sync!
-            .filter(|dep| {
-                let kind = match (node_kind, dep.kind()) {
-                    (CompileKind::Host, _) => CompileKind::Host,
-                    (_, DepKind::Build) => CompileKind::Host,
-                    (_, DepKind::Normal) => node_kind,
-                    (_, DepKind::Development) => node_kind,
-                };
-                // Filter out inactivated targets.
-                if !show_all_targets && !target_data.dep_platform_activated(dep, kind) {
-                    return false;
+            let kind = match (node_kind, dep.kind()) {
+                (CompileKind::Host, _) => CompileKind::Host,
+                (_, DepKind::Build) => CompileKind::Host,
+                (_, DepKind::Normal) => node_kind,
+                (_, DepKind::Development) => node_kind,
+            };
+            // Filter out inactivated targets.
+            if !show_all_targets && !target_data.dep_platform_activated(dep, kind)? {
+                continue;
+            }
+            // Filter out dev-dependencies if requested.
+            if !opts.edge_kinds.contains(&EdgeKind::Dep(dep.kind())) {
+                continue;
+            }
+            if dep.is_optional() {
+                // If the new feature resolver does not enable this
+                // optional dep, then don't use it.
+                if !resolved_features.is_dep_activated(package_id, features_for, dep.name_in_toml())
+                {
+                    continue;
                 }
-                // Filter out dev-dependencies if requested.
-                if !opts.edge_kinds.contains(&EdgeKind::Dep(dep.kind())) {
-                    return false;
-                }
-                if dep.is_optional() {
-                    // If the new feature resolver does not enable this
-                    // optional dep, then don't use it.
-                    if !resolved_features.is_dep_activated(
-                        package_id,
-                        features_for,
-                        dep.name_in_toml(),
-                    ) {
-                        return false;
-                    }
-                }
-                true
-            })
-            .collect();
+            }
+            deps.push(dep);
+        }
 
         // This dependency is eliminated from the dependency tree under
         // the current target and feature set.
@@ -376,7 +371,7 @@ fn add_pkg(
                 target_data,
                 requested_kind,
                 opts,
-            );
+            )?;
             if opts.graph_features {
                 // Add the dependency node with feature nodes in-between.
                 dep_name_map
@@ -417,7 +412,7 @@ fn add_pkg(
             .is_none());
     }
 
-    from_index
+    Ok(from_index)
 }
 
 /// Adds a feature node between two nodes.

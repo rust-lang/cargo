@@ -33,7 +33,7 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'cfg>,
     requested_targets: &[CompileKind],
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
@@ -188,14 +188,14 @@ pub fn generate_std_roots(
     Ok(ret)
 }
 
-fn detect_sysroot_src_path(target_data: &RustcTargetData) -> CargoResult<PathBuf> {
+fn detect_sysroot_src_path<'cfg>(target_data: &RustcTargetData<'cfg>) -> CargoResult<PathBuf> {
     if let Some(s) = env::var_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
 
     // NOTE: This is temporary until we figure out how to acquire the source.
     let src_path = target_data
-        .info(CompileKind::Host)
+        .info(CompileKind::Host)?
         .sysroot
         .join("lib")
         .join("rustlib")

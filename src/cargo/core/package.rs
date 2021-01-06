@@ -492,7 +492,7 @@ impl<'cfg> PackageSet<'cfg> {
         root_ids: &[PackageId],
         has_dev_units: HasDevUnits,
         requested_kinds: &[CompileKind],
-        target_data: &RustcTargetData,
+        target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
         fn collect_used_deps(
@@ -501,43 +501,52 @@ impl<'cfg> PackageSet<'cfg> {
             pkg_id: PackageId,
             has_dev_units: HasDevUnits,
             requested_kinds: &[CompileKind],
-            target_data: &RustcTargetData,
+            target_data: &RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
         ) -> CargoResult<()> {
             if !used.insert(pkg_id) {
                 return Ok(());
             }
-            let filtered_deps = resolve.deps(pkg_id).filter(|&(_id, deps)| {
-                deps.iter().any(|dep| {
+            for (dep_id, deps) in resolve.deps(pkg_id) {
+                let mut accepted = false;
+
+                for dep in deps {
                     if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
-                        return false;
+                        continue;
                     }
+
                     // This is overly broad, since not all target-specific
                     // dependencies are used both for target and host. To tighten this
                     // up, this function would need to track "for_host" similar to how
                     // unit dependencies handles it.
                     if force_all_targets == ForceAllTargets::No {
-                        let activated = requested_kinds
-                            .iter()
-                            .chain(Some(&CompileKind::Host))
-                            .any(|kind| target_data.dep_platform_activated(dep, *kind));
+                        let mut activated = false;
+                        for k in requested_kinds.iter().chain(Some(&CompileKind::Host)) {
+                            if target_data.dep_platform_activated(dep, *k)? {
+                                activated = true;
+                                break;
+                            }
+                        }
                         if !activated {
-                            return false;
+                            continue;
                         }
                     }
-                    true
-                })
-            });
-            for (dep_id, _deps) in filtered_deps {
-                collect_used_deps(
-                    used,
-                    resolve,
-                    dep_id,
-                    has_dev_units,
-                    requested_kinds,
-                    target_data,
-                    force_all_targets,
-                )?;
+
+                    accepted = true;
+                    break;
+                }
+
+                if accepted {
+                    collect_used_deps(
+                        used,
+                        resolve,
+                        dep_id,
+                        has_dev_units,
+                        requested_kinds,
+                        target_data,
+                        force_all_targets,
+                    )?;
+                }
             }
             Ok(())
         }

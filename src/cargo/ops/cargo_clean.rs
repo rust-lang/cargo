@@ -151,7 +151,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                     let triple = target_data.short_name(compile_kind);
 
                     let (file_types, _unsupported) = target_data
-                        .info(*compile_kind)
+                        .info(*compile_kind)?
                         .rustc_outputs(mode, target.kind(), triple)?;
                     let (dir, uplift_dir) = match target.kind() {
                         TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {

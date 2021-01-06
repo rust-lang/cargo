@@ -33,29 +33,33 @@ pub fn fetch<'a>(
         }
 
         to_download.push(id);
-        let deps = resolve
-            .deps(id)
-            .filter(|&(_id, deps)| {
-                deps.iter().any(|d| {
-                    // If no target was specified then all dependencies are
-                    // fetched.
-                    if options.targets.is_empty() {
-                        return true;
-                    }
 
-                    // Otherwise we only download this dependency if any of the
-                    // requested platforms would match this dependency. Note
-                    // that this is a bit lossy because not all dependencies are
-                    // always compiled for all platforms, but it should be
-                    // "close enough" for now.
-                    build_config
-                        .requested_kinds
-                        .iter()
-                        .any(|kind| data.dep_platform_activated(d, *kind))
-                })
-            })
-            .map(|(id, _deps)| id);
-        deps_to_fetch.extend(deps);
+        for (id, deps) in resolve.deps(id) {
+            let mut accepted = false;
+            'accepting_loop: for d in deps {
+                // If no target was specified then all dependencies are
+                // fetched.
+                if options.targets.is_empty() {
+                    accepted = true;
+                    break;
+                }
+
+                // Otherwise we only download this dependency if any of the
+                // requested platforms would match this dependency. Note
+                // that this is a bit lossy because not all dependencies are
+                // always compiled for all platforms, but it should be
+                // "close enough" for now.
+                for kind in build_config.requested_kinds {
+                    if data.dep_platform_activated(d, kind)? {
+                        accepted = true;
+                        break 'accepting_loop;
+                    }
+                }
+            }
+            if accepted {
+                deps_to_fetch.push(id);
+            }
+        }
     }
     packages.get_many(to_download)?;
 

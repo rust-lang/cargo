@@ -232,7 +232,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
-    rustc.args(cx.bcx.rustflags_args(unit));
+    rustc.args(cx.bcx.rustflags_args(unit)?);
     if cx.bcx.config.cli_unstable().binary_dep_depinfo {
         rustc.arg("-Z").arg("binary-dep-depinfo");
     }
@@ -612,7 +612,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     build_deps_args(&mut rustdoc, cx, unit)?;
     rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
 
-    rustdoc.args(bcx.rustdocflags_args(unit));
+    rustdoc.args(bcx.rustdocflags_args(unit)?);
 
     if !crate_version_flag_already_present(&rustdoc) {
         append_crate_version_flag(unit, &mut rustdoc);
@@ -921,7 +921,7 @@ fn build_base_args(
         cmd,
         "-C",
         "linker=",
-        bcx.linker(unit.kind).as_ref().map(|s| s.as_ref()),
+        bcx.linker(unit.kind)?.as_ref().map(|s| s.as_ref()),
     );
     if incremental {
         let dir = cx.files().layout(unit.kind).incremental().as_os_str();

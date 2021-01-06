@@ -157,7 +157,7 @@ pub fn add_root_urls(
     let std_url = match &map.std {
         None | Some(RustdocExternMode::Remote) => None,
         Some(RustdocExternMode::Local) => {
-            let sysroot = &cx.bcx.target_data.info(CompileKind::Host).sysroot;
+            let sysroot = &cx.bcx.target_data.info(CompileKind::Host)?.sysroot;
             let html_root = sysroot.join("share").join("doc").join("rust").join("html");
             if html_root.exists() {
                 let url = Url::from_file_path(&html_root).map_err(|()| {

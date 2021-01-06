@@ -216,7 +216,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     unit: unit.clone(),
                     args,
                     unstable_opts,
-                    linker: self.bcx.linker(unit.kind),
+                    linker: self.bcx.linker(unit.kind)?,
                 });
             }
 
@@ -235,7 +235,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
 
             // Collect rustdocflags.
-            let rustdocflags = self.bcx.rustdocflags_args(unit);
+            let rustdocflags = self.bcx.rustdocflags_args(unit)?;
             if !rustdocflags.is_empty() {
                 self.compilation
                     .rustdocflags

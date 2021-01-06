@@ -109,19 +109,19 @@ impl<'cfg> Compilation<'cfg> {
             deps_output: HashMap::new(),
             sysroot_host_libdir: bcx
                 .target_data
-                .info(CompileKind::Host)
+                .info(CompileKind::Host)?
                 .sysroot_host_libdir
                 .clone(),
             sysroot_target_libdir: bcx
                 .all_kinds
                 .iter()
                 .map(|kind| {
-                    (
+                    Ok((
                         *kind,
-                        bcx.target_data.info(*kind).sysroot_target_libdir.clone(),
-                    )
+                        bcx.target_data.info(*kind)?.sysroot_target_libdir.clone(),
+                    ))
                 })
-                .collect(),
+                .collect::<CargoResult<_>>()?,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
@@ -351,7 +351,7 @@ fn target_runner(
     }
 
     // try target.'cfg(...)'.runner
-    let target_cfg = bcx.target_data.info(kind).cfg();
+    let target_cfg = bcx.target_data.info(kind)?.cfg();
     let mut cfgs = bcx
         .config
         .target_cfgs()?

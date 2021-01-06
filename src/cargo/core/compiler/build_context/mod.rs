@@ -37,7 +37,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub packages: PackageSet<'cfg>,
 
     /// Information about rustc and the target platform.
-    pub target_data: RustcTargetData,
+    pub target_data: RustcTargetData<'cfg>,
 
     /// The root units of `unit_graph` (units requested on the command-line).
     pub roots: Vec<Unit>,
@@ -56,7 +56,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         build_config: &'a BuildConfig,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
-        target_data: RustcTargetData,
+        target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
@@ -86,12 +86,13 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     /// Gets the user-specified linker for a particular host or target.
-    pub fn linker(&self, kind: CompileKind) -> Option<PathBuf> {
-        self.target_data
-            .target_config(kind)
+    pub fn linker(&self, kind: CompileKind) -> CargoResult<Option<PathBuf>> {
+        Ok(self
+            .target_data
+            .target_config(kind)?
             .linker
             .as_ref()
-            .map(|l| l.val.clone().resolve_program(self.config))
+            .map(|l| l.val.clone().resolve_program(self.config)))
     }
 
     /// Gets the host architecture triple.
@@ -109,12 +110,12 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit) -> &[String] {
-        &self.target_data.info(unit.kind).rustflags
+    pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<&[String]> {
+        Ok(&self.target_data.info(unit.kind)?.rustflags)
     }
 
-    pub fn rustdocflags_args(&self, unit: &Unit) -> &[String] {
-        &self.target_data.info(unit.kind).rustdocflags
+    pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<&[String]> {
+        Ok(&self.target_data.info(unit.kind)?.rustdocflags)
     }
 
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {

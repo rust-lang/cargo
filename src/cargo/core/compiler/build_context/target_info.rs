@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -646,60 +647,63 @@ fn env_args(
 }
 
 /// Collection of information about `rustc` and the host and target.
-pub struct RustcTargetData {
+pub struct RustcTargetData<'cfg> {
+    /// Configuration from the Workspace this was built with.
+    config: &'cfg Config,
+
     /// Information about `rustc` itself.
     pub rustc: Rustc,
+
     /// Build information for the "host", which is information about when
     /// `rustc` is invoked without a `--target` flag. This is used for
     /// procedural macros, build scripts, etc.
-    host_config: TargetConfig,
-    host_info: TargetInfo,
+    host_config: Rc<TargetConfig>,
+    host_info: Rc<TargetInfo>,
 
-    /// Build information for targets that we're building for. This will be
-    /// empty if the `--target` flag is not passed.
-    target_config: HashMap<CompileTarget, TargetConfig>,
-    target_info: HashMap<CompileTarget, TargetInfo>,
+    /// Build information for targets that we're building for. This is
+    /// a cache that will be filled on-demand.
+    target_config: RefCell<HashMap<CompileTarget, Rc<TargetConfig>>>,
+    target_info: RefCell<HashMap<CompileTarget, Rc<TargetInfo>>>,
+
+    // TODO: can we get rid of this? in other words, does
+    // TargetInfo::new really need the list of requested kinds?
+    requested_kinds: Vec<CompileKind>,
 }
 
-impl RustcTargetData {
+impl<'cfg> RustcTargetData<'cfg> {
     pub fn new(
-        ws: &Workspace<'_>,
+        ws: &Workspace<'cfg>,
         requested_kinds: &[CompileKind],
-    ) -> CargoResult<RustcTargetData> {
+    ) -> CargoResult<RustcTargetData<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
-        let host_config = config.target_cfg_triple(&rustc.host)?;
-        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
-        let mut target_config = HashMap::new();
-        let mut target_info = HashMap::new();
-        for kind in requested_kinds {
-            if let CompileKind::Target(target) = *kind {
-                let tcfg = config.target_cfg_triple(target.short_name())?;
-                target_config.insert(target, tcfg);
-                target_info.insert(
-                    target,
-                    TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
-                );
-            }
-        }
+        let host_config = Rc::new(config.target_cfg_triple(&rustc.host)?);
+        let host_info = Rc::new(TargetInfo::new(
+            config,
+            requested_kinds,
+            &rustc,
+            CompileKind::Host,
+        )?);
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
         // `--target` flag is not specified. Since the unit_dependency code
         // needs access to the target config data, create a copy so that it
         // can be found. See `rebuild_unit_graph_shared` for why this is done.
-        if requested_kinds.iter().any(CompileKind::is_host) {
-            let ct = CompileTarget::new(&rustc.host)?;
-            target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, host_config.clone());
-        }
+        let mut target_config = HashMap::new();
+        let mut target_info = HashMap::new();
+        let ct = CompileTarget::new(&rustc.host)?;
+        target_info.insert(ct, host_info.clone());
+        target_config.insert(ct, host_config.clone());
 
         Ok(RustcTargetData {
+            config,
             rustc,
-            target_config,
-            target_info,
+            target_config: RefCell::new(target_config),
+            target_info: RefCell::new(target_info),
             host_config,
             host_info,
+            requested_kinds: requested_kinds.to_owned(),
         })
     }
 
@@ -714,43 +718,62 @@ impl RustcTargetData {
 
     /// Whether a dependency should be compiled for the host or target platform,
     /// specified by `CompileKind`.
-    pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> bool {
+    pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> CargoResult<bool> {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
         let platform = match dep.platform() {
             Some(p) => p,
-            None => return true,
+            None => return Ok(true),
         };
         let name = self.short_name(&kind);
-        platform.matches(name, self.cfg(kind))
+        Ok(platform.matches(name, self.cfg(kind)?))
     }
 
     /// Gets the list of `cfg`s printed out from the compiler for the specified kind.
-    pub fn cfg(&self, kind: CompileKind) -> &[Cfg] {
-        self.info(kind).cfg()
+    pub fn cfg(&self, kind: CompileKind) -> CargoResult<&[Cfg]> {
+        Ok(self.info(kind)?.cfg())
     }
 
     /// Information about the given target platform, learned by querying rustc.
-    pub fn info(&self, kind: CompileKind) -> &TargetInfo {
-        match kind {
-            CompileKind::Host => &self.host_info,
-            CompileKind::Target(s) => &self.target_info[&s],
-        }
+    pub fn info(&self, kind: CompileKind) -> CargoResult<Rc<TargetInfo>> {
+        Ok(match kind {
+            CompileKind::Host => self.host_info.clone(),
+            CompileKind::Target(s) => match self.target_info.borrow_mut().entry(s) {
+                std::collections::hash_map::Entry::Occupied(o) => o.get().clone(),
+                std::collections::hash_map::Entry::Vacant(v) => v
+                    .insert(Rc::new(TargetInfo::new(
+                        self.config,
+                        &self.requested_kinds,
+                        &self.rustc,
+                        kind,
+                    )?))
+                    .clone(),
+            },
+        })
     }
 
     /// Gets the target configuration for a particular host or target.
-    pub fn target_config(&self, kind: CompileKind) -> &TargetConfig {
-        match kind {
-            CompileKind::Host => &self.host_config,
-            CompileKind::Target(s) => &self.target_config[&s],
-        }
+    pub fn target_config(&self, kind: CompileKind) -> CargoResult<Rc<TargetConfig>> {
+        Ok(match kind {
+            CompileKind::Host => self.host_config.clone(),
+            CompileKind::Target(s) => match self.target_config.borrow_mut().entry(s) {
+                std::collections::hash_map::Entry::Occupied(o) => o.get().clone(),
+                std::collections::hash_map::Entry::Vacant(v) => v
+                    .insert(Rc::new(self.config.target_cfg_triple(s.short_name())?))
+                    .clone(),
+            },
+        })
     }
 
     /// If a build script is overridden, this returns the `BuildOutput` to use.
     ///
     /// `lib_name` is the `links` library name and `kind` is whether it is for
     /// Host or Target.
-    pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
-        self.target_config(kind).links_overrides.get(lib_name)
+    pub fn script_override(
+        &self,
+        lib_name: &str,
+        kind: CompileKind,
+    ) -> CargoResult<Option<&BuildOutput>> {
+        Ok(self.target_config(kind)?.links_overrides.get(lib_name))
     }
 }

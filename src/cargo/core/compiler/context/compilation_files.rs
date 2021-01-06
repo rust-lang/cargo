@@ -296,7 +296,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ) -> CargoResult<PathBuf> {
         assert!(target.is_bin());
         let dest = self.layout(kind).dest();
-        let info = bcx.target_data.info(kind);
+        let info = bcx.target_data.info(kind)?;
         let (file_types, _) = info
             .rustc_outputs(
                 CompileMode::Build,
@@ -422,7 +422,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ) -> CargoResult<Vec<OutputFile>> {
         let out_dir = self.out_dir(unit);
 
-        let info = bcx.target_data.info(unit.kind);
+        let info = bcx.target_data.info(unit.kind)?;
         let triple = bcx.target_data.short_name(&unit.kind);
         let (file_types, unsupported) =
             info.rustc_outputs(unit.mode, unit.target.kind(), triple)?;

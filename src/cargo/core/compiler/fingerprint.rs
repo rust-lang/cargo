@@ -1296,9 +1296,9 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     // hashed to take up less space on disk as we just need to know when things
     // change.
     let extra_flags = if unit.mode.is_doc() {
-        cx.bcx.rustdocflags_args(unit)
+        cx.bcx.rustdocflags_args(unit)?
     } else {
-        cx.bcx.rustflags_args(unit)
+        cx.bcx.rustflags_args(unit)?
     }
     .to_vec();
 
@@ -1432,9 +1432,9 @@ fn build_script_local_fingerprints(
 ) -> (
     Box<
         dyn FnOnce(
-                &BuildDeps,
-                Option<&dyn Fn() -> CargoResult<String>>,
-            ) -> CargoResult<Option<Vec<LocalFingerprint>>>
+            &BuildDeps,
+            Option<&dyn Fn() -> CargoResult<String>>,
+        ) -> CargoResult<Option<Vec<LocalFingerprint>>>
             + Send,
     >,
     bool,

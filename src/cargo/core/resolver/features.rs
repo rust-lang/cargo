@@ -293,7 +293,7 @@ impl ResolvedFeatures {
 
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
-    target_data: &'a RustcTargetData,
+    target_data: &'a RustcTargetData<'cfg>,
     /// The platforms to build for, requested by the user.
     requested_targets: &'a [CompileKind],
     resolve: &'a Resolve,
@@ -331,7 +331,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     /// with the result.
     pub fn resolve(
         ws: &Workspace<'cfg>,
-        target_data: &RustcTargetData,
+        target_data: &RustcTargetData<'cfg>,
         resolve: &Resolve,
         package_set: &'a PackageSet<'cfg>,
         requested_features: &RequestedFeatures,
@@ -439,7 +439,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // features that enable other features.
             return Ok(());
         }
-        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host)? {
             for (dep, dep_for_host) in deps {
                 if dep.is_optional() {
                     // Optional dependencies are enabled in `activate_fv` when
@@ -550,7 +550,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             .deferred_weak_dependencies
             .remove(&(pkg_id, for_host, dep_name));
         // Activate the optional dep.
-        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host)? {
             for (dep, dep_for_host) in deps {
                 if dep.name_in_toml() != dep_name {
                     continue;
@@ -588,7 +588,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         dep_prefix: bool,
         weak: bool,
     ) -> CargoResult<()> {
-        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host)? {
             for (dep, dep_for_host) in deps {
                 if dep.name_in_toml() != dep_name {
                     continue;
@@ -685,9 +685,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         &self,
         pkg_id: PackageId,
         for_host: bool,
-    ) -> Vec<(PackageId, Vec<(&'a Dependency, bool)>)> {
+    ) -> CargoResult<Vec<(PackageId, Vec<(&'a Dependency, bool)>)>> {
         // Helper for determining if a platform is activated.
-        let platform_activated = |dep: &Dependency| -> bool {
+        let platform_activated = |dep: &Dependency| -> CargoResult<bool> {
             // We always care about build-dependencies, and they are always
             // Host. If we are computing dependencies "for a build script",
             // even normal dependencies are host-only.
@@ -697,37 +697,36 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     .dep_platform_activated(dep, CompileKind::Host);
             }
             // Not a build dependency, and not for a build script, so must be Target.
-            self.requested_targets
-                .iter()
-                .any(|kind| self.target_data.dep_platform_activated(dep, *kind))
+            for kind in self.requested_targets {
+                if self.target_data.dep_platform_activated(dep, *kind)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
         };
-        self.resolve
-            .deps(pkg_id)
-            .map(|(dep_id, deps)| {
-                let deps = deps
-                    .iter()
-                    .filter(|dep| {
-                        if dep.platform().is_some()
-                            && self.opts.ignore_inactive_targets
-                            && !platform_activated(dep)
-                        {
-                            return false;
-                        }
-                        if self.opts.decouple_dev_deps && dep.kind() == DepKind::Development {
-                            return false;
-                        }
-                        true
-                    })
-                    .map(|dep| {
-                        let dep_for_host = self.track_for_host
-                            && (for_host || dep.is_build() || self.is_proc_macro(dep_id));
-                        (dep, dep_for_host)
-                    })
-                    .collect::<Vec<_>>();
-                (dep_id, deps)
-            })
-            .filter(|(_id, deps)| !deps.is_empty())
-            .collect()
+
+        let res = Vec::new();
+        for (dep_id, deps) in self.resolve.deps(pkg_id) {
+            let new_deps = Vec::new();
+            for dep in deps.iter() {
+                if dep.platform().is_some()
+                    && self.opts.ignore_inactive_targets
+                    && !platform_activated(dep)?
+                {
+                    continue;
+                }
+                if self.opts.decouple_dev_deps && dep.kind() == DepKind::Development {
+                    continue;
+                }
+                let dep_for_host = self.track_for_host
+                    && (for_host || dep.is_build() || self.is_proc_macro(dep_id));
+                new_deps.push((dep, dep_for_host));
+            }
+            if !new_deps.is_empty() {
+                res.push((dep_id, new_deps))
+            }
+        }
+        Ok(res)
     }
 
     /// Compare the activated features to the resolver. Used for testing.

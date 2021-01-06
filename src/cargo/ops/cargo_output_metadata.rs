@@ -174,16 +174,16 @@ fn build_resolve_graph(
     Ok((actual_packages, mr))
 }
 
-fn build_resolve_graph_r(
+fn build_resolve_graph_r<'cfg>(
     node_map: &mut BTreeMap<PackageId, MetadataResolveNode>,
     pkg_id: PackageId,
     resolve: &Resolve,
     package_map: &BTreeMap<PackageId, Package>,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'cfg>,
     requested_kinds: &[CompileKind],
-) {
+) -> CargoResult<()> {
     if node_map.contains_key(&pkg_id) {
-        return;
+        return Ok(());
     }
     // This normalizes the IDs so that they are consistent between the
     // `packages` array and the `resolve` map. This is a bit of a hack to
@@ -202,32 +202,36 @@ fn build_resolve_graph_r(
     let normalize_id = |id| -> PackageId { *package_map.get_key_value(&id).unwrap().0 };
     let features = resolve.features(pkg_id).to_vec();
 
-    let deps: Vec<Dep> = resolve
-        .deps(pkg_id)
-        .filter(|(_dep_id, deps)| {
-            if requested_kinds == [CompileKind::Host] {
-                true
-            } else {
-                requested_kinds.iter().any(|kind| {
-                    deps.iter()
-                        .any(|dep| target_data.dep_platform_activated(dep, *kind))
-                })
+    let deps = Vec::new();
+    for (dep_id, dep_deps) in resolve.deps(pkg_id) {
+        if requested_kinds != [CompileKind::Host] {
+            let mut skip = true;
+            for kind in requested_kinds {
+                for dep in dep_deps {
+                    if target_data.dep_platform_activated(dep, *kind)? {
+                        skip = false;
+                    }
+                }
             }
-        })
-        .filter_map(|(dep_id, deps)| {
-            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
-            dep_kinds.sort();
-            package_map
-                .get(&dep_id)
-                .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                .and_then(|lib_target| resolve.extern_crate_name(pkg_id, dep_id, lib_target).ok())
-                .map(|name| Dep {
-                    name,
-                    pkg: normalize_id(dep_id),
-                    dep_kinds,
-                })
-        })
-        .collect();
+            if skip {
+                continue;
+            }
+        }
+        let mut dep_kinds: Vec<_> = dep_deps.iter().map(DepKindInfo::from).collect();
+        dep_kinds.sort();
+        if let Some(d) = package_map
+            .get(&dep_id)
+            .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
+            .and_then(|lib_target| resolve.extern_crate_name(pkg_id, dep_id, lib_target).ok())
+            .map(|name| Dep {
+                name,
+                pkg: normalize_id(dep_id),
+                dep_kinds,
+            })
+        {
+            deps.push(d);
+        }
+    }
     let dumb_deps: Vec<PackageId> = deps.iter().map(|dep| normalize_id(dep.pkg)).collect();
     let to_visit = dumb_deps.clone();
     let node = MetadataResolveNode {
@@ -247,4 +251,5 @@ fn build_resolve_graph_r(
             requested_kinds,
         );
     }
+    Ok(())
 }
