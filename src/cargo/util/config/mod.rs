@@ -1698,13 +1698,11 @@ pub fn save_credentials(
                     rtable.remove("token");
                 }
             }
-        } else {
-            if let Some(registry) = table.get_mut("registry") {
-                let reg_table = registry
-                    .as_table_mut()
-                    .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
-                reg_table.remove("token");
-            }
+        } else if let Some(registry) = table.get_mut("registry") {
+            let reg_table = registry
+                .as_table_mut()
+                .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
+            reg_table.remove("token");
         }
     }
 

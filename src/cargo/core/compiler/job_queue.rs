@@ -780,14 +780,12 @@ impl<'cfg> DrainState<'cfg> {
         if err_state.is_some() {
             // Already encountered one error.
             log::warn!("{:?}", new_err);
+        } else if !self.active.is_empty() {
+            crate::display_error(&new_err, shell);
+            drop(shell.warn("build failed, waiting for other jobs to finish..."));
+            *err_state = Some(anyhow::format_err!("build failed"));
         } else {
-            if !self.active.is_empty() {
-                crate::display_error(&new_err, shell);
-                drop(shell.warn("build failed, waiting for other jobs to finish..."));
-                *err_state = Some(anyhow::format_err!("build failed"));
-            } else {
-                *err_state = Some(new_err);
-            }
+            *err_state = Some(new_err);
         }
     }
 

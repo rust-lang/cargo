@@ -127,10 +127,8 @@ impl CargoPathExt for Path {
             if let Err(e) = remove_dir_all::remove_dir_all(self) {
                 panic!("failed to remove {:?}: {:?}", self, e)
             }
-        } else {
-            if let Err(e) = fs::remove_file(self) {
-                panic!("failed to remove {:?}: {:?}", self, e)
-            }
+        } else if let Err(e) = fs::remove_file(self) {
+            panic!("failed to remove {:?}: {:?}", self, e)
         }
     }
 
