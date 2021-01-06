@@ -689,8 +689,7 @@ where
     // call our callback, `f`, in a loop here.
     if ssh_username_requested {
         debug_assert!(res.is_err());
-        let mut attempts = Vec::new();
-        attempts.push("git".to_string());
+        let mut attempts = vec![String::from("git")];
         if let Ok(s) = env::var("USER").or_else(|_| env::var("USERNAME")) {
             attempts.push(s);
         }

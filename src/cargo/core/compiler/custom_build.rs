@@ -750,7 +750,7 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
 
         // Load any dependency declarations from a previous run.
         if unit.mode.is_run_custom_build() {
-            parse_previous_explicit_deps(cx, unit)?;
+            parse_previous_explicit_deps(cx, unit);
         }
 
         // We want to invoke the compiler deterministically to be cache-friendly
@@ -787,13 +787,12 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
         }
     }
 
-    fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+    fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) {
         let script_run_dir = cx.files().build_script_run_dir(unit);
         let output_file = script_run_dir.join("output");
         let (prev_output, _) = prev_build_output(cx, unit);
         let deps = BuildDeps::new(&output_file, prev_output.as_ref());
         cx.build_explicit_deps.insert(unit.clone(), deps);
-        Ok(())
     }
 }
 

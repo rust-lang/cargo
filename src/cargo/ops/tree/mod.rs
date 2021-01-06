@@ -143,7 +143,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         opts.all_features,
         !opts.no_default_features,
     );
-    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features.clone());
+    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features);
     let has_dev = if opts
         .edge_kinds
         .contains(&EdgeKind::Dep(DepKind::Development))

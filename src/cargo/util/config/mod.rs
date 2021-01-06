@@ -1174,17 +1174,17 @@ impl Config {
 
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
         self.http_config
-            .try_borrow_with(|| Ok(self.get::<CargoHttpConfig>("http")?))
+            .try_borrow_with(|| self.get::<CargoHttpConfig>("http"))
     }
 
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
         self.net_config
-            .try_borrow_with(|| Ok(self.get::<CargoNetConfig>("net")?))
+            .try_borrow_with(|| self.get::<CargoNetConfig>("net"))
     }
 
     pub fn build_config(&self) -> CargoResult<&CargoBuildConfig> {
         self.build_config
-            .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
+            .try_borrow_with(|| self.get::<CargoBuildConfig>("build"))
     }
 
     pub fn progress_config(&self) -> &ProgressConfig {
@@ -1698,13 +1698,11 @@ pub fn save_credentials(
                     rtable.remove("token");
                 }
             }
-        } else {
-            if let Some(registry) = table.get_mut("registry") {
-                let reg_table = registry
-                    .as_table_mut()
-                    .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
-                reg_table.remove("token");
-            }
+        } else if let Some(registry) = table.get_mut("registry") {
+            let reg_table = registry
+                .as_table_mut()
+                .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
+            reg_table.remove("token");
         }
     }
 

@@ -437,14 +437,14 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
-        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> CargoResult<PathBuf> {
+        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
             let path = member_manifest
                 .parent()
                 .unwrap()
                 .join(root_link)
                 .join("Cargo.toml");
             debug!("find_root - pointer {}", path.display());
-            Ok(paths::normalize_path(&path))
+            paths::normalize_path(&path)
         }
 
         {
@@ -456,7 +456,7 @@ impl<'cfg> Workspace<'cfg> {
                 }
                 WorkspaceConfig::Member {
                     root: Some(ref path_to_root),
-                } => return Ok(Some(read_root_pointer(manifest_path, path_to_root)?)),
+                } => return Ok(Some(read_root_pointer(manifest_path, path_to_root))),
                 WorkspaceConfig::Member { root: None } => {}
             }
         }
@@ -481,7 +481,7 @@ impl<'cfg> Workspace<'cfg> {
                         root: Some(ref path_to_root),
                     } => {
                         debug!("find_root - found pointer");
-                        return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)?));
+                        return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
                     }
                     WorkspaceConfig::Member { .. } => {}
                 }
@@ -957,7 +957,7 @@ impl<'cfg> Workspace<'cfg> {
         if self.allows_new_cli_feature_behavior() {
             self.members_with_features_new(specs, requested_features)
         } else {
-            self.members_with_features_old(specs, requested_features)
+            Ok(self.members_with_features_old(specs, requested_features))
         }
     }
 
@@ -1067,7 +1067,7 @@ impl<'cfg> Workspace<'cfg> {
         &self,
         specs: &[PackageIdSpec],
         requested_features: &RequestedFeatures,
-    ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+    ) -> Vec<(&Package, RequestedFeatures)> {
         // Split off any features with the syntax `member-name/feature-name` into a map
         // so that those features can be applied directly to those workspace-members.
         let mut member_specific_features: HashMap<&str, BTreeSet<InternedString>> = HashMap::new();
@@ -1131,7 +1131,7 @@ impl<'cfg> Workspace<'cfg> {
                 }
             }
         });
-        Ok(ms.collect())
+        ms.collect()
     }
 }
 
