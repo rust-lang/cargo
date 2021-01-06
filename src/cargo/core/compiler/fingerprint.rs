@@ -1432,9 +1432,9 @@ fn build_script_local_fingerprints(
 ) -> (
     Box<
         dyn FnOnce(
-            &BuildDeps,
-            Option<&dyn Fn() -> CargoResult<String>>,
-        ) -> CargoResult<Option<Vec<LocalFingerprint>>>
+                &BuildDeps,
+                Option<&dyn Fn() -> CargoResult<String>>,
+            ) -> CargoResult<Option<Vec<LocalFingerprint>>>
             + Send,
     >,
     bool,

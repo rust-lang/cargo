@@ -915,7 +915,7 @@ impl<'cfg> DrainState<'cfg> {
                 // thread to run the job.
                 doit(JobState {
                     id,
-                    messages: messages.clone(),
+                    messages,
                     output: Some(cx.bcx.config),
                     rmeta_required: Cell::new(rmeta_required),
                     _marker: marker::PhantomData,

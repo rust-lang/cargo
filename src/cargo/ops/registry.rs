@@ -366,8 +366,8 @@ pub fn registry_configuration(
     // `registry.default` is handled in command-line parsing.
     let (index, token, process) = match registry {
         Some(registry) => {
-            validate_package_name(&registry, "registry name", "")?;
-            let index = Some(config.get_registry_index(&registry)?.to_string());
+            validate_package_name(registry, "registry name", "")?;
+            let index = Some(config.get_registry_index(registry)?.to_string());
             let token_key = format!("registries.{}.token", registry);
             let token = config.get_string(&token_key)?.map(|p| p.val);
             let process = if config.cli_unstable().credential_process {
@@ -471,7 +471,7 @@ fn registry(
     };
     let token = if validate_token {
         if index.is_some() {
-            if !token.is_some() {
+            if token.is_none() {
                 bail!("command-line argument --index requires --token to be specified");
             }
             token

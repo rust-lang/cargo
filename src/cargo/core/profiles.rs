@@ -143,7 +143,7 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
-    )  {
+    ) {
         profile_makers.by_name.insert(
             InternedString::new("dev"),
             ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),

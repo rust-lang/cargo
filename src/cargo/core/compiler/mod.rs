@@ -397,15 +397,11 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         current_id: PackageId,
         metadata: Option<Metadata>,
     ) {
-        let metadata = match metadata {
-            Some(metadata) => metadata,
-            None => {
-                return;
-            }
-        };
-        if let Some(output) = build_script_outputs.get(current_id, metadata) {
-            for &(ref name, ref value) in output.env.iter() {
-                rustc.env(name, value);
+        if let Some(metadata) = metadata {
+            if let Some(output) = build_script_outputs.get(current_id, metadata) {
+                for &(ref name, ref value) in output.env.iter() {
+                    rustc.env(name, value);
+                }
             }
         }
     }
@@ -492,7 +488,7 @@ fn add_plugin_deps(
     rustc: &mut ProcessBuilder,
     build_script_outputs: &BuildScriptOutputs,
     build_scripts: &BuildScripts,
-    root_output: &PathBuf,
+    root_output: &Path,
 ) -> CargoResult<()> {
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
@@ -516,7 +512,7 @@ fn add_plugin_deps(
 // Strip off prefixes like "native=" or "framework=" and filter out directories
 // **not** inside our output directory since they are likely spurious and can cause
 // clashes with system shared libraries (issue #3366).
-fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &PathBuf) -> Vec<PathBuf>
+fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &Path) -> Vec<PathBuf>
 where
     I: Iterator<Item = &'a PathBuf>,
 {
