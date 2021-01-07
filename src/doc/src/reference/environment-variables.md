@@ -188,6 +188,9 @@ let version = env!("CARGO_PKG_VERSION");
 
 `version` will now contain the value of `CARGO_PKG_VERSION`.
 
+Note that if one of these values is not provided in the manifest, the
+corresponding environment variable is set to the empty string, `""`.
+
 * `CARGO` — Path to the `cargo` binary performing the build.
 * `CARGO_MANIFEST_DIR` — The directory containing the manifest of your package.
 * `CARGO_PKG_VERSION` — The full version of your package.
