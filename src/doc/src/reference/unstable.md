@@ -14,7 +14,7 @@ config file (`.cargo/config.toml`) in the `unstable` table. For example:
 [unstable]
 mtime-on-use = true
 multitarget = true
-timings = true
+timings = ["html"]
 ```
 
 Some unstable features will require you to specify the `cargo-features` key in
