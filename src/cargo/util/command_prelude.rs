@@ -469,7 +469,6 @@ pub trait ArgMatchesExt {
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
-        build_config.rustc_cfg = self._is_present("cfg");
         if build_config.build_plan {
             config
                 .cli_unstable()
@@ -480,10 +479,6 @@ pub trait ArgMatchesExt {
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
-        if self._is_present("cfg") {
-            config.cli_unstable().fail_if_stable_opt("--cfg", 8923)?;
-        }
-
         let opts = CompileOptions {
             build_config,
             features: self._values_of("features"),
