@@ -71,7 +71,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some(target_args)
     };
     if args.is_present(PRINT_CFG_ARG_NAME) {
-        config.cli_unstable().fail_if_stable_opt(PRINT_CFG_ARG_NAME, 8923)?;
+        config
+            .cli_unstable()
+            .fail_if_stable_opt(PRINT_CFG_ARG_NAME, 8923)?;
         ops::print_cfg(&ws, &compile_opts)?;
     } else {
         ops::compile(&ws, &compile_opts)?;

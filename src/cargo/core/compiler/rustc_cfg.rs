@@ -80,9 +80,9 @@ impl<'a> SerializedTargetData<'a> {
                 .iter()
                 .map(|c| match c {
                     Cfg::Name(n) => n.as_str(),
-                    Cfg::KeyPair(k, v) => format!("{}='{}'", k, v).as_str()
+                    Cfg::KeyPair(k, v) => format!("{}='{}'", k, v).as_str(),
                 })
-                .collect()
+                .collect(),
         }
     }
 }
@@ -97,7 +97,7 @@ pub fn emit_serialized_rustc_cfg(rtd: &RustcTargetData, kinds: &[CompileKind]) -
                 let mut target = HashMap::with_capacity(1);
                 target.insert(ct.short_name(), SerializedTargetData::new(rtd, *k));
                 Some(target)
-            },
+            }
         })
         .collect();
     let s = SerializedRustcCfg {
