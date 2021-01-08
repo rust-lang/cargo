@@ -172,16 +172,6 @@ pub trait AppExt: Sized {
         self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
     }
 
-    fn arg_rustc_cfg(self) -> Self {
-        self._arg(
-            opt(
-                "rustc-cfg",
-                "Output the rustc configuration in JSON (unstable)",
-            )
-            .hidden(true),
-        )
-    }
-
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -479,7 +469,7 @@ pub trait ArgMatchesExt {
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
-        build_config.rustc_cfg = self._is_present("cfg") || self._is_present("rustc-cfg");
+        build_config.rustc_cfg = self._is_present("cfg");
         if build_config.build_plan {
             config
                 .cli_unstable()
@@ -492,11 +482,6 @@ pub trait ArgMatchesExt {
         }
         if self._is_present("cfg") {
             config.cli_unstable().fail_if_stable_opt("--cfg", 8923)?;
-        }
-        if self._is_present("rustc-cfg") {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--rustc-cfg", 8923)?;
         }
 
         let opts = CompileOptions {
