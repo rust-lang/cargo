@@ -2,6 +2,8 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
+const PRINT_CFG_ARG_NAME: &str = "print-cfg";
+
 pub fn cli() -> App {
     subcommand("rustc")
         .setting(AppSettings::TrailingVarArg)
@@ -32,7 +34,7 @@ pub fn cli() -> App {
         .arg_unit_graph()
         .arg(
             opt(
-                "--print-cfg",
+                PRINT_CFG_ARG_NAME,
                 "Output the compiler configuration in JSON (unstable)",
             )
             .hidden(true),
@@ -68,8 +70,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else {
         Some(target_args)
     };
-    if args.is_present("--print-cfg") {
-        config.cli_unstable().fail_if_stable_opt("--print-cfg", 8923)?;
+    if args.is_present(PRINT_CFG_ARG_NAME) {
+        config.cli_unstable().fail_if_stable_opt(PRINT_CFG_ARG_NAME, 8923)?;
         ops::print_cfg(&ws, &compile_opts)?;
     } else {
         ops::compile(&ws, &compile_opts)?;
