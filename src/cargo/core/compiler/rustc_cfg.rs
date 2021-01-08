@@ -63,24 +63,24 @@ const VERSION: u32 = 1;
 #[derive(serde::Serialize)]
 struct SerializedRustcCfg<'a> {
     version: u32,
-    host: SerializedTargetData<'a>,
-    targets: Vec<HashMap<&'a str, SerializedTargetData<'a>>>,
+    host: SerializedTargetData,
+    targets: Vec<HashMap<&'a str, SerializedTargetData>>,
 }
 
 #[derive(serde::Serialize)]
-struct SerializedTargetData<'a> {
-    cfgs: Vec<&'a str>,
+struct SerializedTargetData {
+    cfgs: Vec<String>,
 }
 
-impl<'a> SerializedTargetData<'a> {
+impl<'a> SerializedTargetData {
     fn new(rtd: &'a RustcTargetData, kind: CompileKind) -> Self {
         Self {
             cfgs: rtd
                 .cfg(kind)
                 .iter()
                 .map(|c| match c {
-                    Cfg::Name(n) => n.as_str(),
-                    Cfg::KeyPair(k, v) => format!("{}='{}'", k, v).as_str(),
+                    Cfg::Name(n) => n.to_owned(),
+                    Cfg::KeyPair(k, v) => format!("{}='{}'", k, v),
                 })
                 .collect(),
         }

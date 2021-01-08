@@ -77,7 +77,6 @@ impl BuildConfig {
             force_rebuild: false,
             build_plan: false,
             unit_graph: false,
-            rustc_cfg: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,
