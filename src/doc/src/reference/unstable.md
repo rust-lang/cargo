@@ -12,9 +12,9 @@ config file (`.cargo/config.toml`) in the `unstable` table. For example:
 
 ```toml
 [unstable]
-mtime-on-use = 'yes'
-multitarget = 'yes'
-timings = 'yes'
+mtime-on-use = true
+multitarget = true
+timings = true
 ```
 
 Some unstable features will require you to specify the `cargo-features` key in
