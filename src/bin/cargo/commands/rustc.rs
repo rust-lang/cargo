@@ -70,7 +70,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     if args.is_present("--print-cfg") {
         config.cli_unstable().fail_if_stable_opt("--print-cfg", 8923)?;
-        ops::print_cfg(&ws, &comile_opts)?;
+        ops::print_cfg(&ws, &compile_opts)?;
     } else {
         ops::compile(&ws, &compile_opts)?;
     }
