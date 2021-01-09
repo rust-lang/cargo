@@ -265,10 +265,7 @@ fn compute_deps(
             None => continue,
         };
         let mode = check_or_build_mode(unit.mode, lib);
-        let dep_unit_for = unit_for
-            .with_for_host(lib.for_host())
-            // If it is a custom build script, then it *only* has build dependencies.
-            .with_host_features(unit.target.is_custom_build() || lib.proc_macro());
+        let dep_unit_for = unit_for.with_dependency(unit, lib);
 
         if state.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host()
         {
@@ -417,9 +414,7 @@ fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<U
         // Rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
-        let dep_unit_for = UnitFor::new_normal()
-            .with_for_host(lib.for_host())
-            .with_host_features(lib.proc_macro());
+        let dep_unit_for = UnitFor::new_normal().with_dependency(unit, lib);
         let lib_unit_dep = new_unit_dep(
             state,
             unit,
@@ -466,12 +461,13 @@ fn maybe_lib(
         .find(|t| t.is_linkable())
         .map(|t| {
             let mode = check_or_build_mode(unit.mode, t);
+            let dep_unit_for = unit_for.with_dependency(unit, t);
             new_unit_dep(
                 state,
                 unit,
                 &unit.pkg,
                 t,
-                unit_for,
+                dep_unit_for,
                 unit.kind.for_target(t),
                 mode,
             )
