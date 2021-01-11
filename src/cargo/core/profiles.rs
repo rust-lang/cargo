@@ -1,6 +1,6 @@
-use crate::core::compiler::CompileMode;
+use crate::core::compiler::{CompileMode, Unit};
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
+use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell, Target};
 use crate::util::errors::CargoResultExt;
 use crate::util::interning::InternedString;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
@@ -976,36 +976,38 @@ impl UnitFor {
         unit_for
     }
 
-    /// Returns a new copy based on `for_host` setting.
+    /// Returns a new copy updated based on the target dependency.
     ///
-    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
-    /// fashion so that all its dependencies also have `panic_abort_ok=false`.
-    /// This'll help ensure that once we start compiling for the host platform
-    /// (build scripts, plugins, proc macros, etc) we'll share the same build
-    /// graph where everything is `panic=unwind`.
-    pub fn with_for_host(self, for_host: bool) -> UnitFor {
+    /// This is where the magic happens that the host/host_features settings
+    /// transition in a sticky fashion. As the dependency graph is being
+    /// built, once those flags are set, they stay set for the duration of
+    /// that portion of tree.
+    pub fn with_dependency(self, parent: &Unit, dep_target: &Target) -> UnitFor {
+        // A build script or proc-macro transitions this to being built for the host.
+        let dep_for_host = dep_target.for_host();
+        // This is where feature decoupling of host versus target happens.
+        //
+        // Once host features are desired, they are always desired.
+        //
+        // A proc-macro should always use host features.
+        //
+        // Dependencies of a build script should use host features (subtle
+        // point: the build script itself does *not* use host features, that's
+        // why the parent is checked here, and not the dependency).
+        let host_features =
+            self.host_features || parent.target.is_custom_build() || dep_target.proc_macro();
+        // Build scripts and proc macros, and all of their dependencies are
+        // AlwaysUnwind.
+        let panic_setting = if dep_for_host {
+            PanicSetting::AlwaysUnwind
+        } else {
+            self.panic_setting
+        };
         UnitFor {
-            host: self.host || for_host,
-            host_features: self.host_features,
-            panic_setting: if for_host {
-                PanicSetting::AlwaysUnwind
-            } else {
-                self.panic_setting
-            },
+            host: self.host || dep_for_host,
+            host_features,
+            panic_setting,
         }
-    }
-
-    /// Returns a new copy updating it whether or not it should use features
-    /// for build dependencies and proc-macros.
-    ///
-    /// This is part of the machinery responsible for handling feature
-    /// decoupling for build dependencies in the new feature resolver.
-    pub fn with_host_features(mut self, host_features: bool) -> UnitFor {
-        if host_features {
-            assert!(self.host);
-        }
-        self.host_features = self.host_features || host_features;
-        self
     }
 
     /// Returns `true` if this unit is for a build script or any of its

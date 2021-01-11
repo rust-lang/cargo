@@ -2147,3 +2147,133 @@ foo v0.1.0 ([ROOT]/foo)
         .run();
     clear();
 }
+
+#[cargo_test]
+fn pm_with_int_shared() {
+    // This is a somewhat complex scenario of a proc-macro in a workspace with
+    // an integration test where the proc-macro is used for other things, and
+    // *everything* is built at once (`--workspace --all-targets
+    // --all-features`). There was a bug where the UnitFor settings were being
+    // incorrectly computed based on the order that the graph was traversed.
+    //
+    // There are some uncertainties about exactly how proc-macros should behave
+    // with `--workspace`, see https://github.com/rust-lang/cargo/issues/8312.
+    //
+    // This uses a const-eval hack to do compile-time feature checking.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "pm", "shared"]
+                resolver = "2"
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                pm = { path = "../pm" }
+                shared = { path = "../shared", features = ["norm-feat"] }
+            "#,
+        )
+        .file(
+            "foo/src/lib.rs",
+            r#"
+                // foo->shared always has both features set
+                const _CHECK: [(); 0] = [(); 0-!(shared::FEATS==3) as usize];
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                shared = { path = "../shared", features = ["host-feat"] }
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                // pm->shared always has just host
+                const _CHECK: [(); 0] = [(); 0-!(shared::FEATS==1) as usize];
+            "#,
+        )
+        .file(
+            "pm/tests/pm_test.rs",
+            r#"
+                // integration test gets both set
+                const _CHECK: [(); 0] = [(); 0-!(shared::FEATS==3) as usize];
+            "#,
+        )
+        .file(
+            "shared/Cargo.toml",
+            r#"
+                [package]
+                name = "shared"
+                version = "0.1.0"
+
+                [features]
+                norm-feat = []
+                host-feat = []
+            "#,
+        )
+        .file(
+            "shared/src/lib.rs",
+            r#"
+                pub const FEATS: u32 = {
+                    if cfg!(feature="norm-feat") && cfg!(feature="host-feat") {
+                        3
+                    } else if cfg!(feature="norm-feat") {
+                        2
+                    } else if cfg!(feature="host-feat") {
+                        1
+                    } else {
+                        0
+                    }
+                };
+            "#,
+        )
+        .build();
+
+    p.cargo("build --workspace --all-targets --all-features -v")
+        .with_stderr_unordered(
+            "\
+[COMPILING] shared [..]
+[RUNNING] `rustc --crate-name shared [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name shared [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name shared [..]--test[..]
+[COMPILING] pm [..]
+[RUNNING] `rustc --crate-name pm [..]--crate-type proc-macro[..]
+[RUNNING] `rustc --crate-name pm [..]--test[..]
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo [..]--test[..]
+[RUNNING] `rustc --crate-name pm_test [..]--test[..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // And again, should stay fresh.
+    p.cargo("build --workspace --all-targets --all-features -v")
+        .with_stderr_unordered(
+            "\
+[FRESH] shared [..]
+[FRESH] pm [..]
+[FRESH] foo [..]
+[FINISHED] [..]",
+        )
+        .run();
+}
