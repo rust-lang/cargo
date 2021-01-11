@@ -47,6 +47,11 @@ struct State<'a, 'cfg> {
     target_data: &'a RustcTargetData,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+
+    /// A set of edges in `unit_dependencies` where (a, b) means that the
+    /// dependency from a to b was added purely because it was a dev-dependency.
+    /// This is used during `connect_run_custom_build_deps`.
+    dev_dependency_edges: HashSet<(Unit, Unit)>,
 }
 
 pub fn build_unit_dependencies<'a, 'cfg>(
@@ -86,6 +91,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         target_data,
         profiles,
         interner,
+        dev_dependency_edges: HashSet::new(),
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
@@ -98,7 +104,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         attach_std_deps(&mut state, std_roots, std_unit_deps);
     }
 
-    connect_run_custom_build_deps(&mut state.unit_dependencies);
+    connect_run_custom_build_deps(&mut state);
 
     // Dependencies are used in tons of places throughout the backend, many of
     // which affect the determinism of the build itself. As a result be sure
@@ -258,7 +264,8 @@ fn compute_deps(
         });
 
     let mut ret = Vec::new();
-    for (id, _) in filtered_deps {
+    let mut dev_deps = Vec::new();
+    for (id, deps) in filtered_deps {
         let pkg = state.get(id);
         let lib = match pkg.targets().iter().find(|t| t.is_lib()) {
             Some(t) => t,
@@ -270,6 +277,7 @@ fn compute_deps(
             // If it is a custom build script, then it *only* has build dependencies.
             .with_host_features(unit.target.is_custom_build() || lib.proc_macro());
 
+        let start = ret.len();
         if state.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host()
         {
             let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
@@ -289,7 +297,18 @@ fn compute_deps(
             )?;
             ret.push(unit_dep);
         }
+
+        // If the unit added was a dev-dependency unit, then record that in the
+        // dev-dependencies array. We'll add this to
+        // `state.dev_dependency_edges` at the end and process it later in
+        // `connect_run_custom_build_deps`.
+        if deps.iter().all(|d| !d.is_transitive()) {
+            for dep in ret[start..].iter() {
+                dev_deps.push((unit.clone(), dep.unit.clone()));
+            }
+        }
     }
+    state.dev_dependency_edges.extend(dev_deps);
 
     // If this target is a build script, then what we've collected so far is
     // all we need. If this isn't a build script, then it depends on the
@@ -621,26 +640,18 @@ fn new_unit_dep_with_profile(
 ///
 /// Here we take the entire `deps` map and add more dependencies from execution
 /// of one build script to execution of another build script.
-fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
+fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
     let mut new_deps = Vec::new();
 
     {
+        let state = &*state;
         // First up build a reverse dependency map. This is a mapping of all
         // `RunCustomBuild` known steps to the unit which depends on them. For
         // example a library might depend on a build script, so this map will
         // have the build script as the key and the library would be in the
         // value's set.
-        //
-        // Note that as an important part here we're skipping "test" units. Test
-        // units depend on the execution of a build script, but
-        // links-dependencies only propagate through `[dependencies]`, nothing
-        // else. We don't want to pull in a links-dependency through a
-        // dev-dependency since that could create a cycle.
         let mut reverse_deps_map = HashMap::new();
-        for (unit, deps) in unit_dependencies.iter() {
-            if unit.mode.is_any_test() {
-                continue;
-            }
+        for (unit, deps) in state.unit_dependencies.iter() {
             for dep in deps {
                 if dep.unit.mode == CompileMode::RunCustomBuild {
                     reverse_deps_map
@@ -660,7 +671,8 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
         // `links`, then we depend on that package's build script! Here we use
         // `dep_build_script` to manufacture an appropriate build script unit to
         // depend on.
-        for unit in unit_dependencies
+        for unit in state
+            .unit_dependencies
             .keys()
             .filter(|k| k.mode == CompileMode::RunCustomBuild)
         {
@@ -674,16 +686,34 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
             let to_add = reverse_deps
                 .iter()
                 // Get all sibling dependencies of `unit`
-                .flat_map(|reverse_dep| unit_dependencies[reverse_dep].iter())
+                .flat_map(|reverse_dep| {
+                    state.unit_dependencies[reverse_dep]
+                        .iter()
+                        .map(move |a| (reverse_dep, a))
+                })
                 // Only deps with `links`.
-                .filter(|other| {
+                .filter(|(_parent, other)| {
                     other.unit.pkg != unit.pkg
                         && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
+                // Skip dependencies induced via dev-dependencies since
+                // connections between `links` and build scripts only happens
+                // via normal dependencies. Otherwise since dev-dependencies can
+                // be cyclic we could have cyclic build-script executions.
+                .filter_map(move |(parent, other)| {
+                    if state
+                        .dev_dependency_edges
+                        .contains(&((*parent).clone(), other.unit.clone()))
+                    {
+                        None
+                    } else {
+                        Some(other)
+                    }
+                })
                 // Get the RunCustomBuild for other lib.
                 .filter_map(|other| {
-                    unit_dependencies[&other.unit]
+                    state.unit_dependencies[&other.unit]
                         .iter()
                         .find(|other_dep| other_dep.unit.mode == CompileMode::RunCustomBuild)
                         .cloned()
@@ -699,7 +729,11 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
 
     // And finally, add in all the missing dependencies!
     for (unit, new_deps) in new_deps {
-        unit_dependencies.get_mut(&unit).unwrap().extend(new_deps);
+        state
+            .unit_dependencies
+            .get_mut(&unit)
+            .unwrap()
+            .extend(new_deps);
     }
 }
 
