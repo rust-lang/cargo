@@ -4158,3 +4158,48 @@ fn rerun_if_directory() {
     dirty();
     fresh();
 }
+
+#[cargo_test]
+fn test_with_dep_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = 'bar' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    assert_eq!(std::env::var("DEP_BAR_FOO").unwrap(), "bar");
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                links = 'bar'
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "bar/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:foo=bar");
+                }
+            "#,
+        )
+        .build();
+    p.cargo("test --lib").run();
+}
