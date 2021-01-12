@@ -55,10 +55,11 @@ pub fn run(
 
     if bins.len() > 1 {
         if !options.filter.is_specific() {
-            let names: Vec<&str> = bins
+            let mut names: Vec<&str> = bins
                 .into_iter()
                 .map(|(_pkg, target)| target.name())
                 .collect();
+            names.sort();
             anyhow::bail!(
                 "`cargo run` could not determine which binary to run. \
                  Use the `--bin` option to specify a binary, \
