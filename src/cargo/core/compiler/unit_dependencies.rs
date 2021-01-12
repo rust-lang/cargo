@@ -225,7 +225,7 @@ fn compute_deps(
         return compute_deps_custom_build(unit, unit_for, state);
     } else if unit.mode.is_doc() {
         // Note: this does not include doc test.
-        return compute_deps_doc(unit, state);
+        return compute_deps_doc(unit, state, unit_for);
     }
 
     let id = unit.pkg.package_id();
@@ -395,9 +395,13 @@ fn compute_deps_custom_build(
 }
 
 /// Returns the dependencies necessary to document a package.
-fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<UnitDep>> {
+fn compute_deps_doc(
+    unit: &Unit,
+    state: &mut State<'_, '_>,
+    unit_for: UnitFor,
+) -> CargoResult<Vec<UnitDep>> {
     let deps = state
-        .deps(unit, UnitFor::new_normal())
+        .deps(unit, unit_for)
         .into_iter()
         .filter(|&(_id, deps)| deps.iter().any(|dep| dep.kind() == DepKind::Normal));
 
@@ -414,7 +418,7 @@ fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<U
         // Rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
-        let dep_unit_for = UnitFor::new_normal().with_dependency(unit, lib);
+        let dep_unit_for = unit_for.with_dependency(unit, lib);
         let lib_unit_dep = new_unit_dep(
             state,
             unit,
@@ -441,11 +445,11 @@ fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<U
     }
 
     // Be sure to build/run the build script for documented libraries.
-    ret.extend(dep_build_script(unit, UnitFor::new_normal(), state)?);
+    ret.extend(dep_build_script(unit, unit_for, state)?);
 
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
-        ret.extend(maybe_lib(unit, state, UnitFor::new_normal())?);
+        ret.extend(maybe_lib(unit, state, unit_for)?);
     }
     Ok(ret)
 }
