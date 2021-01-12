@@ -105,7 +105,7 @@ fn color() {
         return s.replace("\x1b[0m\x1b[0m", "\x1b[0m");
         #[cfg(not(windows))]
         return s.to_string();
-    };
+    }
 
     let compare = |a, b| {
         assert_eq!(normalize(a), normalize(b));
