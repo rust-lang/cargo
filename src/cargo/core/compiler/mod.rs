@@ -147,6 +147,7 @@ fn compile<'cfg>(
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
+    let only_build_scripts_and_proc_macros = bcx.build_config.only_build_scripts_and_proc_macros;
     if !cx.compiled.insert(unit.clone()) {
         return Ok(());
     }
@@ -163,6 +164,8 @@ fn compile<'cfg>(
         Job::new_fresh()
     } else if build_plan {
         Job::new_dirty(rustc(cx, unit, &exec.clone())?)
+    } else if only_build_scripts_and_proc_macros && matches!(unit.mode, CompileMode::Check { .. }) {
+        Job::new_fresh()
     } else {
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;

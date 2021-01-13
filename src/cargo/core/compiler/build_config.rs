@@ -26,6 +26,11 @@ pub struct BuildConfig {
     pub build_plan: bool,
     /// Output the unit graph to stdout instead of actually compiling.
     pub unit_graph: bool,
+    /// Only for `cargo check`.
+    /// Skips actual check and only compile proc macros and run build script.
+    /// This is needed for IDEs.
+    /// See https://github.com/rust-lang/cargo/issues/7178 for details.
+    pub only_build_scripts_and_proc_macros: bool,
     /// An optional override of the rustc process for primary units
     pub primary_unit_rustc: Option<ProcessBuilder>,
     /// A thread used by `cargo fix` to receive messages on a socket regarding
@@ -79,6 +84,7 @@ impl BuildConfig {
             force_rebuild: false,
             build_plan: false,
             unit_graph: false,
+            only_build_scripts_and_proc_macros: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,

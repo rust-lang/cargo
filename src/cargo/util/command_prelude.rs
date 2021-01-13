@@ -172,6 +172,11 @@ pub trait AppExt: Sized {
         self._arg(opt("unit-graph", "Output build graph in JSON (unstable)"))
     }
 
+    fn arg_only_build_scripts_and_proc_macros(self) -> Self {
+        let help = "Skip actual check and only run build scripts and compile proc macros";
+        self._arg(opt("only-build-scripts-and-proc-macros", help).hidden(true))
+    }
+
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -470,6 +475,8 @@ pub trait ArgMatchesExt {
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
         build_config.future_incompat_report = self._is_present("future-incompat-report");
+        build_config.only_build_scripts_and_proc_macros =
+            self._is_present("only-build-scripts-and-proc-macros");
         if build_config.build_plan {
             config
                 .cli_unstable()
@@ -491,6 +498,11 @@ pub trait ArgMatchesExt {
                     "Usage of `--future-incompat-report` requires `-Z future-incompat-report`"
                 )
             }
+        }
+        if build_config.only_build_scripts_and_proc_macros {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--only-build-scripts-and-proc-macros", 7178)?;
         }
 
         let opts = CompileOptions {

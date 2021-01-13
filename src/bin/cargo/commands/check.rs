@@ -36,6 +36,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_unit_graph()
         .arg_future_incompat_report()
+        .arg_only_build_scripts_and_proc_macros()
         .after_help("Run `cargo help check` for more detailed information.\n")
 }
 
