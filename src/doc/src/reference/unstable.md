@@ -199,7 +199,7 @@ For example, using `cargo build` with `--profile` and the manifest from above:
 cargo +nightly build --profile release-lto -Z unstable-options
 ```
 
-When a custom profile is used, build artifcats go to a different target by
+When a custom profile is used, build artifacts go to a different target by
 default. In the example above, you can expect to see the outputs under
 `target/release-lto`.
 
