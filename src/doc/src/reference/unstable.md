@@ -985,7 +985,7 @@ When used with `credentials` file tokens, it needs the `-Z unstable-options`
 command-line option:
 
 ```console
-cargo logout -Z unstable-options`
+cargo logout -Z unstable-options
 ```
 
 When used with the `credential-process` config, use the `-Z
@@ -993,7 +993,7 @@ credential-process` command-line option:
 
 
 ```console
-cargo logout -Z credential-process`
+cargo logout -Z credential-process
 ```
 
 [`cargo login`]: ../commands/cargo-login.md
