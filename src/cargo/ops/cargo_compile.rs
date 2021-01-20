@@ -1497,18 +1497,19 @@ fn remove_duplicate_doc(build_config: &BuildConfig, unit_graph: &mut UnitGraph) 
                 .push(unit.clone());
         }
     }
+    // Keep track of units to remove so that they can be efficiently removed
+    // from the unit_deps.
+    let mut removed_units: HashSet<Unit> = HashSet::new();
     let mut remove = |units: Vec<Unit>, reason: &str| {
-        for unit in &units {
+        for unit in units {
             log::debug!(
                 "removing duplicate doc due to {} for package {} target `{}`",
                 reason,
                 unit.pkg,
                 unit.target.name()
             );
-            unit_graph.remove(unit);
-        }
-        for unit_deps in unit_graph.values_mut() {
-            unit_deps.retain(|unit_dep| !units.iter().any(|unit| *unit == unit_dep.unit));
+            unit_graph.remove(&unit);
+            removed_units.insert(unit);
         }
     };
     // Iterate over the duplicates and try to remove them from unit_graph.
@@ -1565,5 +1566,9 @@ fn remove_duplicate_doc(build_config: &BuildConfig, unit_graph: &mut UnitGraph) 
         }
         // Are there other heuristics to remove duplicates that would make
         // sense? Maybe prefer path sources over all others?
+    }
+    // Also remove units from the unit_deps so there aren't any dangling edges.
+    for unit_deps in unit_graph.values_mut() {
+        unit_deps.retain(|unit_dep| !removed_units.contains(&unit_dep.unit));
     }
 }
