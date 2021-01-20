@@ -170,6 +170,10 @@ impl Package {
     pub fn proc_macro(&self) -> bool {
         self.targets().iter().any(|target| target.proc_macro())
     }
+    /// Gets the package's minimum Rust version.
+    pub fn rust_version(&self) -> Option<&str> {
+        self.manifest().rust_version()
+    }
 
     /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {

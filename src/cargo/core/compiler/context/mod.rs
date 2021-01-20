@@ -130,7 +130,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
-        self.check_collistions()?;
+        self.check_collisions()?;
 
         for unit in &self.bcx.roots {
             // Build up a list of pending jobs, each of which represent
@@ -398,7 +398,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(inputs.into_iter().collect())
     }
 
-    fn check_collistions(&self) -> CargoResult<()> {
+    fn check_collisions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
         let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
             format!(

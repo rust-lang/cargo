@@ -70,6 +70,17 @@ pub enum Edition {
     Edition2021,
 }
 
+impl Edition {
+    pub(crate) fn first_version(&self) -> Option<semver::Version> {
+        use Edition::*;
+        match self {
+            Edition2015 => None,
+            Edition2018 => Some(semver::Version::new(1, 31, 0)),
+            Edition2021 => Some(semver::Version::new(1, 62, 0)),
+        }
+    }
+}
+
 impl fmt::Display for Edition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
@@ -218,6 +229,9 @@ features! {
 
         // Allow to specify whether binaries should be stripped.
         [unstable] strip: bool,
+
+        // Specifying a minimal 'rust-version' attribute for crates
+        [unstable] rust_version: bool,
     }
 }
 
