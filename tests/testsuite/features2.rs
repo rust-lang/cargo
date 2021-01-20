@@ -2277,3 +2277,50 @@ fn pm_with_int_shared() {
         )
         .run();
 }
+
+#[cargo_test]
+fn doc_proc_macro() {
+    // Checks for a bug when documenting a proc-macro with a dependency. The
+    // doc unit builder was not carrying the "for host" setting through the
+    // dependencies, and the `pm-dep` dependency was causing a panic because
+    // it was looking for target features instead of host features.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                resolver = "2"
+
+                [dependencies]
+                pm = { path = "pm" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                pm-dep = { path = "../pm-dep" }
+            "#,
+        )
+        .file("pm/src/lib.rs", "")
+        .file("pm-dep/Cargo.toml", &basic_manifest("pm-dep", "0.1.0"))
+        .file("pm-dep/src/lib.rs", "")
+        .build();
+
+    // Unfortunately this cannot check the output because what it prints is
+    // nondeterministic. Sometimes it says "Compiling pm-dep" and sometimes
+    // "Checking pm-dep". This is because it is both building it and checking
+    // it in parallel (building so it can build the proc-macro, and checking
+    // so rustdoc can load it).
+    p.cargo("doc").run();
+}
