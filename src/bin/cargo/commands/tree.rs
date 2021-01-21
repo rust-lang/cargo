@@ -19,7 +19,9 @@ pub fn cli() -> App {
             "Display the tree for all packages in the workspace",
             "Exclude specific workspace members",
         )
+        // Deprecated, use --no-dedupe instead.
         .arg(Arg::with_name("all").long("all").short("a").hidden(true))
+        // Deprecated, use --target=all instead.
         .arg(
             Arg::with_name("all-targets")
                 .long("all-targets")
@@ -30,6 +32,7 @@ pub fn cli() -> App {
             "Filter dependencies matching the given target-triple (default host platform). \
             Pass `all` to include all targets.",
         )
+        // Deprecated, use -e=no-dev instead.
         .arg(
             Arg::with_name("no-dev-dependencies")
                 .long("no-dev-dependencies")
@@ -52,7 +55,9 @@ pub fn cli() -> App {
             )
             .short("i"),
         )
+        // Deprecated, use --prefix=none instead.
         .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
+        // Deprecated, use --prefix=depth instead.
         .arg(
             Arg::with_name("prefix-depth")
                 .long("prefix-depth")

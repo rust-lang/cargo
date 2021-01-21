@@ -32,21 +32,25 @@ pub fn cli() -> App {
                 .long("versioned-dirs")
                 .help("Always include version in subdir name"),
         )
+        // Not supported.
         .arg(
             Arg::with_name("no-merge-sources")
                 .long("no-merge-sources")
                 .hidden(true),
         )
+        // Not supported.
         .arg(
             Arg::with_name("relative-path")
                 .long("relative-path")
                 .hidden(true),
         )
+        // Not supported.
         .arg(
             Arg::with_name("only-git-deps")
                 .long("only-git-deps")
                 .hidden(true),
         )
+        // Not supported.
         .arg(
             Arg::with_name("disallow-duplicates")
                 .long("disallow-duplicates")
