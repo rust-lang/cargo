@@ -169,7 +169,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_unit_graph(self) -> Self {
-        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
+        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)"))
     }
 
     fn arg_new_opts(self) -> Self {
@@ -214,13 +214,10 @@ pub trait AppExt: Sized {
     }
 
     fn arg_ignore_rust_version(self) -> Self {
-        self._arg(
-            opt(
-                "ignore-rust-version",
-                "Ignore `rust-version` specification in packages",
-            )
-            .hidden(true), // nightly only (`rust-version` feature)
-        )
+        self._arg(opt(
+            "ignore-rust-version",
+            "Ignore `rust-version` specification in packages (unstable)",
+        ))
     }
 }
 
