@@ -6,44 +6,91 @@
 //! unstable features are tracked in this file.
 //!
 //! If you're reading this then you're likely interested in adding a feature to
-//! Cargo, and the good news is that it shouldn't be too hard! To do this you'll
-//! want to follow these steps:
+//! Cargo, and the good news is that it shouldn't be too hard! First determine
+//! how the feature should be gated:
 //!
-//! 1. Add your feature. Do this by searching for "look here" in this file and
-//!    expanding the macro invocation that lists all features with your new
+//! * New syntax in Cargo.toml should use `cargo-features`.
+//! * New CLI options should use `-Z unstable-options`.
+//! * New functionality that may not have an interface, or the interface has
+//!   not yet been designed, or for more complex features that affect multiple
+//!   parts of Cargo should use a new `-Z` flag.
+//!
+//! See below for more details.
+//!
+//! When adding new tests for your feature, usually the tests should go into a
+//! new module of the testsuite. See
+//! <https://doc.crates.io/contrib/tests/writing.html> for more information on
+//! writing tests. Particularly, check out the "Testing Nightly Features"
+//! section for testing unstable features.
+//!
+//! After you have added your feature, be sure to update the unstable
+//! documentation at `src/doc/src/reference/unstable.md` to include a short
+//! description of how to use your new feature.
+//!
+//! And hopefully that's it!
+//!
+//! ## New Cargo.toml syntax
+//!
+//! The steps for adding new Cargo.toml syntax are:
+//!
+//! 1. Add the cargo-features unstable gate. Search below for "look here" to
+//!    find the `features!` macro and add your feature to the list.
+//!
+//! 2. Update the Cargo.toml parsing code to handle your new feature.
+//!
+//! 3. Wherever you added the new parsing code, call
+//!    `features.require(Feature::my_feature_name())?` if the new syntax is
+//!    used. This will return an error if the user hasn't listed the feature
+//!    in `cargo-features` or this is not the nightly channel.
+//!
+//! ## `-Z unstable-options`
+//!
+//! `-Z unstable-options` is intended to force the user to opt-in to new CLI
+//! flags, options, and new subcommands.
+//!
+//! The steps to add a new command-line option are:
+//!
+//! 1. Add the option to the CLI parsing code. In the help text, be sure to
+//!    include `(unstable)` to note that this is an unstable option.
+//! 2. Where the CLI option is loaded, be sure to call
+//!    [`CliUnstable::fail_if_stable_opt`]. This will return an error if `-Z
+//!    unstable options` was not passed.
+//!
+//! ## `-Z` options
+//!
+//! The steps to add a new `-Z` option are:
+//!
+//! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
+//!    optional value if you want.
+//! 2. Update the [`CliUnstable::add`] function to parse the flag.
+//! 3. Wherever the new functionality is implemented, call
+//!    [`Config::cli_unstable`][crate::util::config::Config::cli_unstable] to
+//!    get an instance of `CliUnstable` and check if the option has been
+//!    enabled on the `CliUnstable` instance. Nightly gating is already
+//!    handled, so no need to worry about that.
+//! 4. Update the `-Z help` documentation in the `main` function.
+//!
+//! ## Stabilization
+//!
+//! For the stabilization process, see
+//! <https://doc.crates.io/contrib/process/unstable.html#stabilization>.
+//!
+//! The steps for stabilizing are roughly:
+//!
+//! 1. Update the feature to be stable, based on the kind of feature:
+//!   1. `cargo-features`: Change the feature to `stable` in the `features!`
+//!      macro below.
+//!   2. `-Z unstable-options`: Find the call to `fail_if_stable_opt` and
+//!      remove it. Be sure to update the man pages if necessary.
+//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`] to call
+//!      `stabilized_warn` or `stabilized_err`. Remove it from the `-Z help`
+//!      docs in the `main` function. Remove the `(unstable)` note in the
+//!      clap help text if necessary.
+//! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
+//!    `cargo-features` from `Cargo.toml` test files if any.
+//! 3. Remove the docs from unstable.md and update the redirect at the bottom
+//!    of that page. Update the rest of the documentation to add the new
 //!    feature.
-//!
-//! 2. Find the appropriate place to place the feature gate in Cargo itself. If
-//!    you're extending the manifest format you'll likely just want to modify
-//!    the `Manifest::feature_gate` function, but otherwise you may wish to
-//!    place the feature gate elsewhere in Cargo.
-//!
-//! 3. To actually perform the feature gate, you'll want to have code that looks
-//!    like:
-//!
-//! ```rust,compile_fail
-//! use core::{Feature, Features};
-//!
-//! let feature = Feature::launch_into_space();
-//! package.manifest().unstable_features().require(feature).chain_err(|| {
-//!     "launching Cargo into space right now is unstable and may result in \
-//!      unintended damage to your codebase, use with caution"
-//! })?;
-//! ```
-//!
-//! Notably you'll notice the `require` function called with your `Feature`, and
-//! then you use `chain_err` to tack on more context for why the feature was
-//! required when the feature isn't activated.
-//!
-//! 4. Update the unstable documentation at
-//!    `src/doc/src/reference/unstable.md` to include a short description of
-//!    how to use your new feature. When the feature is stabilized, be sure
-//!    that the Cargo Guide or Reference is updated to fully document the
-//!    feature and remove the entry from the Unstable section.
-//!
-//! And hopefully that's it! Bear with us though that this is, at the time of
-//! this writing, a very new feature in Cargo. If the process differs from this
-//! we'll be sure to update this documentation!
 
 use std::cell::Cell;
 use std::env;
@@ -367,26 +414,6 @@ impl Features {
 /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
 /// gating unstable functionality to Cargo. These flags are only available on
 /// the nightly channel of Cargo.
-///
-/// This struct doesn't have quite the same convenience macro that the features
-/// have above, but the procedure should still be relatively stable for adding a
-/// new unstable flag:
-///
-/// 1. First, add a field to this `CliUnstable` structure. All flags are allowed
-///    to have a value as the `-Z` flags are either of the form `-Z foo` or
-///    `-Z foo=bar`, and it's up to you how to parse `bar`.
-///
-/// 2. Add an arm to the match statement in `CliUnstable::add` below to match on
-///    your new flag. The key (`k`) is what you're matching on and the value is
-///    in `v`.
-///
-/// 3. (optional) Add a new parsing function to parse your datatype. As of now
-///    there's an example for `bool`, but more can be added!
-///
-/// 4. In Cargo use `config.cli_unstable()` to get a reference to this structure
-///    and then test for your flag or your value and act accordingly.
-///
-/// If you have any trouble with this, please let us know!
 #[derive(Default, Debug, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
