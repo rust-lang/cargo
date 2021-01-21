@@ -54,6 +54,7 @@ use anyhow::{bail, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
+use crate::util::indented_lines;
 
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
@@ -380,6 +381,40 @@ pub struct CliUnstable {
     pub credential_process: bool,
 }
 
+const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
+    enabled when used on an interactive console.\n\
+    See https://doc.rust-lang.org/cargo/reference/config.html#termprogresswhen \
+    for information on controlling the progress bar.";
+
+const STABILIZED_OFFLINE: &str = "Offline mode is now available via the \
+    --offline CLI option";
+
+const STABILIZED_CACHE_MESSAGES: &str = "Message caching is now always enabled.";
+
+const STABILIZED_INSTALL_UPGRADE: &str = "Packages are now always upgraded if \
+    they appear out of date.\n\
+    See https://doc.rust-lang.org/cargo/commands/cargo-install.html for more \
+    information on how upgrading works.";
+
+const STABILIZED_CONFIG_PROFILE: &str = "See \
+    https://doc.rust-lang.org/cargo/reference/config.html#profile for more \
+    information about specifying profiles in config.";
+
+const STABILIZED_CRATE_VERSIONS: &str = "The crate version is now \
+    automatically added to the documentation.";
+
+const STABILIZED_PACKAGE_FEATURES: &str = "Enhanced feature flag behavior is now \
+    available in virtual workspaces, and `member/feature-name` syntax is also \
+    always available. Other extensions require setting `resolver = \"2\"` in \
+    Cargo.toml.\n\
+    See https://doc.rust-lang.org/nightly/cargo/reference/features.html#resolver-version-2-command-line-flags \
+    for more information.";
+
+const STABILIZED_FEATURES: &str = "The new feature resolver is now available \
+    by specifying `resolver = \"2\"` in Cargo.toml.\n\
+    See https://doc.rust-lang.org/nightly/cargo/reference/features.html#feature-resolver-version-2 \
+    for more information.";
+
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -395,7 +430,7 @@ where
 }
 
 impl CliUnstable {
-    pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
+    pub fn parse(&mut self, flags: &[String]) -> CargoResult<Vec<String>> {
         if !flags.is_empty() && !nightly_features_allowed() {
             bail!(
                 "the `-Z` flag is only accepted on the nightly channel of Cargo, \
@@ -405,13 +440,14 @@ impl CliUnstable {
                 SEE_CHANNELS
             );
         }
+        let mut warnings = Vec::new();
         for flag in flags {
-            self.add(flag)?;
+            self.add(flag, &mut warnings)?;
         }
-        Ok(())
+        Ok(warnings)
     }
 
-    fn add(&mut self, flag: &str) -> CargoResult<()> {
+    fn add(&mut self, flag: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
         let mut parts = flag.splitn(2, '=');
         let k = parts.next().unwrap();
         let v = parts.next();
@@ -456,6 +492,26 @@ impl CliUnstable {
             })
         }
 
+        let mut stabilized_warn = |key: &str, version: &str, message: &str| {
+            warnings.push(format!(
+                "flag `-Z {}` has been stabilized in the {} release, \
+                 and is no longer necessary\n{}",
+                key,
+                version,
+                indented_lines(message)
+            ));
+        };
+
+        // Use this if the behavior now requires another mechanism to enable.
+        let stabilized_err = |key: &str, version: &str, message: &str| {
+            Err(anyhow::format_err!(
+                "flag `-Z {}` has been stabilized in the {} release\n{}",
+                key,
+                version,
+                indented_lines(message)
+            ))
+        };
+
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
@@ -477,7 +533,27 @@ impl CliUnstable {
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
-            "features" => self.features = Some(parse_features(v)),
+            "features" => {
+                // For now this is still allowed (there are still some
+                // unstable options like "compare"). This should be removed at
+                // some point, and migrate to a new -Z flag for any future
+                // things.
+                let feats = parse_features(v);
+                let stab: Vec<_> = feats
+                    .iter()
+                    .filter(|feat| {
+                        matches!(
+                            feat.as_str(),
+                            "build_dep" | "host_dep" | "dev_dep" | "itarget" | "all"
+                        )
+                    })
+                    .collect();
+                if !stab.is_empty() || feats.is_empty() {
+                    // Make this stabilized_err once -Zfeature support is removed.
+                    stabilized_warn(k, "1.51", STABILIZED_FEATURES);
+                }
+                self.features = Some(feats);
+            }
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
@@ -486,6 +562,13 @@ impl CliUnstable {
             "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
             "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
             "credential-process" => self.credential_process = parse_empty(k, v)?,
+            "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
+            "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,
+            "cache-messages" => stabilized_warn(k, "1.40", STABILIZED_CACHE_MESSAGES),
+            "install-upgrade" => stabilized_warn(k, "1.41", STABILIZED_INSTALL_UPGRADE),
+            "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
+            "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
+            "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

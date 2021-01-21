@@ -356,3 +356,34 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn z_stabilized() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("check -Z cache-messages")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+warning: flag `-Z cache-messages` has been stabilized in the 1.40 release, \
+  and is no longer necessary
+  Message caching is now always enabled.
+
+[CHECKING] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("check -Z offline")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: flag `-Z offline` has been stabilized in the 1.36 release
+  Offline mode is now available via the --offline CLI option
+
+",
+        )
+        .run();
+}

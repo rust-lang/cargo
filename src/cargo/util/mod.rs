@@ -79,3 +79,15 @@ pub fn elapsed(duration: Duration) -> String {
 pub fn is_ci() -> bool {
     std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
 }
+
+pub fn indented_lines(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            if line.is_empty() {
+                String::from("\n")
+            } else {
+                format!("  {}\n", line)
+            }
+        })
+        .collect()
+}
