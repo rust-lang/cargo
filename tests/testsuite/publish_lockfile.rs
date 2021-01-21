@@ -52,8 +52,6 @@ fn deprecated() {
             "\
 [PACKAGING] foo v0.1.0 ([..])
 [VERIFYING] foo v0.1.0 ([..])
-[WARNING] The `publish-lockfile` feature is deprecated and currently has no effect. \
-    It may be removed in a future version.
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] dev [..]
 ",

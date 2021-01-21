@@ -825,7 +825,6 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
-    publish_lockfile: Option<bool>,
     workspace: Option<String>,
     im_a_teapot: Option<bool>,
     autobins: Option<bool>,
@@ -1304,19 +1303,6 @@ impl TomlManifest {
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
 
-        let publish_lockfile = match project.publish_lockfile {
-            Some(b) => {
-                features.require(Feature::publish_lockfile())?;
-                warnings.push(
-                    "The `publish-lockfile` feature is deprecated and currently \
-                     has no effect. It may be removed in a future version."
-                        .to_string(),
-                );
-                b
-            }
-            None => features.is_enabled(Feature::publish_lockfile()),
-        };
-
         if summary.features().contains_key("default-features") {
             warnings.push(
                 "`default-features = [\"..\"]` was found in [features]. \
@@ -1348,7 +1334,6 @@ impl TomlManifest {
             custom_metadata,
             profiles,
             publish,
-            publish_lockfile,
             replace,
             patch,
             workspace_config,

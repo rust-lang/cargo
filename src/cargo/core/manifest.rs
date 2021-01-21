@@ -39,7 +39,6 @@ pub struct Manifest {
     custom_metadata: Option<toml::Value>,
     profiles: Option<TomlProfiles>,
     publish: Option<Vec<String>>,
-    publish_lockfile: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
@@ -374,7 +373,6 @@ impl Manifest {
         custom_metadata: Option<toml::Value>,
         profiles: Option<TomlProfiles>,
         publish: Option<Vec<String>>,
-        publish_lockfile: bool,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
@@ -407,7 +405,6 @@ impl Manifest {
             original,
             im_a_teapot,
             default_run,
-            publish_lockfile,
             metabuild,
             resolve_behavior,
         }
