@@ -1,24 +1,62 @@
 ## Unstable Features
 
-Experimental Cargo features are only available on the nightly channel. You
-typically use one of the `-Z` flags to enable them. Run `cargo -Z help` to
-see a list of flags available.
+Experimental Cargo features are only available on the [nightly channel]. You
+are encouraged to experiment with these features to see if they meet your
+needs, and if there are any issues or problems. Check the linked tracking
+issues listed below for more information on the feature, and click the GitHub
+subscribe button if you want future updates.
 
-`-Z unstable-options` is a generic flag for enabling other unstable
-command-line flags. Options requiring this will be called out below.
+After some period of time, if the feature does not have any major concerns, it
+can be [stabilized], which will make it available on stable once the current
+nightly release reaches the stable channel (anywhere from 6 to 12 weeks).
 
-Anything which can be configured with a Z flag can also be set in the cargo
-config file (`.cargo/config.toml`) in the `unstable` table. For example:
+There are three different ways that unstable features can be enabled based on
+how the feature works:
 
-```toml
-[unstable]
-mtime-on-use = true
-multitarget = true
-timings = ["html"]
-```
+* New syntax in `Cargo.toml` requires a `cargo-features` key at the top of
+  `Cargo.toml`, before any tables. For example:
 
-Some unstable features will require you to specify the `cargo-features` key in
-`Cargo.toml`.
+  ```toml
+  # This specifies which new Cargo.toml features are enabled.
+  cargo-features = ["test-dummy-unstable"]
+
+  [package]
+  name = "my-package"
+  version = "0.1.0"
+  im-a-teapot = true  # This is a new option enabled by test-dummy-unstable.
+  ```
+
+* New command-line flags, options, and subcommands require the `-Z
+  unstable-options` CLI option to also be included. For example, the new
+  `--out-dir` option is only available on nightly:
+
+  ```cargo +nightly build --out-dir=out -Z unstable-options```
+
+* `-Z` command-line flags are used to enable new functionality that may not
+  have an interface, or the interface has not yet been designed, or for more
+  complex features that affect multiple parts of Cargo. For example, the
+  [timings](#timings) feature can be enabled with:
+
+  ```cargo +nightly build -Z timings```
+
+  Run `cargo -Z help` to see a list of flags available.
+
+  Anything which can be configured with a `-Z` flag can also be set in the
+  cargo [config file] (`.cargo/config.toml`) in the `unstable` table. For
+  example:
+
+  ```toml
+  [unstable]
+  mtime-on-use = true
+  multitarget = true
+  timings = ["html"]
+  ```
+
+Each new feature described below should explain how to use it.
+
+[config file]: config.md
+[nightly channel]: ../../book/appendix-07-nightly-rust.html
+[stabilized]: https://doc.crates.io/contrib/process/unstable.html#stabilization
 
 ### extra-link-arg
 * Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
