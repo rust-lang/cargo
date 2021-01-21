@@ -116,13 +116,12 @@ impl FromStr for Edition {
 enum Status {
     Stable,
     Unstable,
+    Removed,
 }
 
 macro_rules! features {
     (
-        pub struct Features {
-            $([$stab:ident] $feature:ident: bool,)*
-        }
+        $(($stab:ident, $feature:ident, $version:expr, $docs:expr),)*
     ) => (
         #[derive(Default, Clone, Debug)]
         pub struct Features {
@@ -138,6 +137,9 @@ macro_rules! features {
                     }
                     static FEAT: Feature = Feature {
                         name: stringify!($feature),
+                        stability: stab!($stab),
+                        version: $version,
+                        docs: $docs,
                         get,
                     };
                     &FEAT
@@ -150,14 +152,14 @@ macro_rules! features {
         }
 
         impl Features {
-            fn status(&mut self, feature: &str) -> Option<(&mut bool, Status)> {
+            fn status(&mut self, feature: &str) -> Option<(&mut bool, &'static Feature)> {
                 if feature.contains("_") {
                     return None
                 }
                 let feature = feature.replace("-", "_");
                 $(
                     if feature == stringify!($feature) {
-                        return Some((&mut self.$feature, stab!($stab)))
+                        return Some((&mut self.$feature, Feature::$feature()))
                     }
                 )*
                 None
@@ -173,6 +175,9 @@ macro_rules! stab {
     (unstable) => {
         Status::Unstable
     };
+    (removed) => {
+        Status::Removed
+    };
 }
 
 // A listing of all features in Cargo.
@@ -187,57 +192,64 @@ macro_rules! stab {
 // character is translated to `-` when specified in the `cargo-features`
 // manifest entry in `Cargo.toml`.
 features! {
-    pub struct Features {
+    // A dummy feature that doesn't actually gate anything, but it's used in
+    // testing to ensure that we can enable stable features.
+    (stable, test_dummy_stable, "1.0", ""),
 
-        // A dummy feature that doesn't actually gate anything, but it's used in
-        // testing to ensure that we can enable stable features.
-        [stable] test_dummy_stable: bool,
+    // A dummy feature that gates the usage of the `im-a-teapot` manifest
+    // entry. This is basically just intended for tests.
+    (unstable, test_dummy_unstable, "", "reference/unstable.html"),
 
-        // A dummy feature that gates the usage of the `im-a-teapot` manifest
-        // entry. This is basically just intended for tests.
-        [unstable] test_dummy_unstable: bool,
+    // Downloading packages from alternative registry indexes.
+    (stable, alternative_registries, "1.34", "reference/registries.html"),
 
-        // Downloading packages from alternative registry indexes.
-        [stable] alternative_registries: bool,
+    // Using editions
+    (stable, edition, "1.31", "reference/manifest.html#the-edition-field"),
 
-        // Using editions
-        [stable] edition: bool,
+    // Renaming a package in the manifest via the `package` key
+    (stable, rename_dependency, "1.31", "reference/specifying-dependencies.html#renaming-dependencies-in-cargotoml"),
 
-        // Renaming a package in the manifest via the `package` key
-        [stable] rename_dependency: bool,
+    // Whether a lock file is published with this crate
+    (removed, publish_lockfile, "", PUBLISH_LOCKFILE_REMOVED),
 
-        // Whether a lock file is published with this crate
-        // This is deprecated, and will likely be removed in a future version.
-        [unstable] publish_lockfile: bool,
+    // Overriding profiles for dependencies.
+    (stable, profile_overrides, "1.41", "reference/profiles.html#overrides"),
 
-        // Overriding profiles for dependencies.
-        [stable] profile_overrides: bool,
+    // "default-run" manifest option,
+    (stable, default_run, "1.37", "reference/manifest.html#the-default-run-field"),
 
-        // "default-run" manifest option,
-        [stable] default_run: bool,
+    // Declarative build scripts.
+    (unstable, metabuild, "", "reference/unstable.html#metabuild"),
 
-        // Declarative build scripts.
-        [unstable] metabuild: bool,
+    // Specifying the 'public' attribute on dependencies
+    (unstable, public_dependency, "", "reference/unstable.html#public-dependency"),
 
-        // Specifying the 'public' attribute on dependencies
-        [unstable] public_dependency: bool,
+    // Allow to specify profiles other than 'dev', 'release', 'test', etc.
+    (unstable, named_profiles, "", "reference/unstable.html#custom-named-profiles"),
 
-        // Allow to specify profiles other than 'dev', 'release', 'test', etc.
-        [unstable] named_profiles: bool,
+    // Opt-in new-resolver behavior.
+    (stable, resolver, "1.51", "reference/resolver.html#resolver-versions"),
 
-        // Opt-in new-resolver behavior.
-        [stable] resolver: bool,
+    // Allow to specify whether binaries should be stripped.
+    (unstable, strip, "", "reference/unstable.html#profile-strip-option"),
 
-        // Allow to specify whether binaries should be stripped.
-        [unstable] strip: bool,
-
-        // Specifying a minimal 'rust-version' attribute for crates
-        [unstable] rust_version: bool,
-    }
+    // Specifying a minimal 'rust-version' attribute for crates
+    (unstable, rust_version, "", "reference/unstable.html#rust-version"),
 }
+
+const PUBLISH_LOCKFILE_REMOVED: &str = "The publish-lockfile key in Cargo.toml \
+    has been removed. The Cargo.lock file is always included when a package is \
+    published if the package contains a binary target. `cargo install` requires \
+    the `--locked` flag to use the Cargo.lock file.\n\
+    See https://doc.rust-lang.org/cargo/commands/cargo-package.html and \
+    https://doc.rust-lang.org/cargo/commands/cargo-install.html for more \
+    information.";
 
 pub struct Feature {
     name: &'static str,
+    stability: Status,
+    version: &'static str,
+    docs: &'static str,
     get: fn(&Features) -> bool,
 }
 
@@ -251,35 +263,61 @@ impl Features {
         Ok(ret)
     }
 
-    fn add(&mut self, feature: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
-        let (slot, status) = match self.status(feature) {
+    fn add(&mut self, feature_name: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
+        let (slot, feature) = match self.status(feature_name) {
             Some(p) => p,
-            None => bail!("unknown cargo feature `{}`", feature),
+            None => bail!("unknown cargo feature `{}`", feature_name),
         };
 
         if *slot {
-            bail!("the cargo feature `{}` has already been activated", feature);
+            bail!(
+                "the cargo feature `{}` has already been activated",
+                feature_name
+            );
         }
 
-        match status {
+        let see_docs = || {
+            let url_channel = match channel().as_str() {
+                "dev" | "nightly" => "nightly/",
+                "beta" => "beta/",
+                _ => "",
+            };
+            format!(
+                "See https://doc.rust-lang.org/{}cargo/{} for more information \
+                about using this feature.",
+                url_channel, feature.docs
+            )
+        };
+
+        match feature.stability {
             Status::Stable => {
                 let warning = format!(
-                    "the cargo feature `{}` is now stable \
-                     and is no longer necessary to be listed \
-                     in the manifest",
-                    feature
+                    "the cargo feature `{}` has been stabilized in the {} \
+                     release and is no longer necessary to be listed in the \
+                     manifest\n  {}",
+                    feature_name,
+                    feature.version,
+                    see_docs()
                 );
                 warnings.push(warning);
             }
             Status::Unstable if !nightly_features_allowed() => bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel\n\
-                 {}",
-                feature,
+                 {}\n{}",
+                feature_name,
                 channel(),
-                SEE_CHANNELS
+                SEE_CHANNELS,
+                see_docs()
             ),
             Status::Unstable => {}
+            Status::Removed => bail!(
+                "the cargo feature `{}` has been removed\n\
+                Remove the feature from Cargo.toml to remove this error.\n\
+                {}",
+                feature_name,
+                feature.docs
+            ),
         }
 
         *slot = true;
