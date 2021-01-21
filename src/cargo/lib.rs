@@ -37,7 +37,7 @@ use log::debug;
 use std::fmt;
 
 pub use crate::util::errors::{InternalError, VerboseError};
-pub use crate::util::{CargoResult, CliError, CliResult, Config};
+pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &str = "CARGO";
 
@@ -163,13 +163,11 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
             return true;
         }
         drop(writeln!(shell.err(), "\nCaused by:"));
-        for line in cause.to_string().lines() {
-            if line.is_empty() {
-                drop(writeln!(shell.err()));
-            } else {
-                drop(writeln!(shell.err(), "  {}", line));
-            }
-        }
+        drop(write!(
+            shell.err(),
+            "{}",
+            indented_lines(&cause.to_string())
+        ));
     }
     false
 }

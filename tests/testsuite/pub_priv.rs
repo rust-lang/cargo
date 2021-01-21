@@ -115,6 +115,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `public-dependency` requires a nightly version of Cargo, but this is the `stable` channel
   See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#public-dependency for more information about using this feature.
 "
         )
         .run()

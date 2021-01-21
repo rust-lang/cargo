@@ -704,7 +704,9 @@ impl Config {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
-        self.unstable_flags.parse(unstable_flags)?;
+        for warning in self.unstable_flags.parse(unstable_flags)? {
+            self.shell().warn(warning)?;
+        }
         if !unstable_flags.is_empty() {
             // store a copy of the cli flags separately for `load_unstable_flags_from_config`
             // (we might also need it again for `reload_rooted_at`)

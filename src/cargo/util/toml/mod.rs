@@ -69,6 +69,17 @@ fn do_read_manifest(
         parse(contents, pretty_filename, config)?
     };
 
+    // Provide a helpful error message for a common user error.
+    if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
+        if let Some(feats) = package.get("cargo-features") {
+            bail!(
+                "cargo-features = {} was found in the wrong location, it \
+                 should be set at the top of Cargo.toml before any tables",
+                toml::to_string(feats).unwrap()
+            );
+        }
+    }
+
     let mut unused = BTreeSet::new();
     let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
         let mut key = String::new();
@@ -814,7 +825,6 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
-    publish_lockfile: Option<bool>,
     workspace: Option<String>,
     im_a_teapot: Option<bool>,
     autobins: Option<bool>,
@@ -1293,19 +1303,6 @@ impl TomlManifest {
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
 
-        let publish_lockfile = match project.publish_lockfile {
-            Some(b) => {
-                features.require(Feature::publish_lockfile())?;
-                warnings.push(
-                    "The `publish-lockfile` feature is deprecated and currently \
-                     has no effect. It may be removed in a future version."
-                        .to_string(),
-                );
-                b
-            }
-            None => features.is_enabled(Feature::publish_lockfile()),
-        };
-
         if summary.features().contains_key("default-features") {
             warnings.push(
                 "`default-features = [\"..\"]` was found in [features]. \
@@ -1337,7 +1334,6 @@ impl TomlManifest {
             custom_metadata,
             profiles,
             publish,
-            publish_lockfile,
             replace,
             patch,
             workspace_config,
