@@ -327,3 +327,32 @@ fn publish_allowed() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn wrong_position() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                cargo-features = ["test-dummy-unstable"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at [..]
+
+Caused by:
+  cargo-features = [\"test-dummy-unstable\"] was found in the wrong location, it \
+  should be set at the top of Cargo.toml before any tables
+",
+        )
+        .run();
+}
