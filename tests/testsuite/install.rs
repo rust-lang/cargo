@@ -757,7 +757,7 @@ Caused by:
 fn uninstall_pkg_does_not_exist() {
     cargo_process("uninstall foo")
         .with_status(101)
-        .with_stderr("[ERROR] package ID specification `foo` matched no packages")
+        .with_stderr("[ERROR] package ID specification `foo` did not match any packages")
         .run();
 }
 
@@ -797,7 +797,7 @@ fn uninstall_piecemeal() {
 
     cargo_process("uninstall foo")
         .with_status(101)
-        .with_stderr("[ERROR] package ID specification `foo` matched no packages")
+        .with_stderr("[ERROR] package ID specification `foo` did not match any packages")
         .run();
 }
 
@@ -1205,7 +1205,7 @@ fn uninstall_multiple_and_some_pkg_does_not_exist() {
         .with_stderr(
             "\
 [REMOVING] [CWD]/home/.cargo/bin/foo[EXE]
-error: package ID specification `bar` matched no packages
+error: package ID specification `bar` did not match any packages
 [SUMMARY] Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
 error: some packages failed to uninstall
 ",

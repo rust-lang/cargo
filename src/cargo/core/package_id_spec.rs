@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use anyhow::bail;
 use semver::Version;
 use serde::{de, ser};
 use url::Url;
@@ -8,6 +9,7 @@ use url::Url;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
+use crate::util::lev_distance;
 use crate::util::{validate_package_name, IntoUrl, ToSemver};
 
 /// Some or all of the data required to identify a package:
@@ -96,7 +98,7 @@ impl PackageIdSpec {
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         if url.query().is_some() {
-            anyhow::bail!("cannot have a query string in a pkgid: {}", url)
+            bail!("cannot have a query string in a pkgid: {}", url)
         }
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
@@ -180,14 +182,57 @@ impl PackageIdSpec {
     where
         I: IntoIterator<Item = PackageId>,
     {
-        let mut ids = i.into_iter().filter(|p| self.matches(*p));
+        let all_ids: Vec<_> = i.into_iter().collect();
+        let mut ids = all_ids.iter().copied().filter(|&id| self.matches(id));
         let ret = match ids.next() {
             Some(id) => id,
-            None => anyhow::bail!(
-                "package ID specification `{}` \
-                 matched no packages",
-                self
-            ),
+            None => {
+                let mut suggestion = String::new();
+                let try_spec = |spec: PackageIdSpec, suggestion: &mut String| {
+                    let try_matches: Vec<_> = all_ids
+                        .iter()
+                        .copied()
+                        .filter(|&id| spec.matches(id))
+                        .collect();
+                    if !try_matches.is_empty() {
+                        suggestion.push_str("\nDid you mean one of these?\n");
+                        minimize(suggestion, &try_matches, self);
+                    }
+                };
+                if self.url.is_some() {
+                    try_spec(
+                        PackageIdSpec {
+                            name: self.name,
+                            version: self.version.clone(),
+                            url: None,
+                        },
+                        &mut suggestion,
+                    );
+                }
+                if suggestion.is_empty() && self.version.is_some() {
+                    try_spec(
+                        PackageIdSpec {
+                            name: self.name,
+                            version: None,
+                            url: None,
+                        },
+                        &mut suggestion,
+                    );
+                }
+                if suggestion.is_empty() {
+                    suggestion.push_str(&lev_distance::closest_msg(
+                        &self.name,
+                        all_ids.iter(),
+                        |id| id.name().as_str(),
+                    ));
+                }
+
+                bail!(
+                    "package ID specification `{}` did not match any packages{}",
+                    self,
+                    suggestion
+                );
+            }
         };
         return match ids.next() {
             Some(other) => {

@@ -466,6 +466,19 @@ fn clean_spec_multiple() {
         .build();
 
     p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
     p.cargo("clean -p bar:1.0.0")
         .with_stderr(
             "warning: version qualifier in `-p bar:1.0.0` is ignored, \

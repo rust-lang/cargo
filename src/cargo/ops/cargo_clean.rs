@@ -4,6 +4,7 @@ use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
+use crate::util::lev_distance;
 use crate::util::paths;
 use crate::util::Config;
 use std::fs;
@@ -119,7 +120,17 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         }
         let matches: Vec<_> = resolve.iter().filter(|id| spec.matches(*id)).collect();
         if matches.is_empty() {
-            anyhow::bail!("package ID specification `{}` matched no packages", spec);
+            let mut suggestion = String::new();
+            suggestion.push_str(&lev_distance::closest_msg(
+                &spec.name(),
+                resolve.iter(),
+                |id| id.name().as_str(),
+            ));
+            anyhow::bail!(
+                "package ID specification `{}` did not match any packages{}",
+                spec,
+                suggestion
+            );
         }
         pkg_ids.extend(matches);
     }
