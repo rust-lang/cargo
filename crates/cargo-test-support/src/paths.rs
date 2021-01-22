@@ -14,7 +14,7 @@ use std::sync::Mutex;
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 lazy_static! {
-    static ref GLOBAL_ROOT: PathBuf = {
+    pub static ref GLOBAL_ROOT: PathBuf = {
         let mut path = t!(env::current_exe());
         path.pop(); // chop off exe name
         path.pop(); // chop off 'debug'
