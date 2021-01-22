@@ -32,3 +32,68 @@ fn simple() {
         .with_stdout("https://github.com/rust-lang/crates.io-index#bar:0.1.0")
         .run();
 }
+
+#[cargo_test]
+fn suggestion_bad_pkgid() {
+    Package::new("crates-io", "0.1.0").publish();
+    Package::new("two-ver", "0.1.0").publish();
+    Package::new("two-ver", "0.2.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                crates-io = "0.1.0"
+                two-ver = "0.1.0"
+                two-ver2 = { package = "two-ver", version = "0.2.0" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // Bad URL.
+    p.cargo("pkgid https://example.com/crates-io")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `https://example.com/crates-io` did not match any packages
+Did you mean one of these?
+
+  crates-io:0.1.0
+",
+        )
+        .run();
+
+    // Bad name.
+    p.cargo("pkgid crates_io")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `crates_io` did not match any packages
+
+<tab>Did you mean `crates-io`?
+",
+        )
+        .run();
+
+    // Bad version.
+    p.cargo("pkgid two-ver:0.3.0")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `two-ver:0.3.0` did not match any packages
+Did you mean one of these?
+
+  two-ver:0.1.0
+  two-ver:0.2.0
+",
+        )
+        .run();
+}
