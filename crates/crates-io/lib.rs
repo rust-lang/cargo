@@ -122,10 +122,19 @@ struct Crates {
     meta: TotalCrates,
 }
 impl Registry {
-    pub fn new(host: String, token: Option<String>) -> Registry {
-        Registry::new_handle(host, token, Easy::new())
-    }
-
+    /// Creates a new `Registry`.
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use curl::easy::Easy;
+    /// use crates_io::Registry;
+    ///
+    /// let mut handle = Easy::new();
+    /// // If connecting to crates.io, a user-agent is required.
+    /// handle.useragent("my_crawler (example.com/info)");
+    /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle);
+    /// ```
     pub fn new_handle(host: String, token: Option<String>, handle: Easy) -> Registry {
         Registry {
             host,
