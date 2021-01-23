@@ -450,14 +450,19 @@ impl Config {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            if dir.to_str().unwrap().trim() == "" {
-                anyhow::bail!("The CARGO_TARGET_DIR environment variable is an empty string. Try adding the target directory name to it or deleting the variable.")
+            if dir.to_string_lossy() == "" {
+                anyhow::bail!("the target directory is set to an empty string")
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
         } else if let Some(val) = &self.build_config()?.target_dir {
-            let val = val.resolve_path(self);
-            Ok(Some(Filesystem::new(val)))
+            let path = val.resolve_path(self);
+
+            if val.raw_value() == "" {
+                anyhow::bail!("the target directory is set to an empty string")
+            }
+
+            Ok(Some(Filesystem::new(path)))
         } else {
             Ok(None)
         }

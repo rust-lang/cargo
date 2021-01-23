@@ -1483,3 +1483,20 @@ Caused by:
   unknown variant `invalid`, expected one of `debuginfo`, `none`, `symbols`",
     );
 }
+
+#[cargo_test]
+fn cargo_target_empty_cfg() {
+    write_config(
+        "\
+[build]
+target-dir = ''
+",
+    );
+
+    let config = new_config();
+
+    assert_error(
+        config.target_dir().unwrap_err(),
+        "the target directory is set to an empty string",
+    );
+}
