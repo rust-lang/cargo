@@ -7,7 +7,7 @@
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
 use cargo_test_support::{is_nightly, paths, project, rustc_host, Execs};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 struct Setup {
     rustc_wrapper: PathBuf,
@@ -131,15 +131,7 @@ fn setup() -> Option<Setup> {
 fn enable_build_std(e: &mut Execs, setup: &Setup) {
     // First up, force Cargo to use our "mock sysroot" which mimics what
     // libstd looks like upstream.
-    let root = paths::root();
-    let root = root
-        .parent() // chop off test name
-        .unwrap()
-        .parent() // chop off `citN`
-        .unwrap()
-        .parent() // chop off `target`
-        .unwrap()
-        .join("tests/testsuite/mock-std");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std");
     e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
 
     e.masquerade_as_nightly_cargo();
@@ -653,5 +645,20 @@ fn different_features() {
         .build_std(&setup)
         .arg("-Zbuild-std-features=feature1")
         .target_host()
+        .run();
+}
+
+#[cargo_test]
+fn no_roots() {
+    // Checks for a bug where it would panic if there are no roots.
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project().file("tests/t1.rs", "").build();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[FINISHED] [..]")
         .run();
 }

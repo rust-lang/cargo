@@ -17,7 +17,7 @@ crate can upload new versions and yank old versions. Non-team owners can also
 modify the set of owners, so take care!
 
 This command requires you to be authenticated with either the `--token` option
-or using [cargo-login(1)](cargo-login.md).
+or using [cargo-login(1)](cargo-login.html).
 
 If the crate name is not specified, it will use the package name from the
 current directory.
@@ -48,8 +48,8 @@ information about owners and publishing.
 
 <dt class="option-term" id="option-cargo-owner---token"><a class="option-anchor" href="#option-cargo-owner---token"></a><code>--token</code> <em>token</em></dt>
 <dd class="option-desc">API token to use when authenticating. This overrides the token stored in
-the credentials file (which is created by <a href="https://doc.rust-lang.org/cargo/commands/cargo-login.md">cargo-login(1)</a>).</p>
-<p><a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo config</a> environment variables can be
+the credentials file (which is created by <a href="cargo-login.html">cargo-login(1)</a>).</p>
+<p><a href="../reference/config.html">Cargo config</a> environment variables can be
 used to override the tokens stored in the credentials file. The token for
 crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environment
 variable. Tokens for other registries may be specified with environment
@@ -64,7 +64,7 @@ of the registry in all capital letters.</dd>
 
 
 <dt class="option-term" id="option-cargo-owner---registry"><a class="option-anchor" href="#option-cargo-owner---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo config
+<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
 <code>crates-io</code>.</dd>
@@ -81,7 +81,7 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-owner--q"><a class="option-anchor" href="#option-cargo-owner--q"></a><code>-q</code></dt>
@@ -98,7 +98,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -154,4 +154,4 @@ details on environment variables that Cargo reads.
        cargo owner --remove username foo
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-login(1)](cargo-login.md), [cargo-publish(1)](cargo-publish.md)
+[cargo(1)](cargo.html), [cargo-login(1)](cargo-login.html), [cargo-publish(1)](cargo-publish.html)

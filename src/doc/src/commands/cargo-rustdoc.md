@@ -52,7 +52,7 @@ flag can be used to choose a different package in a workspace.
 
 <dt class="option-term" id="option-cargo-rustdoc--p"><a class="option-anchor" href="#option-cargo-rustdoc--p"></a><code>-p</code> <em>spec</em></dt>
 <dt class="option-term" id="option-cargo-rustdoc---package"><a class="option-anchor" href="#option-cargo-rustdoc---package"></a><code>--package</code> <em>spec</em></dt>
-<dd class="option-desc">The package to document. See <a href="https://doc.rust-lang.org/cargo/commands/cargo-pkgid.md">cargo-pkgid(1)</a> for the SPEC
+<dd class="option-desc">The package to document. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC
 format.</dd>
 
 
@@ -67,7 +67,12 @@ if its name is the same as the lib target. Binaries are skipped if they have
 `required-features` that are missing.
 
 Passing target selection flags will document only the specified
-targets.
+targets. 
+
+Note that `--bin`, `--example`, `--test` and `--bench` flags also 
+support common Unix glob patterns like `*`, `?` and `[]`. However, to avoid your 
+shell accidentally expanding glob patterns before Cargo handles them, you must 
+use single quotes or double quotes around each glob pattern.
 
 <dl>
 
@@ -76,7 +81,8 @@ targets.
 
 
 <dt class="option-term" id="option-cargo-rustdoc---bin"><a class="option-anchor" href="#option-cargo-rustdoc---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Document the specified binary. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Document the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---bins"><a class="option-anchor" href="#option-cargo-rustdoc---bins"></a><code>--bins</code></dt>
@@ -85,7 +91,8 @@ targets.
 
 
 <dt class="option-term" id="option-cargo-rustdoc---example"><a class="option-anchor" href="#option-cargo-rustdoc---example"></a><code>--example</code> <em>name</em>...</dt>
-<dd class="option-desc">Document the specified example. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Document the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---examples"><a class="option-anchor" href="#option-cargo-rustdoc---examples"></a><code>--examples</code></dt>
@@ -94,7 +101,7 @@ targets.
 
 <dt class="option-term" id="option-cargo-rustdoc---test"><a class="option-anchor" href="#option-cargo-rustdoc---test"></a><code>--test</code> <em>name</em>...</dt>
 <dd class="option-desc">Document the specified integration test. This flag may be specified
-multiple times.</dd>
+multiple times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---tests"><a class="option-anchor" href="#option-cargo-rustdoc---tests"></a><code>--tests</code></dt>
@@ -108,7 +115,8 @@ manifest settings for the target.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---bench"><a class="option-anchor" href="#option-cargo-rustdoc---bench"></a><code>--bench</code> <em>name</em>...</dt>
-<dd class="option-desc">Document the specified benchmark. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Document the specified benchmark. This flag may be specified multiple
+times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---benches"><a class="option-anchor" href="#option-cargo-rustdoc---benches"></a><code>--benches</code></dt>
@@ -130,22 +138,19 @@ manifest settings for the target.</dd>
 
 ### Feature Selection
 
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in `--manifest-path`. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if `--all-features` is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the `default` feature is activated for every
+selected package.
 
-When no feature options are given, the `default` feature is activated for
-every selected package.
+See [the features documentation](../reference/features.html#command-line-feature-options)
+for more details.
 
 <dl>
 
 <dt class="option-term" id="option-cargo-rustdoc---features"><a class="option-anchor" href="#option-cargo-rustdoc---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
-specified multiple times, which enables all specified features.</dd>
+<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
+be specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---all-features"><a class="option-anchor" href="#option-cargo-rustdoc---all-features"></a><code>--all-features</code></dt>
@@ -153,7 +158,7 @@ specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---no-default-features"><a class="option-anchor" href="#option-cargo-rustdoc---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the current directory's package.</dd>
+<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
 
 
 </dl>
@@ -169,10 +174,10 @@ architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="https://doc.rust-lang.org/cargo/guide/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 
@@ -191,7 +196,7 @@ selection.</dd>
 <dt class="option-term" id="option-cargo-rustdoc---target-dir"><a class="option-anchor" href="#option-cargo-rustdoc---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</dd>
 
 
@@ -205,7 +210,7 @@ to <code>target</code> in the root of the workspace.</dd>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc--q"><a class="option-anchor" href="#option-cargo-rustdoc--q"></a><code>-q</code></dt>
@@ -222,7 +227,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 
@@ -233,7 +238,7 @@ and consists of comma-separated values. Valid values:</p>
 <li><code>human</code> (default): Display in a human-readable text format.</li>
 <li><code>short</code>: Emit shorter, human-readable text messages.</li>
 <li><code>json</code>: Emit JSON messages to stdout. See
-<a href="https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages">the reference</a>
+<a href="../reference/external-tools.html#json-messages">the reference</a>
 for more details.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
 the &quot;short&quot; rendering from rustc.</li>
@@ -277,9 +282,9 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="https://doc.rust-lang.org/cargo/commands/cargo-fetch.md">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -314,7 +319,7 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-rustdoc--j"><a class="option-anchor" href="#option-cargo-rustdoc--j"></a><code>-j</code> <em>N</em></dt>
 <dt class="option-term" id="option-cargo-rustdoc---jobs"><a class="option-anchor" href="#option-cargo-rustdoc---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</dd>
 
 
@@ -357,4 +362,4 @@ details on environment variables that Cargo reads.
        cargo rustdoc --lib -- --extend-css extra.css
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-doc(1)](cargo-doc.md), [rustdoc(1)](https://doc.rust-lang.org/rustdoc/index.html)
+[cargo(1)](cargo.html), [cargo-doc(1)](cargo-doc.html), [rustdoc(1)](https://doc.rust-lang.org/rustdoc/index.html)

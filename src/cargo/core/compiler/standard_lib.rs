@@ -3,7 +3,7 @@
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
+use crate::core::resolver::features::{FeaturesFor, RequestedFeatures, ResolvedFeatures};
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
@@ -109,8 +109,10 @@ pub fn resolve_std<'cfg>(
     };
     // dev_deps setting shouldn't really matter here.
     let opts = ResolveOpts::new(
-        /*dev_deps*/ false, &features, /*all_features*/ false,
-        /*uses_default_features*/ false,
+        /*dev_deps*/ false,
+        RequestedFeatures::from_command_line(
+            &features, /*all_features*/ false, /*uses_default_features*/ false,
+        ),
     );
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,

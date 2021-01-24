@@ -1,8 +1,9 @@
 ## Dependencies
 
-[crates.io] is the Rust community's central package registry that serves as a
-location to discover and download packages. `cargo` is configured to use it by
-default to find requested packages.
+[crates.io] is the Rust community's central [*package registry*][def-package-registry]
+that serves as a location to discover and download
+[packages][def-package]. `cargo` is configured to use it by default to find
+requested packages.
 
 To depend on a library hosted on [crates.io], add it to your `Cargo.toml`.
 
@@ -10,9 +11,9 @@ To depend on a library hosted on [crates.io], add it to your `Cargo.toml`.
 
 ### Adding a dependency
 
-If your `Cargo.toml` doesn't already have a `[dependencies]` section, add that,
-then list the crate name and version that you would like to use. This example
-adds a dependency of the `time` crate:
+If your `Cargo.toml` doesn't already have a `[dependencies]` section, add
+that, then list the [crate][def-crate] name and version that you would like to
+use. This example adds a dependency of the `time` crate:
 
 ```toml
 [dependencies]
@@ -87,3 +88,7 @@ $ cargo run
    Running `target/hello_world`
 Did our date match? true
 ```
+
+[def-crate]:             ../appendix/glossary.md#crate             '"crate" (glossary entry)'
+[def-package]:           ../appendix/glossary.md#package           '"package" (glossary entry)'
+[def-package-registry]:  ../appendix/glossary.md#package-registry  '"package-registry" (glossary entry)'

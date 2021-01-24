@@ -44,7 +44,10 @@ virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-package\fR \fIspec\fR\&...
 .RS 4
 Document only the specified packages. See \fBcargo\-pkgid\fR(1) for the
-SPEC format. This flag may be specified multiple times.
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.
 .RE
 .sp
 \fB\-\-workspace\fR
@@ -60,7 +63,10 @@ Deprecated alias for \fB\-\-workspace\fR\&.
 \fB\-\-exclude\fR \fISPEC\fR\&...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-workspace\fR flag. This flag may be specified multiple times.
+\fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
+common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.
 .RE
 .SS "Target Selection"
 When no target selection options are given, \fBcargo doc\fR will document all
@@ -79,7 +85,8 @@ Document the package's library.
 .sp
 \fB\-\-bin\fR \fIname\fR\&...
 .RS 4
-Document the specified binary. This flag may be specified multiple times.
+Document the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-bins\fR
@@ -87,21 +94,18 @@ Document the specified binary. This flag may be specified multiple times.
 Document all binary targets.
 .RE
 .SS "Feature Selection"
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fR is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the \fBdefault\fR feature is activated for every
+selected package.
 .sp
-When no feature options are given, the \fBdefault\fR feature is activated for
-every selected package.
+See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
+for more details.
 .sp
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
-Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
-specified multiple times, which enables all specified features.
+Space or comma separated list of features to activate. Features of workspace
+members may be enabled with \fBpackage\-name/feature\-name\fR syntax. This flag may
+be specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fR
@@ -111,7 +115,7 @@ Activate all available features of all selected packages.
 .sp
 \fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fR feature of the current directory's package.
+Do not activate the \fBdefault\fR feature of the selected packages.
 .RE
 .SS "Compilation Options"
 .sp

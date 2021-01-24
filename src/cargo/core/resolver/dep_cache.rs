@@ -12,7 +12,7 @@
 use crate::core::resolver::context::Context;
 use crate::core::resolver::errors::describe_path;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
-use crate::core::resolver::{ActivateResult, ResolveOpts};
+use crate::core::resolver::{ActivateError, ActivateResult, ResolveOpts};
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::core::{GitReference, SourceId};
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -307,10 +307,10 @@ pub fn resolve_features<'b>(
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
 
-    let reqs = build_requirements(s, opts)?;
+    let reqs = build_requirements(parent, s, opts)?;
     let mut ret = Vec::new();
-    let mut used_features = HashSet::new();
-    let default_dep = (false, BTreeSet::new());
+    let default_dep = BTreeSet::new();
+    let mut valid_dep_names = HashSet::new();
 
     // Next, collect all actually enabled dependencies and their features.
     for dep in deps {
@@ -319,33 +319,15 @@ pub fn resolve_features<'b>(
         if dep.is_optional() && !reqs.deps.contains_key(&dep.name_in_toml()) {
             continue;
         }
+        valid_dep_names.insert(dep.name_in_toml());
         // So we want this dependency. Move the features we want from
         // `feature_deps` to `ret` and register ourselves as using this
         // name.
-        let base = reqs.deps.get(&dep.name_in_toml()).unwrap_or(&default_dep);
-        used_features.insert(dep.name_in_toml());
-        let always_required = !dep.is_optional()
-            && !s
-                .dependencies()
-                .iter()
-                .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
-        if always_required && base.0 {
-            return Err(match parent {
-                None => anyhow::format_err!(
-                    "Package `{}` does not have feature `{}`. It has a required dependency \
-                     with that name, but only optional dependencies can be used as features.",
-                    s.package_id(),
-                    dep.name_in_toml()
-                )
-                .into(),
-                Some(p) => (
-                    p,
-                    ConflictReason::RequiredDependencyAsFeatures(dep.name_in_toml()),
-                )
-                    .into(),
-            });
-        }
-        let mut base = base.1.clone();
+        let mut base = reqs
+            .deps
+            .get(&dep.name_in_toml())
+            .unwrap_or(&default_dep)
+            .clone();
         base.extend(dep.features().iter());
         for feature in base.iter() {
             if feature.contains('/') {
@@ -359,74 +341,88 @@ pub fn resolve_features<'b>(
         ret.push((dep.clone(), Rc::new(base)));
     }
 
-    // Any entries in `reqs.dep` which weren't used are bugs in that the
-    // package does not actually have those dependencies. We classified
-    // them as dependencies in the first place because there is no such
-    // feature, either.
-    let remaining = reqs
-        .deps
-        .keys()
-        .cloned()
-        .filter(|s| !used_features.contains(s))
-        .collect::<Vec<_>>();
-    if !remaining.is_empty() {
-        let features = remaining.join(", ");
-        return Err(match parent {
-            None => anyhow::format_err!(
-                "Package `{}` does not have these features: `{}`",
-                s.package_id(),
-                features
-            )
-            .into(),
-            Some(p) => (p, ConflictReason::MissingFeatures(features)).into(),
-        });
+    // This is a special case for command-line `--features
+    // dep_name/feat_name` where `dep_name` does not exist. All other
+    // validation is done either in `build_requirements` or
+    // `build_feature_map`.
+    for dep_name in reqs.deps.keys() {
+        if !valid_dep_names.contains(dep_name) {
+            let e = RequirementError::MissingDependency(*dep_name);
+            return Err(e.into_activate_error(parent, s));
+        }
     }
 
-    Ok((reqs.into_used(), ret))
+    Ok((reqs.into_features(), ret))
 }
 
 /// Takes requested features for a single package from the input `ResolveOpts` and
 /// recurses to find all requested features, dependencies and requested
 /// dependency features in a `Requirements` object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
+    parent: Option<PackageId>,
     s: &'a Summary,
     opts: &'b ResolveOpts,
-) -> CargoResult<Requirements<'a>> {
+) -> ActivateResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
     if opts.features.all_features {
         for key in s.features().keys() {
-            reqs.require_feature(*key)?;
-        }
-        for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-            reqs.require_dependency(dep.name_in_toml());
+            if let Err(e) = reqs.require_feature(*key) {
+                return Err(e.into_activate_error(parent, s));
+            }
         }
     } else {
         for &f in opts.features.features.iter() {
-            reqs.require_value(&FeatureValue::new(f, s))?;
+            let fv = FeatureValue::new(f);
+            if fv.has_dep_prefix() {
+                return Err(ActivateError::Fatal(anyhow::format_err!(
+                    "feature value `{}` is not allowed to use explicit `dep:` syntax",
+                    fv
+                )));
+            }
+            if let Err(e) = reqs.require_value(&fv) {
+                return Err(e.into_activate_error(parent, s));
+            }
         }
     }
 
     if opts.features.uses_default_features && s.features().contains_key("default") {
-        reqs.require_feature(InternedString::new("default"))?;
+        if let Err(e) = reqs.require_feature(InternedString::new("default")) {
+            return Err(e.into_activate_error(parent, s));
+        }
     }
 
     Ok(reqs)
 }
 
+/// Set of feature and dependency requirements for a package.
+#[derive(Debug)]
 struct Requirements<'a> {
     summary: &'a Summary,
-    // The deps map is a mapping of package name to list of features enabled.
-    // Each package should be enabled, and each package should have the
-    // specified set of features enabled. The boolean indicates whether this
-    // package was specifically requested (rather than just requesting features
-    // *within* this package).
-    deps: HashMap<InternedString, (bool, BTreeSet<InternedString>)>,
-    // The used features set is the set of features which this local package had
-    // enabled, which is later used when compiling to instruct the code what
-    // features were enabled.
-    used: HashSet<InternedString>,
-    visited: HashSet<InternedString>,
+    /// The deps map is a mapping of dependency name to list of features enabled.
+    ///
+    /// The resolver will activate all of these dependencies, with the given
+    /// features enabled.
+    deps: HashMap<InternedString, BTreeSet<InternedString>>,
+    /// The set of features enabled on this package which is later used when
+    /// compiling to instruct the code what features were enabled.
+    features: HashSet<InternedString>,
+}
+
+/// An error for a requirement.
+///
+/// This will later be converted to an `ActivateError` depending on whether or
+/// not this is a dependency or a root package.
+enum RequirementError {
+    /// The package does not have the requested feature.
+    MissingFeature(InternedString),
+    /// The package does not have the requested dependency.
+    MissingDependency(InternedString),
+    /// A feature has a direct cycle to itself.
+    ///
+    /// Note that cycles through multiple features are allowed (but perhaps
+    /// they shouldn't be?).
+    Cycle(InternedString),
 }
 
 impl Requirements<'_> {
@@ -434,80 +430,150 @@ impl Requirements<'_> {
         Requirements {
             summary,
             deps: HashMap::new(),
-            used: HashSet::new(),
-            visited: HashSet::new(),
+            features: HashSet::new(),
         }
     }
 
-    fn into_used(self) -> HashSet<InternedString> {
-        self.used
+    fn into_features(self) -> HashSet<InternedString> {
+        self.features
     }
 
-    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString) {
+    fn require_dep_feature(
+        &mut self,
+        package: InternedString,
+        feat: InternedString,
+        dep_prefix: bool,
+    ) -> Result<(), RequirementError> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if self
-            .summary
-            .dependencies()
-            .iter()
-            .any(|dep| dep.name_in_toml() == package && dep.is_optional())
+        if !dep_prefix
+            && self
+                .summary
+                .dependencies()
+                .iter()
+                .any(|dep| dep.name_in_toml() == package && dep.is_optional())
         {
-            self.used.insert(package);
+            self.require_feature(package)?;
         }
-        self.deps
-            .entry(package)
-            .or_insert((false, BTreeSet::new()))
-            .1
-            .insert(feat);
-    }
-
-    fn seen(&mut self, feat: InternedString) -> bool {
-        if self.visited.insert(feat) {
-            self.used.insert(feat);
-            false
-        } else {
-            true
-        }
+        self.deps.entry(package).or_default().insert(feat);
+        Ok(())
     }
 
     fn require_dependency(&mut self, pkg: InternedString) {
-        if self.seen(pkg) {
-            return;
-        }
-        self.deps.entry(pkg).or_insert((false, BTreeSet::new())).0 = true;
+        self.deps.entry(pkg).or_default();
     }
 
-    fn require_feature(&mut self, feat: InternedString) -> CargoResult<()> {
-        if feat.is_empty() || self.seen(feat) {
+    fn require_feature(&mut self, feat: InternedString) -> Result<(), RequirementError> {
+        if !self.features.insert(feat) {
+            // Already seen this feature.
             return Ok(());
         }
-        for fv in self
-            .summary
-            .features()
-            .get(&feat)
-            .expect("must be a valid feature")
-        {
-            match *fv {
-                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => anyhow::bail!(
-                    "cyclic feature dependency: feature `{}` depends on itself",
-                    feat
-                ),
-                _ => {}
+
+        let fvs = match self.summary.features().get(&feat) {
+            Some(fvs) => fvs,
+            None => return Err(RequirementError::MissingFeature(feat)),
+        };
+
+        for fv in fvs {
+            if let FeatureValue::Feature(dep_feat) = fv {
+                if *dep_feat == feat {
+                    return Err(RequirementError::Cycle(feat));
+                }
             }
             self.require_value(fv)?;
         }
         Ok(())
     }
 
-    fn require_value(&mut self, fv: &FeatureValue) -> CargoResult<()> {
+    fn require_value(&mut self, fv: &FeatureValue) -> Result<(), RequirementError> {
         match fv {
             FeatureValue::Feature(feat) => self.require_feature(*feat)?,
-            FeatureValue::Crate(dep) => self.require_dependency(*dep),
-            FeatureValue::CrateFeature(dep, dep_feat) => {
-                self.require_crate_feature(*dep, *dep_feat)
-            }
+            FeatureValue::Dep { dep_name } => self.require_dependency(*dep_name),
+            FeatureValue::DepFeature {
+                dep_name,
+                dep_feature,
+                dep_prefix,
+                // Weak features are always activated in the dependency
+                // resolver. They will be narrowed inside the new feature
+                // resolver.
+                weak: _,
+            } => self.require_dep_feature(*dep_name, *dep_feature, *dep_prefix)?,
         };
         Ok(())
+    }
+}
+
+impl RequirementError {
+    fn into_activate_error(self, parent: Option<PackageId>, summary: &Summary) -> ActivateError {
+        match self {
+            RequirementError::MissingFeature(feat) => {
+                let deps: Vec<_> = summary
+                    .dependencies()
+                    .iter()
+                    .filter(|dep| dep.name_in_toml() == feat)
+                    .collect();
+                if deps.is_empty() {
+                    return match parent {
+                        None => ActivateError::Fatal(anyhow::format_err!(
+                            "Package `{}` does not have the feature `{}`",
+                            summary.package_id(),
+                            feat
+                        )),
+                        Some(p) => ActivateError::Conflict(
+                            p,
+                            ConflictReason::MissingFeatures(feat.to_string()),
+                        ),
+                    };
+                }
+                if deps.iter().any(|dep| dep.is_optional()) {
+                    match parent {
+                        None => ActivateError::Fatal(anyhow::format_err!(
+                            "Package `{}` does not have feature `{}`. It has an optional dependency \
+                             with that name, but that dependency uses the \"dep:\" \
+                             syntax in the features table, so it does not have an implicit feature with that name.",
+                            summary.package_id(),
+                            feat
+                        )),
+                        Some(p) => ActivateError::Conflict(
+                            p,
+                            ConflictReason::NonImplicitDependencyAsFeature(feat),
+                        ),
+                    }
+                } else {
+                    match parent {
+                        None => ActivateError::Fatal(anyhow::format_err!(
+                            "Package `{}` does not have feature `{}`. It has a required dependency \
+                             with that name, but only optional dependencies can be used as features.",
+                            summary.package_id(),
+                            feat
+                        )),
+                        Some(p) => ActivateError::Conflict(
+                            p,
+                            ConflictReason::RequiredDependencyAsFeature(feat),
+                        ),
+                    }
+                }
+            }
+            RequirementError::MissingDependency(dep_name) => {
+                match parent {
+                    None => ActivateError::Fatal(anyhow::format_err!(
+                        "package `{}` does not have a dependency named `{}`",
+                        summary.package_id(),
+                        dep_name
+                    )),
+                    // This code path currently isn't used, since `foo/bar`
+                    // and `dep:` syntax is not allowed in a dependency.
+                    Some(p) => ActivateError::Conflict(
+                        p,
+                        ConflictReason::MissingFeatures(dep_name.to_string()),
+                    ),
+                }
+            }
+            RequirementError::Cycle(feat) => ActivateError::Fatal(anyhow::format_err!(
+                "cyclic feature dependency: feature `{}` depends on itself",
+                feat
+            )),
+        }
     }
 }

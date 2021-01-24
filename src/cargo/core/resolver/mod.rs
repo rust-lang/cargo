@@ -47,7 +47,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -1001,28 +1001,46 @@ fn find_candidate(
 }
 
 fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
-    // Sort packages to produce user friendly deterministic errors.
-    let mut all_packages: Vec<_> = resolve.iter().collect();
-    all_packages.sort_unstable();
+    // Create a simple graph representation alternative of `resolve` which has
+    // only the edges we care about. Note that `BTree*` is used to produce
+    // deterministic error messages here. Also note that the main reason for
+    // this copy of the resolve graph is to avoid edges between a crate and its
+    // dev-dependency since that doesn't count for cycles.
+    let mut graph = BTreeMap::new();
+    for id in resolve.iter() {
+        let set = graph.entry(id).or_insert_with(BTreeSet::new);
+        for (dep, listings) in resolve.deps_not_replaced(id) {
+            let is_transitive = listings.iter().any(|d| d.is_transitive());
+
+            if is_transitive {
+                set.insert(dep);
+                set.extend(resolve.replacement(dep));
+            }
+        }
+    }
+
+    // After we have the `graph` that we care about, perform a simple cycle
+    // check by visiting all nodes. We visit each node at most once and we keep
+    // track of the path through the graph as we walk it. If we walk onto the
+    // same node twice that's a cycle.
     let mut checked = HashSet::new();
     let mut path = Vec::new();
     let mut visited = HashSet::new();
-    for pkg in all_packages {
-        if !checked.contains(&pkg) {
-            visit(resolve, pkg, &mut visited, &mut path, &mut checked)?
+    for pkg in graph.keys() {
+        if !checked.contains(pkg) {
+            visit(&graph, *pkg, &mut visited, &mut path, &mut checked)?
         }
     }
     return Ok(());
 
     fn visit(
-        resolve: &Resolve,
+        graph: &BTreeMap<PackageId, BTreeSet<PackageId>>,
         id: PackageId,
         visited: &mut HashSet<PackageId>,
         path: &mut Vec<PackageId>,
         checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
         path.push(id);
-        // See if we visited ourselves
         if !visited.insert(id) {
             anyhow::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
@@ -1031,32 +1049,12 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
             );
         }
 
-        // If we've already checked this node no need to recurse again as we'll
-        // just conclude the same thing as last time, so we only execute the
-        // recursive step if we successfully insert into `checked`.
-        //
-        // Note that if we hit an intransitive dependency then we clear out the
-        // visitation list as we can't induce a cycle through transitive
-        // dependencies.
         if checked.insert(id) {
-            let mut empty_set = HashSet::new();
-            let mut empty_vec = Vec::new();
-            for (dep, listings) in resolve.deps_not_replaced(id) {
-                let is_transitive = listings.iter().any(|d| d.is_transitive());
-                let (visited, path) = if is_transitive {
-                    (&mut *visited, &mut *path)
-                } else {
-                    (&mut empty_set, &mut empty_vec)
-                };
-                visit(resolve, dep, visited, path, checked)?;
-
-                if let Some(id) = resolve.replacement(dep) {
-                    visit(resolve, id, visited, path, checked)?;
-                }
+            for dep in graph[&id].iter() {
+                visit(graph, *dep, visited, path, checked)?;
             }
         }
 
-        // Ok, we're done, no longer visiting our node any more
         path.pop();
         visited.remove(&id);
         Ok(())

@@ -175,14 +175,12 @@ fn install_one(
             if let Some(krate) = krate {
                 let vers = if let Some(vers_flag) = vers {
                     Some(parse_semver_flag(vers_flag)?.to_string())
+                } else if source_id.is_registry() {
+                    // Avoid pre-release versions from crate.io
+                    // unless explicitly asked for
+                    Some(String::from("*"))
                 } else {
-                    if source_id.is_registry() {
-                        // Avoid pre-release versions from crate.io
-                        // unless explicitly asked for
-                        Some(String::from("*"))
-                    } else {
-                        None
-                    }
+                    None
                 };
                 Some(Dependency::parse_no_deprecated(
                     krate,
@@ -233,33 +231,25 @@ fn install_one(
                 |path: &mut PathSource<'_>| path.read_packages(),
                 config,
             )?
+        } else if let Some(dep) = dep {
+            let mut source = map.load(source_id, &HashSet::new())?;
+            if let Ok(Some(pkg)) =
+                installed_exact_package(dep.clone(), &mut source, config, opts, root, &dst, force)
+            {
+                let msg = format!(
+                    "package `{}` is already installed, use --force to override",
+                    pkg
+                );
+                config.shell().status("Ignored", &msg)?;
+                return Ok(true);
+            }
+            select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
         } else {
-            if let Some(dep) = dep {
-                let mut source = map.load(source_id, &HashSet::new())?;
-                if let Ok(Some(pkg)) = installed_exact_package(
-                    dep.clone(),
-                    &mut source,
-                    config,
-                    opts,
-                    root,
-                    &dst,
-                    force,
-                ) {
-                    let msg = format!(
-                        "package `{}` is already installed, use --force to override",
-                        pkg
-                    );
-                    config.shell().status("Ignored", &msg)?;
-                    return Ok(true);
-                }
-                select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
-            } else {
-                bail!(
-                    "must specify a crate to install from \
+            bail!(
+                "must specify a crate to install from \
                      crates.io, or use --path or --git to \
                      specify alternate source"
-                )
-            }
+            )
         }
     };
 
@@ -336,15 +326,13 @@ fn install_one(
     if no_track {
         // Check for conflicts.
         no_track_duplicates()?;
-    } else {
-        if is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force)? {
-            let msg = format!(
-                "package `{}` is already installed, use --force to override",
-                pkg
-            );
-            config.shell().status("Ignored", &msg)?;
-            return Ok(false);
-        }
+    } else if is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force)? {
+        let msg = format!(
+            "package `{}` is already installed, use --force to override",
+            pkg
+        );
+        config.shell().status("Ignored", &msg)?;
+        return Ok(false);
     }
 
     config.shell().status("Installing", &pkg)?;

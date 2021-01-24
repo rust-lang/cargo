@@ -34,6 +34,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
+        .arg_ignore_rust_version()
         .after_help("Run `cargo help rustdoc` for more detailed information.\n")
 }
 

@@ -10,9 +10,9 @@ cargo-uninstall - Remove a Rust binary
 
 ## DESCRIPTION
 
-This command removes a package installed with [cargo-install(1)](cargo-install.md). The _spec_
+This command removes a package installed with [cargo-install(1)](cargo-install.html). The _spec_
 argument is a package ID specification of the package to remove (see
-[cargo-pkgid(1)](cargo-pkgid.md)).
+[cargo-pkgid(1)](cargo-pkgid.html)).
 
 By default all binaries are removed for a crate but the `--bin` and
 `--example` flags can be used to only remove particular binaries.
@@ -56,7 +56,7 @@ The installation root is determined, in order of precedence:
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-uninstall--q"><a class="option-anchor" href="#option-cargo-uninstall--q"></a><code>-q</code></dt>
@@ -73,7 +73,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 
@@ -122,4 +122,4 @@ details on environment variables that Cargo reads.
        cargo uninstall ripgrep
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-install(1)](cargo-install.md)
+[cargo(1)](cargo.html), [cargo-install(1)](cargo-install.html)

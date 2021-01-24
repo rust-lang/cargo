@@ -110,9 +110,10 @@ pub enum ResolveBehavior {
 impl ResolveBehavior {
     pub fn from_manifest(resolver: &str) -> CargoResult<ResolveBehavior> {
         match resolver {
+            "1" => Ok(ResolveBehavior::V1),
             "2" => Ok(ResolveBehavior::V2),
             s => anyhow::bail!(
-                "`resolver` setting `{}` is not valid, only valid option is \"2\"",
+                "`resolver` setting `{}` is not valid, valid options are \"1\" or \"2\"",
                 s
             ),
         }
@@ -146,20 +147,8 @@ impl ResolveOpts {
         }
     }
 
-    pub fn new(
-        dev_deps: bool,
-        features: &[String],
-        all_features: bool,
-        uses_default_features: bool,
-    ) -> ResolveOpts {
-        ResolveOpts {
-            dev_deps,
-            features: RequestedFeatures::from_command_line(
-                features,
-                all_features,
-                uses_default_features,
-            ),
-        }
+    pub fn new(dev_deps: bool, features: RequestedFeatures) -> ResolveOpts {
+        ResolveOpts { dev_deps, features }
     }
 }
 
@@ -290,11 +279,15 @@ pub enum ConflictReason {
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 
-    /// A dependency listed features that ended up being a required dependency.
+    /// A dependency listed a feature that ended up being a required dependency.
     /// For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`
     /// it had a dependency `foo` instead.
-    RequiredDependencyAsFeatures(InternedString),
+    RequiredDependencyAsFeature(InternedString),
+
+    /// A dependency listed a feature for an optional dependency, but that
+    /// optional dependency is "hidden" using namespaced `dep:` syntax.
+    NonImplicitDependencyAsFeature(InternedString),
 
     // TODO: needs more info for `activation_error`
     // TODO: needs more info for `find_candidate`
@@ -319,7 +312,7 @@ impl ConflictReason {
     }
 
     pub fn is_required_dependency_as_features(&self) -> bool {
-        if let ConflictReason::RequiredDependencyAsFeatures(_) = *self {
+        if let ConflictReason::RequiredDependencyAsFeature(_) = *self {
             return true;
         }
         false

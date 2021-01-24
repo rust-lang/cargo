@@ -207,9 +207,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    /// Returns the root of the build output tree for the host
-    pub fn host_root(&self) -> &Path {
+    /// Returns the final artifact path for the host (`/…/target/debug`)
+    pub fn host_dest(&self) -> &Path {
         self.host.dest()
+    }
+
+    /// Returns the root of the build output tree for the host (`/…/target`)
+    pub fn host_root(&self) -> &Path {
+        self.host.root()
     }
 
     /// Returns the host `deps` directory path.

@@ -29,7 +29,7 @@ fn invalid1() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `bar` includes `baz` which is neither a dependency nor another feature
+  feature `bar` includes `baz` which is neither a dependency nor another feature
 ",
         )
         .run();
@@ -48,12 +48,15 @@ fn invalid2() {
 
                 [features]
                 bar = ["baz"]
+                baz = []
 
                 [dependencies.bar]
-                path = "foo"
+                path = "bar"
             "#,
         )
         .file("src/main.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -63,7 +66,7 @@ fn invalid2() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Features and dependencies cannot have the same name: `bar`
+  features and dependencies cannot have the same name: `bar`
 ",
         )
         .run();
@@ -97,8 +100,8 @@ fn invalid3() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `bar` depends on `baz` which is not an optional dependency.
-  Consider adding `optional = true` to the dependency
+  feature `bar` includes `baz`, but `baz` is not an optional dependency
+  A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
 ",
         )
         .run();
@@ -144,7 +147,7 @@ failed to select a version for `bar` which could resolve this conflict",
 
     p.cargo("build --features test")
         .with_status(101)
-        .with_stderr("error: Package `foo v0.0.1 ([..])` does not have these features: `test`")
+        .with_stderr("error: Package `foo v0.0.1 ([..])` does not have the feature `test`")
         .run();
 }
 
@@ -174,7 +177,7 @@ fn invalid5() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Dev-dependencies are not allowed to be optional: `bar`
+  dev-dependencies are not allowed to be optional: `bar`
 ",
         )
         .run();
@@ -205,7 +208,7 @@ fn invalid6() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires a feature of `bar` which is not a dependency
+  feature `foo` includes `bar/baz`, but `bar` is not a dependency
 ",
         )
         .run();
@@ -237,7 +240,7 @@ fn invalid7() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires a feature of `bar` which is not a dependency
+  feature `foo` includes `bar/baz`, but `bar` is not a dependency
 ",
         )
         .run();
@@ -1183,7 +1186,7 @@ fn dep_feature_in_cmd_line() {
     // Trying to enable features of transitive dependencies is an error
     p.cargo("build --features bar/some-feat")
         .with_status(101)
-        .with_stderr("error: Package `foo v0.0.1 ([..])` does not have these features: `bar`")
+        .with_stderr("error: package `foo v0.0.1 ([..])` does not have a dependency named `bar`")
         .run();
 
     // Hierarchical feature specification should still be disallowed
@@ -1351,277 +1354,6 @@ fn many_cli_features_comma_and_space_delimited() {
 ",
         )
         .run();
-}
-
-#[cargo_test]
-fn namespaced_invalid_feature() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                bar = ["baz"]
-            "#,
-        )
-        .file("src/main.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  Feature `bar` includes `baz` which is not defined as a feature
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn namespaced_invalid_dependency() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                bar = ["crate:baz"]
-            "#,
-        )
-        .file("src/main.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  Feature `bar` includes `crate:baz` which is not a known dependency
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn namespaced_non_optional_dependency() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                bar = ["crate:baz"]
-
-                [dependencies]
-                baz = "0.1"
-            "#,
-        )
-        .file("src/main.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  Feature `bar` includes `crate:baz` which is not an optional dependency.
-  Consider adding `optional = true` to the dependency
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn namespaced_implicit_feature() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                bar = ["baz"]
-
-                [dependencies]
-                baz = { version = "0.1", optional = true }
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build").masquerade_as_nightly_cargo().run();
-}
-
-#[cargo_test]
-fn namespaced_shadowed_dep() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                baz = []
-
-                [dependencies]
-                baz = { version = "0.1", optional = true }
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
-        "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  Feature `baz` includes the optional dependency of the same name, but this is left implicit in the features included by this feature.
-  Consider adding `crate:baz` to this feature's requirements.
-",
-    )
-        .run();
-}
-
-#[cargo_test]
-fn namespaced_shadowed_non_optional() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                baz = []
-
-                [dependencies]
-                baz = "0.1"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
-        "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  Feature `baz` includes the dependency of the same name, but this is left implicit in the features included by this feature.
-  Additionally, the dependency must be marked as optional to be included in the feature definition.
-  Consider adding `crate:baz` to this feature's requirements and marking the dependency as `optional = true`
-",
-    )
-        .run();
-}
-
-#[cargo_test]
-fn namespaced_implicit_non_optional() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                bar = ["baz"]
-
-                [dependencies]
-                baz = "0.1"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
-        "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  Feature `bar` includes `baz` which is not defined as a feature.
-  A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition
-",
-    ).run();
-}
-
-#[cargo_test]
-fn namespaced_same_name() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["namespaced-features"]
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                namespaced-features = true
-
-                [features]
-                baz = ["crate:baz"]
-
-                [dependencies]
-                baz = { version = "0.1", optional = true }
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
 #[cargo_test]
@@ -1912,76 +1644,6 @@ fn cli_parse_ok() {
 }
 
 #[cargo_test]
-fn virtual_ws_flags() {
-    // Reject features flags in the root of a virtual workspace.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [workspace]
-                members = ["a"]
-            "#,
-        )
-        .file(
-            "a/Cargo.toml",
-            r#"
-                [package]
-                name = "a"
-                version = "0.1.0"
-
-                [features]
-                f1 = []
-            "#,
-        )
-        .file("a/src/lib.rs", "")
-        .build();
-
-    p.cargo("build --features=f1")
-        .with_stderr(
-            "[ERROR] --features is not allowed in the root of a virtual workspace\n\
-             [NOTE] while this was previously accepted, it didn't actually do anything\n\
-             [HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
-        )
-        .with_status(101)
-        .run();
-
-    p.cargo("build --no-default-features")
-        .with_stderr(
-            "[ERROR] --no-default-features is not allowed in the root of a virtual workspace\n\
-             [NOTE] while this was previously accepted, it didn't actually do anything\n\
-             [HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
-        )
-        .with_status(101)
-        .run();
-
-    // It's OK if cwd is in a member.
-    p.cargo("check --features=f1 -v")
-        .cwd("a")
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[RUNNING] `rustc --crate-name a a/src/lib.rs [..]--cfg [..]feature[..]f1[..]
-[FINISHED] dev [..]
-",
-        )
-        .run();
-
-    p.cargo("clean").run();
-
-    // And -Zpackage-features is OK because it is designed to support this.
-    p.cargo("check --features=f1 -p a -Z package-features -v")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[RUNNING] `rustc --crate-name a a/src/lib.rs [..]--cfg [..]feature[..]f1[..]
-[FINISHED] dev [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn all_features_virtual_ws() {
     // What happens with `--all-features` in the root of a virtual workspace.
     // Some of this behavior is a little strange (member dependencies also
@@ -2230,10 +1892,128 @@ fn nonexistent_required_features() {
 
     p.cargo("build --examples")
         .with_stderr_contains(
-"[WARNING] feature `not_present` is not present in [features] section.
-[WARNING] feature `not_existing` does not exist in package `required_dependency v0.1.0`.
-[WARNING] dependency `not_specified_dependency` specified in required-features as `not_specified_dependency/some_feature` does not exist.
+            "\
+[WARNING] invalid feature `not_present` in required-features of target `ololo`: \
+    `not_present` is not present in [features] section
+[WARNING] invalid feature `required_dependency/not_existing` in required-features \
+    of target `ololo`: feature `not_existing` does not exist in package \
+    `required_dependency v0.1.0`
+[WARNING] invalid feature `not_specified_dependency/some_feature` in required-features \
+    of target `ololo`: dependency `not_specified_dependency` does not exist
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn invalid_feature_names() {
+    // Warnings for more restricted feature syntax.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                # Some valid, but unusual names, shouldn't warn.
+                "c++17" = []
+                "128bit" = []
+                "_foo" = []
+                "feat-name" = []
+                "feat_name" = []
+                "foo.bar" = []
+
+                # Invalid names.
+                "+foo" = []
+                "-foo" = []
+                ".foo" = []
+                "foo/bar" = []
+                "foo:bar" = []
+                "foo?" = []
+                "?foo" = []
+                "ⒶⒷⒸ" = []
+                "a¼" = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Unfortunately the warnings are duplicated due to the Summary being
+    // loaded twice (once in the Workspace, and once in PackageRegistry) and
+    // Cargo does not have a de-duplication system. This should probably be
+    // OK, since I'm not expecting this to affect anyone.
+    p.cargo("check")
+        .with_stderr("\
+[WARNING] invalid character `+` in feature `+foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `-` in feature `-foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `.` in feature `.foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `?` in feature `?foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `¼` in feature `a¼` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `/` in feature `foo/bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `:` in feature `foo:bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `?` in feature `foo?` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `Ⓐ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `Ⓑ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `Ⓒ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `+` in feature `+foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `-` in feature `-foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `.` in feature `.foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `?` in feature `?foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `¼` in feature `a¼` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `/` in feature `foo/bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `:` in feature `foo:bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `?` in feature `foo?` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `Ⓐ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `Ⓑ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[WARNING] invalid character `Ⓒ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+")
         .run();
 }

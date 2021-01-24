@@ -417,6 +417,7 @@ fn test_multiple_required_features() {
 #[cargo_test]
 fn bench_default_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -489,6 +490,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
 #[cargo_test]
 fn bench_arg_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -536,6 +538,7 @@ fn bench_arg_features() {
 #[cargo_test]
 fn bench_multiple_required_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -1167,6 +1170,11 @@ fn run_default_multiple_required_features() {
                 required-features = ["a"]
 
                 [[bin]]
+                name = "foo3"
+                path = "src/foo3.rs"
+                required-features = ["b"]
+
+                [[bin]]
                 name = "foo2"
                 path = "src/foo2.rs"
                 required-features = ["b"]
@@ -1174,6 +1182,7 @@ fn run_default_multiple_required_features() {
         )
         .file("src/lib.rs", "")
         .file("src/foo1.rs", "extern crate foo; fn main() {}")
+        .file("src/foo3.rs", "extern crate foo; fn main() {}")
         .file("src/foo2.rs", "extern crate foo; fn main() {}")
         .build();
 
@@ -1182,7 +1191,7 @@ fn run_default_multiple_required_features() {
         .with_stderr(
             "\
 error: `cargo run` could not determine which binary to run[..]
-available binaries: foo1, foo2",
+available binaries: foo1, foo2, foo3",
         )
         .run();
 }

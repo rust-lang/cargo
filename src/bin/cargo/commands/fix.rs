@@ -72,6 +72,7 @@ pub fn cli() -> App {
                 .long("allow-staged")
                 .help("Fix code even if the working directory has staged changes"),
         )
+        .arg_ignore_rust_version()
         .after_help("Run `cargo help fix` for more detailed information.\n")
 }
 

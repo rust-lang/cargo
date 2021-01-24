@@ -1218,7 +1218,7 @@ enum MatchKind {
 
 /// Compares a line with an expected pattern.
 /// - Use `[..]` as a wildcard to match 0 or more characters on the same line
-///   (similar to `.*` in a regex).
+///   (similar to `.*` in a regex). It is non-greedy.
 /// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
 ///   platforms).
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
@@ -1544,6 +1544,10 @@ fn substitute_macros(input: &str) -> String {
         ("[INSTALLED]", "   Installed"),
         ("[REPLACED]", "    Replaced"),
         ("[BUILDING]", "    Building"),
+        ("[LOGIN]", "       Login"),
+        ("[LOGOUT]", "      Logout"),
+        ("[YANK]", "        Yank"),
+        ("[OWNER]", "       Owner"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {
@@ -1638,8 +1642,12 @@ impl ChannelChanger for cargo::util::ProcessBuilder {
 }
 
 fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
-    for arg in s.split_whitespace() {
-        if arg.contains('"') || arg.contains('\'') {
+    for mut arg in s.split_whitespace() {
+        if (arg.starts_with('"') && arg.ends_with('"'))
+            || (arg.starts_with('\'') && arg.ends_with('\''))
+        {
+            arg = &arg[1..(arg.len() - 1).max(1)];
+        } else if arg.contains(&['"', '\''][..]) {
             panic!("shell-style argument parsing is not supported")
         }
         p.arg(arg);

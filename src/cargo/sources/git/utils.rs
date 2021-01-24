@@ -689,8 +689,7 @@ where
     // call our callback, `f`, in a loop here.
     if ssh_username_requested {
         debug_assert!(res.is_err());
-        let mut attempts = Vec::new();
-        attempts.push("git".to_string());
+        let mut attempts = vec![String::from("git")];
         if let Ok(s) = env::var("USER").or_else(|_| env::var("USERNAME")) {
             attempts.push(s);
         }
@@ -755,7 +754,7 @@ where
                 msg.push_str(attempt);
             }
         }
-        msg.push_str("\n");
+        msg.push('\n');
         if !ssh_agent_attempts.is_empty() {
             let names = ssh_agent_attempts
                 .iter()
@@ -1154,11 +1153,7 @@ fn github_up_to_date(
 
     // Trim off the `.git` from the repository, if present, since that's
     // optional for GitHub and won't work when we try to use the API as well.
-    let repository = if repository.ends_with(".git") {
-        &repository[..repository.len() - 4]
-    } else {
-        repository
-    };
+    let repository = repository.strip_suffix(".git").unwrap_or(repository);
 
     let url = format!(
         "https://api.github.com/repos/{}/{}/commits/{}",

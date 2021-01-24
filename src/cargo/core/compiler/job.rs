@@ -40,9 +40,20 @@ impl Work {
 }
 
 impl Job {
+    /// Creates a new job that does nothing.
+    pub fn new_fresh() -> Job {
+        Job {
+            work: Work::noop(),
+            fresh: Freshness::Fresh,
+        }
+    }
+
     /// Creates a new job representing a unit of work.
-    pub fn new(work: Work, fresh: Freshness) -> Job {
-        Job { work, fresh }
+    pub fn new_dirty(work: Work) -> Job {
+        Job {
+            work,
+            fresh: Freshness::Dirty,
+        }
     }
 
     /// Consumes this job by running it, returning the result of the

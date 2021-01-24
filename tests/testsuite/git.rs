@@ -3020,3 +3020,209 @@ warning: [..]
         )
         .run();
 }
+
+#[cargo_test]
+fn metadata_master_consistency() {
+    // SourceId consistency in the `cargo metadata` output when `master` is
+    // explicit or implicit, using new or old Cargo.lock.
+    let (git_project, git_repo) = git::new_repo("bar", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+    let bar_hash = git_repo.head().unwrap().target().unwrap().to_string();
+
+    // Explicit branch="master" with a lock file created before 1.47 (does not contain ?branch=master).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = {{ git = "{}", branch = "master" }}
+            "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "Cargo.lock",
+            &format!(
+                r#"
+                    [[package]]
+                    name = "bar"
+                    version = "1.0.0"
+                    source = "git+{}#{}"
+
+                    [[package]]
+                    name = "foo"
+                    version = "0.1.0"
+                    dependencies = [
+                     "bar",
+                    ]
+                "#,
+                git_project.url(),
+                bar_hash,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let metadata = |bar_source| -> String {
+        r#"
+            {
+              "packages": [
+                {
+                  "name": "bar",
+                  "version": "1.0.0",
+                  "id": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "__BAR_SOURCE__#__BAR_HASH__",
+                  "dependencies": [],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "publish": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "homepage": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "links": null
+                },
+                {
+                  "name": "foo",
+                  "version": "0.1.0",
+                  "id": "foo 0.1.0 [..]",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": null,
+                  "dependencies": [
+                    {
+                      "name": "bar",
+                      "source": "__BAR_SOURCE__",
+                      "req": "*",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": null
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "publish": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "homepage": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "links": null
+                }
+              ],
+              "workspace_members": [
+                "foo 0.1.0 [..]"
+              ],
+              "resolve": {
+                "nodes": [
+                  {
+                    "id": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
+                    "dependencies": [],
+                    "deps": [],
+                    "features": []
+                  },
+                  {
+                    "id": "foo 0.1.0 [..]",
+                    "dependencies": [
+                      "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)"
+                    ],
+                    "deps": [
+                      {
+                        "name": "bar",
+                        "pkg": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
+                        "dep_kinds": [
+                          {
+                            "kind": null,
+                            "target": null
+                          }
+                        ]
+                      }
+                    ],
+                    "features": []
+                  }
+                ],
+                "root": "foo 0.1.0 [..]"
+              },
+              "target_directory": "[..]",
+              "version": 1,
+              "workspace_root": "[..]",
+              "metadata": null
+            }
+        "#
+        .replace("__BAR_SOURCE__", bar_source)
+        .replace("__BAR_HASH__", &bar_hash)
+    };
+
+    let bar_source = format!("git+{}?branch=master", git_project.url());
+    p.cargo("metadata").with_json(&metadata(&bar_source)).run();
+
+    // Conversely, remove branch="master" from Cargo.toml, but use a new Cargo.lock that has ?branch=master.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = {{ git = "{}" }}
+            "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "Cargo.lock",
+            &format!(
+                r#"
+                    [[package]]
+                    name = "bar"
+                    version = "1.0.0"
+                    source = "git+{}?branch=master#{}"
+
+                    [[package]]
+                    name = "foo"
+                    version = "0.1.0"
+                    dependencies = [
+                     "bar",
+                    ]
+                "#,
+                git_project.url(),
+                bar_hash
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // No ?branch=master!
+    let bar_source = format!("git+{}", git_project.url());
+    p.cargo("metadata").with_json(&metadata(&bar_source)).run();
+}

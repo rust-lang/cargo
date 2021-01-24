@@ -146,6 +146,8 @@ pub struct Package {
     invalid_json: bool,
     proc_macro: bool,
     links: Option<String>,
+    rust_version: Option<String>,
+    cargo_features: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -247,6 +249,8 @@ impl Package {
             invalid_json: false,
             proc_macro: false,
             links: None,
+            rust_version: None,
+            cargo_features: Vec::new(),
         }
     }
 
@@ -363,6 +367,12 @@ impl Package {
         self
     }
 
+    /// Specify a minimal Rust version.
+    pub fn rust_version(&mut self, rust_version: &str) -> &mut Package {
+        self.rust_version = Some(rust_version.into());
+        self
+    }
+
     /// Causes the JSON line emitted in the index to be invalid, presumably
     /// causing Cargo to skip over this version.
     pub fn invalid_json(&mut self, invalid: bool) -> &mut Package {
@@ -372,6 +382,11 @@ impl Package {
 
     pub fn links(&mut self, links: &str) -> &mut Package {
         self.links = Some(links.to_string());
+        self
+    }
+
+    pub fn cargo_feature(&mut self, feature: &str) -> &mut Package {
+        self.cargo_features.push(feature.to_owned());
         self
     }
 
@@ -502,7 +517,16 @@ impl Package {
     }
 
     fn append_manifest<W: Write>(&self, ar: &mut Builder<W>) {
-        let mut manifest = format!(
+        let mut manifest = String::new();
+
+        if !self.cargo_features.is_empty() {
+            manifest.push_str(&format!(
+                "cargo-features = {}\n\n",
+                toml::to_string(&self.cargo_features).unwrap()
+            ));
+        }
+
+        manifest.push_str(&format!(
             r#"
             [package]
             name = "{}"
@@ -510,7 +534,12 @@ impl Package {
             authors = []
         "#,
             self.name, self.vers
-        );
+        ));
+
+        if let Some(version) = &self.rust_version {
+            manifest.push_str(&format!("rust-version = \"{}\"", version));
+        }
+
         for dep in self.deps.iter() {
             let target = match dep.target {
                 None => String::new(),

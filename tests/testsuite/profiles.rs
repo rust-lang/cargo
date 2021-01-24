@@ -474,6 +474,7 @@ fn thin_lto_works() {
 #[cfg_attr(target_os = "macos", ignore)]
 fn strip_works() {
     if !is_nightly() {
+        // -Zstrip is unstable
         return;
     }
 
@@ -508,10 +509,6 @@ fn strip_works() {
 
 #[cargo_test]
 fn strip_requires_cargo_feature() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -542,12 +539,9 @@ Caused by:
         )
         .run();
 }
+
 #[cargo_test]
 fn strip_rejects_invalid_option() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

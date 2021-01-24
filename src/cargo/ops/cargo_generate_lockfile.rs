@@ -17,6 +17,7 @@ pub struct UpdateOptions<'a> {
     pub precise: Option<&'a str>,
     pub aggressive: bool,
     pub dry_run: bool,
+    pub workspace: bool,
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
@@ -78,8 +79,10 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {
-        to_avoid.extend(previous_resolve.iter());
-        to_avoid.extend(previous_resolve.unused_patches());
+        if !opts.workspace {
+            to_avoid.extend(previous_resolve.iter());
+            to_avoid.extend(previous_resolve.unused_patches());
+        }
     } else {
         let mut sources = Vec::new();
         for name in opts.to_update.iter() {

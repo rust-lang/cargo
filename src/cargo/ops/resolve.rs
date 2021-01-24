@@ -138,6 +138,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         has_dev_units,
         requested_targets,
         target_data,
+        force_all_targets,
     )?;
 
     let resolved_features = FeatureResolver::resolve(
@@ -352,7 +353,9 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &try_to_use,
         Some(ws.config()),
-        ws.features().require(Feature::public_dependency()).is_ok(),
+        ws.unstable_features()
+            .require(Feature::public_dependency())
+            .is_ok(),
     )?;
     resolved.register_used_patches(&registry.patches());
     if register_patches {

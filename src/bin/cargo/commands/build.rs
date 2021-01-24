@@ -40,6 +40,7 @@ pub fn cli() -> App {
         )
         .arg_manifest_path()
         .arg_crate_type()
+        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_build_plan()
         .arg_unit_graph()

@@ -13,6 +13,10 @@ pub fn run(
 ) -> CargoResult<()> {
     let config = ws.config();
 
+    if options.filter.contains_glob_patterns() {
+        anyhow::bail!("`cargo run` does not support glob patterns on target selection")
+    }
+
     // We compute the `bins` here *just for diagnosis*. The actual set of
     // packages to be run is determined by the `ops::compile` call below.
     let packages = options.spec.get_packages(ws)?;
@@ -51,10 +55,11 @@ pub fn run(
 
     if bins.len() > 1 {
         if !options.filter.is_specific() {
-            let names: Vec<&str> = bins
+            let mut names: Vec<&str> = bins
                 .into_iter()
                 .map(|(_pkg, target)| target.name())
                 .collect();
+            names.sort();
             anyhow::bail!(
                 "`cargo run` could not determine which binary to run. \
                  Use the `--bin` option to specify a binary, \

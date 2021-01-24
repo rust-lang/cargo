@@ -103,8 +103,9 @@ fn stable_feature_warns() {
     p.cargo("build")
         .with_stderr(
             "\
-warning: the cargo feature `test-dummy-stable` is now stable and is no longer \
-necessary to be listed in the manifest
+warning: the cargo feature `test-dummy-stable` has been stabilized in the 1.0 \
+release and is no longer necessary to be listed in the manifest
+  See https://doc.rust-lang.org/[..]cargo/ for more information about using this feature.
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
@@ -149,6 +150,8 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
   See [..]
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html for more \
+  information about using this feature.
 ",
         )
         .run();
@@ -214,6 +217,8 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
   See [..]
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html for more \
+  information about using this feature.
 ",
         )
         .run();
@@ -256,6 +261,8 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
   See [..]
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html for more \
+  information about using this feature.
 ",
         )
         .run();
@@ -325,5 +332,65 @@ fn publish_allowed() {
         .build();
     p.cargo("publish --token sekrit")
         .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn wrong_position() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                cargo-features = ["test-dummy-unstable"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at [..]
+
+Caused by:
+  cargo-features = [\"test-dummy-unstable\"] was found in the wrong location, it \
+  should be set at the top of Cargo.toml before any tables
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn z_stabilized() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("check -Z cache-messages")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+warning: flag `-Z cache-messages` has been stabilized in the 1.40 release, \
+  and is no longer necessary
+  Message caching is now always enabled.
+
+[CHECKING] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("check -Z offline")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: flag `-Z offline` has been stabilized in the 1.36 release
+  Offline mode is now available via the --offline CLI option
+
+",
+        )
         .run();
 }

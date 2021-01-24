@@ -313,6 +313,7 @@
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
 use std::collections::hash_map::{Entry, HashMap};
+use std::convert::TryInto;
 use std::env;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
@@ -336,10 +337,7 @@ use crate::util::paths;
 use crate::util::{internal, profile, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
-use super::job::{
-    Freshness::{Dirty, Fresh},
-    Job, Work,
-};
+use super::job::{Job, Work};
 use super::{BuildContext, Context, FileFlavor, Unit};
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
@@ -395,7 +393,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     }
 
     if compare.is_ok() && !force {
-        return Ok(Job::new(Work::noop(), Fresh));
+        return Ok(Job::new_fresh());
     }
 
     // Clear out the old fingerprint file if it exists. This protects when
@@ -468,7 +466,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         Work::new(move |_| write_fingerprint(&loc, &fingerprint))
     };
 
-    Ok(Job::new(write_fingerprint, Dirty))
+    Ok(Job::new_dirty(write_fingerprint))
 }
 
 /// Dependency edge information for fingerprints. This is generated for each
@@ -819,9 +817,9 @@ impl Fingerprint {
         }
         if self.features != old.features {
             bail!(
-                "features have changed: {} != {}",
-                self.features,
-                old.features
+                "features have changed: previously {}, now {}",
+                old.features,
+                self.features
             )
         }
         if self.target != old.target {
@@ -835,9 +833,9 @@ impl Fingerprint {
         }
         if self.rustflags != old.rustflags {
             bail!(
-                "RUSTFLAGS has changed: {:?} != {:?}",
-                self.rustflags,
-                old.rustflags
+                "RUSTFLAGS has changed: previously {:?}, now {:?}",
+                old.rustflags,
+                self.rustflags
             )
         }
         if self.metadata != old.metadata {
@@ -855,7 +853,11 @@ impl Fingerprint {
             match (new, old) {
                 (LocalFingerprint::Precalculated(a), LocalFingerprint::Precalculated(b)) => {
                     if a != b {
-                        bail!("precalculated components have changed: {} != {}", a, b)
+                        bail!(
+                            "precalculated components have changed: previously {}, now {}",
+                            b,
+                            a
+                        )
                     }
                 }
                 (
@@ -863,7 +865,11 @@ impl Fingerprint {
                     LocalFingerprint::CheckDepInfo { dep_info: bdep },
                 ) => {
                     if adep != bdep {
-                        bail!("dep info output changed: {:?} != {:?}", adep, bdep)
+                        bail!(
+                            "dep info output changed: previously {:?}, now {:?}",
+                            bdep,
+                            adep
+                        )
                     }
                 }
                 (
@@ -877,13 +883,17 @@ impl Fingerprint {
                     },
                 ) => {
                     if aout != bout {
-                        bail!("rerun-if-changed output changed: {:?} != {:?}", aout, bout)
+                        bail!(
+                            "rerun-if-changed output changed: previously {:?}, now {:?}",
+                            bout,
+                            aout
+                        )
                     }
                     if apaths != bpaths {
                         bail!(
-                            "rerun-if-changed output changed: {:?} != {:?}",
-                            apaths,
+                            "rerun-if-changed output changed: previously {:?}, now {:?}",
                             bpaths,
+                            apaths,
                         )
                     }
                 }
@@ -898,11 +908,11 @@ impl Fingerprint {
                     },
                 ) => {
                     if *akey != *bkey {
-                        bail!("env vars changed: {} != {}", akey, bkey);
+                        bail!("env vars changed: previously {}, now {}", bkey, akey);
                     }
                     if *avalue != *bvalue {
                         bail!(
-                            "env var `{}` changed: previously {:?} now {:?}",
+                            "env var `{}` changed: previously {:?}, now {:?}",
                             akey,
                             bvalue,
                             avalue
@@ -1702,7 +1712,7 @@ where
         let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
-                let mtime = match paths::mtime(path) {
+                let mtime = match paths::mtime_recursive(path) {
                     Ok(mtime) => mtime,
                     Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
                 };
@@ -1906,12 +1916,7 @@ impl EncodedDepInfo {
         fn read_usize(bytes: &mut &[u8]) -> Option<usize> {
             let ret = bytes.get(..4)?;
             *bytes = &bytes[4..];
-            Some(
-                ((ret[0] as usize) << 0)
-                    | ((ret[1] as usize) << 8)
-                    | ((ret[2] as usize) << 16)
-                    | ((ret[3] as usize) << 24),
-            )
+            Some(u32::from_le_bytes(ret.try_into().unwrap()) as usize)
         }
 
         fn read_u8(bytes: &mut &[u8]) -> Option<u8> {
@@ -1960,10 +1965,7 @@ impl EncodedDepInfo {
         }
 
         fn write_usize(dst: &mut Vec<u8>, val: usize) {
-            dst.push(val as u8);
-            dst.push((val >> 8) as u8);
-            dst.push((val >> 16) as u8);
-            dst.push((val >> 24) as u8);
+            dst.extend(&u32::to_le_bytes(val as u32));
         }
     }
 }
@@ -1975,9 +1977,7 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
     let mut found_deps = false;
 
     for line in contents.lines() {
-        let env_dep_prefix = "# env-dep:";
-        if line.starts_with(env_dep_prefix) {
-            let rest = &line[env_dep_prefix.len()..];
+        if let Some(rest) = line.strip_prefix("# env-dep:") {
             let mut parts = rest.splitn(2, '=');
             let env_var = match parts.next() {
                 Some(s) => s,

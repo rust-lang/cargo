@@ -4,10 +4,11 @@ use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionCon
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
-    print_available_tests,
+    print_available_packages, print_available_tests,
 };
 use crate::CargoResult;
 use anyhow::bail;
@@ -51,11 +52,15 @@ pub trait AppExt: Sized {
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
-        self._arg(multi_opt("package", "SPEC", package).short("p"))
+        self._arg(optional_multi_opt("package", "SPEC", package).short("p"))
     }
 
     fn arg_package(self, package: &'static str) -> Self {
-        self._arg(opt("package", package).short("p").value_name("SPEC"))
+        self._arg(
+            optinal_opt("package", package)
+                .short("p")
+                .value_name("SPEC"),
+        )
     }
 
     fn arg_jobs(self) -> Self {
@@ -170,7 +175,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_unit_graph(self) -> Self {
-        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
+        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)"))
     }
 
     fn arg_new_opts(self) -> Self {
@@ -189,7 +194,7 @@ pub trait AppExt: Sized {
         ._arg(opt("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
-                .possible_values(&["2015", "2018"])
+                .possible_values(&["2015", "2018", "2021"])
                 .value_name("YEAR"),
         )
         ._arg(
@@ -213,6 +218,13 @@ pub trait AppExt: Sized {
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
         self._arg(opt("dry-run", dry_run))
     }
+
+    fn arg_ignore_rust_version(self) -> Self {
+        self._arg(opt(
+            "ignore-rust-version",
+            "Ignore `rust-version` specification in packages (unstable)",
+        ))
+    }
 }
 
 impl AppExt for App {
@@ -223,6 +235,10 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn optinal_opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
+    opt(name, help).min_values(0)
 }
 
 pub fn optional_multi_opt(
@@ -306,20 +322,6 @@ pub trait ArgMatchesExt {
         let mut ws = Workspace::new(&root, config)?;
         if config.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
-        }
-        if ws.is_virtual() && !ws.allows_unstable_package_features() {
-            // --all-features is actually honored. In general, workspaces and
-            // feature flags are a bit of a mess right now.
-            for flag in &["features", "no-default-features"] {
-                if self._is_present(flag) {
-                    bail!(
-                        "--{} is not allowed in the root of a virtual workspace\n\
-                         note: while this was previously accepted, it didn't actually do anything\n\
-                         help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
-                        flag
-                    );
-                }
-            }
         }
         if let Some(crate_type) = self._value_of("crate-type") {
             if let Ok(current) = ws.current_mut() {
@@ -509,10 +511,25 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            honor_rust_version: !self._is_present("ignore-rust-version"),
         };
+
+        if !opts.honor_rust_version {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--ignore-rust-version", 8072)?;
+        }
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;
+        } else if self.is_present_with_zero_values("package") {
+            // As for cargo 0.50.0, this won't occur but if someone sneaks in
+            // we can still provide this informative message for them.
+            anyhow::bail!(
+                "\"--package <SPEC>\" requires a SPEC format value, \
+                which can be any package ID specifier in the dependency graph.\n\
+                Run `cargo help pkgid` for more information about SPEC format."
+            )
         }
 
         Ok(opts)
@@ -526,7 +543,11 @@ pub trait ArgMatchesExt {
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
         let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
-        compile_opts.spec = Packages::Packages(self._values_of("package"));
+        let spec = self._values_of("package");
+        if spec.iter().any(is_glob_pattern) {
+            anyhow::bail!("Glob patterns on package selection are not supported.")
+        }
+        compile_opts.spec = Packages::Packages(spec);
         Ok(compile_opts)
     }
 
@@ -599,6 +620,10 @@ about this warning.";
         workspace: &Workspace<'_>,
         compile_opts: &CompileOptions,
     ) -> CargoResult<()> {
+        if self.is_present_with_zero_values("package") {
+            print_available_packages(workspace)?
+        }
+
         if self.is_present_with_zero_values("example") {
             print_available_examples(workspace, compile_opts)?;
         }

@@ -996,7 +996,16 @@ fn run_multiple_packages() {
         .arg("-p")
         .arg("d3")
         .with_status(101)
-        .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace")
+        .with_stderr_contains("[ERROR] package(s) `d3` not found in workspace [..]")
+        .run();
+
+    cargo()
+        .arg("-p")
+        .arg("d*")
+        .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] `cargo run` does not support glob pattern `d*` on package selection",
+        )
         .run();
 }
 

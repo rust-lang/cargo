@@ -126,11 +126,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
-        self.lto = super::lto::generate(&self.bcx)?;
+        self.lto = super::lto::generate(self.bcx)?;
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
-        self.check_collistions()?;
+        self.check_collisions()?;
 
         for unit in &self.bcx.roots {
             // Build up a list of pending jobs, each of which represent
@@ -287,7 +287,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dest = self.bcx.profiles.get_dir_name();
         let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let mut targets = HashMap::new();
-        for kind in self.bcx.build_config.requested_kinds.iter() {
+        for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
                 let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
                 targets.insert(target, layout);
@@ -319,13 +319,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let files = self.files.as_ref().unwrap();
-        for &kind in self
-            .bcx
-            .build_config
-            .requested_kinds
-            .iter()
-            .chain(Some(&CompileKind::Host))
-        {
+        for &kind in self.bcx.all_kinds.iter() {
             let layout = files.layout(kind);
             self.compilation
                 .root_output
@@ -404,7 +398,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(inputs.into_iter().collect())
     }
 
-    fn check_collistions(&self) -> CargoResult<()> {
+    fn check_collisions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
         let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
             format!(

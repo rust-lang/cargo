@@ -6,6 +6,7 @@ use cargo_test_support::{is_nightly, project};
 #[cargo_test]
 fn exported_priv_warning() {
     if !is_nightly() {
+        // exported_private_dependencies lint is unstable
         return;
     }
     Package::new("priv_dep", "0.1.0")
@@ -48,6 +49,7 @@ src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep'
 #[cargo_test]
 fn exported_pub_dep() {
     if !is_nightly() {
+        // exported_private_dependencies lint is unstable
         return;
     }
     Package::new("pub_dep", "0.1.0")
@@ -113,6 +115,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `public-dependency` requires a nightly version of Cargo, but this is the `stable` channel
   See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#public-dependency for more information about using this feature.
 "
         )
         .run()

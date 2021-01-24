@@ -9,7 +9,7 @@ use std::cmp::{self, Ordering};
 use std::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::Mutex;
 use url::Url;
@@ -235,6 +235,15 @@ impl SourceId {
     /// Returns `true` if this source is from a filesystem path.
     pub fn is_path(self) -> bool {
         self.inner.kind == SourceKind::Path
+    }
+
+    /// Returns the local path if this is a path dependency.
+    pub fn local_path(self) -> Option<PathBuf> {
+        if self.inner.kind != SourceKind::Path {
+            return None;
+        }
+
+        Some(self.inner.url.to_file_path().unwrap())
     }
 
     /// Returns `true` if this source is from a registry (either local or not).

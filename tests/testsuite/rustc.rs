@@ -326,6 +326,26 @@ error: The argument '--package <SPEC>' was provided more than once, \
 }
 
 #[cargo_test]
+fn fail_with_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {  break_the_build(); }")
+        .build();
+
+    p.cargo("rustc -p '*z'")
+        .with_status(101)
+        .with_stderr("[ERROR] Glob patterns on package selection are not supported.")
+        .run();
+}
+
+#[cargo_test]
 fn rustc_with_other_profile() {
     let p = project()
         .file(

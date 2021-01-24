@@ -71,7 +71,9 @@ impl<'cfg> Progress<'cfg> {
                 format: Format {
                     style,
                     max_width: n,
-                    max_print: 80,
+                    // 50 gives some space for text after the progress bar,
+                    // even on narrow (e.g. 80 char) terminals.
+                    max_print: 50,
                 },
                 name: name.to_string(),
                 done: false,
@@ -266,20 +268,20 @@ impl Format {
         // Draw the `===>`
         if hashes > 0 {
             for _ in 0..hashes - 1 {
-                string.push_str("=");
+                string.push('=');
             }
             if cur == max {
-                string.push_str("=");
+                string.push('=');
             } else {
-                string.push_str(">");
+                string.push('>');
             }
         }
 
         // Draw the empty space we have left to do
         for _ in 0..(display_width - hashes) {
-            string.push_str(" ");
+            string.push(' ');
         }
-        string.push_str("]");
+        string.push(']');
         string.push_str(&stats);
 
         Some(string)

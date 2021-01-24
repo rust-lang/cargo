@@ -697,6 +697,7 @@ fn metabuild_json_artifact() {
                 "crate_types": [
                   "bin"
                 ],
+                "doc": false,
                 "doctest": false,
                 "edition": "2018",
                 "kind": [
@@ -747,6 +748,7 @@ fn metabuild_failed_build_json() {
                 "crate_types": [
                   "bin"
                 ],
+                "doc": false,
                 "doctest": false,
                 "edition": "2018",
                 "kind": [

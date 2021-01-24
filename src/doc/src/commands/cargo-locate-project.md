@@ -41,7 +41,7 @@ workspace member.</dd>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-locate-project--q"><a class="option-anchor" href="#option-cargo-locate-project--q"></a><code>-q</code></dt>
@@ -58,7 +58,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -116,4 +116,4 @@ details on environment variables that Cargo reads.
        cargo locate-project
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-metadata(1)](cargo-metadata.md)
+[cargo(1)](cargo.html), [cargo-metadata(1)](cargo-metadata.html)

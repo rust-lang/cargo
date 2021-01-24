@@ -1,5 +1,7 @@
 //! Tests for the `cargo metadata` command.
 
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
 
@@ -45,6 +47,7 @@ fn cargo_metadata_simple() {
                         "crate_types": [
                             "bin"
                         ],
+                        "doc": true,
                         "doctest": false,
                         "test": true,
                         "edition": "2015",
@@ -141,6 +144,7 @@ crate-type = ["lib", "staticlib"]
                             "lib",
                             "staticlib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -225,6 +229,7 @@ optional_feat = []
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -340,6 +345,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -378,6 +384,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -441,6 +448,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "bin"
                         ],
+                        "doc": true,
                         "doctest": false,
                         "test": true,
                         "edition": "2015",
@@ -479,6 +487,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -615,6 +624,7 @@ name = "ex"
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -624,6 +634,7 @@ name = "ex"
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "bin" ],
+                        "doc": false,
                         "doctest": false,
                         "test": false,
                         "edition": "2015",
@@ -706,6 +717,7 @@ crate-type = ["rlib", "dylib"]
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -715,6 +727,7 @@ crate-type = ["rlib", "dylib"]
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "rlib", "dylib" ],
+                        "doc": false,
                         "doctest": false,
                         "test": false,
                         "edition": "2015",
@@ -804,6 +817,7 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -840,6 +854,7 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -931,6 +946,7 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -967,6 +983,7 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": ["lib"],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1028,6 +1045,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "targets":[{
             "kind":["bin"],
             "crate_types":["bin"],
+            "doc": true,
             "doctest": false,
             "test": true,
             "edition": "2015",
@@ -1217,6 +1235,7 @@ fn package_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1293,6 +1312,7 @@ fn package_publish() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1370,6 +1390,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1455,6 +1476,7 @@ fn package_edition_2018() {
                                 "crate_types": [
                                     "lib"
                                 ],
+                                "doc": true,
                                 "doctest": true,
                                 "test": true,
                                 "edition": "2018",
@@ -1544,6 +1566,7 @@ fn target_edition_2018() {
                                 "crate_types": [
                                     "lib"
                                 ],
+                                "doc": true,
                                 "doctest": true,
                                 "test": true,
                                 "edition": "2018",
@@ -1557,6 +1580,7 @@ fn target_edition_2018() {
                                 "crate_types": [
                                     "bin"
                                 ],
+                                "doc": true,
                                 "doctest": false,
                                 "test": true,
                                 "edition": "2015",
@@ -1647,6 +1671,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doc": true,
                     "doctest": true,
                     "test": true,
                     "edition": "2015",
@@ -1685,6 +1710,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doc": true,
                     "doctest": true,
                     "test": true,
                     "edition": "2015",
@@ -1748,6 +1774,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doc": true,
                     "doctest": true,
                     "test": true,
                     "edition": "2015",
@@ -1867,6 +1894,7 @@ fn metadata_links() {
                       "crate_types": [
                         "lib"
                       ],
+                      "doc": true,
                       "doctest": true,
                       "test": true,
                       "edition": "2015",
@@ -1880,6 +1908,7 @@ fn metadata_links() {
                       "crate_types": [
                         "bin"
                       ],
+                      "doc": false,
                       "doctest": false,
                       "test": false,
                       "edition": "2015",
@@ -1957,6 +1986,7 @@ fn deps_with_bin_only() {
                       "rename": null,
                       "optional": false,
                       "uses_default_features": true,
+                      "path": "[..]/foo/bdep",
                       "features": [],
                       "target": null,
                       "registry": null
@@ -1973,6 +2003,7 @@ fn deps_with_bin_only() {
                       "name": "foo",
                       "src_path": "[..]/foo/src/lib.rs",
                       "edition": "2015",
+                      "doc": true,
                       "doctest": true,
                       "test": true
                     }
@@ -2076,6 +2107,7 @@ fn filter_platform() {
           "src_path": "[..]/alt-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2117,6 +2149,7 @@ fn filter_platform() {
           "src_path": "[..]/cfg-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2158,6 +2191,7 @@ fn filter_platform() {
           "src_path": "[..]/host-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2199,6 +2233,7 @@ fn filter_platform() {
           "src_path": "[..]/normal-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2289,6 +2324,7 @@ fn filter_platform() {
           "src_path": "[..]/foo/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2310,8 +2346,27 @@ fn filter_platform() {
     .replace("$ALT_TRIPLE", alt_target)
     .replace("$HOST_TRIPLE", &rustc_host());
 
+    // We're going to be checking that we don't download excessively,
+    // so we need to ensure that downloads will happen.
+    let clear = || {
+        cargo_home().join("registry/cache").rm_rf();
+        cargo_home().join("registry/src").rm_rf();
+        p.build_dir().rm_rf();
+    };
+
     // Normal metadata, no filtering, returns *everything*.
     p.cargo("metadata")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] alt-dep v0.0.1 [..]
+[DOWNLOADED] cfg-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2421,10 +2476,20 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter on alternate, removes cfg and host.
     p.cargo("metadata --filter-platform")
         .arg(alt_target)
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] alt-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2493,10 +2558,19 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter on host, removes alt and cfg.
     p.cargo("metadata --filter-platform")
         .arg(rustc_host())
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2565,11 +2639,21 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter host with cfg, removes alt only
     p.cargo("metadata --filter-platform")
         .arg(rustc_host())
         .env("RUSTFLAGS", "--cfg=foobar")
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] cfg-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {

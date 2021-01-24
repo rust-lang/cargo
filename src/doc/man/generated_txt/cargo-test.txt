@@ -63,7 +63,11 @@ OPTIONS
 
        -p spec..., --package spec...
            Test only the specified packages. See cargo-pkgid(1) for the SPEC
-           format. This flag may be specified multiple times.
+           format. This flag may be specified multiple times and supports
+           common Unix glob patterns like *, ? and []. However, to avoid your
+           shell accidentally expanding glob patterns before Cargo handles
+           them, you must use single quotes or double quotes around each
+           pattern.
 
        --workspace
            Test all members in the workspace.
@@ -73,7 +77,11 @@ OPTIONS
 
        --exclude SPEC...
            Exclude the specified packages. Must be used in conjunction with the
-           --workspace flag. This flag may be specified multiple times.
+           --workspace flag. This flag may be specified multiple times and
+           supports common Unix glob patterns like *, ? and []. However, to
+           avoid your shell accidentally expanding glob patterns before Cargo
+           handles them, you must use single quotes or double quotes around
+           each pattern.
 
    Target Selection
        When no target selection options are given, cargo test will build the
@@ -107,7 +115,7 @@ OPTIONS
 
        Binary targets are automatically built if there is an integration test
        or benchmark. This allows an integration test to execute the binary to
-       exercise and test its behavior. The CARGO_bin_EXE_<name> environment
+       exercise and test its behavior. The CARGO_BIN_EXE_<name> environment
        variable
        <https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates>
        is set when the integration test is built so that it can use the env
@@ -116,26 +124,31 @@ OPTIONS
 
        Passing target selection flags will test only the specified targets.
 
+       Note that --bin, --example, --test and --bench flags also support common
+       Unix glob patterns like *, ? and []. However, to avoid your shell
+       accidentally expanding glob patterns before Cargo handles them, you must
+       use single quotes or double quotes around each glob pattern.
+
        --lib
            Test the package's library.
 
        --bin name...
-           Test the specified binary. This flag may be specified multiple
-           times.
+           Test the specified binary. This flag may be specified multiple times
+           and supports common Unix glob patterns.
 
        --bins
            Test all binary targets.
 
        --example name...
            Test the specified example. This flag may be specified multiple
-           times.
+           times and supports common Unix glob patterns.
 
        --examples
            Test all example targets.
 
        --test name...
            Test the specified integration test. This flag may be specified
-           multiple times.
+           multiple times and supports common Unix glob patterns.
 
        --tests
            Test all targets in test mode that have the test = true manifest
@@ -148,7 +161,7 @@ OPTIONS
 
        --bench name...
            Test the specified benchmark. This flag may be specified multiple
-           times.
+           times and supports common Unix glob patterns.
 
        --benches
            Test all targets in benchmark mode that have the bench = true
@@ -168,19 +181,17 @@ OPTIONS
            other target options.
 
    Feature Selection
-       The feature flags allow you to control the enabled features for the
-       "current" package. The "current" package is the package in the current
-       directory, or the one specified in --manifest-path. If running in the
-       root of a virtual workspace, then the default features are selected for
-       all workspace members, or all features if --all-features is specified.
+       The feature flags allow you to control which features are enabled. When
+       no feature options are given, the default feature is activated for every
+       selected package.
 
-       When no feature options are given, the default feature is activated for
-       every selected package.
+       See the features documentation
+       <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
+       for more details.
 
        --features features
-           Space or comma separated list of features to activate. These
-           features only apply to the current directory's package. Features of
-           direct dependencies may be enabled with <dep-name>/<feature-name>
+           Space or comma separated list of features to activate. Features of
+           workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
            specified features.
 
@@ -188,8 +199,7 @@ OPTIONS
            Activate all available features of all selected packages.
 
        --no-default-features
-           Do not activate the default feature of the current directory's
-           package.
+           Do not activate the default feature of the selected packages.
 
    Compilation Options
        --target triple

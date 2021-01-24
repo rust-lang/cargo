@@ -6,8 +6,8 @@ Tests in your `src` files should be unit tests, and tests in `tests/` should be
 integration-style tests. As such, you’ll need to import your crates into
 the files in `tests`.
 
-Here's an example of running `cargo test` in our package, which currently has
-no tests:
+Here's an example of running `cargo test` in our [package][def-package], which
+currently has no tests:
 
 ```console
 $ cargo test
@@ -31,9 +31,10 @@ $ cargo test foo
 
 This will run any test with `foo` in its name.
 
-`cargo test` runs additional checks as well. For example, it will compile any
+`cargo test` runs additional checks as well.  It will compile any
 examples you’ve included and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
 documentation for more details.
 
+[def-package]:  ../appendix/glossary.md#package  '"package" (glossary entry)'
 [testing]: ../../book/ch11-00-testing.html

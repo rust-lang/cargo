@@ -31,8 +31,11 @@ pub struct DependencyQueue<N: Hash + Eq, E: Hash + Eq, V> {
     /// easily indexable with just an `N`
     reverse_dep_map: HashMap<N, HashMap<E, HashSet<N>>>,
 
-    /// The total number of packages that are transitively waiting on this package
+    /// The relative priority of this package. Higher values should be scheduled sooner.
     priority: HashMap<N, usize>,
+
+    /// An expected cost for building this package. Used to determine priority.
+    cost: HashMap<N, usize>,
 }
 
 impl<N: Hash + Eq, E: Hash + Eq, V> Default for DependencyQueue<N, E, V> {
@@ -48,6 +51,7 @@ impl<N: Hash + Eq, E: Hash + Eq, V> DependencyQueue<N, E, V> {
             dep_map: HashMap::new(),
             reverse_dep_map: HashMap::new(),
             priority: HashMap::new(),
+            cost: HashMap::new(),
         }
     }
 }
@@ -63,7 +67,18 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     ///
     /// An optional `value` can also be associated with `key` which is reclaimed
     /// when the node is ready to go.
-    pub fn queue(&mut self, key: N, value: V, dependencies: impl IntoIterator<Item = (N, E)>) {
+    ///
+    /// The cost parameter can be used to hint at the relative cost of building
+    /// this node. This implementation does not care about the units of this value, so
+    /// the calling code is free to use whatever they'd like. In general, higher cost
+    /// nodes are expected to take longer to build.
+    pub fn queue(
+        &mut self,
+        key: N,
+        value: V,
+        dependencies: impl IntoIterator<Item = (N, E)>,
+        cost: usize,
+    ) {
         assert!(!self.dep_map.contains_key(&key));
 
         let mut my_dependencies = HashSet::new();
@@ -76,7 +91,8 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
                 .or_insert_with(HashSet::new)
                 .insert(key.clone());
         }
-        self.dep_map.insert(key, (my_dependencies, value));
+        self.dep_map.insert(key.clone(), (my_dependencies, value));
+        self.cost.insert(key, cost);
     }
 
     /// All nodes have been added, calculate some internal metadata and prepare
@@ -86,8 +102,19 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         for key in self.dep_map.keys() {
             depth(key, &self.reverse_dep_map, &mut out);
         }
-        self.priority = out.into_iter().map(|(n, set)| (n, set.len())).collect();
+        self.priority = out
+            .into_iter()
+            .map(|(n, set)| {
+                let total_cost =
+                    self.cost[&n] + set.iter().map(|key| self.cost[key]).sum::<usize>();
+                (n, total_cost)
+            })
+            .collect();
 
+        /// Creates a flattened reverse dependency list. For a given key, finds the
+        /// set of nodes which depend on it, including transitively. This is different
+        /// from self.reverse_dep_map because self.reverse_dep_map only maps one level
+        /// of reverse dependencies.
         fn depth<'a, N: Hash + Eq + Clone, E: Hash + Eq + Clone>(
             key: &N,
             map: &HashMap<N, HashMap<E, HashSet<N>>>,
@@ -123,16 +150,6 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
     pub fn dequeue(&mut self) -> Option<(N, V)> {
-        // Look at all our crates and find everything that's ready to build (no
-        // deps). After we've got that candidate set select the one which has
-        // the maximum priority in the dependency graph. This way we should
-        // hopefully keep CPUs hottest the longest by ensuring that long
-        // dependency chains are scheduled early on in the build process and the
-        // leafs higher in the tree can fill in the cracks later.
-        //
-        // TODO: it'd be best here to throw in a heuristic of crate size as
-        //       well. For example how long did this crate historically take to
-        //       compile? How large is its source code? etc.
         let next = self
             .dep_map
             .iter()
@@ -190,14 +207,14 @@ mod test {
     use super::DependencyQueue;
 
     #[test]
-    fn deep_first() {
+    fn deep_first_equal_cost() {
         let mut q = DependencyQueue::new();
 
-        q.queue(1, (), vec![]);
-        q.queue(2, (), vec![(1, ())]);
-        q.queue(3, (), vec![]);
-        q.queue(4, (), vec![(2, ()), (3, ())]);
-        q.queue(5, (), vec![(4, ()), (3, ())]);
+        q.queue(1, (), vec![], 1);
+        q.queue(2, (), vec![(1, ())], 1);
+        q.queue(3, (), vec![], 1);
+        q.queue(4, (), vec![(2, ()), (3, ())], 1);
+        q.queue(5, (), vec![(4, ()), (3, ())], 1);
         q.queue_finished();
 
         assert_eq!(q.dequeue(), Some((1, ())));
@@ -213,5 +230,30 @@ mod test {
         assert_eq!(q.dequeue(), None);
         q.finish(&4, &());
         assert_eq!(q.dequeue(), Some((5, ())));
+    }
+
+    #[test]
+    fn sort_by_highest_cost() {
+        let mut q = DependencyQueue::new();
+
+        q.queue(1, (), vec![], 1);
+        q.queue(2, (), vec![(1, ())], 1);
+        q.queue(3, (), vec![], 4);
+        q.queue(4, (), vec![(2, ()), (3, ())], 1);
+        q.queue_finished();
+
+        assert_eq!(q.dequeue(), Some((3, ())));
+        assert_eq!(q.dequeue(), Some((1, ())));
+        assert_eq!(q.dequeue(), None);
+        q.finish(&3, &());
+        assert_eq!(q.dequeue(), None);
+        q.finish(&1, &());
+        assert_eq!(q.dequeue(), Some((2, ())));
+        assert_eq!(q.dequeue(), None);
+        q.finish(&2, &());
+        assert_eq!(q.dequeue(), Some((4, ())));
+        assert_eq!(q.dequeue(), None);
+        q.finish(&4, &());
+        assert_eq!(q.dequeue(), None);
     }
 }

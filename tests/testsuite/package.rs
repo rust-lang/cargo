@@ -6,8 +6,10 @@ use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
 };
+use flate2::read::GzDecoder;
 use std::fs::{self, read_to_string, File};
 use std::path::Path;
+use tar::Archive;
 
 #[cargo_test]
 fn simple() {
@@ -1041,7 +1043,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  supported edition values are `2015` or `2018`, but `chicken` is unknown
+  supported edition values are `2015`, `2018`, or `2021`, but `chicken` is unknown
 "
             .to_string(),
         )
@@ -1073,7 +1075,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  this version of Cargo is older than the `2038` edition, and only supports `2015` and `2018` editions.
+  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, and `2021` editions.
 "
             .to_string(),
         )
@@ -1916,4 +1918,38 @@ src/main.rs
             long_name
         ))
         .run();
+}
+
+#[cargo_test]
+fn reproducible_output() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("package").run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let decoder = GzDecoder::new(f);
+    let mut archive = Archive::new(decoder);
+    for ent in archive.entries().unwrap() {
+        let ent = ent.unwrap();
+        let header = ent.header();
+        assert_eq!(header.mode().unwrap(), 0o644);
+        assert_eq!(header.mtime().unwrap(), 0);
+        assert_eq!(header.username().unwrap().unwrap(), "");
+        assert_eq!(header.groupname().unwrap().unwrap(), "");
+    }
 }

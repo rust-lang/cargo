@@ -1,12 +1,18 @@
 Passing target selection flags will {{lower actionverb}} only the specified
-targets.
+targets. 
+
+Note that `--bin`, `--example`, `--test` and `--bench` flags also 
+support common Unix glob patterns like `*`, `?` and `[]`. However, to avoid your 
+shell accidentally expanding glob patterns before Cargo handles them, you must 
+use single quotes or double quotes around each glob pattern.
 
 {{#options}}
 
 {{> options-targets-lib-bin }}
 
 {{#option "`--example` _name_..." }}
-{{actionverb}} the specified example. This flag may be specified multiple times.
+{{actionverb}} the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
 {{/option}}
 
 {{#option "`--examples`" }}
@@ -15,7 +21,7 @@ targets.
 
 {{#option "`--test` _name_..." }}
 {{actionverb}} the specified integration test. This flag may be specified
-multiple times.
+multiple times and supports common Unix glob patterns.
 {{/option}}
 
 {{#option "`--tests`" }}
@@ -29,7 +35,8 @@ manifest settings for the target.
 {{/option}}
 
 {{#option "`--bench` _name_..." }}
-{{actionverb}} the specified benchmark. This flag may be specified multiple times.
+{{actionverb}} the specified benchmark. This flag may be specified multiple
+times and supports common Unix glob patterns.
 {{/option}}
 
 {{#option "`--benches`" }}

@@ -4,6 +4,7 @@ use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::core::{PackageId, SourceId, Summary};
@@ -61,6 +62,10 @@ struct SerializedDependency<'a> {
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
     registry: Option<&'a str>,
+
+    /// The file system path for a local path dependency.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<PathBuf>,
 }
 
 impl ser::Serialize for Dependency {
@@ -80,6 +85,7 @@ impl ser::Serialize for Dependency {
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
             registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
+            path: self.source_id().local_path(),
         }
         .serialize(s)
     }

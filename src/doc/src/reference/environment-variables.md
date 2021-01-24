@@ -24,6 +24,12 @@ system:
   specified wrapper instead, passing as its commandline arguments the rustc
   invocation, with the first argument being `rustc`. Useful to set up a build
   cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
+* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will 
+  execute this specified wrapper instead for workspace members only, passing
+  as its commandline arguments the rustc invocation, with the first argument 
+  being `rustc`. It affects the filename hash so that artifacts produced by 
+  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`] 
+  to set via config.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
 * `RUSTDOCFLAGS` — A space-separated list of custom flags to pass to all `rustdoc`
@@ -49,7 +55,7 @@ system:
 * `TERM` — If this is set to `dumb`, it disables the progress bar.
 * `BROWSER` — The web browser to execute to open documentation with [`cargo
   doc`]'s' `--open` flag.
-* `RUSTFMT` — Instead of running `rustfmt`, 
+* `RUSTFMT` — Instead of running `rustfmt`,
   [`cargo fmt`](https://github.com/rust-lang/rustfmt) will execute this specified
   `rustfmt` instance instead.
 
@@ -63,6 +69,7 @@ supported environment variables are:
 * `CARGO_BUILD_JOBS` — Number of parallel jobs, see [`build.jobs`].
 * `CARGO_BUILD_RUSTC` — The `rustc` executable, see [`build.rustc`].
 * `CARGO_BUILD_RUSTC_WRAPPER` — The `rustc` wrapper, see [`build.rustc-wrapper`].
+* `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` — The `rustc` wrapper for workspace members only, see [`build.rustc-workspace-wrapper`].
 * `CARGO_BUILD_RUSTDOC` — The `rustdoc` executable, see [`build.rustdoc`].
 * `CARGO_BUILD_TARGET` — The default target platform, see [`build.target`].
 * `CARGO_BUILD_TARGET_DIR` — The default output directory, see [`build.target-dir`].
@@ -113,6 +120,7 @@ supported environment variables are:
 [`cargo install`]: ../commands/cargo-install.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo rustc`]: ../commands/cargo-rustc.md
+[`cargo rustdoc`]: ../commands/cargo-rustdoc.md
 [config-env]: config.md#environment-variables
 [crates.io]: https://crates.io/
 [incremental compilation]: profiles.md#incremental
@@ -120,6 +128,7 @@ supported environment variables are:
 [`build.jobs`]: config.md#buildjobs
 [`build.rustc`]: config.md#buildrustc
 [`build.rustc-wrapper`]: config.md#buildrustc-wrapper
+[`build.rustc-workspace-wrapper`]: config.md#buildrustc-workspace-wrapper
 [`build.rustdoc`]: config.md#buildrustdoc
 [`build.target`]: config.md#buildtarget
 [`build.target-dir`]: config.md#buildtarget-dir
@@ -179,6 +188,9 @@ let version = env!("CARGO_PKG_VERSION");
 
 `version` will now contain the value of `CARGO_PKG_VERSION`.
 
+Note that if one of these values is not provided in the manifest, the
+corresponding environment variable is set to the empty string, `""`.
+
 * `CARGO` — Path to the `cargo` binary performing the build.
 * `CARGO_MANIFEST_DIR` — The directory containing the manifest of your package.
 * `CARGO_PKG_VERSION` — The full version of your package.
@@ -205,6 +217,12 @@ let version = env!("CARGO_PKG_VERSION");
   example, `CARGO_BIN_EXE_my-program` for a binary named `my-program`.
   Binaries are automatically built when the test is built, unless the binary
   has required features that are not enabled.
+* `CARGO_PRIMARY_PACKAGE` — This environment variable will be set if the
+  package being built is primary. Primary packages are the ones the user
+  selected on the command-line, either with `-p` flags or the defaults based
+  on the current directory and the default workspace members. This environment
+  variable will not be set when building dependencies. This is only set when
+  compiling the package (not when running binaries or tests).
 
 [integration test]: cargo-targets.md#integration-tests
 [`env` macro]: ../../std/macro.env.html
@@ -265,12 +283,6 @@ let out_dir = env::var("OUT_DIR").unwrap();
                       Currently Cargo doesn't set the `MAKEFLAGS` variable,
                       but it's free for build scripts invoking GNU Make
                       to set it to the contents of `CARGO_MAKEFLAGS`.
-* `CARGO_PRIMARY_PACKAGE` — This environment variable will be set if the package being
-                            built is primary. Primary packages are the ones the user 
-                            selected on the command-line, either with `-p` flags or 
-                            the defaults based on the current directory and the default 
-                            workspace members.
-                            This environment variable will not be set when building dependencies.
 * `CARGO_FEATURE_<name>` — For each activated feature of the package being
                            built, this environment variable will be present
                            where `<name>` is the name of the feature uppercased
