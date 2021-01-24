@@ -366,7 +366,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  the binary target name `build` is forbidden
+  the binary target name `build` is forbidden, it conflicts with with cargo's build directory names
 ",
         )
         .run();

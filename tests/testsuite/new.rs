@@ -118,8 +118,17 @@ fn invalid_characters() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] invalid character `.` in crate name: `foo.rs`, [..]
-If you need a crate name to not match the directory name, consider using --name flag.
+[ERROR] invalid character `.` in package name: `foo.rs`, [..]
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"foo.rs\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/foo.rs.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"foo.rs\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();
@@ -131,8 +140,17 @@ fn reserved_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]
-If you need a crate name to not match the directory name, consider using --name flag.
+[ERROR] the name `test` cannot be used as a package name, it conflicts [..]
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"test\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/test.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"test\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();
@@ -144,8 +162,8 @@ fn reserved_binary_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]
-If you need a crate name to not match the directory name, consider using --name flag.
+[ERROR] the name `incremental` cannot be used as a package name, it conflicts [..]
+If you need a package name to not match the directory name, consider using --name flag.
 ",
         )
         .run();
@@ -168,8 +186,17 @@ fn keyword_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword
-If you need a crate name to not match the directory name, consider using --name flag.
+[ERROR] the name `pub` cannot be used as a package name, it is a Rust keyword
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"pub\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/pub.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"pub\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();
@@ -183,6 +210,16 @@ fn std_name() {
             "\
 [WARNING] the name `core` is part of Rust's standard library
 It is recommended to use a different name to avoid problems.
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"core\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/core.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"core\"
+    path = \"src/main.rs\"
+
 [CREATED] binary (application) `core` package
 ",
         )
@@ -528,8 +565,19 @@ fn explicit_invalid_name_not_suggested() {
     cargo_process("new --name 10-invalid a")
         .with_status(101)
         .with_stderr(
-            "[ERROR] the name `10-invalid` cannot be used as a crate name, \
-            the name cannot start with a digit",
+            "\
+[ERROR] the name `10-invalid` cannot be used as a package name, \
+the name cannot start with a digit\n\
+If you need a binary with the name \"10-invalid\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/10-invalid.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"10-invalid\"
+    path = \"src/main.rs\"
+
+",
         )
         .run();
 }
@@ -615,7 +663,7 @@ fn restricted_windows_name() {
             .with_stderr(
                 "\
 [ERROR] cannot use name `nul`, it is a reserved Windows filename
-If you need a crate name to not match the directory name, consider using --name flag.
+If you need a package name to not match the directory name, consider using --name flag.
 ",
             )
             .run();
@@ -655,9 +703,18 @@ fn non_ascii_name_invalid() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
+[ERROR] invalid character `Ⓐ` in package name: `ⒶⒷⒸ`, \
 the first character must be a Unicode XID start character (most letters or `_`)
-If you need a crate name to not match the directory name, consider using --name flag.
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"ⒶⒷⒸ\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"ⒶⒷⒸ\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();
@@ -667,9 +724,18 @@ If you need a crate name to not match the directory name, consider using --name 
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] invalid character `¼` in crate name: `a¼`, \
+[ERROR] invalid character `¼` in package name: `a¼`, \
 characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
-If you need a crate name to not match the directory name, consider using --name flag.
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"a¼\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/a¼.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"a¼\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();
