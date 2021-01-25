@@ -1034,7 +1034,7 @@ fn new_warns_you_this_will_not_work() {
         .env("USER", "foo")
         .with_stderr(
             "\
-warning: compiling this new crate may not work due to invalid workspace configuration
+warning: compiling this new package may not work due to invalid workspace configuration
 
 current package believes it's in a workspace when it's not:
 current: [..]
@@ -1056,7 +1056,7 @@ fn new_warning_with_corrupt_ws() {
         .env("USER", "foo")
         .with_stderr(
             "\
-[WARNING] compiling this new crate may not work due to invalid workspace configuration
+[WARNING] compiling this new package may not work due to invalid workspace configuration
 
 failed to parse manifest at `[..]foo/Cargo.toml`
 
