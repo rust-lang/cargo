@@ -33,13 +33,14 @@ use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{self, FeaturesFor};
+use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
-use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
+use crate::core::{PackageId, PackageIdSpec, SourceId, TargetKind, Workspace};
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
+use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
@@ -78,6 +79,9 @@ pub struct CompileOptions {
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
+    /// Whether the build process should check the minimum Rust version
+    /// defined in the cargo metadata for a crate.
+    pub honor_rust_version: bool,
 }
 
 impl<'a> CompileOptions {
@@ -95,6 +99,7 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            honor_rust_version: true,
         })
     }
 }
@@ -282,7 +287,7 @@ pub fn compile_ws<'a>(
     let bcx = create_bcx(ws, options, &interner)?;
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph)?;
-        return Ok(Compilation::new(&bcx)?);
+        return Compilation::new(&bcx);
     }
 
     let _p = profile::start("compiling");
@@ -306,6 +311,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
+        honor_rust_version,
     } = *options;
     let config = ws.config();
 
@@ -336,7 +342,10 @@ pub fn create_bcx<'a, 'cfg>(
 
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
-    let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
+    let opts = ResolveOpts::new(
+        dev_deps,
+        RequestedFeatures::from_command_line(features, all_features, !no_default_features),
+    );
     let has_dev_units = if filter.need_dev_deps(build_config.mode) {
         HasDevUnits::Yes
     } else {
@@ -500,6 +509,12 @@ pub fn create_bcx<'a, 'cfg>(
         interner,
     )?;
 
+    // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
+    // what heuristics to use in that case.
+    if build_config.mode == (CompileMode::Doc { deps: true }) {
+        remove_duplicate_doc(build_config, &mut unit_graph);
+    }
+
     if build_config
         .requested_kinds
         .iter()
@@ -545,6 +560,36 @@ pub fn create_bcx<'a, 'cfg>(
                     .or_default()
                     .extend(args);
             }
+        }
+    }
+
+    if honor_rust_version {
+        // Remove any pre-release identifiers for easier comparison
+        let current_version = &target_data.rustc.version;
+        let untagged_version = semver::Version::new(
+            current_version.major,
+            current_version.minor,
+            current_version.patch,
+        );
+
+        for unit in unit_graph.keys() {
+            let version = match unit.pkg.rust_version() {
+                Some(v) => v,
+                None => continue,
+            };
+
+            let req = semver::VersionReq::parse(version).unwrap();
+            if req.matches(&untagged_version) {
+                continue;
+            }
+
+            anyhow::bail!(
+                "package `{}` cannot be built because it requires rustc {} or newer, \
+                 while the currently active rustc version is {}",
+                unit.pkg,
+                version,
+                current_version,
+            );
         }
     }
 
@@ -1451,4 +1496,114 @@ fn opt_patterns_and_names(
         }
     }
     Ok((opt_patterns, opt_names))
+}
+
+/// Removes duplicate CompileMode::Doc units that would cause problems with
+/// filename collisions.
+///
+/// Rustdoc only separates units by crate name in the file directory
+/// structure. If any two units with the same crate name exist, this would
+/// cause a filename collision, causing different rustdoc invocations to stomp
+/// on one another's files.
+///
+/// Unfortunately this does not remove all duplicates, as some of them are
+/// either user error, or difficult to remove. Cases that I can think of:
+///
+/// - Same target name in different packages. See the `collision_doc` test.
+/// - Different sources. See `collision_doc_sources` test.
+///
+/// Ideally this would not be necessary.
+fn remove_duplicate_doc(build_config: &BuildConfig, unit_graph: &mut UnitGraph) {
+    // NOTE: There is some risk that this can introduce problems because it
+    // may create orphans in the unit graph (parts of the tree get detached
+    // from the roots). I currently can't think of any ways this will cause a
+    // problem because all other parts of Cargo traverse the graph starting
+    // from the roots. Perhaps this should scan for detached units and remove
+    // them too?
+    //
+    // First, create a mapping of crate_name -> Unit so we can see where the
+    // duplicates are.
+    let mut all_docs: HashMap<String, Vec<Unit>> = HashMap::new();
+    for unit in unit_graph.keys() {
+        if unit.mode.is_doc() {
+            all_docs
+                .entry(unit.target.crate_name())
+                .or_default()
+                .push(unit.clone());
+        }
+    }
+    // Keep track of units to remove so that they can be efficiently removed
+    // from the unit_deps.
+    let mut removed_units: HashSet<Unit> = HashSet::new();
+    let mut remove = |units: Vec<Unit>, reason: &str| {
+        for unit in units {
+            log::debug!(
+                "removing duplicate doc due to {} for package {} target `{}`",
+                reason,
+                unit.pkg,
+                unit.target.name()
+            );
+            unit_graph.remove(&unit);
+            removed_units.insert(unit);
+        }
+    };
+    // Iterate over the duplicates and try to remove them from unit_graph.
+    for (_crate_name, mut units) in all_docs {
+        if units.len() == 1 {
+            continue;
+        }
+        // Prefer target over host if --target was not specified.
+        if build_config
+            .requested_kinds
+            .iter()
+            .all(CompileKind::is_host)
+        {
+            let (to_remove, remaining_units): (Vec<Unit>, Vec<Unit>) =
+                units.into_iter().partition(|unit| unit.kind.is_host());
+            // Note these duplicates may not be real duplicates, since they
+            // might get merged in rebuild_unit_graph_shared. Either way, it
+            // shouldn't hurt to remove them early (although the report in the
+            // log might be confusing).
+            remove(to_remove, "host/target merger");
+            units = remaining_units;
+            if units.len() == 1 {
+                continue;
+            }
+        }
+        // Prefer newer versions over older.
+        let mut source_map: HashMap<(InternedString, SourceId, CompileKind), Vec<Unit>> =
+            HashMap::new();
+        for unit in units {
+            let pkg_id = unit.pkg.package_id();
+            // Note, this does not detect duplicates from different sources.
+            source_map
+                .entry((pkg_id.name(), pkg_id.source_id(), unit.kind))
+                .or_default()
+                .push(unit);
+        }
+        let mut remaining_units = Vec::new();
+        for (_key, mut units) in source_map {
+            if units.len() > 1 {
+                units.sort_by(|a, b| a.pkg.version().partial_cmp(b.pkg.version()).unwrap());
+                // Remove any entries with version < newest.
+                let newest_version = units.last().unwrap().pkg.version().clone();
+                let (to_remove, keep_units): (Vec<Unit>, Vec<Unit>) = units
+                    .into_iter()
+                    .partition(|unit| unit.pkg.version() < &newest_version);
+                remove(to_remove, "older version");
+                remaining_units.extend(keep_units);
+            } else {
+                remaining_units.extend(units);
+            }
+        }
+        if remaining_units.len() == 1 {
+            continue;
+        }
+        // Are there other heuristics to remove duplicates that would make
+        // sense? Maybe prefer path sources over all others?
+    }
+    // Also remove units from the unit_deps so there aren't any dangling edges.
+    for unit_deps in unit_graph.values_mut() {
+        unit_deps.retain(|unit_dep| !removed_units.contains(&unit_dep.unit));
+    }
 }

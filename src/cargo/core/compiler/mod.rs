@@ -24,7 +24,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -55,7 +55,7 @@ use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, Verbo
 use crate::util::interning::InternedString;
 use crate::util::machine_message::Message;
 use crate::util::{self, machine_message, ProcessBuilder};
-use crate::util::{add_path_args, internal, join_paths, paths, profile};
+use crate::util::{internal, join_paths, paths, profile};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -276,7 +276,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata)?;
+            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata);
         }
 
         for output in outputs.iter() {
@@ -396,17 +396,14 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         build_script_outputs: &BuildScriptOutputs,
         current_id: PackageId,
         metadata: Option<Metadata>,
-    ) -> CargoResult<()> {
-        let metadata = match metadata {
-            Some(metadata) => metadata,
-            None => return Ok(()),
-        };
-        if let Some(output) = build_script_outputs.get(current_id, metadata) {
-            for &(ref name, ref value) in output.env.iter() {
-                rustc.env(name, value);
+    ) {
+        if let Some(metadata) = metadata {
+            if let Some(output) = build_script_outputs.get(current_id, metadata) {
+                for &(ref name, ref value) in output.env.iter() {
+                    rustc.env(name, value);
+                }
             }
         }
-        Ok(())
     }
 }
 
@@ -491,7 +488,7 @@ fn add_plugin_deps(
     rustc: &mut ProcessBuilder,
     build_script_outputs: &BuildScriptOutputs,
     build_scripts: &BuildScripts,
-    root_output: &PathBuf,
+    root_output: &Path,
 ) -> CargoResult<()> {
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
@@ -515,7 +512,7 @@ fn add_plugin_deps(
 // Strip off prefixes like "native=" or "framework=" and filter out directories
 // **not** inside our output directory since they are likely spurious and can cause
 // clashes with system shared libraries (issue #3366).
-fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &PathBuf) -> Vec<PathBuf>
+fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &Path) -> Vec<PathBuf>
 where
     I: Iterator<Item = &'a PathBuf>,
 {
@@ -583,7 +580,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut rustdoc = cx.compilation.rustdoc_process(unit)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
-    add_path_args(bcx.ws, unit, &mut rustdoc);
+    add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
     if let CompileKind::Target(target) = unit.kind {
@@ -602,7 +599,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format_and_color(cx, &mut rustdoc, false)?;
+    add_error_format_and_color(cx, &mut rustdoc, false);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -668,6 +665,41 @@ fn append_crate_version_flag(unit: &Unit, rustdoc: &mut ProcessBuilder) {
         .arg(unit.pkg.version().to_string());
 }
 
+// The path that we pass to rustc is actually fairly important because it will
+// show up in error messages (important for readability), debug information
+// (important for caching), etc. As a result we need to be pretty careful how we
+// actually invoke rustc.
+//
+// In general users don't expect `cargo build` to cause rebuilds if you change
+// directories. That could be if you just change directories in the package or
+// if you literally move the whole package wholesale to a new directory. As a
+// result we mostly don't factor in `cwd` to this calculation. Instead we try to
+// track the workspace as much as possible and we update the current directory
+// of rustc/rustdoc where appropriate.
+//
+// The first returned value here is the argument to pass to rustc, and the
+// second is the cwd that rustc should operate in.
+fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit) -> (PathBuf, PathBuf) {
+    let ws_root = bcx.ws.root();
+    let src = match unit.target.src_path() {
+        TargetSourcePath::Path(path) => path.to_path_buf(),
+        TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(bcx.ws.target_dir()),
+    };
+    assert!(src.is_absolute());
+    if unit.pkg.package_id().source_id().is_path() {
+        if let Ok(path) = src.strip_prefix(ws_root) {
+            return (path.to_path_buf(), ws_root.to_path_buf());
+        }
+    }
+    (src, unit.pkg.root().to_path_buf())
+}
+
+fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
+    let (arg, cwd) = path_args(bcx, unit);
+    cmd.arg(arg);
+    cmd.cwd(cwd);
+}
+
 fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
@@ -689,11 +721,7 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
-fn add_error_format_and_color(
-    cx: &Context<'_, '_>,
-    cmd: &mut ProcessBuilder,
-    pipelined: bool,
-) -> CargoResult<()> {
+fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pipelined: bool) {
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi");
     if pipelined {
@@ -728,8 +756,6 @@ fn add_error_format_and_color(
             _ => (),
         }
     }
-
-    Ok(())
 }
 
 fn build_base_args(
@@ -762,8 +788,8 @@ fn build_base_args(
         cmd.arg(format!("--edition={}", edition));
     }
 
-    add_path_args(bcx.ws, unit, cmd);
-    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
+    add_path_args(bcx, unit, cmd);
+    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
 
     if !test {
         for crate_type in crate_types.iter() {

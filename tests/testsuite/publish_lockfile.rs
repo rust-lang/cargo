@@ -48,14 +48,16 @@ fn deprecated() {
         .build();
     p.cargo("package")
         .masquerade_as_nightly_cargo()
+        .with_status(101)
         .with_stderr(
             "\
-[PACKAGING] foo v0.1.0 ([..])
-[VERIFYING] foo v0.1.0 ([..])
-[WARNING] The `publish-lockfile` feature is deprecated and currently has no effect. \
-    It may be removed in a future version.
-[COMPILING] foo v0.1.0 ([..])
-[FINISHED] dev [..]
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  the cargo feature `publish-lockfile` has been removed
+  Remove the feature from Cargo.toml to remove this error.
+  The publish-lockfile key [..]
+  See [..]
 ",
         )
         .run();

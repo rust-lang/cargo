@@ -50,7 +50,7 @@ use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
-use crate::core::Workspace;
+use crate::core::{Edition, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
@@ -203,7 +203,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         Err(_) => return Ok(false),
     };
 
-    let args = FixArgs::get();
+    let args = FixArgs::get()?;
     trace!("cargo-fix as rustc got file {:?}", args.file);
 
     let rustc = args.rustc.as_ref().expect("fix wrapper rustc was not set");
@@ -583,7 +583,7 @@ struct FixArgs {
     file: Option<PathBuf>,
     prepare_for_edition: PrepareFor,
     idioms: bool,
-    enabled_edition: Option<String>,
+    enabled_edition: Option<Edition>,
     other: Vec<OsString>,
     rustc: Option<PathBuf>,
     format_args: Vec<String>,
@@ -591,7 +591,7 @@ struct FixArgs {
 
 enum PrepareFor {
     Next,
-    Edition(String),
+    Edition(Edition),
     None,
 }
 
@@ -602,7 +602,7 @@ impl Default for PrepareFor {
 }
 
 impl FixArgs {
-    fn get() -> FixArgs {
+    fn get() -> Result<FixArgs, Error> {
         let mut ret = FixArgs::default();
 
         ret.rustc = env::args_os().nth(1).map(PathBuf::from);
@@ -615,7 +615,7 @@ impl FixArgs {
             }
             if let Some(s) = path.to_str() {
                 if let Some(edition) = s.strip_prefix("--edition=") {
-                    ret.enabled_edition = Some(edition.to_string());
+                    ret.enabled_edition = Some(edition.parse()?);
                     continue;
                 }
                 if s.starts_with("--error-format=") || s.starts_with("--json=") {
@@ -628,13 +628,13 @@ impl FixArgs {
             ret.other.push(path.into());
         }
         if let Ok(s) = env::var(PREPARE_FOR_ENV) {
-            ret.prepare_for_edition = PrepareFor::Edition(s);
+            ret.prepare_for_edition = PrepareFor::Edition(s.parse()?);
         } else if env::var(EDITION_ENV).is_ok() {
             ret.prepare_for_edition = PrepareFor::Next;
         }
 
         ret.idioms = env::var(IDIOMS_ENV).is_ok();
-        ret
+        Ok(ret)
     }
 
     fn apply(&self, cmd: &mut Command) {
@@ -643,9 +643,9 @@ impl FixArgs {
         }
 
         cmd.args(&self.other).arg("--cap-lints=warn");
-        if let Some(edition) = &self.enabled_edition {
-            cmd.arg("--edition").arg(edition);
-            if self.idioms && edition == "2018" {
+        if let Some(edition) = self.enabled_edition {
+            cmd.arg("--edition").arg(edition.to_string());
+            if self.idioms && edition >= Edition::Edition2018 {
                 cmd.arg("-Wrust-2018-idioms");
             }
         }
@@ -667,7 +667,7 @@ impl FixArgs {
             Some(s) => s,
             None => return Ok(()),
         };
-        let enabled = match &self.enabled_edition {
+        let enabled = match self.enabled_edition {
             Some(s) => s,
             None => return Ok(()),
         };
@@ -688,23 +688,19 @@ impl FixArgs {
         process::exit(1);
     }
 
-    fn prepare_for_edition_resolve(&self) -> Option<&str> {
-        match &self.prepare_for_edition {
+    fn prepare_for_edition_resolve(&self) -> Option<Edition> {
+        match self.prepare_for_edition {
             PrepareFor::Edition(s) => Some(s),
             PrepareFor::Next => Some(self.next_edition()),
             PrepareFor::None => None,
         }
     }
 
-    fn next_edition(&self) -> &str {
-        match self.enabled_edition.as_deref() {
-            // 2015 -> 2018,
-            None | Some("2015") => "2018",
-
-            // This'll probably be wrong in 2020, but that's future Cargo's
-            // problem. Eventually though we'll just add more editions here as
-            // necessary.
-            _ => "2018",
+    fn next_edition(&self) -> Edition {
+        match self.enabled_edition {
+            None | Some(Edition::Edition2015) => Edition::Edition2018,
+            Some(Edition::Edition2018) => Edition::Edition2018, // TODO: Change to 2021 when rustc is ready for it.
+            Some(Edition::Edition2021) => Edition::Edition2021,
         }
     }
 }

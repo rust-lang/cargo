@@ -10,6 +10,7 @@ pub fn cli() -> App {
         )
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("token"))
+        // --host is deprecated (use --registry instead)
         .arg(
             opt("host", "Host to set the token for")
                 .value_name("HOST")

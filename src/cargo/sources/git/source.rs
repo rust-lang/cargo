@@ -66,7 +66,7 @@ fn ident(id: &SourceId) -> String {
         .and_then(|s| s.rev().next())
         .unwrap_or("");
 
-    let ident = if ident == "" { "_empty" } else { ident };
+    let ident = if ident.is_empty() { "_empty" } else { ident };
 
     format!("{}-{}", ident, short_hash(id.canonical_url()))
 }

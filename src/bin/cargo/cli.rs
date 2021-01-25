@@ -327,9 +327,12 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
         .arg(opt("offline", "Run without accessing the network").global(true))
         .arg(
-            multi_opt("config", "KEY=VALUE", "Override a configuration value")
-                .global(true)
-                .hidden(true),
+            multi_opt(
+                "config",
+                "KEY=VALUE",
+                "Override a configuration value (unstable)",
+            )
+            .global(true),
         )
         .arg(
             Arg::with_name("unstable-features")

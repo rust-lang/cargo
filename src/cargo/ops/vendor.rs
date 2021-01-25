@@ -338,7 +338,7 @@ fn cp_sources(
 
         paths::create_dir_all(dst.parent().unwrap())?;
 
-        let cksum = copy_and_checksum(&p, &dst, tmp_buf)?;
+        let cksum = copy_and_checksum(p, &dst, tmp_buf)?;
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
     }
     Ok(())

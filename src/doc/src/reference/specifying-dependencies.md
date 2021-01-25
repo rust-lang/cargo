@@ -383,7 +383,7 @@ features = ["secure-password", "civet"]
 ```
 
 More information about features can be found in the [features
-chapter](features.md).
+chapter](features.md#dependency-features).
 
 ### Renaming dependencies in `Cargo.toml`
 

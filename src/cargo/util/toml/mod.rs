@@ -15,6 +15,7 @@ use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::nightly_features_allowed;
 use crate::core::profiles::Strip;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
@@ -67,6 +68,17 @@ fn do_read_manifest(
             .unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
+
+    // Provide a helpful error message for a common user error.
+    if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
+        if let Some(feats) = package.get("cargo-features") {
+            bail!(
+                "cargo-features = {} was found in the wrong location, it \
+                 should be set at the top of Cargo.toml before any tables",
+                toml::to_string(feats).unwrap()
+            );
+        }
+    }
 
     let mut unused = BTreeSet::new();
     let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
@@ -800,8 +812,10 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 /// the field `metadata`, since it is a table and values cannot appear after
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlProject {
     edition: Option<String>,
+    rust_version: Option<String>,
     name: InternedString,
     version: semver::Version,
     authors: Option<Vec<String>>,
@@ -811,16 +825,12 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
-    #[serde(rename = "publish-lockfile")]
-    publish_lockfile: Option<bool>,
     workspace: Option<String>,
-    #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
     autobins: Option<bool>,
     autoexamples: Option<bool>,
     autotests: Option<bool>,
     autobenches: Option<bool>,
-    #[serde(rename = "default-run")]
     default_run: Option<String>,
 
     // Package metadata.
@@ -831,7 +841,6 @@ pub struct TomlProject {
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
-    #[serde(rename = "license-file")]
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
@@ -883,19 +892,7 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
-        let mut cargo_features = self.cargo_features.clone();
         package.resolver = ws.resolve_behavior().to_manifest();
-        if package.resolver.is_some() {
-            // This should be removed when stabilizing.
-            match &mut cargo_features {
-                None => cargo_features = Some(vec!["resolver".to_string()]),
-                Some(feats) => {
-                    if !feats.iter().any(|feat| feat == "resolver") {
-                        feats.push("resolver".to_string());
-                    }
-                }
-            }
-        }
         if let Some(license_file) = &package.license_file {
             let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
@@ -977,7 +974,7 @@ impl TomlManifest {
             patch: None,
             workspace: None,
             badges: self.badges.clone(),
-            cargo_features,
+            cargo_features: self.cargo_features.clone(),
         });
 
         fn map_deps(
@@ -1060,6 +1057,48 @@ impl TomlManifest {
         } else {
             Edition::Edition2015
         };
+
+        if let Some(rust_version) = &project.rust_version {
+            if features.require(Feature::rust_version()).is_err() {
+                let mut msg =
+                    "`rust-version` is not supported on this version of Cargo and will be ignored"
+                        .to_string();
+                if nightly_features_allowed() {
+                    msg.push_str(
+                        "\n\n\
+                        consider adding `cargo-features = [\"rust-version\"]` to the manifest",
+                    );
+                } else {
+                    msg.push_str(
+                        "\n\n\
+                        this Cargo does not support nightly features, but if you\n\
+                        switch to nightly channel you can add\n\
+                        `cargo-features = [\"rust-version\"]` to enable this feature",
+                    );
+                }
+                warnings.push(msg);
+            }
+
+            let req = match semver::VersionReq::parse(rust_version) {
+                // Exclude semver operators like `^` and pre-release identifiers
+                Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
+                _ => bail!("`rust-version` must be a value like \"1.32\""),
+            };
+
+            if let Some(first_version) = edition.first_version() {
+                let unsupported =
+                    semver::Version::new(first_version.major, first_version.minor - 1, 9999);
+                if req.matches(&unsupported) {
+                    bail!(
+                        "rust-version {} is older than first version ({}) required by \
+                         the specified edition ({})",
+                        rust_version,
+                        first_version,
+                        edition,
+                    )
+                }
+            }
+        }
 
         if project.metabuild.is_some() {
             features.require(Feature::metabuild())?;
@@ -1264,19 +1303,6 @@ impl TomlManifest {
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
 
-        let publish_lockfile = match project.publish_lockfile {
-            Some(b) => {
-                features.require(Feature::publish_lockfile())?;
-                warnings.push(
-                    "The `publish-lockfile` feature is deprecated and currently \
-                     has no effect. It may be removed in a future version."
-                        .to_string(),
-                );
-                b
-            }
-            None => features.is_enabled(Feature::publish_lockfile()),
-        };
-
         if summary.features().contains_key("default-features") {
             warnings.push(
                 "`default-features = [\"..\"]` was found in [features]. \
@@ -1308,12 +1334,12 @@ impl TomlManifest {
             custom_metadata,
             profiles,
             publish,
-            publish_lockfile,
             replace,
             patch,
             workspace_config,
             features,
             edition,
+            project.rust_version.clone(),
             project.im_a_teapot,
             project.default_run.clone(),
             Rc::clone(me),
@@ -1692,13 +1718,11 @@ impl DetailedTomlDependency {
                     .count();
 
                 if n_details > 1 {
-                    let msg = format!(
+                    bail!(
                         "dependency ({}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed. \
-                         This will be considered an error in future versions",
+                         Only one of `branch`, `tag` or `rev` is allowed.",
                         name_in_toml
                     );
-                    cx.warnings.push(msg)
                 }
 
                 let reference = self

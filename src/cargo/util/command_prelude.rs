@@ -169,7 +169,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_unit_graph(self) -> Self {
-        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
+        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)"))
     }
 
     fn arg_new_opts(self) -> Self {
@@ -188,7 +188,7 @@ pub trait AppExt: Sized {
         ._arg(opt("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
-                .possible_values(&["2015", "2018"])
+                .possible_values(&["2015", "2018", "2021"])
                 .value_name("YEAR"),
         )
         ._arg(
@@ -211,6 +211,13 @@ pub trait AppExt: Sized {
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
         self._arg(opt("dry-run", dry_run))
+    }
+
+    fn arg_ignore_rust_version(self) -> Self {
+        self._arg(opt(
+            "ignore-rust-version",
+            "Ignore `rust-version` specification in packages (unstable)",
+        ))
     }
 }
 
@@ -309,20 +316,6 @@ pub trait ArgMatchesExt {
         let mut ws = Workspace::new(&root, config)?;
         if config.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
-        }
-        if ws.is_virtual() && !ws.allows_unstable_package_features() {
-            // --all-features is actually honored. In general, workspaces and
-            // feature flags are a bit of a mess right now.
-            for flag in &["features", "no-default-features"] {
-                if self._is_present(flag) {
-                    bail!(
-                        "--{} is not allowed in the root of a virtual workspace\n\
-                         note: while this was previously accepted, it didn't actually do anything\n\
-                         help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
-                        flag
-                    );
-                }
-            }
         }
         Ok(ws)
     }
@@ -502,7 +495,14 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            honor_rust_version: !self._is_present("ignore-rust-version"),
         };
+
+        if !opts.honor_rust_version {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--ignore-rust-version", 8072)?;
+        }
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;

@@ -77,7 +77,7 @@ pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<T
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(&format!("target.{}", triple));
     let links_overrides = match config.get_table(&target_key)? {
-        Some(links) => parse_links_overrides(&target_key, links.val, &config)?,
+        Some(links) => parse_links_overrides(&target_key, links.val, config)?,
         None => BTreeMap::new(),
     };
     Ok(TargetConfig {

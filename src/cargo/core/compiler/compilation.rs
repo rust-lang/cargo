@@ -113,10 +113,8 @@ impl<'cfg> Compilation<'cfg> {
                 .sysroot_host_libdir
                 .clone(),
             sysroot_target_libdir: bcx
-                .build_config
-                .requested_kinds
+                .all_kinds
                 .iter()
-                .chain(Some(&CompileKind::Host))
                 .map(|kind| {
                     (
                         *kind,

@@ -2753,7 +2753,7 @@ fn doctest_receives_build_link_args() {
 
     p.cargo("test -v")
         .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo --test [..]-L native=bar[..]`",
+            "[RUNNING] `rustdoc [..]--test [..] --crate-name foo [..]-L native=bar[..]`",
         )
         .run();
 }
@@ -4157,4 +4157,49 @@ fn rerun_if_directory() {
     fs::remove_file(p.root().join("somedir/foo")).unwrap();
     dirty();
     fresh();
+}
+
+#[cargo_test]
+fn test_with_dep_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = 'bar' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    assert_eq!(std::env::var("DEP_BAR_FOO").unwrap(), "bar");
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                links = 'bar'
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "bar/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:foo=bar");
+                }
+            "#,
+        )
+        .build();
+    p.cargo("test --lib").run();
 }

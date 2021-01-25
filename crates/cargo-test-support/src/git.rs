@@ -41,6 +41,7 @@ use some of the helper functions in this file to interact with the repository.
 use crate::{path2url, project, Project, ProjectBuilder};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Once;
 use url::Url;
 
 #[must_use]
@@ -124,9 +125,23 @@ impl Repository {
 
 /// Initialize a new repository at the given path.
 pub fn init(path: &Path) -> git2::Repository {
+    default_search_path();
     let repo = t!(git2::Repository::init(path));
     default_repo_cfg(&repo);
     repo
+}
+
+fn default_search_path() {
+    use crate::paths::GLOBAL_ROOT;
+    use git2::{opts::set_search_path, ConfigLevel};
+    static INIT: Once = Once::new();
+    INIT.call_once(|| unsafe {
+        let path = GLOBAL_ROOT.join("blank_git_search_path");
+        t!(set_search_path(ConfigLevel::System, &path));
+        t!(set_search_path(ConfigLevel::Global, &path));
+        t!(set_search_path(ConfigLevel::XDG, &path));
+        t!(set_search_path(ConfigLevel::ProgramData, &path));
+    })
 }
 
 fn default_repo_cfg(repo: &git2::Repository) {

@@ -334,7 +334,7 @@ use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{internal, path_args, profile, ProcessBuilder};
+use crate::util::{internal, profile, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};
@@ -817,9 +817,9 @@ impl Fingerprint {
         }
         if self.features != old.features {
             bail!(
-                "features have changed: {} != {}",
-                self.features,
-                old.features
+                "features have changed: previously {}, now {}",
+                old.features,
+                self.features
             )
         }
         if self.target != old.target {
@@ -833,9 +833,9 @@ impl Fingerprint {
         }
         if self.rustflags != old.rustflags {
             bail!(
-                "RUSTFLAGS has changed: {:?} != {:?}",
-                self.rustflags,
-                old.rustflags
+                "RUSTFLAGS has changed: previously {:?}, now {:?}",
+                old.rustflags,
+                self.rustflags
             )
         }
         if self.metadata != old.metadata {
@@ -853,7 +853,11 @@ impl Fingerprint {
             match (new, old) {
                 (LocalFingerprint::Precalculated(a), LocalFingerprint::Precalculated(b)) => {
                     if a != b {
-                        bail!("precalculated components have changed: {} != {}", a, b)
+                        bail!(
+                            "precalculated components have changed: previously {}, now {}",
+                            b,
+                            a
+                        )
                     }
                 }
                 (
@@ -861,7 +865,11 @@ impl Fingerprint {
                     LocalFingerprint::CheckDepInfo { dep_info: bdep },
                 ) => {
                     if adep != bdep {
-                        bail!("dep info output changed: {:?} != {:?}", adep, bdep)
+                        bail!(
+                            "dep info output changed: previously {:?}, now {:?}",
+                            bdep,
+                            adep
+                        )
                     }
                 }
                 (
@@ -875,13 +883,17 @@ impl Fingerprint {
                     },
                 ) => {
                     if aout != bout {
-                        bail!("rerun-if-changed output changed: {:?} != {:?}", aout, bout)
+                        bail!(
+                            "rerun-if-changed output changed: previously {:?}, now {:?}",
+                            bout,
+                            aout
+                        )
                     }
                     if apaths != bpaths {
                         bail!(
-                            "rerun-if-changed output changed: {:?} != {:?}",
-                            apaths,
+                            "rerun-if-changed output changed: previously {:?}, now {:?}",
                             bpaths,
+                            apaths,
                         )
                     }
                 }
@@ -896,11 +908,11 @@ impl Fingerprint {
                     },
                 ) => {
                     if *akey != *bkey {
-                        bail!("env vars changed: {} != {}", akey, bkey);
+                        bail!("env vars changed: previously {}, now {}", bkey, akey);
                     }
                     if *avalue != *bvalue {
                         bail!(
-                            "env var `{}` changed: previously {:?} now {:?}",
+                            "env var `{}` changed: previously {:?}, now {:?}",
                             akey,
                             bvalue,
                             avalue
@@ -1313,7 +1325,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(path_args(cx.bcx.ws, unit).0),
+        path: util::hash_u64(super::path_args(cx.bcx, unit).0),
         features: format!("{:?}", unit.features),
         deps,
         local: Mutex::new(local),

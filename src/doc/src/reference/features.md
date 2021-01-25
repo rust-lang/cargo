@@ -1,134 +1,476 @@
 ## Features
 
-Cargo supports features to allow expression of:
+Cargo "features" provide a mechanism to express [conditional compilation] and
+[optional dependencies](#optional-dependencies). A package defines a set of
+named features in the `[features]` table of `Cargo.toml`, and each feature can
+either be enabled or disabled. Features for the package being built can be
+enabled on the command-line with flags such as `--features`. Features for
+dependencies can be enabled in the dependency declaration in `Cargo.toml`.
 
-* conditional compilation options (usable through `cfg` attributes);
-* optional dependencies, which enhance a package, but are not required; and
-* clusters of optional dependencies, such as `postgres-all`, that would include the
-  `postgres` package, the `postgres-macros` package, and possibly other packages
-  (such as development-time mocking libraries, debugging tools, etc.).
+See also the [Features Examples] chapter for some examples of how features can
+be used.
 
-A feature of a package is either an optional dependency, or a set of other
-features.
+[conditional compilation]: ../../reference/conditional-compilation.md
+[Features Examples]: features-examples.md
 
 ### The `[features]` section
 
-Features are defined in the `[features]` table of `Cargo.toml`. The format for
-specifying features is:
+Features are defined in the `[features]` table in `Cargo.toml`. Each feature
+specifies an array of other features or optional dependencies that it enables.
+The following examples illustrate how features could be used for a 2D image
+processing library where support for different image formats can be optionally
+included:
+
+```toml
+[features]
+# Defines a feature named `webp` that does not enable any other features.
+webp = []
+```
+
+With this feature defined, [`cfg` expressions] can be used to conditionally
+include code to support the requested feature at compile time. For example,
+inside `lib.rs` of the package could include this:
+
+```rust
+// This conditionally includes a module which implements WEBP support.
+#[cfg(feature = "webp")]
+pub mod webp;
+```
+
+Cargo sets features in the package using the `rustc` [`--cfg` flag], and code
+can test for their presence with the [`cfg` attribute] or the [`cfg` macro].
+
+Features can list other features to enable. For example, the ICO image format
+can contain BMP and PNG images, so when it is enabled, it should make sure
+those other features are enabled, too:
+
+```toml
+[features]
+bmp = []
+png = []
+ico = ["bmp", "png"]
+webp = []
+```
+
+Feature names may include characters from the [Unicode XID standard] (which
+includes most letters), and additionally allows starting with `_` or digits
+`0` through `9`, and after the first character may also contain `-`, `+`, or
+`.`.
+
+> **Note**: [crates.io] imposes additional constraints on feature name syntax
+> that they must only be [ASCII alphanumeric] characters or `_`, `-`, or `+`.
+
+[crates.io]: https://crates.io/
+[Unicode XID standard]: https://unicode.org/reports/tr31/
+[ASCII alphanumeric]: ../../std/primitive.char.html#method.is_ascii_alphanumeric
+[`--cfg` flag]: ../../rustc/command-line-arguments.md#option-cfg
+[`cfg` expressions]: ../../reference/conditional-compilation.md
+[`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
+[`cfg` macro]: ../../std/macro.cfg.html
+
+### The `default` feature
+
+By default, all features are disabled unless explicitly enabled. This can be
+changed by specifying the `default` feature:
+
+```toml
+[features]
+default = ["ico", "webp"]
+bmp = []
+png = []
+ico = ["bmp", "png"]
+webp = []
+```
+
+When the package is built, the `default` feature is enabled which in turn
+enables the listed features. This behavior can be changed by:
+
+* The `--no-default-features` [command-line
+  flag](#command-line-feature-options) disables the default features of the
+  package.
+* The `default-features = false` option can be specified in a [dependency
+  declaration](#dependency-features).
+
+> **Note**: Be careful about choosing the default feature set. The default
+> features are a convenience that make it easier to use a package without
+> forcing the user to carefully select which features to enable for common
+> use, but there are some drawbacks. Dependencies automatically enable default
+> features unless `default-features = false` is specified. This can make it
+> difficult to ensure that the default features are not enabled, especially
+> for a dependency that appears multiple times in the dependency graph. Every
+> package must ensure that `default-features = false` is specified to avoid
+> enabling them.
+>
+> Another issue is that it can be a [SemVer incompatible
+> change](#semver-compatibility) to remove a feature from the default set, so
+> you should be confident that you will keep those features.
+
+### Optional dependencies
+
+Dependencies can be marked "optional", which means they will not be compiled
+by default. For example, let's say that our 2D image processing library uses
+an external package to handle GIF images. This can be expressed like this:
+
+```toml
+[dependencies]
+gif = { version = "0.11.1", optional = true }
+```
+
+Optional dependencies implicitly define a feature of the same name as the
+dependency. This means that the same `cfg(feature = "gif")` syntax can be used
+in the code, and the dependency can be enabled just like a feature such as
+`--features gif` (see [Command-line feature
+options](#command-line-feature-options) below).
+
+> **Note**: A feature in the `[feature]` table cannot use the same name as a
+> dependency. Experimental support for enabling this and other extensions is
+> available on the nightly channel via [namespaced
+> features](unstable.md#namespaced-features).
+
+Explicitly defined features can enable optional dependencies, too. Just
+include the name of the optional dependency in the feature list. For example,
+let's say in order to support the AVIF image format, our library needs two
+other dependencies to be enabled:
+
+```toml
+[dependencies]
+ravif = { version = "0.6.3", optional = true }
+rgb = { version = "0.8.25", optional = true }
+
+[features]
+avif = ["ravif", "rgb"]
+```
+
+In this example, the `avif` feature will enable the two listed dependencies.
+
+> **Note**: Another way to optionally include a dependency is to use
+> [platform-specific dependencies]. Instead of using features, these are
+> conditional based on the target platform.
+
+[platform-specific dependencies]: specifying-dependencies.md#platform-specific-dependencies
+
+### Dependency features
+
+Features of dependencies can be enabled within the dependency declaration. The
+`features` key indicates which features to enable:
+
+```toml
+[dependencies]
+# Enables the `derive` feature of serde.
+serde = { version = "1.0.118", features = ["derive"] }
+```
+
+The [`default` features](#the-default-feature) can be disabled using
+`default-features = false`:
+
+```toml
+[dependencies]
+flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
+```
+
+> **Note**: This may not ensure the default features are disabled. If another
+> dependency includes `flate2` without specifying `default-features = false`,
+> then the default features will be enabled. See [feature
+> unification](#feature-unification) below for more details.
+
+Features of dependencies can also be enabled in the `[features]` table. The
+syntax is `"package-name/feature-name"`. For example:
+
+```toml
+[dependencies]
+jpeg-decoder = { version = "0.1.20", default-features = false }
+
+[features]
+# Enables parallel processing support by enabling the "rayon" feature of jpeg-decoder.
+parallel = ["jpeg-decoder/rayon"]
+```
+
+> **Note**: The `"package-name/feature-name"` syntax will also enable
+> `package-name` if it is an optional dependency. Experimental support for
+> disabling that behavior is available on the nightly channel via [weak
+> dependency features](unstable.md#weak-dependency-features).
+
+### Command-line feature options
+
+The following command-line flags can be used to control which features are
+enabled:
+
+* `--features` _FEATURES_: Enables the listed features. Multiple features may
+  be separated with commas or spaces. If using spaces, be sure to use quotes
+  around all the features if running Cargo from a shell (such as `--features
+  "foo bar"`). If building multiple packages in a [workspace], the
+  `package-name/feature-name` syntax can be used to specify features for
+  specific workspace members.
+
+* `--all-features`: Activates all features of all packages selected on the
+  command-line.
+
+* `--no-default-features`: Does not activate the [`default`
+  feature](#the-default-feature) of the selected packages.
+
+[workspace]: workspaces.md
+
+### Feature unification
+
+Features are unique to the package that defines them. Enabling a feature on a
+package does not enable a feature of the same name on other packages.
+
+When a dependency is used by multiple packages, Cargo will use the union of
+all features enabled on that dependency when building it. This helps ensure
+that only a single copy of the dependency is used. See the [features section]
+of the resolver documentation for more details.
+
+For example, let's look at the [`winapi`] package which uses a [large
+number][winapi-features] of features. If your package depends on a package
+`foo` which enables the "fileapi" and "handleapi" features of `winapi`, and
+another dependency `bar` which enables the "std" and "winnt" features of
+`winapi`, then `winapi` will be built with all four of those features enabled.
+
+![winapi features example](../images/winapi-features.svg)
+
+[`winapi`]: https://crates.io/crates/winapi
+[winapi-features]: https://github.com/retep998/winapi-rs/blob/0.3.9/Cargo.toml#L25-L431
+
+A consequence of this is that features should be *additive*. That is, enabling
+a feature should not disable functionality, and it should usually be safe to
+enable any combination of features. A feature should not introduce a
+[SemVer-incompatible change](#semver-compatibility).
+
+For example, if you want to optionally support [`no_std`] environments, **do
+not** use a `no_std` feature. Instead, use a `std` feature that *enables*
+`std`. For example:
+
+```rust
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "std")]
+pub fn function_that_requires_std() {
+    // ...
+}
+```
+
+[`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
+[features section]: resolver.md#features
+
+#### Mutually exclusive features
+
+There are rare cases where features may be mutually incompatible with one
+another. This should be avoided if at all possible, because it requires
+coordinating all uses of the package in the dependency graph to cooperate to
+avoid enabling them together. If it is not possible, consider adding a compile
+error to detect this scenario. For example:
+
+```rust,ignore
+#[cfg(all(feature = "foo", feature = "bar"))]
+compile_error!("feature \"foo\" and feature \"bar\" cannot be enabled at the same time");
+```
+
+Instead of using mutually exclusive features, consider some other options:
+
+* Split the functionality into separate packages.
+* When there is a conflict, [choose one feature over
+  another][feature-precedence]. The [`cfg-if`] package can help with writing
+  more complex `cfg` expressions.
+* Architect the code to allow the features to be enabled concurrently, and use
+  runtime options to control which is used. For example, use a config file,
+  command-line argument, or environment variable to choose which behavior to
+  enable.
+
+[`cfg-if`]: https://crates.io/crates/cfg-if
+[feature-precedence]: features-examples.md#feature-precedence
+
+#### Inspecting resolved features
+
+In complex dependency graphs, it can sometimes be difficult to understand how
+different features get enabled on various packages. The [`cargo tree`] command
+offers several options to help inspect and visualize which features are
+enabled. Some options to try:
+
+* `cargo tree -e features`: This will show features in the dependency graph.
+  Each feature will appear showing which package enabled it.
+* `cargo tree -f "{p} {f}"`: This is a more compact view that shows a
+  comma-spearated list of features enabled on each package.
+* `cargo tree -e features -i foo`: This will invert the tree, showing how
+  features flow into the given package "foo". This can be useful because
+  viewing the entire graph can be quite large and overwhelming. Use this when
+  you are trying to figure out which features are enabled on a specific
+  package and why. See the example at the bottom of the [`cargo tree`] page on
+  how to read this.
+
+[`cargo tree`]: ../commands/cargo-tree.md
+
+### Feature resolver version 2
+
+A different feature resolver can be specified with the `resolver` field in
+`Cargo.toml`, like this:
 
 ```toml
 [package]
-name = "awesome"
-
-[features]
-# The default set of optional packages. Most people will want to use these
-# packages, but they are strictly optional. Note that `session` is not a package
-# but rather another feature listed in this manifest.
-default = ["jquery", "uglifier", "session"]
-
-# A feature with no dependencies is used mainly for conditional compilation,
-# like `#[cfg(feature = "go-faster")]`.
-go-faster = []
-
-# The `secure-password` feature depends on the bcrypt package. This aliasing
-# will allow people to talk about the feature in a higher-level way and allow
-# this package to add more requirements to the feature in the future.
-secure-password = ["bcrypt"]
-
-# Features can be used to reexport features of other packages. The `session`
-# feature of package `awesome` will ensure that the `session` feature of the
-# package `cookie` is also enabled.
-session = ["cookie/session"]
-
-[dependencies]
-# These packages are mandatory and form the core of this package’s distribution.
-cookie = "1.2.0"
-oauth = "1.1.0"
-route-recognizer = "=2.1.0"
-
-# A list of all of the optional dependencies, some of which are included in the
-# above `features`. They can be opted into by apps.
-jquery = { version = "1.0.2", optional = true }
-uglifier = { version = "1.5.3", optional = true }
-bcrypt = { version = "*", optional = true }
-civet = { version = "*", optional = true }
+name = "my-package"
+version = "1.0.0"
+resolver = "2"
 ```
 
-To use the package `awesome`:
+See the [resolver versions] section for more detail on specifying resolver
+versions.
 
-```toml
-[dependencies.awesome]
-version = "1.3.5"
-default-features = false # do not include the default features, and optionally
-                         # cherry-pick individual features
-features = ["secure-password", "civet"]
+The version `"2"` resolver avoids unifying features in a few situations where
+that unification can be unwanted. The exact situations are described in the
+[resolver chapter][resolver-v2], but in short, it avoids unifying in these
+situations:
+
+* Features enabled on [platform-specific dependencies] for targets not
+  currently being built are ignored.
+* [Build-dependencies] and proc-macros do not share features with normal
+  dependencies.
+* [Dev-dependencies] do not activate features unless building a target that
+  needs them (like tests or examples).
+
+Avoiding the unification is necessary for some situations. For example, if a
+build-dependency enables a `std` feature, and the same dependency is used as a
+normal dependency for a `no_std` environment, enabling `std` would break the
+build.
+
+However, one drawback is that this can increase build times because the
+dependency is built multiple times (each with different features). When using
+the version `"2"` resolver, it is recommended to check for dependencies that
+are built multiple times to reduce overall build time. If it is not *required*
+to build those duplicated packages with separate features, consider adding
+features to the `features` list in the [dependency
+declaration](#dependency-features) so that the duplicates end up with the same
+features (and thus Cargo will build it only once). You can detect these
+duplicate dependencies with the [`cargo tree --duplicates`][`cargo tree`]
+command. It will show which packages are built multiple times; look for any
+entries listed with the same version. See [Inspecting resolved
+features](#inspecting-resolved-features) for more on fetching information on
+the resolved features. For build dependencies, this is not necessary if you
+are cross-compiling with the `--target` flag because build dependencies are
+always built separately from normal dependencies in that scenario.
+
+#### Resolver version 2 command-line flags
+
+The `resolver = "2"` setting also changes the behavior of the `--features` and
+`--no-default-features` [command-line options](#command-line-feature-options).
+
+With version `"1"`, you can only enable features for the package in the
+current working directory. For example, in a workspace with packages `foo` and
+`bar`, and you are in the directory for package `foo`, and ran the command
+`cargo build -p bar --features bar-feat`, this would fail because the
+`--features` flag only allowed enabling features on `foo`.
+
+With `resolver = "2"`, the features flags allow enabling features for any of
+the packages selected on the command-line with `-p` and `--workspace` flags.
+For example:
+
+```sh
+# This command is allowed with resolver = "2", regardless of which directory
+# you are in.
+cargo build -p foo -p bar --features foo-feat,bar-feat
 ```
 
-### Rules
+Additionally, with `resolver = "1"`, the `--no-default-features` flag only
+disables the default feature for the package in the current directory. With
+version "2", it will disable the default features for all workspace members.
 
-The usage of features is subject to a few rules:
+[resolver versions]: resolver.md#resolver-versions
+[build-dependencies]: specifying-dependencies.md#build-dependencies
+[dev-dependencies]: specifying-dependencies.md#development-dependencies
+[resolver-v2]: resolver.md#feature-resolver-version-2
 
-* Feature names must not conflict with other package names in the manifest. This
-  is because they are opted into via `features = [...]`, which only has a single
-  namespace.
-* With the exception of the `default` feature, all features are opt-in. To opt
-  out of the default feature, use `default-features = false` and cherry-pick
-  individual features.
-* Feature groups are not allowed to cyclically depend on one another.
-* Dev-dependencies cannot be optional.
-* Feature groups can only reference optional dependencies.
-* When a feature is selected, Cargo will call `rustc` with `--cfg
-  feature="${feature_name}"`. If a feature group is included, it and all of its
-  individual features will be included. This can be tested in code via
-  `#[cfg(feature = "foo")]`.
+### Build scripts
 
-Note that it is explicitly allowed for features to not actually activate any
-optional dependencies. This allows packages to internally enable/disable
-features without requiring a new dependency.
+[Build scripts] can detect which features are enabled on the package by
+inspecting the `CARGO_FEATURE_<name>` environment variable, where `<name>` is
+the feature name converted to uppercase and `-` converted to `_`.
 
-> **Note**: [crates.io] requires feature names to only contain ASCII letters,
-> digits, `_`, `-`, or `+`.
+[build scripts]: build-scripts.md
 
-### Usage in end products
+### Required features
 
-One major use-case for this feature is specifying optional features in
-end-products. For example, the Servo package may want to include optional
-features that people can enable or disable when they build it.
+The [`required-features` field] can be used to disable specific [Cargo
+targets] if a feature is not enabled. See the linked documentation for more
+details.
 
-In that case, Servo will describe features in its `Cargo.toml` and they can be
-enabled using command-line flags:
+[`required-features` field]: cargo-targets.md#the-required-features-field
+[Cargo targets]: cargo-targets.md
 
-```console
-$ cargo build --release --features "shumway pdf"
-```
+### SemVer compatibility
 
-Default features could be excluded using `--no-default-features`.
+Enabling a feature should not introduce a SemVer-incompatible change. For
+example, the feature shouldn't change an existing API in a way that could
+break existing uses. More details about what changes are compatible can be
+found in the [SemVer Compatibility chapter](semver.md).
 
-### Usage in packages
+Care should be taken when adding and removing feature definitions and optional
+dependencies, as these can sometimes be backwards-incompatible changes. More
+details can be found in the [Cargo section](semver.md#cargo) of the SemVer
+Compatibility chapter. In short, follow these rules:
 
-In most cases, the concept of *optional dependency* in a library is best
-expressed as a separate package that the top-level application depends on.
+* The following is usually safe to do in a minor release:
+  * Add a [new feature][cargo-feature-add] or [optional dependency][cargo-dep-add].
+  * [Change the features used on a dependency][cargo-change-dep-feature].
+* The following should usually **not** be done in a minor release:
+  * [Remove a feature][cargo-feature-remove] or [optional dependency][cargo-remove-opt-dep].
+  * [Moving existing public code behind a feature][item-remove].
+  * [Remove a feature from a feature list][cargo-feature-remove-another].
 
-However, high-level packages, like Iron or Piston, may want the ability to
-curate a number of packages for easy installation. The current Cargo system
-allows them to curate a number of mandatory dependencies into a single package
-for easy installation.
+See the links for caveats and examples.
 
-In some cases, packages may want to provide additional curation for optional
-dependencies:
+[cargo-change-dep-feature]: semver.md#cargo-change-dep-feature
+[cargo-dep-add]: semver.md#cargo-dep-add
+[cargo-feature-add]: semver.md#cargo-feature-add
+[item-remove]: semver.md#item-remove
+[cargo-feature-remove]: semver.md#cargo-feature-remove
+[cargo-remove-opt-dep]: semver.md#cargo-remove-opt-dep
+[cargo-feature-remove-another]: semver.md#cargo-feature-remove-another
 
-* grouping a number of low-level optional dependencies together into a single
-  high-level feature;
-* specifying packages that are recommended (or suggested) to be included by
-  users of the package; and
-* including a feature (like `secure-password` in the motivating example) that
-  will only work if an optional dependency is available, and would be difficult
-  to implement as a separate package (for example, it may be overly difficult to
-  design an IO package to be completely decoupled from OpenSSL, with opt-in via
-  the inclusion of a separate package).
+### Feature documentation and discovery
 
-In almost all cases, it is an antipattern to use these features outside of
-high-level packages that are designed for curation. If a feature is optional, it
-can almost certainly be expressed as a separate package.
+You are encouraged to document which features are available in your package.
+This can be done by adding [doc comments] at the top of `lib.rs`. As an
+example, see the [regex crate source], which when rendered can be viewed on
+[docs.rs][regex-docs-rs]. If you have other documentation, such as a user
+guide, consider adding the documentation there (for example, see [serde.rs]).
+If you have a binary project, consider documenting the features in the README
+or other documentation for the project (for example, see [sccache]).
 
-[crates.io]: https://crates.io/
+Clearly documenting the features can set expectations about features
+considered "unstable" or otherwise shouldn't be used. For example, if there is
+an optional dependency, but you don't want users to explicitly list that
+optional dependency as a feature, exclude it from the documented list.
+
+Documentation published on [docs.rs] can use metadata in `Cargo.toml` to
+control which features are enabled when the documentation is built. See
+[docs.rs metadata documentation] for more details.
+
+> **Note**: Rustdoc has experimental support for annotating the documentation
+> to indicate which features are required to use certain APIs. See the
+> [`doc_cfg`] documentation for more details. An example is the [`syn`
+> documentation], where you can see colored boxes which note which features
+> are required to use it.
+
+[docs.rs metadata documentation]: https://docs.rs/about/metadata
+[docs.rs]: https://docs.rs/
+[serde.rs]: https://serde.rs/feature-flags.html
+[doc comments]: ../../rustdoc/how-to-write-documentation.html
+[regex crate source]: https://github.com/rust-lang/regex/blob/1.4.2/src/lib.rs#L488-L583
+[regex-docs-rs]: https://docs.rs/regex/1.4.2/regex/#crate-features
+[sccache]: https://github.com/mozilla/sccache/blob/0.2.13/README.md#build-requirements
+[`doc_cfg`]: ../../unstable-book/language-features/doc-cfg.html
+[`syn` documentation]: https://docs.rs/syn/1.0.54/syn/#modules
+
+#### Discovering features
+
+When features are documented in the library API, this can make it easier for
+your users to discover which features are available and what they do. If the
+feature documentation for a package isn't readily available, you can look at
+the `Cargo.toml` file, but sometimes it can be hard to track it down. The
+crate page on [crates.io] has a link to the source repository if available.
+Tools like [`cargo vendor`] or [cargo-clone-crate] can be used to download the
+source and inspect it.
+
+[`cargo vendor`]: ../commands/cargo-vendor.md
+[cargo-clone-crate]: https://crates.io/crates/cargo-clone-crate

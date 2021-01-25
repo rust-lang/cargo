@@ -1,11 +1,8 @@
 //! Feature resolver.
 //!
 //! This is a new feature resolver that runs independently of the main
-//! dependency resolver. It is intended to make it easier to experiment with
-//! new behaviors. When `-Zfeatures` is not used, it will fall back to using
-//! the original `Resolve` feature computation. With `-Zfeatures` enabled,
-//! this will walk the dependency graph and compute the features using a
-//! different algorithm.
+//! dependency resolver. It is enabled when the user specifies `resolver =
+//! "2"` in `Cargo.toml`.
 //!
 //! One of its key characteristics is that it can avoid unifying features for
 //! shared dependencies in some situations. See `FeatureOpts` for the
@@ -61,11 +58,11 @@ pub struct ResolvedFeatures {
     ///
     /// The value is the `name_in_toml` of the dependencies.
     activated_dependencies: ActivateMap,
-    /// This is only here for legacy support when `-Zfeatures` is not enabled.
+    /// This is only here for legacy support when the new resolver is not enabled.
     ///
     /// This is the set of features enabled for each package.
     legacy_features: Option<HashMap<PackageId, Vec<InternedString>>>,
-    /// This is only here for legacy support when `-Zfeatures` is not enabled.
+    /// This is only here for legacy support when the new resolver is not enabled.
     ///
     /// This is the set of optional dependencies enabled for each package.
     legacy_dependencies: Option<HashMap<PackageId, HashSet<InternedString>>>,
@@ -75,7 +72,7 @@ pub struct ResolvedFeatures {
 /// Options for how the feature resolver works.
 #[derive(Default)]
 struct FeatureOpts {
-    /// -Zfeatures is enabled, use new resolver.
+    /// Use the new resolver instead of the old one.
     new_resolver: bool,
     /// Build deps and proc-macros will not share share features with other dep kinds.
     decouple_host_deps: bool,

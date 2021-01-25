@@ -108,7 +108,7 @@ impl Summary {
         if !weak_dep_features {
             for (feat_name, features) in self.features() {
                 for fv in features {
-                    if matches!(fv, FeatureValue::DepFeature{weak: true, ..}) {
+                    if matches!(fv, FeatureValue::DepFeature { weak: true, .. }) {
                         bail!(
                             "optional dependency features with `?` syntax are only \
                              allowed on the nightly channel and requires the \
@@ -416,7 +416,14 @@ impl FeatureValue {
 
     /// Returns `true` if this feature explicitly used `dep:` syntax.
     pub fn has_dep_prefix(&self) -> bool {
-        matches!(self, FeatureValue::Dep{..} | FeatureValue::DepFeature{dep_prefix:true, ..})
+        matches!(
+            self,
+            FeatureValue::Dep { .. }
+                | FeatureValue::DepFeature {
+                    dep_prefix: true,
+                    ..
+                }
+        )
     }
 }
 

@@ -30,6 +30,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg_ignore_rust_version()
         .arg_unit_graph()
         .after_help("Run `cargo help doc` for more detailed information.\n")
 }

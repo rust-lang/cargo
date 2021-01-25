@@ -27,8 +27,8 @@ pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{
-    add_path_args, path_args, print_available_benches, print_available_binaries,
-    print_available_examples, print_available_packages, print_available_tests,
+    print_available_benches, print_available_binaries, print_available_examples,
+    print_available_packages, print_available_tests,
 };
 
 mod canonical_url;
@@ -78,4 +78,16 @@ pub fn elapsed(duration: Duration) -> String {
 /// Whether or not this running in a Continuous Integration environment.
 pub fn is_ci() -> bool {
     std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
+}
+
+pub fn indented_lines(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            if line.is_empty() {
+                String::from("\n")
+            } else {
+                format!("  {}\n", line)
+            }
+        })
+        .collect()
 }
