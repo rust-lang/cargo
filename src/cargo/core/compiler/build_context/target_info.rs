@@ -776,6 +776,8 @@ impl RustDocFingerprint {
 
     /// Write the `RustDocFingerprint` info into the fingerprint file.
     pub fn write(&self, doc_dir: &Path) -> std::io::Result<()> {
+        crate::util::paths::create_dir_all(doc_dir)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))?;
         let rustdoc_fingerprint_file =
             File::create(RustDocFingerprint::path_to_fingerprint(doc_dir))?;
         // We write the actual `Rustc` version to it so that we just need to compile it straight

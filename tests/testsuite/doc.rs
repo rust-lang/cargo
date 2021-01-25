@@ -1607,11 +1607,6 @@ fn crate_versions() {
 
 #[cargo_test]
 fn crate_versions_flag_is_overridden() {
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct RustDocFingerprint {
-        rustc_verbose_version: String,
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1674,11 +1669,11 @@ LLVM version: 9.0
         .file(
             "Cargo.toml",
             r#"
-                    [package]
-                    name = "foo"
-                    version = "1.2.4"
-                    authors = []
-                "#,
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
         )
         .file("src/lib.rs", "//! These are the docs!")
         .build();
@@ -1785,74 +1780,4 @@ LLVM version: 9.0
         fingerprint.rustc_verbose_version,
         (String::from_utf8_lossy(&output.stdout).as_ref())
     );
-}
-
-#[cargo_test]
-fn doc_test_in_workspace() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [workspace]
-                members = [
-                    "crate-a",
-                    "crate-b",
-                ]
-            "#,
-        )
-        .file(
-            "crate-a/Cargo.toml",
-            r#"
-                [project]
-                name = "crate-a"
-                version = "0.1.0"
-            "#,
-        )
-        .file(
-            "crate-a/src/lib.rs",
-            "\
-                //! ```
-                //! assert_eq!(1, 1);
-                //! ```
-            ",
-        )
-        .file(
-            "crate-b/Cargo.toml",
-            r#"
-                [project]
-                name = "crate-b"
-                version = "0.1.0"
-            "#,
-        )
-        .file(
-            "crate-b/src/lib.rs",
-            "\
-                //! ```
-                //! assert_eq!(1, 1);
-                //! ```
-            ",
-        )
-        .build();
-    p.cargo("test --doc -vv")
-        .with_stderr_contains("[DOCTEST] crate-a")
-        .with_stdout_contains(
-            "
-running 1 test
-test crate-a/src/lib.rs - (line 1) ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-
-",
-        )
-        .with_stderr_contains("[DOCTEST] crate-b")
-        .with_stdout_contains(
-            "
-running 1 test
-test crate-b/src/lib.rs - (line 1) ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-
-",
-        )
-        .run();
 }
