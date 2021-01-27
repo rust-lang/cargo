@@ -1644,14 +1644,14 @@ fn crate_versions_flag_is_overridden() {
 fn doc_fingerprint_versioning_consistent() {
     #[derive(Debug, Serialize, Deserialize)]
     pub struct RustDocFingerprint {
-        pub rustc_verbose_version: String,
+        rustc_vv: String,
     }
 
     // Test that using different Rustc versions forces a
     // doc re-compilation producing new html, css & js files.
 
     // Random rustc verbose version
-    let stable_rustc_verbose_version = format!(
+    let old_rustc_verbose_version = format!(
         "\
 rustc 1.41.1 (f3e1a954d 2020-02-24)
 binary: rustc
@@ -1680,28 +1680,18 @@ LLVM version: 9.0
 
     dummy_project.cargo("doc").run();
 
-    let fingerprint: RustDocFingerprint = serde_json::from_str(
-        dummy_project
-            .read_file(
-                std::path::PathBuf::from("target")
-                    .join("doc")
-                    .join(".rustdoc_fingerprint.json")
-                    .to_str()
-                    .expect("Malformed path"),
-            )
-            .as_str(),
-    )
-    .expect("JSON Serde fail");
+    let fingerprint: RustDocFingerprint =
+        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+            .expect("JSON Serde fail");
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
     let output = std::process::Command::new("rustc")
         .arg("-vV")
-        .stdout(std::process::Stdio::piped())
         .output()
         .expect("Failed to get actual rustc verbose version");
     assert_eq!(
-        fingerprint.rustc_verbose_version,
+        fingerprint.rustc_vv,
         (String::from_utf8_lossy(&output.stdout).as_ref())
     );
 
@@ -1710,31 +1700,13 @@ LLVM version: 9.0
     // So we will remove it and create a new fingerprint with an old rustc version
     // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
     // it gets removed as we expect on the next doc compilation.
-    fs::remove_file(
-        dummy_project
-            .root()
-            .join("target")
-            .join("doc")
-            .join(".rustdoc_fingerprint.json"),
-    )
-    .expect("Failed to read fingerprint on tests");
+    dummy_project.change_file(
+        "target/.rustdoc_fingerprint.json",
+        &old_rustc_verbose_version,
+    );
 
     fs::write(
-        dummy_project
-            .root()
-            .join("target")
-            .join("doc")
-            .join(".rustdoc_fingerprint.json"),
-        stable_rustc_verbose_version,
-    )
-    .expect("Error writing old rustc version");
-
-    fs::write(
-        dummy_project
-            .root()
-            .join("target")
-            .join("doc")
-            .join("bogus_file"),
+        dummy_project.build_dir().join("doc/bogus_file"),
         String::from("This is a bogus file and should be removed!"),
     )
     .expect("Error writing test bogus file");
@@ -1742,42 +1714,19 @@ LLVM version: 9.0
     // Now if we trigger another compilation, since the fingerprint contains an old version
     // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
     // and generating another one with the actual version.
-    // It should also remove the bogus file we created above
-    dummy_project.change_file("src/lib.rs", "//! These are the docs 2!");
+    // It should also remove the bogus file we created above.
     dummy_project.cargo("doc").run();
 
-    assert!(fs::File::open(
-        dummy_project
-            .root()
-            .join("target")
-            .join("doc")
-            .join("bogus_file")
-    )
-    .is_err());
+    assert!(!dummy_project.build_dir().join("doc/bogus_file").exists());
 
-    let fingerprint: RustDocFingerprint = serde_json::from_str(
-        dummy_project
-            .read_file(
-                std::path::PathBuf::from("target")
-                    .join("doc")
-                    .join(".rustdoc_fingerprint.json")
-                    .to_str()
-                    .expect("Malformed path"),
-            )
-            .as_str(),
-    )
-    .expect("JSON Serde fail");
+    let fingerprint: RustDocFingerprint =
+        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+            .expect("JSON Serde fail");
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
-    let output = std::process::Command::new("rustc")
-        .arg("-vV")
-        .stdout(std::process::Stdio::piped())
-        .output()
-        .expect("Failed to get actual rustc verbose version");
-
     assert_eq!(
-        fingerprint.rustc_verbose_version,
+        fingerprint.rustc_vv,
         (String::from_utf8_lossy(&output.stdout).as_ref())
     );
 }

@@ -1,14 +1,15 @@
-use crate::core::compiler::{BuildOutput, CompileKind, CompileMode, CompileTarget, CrateType};
+use crate::core::compiler::{
+    BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
+};
 use crate::core::{Dependency, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
-use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
+use crate::util::{paths, CargoResult, CargoResultExt, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -754,65 +755,53 @@ impl RustcTargetData {
 /// Structure used to deal with Rustdoc fingerprinting
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RustDocFingerprint {
-    rustc_verbose_version: String,
+    rustc_vv: String,
 }
 
 impl RustDocFingerprint {
-    /// Returns the version contained by this `RustDocFingerprint` instance.
-    fn version(&self) -> &str {
-        self.rustc_verbose_version.as_str()
-    }
-
-    /// Given the `doc` dir, returns the path to the rustdoc fingerprint file.
-    fn path_to_fingerprint(doc_dir: &Path) -> PathBuf {
-        doc_dir.to_path_buf().join(".rustdoc_fingerprint.json")
+    /// Read the `RustDocFingerprint` info from the fingerprint file.
+    fn read<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<Self> {
+        let rustdoc_data = paths::read(
+            &cx.files()
+                .host_root()
+                .join(".rustdoc_fingerprint")
+                .with_extension("json"),
+        )?;
+        serde_json::from_str(&rustdoc_data).map_err(|e| anyhow::anyhow!("{:?}", e))
     }
 
     /// Write the `RustDocFingerprint` info into the fingerprint file.
-    pub fn write(&self, doc_dir: &Path) -> std::io::Result<()> {
-        crate::util::paths::create_dir_all(doc_dir)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))?;
-        let rustdoc_fingerprint_file =
-            File::create(RustDocFingerprint::path_to_fingerprint(doc_dir))?;
-        // We write the actual `Rustc` version to it so that we just need to compile it straight
-        // since there's no `doc/` folder to remove.
-        serde_json::to_writer(&rustdoc_fingerprint_file, &self)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))
+    fn write<'a, 'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<()> {
+        paths::write(
+            &cx.files()
+                .host_root()
+                .join(".rustdoc_fingerprint.json")
+                .with_extension("json"),
+            serde_json::to_string(&self)?.as_bytes(),
+        )
     }
 
     /// This function checks whether the latest version of `Rustc` used to compile this
     /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
-    /// call, returning `(Self, bool)` where the `bool` says if the `doc` folder was removed.
+    /// call.
     ///
     /// In case it's not, it takes care of removig the `doc/` folder as well as overwriting
     /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
     /// versions of the `js/html/css` files that `Rustc` autogenerates which do not have
     /// any versioning.
-    pub fn check_rustdoc_fingerprint(
-        doc_dir: &Path,
-        rustc_verbose_ver: &str,
-    ) -> anyhow::Result<(Self, bool)> {
+    pub fn check_rustdoc_fingerprint<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<()> {
         let actual_rustdoc_target_data = RustDocFingerprint {
-            rustc_verbose_version: rustc_verbose_ver.to_string(),
+            rustc_vv: cx.bcx.rustc().verbose_version.clone(),
         };
-
-        // Check wether `.rustdoc_fingerprint.json exists
-        match std::fs::read_to_string(Self::path_to_fingerprint(doc_dir)) {
-            Ok(rustdoc_data) => {
-                let rustdoc_fingerprint: Self = match serde_json::from_str(&rustdoc_data) {
-                    Ok(res) => res,
-                    Err(_) => {
-                        crate::util::paths::remove_dir_all(doc_dir)?;
-                        return Ok((actual_rustdoc_target_data, true));
-                    }
-                };
+        let doc_dir = cx.files().host_root().join("doc");
+        // Check wether `.rustdoc_fingerprint.json` exists
+        match Self::read(cx) {
+            Ok(fingerprint) => {
                 // Check if rustc_version matches the one we just used. Otherways,
                 // remove the `doc` folder to trigger a re-compilation of the docs.
-                if rustdoc_fingerprint.version() != actual_rustdoc_target_data.version() {
-                    crate::util::paths::remove_dir_all(doc_dir)?;
-                    Ok((actual_rustdoc_target_data, true))
-                } else {
-                    Ok((actual_rustdoc_target_data, false))
+                if fingerprint.rustc_vv != actual_rustdoc_target_data.rustc_vv {
+                    paths::remove_dir_all(&doc_dir)?;
+                    actual_rustdoc_target_data.write(cx)?
                 }
             }
             // If the file does not exist, then we cannot assume that the docs were compiled
@@ -821,9 +810,10 @@ impl RustDocFingerprint {
             // exists neither, we simply do nothing and continue.
             Err(_) => {
                 // We don't care if this suceeds as explained above.
-                let _ = crate::util::paths::remove_dir_all(doc_dir);
-                Ok((actual_rustdoc_target_data, true))
+                let _ = paths::remove_dir_all(doc_dir);
+                actual_rustdoc_target_data.write(cx)?
             }
         }
+        Ok(())
     }
 }
