@@ -2,7 +2,7 @@
 
 use cargo_test_support::git;
 use cargo_test_support::paths;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
 
@@ -1543,6 +1543,7 @@ fn update_unused_new_version() {
 #[cargo_test]
 fn too_many_matches() {
     // The patch locations has multiple versions that match.
+    registry::alt_init();
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.0").alternative(true).publish();
     Package::new("bar", "0.1.1").alternative(true).publish();
@@ -1866,6 +1867,7 @@ fn patched_dep_new_version() {
 fn patch_update_doesnt_update_other_sources() {
     // Very extreme edge case, make sure a patch update doesn't update other
     // sources.
+    registry::alt_init();
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.0").alternative(true).publish();
 
@@ -1931,6 +1933,7 @@ fn patch_update_doesnt_update_other_sources() {
 #[cargo_test]
 fn can_update_with_alt_reg() {
     // A patch to an alt reg can update.
+    registry::alt_init();
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.0").alternative(true).publish();
     Package::new("bar", "0.1.1").alternative(true).publish();

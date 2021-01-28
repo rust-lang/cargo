@@ -1,12 +1,8 @@
 //! Tests for credential-process.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
 use std::thread;
-use url::Url;
 
 fn toml_bin(proj: &Project, name: &str) -> String {
     proj.bin(name).display().to_string().replace('\\', "\\\\")
@@ -14,9 +10,10 @@ fn toml_bin(proj: &Project, name: &str) -> String {
 
 #[cargo_test]
 fn gated() {
-    registry::init();
-
-    paths::home().join(".cargo/credentials").rm_rf();
+    registry::RegistryBuilder::new()
+        .alternative(true)
+        .add_tokens(false)
+        .build();
 
     let p = project()
         .file(
@@ -64,8 +61,10 @@ fn gated() {
 #[cargo_test]
 fn warn_both_token_and_process() {
     // Specifying both credential-process and a token in config should issue a warning.
-    registry::init();
-    paths::home().join(".cargo/credentials").rm_rf();
+    registry::RegistryBuilder::new()
+        .alternative(true)
+        .add_tokens(false)
+        .build();
     let p = project()
         .file(
             ".cargo/config",
@@ -138,38 +137,16 @@ Only one of these values may be set, remove one or the other to proceed.
 /// Returns a thread handle for the API server, the test should join it when
 /// finished. Also returns the simple `foo` project to test against.
 fn get_token_test() -> (Project, thread::JoinHandle<()>) {
-    let server = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = server.local_addr().unwrap();
-    let api_url = format!("http://{}", addr);
-
-    registry::init_registry(
-        registry::alt_registry_path(),
-        registry::alt_dl_url(),
-        Url::parse(&api_url).unwrap(),
-        registry::alt_api_path(),
-    );
-
     // API server that checks that the token is included correctly.
-    let t = thread::spawn(move || {
-        let mut conn = BufReader::new(server.accept().unwrap().0);
-        let headers: Vec<_> = (&mut conn)
-            .lines()
-            .map(|s| s.unwrap())
-            .take_while(|s| s.len() > 2)
-            .map(|s| s.trim().to_string())
-            .collect();
-        assert!(headers
-            .iter()
-            .any(|header| header == "Authorization: sekrit"));
-        conn.get_mut()
-            .write_all(
-                b"HTTP/1.1 200\r\n\
-                  Content-Length: 33\r\n\
-                  \r\n\
-                  {\"ok\": true, \"msg\": \"completed!\"}\r\n",
-            )
-            .unwrap();
-    });
+    let server = registry::RegistryBuilder::new()
+        .add_tokens(false)
+        .build_api_server(&|headers| {
+            assert!(headers
+                .iter()
+                .any(|header| header == "Authorization: sekrit"));
+
+            (200, &r#"{"ok": true, "msg": "completed!"}"#)
+        });
 
     // The credential process to use.
     let cred_proj = project()
@@ -206,7 +183,7 @@ fn get_token_test() -> (Project, thread::JoinHandle<()>) {
         )
         .file("src/lib.rs", "")
         .build();
-    (p, t)
+    (p, server)
 }
 
 #[cargo_test]
@@ -231,10 +208,7 @@ fn publish() {
 #[cargo_test]
 fn basic_unsupported() {
     // Non-action commands don't support login/logout.
-    registry::init();
-    // If both `credential-process` and `token` are specified, it will ignore
-    // `credential-process`, so remove the default tokens.
-    paths::home().join(".cargo/credentials").rm_rf();
+    registry::RegistryBuilder::new().add_tokens(false).build();
     cargo::util::paths::append(
         &paths::home().join(".cargo/config"),
         br#"
@@ -327,10 +301,7 @@ fn login() {
 
 #[cargo_test]
 fn logout() {
-    registry::init();
-    // If both `credential-process` and `token` are specified, it will ignore
-    // `credential-process`, so remove the default tokens.
-    paths::home().join(".cargo/credentials").rm_rf();
+    registry::RegistryBuilder::new().add_tokens(false).build();
     // The credential process to use.
     let cred_proj = project()
         .at("cred_proj")
@@ -418,9 +389,7 @@ fn owner() {
 #[cargo_test]
 fn libexec_path() {
     // cargo: prefixed names use the sysroot
-    registry::init();
-
-    paths::home().join(".cargo/credentials").rm_rf();
+    registry::RegistryBuilder::new().add_tokens(false).build();
     cargo::util::paths::append(
         &paths::home().join(".cargo/config"),
         br#"
@@ -448,8 +417,10 @@ Caused by:
 #[cargo_test]
 fn invalid_token_output() {
     // Error when credential process does not output the expected format for a token.
-    registry::init();
-    paths::home().join(".cargo/credentials").rm_rf();
+    registry::RegistryBuilder::new()
+        .alternative(true)
+        .add_tokens(false)
+        .build();
     let cred_proj = project()
         .at("cred_proj")
         .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))

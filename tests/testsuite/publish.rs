@@ -677,7 +677,7 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 
 #[cargo_test]
 fn publish_allowed_registry() {
-    registry::init();
+    registry::alt_init();
 
     let p = project().build();
 
@@ -717,7 +717,7 @@ fn publish_allowed_registry() {
 
 #[cargo_test]
 fn publish_implicitly_to_only_allowed_registry() {
-    registry::init();
+    registry::alt_init();
 
     let p = project().build();
 

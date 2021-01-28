@@ -1,6 +1,6 @@
 //! Tests for the -Zrustdoc-map feature.
 
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{is_nightly, paths, project, Project};
 
 fn basic_project() -> Project {
@@ -215,6 +215,7 @@ fn alt_registry() {
         // --extern-html-root-url is unstable
         return;
     }
+    registry::alt_init();
     Package::new("bar", "1.0.0")
         .alternative(true)
         .file(

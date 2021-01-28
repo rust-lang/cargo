@@ -2,7 +2,7 @@
 
 use cargo_test_support::git;
 use cargo_test_support::paths;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
@@ -66,6 +66,7 @@ fn rename_with_different_names() {
 
 #[cargo_test]
 fn lots_of_names() {
+    registry::alt_init();
     Package::new("foo", "0.1.0")
         .file("src/lib.rs", "pub fn foo1() {}")
         .publish();
