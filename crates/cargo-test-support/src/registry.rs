@@ -4,7 +4,7 @@ use cargo::sources::CRATES_IO_INDEX;
 use cargo::util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
@@ -320,7 +320,7 @@ pub struct Package {
     files: Vec<(String, String)>,
     extra_files: Vec<(String, String)>,
     yanked: bool,
-    features: HashMap<String, Vec<String>>,
+    features: BTreeMap<String, Vec<String>>,
     local: bool,
     alternative: bool,
     invalid_json: bool,
@@ -381,7 +381,7 @@ impl Package {
             files: Vec::new(),
             extra_files: Vec::new(),
             yanked: false,
-            features: HashMap::new(),
+            features: BTreeMap::new(),
             local: false,
             alternative: false,
             invalid_json: false,
@@ -573,16 +573,20 @@ impl Package {
         } else {
             serde_json::json!(self.name)
         };
-        let line = serde_json::json!({
+        let (features, features2) = cargo::ops::features_for_publish(Some(&self.features));
+        let mut json = serde_json::json!({
             "name": name,
             "vers": self.vers,
             "deps": deps,
             "cksum": cksum,
-            "features": self.features,
+            "features": features,
             "yanked": self.yanked,
             "links": self.links,
-        })
-        .to_string();
+        });
+        if let Some(f2) = &features2 {
+            json["features2"] = serde_json::json!(f2);
+        }
+        let line = json.to_string();
 
         let file = match self.name.len() {
             1 => format!("1/{}", self.name),

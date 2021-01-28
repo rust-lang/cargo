@@ -37,12 +37,16 @@ pub struct Crate {
     pub max_version: String,
 }
 
+pub type NewFeatureMap = BTreeMap<String, Vec<String>>;
+
 #[derive(Serialize)]
 pub struct NewCrate {
     pub name: String,
     pub vers: String,
     pub deps: Vec<NewCrateDependency>,
-    pub features: BTreeMap<String, Vec<String>>,
+    pub features: NewFeatureMap,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features2: Option<NewFeatureMap>,
     pub authors: Vec<String>,
     pub description: Option<String>,
     pub documentation: Option<String>,
@@ -294,6 +298,13 @@ impl Registry {
                          10MB in size, you can email help@crates.io for assistance.\n\
                          Total size was {}.",
                         tarball_len
+                    )
+                }
+                ResponseError::Code { code, .. } if code == 404 && krate.features2.is_some() => {
+                    format_err!(
+                        "This package uses new feature syntax that is not supported by \
+                         the registry at {}.",
+                        self.host,
                     )
                 }
                 _ => e.into(),

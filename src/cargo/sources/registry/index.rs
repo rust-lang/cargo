@@ -72,6 +72,7 @@ use crate::sources::registry::{RegistryData, RegistryPackage};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
+use anyhow::bail;
 use log::info;
 use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
@@ -659,19 +660,19 @@ impl<'a> SummariesCache<'a> {
             .split_first()
             .ok_or_else(|| anyhow::format_err!("malformed cache"))?;
         if *first_byte != CURRENT_CACHE_VERSION {
-            anyhow::bail!("looks like a different Cargo's cache, bailing out");
+            bail!("looks like a different Cargo's cache, bailing out");
         }
         let mut iter = split(rest, 0);
         if let Some(update) = iter.next() {
             if update != last_index_update.as_bytes() {
-                anyhow::bail!(
+                bail!(
                     "cache out of date: current index ({}) != cache ({})",
                     last_index_update,
                     str::from_utf8(update)?,
                 )
             }
         } else {
-            anyhow::bail!("malformed file");
+            bail!("malformed file");
         }
         let mut ret = SummariesCache::default();
         while let Some(version) = iter.next() {
@@ -746,7 +747,8 @@ impl IndexSummary {
             vers,
             cksum,
             deps,
-            features,
+            mut features,
+            features2,
             yanked,
             links,
         } = serde_json::from_slice(line)?;
@@ -756,6 +758,11 @@ impl IndexSummary {
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
+        if let Some(features2) = features2 {
+            for (name, values) in features2 {
+                features.entry(name).or_default().extend(values);
+            }
+        }
         let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {

@@ -1,7 +1,9 @@
 //! Tests for namespaced features.
 
-use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{project, publish};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::{self, Dependency, Package};
+use cargo_test_support::{paths, process, project, publish, rustc_host};
+use std::fs;
 
 #[cargo_test]
 fn gated() {
@@ -1105,4 +1107,362 @@ feat = ["opt-dep1"]
 "#,
         )],
     );
+}
+
+#[cargo_test]
+fn publish() {
+    // Publish uploads `features2` in JSON.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "MIT"
+                homepage = "https://example.com/"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                feat1 = []
+                feat2 = ["dep:bar"]
+                feat3 = ["feat2"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    registry::api_path().join("api/v2/crates").mkdir_p();
+
+    p.cargo("publish --token sekrit -Z namespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[VERIFYING] foo v0.1.0 [..]
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[UPLOADING] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "bar",
+              "optional": true,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {
+            "feat1": [],
+            "feat2": [],
+            "feat3": ["feat2"]
+          },
+          "features2": {
+            "feat2": ["dep:bar"]
+          },
+          "homepage": "https://example.com/",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.1.0"
+          }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"[..]
+[package]
+name = "foo"
+version = "0.1.0"
+description = "foo"
+homepage = "https://example.com/"
+license = "MIT"
+[dependencies.bar]
+version = "1.0"
+optional = true
+
+[features]
+feat1 = []
+feat2 = ["dep:bar"]
+feat3 = ["feat2"]
+"#,
+        )],
+    );
+}
+
+// This is a test for exercising the behavior of older versions of cargo. You
+// will need rustup installed. This will iterate over the installed
+// toolchains, and run some tests over each one, producing a report at the
+// end.
+//
+// This is ignored because it is intended to be run on a developer system with
+// a bunch of toolchains installed. As of this writing, I have tested 1.0 to
+// 1.51. Run this with:
+//
+//    cargo test --test testsuite -- old_cargos --nocapture --ignored
+#[ignore]
+#[cargo_test]
+fn old_cargos() {
+    if std::process::Command::new("rustup").output().is_err() {
+        eprintln!("old_cargos ignored, rustup not installed");
+        return;
+    }
+    Package::new("new-baz-dep", "1.0.0").publish();
+
+    Package::new("baz", "1.0.0").publish();
+    Package::new("baz", "1.0.1")
+        .add_dep(Dependency::new("new-baz-dep", "1.0").optional(true))
+        .feature("new-feat", &["dep:new-baz-dep"])
+        .publish();
+
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("baz", "1.0").optional(true))
+        .feature("feat", &["baz"])
+        .publish();
+    let bar_cksum = Package::new("bar", "1.0.1")
+        .add_dep(Dependency::new("baz", "1.0").optional(true))
+        .feature("feat", &["dep:baz"])
+        .publish();
+    Package::new("bar", "1.0.2")
+        .add_dep(Dependency::new("baz", "1.0").enable_features(&["new-feat"]))
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Collect a sorted list of all installed toolchains for this host.
+    let host = rustc_host();
+    // I tend to have lots of toolchains installed, but I don't want to test
+    // all of them (like dated nightlies, or toolchains for non-host targets).
+    let valid_names = &[
+        format!("stable-{}", host),
+        format!("beta-{}", host),
+        format!("nightly-{}", host),
+    ];
+    let output = cargo::util::process("rustup")
+        .args(&["toolchain", "list"])
+        .exec_with_output()
+        .expect("rustup should be installed");
+    let stdout = std::str::from_utf8(&output.stdout).unwrap();
+    let mut toolchains: Vec<_> = stdout
+        .lines()
+        .map(|line| {
+            // Some lines say things like (default), just get the version.
+            line.split_whitespace().next().expect("non-empty line")
+        })
+        .filter(|line| {
+            line.ends_with(&host)
+                && (line.starts_with("1.") || valid_names.iter().any(|name| name == line))
+        })
+        .map(|line| {
+            let output = cargo::util::process("rustc")
+                .args(&[format!("+{}", line).as_str(), "-V"])
+                .exec_with_output()
+                .expect("rustc installed");
+            let version = std::str::from_utf8(&output.stdout).unwrap();
+            let parts: Vec<_> = version.split_whitespace().collect();
+            assert_eq!(parts[0], "rustc");
+            assert!(parts[1].starts_with("1."));
+
+            (
+                semver::Version::parse(parts[1]).expect("valid version"),
+                line,
+            )
+        })
+        .collect();
+
+    toolchains.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let config_path = paths::home().join(".cargo/config");
+    let lock_path = p.root().join("Cargo.lock");
+
+    // Results collected for printing a final report.
+    let mut results: Vec<Vec<String>> = Vec::new();
+
+    for (version, toolchain) in toolchains {
+        let mut toolchain_result = vec![toolchain.to_string()];
+        if version < semver::Version::new(1, 12, 0) {
+            fs::write(
+                &config_path,
+                format!(
+                    r#"
+                        [registry]
+                        index = "{}"
+                    "#,
+                    registry::registry_url()
+                ),
+            )
+            .unwrap();
+        } else {
+            fs::write(
+                &config_path,
+                format!(
+                    "
+                        [source.crates-io]
+                        registry = 'https://wut'  # only needed by 1.12
+                        replace-with = 'dummy-registry'
+
+                        [source.dummy-registry]
+                        registry = '{}'
+                    ",
+                    registry::registry_url()
+                ),
+            )
+            .unwrap();
+        }
+
+        let run_cargo = || -> String {
+            match process("cargo")
+                .args(&[format!("+{}", toolchain).as_str(), "build"])
+                .cwd(p.root())
+                .exec_with_output()
+            {
+                Ok(_output) => {
+                    eprintln!("{} ok", toolchain);
+                    let output = process("cargo")
+                        .args(&[format!("+{}", toolchain).as_str(), "pkgid", "bar"])
+                        .cwd(p.root())
+                        .exec_with_output()
+                        .expect("pkgid should succeed");
+                    let stdout = std::str::from_utf8(&output.stdout).unwrap();
+                    let version = stdout
+                        .trim()
+                        .rsplitn(2, ':')
+                        .next()
+                        .expect("version after colon");
+                    format!("success bar={}", version)
+                }
+                Err(e) => {
+                    eprintln!("{} err {}", toolchain, e);
+                    "failed".to_string()
+                }
+            }
+        };
+
+        lock_path.rm_rf();
+        p.build_dir().rm_rf();
+
+        toolchain_result.push(run_cargo());
+        if version < semver::Version::new(1, 12, 0) {
+            p.change_file(
+                "Cargo.lock",
+                &format!(
+                    r#"
+                        [root]
+                        name = "foo"
+                        version = "0.1.0"
+                        dependencies = [
+                         "bar 1.0.1 (registry+{url})",
+                        ]
+
+                        [[package]]
+                        name = "bar"
+                        version = "1.0.1"
+                        source = "registry+{url}"
+                    "#,
+                    url = registry::registry_url()
+                ),
+            );
+        } else {
+            p.change_file(
+                "Cargo.lock",
+                &format!(
+                    r#"
+                        [root]
+                        name = "foo"
+                        version = "0.1.0"
+                        dependencies = [
+                         "bar 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                        ]
+
+                        [[package]]
+                        name = "bar"
+                        version = "1.0.1"
+                        source = "registry+https://github.com/rust-lang/crates.io-index"
+
+                        [metadata]
+                        "checksum bar 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "{}"
+                    "#,
+                    bar_cksum
+                ),
+            );
+        }
+        toolchain_result.push(run_cargo());
+        results.push(toolchain_result);
+    }
+
+    // Generate a report.
+    let headers = vec!["Version", "Unlocked", "Locked"];
+    let init: Vec<usize> = headers.iter().map(|h| h.len()).collect();
+    let col_widths = results.iter().fold(init, |acc, row| {
+        acc.iter().zip(row).map(|(a, b)| *a.max(&b.len())).collect()
+    });
+    // Print headers
+    let spaced: Vec<_> = headers
+        .iter()
+        .enumerate()
+        .map(|(i, h)| {
+            format!(
+                " {}{}",
+                h,
+                " ".repeat(col_widths[i].saturating_sub(h.len()))
+            )
+        })
+        .collect();
+    eprintln!("{}", spaced.join(" |"));
+    let lines: Vec<_> = col_widths.iter().map(|w| "-".repeat(*w + 2)).collect();
+    eprintln!("{}", lines.join("|"));
+    // Print columns.
+    for row in results {
+        let rs: Vec<_> = row
+            .iter()
+            .enumerate()
+            .map(|(i, c)| {
+                format!(
+                    " {}{} ",
+                    c,
+                    " ".repeat(col_widths[i].saturating_sub(c.len()))
+                )
+            })
+            .collect();
+        eprintln!("{}", rs.join("|"));
+    }
 }

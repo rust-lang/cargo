@@ -258,6 +258,13 @@ pub struct RegistryPackage<'a> {
     #[serde(borrow)]
     deps: Vec<RegistryDependency<'a>>,
     features: BTreeMap<InternedString, Vec<InternedString>>,
+    /// This field contains features with new, extended syntax. Specifically,
+    /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
+    ///
+    /// This is separated from `features` because versions older than 1.19
+    /// will fail to load due to not being able to parse the new syntax, even
+    /// with a `Cargo.lock` file.
+    features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     cksum: String,
     /// If `true`, Cargo will skip this version when resolving.
     ///

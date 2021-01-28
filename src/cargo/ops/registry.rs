@@ -8,7 +8,7 @@ use std::time::Duration;
 use std::{cmp, env};
 
 use anyhow::{bail, format_err};
-use crates_io::{self, NewCrate, NewCrateDependency, Registry};
+use crates_io::{self, NewCrate, NewCrateDependency, NewFeatureMap, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
@@ -273,25 +273,15 @@ fn transmit(
         return Ok(());
     }
 
-    let string_features = match manifest.original().features() {
-        Some(features) => features
-            .iter()
-            .map(|(feat, values)| {
-                (
-                    feat.to_string(),
-                    values.iter().map(|fv| fv.to_string()).collect(),
-                )
-            })
-            .collect::<BTreeMap<String, Vec<String>>>(),
-        None => BTreeMap::new(),
-    };
+    let (features, features2) = features_for_publish(manifest.original().features());
 
     let publish = registry.publish(
         &NewCrate {
             name: pkg.name().to_string(),
             vers: pkg.version().to_string(),
             deps,
-            features: string_features,
+            features,
+            features2,
             authors: authors.clone(),
             description: description.clone(),
             homepage: homepage.clone(),
@@ -343,6 +333,44 @@ fn transmit(
             Ok(())
         }
         Err(e) => Err(e),
+    }
+}
+
+/// Extracts the features for publishing, since publishing needs new feature
+/// syntax to be separated.
+pub fn features_for_publish<Str: AsRef<str>>(
+    features: Option<&BTreeMap<Str, Vec<Str>>>,
+) -> (NewFeatureMap, Option<NewFeatureMap>) {
+    let features = match features {
+        Some(features) => features,
+        None => return (NewFeatureMap::new(), None),
+    };
+    let mut features: NewFeatureMap = features
+        .iter()
+        .map(|(feat, values)| {
+            (
+                feat.as_ref().to_string(),
+                values.iter().map(|v| v.as_ref().to_string()).collect(),
+            )
+        })
+        .collect();
+    let mut features2 = NewFeatureMap::new();
+    for (feat, values) in features.iter_mut() {
+        if values
+            .iter()
+            .any(|value| value.starts_with("dep:") || value.contains("?/"))
+        {
+            // This leaves the old feature with an empty list, otherwise 1.11
+            // and older will fail due to missing features, even with
+            // Cargo.lock.
+            let new_values = values.drain(..).collect();
+            features2.insert(feat.clone(), new_values);
+        }
+    }
+    if features2.is_empty() {
+        (features, None)
+    } else {
+        (features, Some(features2))
     }
 }
 
