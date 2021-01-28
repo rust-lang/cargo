@@ -254,6 +254,14 @@ fn install_one(
     };
 
     let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+    // If we're installing in --locked mode and there's no `Cargo.lock` published
+    // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
+    if config.locked() && !ws.root().join("Cargo.lock").exists() {
+        config.shell().warn(format!(
+            "no Cargo.lock file published in {}",
+            pkg.to_string()
+        ))?;
+    }
     let pkg = if source_id.is_git() {
         // Don't use ws.current() in order to keep the package source as a git source so that
         // install tracking uses the correct source.

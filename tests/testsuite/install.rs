@@ -682,6 +682,7 @@ fn git_repo() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
+[WARNING] no Cargo.lock file published in foo v0.1.0 ([..])
 [INSTALLING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -1664,4 +1665,15 @@ workspace: [..]/foo/Cargo.toml
         )
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn locked_install_without_published_lockfile() {
+    Package::new("foo", "0.1.0")
+        .file("src/main.rs", "//! Some docs\nfn main() {}")
+        .publish();
+
+    cargo_process("install foo --locked")
+        .with_stderr_contains("[WARNING] no Cargo.lock file published in foo v0.1.0")
+        .run();
 }
