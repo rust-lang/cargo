@@ -1175,6 +1175,7 @@ fn publish_git_with_version() {
     p.cargo("publish --no-verify --token sekrit").run();
 
     publish::validate_upload_with_contents(
+        "v1",
         r#"
         {
           "authors": [],
@@ -1272,6 +1273,7 @@ fn publish_dev_dep_no_version() {
         .run();
 
     publish::validate_upload_with_contents(
+        "v1",
         r#"
         {
           "authors": [],

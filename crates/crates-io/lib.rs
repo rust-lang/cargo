@@ -269,14 +269,14 @@ impl Registry {
         let size = tarball_len as usize + header.len();
         let mut body = Cursor::new(header).chain(tarball);
 
-        let url = format!("{}/api/v1/crates/new", self.host);
+        let version = if krate.features2.is_some() { 2 } else { 1 };
+        self.set_url(version, "/crates/new")?;
 
         let token = match self.token.as_ref() {
             Some(s) => s,
             None => bail!("no upload token found, please run `cargo login`"),
         };
         self.handle.put(true)?;
-        self.handle.url(&url)?;
         self.handle.in_filesize(size as u64)?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
@@ -383,8 +383,16 @@ impl Registry {
         self.req(path, b, Auth::Authorized)
     }
 
+    fn set_url(&mut self, version: u32, path: &str) -> Result<()> {
+        assert!(path.starts_with('/'));
+        let sep = if self.host.ends_with('/') { "" } else { "/" };
+        self.handle
+            .url(&format!("{}{}api/v{}{}", self.host, sep, version, path))?;
+        Ok(())
+    }
+
     fn req(&mut self, path: &str, body: Option<&[u8]>, authorized: Auth) -> Result<String> {
-        self.handle.url(&format!("{}/api/v1{}", self.host, path))?;
+        self.set_url(1, path)?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
         headers.append("Content-Type: application/json")?;

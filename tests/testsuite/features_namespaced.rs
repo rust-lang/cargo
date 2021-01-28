@@ -1039,6 +1039,7 @@ fn publish_no_implicit() {
         .run();
 
     publish::validate_upload_with_contents(
+        "v1",
         r#"
         {
           "authors": [],
@@ -1153,6 +1154,7 @@ fn publish() {
         .run();
 
     publish::validate_upload_with_contents(
+        "v2",
         r#"
         {
           "authors": [],
@@ -1214,6 +1216,53 @@ feat3 = ["feat2"]
 "#,
         )],
     );
+}
+
+#[cargo_test]
+fn old_registry_publish_error() {
+    // What happens if a registry does not support the v2 api.
+    let server = registry::RegistryBuilder::new().build_api_server(&|headers| {
+        assert_eq!(headers[0], "PUT /api/v2/crates/new HTTP/1.1");
+        (404, &"")
+    });
+
+    Package::new("bar", "1.0.0").alternative(true).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "MIT"
+                homepage = "https://example.com/"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true, registry = "alternative" }
+
+                [features]
+                feat = ["dep:bar"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --registry alternative -Z namespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[VERIFYING] foo v0.1.0 [..]
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[UPLOADING] foo v0.1.0 [..]
+[ERROR] This package uses new feature syntax that is not supported by the registry at http://127.0.0.1:[..]
+")
+        .run();
+
+    server.join().unwrap();
 }
 
 // This is a test for exercising the behavior of older versions of cargo. You

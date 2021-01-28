@@ -610,6 +610,7 @@ fn publish() {
         .run();
 
     publish::validate_upload_with_contents(
+        "v2",
         r#"
         {
           "authors": [],

@@ -30,12 +30,16 @@ pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_
 
 /// Checks the result of a crate publish, along with the contents of the files.
 pub fn validate_upload_with_contents(
+    version: &str,
     expected_json: &str,
     expected_crate_name: &str,
     expected_files: &[&str],
     expected_contents: &[(&str, &str)],
 ) {
-    let new_path = registry::api_path().join("api/v1/crates/new");
+    let new_path = registry::api_path()
+        .join("api")
+        .join(version)
+        .join("crates/new");
     _validate_upload(
         &new_path,
         expected_json,
