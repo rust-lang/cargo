@@ -188,6 +188,7 @@ const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
+pub const INDEX_SCHEMA_VERSION: u32 = 2;
 
 /// A "source" for a [local](local::LocalRegistry) or
 /// [remote](remote::RemoteRegistry) registry.
@@ -276,6 +277,25 @@ pub struct RegistryPackage<'a> {
     /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
     links: Option<InternedString>,
+    /// The schema version for this entry.
+    ///
+    /// If this is None, it defaults to version 1. Version 2 means the
+    /// `features2` field is present. Entries with unknown versions are
+    /// ignored.
+    ///
+    /// This provides a method to safely introduce changes to index entries
+    /// and allow older versions of cargo to ignore newer entries it doesn't
+    /// understand. This is honored as of 1.51, so unfortunately older
+    /// versions will ignore it, and potentially misinterpret version 2 and
+    /// newer entries.
+    ///
+    /// The intent is that versions older than 1.51 will work with a
+    /// pre-existing `Cargo.lock`, but they may not correctly process `cargo
+    /// update` or build a lock from scratch. In that case, cargo may
+    /// incorrectly select a new package that uses a new index format. A
+    /// workaround is to downgrade any packages that are incompatible with the
+    /// `--precise` flag of `cargo update`.
+    v: Option<u32>,
 }
 
 #[test]

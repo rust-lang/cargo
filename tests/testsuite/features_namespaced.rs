@@ -1191,7 +1191,8 @@ fn publish() {
           "readme": null,
           "readme_file": null,
           "repository": null,
-          "vers": "0.1.0"
+          "vers": "0.1.0",
+          "v": 2
           }
         "#,
         "foo-0.1.0.crate",

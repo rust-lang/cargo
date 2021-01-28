@@ -274,6 +274,7 @@ fn transmit(
     }
 
     let (features, features2) = features_for_publish(manifest.original().features());
+    let v = if features2.is_some() { Some(2) } else { None };
 
     let publish = registry.publish(
         &NewCrate {
@@ -295,6 +296,7 @@ fn transmit(
             license_file: license_file.clone(),
             badges: badges.clone(),
             links: links.clone(),
+            v,
         },
         tarball,
     );

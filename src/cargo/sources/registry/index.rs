@@ -68,7 +68,7 @@
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_SCHEMA_VERSION};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
@@ -751,7 +751,12 @@ impl IndexSummary {
             features2,
             yanked,
             links,
+            v,
         } = serde_json::from_slice(line)?;
+        let v = v.unwrap_or(1);
+        if v > INDEX_SCHEMA_VERSION {
+            bail!("unsupported schema version {} ({} {})", v, name, vers);
+        }
         log::trace!("json parsed registry {}/{}", name, vers);
         let pkgid = PackageId::new(name, &vers, source_id)?;
         let deps = deps

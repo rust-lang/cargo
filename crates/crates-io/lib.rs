@@ -60,6 +60,8 @@ pub struct NewCrate {
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v: Option<u32>,
 }
 
 #[derive(Serialize)]
@@ -105,7 +107,7 @@ struct OwnerResponse {
 struct ApiErrorList {
     errors: Vec<ApiError>,
 }
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ApiError {
     detail: String,
 }
@@ -269,8 +271,7 @@ impl Registry {
         let size = tarball_len as usize + header.len();
         let mut body = Cursor::new(header).chain(tarball);
 
-        let version = if krate.features2.is_some() { 2 } else { 1 };
-        self.set_url(version, "/crates/new")?;
+        self.set_url(krate.v.unwrap_or(1), "/crates/new")?;
 
         let token = match self.token.as_ref() {
             Some(s) => s,

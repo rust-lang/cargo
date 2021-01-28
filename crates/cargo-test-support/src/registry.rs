@@ -328,6 +328,7 @@ pub struct Package {
     links: Option<String>,
     rust_version: Option<String>,
     cargo_features: Vec<String>,
+    v: Option<u32>,
 }
 
 #[derive(Clone)]
@@ -389,6 +390,7 @@ impl Package {
             links: None,
             rust_version: None,
             cargo_features: Vec::new(),
+            v: None,
         }
     }
 
@@ -528,6 +530,14 @@ impl Package {
         self
     }
 
+    /// Sets the index schema version for this package.
+    ///
+    /// See [`cargo::sources::registry::RegistryPackage`] for more information.
+    pub fn schema_version(&mut self, version: u32) -> &mut Package {
+        self.v = Some(version);
+        self
+    }
+
     /// Creates the package and place it in the registry.
     ///
     /// This does not actually use Cargo's publishing system, but instead
@@ -585,6 +595,10 @@ impl Package {
         });
         if let Some(f2) = &features2 {
             json["features2"] = serde_json::json!(f2);
+            json["v"] = serde_json::json!(2);
+        }
+        if let Some(v) = self.v {
+            json["v"] = serde_json::json!(v);
         }
         let line = json.to_string();
 
