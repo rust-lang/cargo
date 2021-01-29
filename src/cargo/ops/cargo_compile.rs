@@ -429,12 +429,7 @@ pub fn create_bcx<'a, 'cfg>(
         );
     }
 
-    let profiles = Profiles::new(
-        ws.profiles(),
-        config,
-        build_config.requested_profile,
-        ws.unstable_features(),
-    )?;
+    let profiles = Profiles::new(ws, build_config.requested_profile)?;
     profiles.validate_packages(
         ws.profiles(),
         &mut config.shell(),
@@ -887,19 +882,20 @@ fn generate_targets(
             };
 
             let is_local = pkg.package_id().source_id().is_path();
-            let profile = profiles.get_profile(
-                pkg.package_id(),
-                ws.is_member(pkg),
-                is_local,
-                unit_for,
-                target_mode,
-            );
 
             // No need to worry about build-dependencies, roots are never build dependencies.
             let features_for = FeaturesFor::from_for_host(target.proc_macro());
             let features = resolved_features.activated_features(pkg.package_id(), features_for);
 
             for kind in requested_kinds {
+                let profile = profiles.get_profile(
+                    pkg.package_id(),
+                    ws.is_member(pkg),
+                    is_local,
+                    unit_for,
+                    target_mode,
+                    kind.for_target(target),
+                );
                 let unit = interner.intern(
                     pkg,
                     target,

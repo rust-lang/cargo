@@ -4444,7 +4444,9 @@ fn uplift_dsym_of_bin_on_mac() {
         .file("tests/d.rs", "fn main() { panic!(); }")
         .build();
 
-    p.cargo("build --bins --examples --tests").run();
+    p.cargo("build --bins --examples --tests")
+        .enable_mac_dsym()
+        .run();
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
@@ -4461,7 +4463,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
         .build();
     let dsym = p.target_debug_dir().join("foo.dSYM");
 
-    p.cargo("build").run();
+    p.cargo("build").enable_mac_dsym().run();
     assert!(dsym.is_dir());
 
     // Simulate the situation where the underlying dSYM bundle goes missing
@@ -4477,7 +4479,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
     assert!(dsym.is_symlink());
     assert!(!dsym.exists());
 
-    p.cargo("build").run();
+    p.cargo("build").enable_mac_dsym().run();
     assert!(dsym.is_dir());
 }
 
