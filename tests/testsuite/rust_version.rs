@@ -11,7 +11,7 @@ fn rust_version_gated() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
-                rust-version = "1.17"
+                rust-version = "1.9999"
             "#,
         )
         .file("src/lib.rs", "")
@@ -31,7 +31,7 @@ fn rust_version_gated() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
-                rust-version = "1.17"
+                rust-version = "1.9999"
             "#,
         )
         .file("src/lib.rs", "")
