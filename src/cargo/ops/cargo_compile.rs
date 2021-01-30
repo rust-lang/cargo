@@ -290,9 +290,7 @@ pub fn compile_ws<'a>(
     cx.compile(exec)
 }
 
-pub fn print_cfg<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<()> {
-    let target_data = RustcTargetData::new(ws, &options.build_config.requested_kinds)?;
-    rustc_cfg::emit_serialized_rustc_cfg(&target_data, &options.build_config.requested_kinds)?;
+pub fn print<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<()> {
     Ok(())
 }
 

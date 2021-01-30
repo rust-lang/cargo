@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-const PRINT_CFG_ARG_NAME: &str = "print-cfg";
+const PRINT_ARG_NAME: &str = "print";
 
 pub fn cli() -> App {
     subcommand("rustc")
@@ -32,13 +32,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
-        .arg(
-            opt(
-                PRINT_CFG_ARG_NAME,
-                "Output the compiler configuration in JSON (unstable)",
-            )
-            .hidden(true),
-        )
+        .arg(Arg::with_name(PRINT_ARG_NAME).takes_value(true).help("Output the compiler configuration").hidden(true))
         .after_help("Run `cargo help rustc` for more detailed information.\n")
 }
 
@@ -70,11 +64,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else {
         Some(target_args)
     };
-    if args.is_present(PRINT_CFG_ARG_NAME) {
+    if args.is_present(PRINT_ARG_NAME) {
         config
             .cli_unstable()
-            .fail_if_stable_opt(PRINT_CFG_ARG_NAME, 8923)?;
-        ops::print_cfg(&ws, &compile_opts)?;
+            .fail_if_stable_opt(PRINT_ARG_NAME, 8923)?;
+        ops::print(&ws, &compile_opts)?;
     } else {
         ops::compile(&ws, &compile_opts)?;
     }
