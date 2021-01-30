@@ -24,14 +24,16 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::io::Write;
 use std::sync::Arc;
 
-use crate::core::compiler::rustc_cfg;
 use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::{
+    env_args, output_err_info, CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit,
+};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
-use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
@@ -42,6 +44,7 @@ use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
 use crate::util::restricted_names::is_glob_pattern;
+use crate::util::CargoResultExt;
 use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
 use anyhow::Context as _;
@@ -290,7 +293,68 @@ pub fn compile_ws<'a>(
     cx.compile(exec)
 }
 
-pub fn print<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<()> {
+pub fn print<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions,
+    print_opt_value: &str,
+) -> CargoResult<()> {
+    let CompileOptions {
+        ref build_config,
+        ref target_rustc_args,
+        ..
+    } = *options;
+    let config = ws.config();
+    let rustc = config.load_global_rustc(Some(ws))?;
+    let mut kinds = build_config.requested_kinds.clone();
+    if kinds.is_empty() {
+        kinds.push(CompileKind::Host);
+    }
+    let mut print_empty_line = false;
+    for kind in kinds {
+        let rustflags = env_args(
+            config,
+            &build_config.requested_kinds,
+            &rustc.host,
+            None,
+            kind,
+            "RUSTFLAGS",
+        )?;
+        let mut process = rustc.process();
+        process
+            .arg("-")
+            .arg("--crate-name")
+            .arg("___")
+            .args(&rustflags);
+        if let Some(args) = target_rustc_args {
+            process.args(args);
+        }
+        if let CompileKind::Target(t) = kind {
+            process.arg("--target").arg(t.short_name());
+        }
+        process
+            .arg("--print")
+            .arg(print_opt_value)
+            .env_remove("RUSTC_LOG");
+        let (output, error) = rustc
+            .cached_output(&process)
+            .chain_err(|| "failed to run `rustc --print=<INFO>`")?;
+        if output.is_empty() {
+            anyhow::bail!(
+                "output of --print={} missing from rustc\n{}",
+                print_opt_value,
+                output_err_info(&process, &output, &error)
+            );
+        }
+        let stdout = std::io::stdout();
+        let mut lock = stdout.lock();
+        if print_empty_line {
+            writeln!(lock)?;
+        } else {
+            print_empty_line = true;
+        }
+        lock.write_all(output.as_bytes())?;
+        drop(lock);
+    }
     Ok(())
 }
 

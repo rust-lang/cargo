@@ -519,7 +519,7 @@ fn parse_crate_type(
 }
 
 /// Helper for creating an error message when parsing rustc output fails.
-fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
+pub fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
     let mut result = format!("command was: {}\n", cmd);
     if !stdout.is_empty() {
         result.push_str("\n--- stdout\n");
@@ -552,7 +552,7 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 ///
 /// Note that if a `target` is specified, no args will be passed to host code (plugins, build
 /// scripts, ...), even if it is the same as the target.
-fn env_args(
+pub fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],
     host_triple: &str,

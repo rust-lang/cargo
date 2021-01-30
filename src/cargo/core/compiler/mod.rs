@@ -13,7 +13,6 @@ mod layout;
 mod links;
 mod lto;
 mod output_depinfo;
-pub mod rustc_cfg;
 pub mod rustdoc;
 pub mod standard_lib;
 mod timings;
@@ -33,7 +32,9 @@ use lazycell::LazyCell;
 use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
-pub use self::build_context::{BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo};
+pub use self::build_context::{
+    env_args, output_err_info, BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo,
+};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
