@@ -342,6 +342,14 @@ impl Registry {
 
         match (self.handle.response_code()?, errors) {
             (0, None) | (200, None) => {}
+            // We need to report this until https://github.com/rust-lang/crates.io/issues/1643 is
+            // handled better or cargo publishes considering the MAX rate..
+            (429, None) => bail!(
+                "The maximum publish rate for crates.io is 30 crates/min.
+                If the number of components of your workspace is bigger, please \
+                fill an issue in https://github.com/rust-lang/crates.io
+                For more info see: https://github.com/rust-lang/crates.io/pull/1596"
+            ),
             (503, None) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => bail!(
                 "Request timed out after 30 seconds. If you're trying to \
                  upload a crate it may be too large. If the crate is under \
