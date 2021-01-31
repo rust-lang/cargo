@@ -826,10 +826,18 @@ fn target_path(
                     return Ok(path);
                 }
             }
+            let target_folder_name = match target_kind {
+                "test" => "tests",
+                "bench" => "benches",
+                "example" => "examples",
+                "bins" => "bin",
+                _ => target_kind,
+            };
             Err(format!(
-                "can't find `{name}` {target_kind}, specify {target_kind}.path",
+                "can't find `{name}` {target_kind} at `{target_folder_name}/{name}`, specify {target_kind}.path if you want to use a non-default path",
                 name = name,
-                target_kind = target_kind
+                target_kind = target_kind,
+                target_folder_name = target_folder_name,
             ))
         }
         (None, Some(_)) => unreachable!(),
