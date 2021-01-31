@@ -1755,3 +1755,54 @@ fn json_artifact_includes_executable_for_benchmark() {
         )
         .run();
 }
+
+#[cargo_test]
+fn external_bench_warns_wrong_path() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [[bench]]
+                name = "external"
+                "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+
+                pub fn get_hello() -> &'static str { "Hello" }
+            "#,
+        )
+        .file(
+            "./bench/external.rs",
+            r#"
+                #![feature(test)]
+                #[allow(unused_extern_crates)]
+                extern crate foo;
+                extern crate test;
+
+                #[bench]
+                fn external_bench(_b: &mut test::Bencher) {()}
+            "#,
+        )
+        .build();
+
+    p.cargo("bench")
+    .with_status(101)
+        .with_stderr_contains(
+            "[..]can't find `[..]` bench at `[..]`, specify [..] if you want to use a non-default path",
+        )
+        .run();
+}

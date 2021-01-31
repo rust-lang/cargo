@@ -1849,7 +1849,7 @@ fn non_existing_example() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `hello` example, specify example.path",
+  can't find `[..]` example at `[..]`, specify [..] if you want to use a non-default path",
         )
         .run();
 }
@@ -1869,7 +1869,7 @@ fn non_existing_binary() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `foo` bin, specify bin.path",
+  can't find `[..]` bin at `[..]`, specify [..] if you want to use a non-default path",
         )
         .run();
 }
@@ -4220,7 +4220,7 @@ fn no_bin_in_src_with_lib() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `foo` bin, specify bin.path",
+  can't find `[..]` bin at `[..]`, specify [..] if you want to use a non-default path",
         )
         .run();
 }
@@ -4397,7 +4397,7 @@ fn same_metadata_different_directory() {
 }
 
 #[cargo_test]
-fn building_a_dependent_crate_witout_bin_should_fail() {
+fn building_a_dependent_crate_without_bin_should_fail() {
     Package::new("testless", "0.1.0")
         .file(
             "Cargo.toml",
@@ -4430,7 +4430,7 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("[..]can't find `a_bin` bin, specify bin.path")
+        .with_stderr_contains("[..]can't find `[..]` bin at `[..]`, specify [..] if you want to use a non-default path")
         .run();
 }
 
@@ -5437,4 +5437,28 @@ fn primary_package_env_var() {
         .build();
 
     foo.cargo("test").run();
+}
+
+#[cargo_test]
+fn using_bins_instead_of_bin_is_warned_in_err() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [[bin]]
+                name = "a_bin"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bins/a_bin.rs", "fn main { () }")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]can't find `[..]` bin at `[..]`, specify [..] if you want to use a non-default path")
+        .run();
 }
