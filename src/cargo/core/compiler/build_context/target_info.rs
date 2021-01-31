@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -755,28 +755,20 @@ impl RustcTargetData {
 /// Structure used to deal with Rustdoc fingerprinting
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RustDocFingerprint {
-    rustc_vv: String,
+    pub rustc_vv: String,
 }
 
 impl RustDocFingerprint {
     /// Read the `RustDocFingerprint` info from the fingerprint file.
     fn read<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<Self> {
-        let rustdoc_data = paths::read(
-            &cx.files()
-                .host_root()
-                .join(".rustdoc_fingerprint")
-                .with_extension("json"),
-        )?;
+        let rustdoc_data = paths::read(&cx.files().host_root().join(".rustdoc_fingerprint.json"))?;
         serde_json::from_str(&rustdoc_data).map_err(|e| anyhow::anyhow!("{:?}", e))
     }
 
     /// Write the `RustDocFingerprint` info into the fingerprint file.
     fn write<'a, 'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<()> {
         paths::write(
-            &cx.files()
-                .host_root()
-                .join(".rustdoc_fingerprint.json")
-                .with_extension("json"),
+            &cx.files().host_root().join(".rustdoc_fingerprint.json"),
             serde_json::to_string(&self)?.as_bytes(),
         )
     }
@@ -793,14 +785,28 @@ impl RustDocFingerprint {
         let actual_rustdoc_target_data = RustDocFingerprint {
             rustc_vv: cx.bcx.rustc().verbose_version.clone(),
         };
-        let doc_dir = cx.files().host_root().join("doc");
+
+        // Collect all of the target doc paths for which the docs need to be compiled for.
+        let doc_dirs: Vec<PathBuf> = cx
+            .compilation
+            .root_output
+            .iter()
+            .map(|(ck, _)| match ck {
+                CompileKind::Host => cx.files().host_root().to_path_buf(),
+                CompileKind::Target(t) => cx.files().host_root().join(Path::new(t.rustc_target())),
+            })
+            .map(|path| path.join("doc"))
+            .collect();
+
         // Check wether `.rustdoc_fingerprint.json` exists
         match Self::read(cx) {
             Ok(fingerprint) => {
                 // Check if rustc_version matches the one we just used. Otherways,
                 // remove the `doc` folder to trigger a re-compilation of the docs.
                 if fingerprint.rustc_vv != actual_rustdoc_target_data.rustc_vv {
-                    paths::remove_dir_all(&doc_dir)?;
+                    doc_dirs
+                        .iter()
+                        .try_for_each(|path| paths::remove_dir_all(&path))?;
                     actual_rustdoc_target_data.write(cx)?
                 }
             }
@@ -810,7 +816,9 @@ impl RustDocFingerprint {
             // exists neither, we simply do nothing and continue.
             Err(_) => {
                 // We don't care if this suceeds as explained above.
-                let _ = paths::remove_dir_all(doc_dir);
+                let _ = doc_dirs
+                    .iter()
+                    .try_for_each(|path| paths::remove_dir_all(&path));
                 actual_rustdoc_target_data.write(cx)?
             }
         }
