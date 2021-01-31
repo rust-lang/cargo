@@ -1406,3 +1406,21 @@ environment variables.
 The `rust-version` field in `Cargo.toml` has been stabilized in the 1.56 release.
 See the [rust-version field](manifest.html#the-rust-version-field) for more
 information on using the `rust-version` field and the `--ignore-rust-version` option.
+
+### codegen-backend
+
+The `codegen-backend` feature makes it possible to select the codegen backend used by rustc using a
+profile.
+
+Example:
+
+```toml
+[package]
+name = "foo"
+
+[dependencies]
+serde = "1.0.117"
+
+[profile.dev.package.foo]
+codegen-backend = "cranelift"
+```

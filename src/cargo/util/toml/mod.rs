@@ -433,6 +433,7 @@ pub enum U32OrBool {
 pub struct TomlProfile {
     pub opt_level: Option<TomlOptLevel>,
     pub lto: Option<StringOrBool>,
+    pub codegen_backend: Option<InternedString>,
     pub codegen_units: Option<u32>,
     pub debug: Option<U32OrBool>,
     pub split_debuginfo: Option<String>,
@@ -491,12 +492,12 @@ impl TomlProfile {
     ) -> CargoResult<()> {
         if let Some(ref profile) = self.build_override {
             features.require(Feature::profile_overrides())?;
-            profile.validate_override("build-override")?;
+            profile.validate_override("build-override", features)?;
         }
         if let Some(ref packages) = self.package {
             features.require(Feature::profile_overrides())?;
             for profile in packages.values() {
-                profile.validate_override("package")?;
+                profile.validate_override("package", features)?;
             }
         }
 
@@ -562,6 +563,11 @@ impl TomlProfile {
         if self.strip.is_some() {
             features.require(Feature::strip())?;
         }
+
+        if self.codegen_backend.is_some() {
+            features.require(Feature::codegen_backend())?;
+        }
+
         Ok(())
     }
 
@@ -642,7 +648,7 @@ impl TomlProfile {
         Ok(())
     }
 
-    fn validate_override(&self, which: &str) -> CargoResult<()> {
+    fn validate_override(&self, which: &str, features: &Features) -> CargoResult<()> {
         if self.package.is_some() {
             bail!("package-specific profiles cannot be nested");
         }
@@ -658,6 +664,9 @@ impl TomlProfile {
         if self.rpath.is_some() {
             bail!("`rpath` may not be specified in a `{}` profile", which)
         }
+        if self.codegen_backend.is_some() {
+            features.require(Feature::codegen_backend())?;
+        }
         Ok(())
     }
 
@@ -669,6 +678,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.lto {
             self.lto = Some(v.clone());
+        }
+
+        if let Some(v) = profile.codegen_backend {
+            self.codegen_backend = Some(v);
         }
 
         if let Some(v) = profile.codegen_units {
