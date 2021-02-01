@@ -97,29 +97,29 @@ fn read_file(path: &Path) -> Result<String, Error> {
 }
 
 fn diff(expected: &str, actual: &str) -> String {
-    use difference::{Changeset, Difference};
+    use similar::text::{ChangeTag, TextDiff};
     use std::fmt::Write;
 
     let mut res = String::new();
-    let changeset = Changeset::new(expected.trim(), actual.trim(), "\n");
+    let diff = TextDiff::from_lines(expected.trim(), actual.trim());
 
     let mut different = false;
-    for diff in changeset.diffs {
-        let (prefix, diff) = match diff {
-            Difference::Same(_) => continue,
-            Difference::Add(add) => ("+", add),
-            Difference::Rem(rem) => ("-", rem),
-        };
-        if !different {
-            write!(
-                &mut res,
-                "differences found (+ == actual, - == expected):\n"
-            )
-            .unwrap();
-            different = true;
-        }
-        for diff in diff.lines() {
-            writeln!(&mut res, "{} {}", prefix, diff).unwrap();
+    for op in diff.ops() {
+        for change in diff.iter_changes(op) {
+            let prefix = match change.tag() {
+                ChangeTag::Equal => continue,
+                ChangeTag::Insert => "+",
+                ChangeTag::Delete => "-",
+            };
+            if !different {
+                write!(
+                    &mut res,
+                    "differences found (+ == actual, - == expected):\n"
+                )
+                .unwrap();
+                different = true;
+            }
+            write!(&mut res, "{} {}", prefix, change.value()).unwrap();
         }
     }
     if different {
