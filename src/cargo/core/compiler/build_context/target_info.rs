@@ -773,6 +773,19 @@ impl RustDocFingerprint {
         )
     }
 
+    fn remove_doc_dirs(doc_dirs: &Vec<PathBuf>) -> CargoResult<()> {
+        let errs: Vec<CargoResult<()>> = doc_dirs
+            .iter()
+            .map(|path| paths::remove_dir_all(&path))
+            .filter(|res| res.is_err())
+            .collect();
+        if !errs.is_empty() {
+            Err(anyhow::anyhow!("Dir removal error"))
+        } else {
+            Ok(())
+        }
+    }
+
     /// This function checks whether the latest version of `Rustc` used to compile this
     /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
     /// call.
@@ -804,9 +817,7 @@ impl RustDocFingerprint {
                 // Check if rustc_version matches the one we just used. Otherways,
                 // remove the `doc` folder to trigger a re-compilation of the docs.
                 if fingerprint.rustc_vv != actual_rustdoc_target_data.rustc_vv {
-                    doc_dirs
-                        .iter()
-                        .try_for_each(|path| paths::remove_dir_all(&path))?;
+                    Self::remove_doc_dirs(&doc_dirs)?;
                     actual_rustdoc_target_data.write(cx)?
                 }
             }
@@ -816,9 +827,7 @@ impl RustDocFingerprint {
             // exists neither, we simply do nothing and continue.
             Err(_) => {
                 // We don't care if this suceeds as explained above.
-                let _ = doc_dirs
-                    .iter()
-                    .try_for_each(|path| paths::remove_dir_all(&path));
+                let _ = Self::remove_doc_dirs(&doc_dirs);
                 actual_rustdoc_target_data.write(cx)?
             }
         }

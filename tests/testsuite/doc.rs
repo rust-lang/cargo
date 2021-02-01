@@ -1723,6 +1723,7 @@ LLVM version: 9.0
     );
 }
 
+#[cfg(target_os = "linux")]
 #[cargo_test]
 fn doc_fingerprint_respects_target_paths() {
     // Random rustc verbose version
