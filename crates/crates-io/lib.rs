@@ -344,7 +344,7 @@ impl Registry {
             (0, None) | (200, None) => {}
             // We need to report this until https://github.com/rust-lang/crates.io/issues/1643 is
             // handled better or cargo publishes considering the MAX rate..
-            (429, None) => bail!(
+            (429, None) if self.host_is_crates_io() => bail!(
                 "The maximum publish rate for crates.io is 30 crates/min.
                 If the number of components of your workspace is bigger, please \
                 fill an issue in https://github.com/rust-lang/crates.io
