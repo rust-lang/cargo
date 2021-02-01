@@ -171,7 +171,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     };
 
     if let Some(perr) = err.downcast_ref::<ProcessError>() {
-        if let Some(code) = perr.exit.as_ref().and_then(|c| c.code()) {
+        if let Some(code) = perr.code {
             return Err(CliError::code(code));
         }
     }

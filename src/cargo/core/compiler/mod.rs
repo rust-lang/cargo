@@ -297,7 +297,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             match err
                 .downcast_ref::<ProcessError>()
                 .as_ref()
-                .and_then(|perr| perr.exit.and_then(|e| e.code()))
+                .and_then(|perr| perr.code)
             {
                 Some(n) if errors::is_simple_exit_code(n) => VerboseError::new(err).into(),
                 _ => err,

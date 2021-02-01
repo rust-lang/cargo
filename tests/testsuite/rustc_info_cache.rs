@@ -6,11 +6,6 @@ use std::env;
 
 #[cargo_test]
 fn rustc_info_cache() {
-    // Currently detects a flag only supported on nightly. All other channels
-    // always have a miss.
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();

@@ -4,7 +4,7 @@ pub use self::canonical_url::CanonicalUrl;
 pub use self::config::{homedir, Config, ConfigValue};
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
-pub use self::errors::{internal, process_error};
+pub use self::errors::{exit_status_to_string, internal, process_error, process_error_raw};
 pub use self::errors::{CargoResult, CargoResultExt, CliResult, Test};
 pub use self::errors::{CargoTestError, CliError, ProcessError};
 pub use self::flock::{FileLock, Filesystem};

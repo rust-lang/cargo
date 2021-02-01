@@ -125,7 +125,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         None => Ok(()),
         Some(err) => {
             let context = anyhow::format_err!("{}", err.hint(&ws, &ops.compile_opts));
-            let e = match err.exit.as_ref().and_then(|e| e.code()) {
+            let e = match err.code {
                 // Don't show "process didn't exit successfully" for simple errors.
                 Some(i) if errors::is_simple_exit_code(i) => CliError::new(context, i),
                 Some(i) => CliError::new(Error::from(err).context(context), i),
