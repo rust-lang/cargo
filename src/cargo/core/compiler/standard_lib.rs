@@ -162,17 +162,16 @@ pub fn generate_std_roots(
         // in time is minimal, and the difference in caching is
         // significant.
         let mode = CompileMode::Build;
+        let profile = profiles.get_profile(
+            pkg.package_id(),
+            /*is_member*/ false,
+            /*is_local*/ false,
+            unit_for,
+            mode,
+        );
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
 
         for kind in kinds {
-            let profile = profiles.get_profile(
-                pkg.package_id(),
-                /*is_member*/ false,
-                /*is_local*/ false,
-                unit_for,
-                mode,
-                *kind,
-            );
             let list = ret.entry(*kind).or_insert_with(Vec::new);
             list.push(interner.intern(
                 pkg,

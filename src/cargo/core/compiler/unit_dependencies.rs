@@ -593,7 +593,6 @@ fn new_unit_dep(
         is_local,
         unit_for,
         mode,
-        kind,
     );
     new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
 }
