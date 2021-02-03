@@ -790,9 +790,9 @@ impl RustDocFingerprint {
     /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
     /// call.
     ///
-    /// In case it's not, it takes care of removig the `doc/` folder as well as overwriting
+    /// In case it's not, it takes care of removing the `doc/` folder as well as overwriting
     /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
-    /// versions of the `js/html/css` files that `Rustc` autogenerates which do not have
+    /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
     /// any versioning.
     pub fn check_rustdoc_fingerprint<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<()> {
         let actual_rustdoc_target_data = RustDocFingerprint {
@@ -822,11 +822,11 @@ impl RustDocFingerprint {
                 }
             }
             // If the file does not exist, then we cannot assume that the docs were compiled
-            // with the actual Rustc instace version. Therefore, we try to remove the
+            // with the actual Rustc instance version. Therefore, we try to remove the
             // `doc` directory forcing the recompilation of the docs. If the directory doesn't
             // exists neither, we simply do nothing and continue.
             Err(_) => {
-                // We don't care if this suceeds as explained above.
+                // We don't care if this succeeds as explained above.
                 let _ = Self::remove_doc_dirs(&doc_dirs);
                 actual_rustdoc_target_data.write(cx)?
             }
