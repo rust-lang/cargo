@@ -876,7 +876,7 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
-    /// Prepares the manfiest for publishing.
+    /// Prepares the manifest for publishing.
     // - Path and git components of dependency specifications are removed.
     // - License path is updated to point within the package.
     pub fn prepare_for_publish(
