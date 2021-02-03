@@ -429,12 +429,7 @@ pub fn create_bcx<'a, 'cfg>(
         );
     }
 
-    let profiles = Profiles::new(
-        ws.profiles(),
-        config,
-        build_config.requested_profile,
-        ws.unstable_features(),
-    )?;
+    let profiles = Profiles::new(ws, build_config.requested_profile)?;
     profiles.validate_packages(
         ws.profiles(),
         &mut config.shell(),

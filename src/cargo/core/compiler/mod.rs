@@ -297,7 +297,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             match err
                 .downcast_ref::<ProcessError>()
                 .as_ref()
-                .and_then(|perr| perr.exit.and_then(|e| e.code()))
+                .and_then(|perr| perr.code)
             {
                 Some(n) if errors::is_simple_exit_code(n) => VerboseError::new(err).into(),
                 _ => err,
@@ -768,6 +768,7 @@ fn build_base_args(
         codegen_units,
         debuginfo,
         debug_assertions,
+        split_debuginfo,
         overflow_checks,
         rpath,
         ref panic,
@@ -819,6 +820,15 @@ fn build_base_args(
     }
 
     cmd.args(&lto_args(cx, unit));
+
+    // This is generally just an optimization on build time so if we don't pass
+    // it then it's ok. As of the time of this writing it's a very new flag, so
+    // we need to dynamically check if it's available.
+    if cx.bcx.target_data.info(unit.kind).supports_split_debuginfo {
+        if let Some(split) = split_debuginfo {
+            cmd.arg("-C").arg(format!("split-debuginfo={}", split));
+        }
+    }
 
     if let Some(n) = codegen_units {
         cmd.arg("-C").arg(&format!("codegen-units={}", n));
