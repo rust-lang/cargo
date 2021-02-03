@@ -2,12 +2,13 @@
 #![allow(clippy::identity_op)] // used for vertical alignment
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, format_err, Context, Result};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
@@ -121,6 +122,70 @@ struct Crates {
     crates: Vec<Crate>,
     meta: TotalCrates,
 }
+
+#[derive(Debug)]
+pub enum ResponseError {
+    Curl(curl::Error),
+    Api {
+        code: u32,
+        errors: Vec<String>,
+    },
+    Code {
+        code: u32,
+        headers: Vec<String>,
+        body: String,
+    },
+    Other(anyhow::Error),
+}
+
+impl std::error::Error for ResponseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ResponseError::Curl(..) => None,
+            ResponseError::Api { .. } => None,
+            ResponseError::Code { .. } => None,
+            ResponseError::Other(e) => Some(e.as_ref()),
+        }
+    }
+}
+
+impl fmt::Display for ResponseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ResponseError::Curl(e) => write!(f, "{}", e),
+            ResponseError::Api { code, errors } => write!(
+                f,
+                "api errors (status {} {}): {}",
+                code,
+                reason(*code),
+                errors.join(", ")
+            ),
+            ResponseError::Code {
+                code,
+                headers,
+                body,
+            } => write!(
+                f,
+                "failed to get a 200 OK response, got {}\n\
+                 headers:\n\
+                 \t{}\n\
+                 body:\n\
+                 {}",
+                code,
+                headers.join("\n\t"),
+                body
+            ),
+            ResponseError::Other(..) => write!(f, "invalid response from server"),
+        }
+    }
+}
+
+impl From<curl::Error> for ResponseError {
+    fn from(error: curl::Error) -> Self {
+        ResponseError::Curl(error)
+    }
+}
+
 impl Registry {
     /// Creates a new `Registry`.
     ///
@@ -214,7 +279,25 @@ impl Registry {
         headers.append(&format!("Authorization: {}", token))?;
         self.handle.http_headers(headers)?;
 
-        let body = self.handle(&mut |buf| body.read(buf).unwrap_or(0))?;
+        let started = Instant::now();
+        let body = self
+            .handle(&mut |buf| body.read(buf).unwrap_or(0))
+            .map_err(|e| match e {
+                ResponseError::Code { code, .. }
+                    if code == 503
+                        && started.elapsed().as_secs() >= 29
+                        && self.host_is_crates_io() =>
+                {
+                    format_err!(
+                        "Request timed out after 30 seconds. If you're trying to \
+                         upload a crate it may be too large. If the crate is under \
+                         10MB in size, you can email help@crates.io for assistance.\n\
+                         Total size was {}.",
+                        tarball_len
+                    )
+                }
+                _ => e.into(),
+            })?;
 
         let response = if body.is_empty() {
             "{}".parse()?
@@ -308,15 +391,18 @@ impl Registry {
                 self.handle.upload(true)?;
                 self.handle.in_filesize(body.len() as u64)?;
                 self.handle(&mut |buf| body.read(buf).unwrap_or(0))
+                    .map_err(|e| e.into())
             }
-            None => self.handle(&mut |_| 0),
+            None => self.handle(&mut |_| 0).map_err(|e| e.into()),
         }
     }
 
-    fn handle(&mut self, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
+    fn handle(
+        &mut self,
+        read: &mut dyn FnMut(&mut [u8]) -> usize,
+    ) -> std::result::Result<String, ResponseError> {
         let mut headers = Vec::new();
         let mut body = Vec::new();
-        let started;
         {
             let mut handle = self.handle.transfer();
             handle.read_function(|buf| Ok(read(buf)))?;
@@ -325,50 +411,36 @@ impl Registry {
                 Ok(data.len())
             })?;
             handle.header_function(|data| {
-                headers.push(String::from_utf8_lossy(data).into_owned());
+                // Headers contain trailing \r\n, trim them to make it easier
+                // to work with.
+                let s = String::from_utf8_lossy(data).trim().to_string();
+                headers.push(s);
                 true
             })?;
-            started = Instant::now();
             handle.perform()?;
         }
 
         let body = match String::from_utf8(body) {
             Ok(body) => body,
-            Err(..) => bail!("response body was not valid utf-8"),
+            Err(..) => {
+                return Err(ResponseError::Other(format_err!(
+                    "response body was not valid utf-8"
+                )))
+            }
         };
         let errors = serde_json::from_str::<ApiErrorList>(&body)
             .ok()
             .map(|s| s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>());
 
         match (self.handle.response_code()?, errors) {
-            (0, None) | (200, None) => {}
-            (503, None) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => bail!(
-                "Request timed out after 30 seconds. If you're trying to \
-                 upload a crate it may be too large. If the crate is under \
-                 10MB in size, you can email help@crates.io for assistance."
-            ),
-            (code, Some(errors)) => {
-                let reason = reason(code);
-                bail!(
-                    "api errors (status {} {}): {}",
-                    code,
-                    reason,
-                    errors.join(", ")
-                )
-            }
-            (code, None) => bail!(
-                "failed to get a 200 OK response, got {}\n\
-                 headers:\n\
-                 \t{}\n\
-                 body:\n\
-                 {}",
+            (0, None) | (200, None) => Ok(body),
+            (code, Some(errors)) => Err(ResponseError::Api { code, errors }),
+            (code, None) => Err(ResponseError::Code {
                 code,
-                headers.join("\n\t"),
+                headers,
                 body,
-            ),
+            }),
         }
-
-        Ok(body)
     }
 }
 

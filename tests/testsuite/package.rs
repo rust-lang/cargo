@@ -818,6 +818,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 
 #[cargo_test]
 fn generated_manifest() {
+    registry::alt_init();
     Package::new("abc", "1.0.0").publish();
     Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();

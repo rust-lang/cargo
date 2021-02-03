@@ -8,6 +8,7 @@ use std::fs;
 
 #[cargo_test]
 fn depend_on_alt_registry() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -57,6 +58,7 @@ fn depend_on_alt_registry() {
 
 #[cargo_test]
 fn depend_on_alt_registry_depends_on_same_registry_no_index() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -99,6 +101,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 
 #[cargo_test]
 fn depend_on_alt_registry_depends_on_same_registry() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -141,6 +144,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 
 #[cargo_test]
 fn depend_on_alt_registry_depends_on_crates_io() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -185,7 +189,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 
 #[cargo_test]
 fn registry_and_path_dep_works() {
-    registry::init();
+    registry::alt_init();
 
     let p = project()
         .file(
@@ -219,7 +223,7 @@ fn registry_and_path_dep_works() {
 
 #[cargo_test]
 fn registry_incompatible_with_git() {
-    registry::init();
+    registry::alt_init();
 
     let p = project()
         .file(
@@ -249,6 +253,7 @@ fn registry_incompatible_with_git() {
 
 #[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
+    registry::alt_init();
     let fakeio_path = paths::root().join("fake.io");
     let fakeio_url = fakeio_path.into_url().unwrap();
     let p = project()
@@ -307,6 +312,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
 
 #[cargo_test]
 fn publish_with_registry_dependency() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -370,6 +376,7 @@ fn publish_with_registry_dependency() {
 
 #[cargo_test]
 fn alt_registry_and_crates_io_deps() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -415,7 +422,7 @@ fn alt_registry_and_crates_io_deps() {
 
 #[cargo_test]
 fn block_publish_due_to_no_token() {
-    registry::init();
+    registry::alt_init();
     let p = project().file("src/lib.rs", "").build();
 
     fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
@@ -432,6 +439,7 @@ fn block_publish_due_to_no_token() {
 
 #[cargo_test]
 fn publish_to_alt_registry() {
+    registry::alt_init();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     // Setup the registry by publishing a package
@@ -472,6 +480,7 @@ fn publish_to_alt_registry() {
 
 #[cargo_test]
 fn publish_with_crates_io_dep() {
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -537,7 +546,7 @@ fn publish_with_crates_io_dep() {
 
 #[cargo_test]
 fn passwords_in_registries_index_url_forbidden() {
-    registry::init();
+    registry::alt_init();
 
     let config = paths::home().join(".cargo/config");
 
@@ -567,6 +576,7 @@ Caused by:
 
 #[cargo_test]
 fn patch_alt_reg() {
+    registry::alt_init();
     Package::new("bar", "0.1.0").publish();
     let p = project()
         .file(
@@ -656,6 +666,7 @@ Caused by:
 
 #[cargo_test]
 fn no_api() {
+    registry::alt_init();
     Package::new("bar", "0.0.1").alternative(true).publish();
     // Configure without `api`.
     let repo = git2::Repository::open(registry::alt_registry_path()).unwrap();
@@ -739,6 +750,7 @@ fn no_api() {
 #[cargo_test]
 fn alt_reg_metadata() {
     // Check for "registry" entries in `cargo metadata` with alternative registries.
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -1033,6 +1045,7 @@ fn alt_reg_metadata() {
 fn unknown_registry() {
     // A known registry refers to an unknown registry.
     // foo -> bar(crates.io) -> baz(alt)
+    registry::alt_init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -1188,6 +1201,7 @@ fn unknown_registry() {
 
 #[cargo_test]
 fn registries_index_relative_url() {
+    registry::alt_init();
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     fs::write(
@@ -1237,6 +1251,7 @@ fn registries_index_relative_url() {
 
 #[cargo_test]
 fn registries_index_relative_path_not_allowed() {
+    registry::alt_init();
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     fs::write(
