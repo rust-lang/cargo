@@ -4203,3 +4203,96 @@ fn test_with_dep_metadata() {
         .build();
     p.cargo("test --lib").run();
 }
+
+#[cargo_test]
+fn duplicate_script_with_extra_env() {
+    // Test where a build script is run twice, that emits different rustc-env
+    // and rustc-cfg values. In this case, one is run for host, the other for
+    // target.
+    if !cross_compile::can_run_on_host() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "pm"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                pm = { path = "../pm" }
+            "#,
+        )
+        .file(
+            "foo/src/lib.rs",
+            &r#"
+                //! ```rust
+                //! #[cfg(not(mycfg="{target}"))]
+                //! compile_error!{"expected mycfg set"}
+                //! assert_eq!(env!("CRATE_TARGET"), "{target}");
+                //! assert_eq!(std::env::var("CRATE_TARGET").unwrap(), "{target}");
+                //! ```
+
+                #[test]
+                fn check_target() {
+                    #[cfg(not(mycfg="{target}"))]
+                    compile_error!{"expected mycfg set"}
+                    // Compile-time assertion.
+                    assert_eq!(env!("CRATE_TARGET"), "{target}");
+                    // Run-time assertion.
+                    assert_eq!(std::env::var("CRATE_TARGET").unwrap(), "{target}");
+                }
+            "#
+            .replace("{target}", target),
+        )
+        .file(
+            "foo/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rustc-env=CRATE_TARGET={}", std::env::var("TARGET").unwrap());
+                    println!("cargo:rustc-cfg=mycfg=\"{}\"", std::env::var("TARGET").unwrap());
+                }
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+                # This is just here to speed things up.
+                doctest = false
+
+                [dev-dependencies]
+                foo = { path = "../foo" }
+            "#,
+        )
+        .file("pm/src/lib.rs", "")
+        .build();
+
+    p.cargo("test --workspace --target")
+        .arg(&target)
+        .with_stdout_contains("test check_target ... ok")
+        .run();
+
+    if cargo_test_support::is_nightly() {
+        p.cargo("test --workspace -Z doctest-xcompile --doc --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_stdout_contains("test src/lib.rs - (line 2) ... ok")
+            .run();
+    }
+}

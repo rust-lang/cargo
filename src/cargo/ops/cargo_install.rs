@@ -7,8 +7,7 @@ use anyhow::{bail, format_err};
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
 
-use crate::core::compiler::Freshness;
-use crate::core::compiler::{CompileKind, DefaultExecutor, Executor};
+use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
@@ -364,10 +363,10 @@ fn install_one(
     let mut binaries: Vec<(&str, &Path)> = compile
         .binaries
         .iter()
-        .map(|(_, bin)| {
-            let name = bin.file_name().unwrap();
+        .map(|UnitOutput { path, .. }| {
+            let name = path.file_name().unwrap();
             if let Some(s) = name.to_str() {
-                Ok((s, bin.as_ref()))
+                Ok((s, path.as_ref()))
             } else {
                 bail!("Binary `{:?}` name can't be serialized into string", name)
             }
