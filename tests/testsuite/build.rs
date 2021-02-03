@@ -438,18 +438,18 @@ fn cargo_compile_api_exposes_artifact_paths() {
     let result = cargo::ops::compile(&ws, &compile_options).unwrap();
 
     assert_eq!(1, result.binaries.len());
-    assert!(result.binaries[0].1.exists());
+    assert!(result.binaries[0].path.exists());
     assert!(result.binaries[0]
-        .1
+        .path
         .to_str()
         .unwrap()
         .contains("the_foo_bin"));
 
     assert_eq!(1, result.cdylibs.len());
     // The exact library path varies by platform, but should certainly exist at least
-    assert!(result.cdylibs[0].1.exists());
+    assert!(result.cdylibs[0].path.exists());
     assert!(result.cdylibs[0]
-        .1
+        .path
         .to_str()
         .unwrap()
         .contains("the_foo_lib"));

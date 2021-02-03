@@ -806,6 +806,10 @@ impl Config {
         self.frozen
     }
 
+    pub fn locked(&self) -> bool {
+        self.locked
+    }
+
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen && !self.locked
     }

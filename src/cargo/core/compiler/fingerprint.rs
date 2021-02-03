@@ -441,14 +441,13 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         // using the `build_script_local_fingerprints` function which returns a
         // thunk we can invoke on a foreign thread to calculate this.
         let build_script_outputs = Arc::clone(&cx.build_script_outputs);
-        let pkg_id = unit.pkg.package_id();
         let metadata = cx.get_run_build_script_metadata(unit);
         let (gen_local, _overridden) = build_script_local_fingerprints(cx, unit);
         let output_path = cx.build_explicit_deps[unit].build_script_output.clone();
         Work::new(move |_| {
             let outputs = build_script_outputs.lock().unwrap();
             let output = outputs
-                .get(pkg_id, metadata)
+                .get(metadata)
                 .expect("output must exist after running");
             let deps = BuildDeps::new(&output_path, Some(output));
 
@@ -1510,7 +1509,7 @@ fn build_script_override_fingerprint(
     let build_script_outputs = cx.build_script_outputs.lock().unwrap();
     let metadata = cx.get_run_build_script_metadata(unit);
     // Returns None if it is not overridden.
-    let output = build_script_outputs.get(unit.pkg.package_id(), metadata)?;
+    let output = build_script_outputs.get(metadata)?;
     let s = format!(
         "overridden build state with hash: {}",
         util::hash_u64(output)

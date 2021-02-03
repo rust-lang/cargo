@@ -5,9 +5,12 @@ use cargo::util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::fs::{self, File};
-use std::io::prelude::*;
+use std::io::{BufRead, BufReader, Write};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
+use std::thread;
 use tar::{Builder, Header};
 use url::Url;
 
@@ -68,6 +71,183 @@ pub fn generate_url(name: &str) -> Url {
 pub fn generate_alt_dl_url(name: &str) -> String {
     let base = Url::from_file_path(generate_path(name)).ok().unwrap();
     format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
+}
+
+/// A builder for initializing registries.
+pub struct RegistryBuilder {
+    /// If `true`, adds source replacement for crates.io to a registry on the filesystem.
+    replace_crates_io: bool,
+    /// If `true`, configures a registry named "alternative".
+    alternative: bool,
+    /// If set, sets the API url for the "alternative" registry.
+    /// This defaults to a directory on the filesystem.
+    alt_api_url: Option<String>,
+    /// If `true`, configures `.cargo/credentials` with some tokens.
+    add_tokens: bool,
+}
+
+impl RegistryBuilder {
+    pub fn new() -> RegistryBuilder {
+        RegistryBuilder {
+            replace_crates_io: true,
+            alternative: false,
+            alt_api_url: None,
+            add_tokens: true,
+        }
+    }
+
+    /// Sets whether or not to replace crates.io with a registry on the filesystem.
+    /// Default is `true`.
+    pub fn replace_crates_io(&mut self, replace: bool) -> &mut Self {
+        self.replace_crates_io = replace;
+        self
+    }
+
+    /// Sets whether or not to initialize an alternative registry named "alternative".
+    /// Default is `false`.
+    pub fn alternative(&mut self, alt: bool) -> &mut Self {
+        self.alternative = alt;
+        self
+    }
+
+    /// Sets the API url for the "alternative" registry.
+    /// Defaults to a path on the filesystem ([`alt_api_path`]).
+    pub fn alternative_api_url(&mut self, url: &str) -> &mut Self {
+        self.alternative = true;
+        self.alt_api_url = Some(url.to_string());
+        self
+    }
+
+    /// Sets whether or not to initialize `.cargo/credentials` with some tokens.
+    /// Defaults to `true`.
+    pub fn add_tokens(&mut self, add: bool) -> &mut Self {
+        self.add_tokens = add;
+        self
+    }
+
+    /// Initializes the registries.
+    pub fn build(&self) {
+        let config_path = paths::home().join(".cargo/config");
+        if config_path.exists() {
+            panic!(
+                "{} already exists, the registry may only be initialized once, \
+                and must be done before the config file is created",
+                config_path.display()
+            );
+        }
+        t!(fs::create_dir_all(config_path.parent().unwrap()));
+        let mut config = String::new();
+        if self.replace_crates_io {
+            write!(
+                &mut config,
+                "
+                    [source.crates-io]
+                    replace-with = 'dummy-registry'
+
+                    [source.dummy-registry]
+                    registry = '{}'
+                ",
+                registry_url()
+            )
+            .unwrap();
+        }
+        if self.alternative {
+            write!(
+                config,
+                "
+                    [registries.alternative]
+                    index = '{}'
+                ",
+                alt_registry_url()
+            )
+            .unwrap();
+        }
+        t!(fs::write(&config_path, config));
+
+        if self.add_tokens {
+            let credentials = paths::home().join(".cargo/credentials");
+            t!(fs::write(
+                &credentials,
+                r#"
+                    [registry]
+                    token = "api-token"
+
+                    [registries.alternative]
+                    token = "api-token"
+                "#
+            ));
+        }
+
+        if self.replace_crates_io {
+            init_registry(
+                registry_path(),
+                dl_url().into_string(),
+                api_url(),
+                api_path(),
+            );
+        }
+
+        if self.alternative {
+            init_registry(
+                alt_registry_path(),
+                alt_dl_url(),
+                self.alt_api_url
+                    .as_ref()
+                    .map_or_else(alt_api_url, |url| Url::parse(&url).expect("valid url")),
+                alt_api_path(),
+            );
+        }
+    }
+
+    /// Initializes the registries, and sets up an HTTP server for the
+    /// "alternative" registry.
+    ///
+    /// The given callback takes a `Vec` of headers when a request comes in.
+    /// The first entry should be the HTTP command, such as
+    /// `PUT /api/v1/crates/new HTTP/1.1`.
+    ///
+    /// The callback should return the HTTP code for the response, and the
+    /// response body.
+    ///
+    /// This method returns a `JoinHandle` which you should call
+    /// `.join().unwrap()` on before exiting the test.
+    pub fn build_api_server<'a>(
+        &mut self,
+        handler: &'static (dyn (Fn(Vec<String>) -> (u32, &'a dyn AsRef<[u8]>)) + Sync),
+    ) -> thread::JoinHandle<()> {
+        let server = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = server.local_addr().unwrap();
+        let api_url = format!("http://{}", addr);
+
+        self.replace_crates_io(false)
+            .alternative_api_url(&api_url)
+            .build();
+
+        let t = thread::spawn(move || {
+            let mut conn = BufReader::new(server.accept().unwrap().0);
+            let headers: Vec<_> = (&mut conn)
+                .lines()
+                .map(|s| s.unwrap())
+                .take_while(|s| s.len() > 2)
+                .map(|s| s.trim().to_string())
+                .collect();
+            let (code, response) = handler(headers);
+            let response = response.as_ref();
+            let stream = conn.get_mut();
+            write!(
+                stream,
+                "HTTP/1.1 {}\r\n\
+                  Content-Length: {}\r\n\
+                  \r\n",
+                code,
+                response.len()
+            )
+            .unwrap();
+            stream.write_all(response).unwrap();
+        });
+
+        t
+    }
 }
 
 /// A builder for creating a new package in a registry.
@@ -162,70 +342,28 @@ pub struct Dependency {
     optional: bool,
 }
 
+/// Initializes the on-disk registry and sets up the config so that crates.io
+/// is replaced with the one on disk.
 pub fn init() {
     let config = paths::home().join(".cargo/config");
-    t!(fs::create_dir_all(config.parent().unwrap()));
     if config.exists() {
         return;
     }
-    t!(fs::write(
-        &config,
-        format!(
-            r#"
-                [source.crates-io]
-                registry = 'https://wut'
-                replace-with = 'dummy-registry'
-
-                [source.dummy-registry]
-                registry = '{reg}'
-
-                [registries.alternative]
-                index = '{alt}'
-            "#,
-            reg = registry_url(),
-            alt = alt_registry_url()
-        )
-    ));
-    let credentials = paths::home().join(".cargo/credentials");
-    t!(fs::write(
-        &credentials,
-        r#"
-            [registry]
-            token = "api-token"
-
-            [registries.alternative]
-            token = "api-token"
-        "#
-    ));
-
-    // Initialize a new registry.
-    init_registry(
-        registry_path(),
-        dl_url().into_string(),
-        api_url(),
-        api_path(),
-    );
-
-    // Initialize an alternative registry.
-    init_registry(
-        alt_registry_path(),
-        alt_dl_url(),
-        alt_api_url(),
-        alt_api_path(),
-    );
+    RegistryBuilder::new().build();
 }
 
+/// Variant of `init` that initializes the "alternative" registry.
+pub fn alt_init() {
+    RegistryBuilder::new().alternative(true).build();
+}
+
+/// Creates a new on-disk registry.
 pub fn init_registry(registry_path: PathBuf, dl_url: String, api_url: Url, api_path: PathBuf) {
     // Initialize a new registry.
     repo(&registry_path)
         .file(
             "config.json",
-            &format!(
-                r#"
-            {{"dl":"{}","api":"{}"}}
-        "#,
-                dl_url, api_url
-            ),
+            &format!(r#"{{"dl":"{}","api":"{}"}}"#, dl_url, api_url),
         )
         .build();
     fs::create_dir_all(api_path.join("api/v1/crates")).unwrap();

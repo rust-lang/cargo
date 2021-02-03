@@ -145,7 +145,7 @@ fn new_credentials_is_used_instead_old() {
 
 #[cargo_test]
 fn registry_credentials() {
-    registry::init();
+    registry::alt_init();
 
     let config = paths::home().join(".cargo/config");
     let mut f = OpenOptions::new().append(true).open(config).unwrap();

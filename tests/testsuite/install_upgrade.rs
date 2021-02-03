@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cargo_test_support::install::{cargo_home, exe};
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, cross_compile, execs, git, process, project, Execs,
 };
@@ -549,6 +549,7 @@ fn upgrade_git() {
 fn switch_sources() {
     // Installing what appears to be the same thing, but from different
     // sources should reinstall.
+    registry::alt_init();
     pkg("foo", "1.0.0");
     Package::new("foo", "1.0.0")
         .file("src/main.rs", r#"fn main() { println!("alt"); }"#)

@@ -9,6 +9,9 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::Path;
 
+/// A local registry is a registry that lives on the filesystem as a set of
+/// `.crate` files with an `index` directory in the same format as a remote
+/// registry.
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
     root: Filesystem,

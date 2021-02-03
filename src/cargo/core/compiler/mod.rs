@@ -36,7 +36,7 @@ pub use self::build_context::{
     BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
 use self::build_plan::BuildPlan;
-pub use self::compilation::{Compilation, Doctest};
+pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
 pub use self::crate_type::CrateType;
@@ -254,7 +254,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
-    let script_metadata = cx.find_build_script_metadata(unit.clone());
+    let script_metadata = cx.find_build_script_metadata(unit);
     let is_local = unit.is_local();
 
     return Ok(Work::new(move |state| {
@@ -278,7 +278,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata);
+            add_custom_env(&mut rustc, &script_outputs, script_metadata);
         }
 
         for output in outputs.iter() {
@@ -359,7 +359,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = build_script_outputs.get(key.0, key.1).ok_or_else(|| {
+            let output = build_script_outputs.get(key.1).ok_or_else(|| {
                 internal(format!(
                     "couldn't find build script output for {}/{}",
                     key.0, key.1
@@ -396,11 +396,10 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     fn add_custom_env(
         rustc: &mut ProcessBuilder,
         build_script_outputs: &BuildScriptOutputs,
-        current_id: PackageId,
         metadata: Option<Metadata>,
     ) {
         if let Some(metadata) = metadata {
-            if let Some(output) = build_script_outputs.get(current_id, metadata) {
+            if let Some(output) = build_script_outputs.get(metadata) {
                 for &(ref name, ref value) in output.env.iter() {
                     rustc.env(name, value);
                 }
@@ -497,7 +496,7 @@ fn add_plugin_deps(
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for (pkg_id, metadata) in &build_scripts.plugins {
         let output = build_script_outputs
-            .get(*pkg_id, *metadata)
+            .get(*metadata)
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", pkg_id)))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
@@ -579,7 +578,8 @@ fn prepare_rustc(
 
 fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(unit)?;
+    // script_metadata is not needed here, it is only for tests.
+    let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
@@ -621,16 +621,11 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
-    let pkg_id = unit.pkg.package_id();
-    let script_metadata = cx.find_build_script_metadata(unit.clone());
+    let script_metadata = cx.find_build_script_metadata(unit);
 
     Ok(Work::new(move |state| {
         if let Some(script_metadata) = script_metadata {
-            if let Some(output) = build_script_outputs
-                .lock()
-                .unwrap()
-                .get(pkg_id, script_metadata)
-            {
+            if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
                 for cfg in output.cfgs.iter() {
                     rustdoc.arg("--cfg").arg(cfg);
                 }

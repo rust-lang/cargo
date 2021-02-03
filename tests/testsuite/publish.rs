@@ -677,7 +677,7 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 
 #[cargo_test]
 fn publish_allowed_registry() {
-    registry::init();
+    registry::alt_init();
 
     let p = project().build();
 
@@ -717,7 +717,7 @@ fn publish_allowed_registry() {
 
 #[cargo_test]
 fn publish_implicitly_to_only_allowed_registry() {
-    registry::init();
+    registry::alt_init();
 
     let p = project().build();
 
@@ -1456,4 +1456,173 @@ Caused by:
             no_such_file_err_msg()
         ))
         .run();
+}
+
+#[cargo_test]
+fn api_error_json() {
+    // Registry returns an API error.
+    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| {
+        (403, &r#"{"errors": [{"detail": "you must be logged in"}]}"#)
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 [..]
+[ERROR] api errors (status 403 Forbidden): you must be logged in
+",
+        )
+        .run();
+
+    t.join().unwrap();
+}
+
+#[cargo_test]
+fn api_error_code() {
+    // Registry returns an error code without a JSON message.
+    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| (400, &"go away"));
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 [..]
+[ERROR] failed to get a 200 OK response, got 400
+headers:
+<tab>HTTP/1.1 400
+<tab>Content-Length: 7
+<tab>
+body:
+go away
+",
+        )
+        .run();
+
+    t.join().unwrap();
+}
+
+#[cargo_test]
+fn api_curl_error() {
+    // Registry has a network error.
+    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| panic!("broke!"));
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // This doesn't check for the exact text of the error in the remote
+    // possibility that cargo is linked with a weird version of libcurl, or
+    // curl changes the text of the message. Currently the message 52
+    // (CURLE_GOT_NOTHING) is:
+    //    Server returned nothing (no headers, no data) (Empty reply from server)
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 [..]
+[ERROR] [52] [..]
+",
+        )
+        .run();
+
+    let e = t.join().unwrap_err();
+    assert_eq!(*e.downcast::<&str>().unwrap(), "broke!");
+}
+
+#[cargo_test]
+fn api_other_error() {
+    // Registry returns an invalid response.
+    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| (200, b"\xff"));
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 [..]
+[ERROR] invalid response from server
+
+Caused by:
+  response body was not valid utf-8
+",
+        )
+        .run();
+
+    t.join().unwrap();
 }
