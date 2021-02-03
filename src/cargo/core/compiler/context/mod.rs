@@ -214,6 +214,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut unstable_opts = false;
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lto_args(&self, unit));
+
                 for feature in &unit.features {
                     args.push("--cfg".into());
                     args.push(format!("feature=\"{}\"", feature).into());
@@ -228,6 +229,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     }
                 }
                 args.extend(self.bcx.rustdocflags_args(unit).iter().map(Into::into));
+
+                use super::MessageFormat;
+                let format = match self.bcx.build_config.message_format {
+                    MessageFormat::Short => "short",
+                    MessageFormat::Human => "human",
+                    MessageFormat::Json { .. } => "json",
+                };
+                args.push("--error-format".into());
+                args.push(format.into());
+
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     unit: unit.clone(),
                     args,
