@@ -773,7 +773,7 @@ impl RustDocFingerprint {
         )
     }
 
-    fn remove_doc_dirs(doc_dirs: &Vec<PathBuf>) -> CargoResult<()> {
+    fn remove_doc_dirs(doc_dirs: &Vec<&Path>) -> CargoResult<()> {
         let errs: Vec<CargoResult<()>> = doc_dirs
             .iter()
             .map(|path| paths::remove_dir_all(&path))
@@ -800,15 +800,11 @@ impl RustDocFingerprint {
         };
 
         // Collect all of the target doc paths for which the docs need to be compiled for.
-        let doc_dirs: Vec<PathBuf> = cx
-            .compilation
-            .root_output
+        let doc_dirs: Vec<&Path> = cx
+            .bcx
+            .all_kinds
             .iter()
-            .map(|(ck, _)| match ck {
-                CompileKind::Host => cx.files().host_root().to_path_buf(),
-                CompileKind::Target(t) => cx.files().host_root().join(Path::new(t.rustc_target())),
-            })
-            .map(|path| path.join("doc"))
+            .map(|kind| cx.files().layout(*kind).doc())
             .collect();
 
         // Check wether `.rustdoc_fingerprint.json` exists
