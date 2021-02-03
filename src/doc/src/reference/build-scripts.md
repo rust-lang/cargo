@@ -192,6 +192,12 @@ unique identifier of a continuous integration server.
 See also the [environment variables automatically included by
 Cargo][env-cargo].
 
+> **Note**: These environment variables are also set when running an
+> executable with `cargo run` or `cargo test`. However, this usage is
+> discouraged since it ties the executable to Cargo's execution environment.
+> Normally, these environment variables should only be checked at compile-time
+> with the `env!` macro.
+
 [env-macro]: ../../std/macro.env.html
 [env-cargo]: environment-variables.md#environment-variables-cargo-sets-for-crates
 
