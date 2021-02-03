@@ -21,10 +21,6 @@ use super::unit_graph::UnitDep;
 use super::{
     BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor, RustDocFingerprint,
 };
-use crate::core::compiler::{self, compilation, Unit};
-use crate::core::PackageId;
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::profile;
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
