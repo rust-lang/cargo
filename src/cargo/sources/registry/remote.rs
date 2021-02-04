@@ -106,7 +106,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
             let repo = self.repo()?;
-            let oid = self.index_git_ref.resolve(repo, None)?;
+            let oid = self.index_git_ref.resolve(repo)?;
             self.head.set(Some(oid));
         }
         Ok(self.head.get().unwrap())

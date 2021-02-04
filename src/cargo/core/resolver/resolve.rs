@@ -409,6 +409,6 @@ impl Default for ResolveVersion {
     /// file anyway so it takes the opportunity to bump the lock file version
     /// forward.
     fn default() -> ResolveVersion {
-        ResolveVersion::V2
+        ResolveVersion::V3
     }
 }
