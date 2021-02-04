@@ -317,8 +317,7 @@ pub struct Package {
     name: String,
     vers: String,
     deps: Vec<Dependency>,
-    files: Vec<(String, String)>,
-    extra_files: Vec<(String, String)>,
+    files: Vec<PackageFile>,
     yanked: bool,
     features: HashMap<String, Vec<String>>,
     local: bool,
@@ -341,6 +340,20 @@ pub struct Dependency {
     package: Option<String>,
     optional: bool,
 }
+
+/// A file to be created in a package.
+struct PackageFile {
+    path: String,
+    contents: String,
+    /// The Unix mode for the file. Note that when extracted on Windows, this
+    /// is mostly ignored since it doesn't have the same style of permissions.
+    mode: u32,
+    /// If `true`, the file is created in the root of the tarfile, used for
+    /// testing invalid packages.
+    extra: bool,
+}
+
+const DEFAULT_MODE: u32 = 0o644;
 
 /// Initializes the on-disk registry and sets up the config so that crates.io
 /// is replaced with the one on disk.
@@ -379,7 +392,6 @@ impl Package {
             vers: vers.to_string(),
             deps: Vec::new(),
             files: Vec::new(),
-            extra_files: Vec::new(),
             yanked: false,
             features: HashMap::new(),
             local: false,
@@ -416,7 +428,17 @@ impl Package {
 
     /// Adds a file to the package.
     pub fn file(&mut self, name: &str, contents: &str) -> &mut Package {
-        self.files.push((name.to_string(), contents.to_string()));
+        self.file_with_mode(name, DEFAULT_MODE, contents)
+    }
+
+    /// Adds a file with a specific Unix mode.
+    pub fn file_with_mode(&mut self, path: &str, mode: u32, contents: &str) -> &mut Package {
+        self.files.push(PackageFile {
+            path: path.to_string(),
+            contents: contents.to_string(),
+            mode,
+            extra: false,
+        });
         self
     }
 
@@ -425,9 +447,13 @@ impl Package {
     /// Normal files are automatically placed within a directory named
     /// `$PACKAGE-$VERSION`. This allows you to override that behavior,
     /// typically for testing invalid behavior.
-    pub fn extra_file(&mut self, name: &str, contents: &str) -> &mut Package {
-        self.extra_files
-            .push((name.to_string(), contents.to_string()));
+    pub fn extra_file(&mut self, path: &str, contents: &str) -> &mut Package {
+        self.files.push(PackageFile {
+            path: path.to_string(),
+            contents: contents.to_string(),
+            mode: DEFAULT_MODE,
+            extra: true,
+        });
         self
     }
 
@@ -639,18 +665,29 @@ impl Package {
         let f = t!(File::create(&dst));
         let mut a = Builder::new(GzEncoder::new(f, Compression::default()));
 
-        if !self.files.iter().any(|(name, _)| name == "Cargo.toml") {
+        if !self
+            .files
+            .iter()
+            .any(|PackageFile { path, .. }| path == "Cargo.toml")
+        {
             self.append_manifest(&mut a);
         }
         if self.files.is_empty() {
-            self.append(&mut a, "src/lib.rs", "");
+            self.append(&mut a, "src/lib.rs", DEFAULT_MODE, "");
         } else {
-            for &(ref name, ref contents) in self.files.iter() {
-                self.append(&mut a, name, contents);
+            for PackageFile {
+                path,
+                contents,
+                mode,
+                extra,
+            } in &self.files
+            {
+                if *extra {
+                    self.append_raw(&mut a, path, *mode, contents);
+                } else {
+                    self.append(&mut a, path, *mode, contents);
+                }
             }
-        }
-        for &(ref name, ref contents) in self.extra_files.iter() {
-            self.append_extra(&mut a, name, contents);
         }
     }
 
@@ -704,21 +741,23 @@ impl Package {
             manifest.push_str("[lib]\nproc-macro = true\n");
         }
 
-        self.append(ar, "Cargo.toml", &manifest);
+        self.append(ar, "Cargo.toml", DEFAULT_MODE, &manifest);
     }
 
-    fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, contents: &str) {
-        self.append_extra(
+    fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, mode: u32, contents: &str) {
+        self.append_raw(
             ar,
             &format!("{}-{}/{}", self.name, self.vers, file),
+            mode,
             contents,
         );
     }
 
-    fn append_extra<W: Write>(&self, ar: &mut Builder<W>, path: &str, contents: &str) {
+    fn append_raw<W: Write>(&self, ar: &mut Builder<W>, path: &str, mode: u32, contents: &str) {
         let mut header = Header::new_ustar();
         header.set_size(contents.len() as u64);
         t!(header.set_path(path));
+        header.set_mode(mode);
         header.set_cksum();
         t!(ar.append(&header, contents.as_bytes()));
     }

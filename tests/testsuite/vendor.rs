@@ -676,3 +676,36 @@ fn git_crlf_preservation() {
     let output = p.read_file("vendor/a/src/lib.rs");
     assert_eq!(input, output);
 }
+
+#[cargo_test]
+#[cfg(unix)]
+fn vendor_preserves_permissions() {
+    use std::os::unix::fs::MetadataExt;
+
+    Package::new("bar", "1.0.0")
+        .file_with_mode("example.sh", 0o755, "#!/bin/sh")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+
+    let metadata = fs::metadata(p.root().join("vendor/bar/src/lib.rs")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o644);
+    let metadata = fs::metadata(p.root().join("vendor/bar/example.sh")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o755);
+}
