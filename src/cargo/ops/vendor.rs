@@ -8,8 +8,7 @@ use anyhow::bail;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::fs;
-use std::fs::File;
+use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -346,8 +345,21 @@ fn cp_sources(
 
 fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoResult<String> {
     let mut src = File::open(src_path).chain_err(|| format!("failed to open {:?}", src_path))?;
-    let mut dst =
-        File::create(dst_path).chain_err(|| format!("failed to create {:?}", dst_path))?;
+    let mut dst_opts = OpenOptions::new();
+    dst_opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+        let src_metadata = src
+            .metadata()
+            .chain_err(|| format!("failed to stat {:?}", src_path))?;
+        dst_opts.mode(src_metadata.mode());
+    }
+    let mut dst = dst_opts
+        .open(dst_path)
+        .chain_err(|| format!("failed to create {:?}", dst_path))?;
+    // Not going to bother setting mode on pre-existing files, since there
+    // shouldn't be any under normal conditions.
     let mut cksum = Sha256::new();
     loop {
         let n = src
