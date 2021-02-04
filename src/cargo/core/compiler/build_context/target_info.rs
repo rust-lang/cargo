@@ -774,16 +774,13 @@ impl RustDocFingerprint {
     }
 
     fn remove_doc_dirs(doc_dirs: &Vec<&Path>) -> CargoResult<()> {
-        let errs: Vec<CargoResult<()>> = doc_dirs
+        doc_dirs
             .iter()
+            .filter(|path| path.exists())
             .map(|path| paths::remove_dir_all(&path))
             .filter(|res| res.is_err())
-            .collect();
-        if !errs.is_empty() {
-            Err(anyhow::anyhow!("Dir removal error"))
-        } else {
-            Ok(())
-        }
+            .collect::<CargoResult<Vec<()>>>()
+            .map(|_| ())
     }
 
     /// This function checks whether the latest version of `Rustc` used to compile this
