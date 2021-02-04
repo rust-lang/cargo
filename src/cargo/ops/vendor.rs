@@ -9,8 +9,6 @@ use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
-use std::fs::File;
-use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 pub struct VendorOptions<'a> {
@@ -184,7 +182,6 @@ fn sync(
     }
 
     let mut sources = BTreeSet::new();
-    let mut tmp_buf = [0; 64 * 1024];
     for (id, pkg) in ids.iter() {
         // Next up, copy it to the vendor directory
         let src = pkg
@@ -219,7 +216,7 @@ fn sync(
         let pathsource = PathSource::new(src, id.source_id(), config);
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
-        cp_sources(src, &paths, &dst, &mut map, &mut tmp_buf)
+        cp_sources(src, &paths, &dst, &mut map)
             .chain_err(|| format!("failed to copy over vendored sources for: {}", id))?;
 
         // Finally, emit the metadata about this package
@@ -302,7 +299,6 @@ fn cp_sources(
     paths: &[PathBuf],
     dst: &Path,
     cksums: &mut BTreeMap<String, String>,
-    tmp_buf: &mut [u8],
 ) -> CargoResult<()> {
     for p in paths {
         let relative = p.strip_prefix(&src).unwrap();
@@ -338,27 +334,9 @@ fn cp_sources(
 
         paths::create_dir_all(dst.parent().unwrap())?;
 
-        let cksum = copy_and_checksum(&p, &dst, tmp_buf)?;
+        paths::copy(&p, &dst)?;
+        let cksum = Sha256::new().update_path(dst)?.finish_hex();
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
     }
     Ok(())
-}
-
-fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoResult<String> {
-    let mut src = File::open(src_path).chain_err(|| format!("failed to open {:?}", src_path))?;
-    let mut dst =
-        File::create(dst_path).chain_err(|| format!("failed to create {:?}", dst_path))?;
-    let mut cksum = Sha256::new();
-    loop {
-        let n = src
-            .read(buf)
-            .chain_err(|| format!("failed to read from {:?}", src_path))?;
-        if n == 0 {
-            break Ok(cksum.finish_hex());
-        }
-        let data = &buf[..n];
-        cksum.update(data);
-        dst.write_all(data)
-            .chain_err(|| format!("failed to write to {:?}", dst_path))?;
-    }
 }
