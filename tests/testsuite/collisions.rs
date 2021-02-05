@@ -3,9 +3,8 @@
 //! Ideally these should never happen, but I don't think we'll ever be able to
 //! prevent all collisions.
 
-use cargo_test_support::basic_manifest;
-use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, cross_compile, project};
 use std::env;
 
 #[cargo_test]
@@ -424,6 +423,54 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] bar v1.0.0 [..]
 [DOCUMENTING] bar v1.0.0 [..]
 [DOCUMENTING] bar v1.0.0
+[CHECKING] bar v1.0.0
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn collision_doc_target() {
+    // collision in doc with --target, doesn't fail due to orphans
+    if cross_compile::disabled() {
+        return;
+    }
+
+    Package::new("orphaned", "1.0.0").publish();
+    Package::new("bar", "1.0.0")
+        .dep("orphaned", "1.0")
+        .publish();
+    Package::new("bar", "2.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar2 = { version = "2.0", package="bar" }
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc --target")
+        .arg(cross_compile::alternate())
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] orphaned v1.0.0 [..]
+[DOWNLOADED] bar v2.0.0 [..]
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] orphaned v1.0.0
+[DOCUMENTING] bar v2.0.0
+[CHECKING] bar v2.0.0
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]

@@ -507,7 +507,7 @@ pub fn create_bcx<'a, 'cfg>(
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
     if build_config.mode == (CompileMode::Doc { deps: true }) {
-        remove_duplicate_doc(build_config, &mut unit_graph);
+        remove_duplicate_doc(build_config, &units, &mut unit_graph);
     }
 
     if build_config
@@ -1508,14 +1508,11 @@ fn opt_patterns_and_names(
 /// - Different sources. See `collision_doc_sources` test.
 ///
 /// Ideally this would not be necessary.
-fn remove_duplicate_doc(build_config: &BuildConfig, unit_graph: &mut UnitGraph) {
-    // NOTE: There is some risk that this can introduce problems because it
-    // may create orphans in the unit graph (parts of the tree get detached
-    // from the roots). I currently can't think of any ways this will cause a
-    // problem because all other parts of Cargo traverse the graph starting
-    // from the roots. Perhaps this should scan for detached units and remove
-    // them too?
-    //
+fn remove_duplicate_doc(
+    build_config: &BuildConfig,
+    root_units: &[Unit],
+    unit_graph: &mut UnitGraph,
+) {
     // First, create a mapping of crate_name -> Unit so we can see where the
     // duplicates are.
     let mut all_docs: HashMap<String, Vec<Unit>> = HashMap::new();
@@ -1601,4 +1598,18 @@ fn remove_duplicate_doc(build_config: &BuildConfig, unit_graph: &mut UnitGraph) 
     for unit_deps in unit_graph.values_mut() {
         unit_deps.retain(|unit_dep| !removed_units.contains(&unit_dep.unit));
     }
+    // Remove any orphan units that were detached from the graph.
+    let mut visited = HashSet::new();
+    fn visit(unit: &Unit, graph: &UnitGraph, visited: &mut HashSet<Unit>) {
+        if !visited.insert(unit.clone()) {
+            return;
+        }
+        for dep in &graph[unit] {
+            visit(&dep.unit, graph, visited);
+        }
+    }
+    for unit in root_units {
+        visit(unit, unit_graph, &mut visited);
+    }
+    unit_graph.retain(|unit, _| visited.contains(unit));
 }
