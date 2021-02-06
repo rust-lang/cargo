@@ -370,7 +370,11 @@ fn finds_git_author() {
 
     let toml = paths::root().join("foo/Cargo.toml");
     let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
+    assert!(
+        contents.contains(r#"authors = ["foo <gitfoo>"]"#),
+        "{}",
+        contents
+    );
 }
 
 #[cargo_test]
@@ -411,7 +415,11 @@ fn finds_git_author_in_included_config() {
     cargo_process("new foo/bar").run();
     let toml = paths::root().join("foo/bar/Cargo.toml");
     let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo <bar>"]"#), contents,);
+    assert!(
+        contents.contains(r#"authors = ["foo <bar>"]"#),
+        "{}",
+        contents
+    );
 }
 
 #[cargo_test]
@@ -632,7 +640,7 @@ fn new_with_blank_email() {
         .run();
 
     let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(contents.contains(r#"authors = ["Sen"]"#), contents);
+    assert!(contents.contains(r#"authors = ["Sen"]"#), "{}", contents);
 }
 
 #[cargo_test]
