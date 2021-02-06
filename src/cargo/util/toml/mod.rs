@@ -24,7 +24,9 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::{self, paths, validate_package_name, Config, IntoUrl};
+use crate::util::{
+    self, config::ConfigRelativePath, paths, validate_package_name, Config, IntoUrl,
+};
 
 mod targets;
 use self::targets::targets;
@@ -1765,7 +1767,36 @@ impl DetailedTomlDependency {
                 // always end up hashing to the same value no matter where it's
                 // built from.
                 if cx.source_id.is_path() {
-                    let path = cx.root.join(path);
+                    let mut with_prefix = path.splitn(2, "::");
+                    let prefix = with_prefix.next().expect("split always yields once");
+                    let path = if let Some(path) = with_prefix.next() {
+                        if !cx.config.cli_unstable().path_prefixes {
+                            bail!("Usage of path prefixes requires `-Z path-prefixes`");
+                        }
+
+                        // We have prefix::path.
+                        // Look up the relevant prefix in the Config and use that as the root.
+                        if let Some(prefix_path) = cx
+                            .config
+                            .get::<Option<ConfigRelativePath>>(&format!("path.{}", prefix))?
+                        {
+                            let prefix_path = prefix_path.resolve_path(cx.config);
+                            prefix_path.join(path)
+                        } else {
+                            bail!(
+                                "path prefix `{}` is undefined in path `{}::{}`. \
+                                 You must specify a path for `path.{}` in your cargo configuration.",
+                                prefix,
+                                prefix,
+                                path,
+                                prefix
+                            );
+                        }
+                    } else {
+                        // This is a standard path with no prefix.
+                        let path = prefix;
+                        cx.root.join(path)
+                    };
                     let path = util::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
