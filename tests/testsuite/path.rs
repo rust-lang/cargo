@@ -530,7 +530,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn prefix_not_stable() {
+fn path_bases_not_stable() {
     let bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
@@ -541,7 +541,7 @@ fn prefix_not_stable() {
     fs::write(
         &paths::root().join(".cargo/config"),
         &format!(
-            "[path]\ntest = '{}'",
+            "[base]\ntest = '{}'",
             bar.root().parent().unwrap().display()
         ),
     )
@@ -558,7 +558,8 @@ fn prefix_not_stable() {
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
-                path = 'test::bar'
+                path = 'bar'
+                base = 'test'
             "#,
         )
         .file("src/lib.rs", "")
@@ -571,14 +572,14 @@ fn prefix_not_stable() {
 error: failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  Usage of path prefixes requires `-Z path-prefixes`
+  Usage of path bases requires `-Z path-bases`
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn prefixed_path() {
+fn path_with_base() {
     let bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
@@ -589,7 +590,7 @@ fn prefixed_path() {
     fs::write(
         &paths::root().join(".cargo/config"),
         &format!(
-            "[path]\ntest = '{}'",
+            "[base]\ntest = '{}'",
             bar.root().parent().unwrap().display()
         ),
     )
@@ -606,19 +607,20 @@ fn prefixed_path() {
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
-                path = 'test::bar'
+                path = 'bar'
+                base = 'test'
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v -Zpath-prefixes")
+    p.cargo("build -v -Zpath-bases")
         .masquerade_as_nightly_cargo()
         .run();
 }
 
 #[cargo_test]
-fn unknown_prefix() {
+fn unknown_base() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -630,13 +632,14 @@ fn unknown_prefix() {
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
-                path = 'test::bar'
+                path = 'bar'
+                base = 'test'
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zpath-prefixes")
+    p.cargo("build -Zpath-bases")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
@@ -644,7 +647,7 @@ fn unknown_prefix() {
 error: failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  path prefix `test` is undefined in path `test::bar`. You must specify a path for `path.test` in your cargo configuration.
+  path base `test` is undefined for path `bar`. You must specify a path for `base.test` in your cargo configuration.
 ",
         )
         .run();

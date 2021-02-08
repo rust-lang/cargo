@@ -263,6 +263,7 @@ pub struct DetailedTomlDependency {
     /// crates published by other users.
     registry_index: Option<String>,
     path: Option<String>,
+    base: Option<String>,
     git: Option<String>,
     branch: Option<String>,
     tag: Option<String>,
@@ -1007,6 +1008,7 @@ impl TomlManifest {
                     let mut d = d.clone();
                     // Path dependencies become crates.io deps.
                     d.path.take();
+                    d.base.take();
                     // Same with git dependencies.
                     d.git.take();
                     d.branch.take();
@@ -1767,34 +1769,29 @@ impl DetailedTomlDependency {
                 // always end up hashing to the same value no matter where it's
                 // built from.
                 if cx.source_id.is_path() {
-                    let mut with_prefix = path.splitn(2, "::");
-                    let prefix = with_prefix.next().expect("split always yields once");
-                    let path = if let Some(path) = with_prefix.next() {
-                        if !cx.config.cli_unstable().path_prefixes {
-                            bail!("Usage of path prefixes requires `-Z path-prefixes`");
+                    let path = if let Some(base) = self.base.as_ref() {
+                        if !cx.config.cli_unstable().path_bases {
+                            bail!("Usage of path bases requires `-Z path-bases`");
                         }
 
-                        // We have prefix::path.
-                        // Look up the relevant prefix in the Config and use that as the root.
-                        if let Some(prefix_path) = cx
+                        // Look up the relevant base in the Config and use that as the root.
+                        if let Some(base_path) = cx
                             .config
-                            .get::<Option<ConfigRelativePath>>(&format!("path.{}", prefix))?
+                            .get::<Option<ConfigRelativePath>>(&format!("base.{}", base))?
                         {
-                            let prefix_path = prefix_path.resolve_path(cx.config);
-                            prefix_path.join(path)
+                            let base_path = base_path.resolve_path(cx.config);
+                            base_path.join(path)
                         } else {
                             bail!(
-                                "path prefix `{}` is undefined in path `{}::{}`. \
-                                 You must specify a path for `path.{}` in your cargo configuration.",
-                                prefix,
-                                prefix,
+                                "path base `{}` is undefined for path `{}`. \
+                                 You must specify a path for `base.{}` in your cargo configuration.",
+                                base,
                                 path,
-                                prefix
+                                base
                             );
                         }
                     } else {
                         // This is a standard path with no prefix.
-                        let path = prefix;
                         cx.root.join(path)
                     };
                     let path = util::normalize_path(&path);
