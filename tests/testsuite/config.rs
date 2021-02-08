@@ -1459,26 +1459,3 @@ strip = 'debuginfo'
     let strip = p.strip.unwrap();
     assert_eq!(strip, toml::StringOrBool::String("debuginfo".to_string()));
 }
-
-#[cargo_test]
-fn parse_strip_with_unknown_string_fail() {
-    write_config(
-        "\
-[profile.release]
-strip = 'invalid'
-",
-    );
-
-    let config = new_config();
-
-    assert_error(
-        config
-            .get::<toml::TomlProfile>("profile.release")
-            .unwrap_err(),
-        "\
-error in [..]/.cargo/config: could not load config key `profile.release.strip`
-
-Caused by:
-  `strip` setting of `wrong` is not a valid setting,must be `symbols`, `debuginfo`, `none`, `true`, or `false`",
-    );
-}
