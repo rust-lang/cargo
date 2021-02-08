@@ -579,6 +579,51 @@ Caused by:
 }
 
 #[cargo_test]
+fn patch_with_base() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "pub fn hello() {}")
+        .build();
+    Package::new("bar", "0.5.0").publish();
+
+    fs::create_dir(&paths::root().join(".cargo")).unwrap();
+    fs::write(
+        &paths::root().join(".cargo/config"),
+        &format!(
+            "[base]\ntest = '{}'",
+            bar.root().parent().unwrap().display()
+        ),
+    )
+    .unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+
+                [dependencies.bar]
+                bar = "0.5.0"
+
+                [patch.crates-io.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "use bar::hello as _;")
+        .build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
 fn path_with_base() {
     let bar = project()
         .at("bar")
