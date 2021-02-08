@@ -53,4 +53,4 @@ Windows uses Pageant for SSH authentication.
 
 [`credential.helper`]: https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
 [`net.git-fetch-with-cli`]: ../reference/config.md#netgit-fetch-with-cli
-[GCM]: https://github.com/Microsoft/Git-Credential-Manager-for-Windows/
+[GCM]: https://github.com/microsoft/Git-Credential-Manager-Core/
