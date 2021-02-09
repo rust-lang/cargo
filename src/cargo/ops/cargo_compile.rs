@@ -319,11 +319,7 @@ pub fn print<'a>(
             "RUSTFLAGS",
         )?;
         let mut process = rustc.process();
-        process
-            .arg("-")
-            .arg("--crate-name")
-            .arg("___")
-            .args(&rustflags);
+        process.args(&rustflags);
         if let Some(args) = target_rustc_args {
             process.args(args);
         }
