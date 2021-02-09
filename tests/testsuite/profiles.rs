@@ -546,7 +546,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn strip_rejects_invalid_option() {
+fn strip_passes_unknown_option_to_rustc() {
     if !is_nightly() {
         // -Zstrip is unstable
         return;
@@ -563,7 +563,7 @@ fn strip_rejects_invalid_option() {
                 version = "0.1.0"
 
                 [profile.release]
-                strip = 'wrong'
+                strip = 'unknown'
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -574,10 +574,9 @@ fn strip_rejects_invalid_option() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  unknown variant `wrong`, expected one of `debuginfo`, `none`, `symbols` for key `strip`
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -Z strip=unknown [..]`
+[FINISHED] [..]
 ",
         )
         .run();
@@ -644,13 +643,6 @@ fn strip_accepts_false_to_disable_strip() {
 
     p.cargo("build --release -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[RUNNING] `rustc [..] -Z strip=none
- [..]`
-[FINISHED] [..]
-",
-        )
+        .with_stderr_does_not_contain("-Z strip")
         .run();
 }

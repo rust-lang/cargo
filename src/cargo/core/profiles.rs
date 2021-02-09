@@ -552,9 +552,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
     match toml.lto {
         Some(StringOrBool::Bool(b)) => profile.lto = Lto::Bool(b),
-        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "off" | "n" | "no") => {
-            profile.lto = Lto::Off
-        }
+        Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => profile.lto = Lto::Off,
         Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
     }
@@ -591,19 +589,10 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.incremental = incremental;
     }
     profile.strip = match toml.strip {
-        Some(StringOrBool::Bool(enabled)) if enabled => Strip::Symbols,
-        Some(StringOrBool::Bool(enabled)) if !enabled => Strip::None,
-        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "off" | "n" | "no" | "none") => {
-            Strip::None
-        }
-        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "debuginfo") => Strip::DebugInfo,
-        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "symbols") => Strip::Symbols,
-        None => Strip::None,
-        Some(ref strip) => panic!(
-            "unknown variant `{}`, expected one of `debuginfo`, `none`, `symbols` for key `strip`
-            ",
-            strip
-        ),
+        Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
+        None | Some(StringOrBool::Bool(false)) => Strip::None,
+        Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => Strip::None,
+        Some(StringOrBool::String(ref n)) => Strip::Named(InternedString::new(n)),
     };
 }
 
@@ -821,24 +810,22 @@ impl fmt::Display for PanicStrategy {
 )]
 #[serde(rename_all = "lowercase")]
 pub enum Strip {
-    /// Only strip debugging symbols
-    DebugInfo,
     /// Don't remove any symbols
     None,
-    /// Strip all non-exported symbols from the final binary
-    Symbols,
+    /// Named Strip settings
+    Named(InternedString),
 }
 
 impl fmt::Display for Strip {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Strip::DebugInfo => "debuginfo",
             Strip::None => "none",
-            Strip::Symbols => "symbols",
+            Strip::Named(s) => s.as_str(),
         }
         .fmt(f)
     }
 }
+
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -1260,4 +1247,9 @@ fn validate_packages_unmatched(
         }
     }
     Ok(())
+}
+
+/// Returns `true` if a string is a toggle that turns an option off.
+fn is_off(s: &str) -> bool {
+    matches!(s, "off" | "n" | "no" | "none")
 }

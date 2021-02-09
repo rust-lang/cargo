@@ -560,18 +560,6 @@ impl TomlProfile {
 
         if self.strip.is_some() {
             features.require(Feature::strip())?;
-            match self.strip {
-                Some(StringOrBool::Bool(_)) => {}
-                Some(StringOrBool::String(ref n)) => match n.as_str() {
-                    "off" | "n" | "none" | "no" | "debuginfo" | "symbols" => {}
-                    _ => bail!(
-                        "`strip` setting of `{}` is not a valid setting,\
-                         must be `symbols`, `debuginfo`, `none`, `true`, or `false`",
-                        n
-                    ),
-                },
-                None => {}
-            }
         }
         Ok(())
     }
@@ -777,15 +765,6 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
         }
 
         deserializer.deserialize_any(Visitor)
-    }
-}
-
-impl fmt::Display for StringOrBool {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::String(s) => write!(f, "{}", &s),
-            Self::Bool(b) => write!(f, "{}", b),
-        }
     }
 }
 
