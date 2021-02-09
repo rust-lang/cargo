@@ -2788,6 +2788,57 @@ to proceed despite [..]
 }
 
 #[cargo_test]
+fn default_not_master() {
+    let project = project();
+
+    // Create a repository with a `master` branch, but switch the head to a
+    // branch called `main` at the same time.
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "pub fn foo() {}")
+    });
+    let head_id = repo.head().unwrap().target().unwrap();
+    let head = repo.find_commit(head_id).unwrap();
+    repo.branch("main", &head, false).unwrap();
+    repo.set_head("refs/heads/main").unwrap();
+
+    // Then create a commit on the new `main` branch so `master` and `main`
+    // differ.
+    git_project.change_file("src/lib.rs", "pub fn bar() {}");
+    git::add(&repo);
+    git::commit(&repo);
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { dep1::bar() }")
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository `[..]`
+[COMPILING] dep1 v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn historical_lockfile_works() {
     let project = project();
 
@@ -2897,6 +2948,67 @@ dependencies = [
         ),
     );
     project.cargo("build").run();
+}
+
+#[cargo_test]
+fn two_dep_forms() {
+    let project = project();
+
+    let (git_project, _repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = 'master' }}
+                    a = {{ path = 'a' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "a"
+                    version = "0.5.0"
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    // This'll download the git repository twice, one with HEAD and once with
+    // the master branch. Then it'll compile 4 crates, the 2 git deps, then
+    // the two local deps.
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[UPDATING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
