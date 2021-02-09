@@ -27,7 +27,6 @@ use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::sync::Arc;
 
-use crate::drop_println;
 use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
@@ -41,6 +40,7 @@ use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
+use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
