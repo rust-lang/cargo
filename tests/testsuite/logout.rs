@@ -78,5 +78,6 @@ fn default_registry() {
 
 #[cargo_test]
 fn other_registry() {
+    registry::alt_init();
     simple_logout_test(Some("alternative"), "--registry alternative");
 }

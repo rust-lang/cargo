@@ -85,7 +85,7 @@
 //! ```
 //!
 //! The root of the index contains a `config.json` file with a few entries
-//! corresponding to the registry (see `RegistryConfig` below).
+//! corresponding to the registry (see [`RegistryConfig`] below).
 //!
 //! Otherwise, there are three numbered directories (1, 2, 3) for crates with
 //! names 1, 2, and 3 characters in length. The 1/2 directories simply have the
@@ -189,16 +189,42 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 
+/// A "source" for a [local](local::LocalRegistry) or
+/// [remote](remote::RemoteRegistry) registry.
+///
+/// This contains common functionality that is shared between the two registry
+/// kinds, with the registry-specific logic implemented as part of the
+/// [`RegistryData`] trait referenced via the `ops` field.
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
+    /// The path where crate files are extracted (`$CARGO_HOME/registry/src/$REG-HASH`).
     src_path: Filesystem,
+    /// Local reference to [`Config`] for convenience.
     config: &'cfg Config,
+    /// Whether or not the index has been updated.
+    ///
+    /// This is used as an optimization to avoid updating if not needed, such
+    /// as `Cargo.lock` already exists and the index already contains the
+    /// locked entries. Or, to avoid updating multiple times.
+    ///
+    /// Only remote registries really need to update. Local registries only
+    /// check that the index exists.
     updated: bool,
+    /// Abstraction for interfacing to the different registry kinds.
     ops: Box<dyn RegistryData + 'cfg>,
+    /// Interface for managing the on-disk index.
     index: index::RegistryIndex<'cfg>,
+    /// A set of packages that should be allowed to be used, even if they are
+    /// yanked.
+    ///
+    /// This is populated from the entries in `Cargo.lock` to ensure that
+    /// `cargo update -p somepkg` won't unlock yanked entries in `Cargo.lock`.
+    /// Otherwise, the resolver would think that those entries no longer
+    /// exist, and it would trigger updates to unrelated packages.
     yanked_whitelist: HashSet<PackageId>,
 }
 
+/// The `config.json` file stored in the index.
 #[derive(Deserialize)]
 pub struct RegistryConfig {
     /// Download endpoint for all crates.
@@ -278,18 +304,7 @@ fn escaped_char_in_json() {
     .unwrap();
 }
 
-#[derive(Deserialize)]
-#[serde(field_identifier, rename_all = "lowercase")]
-enum Field {
-    Name,
-    Vers,
-    Deps,
-    Features,
-    Cksum,
-    Yanked,
-    Links,
-}
-
+/// A dependency as encoded in the index JSON.
 #[derive(Deserialize)]
 struct RegistryDependency<'a> {
     name: InternedString,
@@ -369,30 +384,108 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
+/// An abstract interface to handle both a [local](local::LocalRegistry) and
+/// [remote](remote::RemoteRegistry) registry.
+///
+/// This allows [`RegistrySource`] to abstractly handle both registry kinds.
 pub trait RegistryData {
+    /// Performs initialization for the registry.
+    ///
+    /// This should be safe to call multiple times, the implementation is
+    /// expected to not do any work if it is already prepared.
     fn prepare(&self) -> CargoResult<()>;
+
+    /// Returns the path to the index.
+    ///
+    /// Note that different registries store the index in different formats
+    /// (remote=git, local=files).
     fn index_path(&self) -> &Filesystem;
+
+    /// Loads the JSON for a specific named package from the index.
+    ///
+    /// * `root` is the root path to the index.
+    /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
+    /// * `data` is a callback that will receive the raw bytes of the index JSON file.
     fn load(
         &self,
         root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()>;
+
+    /// Loads the `config.json` file and returns it.
+    ///
+    /// Local registries don't have a config, and return `None`.
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
+
+    /// Updates the index.
+    ///
+    /// For a remote registry, this updates the index over the network. Local
+    /// registries only check that the index exists.
     fn update_index(&mut self) -> CargoResult<()>;
+
+    /// Prepare to start downloading a `.crate` file.
+    ///
+    /// Despite the name, this doesn't actually download anything. If the
+    /// `.crate` is already downloaded, then it returns [`MaybeLock::Ready`].
+    /// If it hasn't been downloaded, then it returns [`MaybeLock::Download`]
+    /// which contains the URL to download. The [`crate::core::package::Download`]
+    /// system handles the actual download process. After downloading, it
+    /// calls [`finish_download`] to save the downloaded file.
+    ///
+    /// `checksum` is currently only used by local registries to verify the
+    /// file contents (because local registries never actually download
+    /// anything). Remote registries will validate the checksum in
+    /// `finish_download`. For already downloaded `.crate` files, it does not
+    /// validate the checksum, assuming the filesystem does not suffer from
+    /// corruption or manipulation.
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
+
+    /// Finish a download by saving a `.crate` file to disk.
+    ///
+    /// After [`crate::core::package::Download`] has finished a download,
+    /// it will call this to save the `.crate` file. This is only relevant
+    /// for remote registries. This should validate the checksum and save
+    /// the given data to the on-disk cache.
+    ///
+    /// Returns a [`File`] handle to the `.crate` file, positioned at the start.
     fn finish_download(&mut self, pkg: PackageId, checksum: &str, data: &[u8])
         -> CargoResult<File>;
 
+    /// Returns whether or not the `.crate` file is already downloaded.
     fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
         true
     }
+
+    /// Validates that the global package cache lock is held.
+    ///
+    /// Given the [`Filesystem`], this will make sure that the package cache
+    /// lock is held. If not, it will panic. See
+    /// [`Config::acquire_package_cache_lock`] for acquiring the global lock.
+    ///
+    /// Returns the [`Path`] to the [`Filesystem`].
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
+
+    /// Returns the current "version" of the index.
+    ///
+    /// For local registries, this returns `None` because there is no
+    /// versioning. For remote registries, this returns the SHA hash of the
+    /// git index on disk (or None if the index hasn't been downloaded yet).
+    ///
+    /// This is used by index caching to check if the cache is out of date.
     fn current_version(&self) -> Option<InternedString>;
 }
 
+/// The status of [`RegistryData::download`] which indicates if a `.crate`
+/// file has already been downloaded, or if not then the URL to download.
 pub enum MaybeLock {
+    /// The `.crate` file is already downloaded. [`File`] is a handle to the
+    /// opened `.crate` file on the filesystem.
     Ready(File),
+    /// The `.crate` file is not downloaded, here's the URL to download it from.
+    ///
+    /// `descriptor` is just a text string to display to the user of what is
+    /// being downloaded.
     Download { url: String, descriptor: String },
 }
 

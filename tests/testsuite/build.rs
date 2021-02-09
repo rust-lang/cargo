@@ -366,7 +366,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  the binary target name `build` is forbidden
+  the binary target name `build` is forbidden, it conflicts with with cargo's build directory names
 ",
         )
         .run();
@@ -438,18 +438,18 @@ fn cargo_compile_api_exposes_artifact_paths() {
     let result = cargo::ops::compile(&ws, &compile_options).unwrap();
 
     assert_eq!(1, result.binaries.len());
-    assert!(result.binaries[0].1.exists());
+    assert!(result.binaries[0].path.exists());
     assert!(result.binaries[0]
-        .1
+        .path
         .to_str()
         .unwrap()
         .contains("the_foo_bin"));
 
     assert_eq!(1, result.cdylibs.len());
     // The exact library path varies by platform, but should certainly exist at least
-    assert!(result.cdylibs[0].1.exists());
+    assert!(result.cdylibs[0].path.exists());
     assert!(result.cdylibs[0]
-        .1
+        .path
         .to_str()
         .unwrap()
         .contains("the_foo_lib"));
@@ -3063,12 +3063,12 @@ fn invalid_spec() {
 
     p.cargo("build -p notAValidDep")
         .with_status(101)
-        .with_stderr("[ERROR] package ID specification `notAValidDep` matched no packages")
+        .with_stderr("[ERROR] package ID specification `notAValidDep` did not match any packages")
         .run();
 
     p.cargo("build -p d1 -p notAValidDep")
         .with_status(101)
-        .with_stderr("[ERROR] package ID specification `notAValidDep` matched no packages")
+        .with_stderr("[ERROR] package ID specification `notAValidDep` did not match any packages")
         .run();
 }
 
@@ -4023,9 +4023,8 @@ fn rustc_wrapper_from_path() {
 #[cfg(not(windows))]
 fn rustc_workspace_wrapper() {
     let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v -Zunstable-options")
+    p.cargo("build -v")
         .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
         .run();
 }
@@ -4034,9 +4033,8 @@ fn rustc_workspace_wrapper() {
 #[cfg(not(windows))]
 fn rustc_workspace_wrapper_relative() {
     let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v -Zunstable-options")
+    p.cargo("build -v")
         .env("RUSTC_WORKSPACE_WRAPPER", "./sccache")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]/foo/./sccache rustc[..]")
         .run();
@@ -4046,9 +4044,8 @@ fn rustc_workspace_wrapper_relative() {
 #[cfg(not(windows))]
 fn rustc_workspace_wrapper_from_path() {
     let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v -Zunstable-options")
+    p.cargo("build -v")
         .env("RUSTC_WORKSPACE_WRAPPER", "wannabe_sccache")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]`wannabe_sccache rustc [..]")
         .run();
@@ -4333,8 +4330,6 @@ fn target_edition() {
         .build();
 
     p.cargo("build -v")
-        // Passes on nightly, fails on stable, since `--edition` is nightly-only.
-        .without_status()
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -4449,7 +4444,9 @@ fn uplift_dsym_of_bin_on_mac() {
         .file("tests/d.rs", "fn main() { panic!(); }")
         .build();
 
-    p.cargo("build --bins --examples --tests").run();
+    p.cargo("build --bins --examples --tests")
+        .enable_mac_dsym()
+        .run();
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
@@ -4466,7 +4463,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
         .build();
     let dsym = p.target_debug_dir().join("foo.dSYM");
 
-    p.cargo("build").run();
+    p.cargo("build").enable_mac_dsym().run();
     assert!(dsym.is_dir());
 
     // Simulate the situation where the underlying dSYM bundle goes missing
@@ -4482,7 +4479,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
     assert!(dsym.is_symlink());
     assert!(!dsym.exists());
 
-    p.cargo("build").run();
+    p.cargo("build").enable_mac_dsym().run();
     assert!(dsym.is_dir());
 }
 

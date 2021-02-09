@@ -170,6 +170,10 @@ impl Package {
     pub fn proc_macro(&self) -> bool {
         self.targets().iter().any(|target| target.proc_macro())
     }
+    /// Gets the package's minimum Rust version.
+    pub fn rust_version(&self) -> Option<&str> {
+        self.manifest().rust_version()
+    }
 
     /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {
@@ -607,9 +611,8 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
     pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
-        Ok(self
-            .start_inner(id)
-            .chain_err(|| format!("failed to download `{}`", id))?)
+        self.start_inner(id)
+            .chain_err(|| format!("failed to download `{}`", id))
     }
 
     fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {

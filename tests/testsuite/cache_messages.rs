@@ -105,7 +105,7 @@ fn color() {
         return s.replace("\x1b[0m\x1b[0m", "\x1b[0m");
         #[cfg(not(windows))]
         return s.to_string();
-    };
+    }
 
     let compare = |a, b| {
         assert_eq!(normalize(a), normalize(b));
@@ -469,9 +469,8 @@ fn rustc_workspace_wrapper() {
         )
         .build();
 
-    p.cargo("check -Zunstable-options -v")
+    p.cargo("check -v")
         .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
         .run();
 
@@ -488,9 +487,8 @@ fn rustc_workspace_wrapper() {
         .run();
 
     // Again, reading from the cache.
-    p.cargo("check -Zunstable-options -v")
+    p.cargo("check -v")
         .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[FRESH] foo [..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
         .run();

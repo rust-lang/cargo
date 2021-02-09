@@ -233,7 +233,7 @@ fn profile_config_all_options() {
 [RUNNING] `rustc --crate-name foo [..] \
             -C opt-level=1 \
             -C panic=abort \
-            -C lto \
+            -C lto[..]\
             -C codegen-units=2 \
             -C debuginfo=2 \
             -C debug-assertions=on \
@@ -344,62 +344,60 @@ fn named_config_profile() {
     use super::config::ConfigBuilder;
     use cargo::core::compiler::CompileMode;
     use cargo::core::enable_nightly_features;
-    use cargo::core::features::Features;
     use cargo::core::profiles::{Profiles, UnitFor};
-    use cargo::core::PackageId;
+    use cargo::core::{PackageId, Workspace};
     use cargo::util::interning::InternedString;
-    use cargo::util::toml::TomlProfiles;
     use std::fs;
     enable_nightly_features();
     paths::root().join(".cargo").mkdir_p();
     fs::write(
         paths::root().join(".cargo/config"),
         r#"
-        [profile.foo]
-        inherits = "middle"
-        codegen-units = 2
-        [profile.foo.build-override]
-        codegen-units = 6
-        [profile.foo.package.dep]
-        codegen-units = 7
+            [profile.foo]
+            inherits = "middle"
+            codegen-units = 2
+            [profile.foo.build-override]
+            codegen-units = 6
+            [profile.foo.package.dep]
+            codegen-units = 7
 
-        [profile.middle]
-        inherits = "bar"
-        codegen-units = 3
+            [profile.middle]
+            inherits = "bar"
+            codegen-units = 3
 
-        [profile.bar]
-        inherits = "dev"
-        codegen-units = 4
-        debug = 1
+            [profile.bar]
+            inherits = "dev"
+            codegen-units = 4
+            debug = 1
+        "#,
+    )
+    .unwrap();
+    fs::write(
+        paths::root().join("Cargo.toml"),
+        r#"
+            cargo-features = ['named-profiles']
+
+            [workspace]
+
+            [profile.middle]
+            inherits = "bar"
+            codegen-units = 1
+            opt-level = 1
+            [profile.middle.package.dep]
+            overflow-checks = false
+
+            [profile.foo.build-override]
+            codegen-units = 5
+            debug-assertions = false
+            [profile.foo.package.dep]
+            codegen-units = 8
         "#,
     )
     .unwrap();
     let config = ConfigBuilder::new().build();
-    let mut warnings = Vec::new();
-    let features = Features::new(&["named-profiles".to_string()], &mut warnings).unwrap();
-    assert_eq!(warnings.len(), 0);
     let profile_name = InternedString::new("foo");
-    let toml = r#"
-        [profile.middle]
-        inherits = "bar"
-        codegen-units = 1
-        opt-level = 1
-        [profile.middle.package.dep]
-        overflow-checks = false
-
-        [profile.foo.build-override]
-        codegen-units = 5
-        debug-assertions = false
-        [profile.foo.package.dep]
-        codegen-units = 8
-    "#;
-    #[derive(serde::Deserialize)]
-    struct TomlManifest {
-        profile: Option<TomlProfiles>,
-    }
-    let manifest: TomlManifest = toml::from_str(toml).unwrap();
-    let profiles =
-        Profiles::new(manifest.profile.as_ref(), &config, profile_name, &features).unwrap();
+    let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
+    let profiles = Profiles::new(&ws, profile_name).unwrap();
 
     let crates_io = cargo::core::source::SourceId::crates_io(&config).unwrap();
     let a_pkg = PackageId::new("a", "0.1.0", crates_io).unwrap();

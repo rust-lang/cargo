@@ -29,8 +29,12 @@ fn make_dep_prefix(name: &str) -> String {
     }
 }
 
+/// A remote registry is a registry that lives at a remote URL (such as
+/// crates.io). The git index is cloned locally, and `.crate` files are
+/// downloaded as needed and cached locally.
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
+    /// Path to the cache of `.crate` files (`$CARGO_HOME/registry/path/$REG-HASH`).
     cache_path: Filesystem,
     source_id: SourceId,
     index_git_ref: GitReference,

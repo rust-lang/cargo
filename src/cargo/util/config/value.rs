@@ -78,12 +78,12 @@ impl Definition {
     ///
     /// CLI is preferred over environment, which is preferred over files.
     pub fn is_higher_priority(&self, other: &Definition) -> bool {
-        match (self, other) {
-            (Definition::Cli, Definition::Environment(_)) => true,
-            (Definition::Cli, Definition::Path(_)) => true,
-            (Definition::Environment(_), Definition::Path(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Definition::Cli, Definition::Environment(_))
+                | (Definition::Cli, Definition::Path(_))
+                | (Definition::Environment(_), Definition::Path(_))
+        )
     }
 }
 

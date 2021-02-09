@@ -1,5 +1,6 @@
-//! Tests for -Zpackage-features
+//! Tests for feature selection on the command-line.
 
+use super::features2::switch_to_resolver_2;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project};
 
@@ -52,18 +53,6 @@ fn virtual_no_default_features() {
         .build();
 
     p.cargo("check --no-default-features")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] --no-default-features is not allowed in the root of a virtual workspace
-[NOTE] while this was previously accepted, it didn't actually do anything
-[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
-",
-        )
-        .run();
-
-    p.cargo("check --no-default-features -Zpackage-features")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
@@ -74,13 +63,13 @@ fn virtual_no_default_features() {
         )
         .run();
 
-    p.cargo("check --features foo -Zpackage-features")
+    p.cargo("check --features foo")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: foo")
         .run();
 
-    p.cargo("check --features a/dep1,b/f1,b/f2,f2 -Zpackage-features")
+    p.cargo("check --features a/dep1,b/f1,b/f2,f2")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2")
@@ -121,18 +110,6 @@ fn virtual_features() {
         .build();
 
     p.cargo("check --features f1")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] --features is not allowed in the root of a virtual workspace
-[NOTE] while this was previously accepted, it didn't actually do anything
-[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
-",
-        )
-        .run();
-
-    p.cargo("check --features f1 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [CHECKING] a [..]
@@ -199,18 +176,6 @@ fn virtual_with_specific() {
         .build();
 
     p.cargo("check -p a -p b --features f1,f2,f3")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] --features is not allowed in the root of a virtual workspace
-[NOTE] while this was previously accepted, it didn't actually do anything
-[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
-",
-        )
-        .run();
-
-    p.cargo("check -p a -p b --features f1,f2,f3 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [CHECKING] a [..]
@@ -279,13 +244,9 @@ fn other_member_from_current() {
         )
         .build();
 
+    // Old behavior.
     p.cargo("run -p bar --features f1")
         .with_stdout("f3f4")
-        .run();
-
-    p.cargo("run -p bar --features f1 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("f1")
         .run();
 
     p.cargo("run -p bar --features f1,f2")
@@ -293,17 +254,19 @@ fn other_member_from_current() {
         .with_stderr("[ERROR] Package `foo[..]` does not have the feature `f2`")
         .run();
 
-    p.cargo("run -p bar --features f1,f2 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("f1f2")
-        .run();
-
     p.cargo("run -p bar --features bar/f1")
         .with_stdout("f1f3")
         .run();
 
-    p.cargo("run -p bar --features bar/f1 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
+    // New behavior.
+    switch_to_resolver_2(&p);
+    p.cargo("run -p bar --features f1").with_stdout("f1").run();
+
+    p.cargo("run -p bar --features f1,f2")
+        .with_stdout("f1f2")
+        .run();
+
+    p.cargo("run -p bar --features bar/f1")
         .with_stdout("f1")
         .run();
 }
@@ -368,53 +331,35 @@ fn virtual_member_slash() {
         )
         .build();
 
-    p.cargo("check --features a/f1")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] --features is not allowed in the root of a virtual workspace
-[NOTE] while this was previously accepted, it didn't actually do anything
-[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
-",
-        )
-        .run();
-
-    p.cargo("check -p a -Zpackage-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p a")
         .with_status(101)
         .with_stderr_contains("[..]f1 is set[..]")
         .with_stderr_does_not_contain("[..]f2 is set[..]")
         .with_stderr_does_not_contain("[..]b is set[..]")
         .run();
 
-    p.cargo("check -p a --features a/f1 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p a --features a/f1")
         .with_status(101)
         .with_stderr_contains("[..]f1 is set[..]")
         .with_stderr_does_not_contain("[..]f2 is set[..]")
         .with_stderr_does_not_contain("[..]b is set[..]")
         .run();
 
-    p.cargo("check -p a --features a/f2 -Zpackage-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p a --features a/f2")
         .with_status(101)
         .with_stderr_contains("[..]f1 is set[..]")
         .with_stderr_contains("[..]f2 is set[..]")
         .with_stderr_does_not_contain("[..]b is set[..]")
         .run();
 
-    p.cargo("check -p a --features b/bfeat -Zpackage-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p a --features b/bfeat")
         .with_status(101)
         .with_stderr_contains("[..]bfeat is set[..]")
         .run();
 
-    p.cargo("check -p a --no-default-features -Zpackage-features")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("check -p a --no-default-features").run();
 
-    p.cargo("check -p a --no-default-features --features b -Zpackage-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p a --no-default-features --features b")
         .with_status(101)
         .with_stderr_contains("[..]b is set[..]")
         .run();
@@ -431,6 +376,7 @@ fn non_member() {
             [package]
             name = "foo"
             version = "0.1.0"
+            resolver = "2"
 
             [dependencies]
             dep = "1.0"
@@ -442,28 +388,24 @@ fn non_member() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zpackage-features -p dep --features f1")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -p dep --features f1")
         .with_status(101)
         .with_stderr(
             "[UPDATING][..]\n[ERROR] cannot specify features for packages outside of workspace",
         )
         .run();
 
-    p.cargo("build -Zpackage-features -p dep --all-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -p dep --all-features")
         .with_status(101)
         .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
-    p.cargo("build -Zpackage-features -p dep --no-default-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -p dep --no-default-features")
         .with_status(101)
         .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
-    p.cargo("build -Zpackage-features -p dep")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -p dep")
         .with_stderr(
             "\
 [DOWNLOADING] [..]
@@ -472,5 +414,47 @@ fn non_member() {
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn resolver1_member_features() {
+    // --features member-name/feature-name with resolver="1"
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["member1", "member2"]
+            "#,
+        )
+        .file(
+            "member1/Cargo.toml",
+            r#"
+                [package]
+                name = "member1"
+                version = "0.1.0"
+
+                [features]
+                m1-feature = []
+            "#,
+        )
+        .file(
+            "member1/src/main.rs",
+            r#"
+                fn main() {
+                    if cfg!(feature = "m1-feature") {
+                        println!("m1-feature set");
+                    }
+                }
+            "#,
+        )
+        .file("member2/Cargo.toml", &basic_manifest("member2", "0.1.0"))
+        .file("member2/src/lib.rs", "")
+        .build();
+
+    p.cargo("run -p member1 --features member1/m1-feature")
+        .cwd("member2")
+        .with_stdout("m1-feature set")
         .run();
 }

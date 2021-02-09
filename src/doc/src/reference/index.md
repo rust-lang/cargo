@@ -8,6 +8,7 @@ The reference covers the details of various areas of Cargo.
     * [Cargo Targets](cargo-targets.md)
 * [Workspaces](workspaces.md)
 * [Features](features.md)
+    * [Features Examples](features-examples.md)
 * [Profiles](profiles.md)
 * [Configuration](config.md)
 * [Environment Variables](environment-variables.md)

@@ -1,11 +1,12 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
 use jobserver::Client;
 
-use crate::core::compiler::{self, compilation, Unit};
+use crate::core::compiler::compilation::{self, UnitOutput};
+use crate::core::compiler::{self, Unit};
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
@@ -130,7 +131,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
-        self.check_collistions()?;
+        self.check_collisions()?;
 
         for unit in &self.bcx.roots {
             // Build up a list of pending jobs, each of which represent
@@ -174,16 +175,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 if unit.mode == CompileMode::Test {
                     self.compilation
                         .tests
-                        .push((unit.clone(), output.path.clone()));
+                        .push(self.unit_output(unit, &output.path));
                 } else if unit.target.is_executable() {
                     self.compilation
                         .binaries
-                        .push((unit.clone(), bindst.clone()));
+                        .push(self.unit_output(unit, bindst));
                 } else if unit.target.is_cdylib() {
-                    if !self.compilation.cdylibs.iter().any(|(u, _)| u == unit) {
+                    if !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit) {
                         self.compilation
                             .cdylibs
-                            .push((unit.clone(), bindst.clone()));
+                            .push(self.unit_output(unit, bindst));
                     }
                 }
             }
@@ -198,9 +199,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             .build_script_out_dir(&dep.unit)
                             .display()
                             .to_string();
+                        let script_meta = self.get_run_build_script_metadata(&dep.unit);
                         self.compilation
                             .extra_env
-                            .entry(dep.unit.pkg.package_id())
+                            .entry(script_meta)
                             .or_insert_with(Vec::new)
                             .push(("OUT_DIR".to_string(), out_dir));
                     }
@@ -212,50 +214,36 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut unstable_opts = false;
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lto_args(&self, unit));
+                for feature in &unit.features {
+                    args.push("--cfg".into());
+                    args.push(format!("feature=\"{}\"", feature).into());
+                }
+                let script_meta = self.find_build_script_metadata(unit);
+                if let Some(meta) = script_meta {
+                    if let Some(output) = self.build_script_outputs.lock().unwrap().get(meta) {
+                        for cfg in &output.cfgs {
+                            args.push("--cfg".into());
+                            args.push(cfg.into());
+                        }
+                    }
+                }
+                args.extend(self.bcx.rustdocflags_args(unit).iter().map(Into::into));
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     unit: unit.clone(),
                     args,
                     unstable_opts,
                     linker: self.bcx.linker(unit.kind),
+                    script_meta,
                 });
-            }
-
-            // Collect the enabled features.
-            let feats = &unit.features;
-            if !feats.is_empty() {
-                self.compilation
-                    .cfgs
-                    .entry(unit.pkg.package_id())
-                    .or_insert_with(|| {
-                        feats
-                            .iter()
-                            .map(|feat| format!("feature=\"{}\"", feat))
-                            .collect()
-                    });
-            }
-
-            // Collect rustdocflags.
-            let rustdocflags = self.bcx.rustdocflags_args(unit);
-            if !rustdocflags.is_empty() {
-                self.compilation
-                    .rustdocflags
-                    .entry(unit.pkg.package_id())
-                    .or_insert_with(|| rustdocflags.to_vec());
             }
 
             super::output_depinfo(&mut self, unit)?;
         }
 
-        for (pkg_id, output) in self.build_script_outputs.lock().unwrap().iter() {
-            self.compilation
-                .cfgs
-                .entry(pkg_id)
-                .or_insert_with(HashSet::new)
-                .extend(output.cfgs.iter().cloned());
-
+        for (script_meta, output) in self.build_script_outputs.lock().unwrap().iter() {
             self.compilation
                 .extra_env
-                .entry(pkg_id)
+                .entry(*script_meta)
                 .or_insert_with(Vec::new)
                 .extend(output.env.iter().cloned());
 
@@ -287,7 +275,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dest = self.bcx.profiles.get_dir_name();
         let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let mut targets = HashMap::new();
-        for kind in self.bcx.build_config.requested_kinds.iter() {
+        for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
                 let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
                 targets.insert(target, layout);
@@ -319,13 +307,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let files = self.files.as_ref().unwrap();
-        for &kind in self
-            .bcx
-            .build_config
-            .requested_kinds
-            .iter()
-            .chain(Some(&CompileKind::Host))
-        {
+        for &kind in self.bcx.all_kinds.iter() {
             let layout = files.layout(kind);
             self.compilation
                 .root_output
@@ -358,11 +340,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the RunCustomBuild Unit associated with the given Unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_unit(&self, unit: Unit) -> Option<Unit> {
+    pub fn find_build_script_unit(&self, unit: &Unit) -> Option<Unit> {
         if unit.mode.is_run_custom_build() {
-            return Some(unit);
+            return Some(unit.clone());
         }
-        self.bcx.unit_graph[&unit]
+        self.bcx.unit_graph[unit]
             .iter()
             .find(|unit_dep| {
                 unit_dep.unit.mode.is_run_custom_build()
@@ -375,7 +357,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// the given unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_metadata(&self, unit: Unit) -> Option<Metadata> {
+    pub fn find_build_script_metadata(&self, unit: &Unit) -> Option<Metadata> {
         let script_unit = self.find_build_script_unit(unit)?;
         Some(self.get_run_build_script_metadata(&script_unit))
     }
@@ -404,7 +386,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(inputs.into_iter().collect())
     }
 
-    fn check_collistions(&self) -> CargoResult<()> {
+    /// Returns a [`UnitOutput`] which represents some information about the
+    /// output of a unit.
+    pub fn unit_output(&self, unit: &Unit, path: &Path) -> UnitOutput {
+        let script_meta = self.find_build_script_metadata(unit);
+        UnitOutput {
+            unit: unit.clone(),
+            path: path.to_path_buf(),
+            script_meta,
+        }
+    }
+
+    fn check_collisions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
         let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
             format!(

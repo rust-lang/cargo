@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
@@ -7,9 +7,8 @@ use cargo_platform::CfgExpr;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::compiler::CompileKind;
-use crate::core::compiler::Unit;
-use crate::core::{Edition, Package, PackageId};
+use crate::core::compiler::{CompileKind, Metadata, Unit};
+use crate::core::{Edition, Package};
 use crate::util::{self, config, join_paths, process, CargoResult, Config, ProcessBuilder};
 
 /// Structure with enough information to run `rustdoc --test`.
@@ -22,20 +21,35 @@ pub struct Doctest {
     pub unstable_opts: bool,
     /// The -Clinker value to use.
     pub linker: Option<PathBuf>,
+    /// The script metadata, if this unit's package has a build script.
+    ///
+    /// This is used for indexing [`Compilation::extra_env`].
+    pub script_meta: Option<Metadata>,
+}
+
+/// Information about the output of a unit.
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+pub struct UnitOutput {
+    /// The unit that generated this output.
+    pub unit: Unit,
+    /// Path to the unit's primary output (an executable or cdylib).
+    pub path: PathBuf,
+    /// The script metadata, if this unit's package has a build script.
+    ///
+    /// This is used for indexing [`Compilation::extra_env`].
+    pub script_meta: Option<Metadata>,
 }
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
-    /// `(unit, path_to_test_exe)` where `unit` contains information such as the
-    /// package, compile target, etc.
-    pub tests: Vec<(Unit, PathBuf)>,
+    pub tests: Vec<UnitOutput>,
 
     /// An array of all binaries created.
-    pub binaries: Vec<(Unit, PathBuf)>,
+    pub binaries: Vec<UnitOutput>,
 
     /// An array of all cdylibs created.
-    pub cdylibs: Vec<(Unit, PathBuf)>,
+    pub cdylibs: Vec<UnitOutput>,
 
     /// All directories for the output of native build commands.
     ///
@@ -60,16 +74,13 @@ pub struct Compilation<'cfg> {
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
-    pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
+    ///
+    /// The key is the build script metadata for uniquely identifying the
+    /// `RunCustomBuild` unit that generated these env vars.
+    pub extra_env: HashMap<Metadata, Vec<(String, String)>>,
 
     /// Libraries to test with rustdoc.
     pub to_doc_test: Vec<Doctest>,
-
-    /// Features per package enabled during this compilation.
-    pub cfgs: HashMap<PackageId, HashSet<String>>,
-
-    /// Flags to pass to rustdoc when invoked from cargo test, per package.
-    pub rustdocflags: HashMap<PackageId, Vec<String>>,
 
     /// The target host triple.
     pub host: String,
@@ -113,10 +124,8 @@ impl<'cfg> Compilation<'cfg> {
                 .sysroot_host_libdir
                 .clone(),
             sysroot_target_libdir: bcx
-                .build_config
-                .requested_kinds
+                .all_kinds
                 .iter()
-                .chain(Some(&CompileKind::Host))
                 .map(|kind| {
                     (
                         *kind,
@@ -129,8 +138,6 @@ impl<'cfg> Compilation<'cfg> {
             cdylibs: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
-            cfgs: HashMap::new(),
-            rustdocflags: HashMap::new(),
             config: bcx.config,
             host: bcx.host_triple().to_string(),
             rustc_process: rustc,
@@ -146,7 +153,13 @@ impl<'cfg> Compilation<'cfg> {
         })
     }
 
-    /// See `process`.
+    /// Returns a [`ProcessBuilder`] for running `rustc`.
+    ///
+    /// `is_primary` is true if this is a "primary package", which means it
+    /// was selected by the user on the command-line (such as with a `-p`
+    /// flag), see [`crate::core::compiler::Context::primary_packages`].
+    ///
+    /// `is_workspace` is true if this is a workspace member.
     pub fn rustc_process(
         &self,
         unit: &Unit,
@@ -162,14 +175,18 @@ impl<'cfg> Compilation<'cfg> {
         };
 
         let cmd = fill_rustc_tool_env(rustc, unit);
-        self.fill_env(cmd, &unit.pkg, unit.kind, true)
+        self.fill_env(cmd, &unit.pkg, None, unit.kind, true)
     }
 
-    /// See `process`.
-    pub fn rustdoc_process(&self, unit: &Unit) -> CargoResult<ProcessBuilder> {
+    /// Returns a [`ProcessBuilder`] for running `rustdoc`.
+    pub fn rustdoc_process(
+        &self,
+        unit: &Unit,
+        script_meta: Option<Metadata>,
+    ) -> CargoResult<ProcessBuilder> {
         let rustdoc = process(&*self.config.rustdoc()?);
         let cmd = fill_rustc_tool_env(rustdoc, unit);
-        let mut p = self.fill_env(cmd, &unit.pkg, unit.kind, true)?;
+        let mut p = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
         if unit.target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", unit.target.edition()));
         }
@@ -181,25 +198,37 @@ impl<'cfg> Compilation<'cfg> {
         Ok(p)
     }
 
-    /// See `process`.
+    /// Returns a [`ProcessBuilder`] appropriate for running a process for the
+    /// host platform.
+    ///
+    /// This is currently only used for running build scripts. If you use this
+    /// for anything else, please be extra careful on how environment
+    /// variables are set!
     pub fn host_process<T: AsRef<OsStr>>(
         &self,
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, CompileKind::Host, false)
+        self.fill_env(process(cmd), pkg, None, CompileKind::Host, false)
     }
 
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
         self.target_runners.get(&kind).and_then(|x| x.as_ref())
     }
 
-    /// See `process`.
+    /// Returns a [`ProcessBuilder`] appropriate for running a process for the
+    /// target platform. This is typically used for `cargo run` and `cargo
+    /// test`.
+    ///
+    /// `script_meta` is the metadata for the `RunCustomBuild` unit that this
+    /// unit used for its build script. Use `None` if the package did not have
+    /// a build script.
     pub fn target_process<T: AsRef<OsStr>>(
         &self,
         cmd: T,
         kind: CompileKind,
         pkg: &Package,
+        script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
         let builder = if let Some((runner, args)) = self.target_runner(kind) {
             let mut builder = process(runner);
@@ -209,7 +238,7 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             process(cmd)
         };
-        self.fill_env(builder, pkg, kind, false)
+        self.fill_env(builder, pkg, script_meta, kind, false)
     }
 
     /// Prepares a new process with an appropriate environment to run against
@@ -221,6 +250,7 @@ impl<'cfg> Compilation<'cfg> {
         &self,
         mut cmd: ProcessBuilder,
         pkg: &Package,
+        script_meta: Option<Metadata>,
         kind: CompileKind,
         is_rustc_tool: bool,
     ) -> CargoResult<ProcessBuilder> {
@@ -260,9 +290,11 @@ impl<'cfg> Compilation<'cfg> {
         let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
 
         cmd.env(util::dylib_path_envvar(), &search_path);
-        if let Some(env) = self.extra_env.get(&pkg.package_id()) {
-            for &(ref k, ref v) in env {
-                cmd.env(k, v);
+        if let Some(meta) = script_meta {
+            if let Some(env) = self.extra_env.get(&meta) {
+                for (k, v) in env {
+                    cmd.env(k, v);
+                }
             }
         }
 

@@ -14,7 +14,7 @@ use std::sync::Mutex;
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 lazy_static! {
-    static ref GLOBAL_ROOT: PathBuf = {
+    pub static ref GLOBAL_ROOT: PathBuf = {
         let mut path = t!(env::current_exe());
         path.pop(); // chop off exe name
         path.pop(); // chop off 'debug'
@@ -127,10 +127,8 @@ impl CargoPathExt for Path {
             if let Err(e) = remove_dir_all::remove_dir_all(self) {
                 panic!("failed to remove {:?}: {:?}", self, e)
             }
-        } else {
-            if let Err(e) = fs::remove_file(self) {
-                panic!("failed to remove {:?}: {:?}", self, e)
-            }
+        } else if let Err(e) = fs::remove_file(self) {
+            panic!("failed to remove {:?}: {:?}", self, e)
         }
     }
 

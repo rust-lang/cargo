@@ -304,8 +304,17 @@ fn invalid_dir_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] invalid character `.` in crate name: `foo.bar`, [..]
-If you need a crate name to not match the directory name, consider using --name flag.
+[ERROR] invalid character `.` in package name: `foo.bar`, [..]
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"foo.bar\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/foo.bar.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"foo.bar\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();
@@ -323,8 +332,17 @@ fn reserved_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]\n\
-If you need a crate name to not match the directory name, consider using --name flag.
+[ERROR] the name `test` cannot be used as a package name, it conflicts [..]\n\
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name \"test\", use a valid package name, \
+and set the binary name to be different from the package. \
+This can be done by setting the binary filename to `src/bin/test.rs` \
+or change the name in Cargo.toml with:
+
+    [bin]
+    name = \"test\"
+    path = \"src/main.rs\"
+
 ",
         )
         .run();

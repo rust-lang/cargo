@@ -41,7 +41,7 @@ rearrange the compiled code which may make it harder to use with a debugger.
 
 The valid options are:
 
-* `0`: no optimizations, also turns on [`cfg(debug_assertions)`](#debug-assertions).
+* `0`: no optimizations
 * `1`: basic optimizations
 * `2`: some optimizations
 * `3`: all optimizations
@@ -71,7 +71,25 @@ The valid options are:
 * `1`: line tables only
 * `2` or `true`: full debug info
 
+You may wish to also configure the [`split-debuginfo`](#split-debuginfo) option
+depending on your needs as well.
+
 [`-C debuginfo` flag]: ../../rustc/codegen-options/index.html#debuginfo
+
+#### split-debuginfo
+
+The `split-debuginfo` setting controls the [`-C split-debuginfo` flag] which
+controls whether debug information, if generated, is either placed in the
+executable itself or adjacent to it.
+
+This option is a string and acceptable values are the same as those the
+[compiler accepts][`-C split-debuginfo` flag]. This option is currently not
+passed by default on platforms other than macOS, where it defaults to
+`unpacked`. The default may change in the future for platforms using DWARF
+debugging information and ELF executables to `unpacked` as well once it is
+stabilized in the compiler.
+
+[`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo
 
 #### debug-assertions
 

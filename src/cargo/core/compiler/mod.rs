@@ -24,7 +24,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -36,7 +36,7 @@ pub use self::build_context::{
     env_args, output_err_info, BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo,
 };
 use self::build_plan::BuildPlan;
-pub use self::compilation::{Compilation, Doctest};
+pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
 pub use self::crate_type::CrateType;
@@ -254,7 +254,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
-    let script_metadata = cx.find_build_script_metadata(unit.clone());
+    let script_metadata = cx.find_build_script_metadata(unit);
     let is_local = unit.is_local();
 
     return Ok(Work::new(move |state| {
@@ -278,7 +278,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata)?;
+            add_custom_env(&mut rustc, &script_outputs, script_metadata);
         }
 
         for output in outputs.iter() {
@@ -299,7 +299,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             match err
                 .downcast_ref::<ProcessError>()
                 .as_ref()
-                .and_then(|perr| perr.exit.and_then(|e| e.code()))
+                .and_then(|perr| perr.code)
             {
                 Some(n) if errors::is_simple_exit_code(n) => VerboseError::new(err).into(),
                 _ => err,
@@ -359,7 +359,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = build_script_outputs.get(key.0, key.1).ok_or_else(|| {
+            let output = build_script_outputs.get(key.1).ok_or_else(|| {
                 internal(format!(
                     "couldn't find build script output for {}/{}",
                     key.0, key.1
@@ -396,19 +396,15 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     fn add_custom_env(
         rustc: &mut ProcessBuilder,
         build_script_outputs: &BuildScriptOutputs,
-        current_id: PackageId,
         metadata: Option<Metadata>,
-    ) -> CargoResult<()> {
-        let metadata = match metadata {
-            Some(metadata) => metadata,
-            None => return Ok(()),
-        };
-        if let Some(output) = build_script_outputs.get(current_id, metadata) {
-            for &(ref name, ref value) in output.env.iter() {
-                rustc.env(name, value);
+    ) {
+        if let Some(metadata) = metadata {
+            if let Some(output) = build_script_outputs.get(metadata) {
+                for &(ref name, ref value) in output.env.iter() {
+                    rustc.env(name, value);
+                }
             }
         }
-        Ok(())
     }
 }
 
@@ -493,14 +489,14 @@ fn add_plugin_deps(
     rustc: &mut ProcessBuilder,
     build_script_outputs: &BuildScriptOutputs,
     build_scripts: &BuildScripts,
-    root_output: &PathBuf,
+    root_output: &Path,
 ) -> CargoResult<()> {
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for (pkg_id, metadata) in &build_scripts.plugins {
         let output = build_script_outputs
-            .get(*pkg_id, *metadata)
+            .get(*metadata)
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", pkg_id)))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
@@ -517,7 +513,7 @@ fn add_plugin_deps(
 // Strip off prefixes like "native=" or "framework=" and filter out directories
 // **not** inside our output directory since they are likely spurious and can cause
 // clashes with system shared libraries (issue #3366).
-fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &PathBuf) -> Vec<PathBuf>
+fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &Path) -> Vec<PathBuf>
 where
     I: Iterator<Item = &'a PathBuf>,
 {
@@ -582,7 +578,8 @@ fn prepare_rustc(
 
 fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(unit)?;
+    // script_metadata is not needed here, it is only for tests.
+    let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
@@ -605,7 +602,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format_and_color(cx, &mut rustdoc, false)?;
+    add_error_format_and_color(cx, &mut rustdoc, false);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -625,16 +622,11 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
-    let pkg_id = unit.pkg.package_id();
-    let script_metadata = cx.find_build_script_metadata(unit.clone());
+    let script_metadata = cx.find_build_script_metadata(unit);
 
     Ok(Work::new(move |state| {
         if let Some(script_metadata) = script_metadata {
-            if let Some(output) = build_script_outputs
-                .lock()
-                .unwrap()
-                .get(pkg_id, script_metadata)
-            {
+            if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
                 for cfg in output.cfgs.iter() {
                     rustdoc.arg("--cfg").arg(cfg);
                 }
@@ -727,11 +719,7 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
-fn add_error_format_and_color(
-    cx: &Context<'_, '_>,
-    cmd: &mut ProcessBuilder,
-    pipelined: bool,
-) -> CargoResult<()> {
+fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pipelined: bool) {
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi");
     if pipelined {
@@ -766,8 +754,6 @@ fn add_error_format_and_color(
             _ => (),
         }
     }
-
-    Ok(())
 }
 
 fn build_base_args(
@@ -784,6 +770,7 @@ fn build_base_args(
         codegen_units,
         debuginfo,
         debug_assertions,
+        split_debuginfo,
         overflow_checks,
         rpath,
         ref panic,
@@ -801,7 +788,7 @@ fn build_base_args(
     }
 
     add_path_args(bcx, unit, cmd);
-    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
+    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
 
     if !test {
         for crate_type in crate_types.iter() {
@@ -835,6 +822,15 @@ fn build_base_args(
     }
 
     cmd.args(&lto_args(cx, unit));
+
+    // This is generally just an optimization on build time so if we don't pass
+    // it then it's ok. As of the time of this writing it's a very new flag, so
+    // we need to dynamically check if it's available.
+    if cx.bcx.target_data.info(unit.kind).supports_split_debuginfo {
+        if let Some(split) = split_debuginfo {
+            cmd.arg("-C").arg(format!("split-debuginfo={}", split));
+        }
+    }
 
     if let Some(n) = codegen_units {
         cmd.arg("-C").arg(&format!("codegen-units={}", n));

@@ -39,6 +39,7 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .arg_message_format()
         .arg(opt(
             "no-fail-fast",
@@ -73,7 +74,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let err = ops::run_benches(&ws, &ops, &bench_args)?;
     match err {
         None => Ok(()),
-        Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {
+        Some(err) => Err(match err.code {
             Some(i) => CliError::new(anyhow::format_err!("bench failed"), i),
             None => CliError::new(err.into(), 101),
         }),

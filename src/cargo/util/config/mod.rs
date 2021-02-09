@@ -327,10 +327,6 @@ impl Config {
             &self.build_config()?.rustc_workspace_wrapper,
         );
 
-        if !self.cli_unstable().unstable_options && rustc_workspace_wrapper.is_some() {
-            bail!("Usage of `RUSTC_WORKSPACE_WRAPPER` requires `-Z unstable-options`")
-        }
-
         Rustc::new(
             self.get_tool("rustc", &self.build_config()?.rustc),
             wrapper,
@@ -708,7 +704,9 @@ impl Config {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
-        self.unstable_flags.parse(unstable_flags)?;
+        for warning in self.unstable_flags.parse(unstable_flags)? {
+            self.shell().warn(warning)?;
+        }
         if !unstable_flags.is_empty() {
             // store a copy of the cli flags separately for `load_unstable_flags_from_config`
             // (we might also need it again for `reload_rooted_at`)
@@ -806,6 +804,10 @@ impl Config {
 
     pub fn frozen(&self) -> bool {
         self.frozen
+    }
+
+    pub fn locked(&self) -> bool {
+        self.locked
     }
 
     pub fn lock_update_allowed(&self) -> bool {
@@ -1178,17 +1180,17 @@ impl Config {
 
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
         self.http_config
-            .try_borrow_with(|| Ok(self.get::<CargoHttpConfig>("http")?))
+            .try_borrow_with(|| self.get::<CargoHttpConfig>("http"))
     }
 
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
         self.net_config
-            .try_borrow_with(|| Ok(self.get::<CargoNetConfig>("net")?))
+            .try_borrow_with(|| self.get::<CargoNetConfig>("net"))
     }
 
     pub fn build_config(&self) -> CargoResult<&CargoBuildConfig> {
         self.build_config
-            .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
+            .try_borrow_with(|| self.get::<CargoBuildConfig>("build"))
     }
 
     pub fn progress_config(&self) -> &ProgressConfig {
@@ -1702,13 +1704,11 @@ pub fn save_credentials(
                     rtable.remove("token");
                 }
             }
-        } else {
-            if let Some(registry) = table.get_mut("registry") {
-                let reg_table = registry
-                    .as_table_mut()
-                    .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
-                reg_table.remove("token");
-            }
+        } else if let Some(registry) = table.get_mut("registry") {
+            let reg_table = registry
+                .as_table_mut()
+                .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
+            reg_table.remove("token");
         }
     }
 

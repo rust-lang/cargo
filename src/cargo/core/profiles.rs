@@ -1,12 +1,13 @@
-use crate::core::compiler::CompileMode;
+use crate::core::compiler::{CompileMode, Unit};
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
+use crate::core::{Feature, PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::errors::CargoResultExt;
 use crate::util::interning::InternedString;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::bail;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::hash::Hash;
 use std::{cmp, env, fmt, hash};
 
 /// Collection of all profiles.
@@ -24,28 +25,28 @@ pub struct Profiles {
     named_profiles_enabled: bool,
     /// The profile the user requested to use.
     requested_profile: InternedString,
+    /// The host target for rustc being used by this `Profiles`.
+    rustc_host: InternedString,
 }
 
 impl Profiles {
-    pub fn new(
-        profiles: Option<&TomlProfiles>,
-        config: &Config,
-        requested_profile: InternedString,
-        features: &Features,
-    ) -> CargoResult<Profiles> {
+    pub fn new(ws: &Workspace<'_>, requested_profile: InternedString) -> CargoResult<Profiles> {
+        let config = ws.config();
         let incremental = match env::var_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
             None => config.build_config()?.incremental,
         };
-        let mut profiles = merge_config_profiles(profiles, config, requested_profile, features)?;
+        let mut profiles = merge_config_profiles(ws, requested_profile)?;
+        let rustc_host = ws.config().load_global_rustc(Some(ws))?.host;
 
-        if !features.is_enabled(Feature::named_profiles()) {
+        if !ws.unstable_features().is_enabled(Feature::named_profiles()) {
             let mut profile_makers = Profiles {
                 incremental,
                 named_profiles_enabled: false,
                 dir_names: Self::predefined_dir_names(),
                 by_name: HashMap::new(),
                 requested_profile,
+                rustc_host,
             };
 
             profile_makers.by_name.insert(
@@ -98,9 +99,10 @@ impl Profiles {
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
             requested_profile,
+            rustc_host,
         };
 
-        Self::add_root_profiles(&mut profile_makers, &profiles)?;
+        Self::add_root_profiles(&mut profile_makers, &profiles);
 
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
@@ -143,7 +145,7 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
-    ) -> CargoResult<()> {
+    ) {
         profile_makers.by_name.insert(
             InternedString::new("dev"),
             ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
@@ -153,7 +155,6 @@ impl Profiles {
             InternedString::new("release"),
             ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
         );
-        Ok(())
     }
 
     /// Returns the built-in profiles (not including dev/release, which are
@@ -349,6 +350,7 @@ impl Profiles {
         if let Some(v) = self.incremental {
             profile.incremental = v;
         }
+
         // Only enable incremental compilation for sources the user can
         // modify (aka path sources). For things that change infrequently,
         // non-incremental builds yield better performance in the compiler
@@ -568,6 +570,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(debug_assertions) = toml.debug_assertions {
         profile.debug_assertions = debug_assertions;
     }
+    if let Some(split_debuginfo) = &toml.split_debuginfo {
+        profile.split_debuginfo = Some(InternedString::new(split_debuginfo));
+    }
     if let Some(rpath) = toml.rpath {
         profile.rpath = rpath;
     }
@@ -613,6 +618,7 @@ pub struct Profile {
     // `None` means use rustc default.
     pub codegen_units: Option<u32>,
     pub debuginfo: Option<u32>,
+    pub split_debuginfo: Option<InternedString>,
     pub debug_assertions: bool,
     pub overflow_checks: bool,
     pub rpath: bool,
@@ -631,6 +637,7 @@ impl Default for Profile {
             codegen_units: None,
             debuginfo: None,
             debug_assertions: false,
+            split_debuginfo: None,
             overflow_checks: false,
             rpath: false,
             incremental: false,
@@ -655,6 +662,7 @@ compact_debug! {
                 root
                 codegen_units
                 debuginfo
+                split_debuginfo
                 debug_assertions
                 overflow_checks
                 rpath
@@ -735,25 +743,13 @@ impl Profile {
     /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
-    fn comparable(
-        &self,
-    ) -> (
-        InternedString,
-        Lto,
-        Option<u32>,
-        Option<u32>,
-        bool,
-        bool,
-        bool,
-        bool,
-        PanicStrategy,
-        Strip,
-    ) {
+    fn comparable(&self) -> impl Hash + Eq {
         (
             self.opt_level,
             self.lto,
             self.codegen_units,
             self.debuginfo,
+            self.split_debuginfo,
             self.debug_assertions,
             self.overflow_checks,
             self.rpath,
@@ -977,36 +973,38 @@ impl UnitFor {
         unit_for
     }
 
-    /// Returns a new copy based on `for_host` setting.
+    /// Returns a new copy updated based on the target dependency.
     ///
-    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
-    /// fashion so that all its dependencies also have `panic_abort_ok=false`.
-    /// This'll help ensure that once we start compiling for the host platform
-    /// (build scripts, plugins, proc macros, etc) we'll share the same build
-    /// graph where everything is `panic=unwind`.
-    pub fn with_for_host(self, for_host: bool) -> UnitFor {
+    /// This is where the magic happens that the host/host_features settings
+    /// transition in a sticky fashion. As the dependency graph is being
+    /// built, once those flags are set, they stay set for the duration of
+    /// that portion of tree.
+    pub fn with_dependency(self, parent: &Unit, dep_target: &Target) -> UnitFor {
+        // A build script or proc-macro transitions this to being built for the host.
+        let dep_for_host = dep_target.for_host();
+        // This is where feature decoupling of host versus target happens.
+        //
+        // Once host features are desired, they are always desired.
+        //
+        // A proc-macro should always use host features.
+        //
+        // Dependencies of a build script should use host features (subtle
+        // point: the build script itself does *not* use host features, that's
+        // why the parent is checked here, and not the dependency).
+        let host_features =
+            self.host_features || parent.target.is_custom_build() || dep_target.proc_macro();
+        // Build scripts and proc macros, and all of their dependencies are
+        // AlwaysUnwind.
+        let panic_setting = if dep_for_host {
+            PanicSetting::AlwaysUnwind
+        } else {
+            self.panic_setting
+        };
         UnitFor {
-            host: self.host || for_host,
-            host_features: self.host_features,
-            panic_setting: if for_host {
-                PanicSetting::AlwaysUnwind
-            } else {
-                self.panic_setting
-            },
+            host: self.host || dep_for_host,
+            host_features,
+            panic_setting,
         }
-    }
-
-    /// Returns a new copy updating it whether or not it should use features
-    /// for build dependencies and proc-macros.
-    ///
-    /// This is part of the machinery responsible for handling feature
-    /// decoupling for build dependencies in the new feature resolver.
-    pub fn with_host_features(mut self, host_features: bool) -> UnitFor {
-        if host_features {
-            assert!(self.host);
-        }
-        self.host_features = self.host_features || host_features;
-        self
     }
 
     /// Returns `true` if this unit is for a build script or any of its
@@ -1072,12 +1070,10 @@ impl UnitFor {
 ///
 /// Returns a new copy of the profile map with all the mergers complete.
 fn merge_config_profiles(
-    profiles: Option<&TomlProfiles>,
-    config: &Config,
+    ws: &Workspace<'_>,
     requested_profile: InternedString,
-    features: &Features,
 ) -> CargoResult<BTreeMap<InternedString, TomlProfile>> {
-    let mut profiles = match profiles {
+    let mut profiles = match ws.profiles() {
         Some(profiles) => profiles.get_all().clone(),
         None => BTreeMap::new(),
     };
@@ -1086,7 +1082,7 @@ fn merge_config_profiles(
     check_to_add.insert(requested_profile);
     // Merge config onto manifest profiles.
     for (name, profile) in &mut profiles {
-        if let Some(config_profile) = get_config_profile(name, config, features)? {
+        if let Some(config_profile) = get_config_profile(ws, name)? {
             profile.merge(&config_profile);
         }
         if let Some(inherits) = &profile.inherits {
@@ -1105,7 +1101,7 @@ fn merge_config_profiles(
         std::mem::swap(&mut current, &mut check_to_add);
         for name in current.drain() {
             if !profiles.contains_key(&name) {
-                if let Some(config_profile) = get_config_profile(&name, config, features)? {
+                if let Some(config_profile) = get_config_profile(ws, &name)? {
                     if let Some(inherits) = &config_profile.inherits {
                         check_to_add.insert(*inherits);
                     }
@@ -1118,12 +1114,9 @@ fn merge_config_profiles(
 }
 
 /// Helper for fetching a profile from config.
-fn get_config_profile(
-    name: &str,
-    config: &Config,
-    features: &Features,
-) -> CargoResult<Option<TomlProfile>> {
-    let profile: Option<config::Value<TomlProfile>> = config.get(&format!("profile.{}", name))?;
+fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<TomlProfile>> {
+    let profile: Option<config::Value<TomlProfile>> =
+        ws.config().get(&format!("profile.{}", name))?;
     let profile = match profile {
         Some(profile) => profile,
         None => return Ok(None),
@@ -1131,7 +1124,7 @@ fn get_config_profile(
     let mut warnings = Vec::new();
     profile
         .val
-        .validate(name, features, &mut warnings)
+        .validate(name, ws.unstable_features(), &mut warnings)
         .chain_err(|| {
             anyhow::format_err!(
                 "config profile `{}` is not valid (defined in `{}`)",
@@ -1140,7 +1133,7 @@ fn get_config_profile(
             )
         })?;
     for warning in warnings {
-        config.shell().warn(warning)?;
+        ws.config().shell().warn(warning)?;
     }
     Ok(Some(profile.val))
 }

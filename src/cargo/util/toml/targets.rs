@@ -289,7 +289,11 @@ fn clean_bins(
         }
 
         if restricted_names::is_conflicting_artifact_name(&name) {
-            anyhow::bail!("the binary target name `{}` is forbidden", name)
+            anyhow::bail!(
+                "the binary target name `{}` is forbidden, \
+                 it conflicts with with cargo's build directory names",
+                name
+            )
         }
     }
 

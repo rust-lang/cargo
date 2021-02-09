@@ -682,6 +682,7 @@ fn git_repo() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
+[WARNING] no Cargo.lock file published in foo v0.1.0 ([..])
 [INSTALLING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -757,7 +758,7 @@ Caused by:
 fn uninstall_pkg_does_not_exist() {
     cargo_process("uninstall foo")
         .with_status(101)
-        .with_stderr("[ERROR] package ID specification `foo` matched no packages")
+        .with_stderr("[ERROR] package ID specification `foo` did not match any packages")
         .run();
 }
 
@@ -797,7 +798,7 @@ fn uninstall_piecemeal() {
 
     cargo_process("uninstall foo")
         .with_status(101)
-        .with_stderr("[ERROR] package ID specification `foo` matched no packages")
+        .with_stderr("[ERROR] package ID specification `foo` did not match any packages")
         .run();
 }
 
@@ -1205,7 +1206,7 @@ fn uninstall_multiple_and_some_pkg_does_not_exist() {
         .with_stderr(
             "\
 [REMOVING] [CWD]/home/.cargo/bin/foo[EXE]
-error: package ID specification `bar` matched no packages
+error: package ID specification `bar` did not match any packages
 [SUMMARY] Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
 error: some packages failed to uninstall
 ",
@@ -1664,4 +1665,15 @@ workspace: [..]/foo/Cargo.toml
         )
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn locked_install_without_published_lockfile() {
+    Package::new("foo", "0.1.0")
+        .file("src/main.rs", "//! Some docs\nfn main() {}")
+        .publish();
+
+    cargo_process("install foo --locked")
+        .with_stderr_contains("[WARNING] no Cargo.lock file published in foo v0.1.0")
+        .run();
 }

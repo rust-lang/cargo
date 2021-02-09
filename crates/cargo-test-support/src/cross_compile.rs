@@ -177,7 +177,7 @@ rustup does not appear to be installed. Make sure that the appropriate
         },
     }
 
-    panic!(message);
+    panic!("{}", message);
 }
 
 /// The alternate target-triple to build with.

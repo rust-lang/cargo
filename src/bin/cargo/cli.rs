@@ -36,6 +36,7 @@ pub fn main(config: &mut Config) -> CliResult {
 Available unstable (nightly-only) flags:
 
     -Z avoid-dev-deps      -- Avoid installing dev-dependencies if possible
+    -Z extra-link-arg      -- Allow `cargo:rustc-link-arg` in build scripts
     -Z minimal-versions    -- Install minimal dependency versions instead of maximum
     -Z no-index-update     -- Do not update the registry, avoids a network request for benchmarking
     -Z unstable-options    -- Allow the usage of unstable options
@@ -327,9 +328,12 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
         .arg(opt("offline", "Run without accessing the network").global(true))
         .arg(
-            multi_opt("config", "KEY=VALUE", "Override a configuration value")
-                .global(true)
-                .hidden(true),
+            multi_opt(
+                "config",
+                "KEY=VALUE",
+                "Override a configuration value (unstable)",
+            )
+            .global(true),
         )
         .arg(
             Arg::with_name("unstable-features")

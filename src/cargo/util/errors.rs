@@ -192,14 +192,25 @@ impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 pub struct ProcessError {
     /// A detailed description to show to the user why the process failed.
     pub desc: String,
+
     /// The exit status of the process.
     ///
-    /// This can be `None` if the process failed to launch (like process not found).
-    pub exit: Option<ExitStatus>,
-    /// The output from the process.
+    /// This can be `None` if the process failed to launch (like process not
+    /// found) or if the exit status wasn't a code but was instead something
+    /// like termination via a signal.
+    pub code: Option<i32>,
+
+    /// The stdout from the process.
     ///
-    /// This can be `None` if the process failed to launch, or the output was not captured.
-    pub output: Option<Output>,
+    /// This can be `None` if the process failed to launch, or the output was
+    /// not captured.
+    pub stdout: Option<Vec<u8>>,
+
+    /// The stderr from the process.
+    ///
+    /// This can be `None` if the process failed to launch, or the output was
+    /// not captured.
+    pub stderr: Option<Vec<u8>>,
 }
 
 impl fmt::Display for ProcessError {
@@ -218,7 +229,7 @@ impl std::error::Error for ProcessError {}
 pub struct CargoTestError {
     pub test: Test,
     pub desc: String,
-    pub exit: Option<ExitStatus>,
+    pub code: Option<i32>,
     pub causes: Vec<ProcessError>,
 }
 
@@ -254,7 +265,7 @@ impl CargoTestError {
         CargoTestError {
             test,
             desc,
-            exit: errors[0].exit,
+            code: errors[0].code,
             causes: errors,
         }
     }
@@ -359,20 +370,39 @@ pub fn process_error(
     output: Option<&Output>,
 ) -> ProcessError {
     let exit = match status {
-        Some(s) => status_to_string(s),
+        Some(s) => exit_status_to_string(s),
         None => "never executed".to_string(),
     };
-    let mut desc = format!("{} ({})", &msg, exit);
 
-    if let Some(out) = output {
-        match str::from_utf8(&out.stdout) {
+    process_error_raw(
+        msg,
+        status.and_then(|s| s.code()),
+        &exit,
+        output.map(|s| s.stdout.as_slice()),
+        output.map(|s| s.stderr.as_slice()),
+    )
+}
+
+pub fn process_error_raw(
+    msg: &str,
+    code: Option<i32>,
+    status: &str,
+    stdout: Option<&[u8]>,
+    stderr: Option<&[u8]>,
+) -> ProcessError {
+    let mut desc = format!("{} ({})", msg, status);
+
+    if let Some(out) = stdout {
+        match str::from_utf8(out) {
             Ok(s) if !s.trim().is_empty() => {
                 desc.push_str("\n--- stdout\n");
                 desc.push_str(s);
             }
             Ok(..) | Err(..) => {}
         }
-        match str::from_utf8(&out.stderr) {
+    }
+    if let Some(out) = stderr {
+        match str::from_utf8(out) {
             Ok(s) if !s.trim().is_empty() => {
                 desc.push_str("\n--- stderr\n");
                 desc.push_str(s);
@@ -381,11 +411,16 @@ pub fn process_error(
         }
     }
 
-    return ProcessError {
+    ProcessError {
         desc,
-        exit: status,
-        output: output.cloned(),
-    };
+        code,
+        stdout: stdout.map(|s| s.to_vec()),
+        stderr: stderr.map(|s| s.to_vec()),
+    }
+}
+
+pub fn exit_status_to_string(status: ExitStatus) -> String {
+    return status_to_string(status);
 
     #[cfg(unix)]
     fn status_to_string(status: ExitStatus) -> String {
