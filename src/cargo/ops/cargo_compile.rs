@@ -304,11 +304,7 @@ pub fn print<'a>(
     } = *options;
     let config = ws.config();
     let rustc = config.load_global_rustc(Some(ws))?;
-    let mut kinds = build_config.requested_kinds.clone();
-    if kinds.is_empty() {
-        kinds.push(CompileKind::Host);
-    }
-    for (index, kind) in kinds.iter().enumerate() {
+    for (index, kind) in build_config.requested_kinds.iter().enumerate() {
         if index != 0 {
             println!();
         }
@@ -328,9 +324,7 @@ pub fn print<'a>(
         if let CompileKind::Target(t) = kind {
             process.arg("--target").arg(t.short_name());
         }
-        process
-            .arg("--print")
-            .arg(print_opt_value);
+        process.arg("--print").arg(print_opt_value);
         let output = process.exec_with_output()?;
         let stdout = std::io::stdout();
         let mut lock = stdout.lock();
