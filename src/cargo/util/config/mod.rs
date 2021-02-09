@@ -63,7 +63,7 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::Instant;
 
-use anyhow::{anyhow, bail, format_err};
+use anyhow::{anyhow, bail, format_err, Context};
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
@@ -260,12 +260,7 @@ impl Config {
         let shell = Shell::new();
         let cwd =
             env::current_dir().chain_err(|| "couldn't get the current directory of the process")?;
-        let homedir = homedir(&cwd).ok_or_else(|| {
-            anyhow!(
-                "Cargo couldn't find your home directory. \
-                 This probably means that $HOME was not set."
-            )
-        })?;
+        let homedir = homedir(&cwd)?;
         Ok(Config::new(shell, cwd, homedir))
     }
 
@@ -1618,8 +1613,36 @@ impl ConfigValue {
     }
 }
 
-pub fn homedir(cwd: &Path) -> Option<PathBuf> {
-    ::home::cargo_home_with_cwd(cwd).ok()
+pub fn homedir(cwd: &Path) -> CargoResult<PathBuf> {
+    if std::env::var_os("CARGO_HOME")
+        .filter(|h| !h.is_empty())
+        .is_none()
+    {
+        // CARGO_HOME is not set -- look for a .cargo/home file instead
+        let mut components = cwd.components();
+        loop {
+            let cargo_home = components.as_path().join(".cargo/home");
+            if cargo_home.exists() {
+                let home = std::fs::read_to_string(&cargo_home).with_context(|| {
+                    format!(
+                        "Cargo could not follow home pointer in '{}'",
+                        cargo_home.display()
+                    )
+                })?;
+                return Ok(PathBuf::from(home));
+            }
+            if components.next_back().is_none() {
+                break;
+            }
+        }
+    }
+
+    ::home::cargo_home_with_cwd(cwd).map_err(|_| {
+        anyhow!(
+            "Cargo couldn't find your home directory. \
+             This probably means that $HOME was not set."
+        )
+    })
 }
 
 pub fn save_credentials(

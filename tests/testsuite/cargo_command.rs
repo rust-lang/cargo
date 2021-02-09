@@ -272,6 +272,85 @@ fn override_cargo_home() {
 }
 
 #[cargo_test]
+fn cargo_home_pointer() {
+    let root = paths::root();
+    let my_home = root.join("my_home");
+    fs::create_dir(&my_home).unwrap();
+    fs::write(
+        &my_home.join("config"),
+        r#"
+            [cargo-new]
+            name = "foo"
+            email = "bar"
+            git = false
+        "#,
+    )
+    .unwrap();
+
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/home"),
+        my_home.as_os_str().to_str().unwrap().as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("new foo")
+        .env("USER", "foo")
+        .env_remove("CARGO_HOME")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
+}
+
+#[cargo_test]
+fn cargo_home_prefer_env() {
+    let root = paths::root();
+    let my_home = root.join("my_home");
+    fs::create_dir(&my_home).unwrap();
+    fs::write(
+        &my_home.join("config"),
+        r#"
+            [cargo-new]
+            name = "foo"
+            email = "bar"
+            git = false
+        "#,
+    )
+    .unwrap();
+
+    let my_other_home = root.join("my_other_home");
+    fs::create_dir(&my_other_home).unwrap();
+    fs::write(
+        &my_other_home.join("config"),
+        r#"
+            [cargo-new]
+            name = "foo"
+            email = "baz"
+            git = false
+        "#,
+    )
+    .unwrap();
+
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/home"),
+        my_other_home.as_os_str().to_str().unwrap().as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("new foo")
+        .env("USER", "foo")
+        .env("CARGO_HOME", &my_home)
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
+}
+
+#[cargo_test]
 fn cargo_subcommand_env() {
     let src = format!(
         r#"
