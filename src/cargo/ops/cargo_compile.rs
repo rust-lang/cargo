@@ -335,16 +335,7 @@ pub fn print<'a>(
             .arg("--print")
             .arg(print_opt_value)
             .env_remove("RUSTC_LOG");
-        let (output, error) = rustc
-            .cached_output(&process)
-            .chain_err(|| "failed to run `rustc --print=<INFO>`")?;
-        if output.is_empty() {
-            anyhow::bail!(
-                "output of --print={} missing from rustc\n{}",
-                print_opt_value,
-                output_err_info(&process, &output, &error)
-            );
-        }
+        let output = process.exec_with_output()?;
         let stdout = std::io::stdout();
         let mut lock = stdout.lock();
         if print_empty_line {
@@ -352,7 +343,7 @@ pub fn print<'a>(
         } else {
             print_empty_line = true;
         }
-        lock.write_all(output.as_bytes())?;
+        lock.write_all(&output.stdout)?;
         drop(lock);
     }
     Ok(())
