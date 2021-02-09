@@ -27,6 +27,7 @@ use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::sync::Arc;
 
+use crate::drop_println;
 use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
@@ -306,7 +307,7 @@ pub fn print<'a>(
     let rustc = config.load_global_rustc(Some(ws))?;
     for (index, kind) in build_config.requested_kinds.iter().enumerate() {
         if index != 0 {
-            println!();
+            drop_println!(config);
         }
         let rustflags = env_args(
             config,
