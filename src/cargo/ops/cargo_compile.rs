@@ -31,7 +31,7 @@ use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{
-    env_args, output_err_info, CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit,
+    env_args, CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit,
 };
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -44,7 +44,6 @@ use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::CargoResultExt;
 use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
 use anyhow::Context as _;
@@ -333,8 +332,7 @@ pub fn print<'a>(
         }
         process
             .arg("--print")
-            .arg(print_opt_value)
-            .env_remove("RUSTC_LOG");
+            .arg(print_opt_value);
         let output = process.exec_with_output()?;
         let stdout = std::io::stdout();
         let mut lock = stdout.lock();
