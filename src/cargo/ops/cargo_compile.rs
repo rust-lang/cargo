@@ -308,14 +308,16 @@ pub fn print<'a>(
     if kinds.is_empty() {
         kinds.push(CompileKind::Host);
     }
-    let mut print_empty_line = false;
-    for kind in kinds {
+    for (index, kind) in kinds.iter().enumerate() {
+        if index != 0 {
+            println!();
+        }
         let rustflags = env_args(
             config,
             &build_config.requested_kinds,
             &rustc.host,
             None,
-            kind,
+            *kind,
             "RUSTFLAGS",
         )?;
         let mut process = rustc.process();
@@ -332,11 +334,6 @@ pub fn print<'a>(
         let output = process.exec_with_output()?;
         let stdout = std::io::stdout();
         let mut lock = stdout.lock();
-        if print_empty_line {
-            writeln!(lock)?;
-        } else {
-            print_empty_line = true;
-        }
         lock.write_all(&output.stdout)?;
         drop(lock);
     }
