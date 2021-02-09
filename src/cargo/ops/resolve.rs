@@ -13,10 +13,12 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{FeatureResolver, ForceAllTargets, ResolvedFeatures};
-use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts};
+use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion};
 use crate::core::summary::Summary;
 use crate::core::Feature;
-use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
+use crate::core::{
+    GitReference, PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace,
+};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -597,7 +599,31 @@ fn register_previous_locks(
             .deps_not_replaced(node)
             .map(|p| p.0)
             .filter(keep)
-            .collect();
+            .collect::<Vec<_>>();
+
+        // In the v2 lockfile format and prior the `branch=master` dependency
+        // directive was serialized the same way as the no-branch-listed
+        // directive. Nowadays in Cargo, however, these two directives are
+        // considered distinct and are no longer represented the same way. To
+        // maintain compatibility with older lock files we register locked nodes
+        // for *both* the master branch and the default branch.
+        //
+        // Note that this is only applicable for loading older resolves now at
+        // this point. All new lock files are encoded as v3-or-later, so this is
+        // just compat for loading an old lock file successfully.
+        if resolve.version() <= ResolveVersion::V2 {
+            let source = node.source_id();
+            if let Some(GitReference::DefaultBranch) = source.git_reference() {
+                let new_source =
+                    SourceId::for_git(source.url(), GitReference::Branch("master".to_string()))
+                        .unwrap()
+                        .with_precise(source.precise().map(|s| s.to_string()));
+
+                let node = node.with_source_id(new_source);
+                registry.register_lock(node, deps.clone());
+            }
+        }
+
         registry.register_lock(node, deps);
     }
 

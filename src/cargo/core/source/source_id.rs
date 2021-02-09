@@ -394,45 +394,9 @@ impl Ord for SourceId {
 
         // Sort first based on `kind`, deferring to the URL comparison below if
         // the kinds are equal.
-        match (&self.inner.kind, &other.inner.kind) {
-            (SourceKind::Path, SourceKind::Path) => {}
-            (SourceKind::Path, _) => return Ordering::Less,
-            (_, SourceKind::Path) => return Ordering::Greater,
-
-            (SourceKind::Registry, SourceKind::Registry) => {}
-            (SourceKind::Registry, _) => return Ordering::Less,
-            (_, SourceKind::Registry) => return Ordering::Greater,
-
-            (SourceKind::LocalRegistry, SourceKind::LocalRegistry) => {}
-            (SourceKind::LocalRegistry, _) => return Ordering::Less,
-            (_, SourceKind::LocalRegistry) => return Ordering::Greater,
-
-            (SourceKind::Directory, SourceKind::Directory) => {}
-            (SourceKind::Directory, _) => return Ordering::Less,
-            (_, SourceKind::Directory) => return Ordering::Greater,
-
-            (SourceKind::Git(a), SourceKind::Git(b)) => {
-                use GitReference::*;
-                let ord = match (a, b) {
-                    (Tag(a), Tag(b)) => a.cmp(b),
-                    (Tag(_), _) => Ordering::Less,
-                    (_, Tag(_)) => Ordering::Greater,
-
-                    (Rev(a), Rev(b)) => a.cmp(b),
-                    (Rev(_), _) => Ordering::Less,
-                    (_, Rev(_)) => Ordering::Greater,
-
-                    // See module comments in src/cargo/sources/git/utils.rs
-                    // for why `DefaultBranch` is treated specially here.
-                    (Branch(a), DefaultBranch) => a.as_str().cmp("master"),
-                    (DefaultBranch, Branch(b)) => "master".cmp(b),
-                    (Branch(a), Branch(b)) => a.cmp(b),
-                    (DefaultBranch, DefaultBranch) => Ordering::Equal,
-                };
-                if ord != Ordering::Equal {
-                    return ord;
-                }
-            }
+        match self.inner.kind.cmp(&other.inner.kind) {
+            Ordering::Equal => {}
+            other => return other,
         }
 
         // If the `kind` and the `url` are equal, then for git sources we also
@@ -509,43 +473,9 @@ impl fmt::Display for SourceId {
 // The hash of SourceId is used in the name of some Cargo folders, so shouldn't
 // vary. `as_str` gives the serialisation of a url (which has a spec) and so
 // insulates against possible changes in how the url crate does hashing.
-//
-// Note that the semi-funky hashing here is done to handle `DefaultBranch`
-// hashing the same as `"master"`, and also to hash the same as previous
-// versions of Cargo while it's somewhat convenient to do so (that way all
-// versions of Cargo use the same checkout).
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
-        match &self.inner.kind {
-            SourceKind::Git(GitReference::Tag(a)) => {
-                0usize.hash(into);
-                0usize.hash(into);
-                a.hash(into);
-            }
-            SourceKind::Git(GitReference::Branch(a)) => {
-                0usize.hash(into);
-                1usize.hash(into);
-                a.hash(into);
-            }
-            // For now hash `DefaultBranch` the same way as `Branch("master")`,
-            // and for more details see module comments in
-            // src/cargo/sources/git/utils.rs for why `DefaultBranch`
-            SourceKind::Git(GitReference::DefaultBranch) => {
-                0usize.hash(into);
-                1usize.hash(into);
-                "master".hash(into);
-            }
-            SourceKind::Git(GitReference::Rev(a)) => {
-                0usize.hash(into);
-                2usize.hash(into);
-                a.hash(into);
-            }
-
-            SourceKind::Path => 1usize.hash(into),
-            SourceKind::Registry => 2usize.hash(into),
-            SourceKind::LocalRegistry => 3usize.hash(into),
-            SourceKind::Directory => 4usize.hash(into),
-        }
+        self.inner.kind.hash(into);
         match self.inner.kind {
             SourceKind::Git(_) => self.inner.canonical_url.hash(into),
             _ => self.inner.url.as_str().hash(into),
