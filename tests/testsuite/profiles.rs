@@ -572,11 +572,11 @@ fn strip_passes_unknown_option_to_rustc() {
     p.cargo("build --release -v")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
 [COMPILING] foo [..]
 [RUNNING] `rustc [..] -Z strip=unknown [..]`
-[FINISHED] [..]
+error: incorrect value `unknown` for debugging option `strip` - either `none`, `debuginfo`, or `symbols` was expected
 ",
         )
         .run();
