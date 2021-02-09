@@ -1063,3 +1063,75 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn catch_tricky_cycle() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "message"
+                version = "0.1.0"
+
+                [dev-dependencies]
+                test = { path = "test" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "tangle/Cargo.toml",
+            r#"
+                [package]
+                name = "tangle"
+                version = "0.1.0"
+
+                [dependencies]
+                message = { path = ".." }
+                snapshot = { path = "../snapshot" }
+            "#,
+        )
+        .file("tangle/src/lib.rs", "")
+        .file(
+            "snapshot/Cargo.toml",
+            r#"
+                [package]
+                name = "snapshot"
+                version = "0.1.0"
+
+                [dependencies]
+                ledger = { path = "../ledger" }
+            "#,
+        )
+        .file("snapshot/src/lib.rs", "")
+        .file(
+            "ledger/Cargo.toml",
+            r#"
+                [package]
+                name = "ledger"
+                version = "0.1.0"
+
+                [dependencies]
+                tangle = { path = "../tangle" }
+            "#,
+        )
+        .file("ledger/src/lib.rs", "")
+        .file(
+            "test/Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.1.0"
+
+                [dependencies]
+                snapshot = { path = "../snapshot" }
+            "#,
+        )
+        .file("test/src/lib.rs", "")
+        .build();
+
+    p.cargo("test")
+        .with_stderr_contains("[..]cyclic package dependency[..]")
+        .with_status(101)
+        .run();
+}

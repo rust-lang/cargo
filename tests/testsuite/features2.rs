@@ -5,8 +5,24 @@ use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{basic_manifest, cargo_process, project, rustc_host};
+use cargo_test_support::{basic_manifest, cargo_process, project, rustc_host, Project};
 use std::fs::File;
+
+/// Switches Cargo.toml to use `resolver = "2"`.
+pub fn switch_to_resolver_2(p: &Project) {
+    let mut manifest = p.read_file("Cargo.toml");
+    if manifest.contains("resolver =") {
+        panic!("did not expect manifest to already contain a resolver setting");
+    }
+    if let Some(index) = manifest.find("[workspace]\n") {
+        manifest.insert_str(index + 12, "resolver = \"2\"\n");
+    } else if let Some(index) = manifest.find("[package]\n") {
+        manifest.insert_str(index + 10, "resolver = \"2\"\n");
+    } else {
+        panic!("expected [package] or [workspace] in manifest");
+    }
+    p.change_file("Cargo.toml", &manifest);
+}
 
 #[cargo_test]
 fn inactivate_targets() {
@@ -52,9 +68,8 @@ fn inactivate_targets() {
         .with_stderr_contains("[..]f1 should not activate[..]")
         .run();
 
-    p.cargo("check -Zfeatures=itarget")
-        .masquerade_as_nightly_cargo()
-        .run();
+    switch_to_resolver_2(&p);
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -167,26 +182,14 @@ fn inactive_target_optional() {
         .with_stdout("common\nf4\n")
         .run();
 
-    p.cargo("run -Zfeatures=itarget --all-features")
-        .masquerade_as_nightly_cargo()
+    switch_to_resolver_2(&p);
+    p.cargo("run --all-features")
         .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon")
         .run();
-    p.cargo("run -Zfeatures=itarget --features dep1")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("dep1\n")
-        .run();
-    p.cargo("run -Zfeatures=itarget --features foo1")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("foo1\n")
-        .run();
-    p.cargo("run -Zfeatures=itarget --features dep2")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("dep2\n")
-        .run();
-    p.cargo("run -Zfeatures=itarget --features common")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("common")
-        .run();
+    p.cargo("run --features dep1").with_stdout("dep1\n").run();
+    p.cargo("run --features foo1").with_stdout("foo1\n").run();
+    p.cargo("run --features dep2").with_stdout("dep2\n").run();
+    p.cargo("run --features common").with_stdout("common").run();
 }
 
 #[cargo_test]
@@ -216,20 +219,16 @@ fn itarget_proc_macro() {
         .file("src/lib.rs", "")
         .build();
 
+    // Old behavior
     p.cargo("check").run();
-    p.cargo("check -Zfeatures=itarget")
-        .masquerade_as_nightly_cargo()
-        .run();
     p.cargo("check --target").arg(alternate()).run();
-    p.cargo("check -Zfeatures=itarget --target")
-        .arg(alternate())
-        .masquerade_as_nightly_cargo()
-        .run();
+
+    // New behavior
+    switch_to_resolver_2(&p);
+    p.cargo("check").run();
+    p.cargo("check --target").arg(alternate()).run();
     // For good measure, just make sure things don't break.
-    p.cargo("check -Zfeatures=all --target")
-        .arg(alternate())
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("check --target").arg(alternate()).run();
 }
 
 #[cargo_test]
@@ -279,9 +278,8 @@ fn decouple_host_deps() {
         .with_stderr_contains("[..]unresolved import `common::bar`[..]")
         .run();
 
-    p.cargo("check -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
+    switch_to_resolver_2(&p);
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -344,9 +342,8 @@ fn decouple_host_deps_nested() {
         .with_stderr_contains("[..]unresolved import `common::bar`[..]")
         .run();
 
-    p.cargo("check -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
+    switch_to_resolver_2(&p);
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -449,7 +446,7 @@ fn decouple_dev_deps() {
             #[test]
             fn test_main() {
                 // Features are unified for main when run with `cargo test`,
-                // even with -Zfeatures=dev_dep.
+                // even with the new resolver.
                 let s = std::process::Command::new("target/debug/foo")
                     .arg("3")
                     .status().unwrap();
@@ -459,17 +456,14 @@ fn decouple_dev_deps() {
         )
         .build();
 
+    // Old behavior
     p.cargo("run 3").run();
-
-    p.cargo("run -Zfeatures=dev_dep 1")
-        .masquerade_as_nightly_cargo()
-        .run();
-
     p.cargo("test").run();
 
-    p.cargo("test -Zfeatures=dev_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
+    // New behavior
+    switch_to_resolver_2(&p);
+    p.cargo("run 1").run();
+    p.cargo("test").run();
 }
 
 #[cargo_test]
@@ -621,7 +615,7 @@ fn build_script_runtime_features() {
             #[test]
             fn test_main() {
                 // Features are unified for main when run with `cargo test`,
-                // even with -Zfeatures=dev_dep.
+                // even with the new resolver.
                 let s = std::process::Command::new("target/debug/foo")
                     .status().unwrap();
                 assert!(s.success());
@@ -632,32 +626,16 @@ fn build_script_runtime_features() {
 
     // Old way, unifies all 3.
     p.cargo("run").env("CARGO_FEATURE_EXPECT", "7").run();
-
-    // normal + build unify
-    p.cargo("run -Zfeatures=dev_dep")
-        .env("CARGO_FEATURE_EXPECT", "5")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    // Normal only.
-    p.cargo("run -Zfeatures=dev_dep,host_dep")
-        .env("CARGO_FEATURE_EXPECT", "1")
-        .masquerade_as_nightly_cargo()
-        .run();
-
     p.cargo("test").env("CARGO_FEATURE_EXPECT", "7").run();
 
-    // dev_deps are still unified with `cargo test`
-    p.cargo("test -Zfeatures=dev_dep")
-        .env("CARGO_FEATURE_EXPECT", "7")
-        .masquerade_as_nightly_cargo()
-        .run();
+    // New behavior.
+    switch_to_resolver_2(&p);
 
-    // normal + dev unify
-    p.cargo("test -Zfeatures=host_dep")
-        .env("CARGO_FEATURE_EXPECT", "3")
-        .masquerade_as_nightly_cargo()
-        .run();
+    // normal + build unify
+    p.cargo("run").env("CARGO_FEATURE_EXPECT", "1").run();
+
+    // dev_deps are still unified with `cargo test`
+    p.cargo("test").env("CARGO_FEATURE_EXPECT", "3").run();
 }
 
 #[cargo_test]
@@ -719,19 +697,16 @@ fn cyclical_dev_dep() {
 
     // Old way unifies features.
     p.cargo("run true").run();
-
-    // Should decouple main.
-    p.cargo("run -Zfeatures=dev_dep false")
-        .masquerade_as_nightly_cargo()
-        .run();
-
     // dev feature should always be enabled in tests.
     p.cargo("test").run();
 
+    // New behavior.
+    switch_to_resolver_2(&p);
+    // Should decouple main.
+    p.cargo("run false").run();
+
     // And this should be no different.
-    p.cargo("test -Zfeatures=dev_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("test").run();
 }
 
 #[cargo_test]
@@ -800,20 +775,15 @@ fn all_feature_opts() {
         .build();
 
     p.cargo("run").env("EXPECTED_FEATS", "15").run();
-
-    // Only normal feature.
-    p.cargo("run -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
-        .env("EXPECTED_FEATS", "1")
-        .run();
-
     p.cargo("test").env("EXPECTED_FEATS", "15").run();
 
+    // New behavior.
+    switch_to_resolver_2(&p);
+    // Only normal feature.
+    p.cargo("run").env("EXPECTED_FEATS", "1").run();
+
     // only normal+dev
-    p.cargo("test -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
-        .env("EXPECTED_FEATS", "5")
-        .run();
+    p.cargo("test").env("EXPECTED_FEATS", "5").run();
 }
 
 #[cargo_test]
@@ -867,9 +837,9 @@ Consider enabling them by passing, e.g., `--features=\"bdep/f1\"`
         )
         .run();
 
-    p.cargo("run --features bdep/f1 -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
+    // New behavior.
+    switch_to_resolver_2(&p);
+    p.cargo("run --features bdep/f1").run();
 }
 
 #[cargo_test]
@@ -920,6 +890,7 @@ fn disabled_shared_host_dep() {
             name = "foo"
             version = "1.0.0"
             edition = "2018"
+            resolver = "2"
 
             [dependencies]
             common = "1.0"
@@ -938,10 +909,7 @@ fn disabled_shared_host_dep() {
         )
         .build();
 
-    p.cargo("run -Zfeatures=host_dep -v")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("hello from somedep")
-        .run();
+    p.cargo("run -v").with_stdout("hello from somedep").run();
 }
 
 #[cargo_test]
@@ -954,6 +922,7 @@ fn required_features_inactive_dep() {
             [package]
             name = "foo"
             version = "0.1.0"
+            resolver = "2"
 
             [target.'cfg(whatever)'.dependencies]
             bar = {path="bar"}
@@ -971,13 +940,9 @@ fn required_features_inactive_dep() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zfeatures=itarget")
-        .masquerade_as_nightly_cargo()
-        .with_stderr("[FINISHED] [..]")
-        .run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
-    p.cargo("check -Zfeatures=itarget --features=feat1")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features=feat1")
         .with_stderr("[CHECKING] foo[..]\n[FINISHED] [..]")
         .run();
 }
@@ -1055,24 +1020,12 @@ fn decouple_proc_macro() {
         .env("TEST_EXPECTS_ENABLED", "1")
         .with_stdout("it is true")
         .run();
-
-    p.cargo("run -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("it is false")
-        .run();
-
     // Make sure the test is fallible.
     p.cargo("test --doc")
         .with_status(101)
         .with_stdout_contains("[..]common is wrong[..]")
         .run();
-
     p.cargo("test --doc").env("TEST_EXPECTS_ENABLED", "1").run();
-
-    p.cargo("test --doc -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
-
     p.cargo("doc").run();
     assert!(p
         .build_dir()
@@ -1082,9 +1035,12 @@ fn decouple_proc_macro() {
     // https://github.com/rust-lang/cargo/issues/6783 (same for removed items)
     p.build_dir().join("doc").rm_rf();
 
-    p.cargo("doc -Zfeatures=host_dep")
-        .masquerade_as_nightly_cargo()
-        .run();
+    // New behavior.
+    switch_to_resolver_2(&p);
+    p.cargo("run").with_stdout("it is false").run();
+
+    p.cargo("test --doc").run();
+    p.cargo("doc").run();
     assert!(!p
         .build_dir()
         .join("doc/common/constant.FEAT_ONLY_CONST.html")
@@ -1100,6 +1056,7 @@ fn proc_macro_ws() {
             r#"
             [workspace]
             members = ["foo", "pm"]
+            resolver = "2"
             "#,
         )
         .file(
@@ -1131,8 +1088,7 @@ fn proc_macro_ws() {
         .file("pm/src/lib.rs", "")
         .build();
 
-    p.cargo("check -p pm -Zfeatures=host_dep -v")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p pm -v")
         .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]--cfg[..]feat1[..]")
         .run();
     // This may be surprising that `foo` doesn't get built separately. It is
@@ -1140,8 +1096,7 @@ fn proc_macro_ws() {
     // feature resolver must assume that normal deps get unified with it. This
     // is related to the bigger issue where the features selected in a
     // workspace depend on which packages are selected.
-    p.cargo("check --workspace -Zfeatures=host_dep -v")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --workspace -v")
         .with_stderr(
             "\
 [FRESH] foo v0.1.0 [..]
@@ -1151,8 +1106,7 @@ fn proc_macro_ws() {
         )
         .run();
     // Selecting just foo will build without unification.
-    p.cargo("check -p foo -Zfeatures=host_dep -v")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -p foo -v")
         // Make sure `foo` is built without feat1
         .with_stderr_line_without(&["[RUNNING] `rustc --crate-name foo"], &["--cfg[..]feat1"])
         .run();
@@ -1212,8 +1166,7 @@ fn has_dev_dep_for_test() {
 ",
         )
         .run();
-    p.cargo("check -v --profile=test -Zfeatures=dev_dep")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -v --profile=test")
         .with_stderr(
             "\
 [CHECKING] dep v0.1.0 [..]
@@ -1224,6 +1177,9 @@ fn has_dev_dep_for_test() {
 ",
         )
         .run();
+
+    // New resolver should not be any different.
+    switch_to_resolver_2(&p);
     p.cargo("check -v --profile=test")
         .with_stderr(
             "\
@@ -1285,75 +1241,12 @@ fn build_dep_activated() {
         .build();
 
     p.cargo("check").run();
-    p.cargo("check -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
-        .run();
     p.cargo("check --target").arg(alternate()).run();
-    p.cargo("check -Zfeatures=all --target")
-        .arg(alternate())
-        .masquerade_as_nightly_cargo()
-        .run();
-}
 
-#[cargo_test]
-fn resolver_gated() {
-    // Check that `resolver` field is feature gated.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            resolver = "2"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]/foo/Cargo.toml`
-
-Caused by:
-  feature `resolver` is required
-
-  consider adding `cargo-features = [\"resolver\"]` to the manifest
-",
-        )
-        .run();
-
-    // Test with virtual ws.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [workspace]
-            members = ["a"]
-            resolver = "2"
-            "#,
-        )
-        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
-        .file("a/src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]/foo/Cargo.toml`
-
-Caused by:
-  feature `resolver` is required
-
-  consider adding `cargo-features = [\"resolver\"]` to the manifest
-",
-        )
-        .run();
+    // New behavior.
+    switch_to_resolver_2(&p);
+    p.cargo("check").run();
+    p.cargo("check --target").arg(alternate()).run();
 }
 
 #[cargo_test]
@@ -1363,7 +1256,6 @@ fn resolver_bad_setting() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [package]
             name = "foo"
             version = "0.1.0"
@@ -1374,7 +1266,6 @@ fn resolver_bad_setting() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -1412,7 +1303,6 @@ fn resolver_original() {
     let manifest = |resolver| {
         format!(
             r#"
-                cargo-features = ["resolver"]
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -1432,14 +1322,13 @@ fn resolver_original() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]f1 should not activate[..]")
         .run();
 
     p.change_file("Cargo.toml", &manifest("2"));
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1449,7 +1338,6 @@ fn resolver_not_both() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [workspace]
             resolver = "2"
             [package]
@@ -1462,7 +1350,6 @@ fn resolver_not_both() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -1489,7 +1376,6 @@ fn resolver_ws_member() {
         .file(
             "a/Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [package]
             name = "a"
             version = "0.1.0"
@@ -1500,7 +1386,6 @@ fn resolver_ws_member() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 warning: resolver for the non root package will be ignored, specify resolver at the workspace root:
@@ -1520,7 +1405,6 @@ fn resolver_ws_root_and_member() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [workspace]
             members = ["a"]
             resolver = "2"
@@ -1529,7 +1413,6 @@ fn resolver_ws_root_and_member() {
         .file(
             "a/Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [package]
             name = "a"
             version = "0.1.0"
@@ -1541,7 +1424,6 @@ fn resolver_ws_root_and_member() {
 
     // Ignores if they are the same.
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [CHECKING] a v0.1.0 [..]
@@ -1578,7 +1460,6 @@ fn resolver_enables_new_features() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [workspace]
             members = ["a", "b"]
             resolver = "2"
@@ -1648,7 +1529,6 @@ fn resolver_enables_new_features() {
 
     // Only normal.
     p.cargo("run --bin a")
-        .masquerade_as_nightly_cargo()
         .env("EXPECTED_FEATS", "1")
         .with_stderr(
             "\
@@ -1664,16 +1544,11 @@ fn resolver_enables_new_features() {
         .run();
 
     // only normal+dev
-    p.cargo("test")
-        .cwd("a")
-        .masquerade_as_nightly_cargo()
-        .env("EXPECTED_FEATS", "5")
-        .run();
+    p.cargo("test").cwd("a").env("EXPECTED_FEATS", "5").run();
 
-    // -Zpackage-features is enabled.
+    // Can specify features of packages from a different directory.
     p.cargo("run -p b --features=ping")
         .cwd("a")
-        .masquerade_as_nightly_cargo()
         .with_stdout("pong")
         .run();
 }
@@ -1698,8 +1573,6 @@ fn install_resolve_behavior() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
-
             [package]
             name = "foo"
             version = "1.0.0"
@@ -1716,9 +1589,7 @@ fn install_resolve_behavior() {
         .file("src/main.rs", "fn main() {}")
         .publish();
 
-    cargo_process("install foo")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo").run();
 }
 
 #[cargo_test]
@@ -1728,7 +1599,6 @@ fn package_includes_resolve_behavior() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["resolver"]
             [workspace]
             members = ["a"]
             resolver = "2"
@@ -1749,15 +1619,10 @@ fn package_includes_resolve_behavior() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("package")
-        .cwd("a")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package").cwd("a").run();
 
     let rewritten_toml = format!(
         r#"{}
-cargo-features = ["resolver"]
-
 [package]
 name = "a"
 version = "0.1.0"
@@ -1790,6 +1655,7 @@ fn tree_all() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                resolver = "2"
 
                 [target.'cfg(whatever)'.dependencies]
                 log = {version="*", features=["serde"]}
@@ -1797,8 +1663,7 @@ fn tree_all() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("tree --target=all -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree --target=all")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -1824,6 +1689,7 @@ fn shared_dep_same_but_dependencies() {
             r#"
                 [workspace]
                 members = ["bin1", "bin2"]
+                resolver = "2"
             "#,
         )
         .file(
@@ -1889,8 +1755,7 @@ fn shared_dep_same_but_dependencies() {
         )
         .build();
 
-    p.cargo("build --bin bin1 --bin bin2 -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --bin bin1 --bin bin2")
         // unordered because bin1 and bin2 build at the same time
         .with_stderr_unordered(
             "\
@@ -1908,8 +1773,7 @@ warning: feat: enabled
         .run();
 
     // Make sure everything stays cached.
-    p.cargo("build -v --bin bin1 --bin bin2 -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -v --bin bin1 --bin bin2")
         .with_stderr_unordered(
             "\
 [FRESH] subdep [..]
@@ -1939,6 +1803,8 @@ fn test_proc_macro() {
                 [package]
                 name = "runtime"
                 version = "0.1.0"
+                resolver = "2"
+
                 [dependencies]
                 the-macro = { path = "the-macro", features = ['a'] }
                 [build-dependencies]
@@ -2000,9 +1866,7 @@ fn test_proc_macro() {
         )
         .file("shared/src/lib.rs", "pub struct Foo;")
         .build();
-    p.cargo("test -Zfeatures=all --manifest-path the-macro/Cargo.toml")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("test --manifest-path the-macro/Cargo.toml").run();
 }
 
 #[cargo_test]
@@ -2024,6 +1888,7 @@ fn doc_optional() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                resolver = "2"
 
                 [target.'cfg(whatever)'.dependencies]
                 enabler = "1.0"
@@ -2035,8 +1900,7 @@ fn doc_optional() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zfeatures=itarget")
-        .masquerade_as_nightly_cargo()
+    p.cargo("doc")
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
@@ -2168,9 +2032,11 @@ fn minimal_download() {
         .run();
     clear();
 
+    // New behavior
+    switch_to_resolver_2(&p);
+
     // all
-    p.cargo("check -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr_unordered(
             "\
 [DOWNLOADING] crates ...
@@ -2190,8 +2056,7 @@ fn minimal_download() {
     clear();
 
     // This disables decouple_dev_deps.
-    p.cargo("test --no-run -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("test --no-run")
         .with_stderr_unordered(
             "\
 [DOWNLOADING] crates ...
@@ -2215,8 +2080,7 @@ fn minimal_download() {
     clear();
 
     // This disables itarget, but leaves decouple_dev_deps enabled.
-    p.cargo("tree -e normal --target=all -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e normal --target=all")
         .with_stderr_unordered(
             "\
 [DOWNLOADING] crates ...
@@ -2243,8 +2107,7 @@ foo v0.1.0 ([ROOT]/foo)
     clear();
 
     // This disables itarget and decouple_dev_deps.
-    p.cargo("tree --target=all -Zfeatures=all")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree --target=all")
         .with_stderr_unordered(
             "\
 [DOWNLOADING] crates ...
@@ -2283,4 +2146,181 @@ foo v0.1.0 ([ROOT]/foo)
         )
         .run();
     clear();
+}
+
+#[cargo_test]
+fn pm_with_int_shared() {
+    // This is a somewhat complex scenario of a proc-macro in a workspace with
+    // an integration test where the proc-macro is used for other things, and
+    // *everything* is built at once (`--workspace --all-targets
+    // --all-features`). There was a bug where the UnitFor settings were being
+    // incorrectly computed based on the order that the graph was traversed.
+    //
+    // There are some uncertainties about exactly how proc-macros should behave
+    // with `--workspace`, see https://github.com/rust-lang/cargo/issues/8312.
+    //
+    // This uses a const-eval hack to do compile-time feature checking.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "pm", "shared"]
+                resolver = "2"
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                pm = { path = "../pm" }
+                shared = { path = "../shared", features = ["norm-feat"] }
+            "#,
+        )
+        .file(
+            "foo/src/lib.rs",
+            r#"
+                // foo->shared always has both features set
+                const _CHECK: [(); 0] = [(); 0-!(shared::FEATS==3) as usize];
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                shared = { path = "../shared", features = ["host-feat"] }
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                // pm->shared always has just host
+                const _CHECK: [(); 0] = [(); 0-!(shared::FEATS==1) as usize];
+            "#,
+        )
+        .file(
+            "pm/tests/pm_test.rs",
+            r#"
+                // integration test gets both set
+                const _CHECK: [(); 0] = [(); 0-!(shared::FEATS==3) as usize];
+            "#,
+        )
+        .file(
+            "shared/Cargo.toml",
+            r#"
+                [package]
+                name = "shared"
+                version = "0.1.0"
+
+                [features]
+                norm-feat = []
+                host-feat = []
+            "#,
+        )
+        .file(
+            "shared/src/lib.rs",
+            r#"
+                pub const FEATS: u32 = {
+                    if cfg!(feature="norm-feat") && cfg!(feature="host-feat") {
+                        3
+                    } else if cfg!(feature="norm-feat") {
+                        2
+                    } else if cfg!(feature="host-feat") {
+                        1
+                    } else {
+                        0
+                    }
+                };
+            "#,
+        )
+        .build();
+
+    p.cargo("build --workspace --all-targets --all-features -v")
+        .with_stderr_unordered(
+            "\
+[COMPILING] shared [..]
+[RUNNING] `rustc --crate-name shared [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name shared [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name shared [..]--test[..]
+[COMPILING] pm [..]
+[RUNNING] `rustc --crate-name pm [..]--crate-type proc-macro[..]
+[RUNNING] `rustc --crate-name pm [..]--test[..]
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo [..]--test[..]
+[RUNNING] `rustc --crate-name pm_test [..]--test[..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // And again, should stay fresh.
+    p.cargo("build --workspace --all-targets --all-features -v")
+        .with_stderr_unordered(
+            "\
+[FRESH] shared [..]
+[FRESH] pm [..]
+[FRESH] foo [..]
+[FINISHED] [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_proc_macro() {
+    // Checks for a bug when documenting a proc-macro with a dependency. The
+    // doc unit builder was not carrying the "for host" setting through the
+    // dependencies, and the `pm-dep` dependency was causing a panic because
+    // it was looking for target features instead of host features.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                resolver = "2"
+
+                [dependencies]
+                pm = { path = "pm" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                pm-dep = { path = "../pm-dep" }
+            "#,
+        )
+        .file("pm/src/lib.rs", "")
+        .file("pm-dep/Cargo.toml", &basic_manifest("pm-dep", "0.1.0"))
+        .file("pm-dep/src/lib.rs", "")
+        .build();
+
+    // Unfortunately this cannot check the output because what it prints is
+    // nondeterministic. Sometimes it says "Compiling pm-dep" and sometimes
+    // "Checking pm-dep". This is because it is both building it and checking
+    // it in parallel (building so it can build the proc-macro, and checking
+    // so rustdoc can load it).
+    p.cargo("doc").run();
 }

@@ -96,6 +96,7 @@ considered incompatible.
     * Cargo
         * [Minor: adding a new Cargo feature](#cargo-feature-add)
         * [Major: removing a Cargo feature](#cargo-feature-remove)
+        * [Major: removing a feature from a feature list if that changes functionality or public items](#cargo-feature-remove-another)
         * [Possibly-breaking: removing an optional dependency](#cargo-remove-opt-dep)
         * [Minor: changing dependency features](#cargo-change-dep-feature)
         * [Minor: adding dependencies](#cargo-dep-add)
@@ -131,6 +132,9 @@ fn main() {
     updated_crate::foo(); // Error: cannot find function `foo`
 }
 ```
+
+This includes adding any sort of [`cfg` attribute] which can change which
+items or behavior is available based on [conditional compilation].
 
 Mitigating strategies:
 * Mark items to be removed as [deprecated], and then remove them at a later
@@ -1212,6 +1216,28 @@ Mitigation strategies:
   functionality. Document that the feature is deprecated, and remove it in a
   future major SemVer release.
 
+<a id="cargo-feature-remove-another"></a>
+#### Major: removing a feature from a feature list if that changes functionality or public items
+
+If removing a feature from another feature, this can break existing users if
+they are expecting that functionality to be available through that feature.
+
+```toml
+# Breaking change example
+
+###########################################################
+# Before
+[features]
+default = ["std"]
+std = []
+
+###########################################################
+# After
+[features]
+default = []  # This may cause packages to fail if they are expecting std to be enabled.
+std = []
+```
+
 <a id="cargo-remove-opt-dep"></a>
 #### Possibly-breaking: removing an optional dependency
 
@@ -1301,12 +1327,14 @@ to list, so you are encouraged to use the spirit of the [SemVer] spec to guide
 your decisions on how to apply versioning to your application, or at least
 document what your commitments are.
 
+[`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
 [`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
 [`pub use`]: ../../reference/items/use-declarations.html
 [Cargo feature]: features.md
 [Cargo features]: features.md
 [cfg-accessible]: https://github.com/rust-lang/rust/issues/64797
 [cfg-version]: https://github.com/rust-lang/rust/issues/64796
+[conditional compilation]: ../../reference/conditional-compilation.md
 [Default]: ../../std/default/trait.Default.html
 [deprecated]: ../../reference/attributes/diagnostics.html#the-deprecated-attribute
 [disambiguation syntax]: ../../reference/expressions/call-expr.html#disambiguating-function-calls

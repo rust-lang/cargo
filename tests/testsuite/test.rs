@@ -4245,3 +4245,140 @@ fn bin_env_for_test() {
     p.cargo("test --test check_env").run();
     p.cargo("check --test check_env").run();
 }
+
+#[cargo_test]
+fn test_workspaces_cwd() {
+    // This tests that all the different test types are executed from the
+    // crate directory (manifest_dir), and not from the workspace root.
+
+    let make_lib_file = |expected| {
+        format!(
+            r#"
+                //! ```
+                //! assert_eq!("{expected}", std::fs::read_to_string("file.txt").unwrap());
+                //! assert_eq!(
+                //!     std::path::PathBuf::from(std::env!("CARGO_MANIFEST_DIR")),
+                //!     std::env::current_dir().unwrap(),
+                //! );
+                //! ```
+
+                #[test]
+                fn test_unit_{expected}_cwd() {{
+                    assert_eq!("{expected}", std::fs::read_to_string("file.txt").unwrap());
+                    assert_eq!(
+                        std::path::PathBuf::from(std::env!("CARGO_MANIFEST_DIR")),
+                        std::env::current_dir().unwrap(),
+                    );
+                }}
+            "#,
+            expected = expected
+        )
+    };
+    let make_test_file = |expected| {
+        format!(
+            r#"
+                #[test]
+                fn test_integration_{expected}_cwd() {{
+                    assert_eq!("{expected}", std::fs::read_to_string("file.txt").unwrap());
+                    assert_eq!(
+                        std::path::PathBuf::from(std::env!("CARGO_MANIFEST_DIR")),
+                        std::env::current_dir().unwrap(),
+                    );
+                }}
+            "#,
+            expected = expected
+        )
+    };
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "root-crate"
+                version = "0.0.0"
+
+                [workspace]
+                members = [".", "nested-crate", "very/deeply/nested/deep-crate"]
+            "#,
+        )
+        .file("file.txt", "root")
+        .file("src/lib.rs", &make_lib_file("root"))
+        .file("tests/integration.rs", &make_test_file("root"))
+        .file(
+            "nested-crate/Cargo.toml",
+            r#"
+                [package]
+                name = "nested-crate"
+                version = "0.0.0"
+            "#,
+        )
+        .file("nested-crate/file.txt", "nested")
+        .file("nested-crate/src/lib.rs", &make_lib_file("nested"))
+        .file(
+            "nested-crate/tests/integration.rs",
+            &make_test_file("nested"),
+        )
+        .file(
+            "very/deeply/nested/deep-crate/Cargo.toml",
+            r#"
+                [package]
+                name = "deep-crate"
+                version = "0.0.0"
+            "#,
+        )
+        .file("very/deeply/nested/deep-crate/file.txt", "deep")
+        .file(
+            "very/deeply/nested/deep-crate/src/lib.rs",
+            &make_lib_file("deep"),
+        )
+        .file(
+            "very/deeply/nested/deep-crate/tests/integration.rs",
+            &make_test_file("deep"),
+        )
+        .build();
+
+    p.cargo("test --workspace --all")
+        .with_stderr_contains("[DOCTEST] root-crate")
+        .with_stderr_contains("[DOCTEST] nested-crate")
+        .with_stderr_contains("[DOCTEST] deep-crate")
+        .with_stdout_contains("test test_unit_root_cwd ... ok")
+        .with_stdout_contains("test test_unit_nested_cwd ... ok")
+        .with_stdout_contains("test test_unit_deep_cwd ... ok")
+        .with_stdout_contains("test test_integration_root_cwd ... ok")
+        .with_stdout_contains("test test_integration_nested_cwd ... ok")
+        .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .run();
+
+    p.cargo("test -p root-crate --all")
+        .with_stderr_contains("[DOCTEST] root-crate")
+        .with_stdout_contains("test test_unit_root_cwd ... ok")
+        .with_stdout_contains("test test_integration_root_cwd ... ok")
+        .run();
+
+    p.cargo("test -p nested-crate --all")
+        .with_stderr_contains("[DOCTEST] nested-crate")
+        .with_stdout_contains("test test_unit_nested_cwd ... ok")
+        .with_stdout_contains("test test_integration_nested_cwd ... ok")
+        .run();
+
+    p.cargo("test -p deep-crate --all")
+        .with_stderr_contains("[DOCTEST] deep-crate")
+        .with_stdout_contains("test test_unit_deep_cwd ... ok")
+        .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .run();
+
+    p.cargo("test --all")
+        .cwd("nested-crate")
+        .with_stderr_contains("[DOCTEST] nested-crate")
+        .with_stdout_contains("test test_unit_nested_cwd ... ok")
+        .with_stdout_contains("test test_integration_nested_cwd ... ok")
+        .run();
+
+    p.cargo("test --all")
+        .cwd("very/deeply/nested/deep-crate")
+        .with_stderr_contains("[DOCTEST] deep-crate")
+        .with_stdout_contains("test test_unit_deep_cwd ... ok")
+        .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .run();
+}

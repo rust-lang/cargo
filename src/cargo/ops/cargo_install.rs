@@ -7,8 +7,7 @@ use anyhow::{bail, format_err};
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
 
-use crate::core::compiler::Freshness;
-use crate::core::compiler::{CompileKind, DefaultExecutor, Executor};
+use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
@@ -175,14 +174,12 @@ fn install_one(
             if let Some(krate) = krate {
                 let vers = if let Some(vers_flag) = vers {
                     Some(parse_semver_flag(vers_flag)?.to_string())
+                } else if source_id.is_registry() {
+                    // Avoid pre-release versions from crate.io
+                    // unless explicitly asked for
+                    Some(String::from("*"))
                 } else {
-                    if source_id.is_registry() {
-                        // Avoid pre-release versions from crate.io
-                        // unless explicitly asked for
-                        Some(String::from("*"))
-                    } else {
-                        None
-                    }
+                    None
                 };
                 Some(Dependency::parse_no_deprecated(
                     krate,
@@ -233,37 +230,37 @@ fn install_one(
                 |path: &mut PathSource<'_>| path.read_packages(),
                 config,
             )?
+        } else if let Some(dep) = dep {
+            let mut source = map.load(source_id, &HashSet::new())?;
+            if let Ok(Some(pkg)) =
+                installed_exact_package(dep.clone(), &mut source, config, opts, root, &dst, force)
+            {
+                let msg = format!(
+                    "package `{}` is already installed, use --force to override",
+                    pkg
+                );
+                config.shell().status("Ignored", &msg)?;
+                return Ok(true);
+            }
+            select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
         } else {
-            if let Some(dep) = dep {
-                let mut source = map.load(source_id, &HashSet::new())?;
-                if let Ok(Some(pkg)) = installed_exact_package(
-                    dep.clone(),
-                    &mut source,
-                    config,
-                    opts,
-                    root,
-                    &dst,
-                    force,
-                ) {
-                    let msg = format!(
-                        "package `{}` is already installed, use --force to override",
-                        pkg
-                    );
-                    config.shell().status("Ignored", &msg)?;
-                    return Ok(true);
-                }
-                select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
-            } else {
-                bail!(
-                    "must specify a crate to install from \
+            bail!(
+                "must specify a crate to install from \
                      crates.io, or use --path or --git to \
                      specify alternate source"
-                )
-            }
+            )
         }
     };
 
     let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+    // If we're installing in --locked mode and there's no `Cargo.lock` published
+    // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
+    if config.locked() && !ws.root().join("Cargo.lock").exists() {
+        config.shell().warn(format!(
+            "no Cargo.lock file published in {}",
+            pkg.to_string()
+        ))?;
+    }
     let pkg = if source_id.is_git() {
         // Don't use ws.current() in order to keep the package source as a git source so that
         // install tracking uses the correct source.
@@ -336,15 +333,13 @@ fn install_one(
     if no_track {
         // Check for conflicts.
         no_track_duplicates()?;
-    } else {
-        if is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force)? {
-            let msg = format!(
-                "package `{}` is already installed, use --force to override",
-                pkg
-            );
-            config.shell().status("Ignored", &msg)?;
-            return Ok(false);
-        }
+    } else if is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force)? {
+        let msg = format!(
+            "package `{}` is already installed, use --force to override",
+            pkg
+        );
+        config.shell().status("Ignored", &msg)?;
+        return Ok(false);
     }
 
     config.shell().status("Installing", &pkg)?;
@@ -368,10 +363,10 @@ fn install_one(
     let mut binaries: Vec<(&str, &Path)> = compile
         .binaries
         .iter()
-        .map(|(_, bin)| {
-            let name = bin.file_name().unwrap();
+        .map(|UnitOutput { path, .. }| {
+            let name = path.file_name().unwrap();
             if let Some(s) = name.to_str() {
-                Ok((s, bin.as_ref()))
+                Ok((s, path.as_ref()))
             } else {
                 bail!("Binary `{:?}` name can't be serialized into string", name)
             }

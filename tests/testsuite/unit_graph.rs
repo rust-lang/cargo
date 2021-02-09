@@ -78,7 +78,8 @@ fn simple() {
                     "rpath": false,
                     "incremental": false,
                     "panic": "unwind",
-                    "strip": "none"
+                    "strip": "none",
+                    "split_debuginfo": "{...}"
                   },
                   "platform": null,
                   "mode": "build",
@@ -121,7 +122,8 @@ fn simple() {
                     "rpath": false,
                     "incremental": false,
                     "panic": "unwind",
-                    "strip": "none"
+                    "strip": "none",
+                    "split_debuginfo": "{...}"
                   },
                   "platform": null,
                   "mode": "build",
@@ -164,7 +166,8 @@ fn simple() {
                     "rpath": false,
                     "incremental": false,
                     "panic": "unwind",
-                    "strip": "none"
+                    "strip": "none",
+                    "split_debuginfo": "{...}"
                   },
                   "platform": null,
                   "mode": "build",
@@ -200,7 +203,8 @@ fn simple() {
                     "rpath": false,
                     "incremental": false,
                     "panic": "unwind",
-                    "strip": "none"
+                    "strip": "none",
+                    "split_debuginfo": "{...}"
                   },
                   "platform": null,
                   "mode": "build",

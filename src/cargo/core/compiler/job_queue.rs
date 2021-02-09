@@ -780,14 +780,12 @@ impl<'cfg> DrainState<'cfg> {
         if err_state.is_some() {
             // Already encountered one error.
             log::warn!("{:?}", new_err);
+        } else if !self.active.is_empty() {
+            crate::display_error(&new_err, shell);
+            drop(shell.warn("build failed, waiting for other jobs to finish..."));
+            *err_state = Some(anyhow::format_err!("build failed"));
         } else {
-            if !self.active.is_empty() {
-                crate::display_error(&new_err, shell);
-                drop(shell.warn("build failed, waiting for other jobs to finish..."));
-                *err_state = Some(anyhow::format_err!("build failed"));
-            } else {
-                *err_state = Some(new_err);
-            }
+            *err_state = Some(new_err);
         }
     }
 
@@ -917,7 +915,7 @@ impl<'cfg> DrainState<'cfg> {
                 // thread to run the job.
                 doit(JobState {
                     id,
-                    messages: messages.clone(),
+                    messages,
                     output: Some(cx.bcx.config),
                     rmeta_required: Cell::new(rmeta_required),
                     _marker: marker::PhantomData,
@@ -947,12 +945,12 @@ impl<'cfg> DrainState<'cfg> {
         cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
         let outputs = cx.build_script_outputs.lock().unwrap();
-        let metadata = match cx.find_build_script_metadata(unit.clone()) {
+        let metadata = match cx.find_build_script_metadata(unit) {
             Some(metadata) => metadata,
             None => return Ok(()),
         };
         let bcx = &mut cx.bcx;
-        if let Some(output) = outputs.get(unit.pkg.package_id(), metadata) {
+        if let Some(output) = outputs.get(metadata) {
             if !output.warnings.is_empty() {
                 if let Some(msg) = msg {
                     writeln!(bcx.config.shell().err(), "{}\n", msg)?;

@@ -83,6 +83,10 @@ The output has the following format:
                        null if not a target dependency.
                     */
                     "target": "cfg(windows)",
+                    /* The file system path for a local path dependency.
+                       not present if not a path dependency.
+                    */
+                    "path": "/path/to/dep",
                     /* A string of the URL of the registry this dependency is from.
                        If not specified or null, the dependency is from the default
                        registry (crates.io).

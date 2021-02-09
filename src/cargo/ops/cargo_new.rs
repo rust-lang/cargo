@@ -163,23 +163,42 @@ fn check_name(
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = if show_name_help {
-        "\nIf you need a crate name to not match the directory name, consider using --name flag."
+        "\nIf you need a package name to not match the directory name, consider using --name flag."
     } else {
         ""
     };
-    restricted_names::validate_package_name(name, "crate name", name_help)?;
+    let bin_help = || {
+        let mut help = String::from(name_help);
+        if has_bin {
+            help.push_str(&format!(
+                "\n\
+                If you need a binary with the name \"{name}\", use a valid package \
+                name, and set the binary name to be different from the package. \
+                This can be done by setting the binary filename to `src/bin/{name}.rs` \
+                or change the name in Cargo.toml with:\n\
+                \n    \
+                [bin]\n    \
+                name = \"{name}\"\n    \
+                path = \"src/main.rs\"\n\
+            ",
+                name = name
+            ));
+        }
+        help
+    };
+    restricted_names::validate_package_name(name, "package name", &bin_help())?;
 
     if restricted_names::is_keyword(name) {
         anyhow::bail!(
-            "the name `{}` cannot be used as a crate name, it is a Rust keyword{}",
+            "the name `{}` cannot be used as a package name, it is a Rust keyword{}",
             name,
-            name_help
+            bin_help()
         );
     }
     if restricted_names::is_conflicting_artifact_name(name) {
         if has_bin {
             anyhow::bail!(
-                "the name `{}` cannot be used as a crate name, \
+                "the name `{}` cannot be used as a package name, \
                 it conflicts with cargo's build directory names{}",
                 name,
                 name_help
@@ -195,16 +214,17 @@ fn check_name(
     }
     if name == "test" {
         anyhow::bail!(
-            "the name `test` cannot be used as a crate name, \
+            "the name `test` cannot be used as a package name, \
             it conflicts with Rust's built-in test library{}",
-            name_help
+            bin_help()
         );
     }
     if ["core", "std", "alloc", "proc_macro", "proc-macro"].contains(&name) {
         shell.warn(format!(
             "the name `{}` is part of Rust's standard library\n\
-            It is recommended to use a different name to avoid problems.",
-            name
+            It is recommended to use a different name to avoid problems.{}",
+            name,
+            bin_help()
         ))?;
     }
     if restricted_names::is_windows_reserved(name) {
@@ -781,7 +801,7 @@ mod tests {
 
     if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
         crate::display_warning_with_error(
-            "compiling this new crate may not work due to invalid \
+            "compiling this new package may not work due to invalid \
              workspace configuration",
             &e,
             &mut config.shell(),

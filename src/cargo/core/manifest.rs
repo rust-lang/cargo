@@ -39,13 +39,13 @@ pub struct Manifest {
     custom_metadata: Option<toml::Value>,
     profiles: Option<TomlProfiles>,
     publish: Option<Vec<String>>,
-    publish_lockfile: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
     unstable_features: Features,
     edition: Edition,
+    rust_version: Option<String>,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
@@ -373,12 +373,12 @@ impl Manifest {
         custom_metadata: Option<toml::Value>,
         profiles: Option<TomlProfiles>,
         publish: Option<Vec<String>>,
-        publish_lockfile: bool,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         unstable_features: Features,
         edition: Edition,
+        rust_version: Option<String>,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
@@ -401,10 +401,10 @@ impl Manifest {
             workspace,
             unstable_features,
             edition,
+            rust_version,
             original,
             im_a_teapot,
             default_run,
-            publish_lockfile,
             metabuild,
             resolve_behavior,
         }
@@ -518,6 +518,10 @@ impl Manifest {
 
     pub fn edition(&self) -> Edition {
         self.edition
+    }
+
+    pub fn rust_version(&self) -> Option<&str> {
+        self.rust_version.as_deref()
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

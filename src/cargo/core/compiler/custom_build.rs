@@ -51,7 +51,7 @@ pub struct BuildOutput {
 /// `Unit` because this structure needs to be shareable between threads.
 #[derive(Default)]
 pub struct BuildScriptOutputs {
-    outputs: HashMap<(PackageId, Metadata), BuildOutput>,
+    outputs: HashMap<Metadata, BuildOutput>,
 }
 
 /// Linking information for a `Unit`.
@@ -114,7 +114,7 @@ pub fn prepare(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .build_script_outputs
         .lock()
         .unwrap()
-        .contains_key(unit.pkg.package_id(), metadata)
+        .contains_key(metadata)
     {
         // The output is already set, thus the build script is overridden.
         fingerprint::prepare_target(cx, unit, false)
@@ -312,15 +312,12 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         if !build_plan {
             let build_script_outputs = build_script_outputs.lock().unwrap();
             for (name, dep_id, dep_metadata) in lib_deps {
-                let script_output =
-                    build_script_outputs
-                        .get(dep_id, dep_metadata)
-                        .ok_or_else(|| {
-                            internal(format!(
-                                "failed to locate build state for env vars: {}/{}",
-                                dep_id, dep_metadata
-                            ))
-                        })?;
+                let script_output = build_script_outputs.get(dep_metadata).ok_or_else(|| {
+                    internal(format!(
+                        "failed to locate build state for env vars: {}/{}",
+                        dep_id, dep_metadata
+                    ))
+                })?;
                 let data = &script_output.metadata;
                 for &(ref key, ref value) in data.iter() {
                     cmd.env(
@@ -743,14 +740,14 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
         // If a package has a build script, add itself as something to inspect for linking.
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
             let script_meta = cx
-                .find_build_script_metadata(unit.clone())
+                .find_build_script_metadata(unit)
                 .expect("has_custom_build should have RunCustomBuild");
             add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
         }
 
         // Load any dependency declarations from a previous run.
         if unit.mode.is_run_custom_build() {
-            parse_previous_explicit_deps(cx, unit)?;
+            parse_previous_explicit_deps(cx, unit);
         }
 
         // We want to invoke the compiler deterministically to be cache-friendly
@@ -787,13 +784,12 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
         }
     }
 
-    fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+    fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) {
         let script_run_dir = cx.files().build_script_run_dir(unit);
         let output_file = script_run_dir.join("output");
         let (prev_output, _) = prev_build_output(cx, unit);
         let deps = BuildDeps::new(&output_file, prev_output.as_ref());
         cx.build_explicit_deps.insert(unit.clone(), deps);
-        Ok(())
     }
 }
 
@@ -830,7 +826,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
 impl BuildScriptOutputs {
     /// Inserts a new entry into the map.
     fn insert(&mut self, pkg_id: PackageId, metadata: Metadata, parsed_output: BuildOutput) {
-        match self.outputs.entry((pkg_id, metadata)) {
+        match self.outputs.entry(metadata) {
             Entry::Vacant(entry) => {
                 entry.insert(parsed_output);
             }
@@ -846,17 +842,17 @@ impl BuildScriptOutputs {
     }
 
     /// Returns `true` if the given key already exists.
-    fn contains_key(&self, pkg_id: PackageId, metadata: Metadata) -> bool {
-        self.outputs.contains_key(&(pkg_id, metadata))
+    fn contains_key(&self, metadata: Metadata) -> bool {
+        self.outputs.contains_key(&metadata)
     }
 
     /// Gets the build output for the given key.
-    pub fn get(&self, pkg_id: PackageId, meta: Metadata) -> Option<&BuildOutput> {
-        self.outputs.get(&(pkg_id, meta))
+    pub fn get(&self, meta: Metadata) -> Option<&BuildOutput> {
+        self.outputs.get(&meta)
     }
 
     /// Returns an iterator over all entries.
-    pub fn iter(&self) -> impl Iterator<Item = (PackageId, &BuildOutput)> {
-        self.outputs.iter().map(|(key, value)| (key.0, value))
+    pub fn iter(&self) -> impl Iterator<Item = (&Metadata, &BuildOutput)> {
+        self.outputs.iter()
     }
 }

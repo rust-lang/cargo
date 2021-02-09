@@ -11,10 +11,16 @@ pub fn cli() -> App {
         .arg_package_spec_simple("Package to update")
         .arg(opt(
             "aggressive",
-            "Force updating all dependencies of <name> as well",
+            "Force updating all dependencies of SPEC as well when used with -p",
         ))
         .arg_dry_run("Don't actually write the lockfile")
-        .arg(opt("precise", "Update a single dependency to exactly PRECISE").value_name("PRECISE"))
+        .arg(
+            opt(
+                "precise",
+                "Update a single dependency to exactly PRECISE when used with -p",
+            )
+            .value_name("PRECISE"),
+        )
         .arg_manifest_path()
         .after_help("Run `cargo help update` for more detailed information.\n")
 }

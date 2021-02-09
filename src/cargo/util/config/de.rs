@@ -527,7 +527,7 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
                 seed.deserialize(Tuple2Deserializer(0i32, path.to_string_lossy()))
             }
             Definition::Environment(env) => {
-                seed.deserialize(Tuple2Deserializer(1i32, env.as_ref()))
+                seed.deserialize(Tuple2Deserializer(1i32, env.as_str()))
             }
             Definition::Cli => seed.deserialize(Tuple2Deserializer(2i32, "")),
         }

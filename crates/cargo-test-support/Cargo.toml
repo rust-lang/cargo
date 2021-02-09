@@ -13,10 +13,11 @@ cargo = { path = "../.." }
 cargo-test-macro = { path = "../cargo-test-macro" }
 filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
-git2 = "0.13"
+git2 = "0.13.16"
 glob = "0.3"
 lazy_static = "1.0"
 remove_dir_all = "0.5"
 serde_json = "1.0"
 tar = { version = "0.4.18", default-features = false }
+toml = "0.5.7"
 url = "2.0"

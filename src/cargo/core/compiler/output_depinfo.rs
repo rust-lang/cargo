@@ -79,13 +79,8 @@ fn add_deps_for_unit(
     }
 
     // Add rerun-if-changed dependencies
-    if let Some(metadata) = cx.find_build_script_metadata(unit.clone()) {
-        if let Some(output) = cx
-            .build_script_outputs
-            .lock()
-            .unwrap()
-            .get(unit.pkg.package_id(), metadata)
-        {
+    if let Some(metadata) = cx.find_build_script_metadata(unit) {
+        if let Some(output) = cx.build_script_outputs.lock().unwrap().get(metadata) {
             for path in &output.rerun_if_changed {
                 deps.insert(path.into());
             }

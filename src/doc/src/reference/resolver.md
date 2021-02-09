@@ -193,11 +193,13 @@ the other constraints that can affect resolution.
 
 ### Features
 
-The resolver resolves the graph as-if the [features] of all [workspace]
-members are enabled. This ensures that any optional dependencies are available
-and properly resolved with the rest of the graph when features are added or
-removed with the `--features` command-line flag. The actual features used when
-*compiling* a crate will depend on the features enabled on the command-line.
+For the purpose of generating `Cargo.lock`, the resolver builds the dependency
+graph as-if all [features] of all [workspace] members are enabled. This
+ensures that any optional dependencies are available and properly resolved
+with the rest of the graph when features are added or removed with the
+[`--features` command-line flag](features.md#command-line-feature-options).
+The resolver runs a second time to determine the actual features used when
+*compiling* a crate, based on the features selected on the command-line.
 
 Dependencies are resolved with the union of all features enabled on them. For
 example, if one package depends on the [`im`] package with the [`serde`
@@ -206,6 +208,12 @@ dependency] enabled, then `im` will be built with both features enabled, and
 the `serde` and `rayon` crates will be included in the resolve graph. If no
 packages depend on `im` with those features, then those optional dependencies
 will be ignored, and they will not affect resolution.
+
+When building multiple packages in a workspace (such as with `--workspace` or
+multiple `-p` flags), the features of the dependencies of all of those
+packages are unified. If you have a circumstance where you want to avoid that
+unification for different workspace members, you will need to build them via
+separate `cargo` invocations.
 
 The resolver will skip over versions of packages that are missing required
 features. For example, if a package depends on version `^1` of [`regex`] with
@@ -226,6 +234,69 @@ optional dependency].
 [features]: features.md
 [removing an optional dependency]: semver.md#cargo-remove-opt-dep
 [workspace]: workspaces.md
+
+#### Feature resolver version 2
+
+When `resolver = "2"` is specified in `Cargo.toml` (see [resolver
+versions](#resolver-versions) below), a different feature resolver is used
+which uses a different algorithm for unifying features. The version `"1"`
+resolver will unify features for a package no matter where it is specified.
+The version `"2"` resolver will avoid unifying features in the following
+situations:
+
+* Features for target-specific dependencies are not enabled if the target is
+  not currently being built. For example:
+
+  ```toml
+  [dependency.common]
+  version = "1.0"
+  features = ["f1"]
+
+  [target.'cfg(windows)'.dependencies.common]
+  version = "1.0"
+  features = ["f2"]
+  ```
+
+  When building this example for a non-Windows platform, the `f2` feature will
+  *not* be enabled.
+
+* Features enabled on [build-dependencies] or proc-macros will not be unified
+  when those same dependencies are used as a normal dependency. For example:
+
+  ```toml
+  [dependencies]
+  log = "0.4"
+
+  [build-dependencies]
+  log = {version = "0.4", features=['std']}
+  ```
+
+  When building the build script, the `log` crate will be built with the `std`
+  feature. When building the library of your package, it will not enable the
+  feature.
+
+* Features enabled on [dev-dependencies] will not be unified when those same
+  dependencies are used as a normal dependency, unless those dev-dependencies
+  are currently being built. For example:
+
+  ```toml
+  [dependencies]
+  serde = {version = "1.0", default-features = false}
+
+  [dev-dependencies]
+  serde = {version = "1.0", features = ["std"]}
+  ```
+
+  In this example, the library will normally link against `serde` without the
+  `std` feature. However, when built as a test or example, it will include the
+  `std` feature. For example, `cargo test` or `cargo build --all-targets` will
+  unify these features. Note that dev-dependencies in dependencies are always
+  ignored, this is only relevant for the top-level package or workspace
+  members.
+
+[build-dependencies]: specifying-dependencies.md#build-dependencies
+[dev-dependencies]: specifying-dependencies.md#development-dependencies
+[resolver-field]: features.md#resolver-versions
 
 ### `links`
 
@@ -324,6 +395,39 @@ types.
 
 If possible, try to split your package into multiple packages and restructure
 it so that it remains strictly acyclic.
+
+## Resolver versions
+
+A different feature resolver algorithm can be used by specifying the resolver
+version in `Cargo.toml` like this:
+
+```toml
+[package]
+name = "my-package"
+version = "1.0.0"
+resolver = "2"
+```
+
+The version `"1"` resolver is the original resolver that shipped with Cargo up
+to version 1.50, and is the default if the `resolver` is not specified.
+
+The version `"2"` resolver introduces changes in [feature
+unification](#features). See the [features chapter][features-2] for more
+details.
+
+The resolver is a global option that affects the entire workspace. The
+`resolver` version in dependencies is ignored, only the value in the top-level
+package will be used. If using a [virtual workspace], the version should be
+specified in the `[workspace]` table, for example:
+
+```toml
+[workspace]
+members = ["member1", "member2"]
+resolver = "2"
+```
+
+[virtual workspace]: workspaces.md#virtual-manifest
+[features-2]: features.md#feature-resolver-version-2
 
 ## Recommendations
 

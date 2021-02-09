@@ -383,7 +383,7 @@ features = ["secure-password", "civet"]
 ```
 
 More information about features can be found in the [features
-chapter](features.md).
+chapter](features.md#dependency-features).
 
 ### Renaming dependencies in `Cargo.toml`
 
@@ -429,11 +429,11 @@ Note that if you have an optional dependency like:
 
 ```toml
 [dependencies]
-foo = { version = "0.1", package = 'bar', optional = true }
+bar = { version = "0.1", package = 'foo', optional = true }
 ```
 
-you're depending on the crate `bar` from crates.io, but your crate has a `foo`
-feature instead of a `bar` feature. That is, names of features take after the
+you're depending on the crate `foo` from crates.io, but your crate has a `bar`
+feature instead of a `foo` feature. That is, names of features take after the
 name of the dependency, not the package name, when renamed.
 
 Enabling transitive dependencies works similarly, for example we could add the
@@ -441,7 +441,7 @@ following to the above manifest:
 
 ```toml
 [features]
-log-debug = ['foo/log-debug'] # using 'bar/log-debug' would be an error!
+log-debug = ['bar/log-debug'] # using 'foo/log-debug' would be an error!
 ```
 
 [crates.io]: https://crates.io/

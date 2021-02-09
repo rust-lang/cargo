@@ -26,6 +26,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
+        .arg_ignore_rust_version()
         .after_help("Run `cargo help run` for more detailed information.\n")
 }
 
@@ -89,7 +90,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
         // If we never actually spawned the process then that sounds pretty
         // bad and we always want to forward that up.
-        let exit = match proc_err.exit {
+        let exit_code = match proc_err.code {
             Some(exit) => exit,
             None => return CliError::new(err, 101),
         };
@@ -97,7 +98,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         // If `-q` was passed then we suppress extra error information about
         // a failed process, we assume the process itself printed out enough
         // information about why it failed so we don't do so as well
-        let exit_code = exit.code().unwrap_or(101);
         let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
         if is_quiet {
             CliError::code(exit_code)

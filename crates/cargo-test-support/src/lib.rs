@@ -722,6 +722,16 @@ impl Execs {
         self
     }
 
+    pub fn enable_mac_dsym(&mut self) -> &mut Self {
+        if cfg!(target_os = "macos") {
+            self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
+                .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")
+                .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "packed")
+                .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "packed");
+        }
+        self
+    }
+
     pub fn run(&mut self) {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
@@ -788,13 +798,17 @@ impl Execs {
         match res {
             Ok(out) => self.match_output(&out),
             Err(e) => {
-                let err = e.downcast_ref::<ProcessError>();
-                if let Some(&ProcessError {
-                    output: Some(ref out),
+                if let Some(ProcessError {
+                    stdout: Some(stdout),
+                    stderr: Some(stderr),
+                    code,
                     ..
-                }) = err
+                }) = e.downcast_ref::<ProcessError>()
                 {
-                    return self.match_output(out);
+                    return self
+                        .match_status(*code, stdout, stderr)
+                        .and(self.match_stdout(stdout, stderr))
+                        .and(self.match_stderr(stdout, stderr));
                 }
                 Err(format!("could not exec process {}: {:?}", process, e))
             }
@@ -803,119 +817,91 @@ impl Execs {
 
     fn match_output(&self, actual: &Output) -> MatchResult {
         self.verify_checks_output(actual);
-        self.match_status(actual)
-            .and(self.match_stdout(actual))
-            .and(self.match_stderr(actual))
+        self.match_status(actual.status.code(), &actual.stdout, &actual.stderr)
+            .and(self.match_stdout(&actual.stdout, &actual.stderr))
+            .and(self.match_stderr(&actual.stdout, &actual.stderr))
     }
 
-    fn match_status(&self, actual: &Output) -> MatchResult {
+    fn match_status(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> MatchResult {
         match self.expect_exit_code {
             None => Ok(()),
-            Some(code) if actual.status.code() == Some(code) => Ok(()),
+            Some(expected) if code == Some(expected) => Ok(()),
             Some(_) => Err(format!(
-                "exited with {}\n--- stdout\n{}\n--- stderr\n{}",
-                actual.status,
-                String::from_utf8_lossy(&actual.stdout),
-                String::from_utf8_lossy(&actual.stderr)
+                "exited with {:?}\n--- stdout\n{}\n--- stderr\n{}",
+                code,
+                String::from_utf8_lossy(&stdout),
+                String::from_utf8_lossy(&stderr)
             )),
         }
     }
 
-    fn match_stdout(&self, actual: &Output) -> MatchResult {
+    fn match_stdout(&self, stdout: &[u8], stderr: &[u8]) -> MatchResult {
         self.match_std(
             self.expect_stdout.as_ref(),
-            &actual.stdout,
+            stdout,
             "stdout",
-            &actual.stderr,
+            stderr,
             MatchKind::Exact,
         )?;
         for expect in self.expect_stdout_contains.iter() {
-            self.match_std(
-                Some(expect),
-                &actual.stdout,
-                "stdout",
-                &actual.stderr,
-                MatchKind::Partial,
-            )?;
+            self.match_std(Some(expect), stdout, "stdout", stderr, MatchKind::Partial)?;
         }
         for expect in self.expect_stderr_contains.iter() {
-            self.match_std(
-                Some(expect),
-                &actual.stderr,
-                "stderr",
-                &actual.stdout,
-                MatchKind::Partial,
-            )?;
+            self.match_std(Some(expect), stderr, "stderr", stdout, MatchKind::Partial)?;
         }
         for &(ref expect, number) in self.expect_stdout_contains_n.iter() {
             self.match_std(
                 Some(expect),
-                &actual.stdout,
+                stdout,
                 "stdout",
-                &actual.stderr,
+                stderr,
                 MatchKind::PartialN(number),
             )?;
         }
         for expect in self.expect_stdout_not_contains.iter() {
             self.match_std(
                 Some(expect),
-                &actual.stdout,
+                stdout,
                 "stdout",
-                &actual.stderr,
+                stderr,
                 MatchKind::NotPresent,
             )?;
         }
         for expect in self.expect_stderr_not_contains.iter() {
             self.match_std(
                 Some(expect),
-                &actual.stderr,
+                stderr,
                 "stderr",
-                &actual.stdout,
+                stdout,
                 MatchKind::NotPresent,
             )?;
         }
         for expect in self.expect_stderr_unordered.iter() {
-            self.match_std(
-                Some(expect),
-                &actual.stderr,
-                "stderr",
-                &actual.stdout,
-                MatchKind::Unordered,
-            )?;
+            self.match_std(Some(expect), stderr, "stderr", stdout, MatchKind::Unordered)?;
         }
         for expect in self.expect_neither_contains.iter() {
             self.match_std(
                 Some(expect),
-                &actual.stdout,
+                stdout,
                 "stdout",
-                &actual.stdout,
+                stdout,
                 MatchKind::NotPresent,
             )?;
 
             self.match_std(
                 Some(expect),
-                &actual.stderr,
+                stderr,
                 "stderr",
-                &actual.stderr,
+                stderr,
                 MatchKind::NotPresent,
             )?;
         }
 
         for expect in self.expect_either_contains.iter() {
-            let match_std = self.match_std(
-                Some(expect),
-                &actual.stdout,
-                "stdout",
-                &actual.stdout,
-                MatchKind::Partial,
-            );
-            let match_err = self.match_std(
-                Some(expect),
-                &actual.stderr,
-                "stderr",
-                &actual.stderr,
-                MatchKind::Partial,
-            );
+            let match_std =
+                self.match_std(Some(expect), stdout, "stdout", stdout, MatchKind::Partial);
+            let match_err =
+                self.match_std(Some(expect), stderr, "stderr", stderr, MatchKind::Partial);
 
             if let (Err(_), Err(_)) = (match_std, match_err) {
                 return Err(format!(
@@ -928,12 +914,12 @@ impl Execs {
         }
 
         for (with, without) in self.expect_stderr_with_without.iter() {
-            self.match_with_without(&actual.stderr, with, without)?;
+            self.match_with_without(stderr, with, without)?;
         }
 
         if let Some(ref objects) = self.expect_json {
-            let stdout = str::from_utf8(&actual.stdout)
-                .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+            let stdout =
+                str::from_utf8(stdout).map_err(|_| "stdout was not utf8 encoded".to_owned())?;
             let lines = stdout
                 .lines()
                 .filter(|line| line.starts_with('{'))
@@ -952,8 +938,8 @@ impl Execs {
         }
 
         if !self.expect_json_contains_unordered.is_empty() {
-            let stdout = str::from_utf8(&actual.stdout)
-                .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+            let stdout =
+                str::from_utf8(stdout).map_err(|_| "stdout was not utf8 encoded".to_owned())?;
             let mut lines = stdout
                 .lines()
                 .filter(|line| line.starts_with('{'))
@@ -980,12 +966,12 @@ impl Execs {
         Ok(())
     }
 
-    fn match_stderr(&self, actual: &Output) -> MatchResult {
+    fn match_stderr(&self, stdout: &[u8], stderr: &[u8]) -> MatchResult {
         self.match_std(
             self.expect_stderr.as_ref(),
-            &actual.stderr,
+            stderr,
             "stderr",
-            &actual.stdout,
+            stdout,
             MatchKind::Exact,
         )
     }

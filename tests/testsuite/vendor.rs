@@ -7,7 +7,7 @@
 use std::fs;
 
 use cargo_test_support::git;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_lib_manifest, paths, project, Project};
 
 #[cargo_test]
@@ -594,6 +594,7 @@ fn ignore_hidden() {
 #[cargo_test]
 fn config_instructions_works() {
     // Check that the config instructions work for all dependency kinds.
+    registry::alt_init();
     Package::new("dep", "0.1.0").publish();
     Package::new("altdep", "0.1.0").alternative(true).publish();
     let git_project = git::new("gitdep", |project| {
@@ -674,4 +675,37 @@ fn git_crlf_preservation() {
     p.cargo("vendor --respect-source-config").run();
     let output = p.read_file("vendor/a/src/lib.rs");
     assert_eq!(input, output);
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn vendor_preserves_permissions() {
+    use std::os::unix::fs::MetadataExt;
+
+    Package::new("bar", "1.0.0")
+        .file_with_mode("example.sh", 0o755, "#!/bin/sh")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+
+    let metadata = fs::metadata(p.root().join("vendor/bar/src/lib.rs")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o644);
+    let metadata = fs::metadata(p.root().join("vendor/bar/example.sh")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o755);
 }

@@ -108,7 +108,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
 
         let mut name = match self.id2name.get(&id) {
             Some(name) => name,
-            None => return Ok(id.load(self.config, yanked_whitelist)?),
+            None => return id.load(self.config, yanked_whitelist),
         };
         let mut cfg_loc = "";
         let orig_name = name;
@@ -130,7 +130,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                     name = s;
                     cfg_loc = c;
                 }
-                None if id == cfg.id => return Ok(id.load(self.config, yanked_whitelist)?),
+                None if id == cfg.id => return id.load(self.config, yanked_whitelist),
                 None => {
                     new_id = cfg.id.with_precise(id.precise().map(|s| s.to_string()));
                     break;

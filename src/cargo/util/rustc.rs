@@ -1,4 +1,4 @@
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::HashMap;
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -123,8 +123,17 @@ struct Cache {
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct CacheData {
     rustc_fingerprint: u64,
-    outputs: HashMap<u64, (String, String)>,
+    outputs: HashMap<u64, Output>,
     successes: HashMap<u64, bool>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Output {
+    success: bool,
+    status: String,
+    code: Option<i32>,
+    stdout: String,
+    stderr: String,
 }
 
 impl Cache {
@@ -180,26 +189,49 @@ impl Cache {
 
     fn cached_output(&mut self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
         let key = process_fingerprint(cmd);
-        match self.data.outputs.entry(key) {
-            Entry::Occupied(entry) => {
-                debug!("rustc info cache hit");
-                Ok(entry.get().clone())
-            }
-            Entry::Vacant(entry) => {
-                debug!("rustc info cache miss");
-                debug!("running {}", cmd);
-                let output = cmd.exec_with_output()?;
-                let stdout = String::from_utf8(output.stdout)
-                    .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                    .chain_err(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
-                let stderr = String::from_utf8(output.stderr)
-                    .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                    .chain_err(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
-                let output = (stdout, stderr);
-                entry.insert(output.clone());
-                self.dirty = true;
-                Ok(output)
-            }
+        if self.data.outputs.contains_key(&key) {
+            debug!("rustc info cache hit");
+        } else {
+            debug!("rustc info cache miss");
+            debug!("running {}", cmd);
+            let output = cmd
+                .build_command()
+                .output()
+                .chain_err(|| format!("could not execute process {} (never executed)", cmd))?;
+            let stdout = String::from_utf8(output.stdout)
+                .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
+                .chain_err(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
+            let stderr = String::from_utf8(output.stderr)
+                .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
+                .chain_err(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
+            self.data.outputs.insert(
+                key,
+                Output {
+                    success: output.status.success(),
+                    status: if output.status.success() {
+                        String::new()
+                    } else {
+                        util::exit_status_to_string(output.status)
+                    },
+                    code: output.status.code(),
+                    stdout,
+                    stderr,
+                },
+            );
+            self.dirty = true;
+        }
+        let output = &self.data.outputs[&key];
+        if output.success {
+            Ok((output.stdout.clone(), output.stderr.clone()))
+        } else {
+            Err(util::process_error_raw(
+                &format!("process didn't exit successfully: {}", cmd),
+                output.code,
+                &output.status,
+                Some(output.stdout.as_ref()),
+                Some(output.stderr.as_ref()),
+            )
+            .into())
         }
     }
 }

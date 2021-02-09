@@ -1,24 +1,62 @@
 ## Unstable Features
 
-Experimental Cargo features are only available on the nightly channel. You
-typically use one of the `-Z` flags to enable them. Run `cargo -Z help` to
-see a list of flags available.
+Experimental Cargo features are only available on the [nightly channel]. You
+are encouraged to experiment with these features to see if they meet your
+needs, and if there are any issues or problems. Check the linked tracking
+issues listed below for more information on the feature, and click the GitHub
+subscribe button if you want future updates.
 
-`-Z unstable-options` is a generic flag for enabling other unstable
-command-line flags. Options requiring this will be called out below.
+After some period of time, if the feature does not have any major concerns, it
+can be [stabilized], which will make it available on stable once the current
+nightly release reaches the stable channel (anywhere from 6 to 12 weeks).
 
-Anything which can be configured with a Z flag can also be set in the cargo
-config file (`.cargo/config.toml`) in the `unstable` table. For example:
+There are three different ways that unstable features can be enabled based on
+how the feature works:
 
-```toml
-[unstable]
-mtime-on-use = 'yes'
-multitarget = 'yes'
-timings = 'yes'
-```
+* New syntax in `Cargo.toml` requires a `cargo-features` key at the top of
+  `Cargo.toml`, before any tables. For example:
 
-Some unstable features will require you to specify the `cargo-features` key in
-`Cargo.toml`.
+  ```toml
+  # This specifies which new Cargo.toml features are enabled.
+  cargo-features = ["test-dummy-unstable"]
+
+  [package]
+  name = "my-package"
+  version = "0.1.0"
+  im-a-teapot = true  # This is a new option enabled by test-dummy-unstable.
+  ```
+
+* New command-line flags, options, and subcommands require the `-Z
+  unstable-options` CLI option to also be included. For example, the new
+  `--out-dir` option is only available on nightly:
+
+  ```cargo +nightly build --out-dir=out -Z unstable-options```
+
+* `-Z` command-line flags are used to enable new functionality that may not
+  have an interface, or the interface has not yet been designed, or for more
+  complex features that affect multiple parts of Cargo. For example, the
+  [timings](#timings) feature can be enabled with:
+
+  ```cargo +nightly build -Z timings```
+
+  Run `cargo -Z help` to see a list of flags available.
+
+  Anything which can be configured with a `-Z` flag can also be set in the
+  cargo [config file] (`.cargo/config.toml`) in the `unstable` table. For
+  example:
+
+  ```toml
+  [unstable]
+  mtime-on-use = true
+  multitarget = true
+  timings = ["html"]
+  ```
+
+Each new feature described below should explain how to use it.
+
+[config file]: config.md
+[nightly channel]: ../../book/appendix-07-nightly-rust.html
+[stabilized]: https://doc.crates.io/contrib/process/unstable.html#stabilization
 
 ### extra-link-arg
 * Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
@@ -199,7 +237,7 @@ For example, using `cargo build` with `--profile` and the manifest from above:
 cargo +nightly build --profile release-lto -Z unstable-options
 ```
 
-When a custom profile is used, build artifcats go to a different target by
+When a custom profile is used, build artifacts go to a different target by
 default. In the example above, you can expect to see the outputs under
 `target/release-lto`.
 
@@ -577,140 +615,6 @@ cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 
 CLI paths are relative to the current working directory.
 
-### Features
-* Tracking Issues:
-  * [itarget #7914](https://github.com/rust-lang/cargo/issues/7914)
-  * [build_dep #7915](https://github.com/rust-lang/cargo/issues/7915)
-  * [dev_dep #7916](https://github.com/rust-lang/cargo/issues/7916)
-
-The `-Zfeatures` option causes Cargo to use a new feature resolver that can
-resolve features differently from before. It takes a comma separated list of
-options to indicate which new behaviors to enable. With no options, it should
-behave the same as without the flag.
-
-```console
-cargo +nightly -Zfeatures=itarget,build_dep
-```
-
-The available options are:
-
-* `itarget` — Ignores features for target-specific dependencies for targets
-  that don't match the current compile target. For example:
-
-  ```toml
-  [dependency.common]
-  version = "1.0"
-  features = ["f1"]
-
-  [target.'cfg(windows)'.dependencies.common]
-  version = "1.0"
-  features = ["f2"]
-  ```
-
-  When building this example for a non-Windows platform, the `f2` feature will
-  *not* be enabled.
-
-* `host_dep` — Prevents features enabled on build dependencies or proc-macros
-  from being enabled for normal dependencies. For example:
-
-  ```toml
-  [dependencies]
-  log = "0.4"
-
-  [build-dependencies]
-  log = {version = "0.4", features=['std']}
-  ```
-
-  When building the build script, the `log` crate will be built with the `std`
-  feature. When building the library of your package, it will not enable the
-  feature.
-
-  Note that proc-macro decoupling requires changes to the registry, so it
-  won't be decoupled until the registry is updated to support the new field.
-
-* `dev_dep` — Prevents features enabled on dev dependencies from being enabled
-  for normal dependencies. For example:
-
-  ```toml
-  [dependencies]
-  serde = {version = "1.0", default-features = false}
-
-  [dev-dependencies]
-  serde = {version = "1.0", features = ["std"]}
-  ```
-
-  In this example, the library will normally link against `serde` without the
-  `std` feature. However, when built as a test or example, it will include the
-  `std` feature.
-
-  This mode is ignored if you are building any test, bench, or example. That
-  is, dev dependency features will still be unified if you run commands like
-  `cargo test` or `cargo build --all-targets`.
-
-* `all` — Enable all feature options (`itarget,build_dep,dev_dep`).
-
-* `compare` — This option compares the resolved features to the old resolver,
-  and will print any differences.
-
-### package-features
-* Tracking Issue: [#5364](https://github.com/rust-lang/cargo/issues/5364)
-
-The `-Zpackage-features` flag changes the way features can be passed on the
-command-line for a workspace. The normal behavior can be confusing, as the
-features passed are always enabled on the package in the current directory,
-even if that package is not selected with a `-p` flag. Feature flags also do
-not work in the root of a virtual workspace. `-Zpackage-features` tries to
-make feature flags behave in a more intuitive manner.
-
-* `cargo build -p other_member --features …` — This now only enables the given
-  features as defined in `other_member` (ignores whatever is in the current
-  directory).
-* `cargo build -p a -p b --features …` — This now enables the given features
-  on both `a` and `b`. Not all packages need to define every feature, it only
-  enables matching features. It is still an error if none of the packages
-  define a given feature.
-* `--features` and `--no-default-features` are now allowed in the root of a
-  virtual workspace.
-* `member_name/feature_name` syntax may now be used on the command-line to
-  enable features for a specific member.
-
-The ability to set features for non-workspace members is no longer allowed, as
-the resolver fundamentally does not support that ability.
-
-### Resolver
-* Tracking Issue: [#8088](https://github.com/rust-lang/cargo/issues/8088)
-
-The `resolver` feature allows the resolver version to be specified in the
-`Cargo.toml` manifest. This allows a project to opt-in to
-backwards-incompatible changes in the resolver.
-
-```toml
-cargo-features = ["resolver"]
-
-[package]
-name = "my-package"
-version = "1.0.0"
-resolver = "2"
-```
-
-The value `"1"` is the current resolver behavior on the stable channel. A
-value of `"2"` enables all of the new feature behavior of
-[`-Zfeatures=all`](#features) and [`-Zpackage-features`](#package-features).
-
-This flag is global for a workspace. If using a virtual workspace, the root
-definition should be in the `[workspace]` table like this:
-
-```toml
-cargo-features = ["resolver"]
-
-[workspace]
-members = ["member1", "member2"]
-resolver = "2"
-```
-
-The `resolver` field is ignored in dependencies, only the top-level project or
-workspace can control the new behavior.
-
 ### unit-graph
 * Tracking Issue: [#8002](https://github.com/rust-lang/cargo/issues/8002)
 
@@ -1037,7 +941,7 @@ Linux systems. Due to build limitations, this wrapper is not available as a
 pre-compiled binary. This can be built and installed manually. First, install
 libsecret using your system package manager (for example, `sudo apt install
 libsecret-1-dev`). Then build and install the wrapper with `cargo install
---git https://github.com/rust-lang/cargo.git cargo-credential-gnome-secret`.
+cargo-credential-gnome-secret`.
 In the config, use a path to the binary like this:
 
 ```toml
@@ -1119,7 +1023,7 @@ When used with `credentials` file tokens, it needs the `-Z unstable-options`
 command-line option:
 
 ```console
-cargo logout -Z unstable-options`
+cargo logout -Z unstable-options
 ```
 
 When used with the `credential-process` config, use the `-Z
@@ -1127,7 +1031,7 @@ credential-process` command-line option:
 
 
 ```console
-cargo logout -Z credential-process`
+cargo logout -Z credential-process
 ```
 
 [`cargo login`]: ../commands/cargo-login.md
@@ -1137,3 +1041,54 @@ cargo logout -Z credential-process`
 [`credentials` file]: config.md#credentials
 [crates.io]: https://crates.io/
 [config file]: config.md
+
+### rust-version
+* RFC: [#2495](https://github.com/rust-lang/rfcs/blob/master/text/2495-min-rust-version.md)
+* rustc Tracking Issue: [#65262](https://github.com/rust-lang/rust/issues/65262)
+
+The `-Z rust-version` flag enables the reading the `rust-version` field in the
+Cargo manifest `package` section. This can be used by a package to state a minimal
+version of the compiler required to build the package. An error is generated if
+the version of rustc is older than the stated `rust-version`. The
+`--ignore-rust-version` flag can be used to override the check.
+
+```toml
+cargo-features = ["rust-version"]
+
+[package]
+name = "mypackage"
+version = "0.0.1"
+rust-version = "1.42"
+```
+
+<script>
+(function() {
+    var fragments = {
+        "#edition": "manifest.html#the-edition-field",
+        "#compile-progress": "config.html#termprogresswhen",
+        "#rename-dependency": "specifying-dependencies.html#renaming-dependencies-in-cargotoml",
+        "#alternate-registries": "registries.html",
+        "#offline-mode": "../commands/cargo.html",
+        "#publish-lockfile": "../commands/cargo-package.html",
+        "#default-run": "manifest.html#the-default-run-field",
+        "#cache-messages": "https://github.com/rust-lang/cargo/pull/7450",
+        "#install-upgrade": "../commands/cargo-install.html",
+        "#profile-overrides": "profiles.html#overrides",
+        "#config-profiles": "config.html#profile",
+        "#crate-versions": "https://github.com/rust-lang/cargo/pull/8509",
+        "#features": "features.html#feature-resolver-version-2",
+        "#package-features": "features.html#resolver-version-2-command-line-flags",
+        "#resolver": "resolver.html#resolver-versions",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        if (target.startsWith('https')) {
+          window.location.replace(target);
+        } else {
+          var url = window.location.toString();
+          var base = url.substring(0, url.lastIndexOf('/'));
+          window.location.replace(base + "/" + target);
+        }
+    }
+})();
+</script>

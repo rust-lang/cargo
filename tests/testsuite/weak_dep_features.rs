@@ -336,7 +336,7 @@ optional dependency with `?` is not allowed in required-features
 
 #[cargo_test]
 fn weak_with_host_decouple() {
-    // -Z weak-opt-features with -Z features=host
+    // -Z weak-opt-features with new resolver
     //
     // foo v0.1.0
     // └── common v1.0.0
@@ -390,6 +390,7 @@ fn weak_with_host_decouple() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                resolver = "2"
 
                 [dependencies]
                 common = { version = "1.0", features = ["feat"] }
@@ -416,7 +417,7 @@ fn weak_with_host_decouple() {
         )
         .build();
 
-    p.cargo("run -Z weak-dep-features -Z features=host_dep")
+    p.cargo("run -Z weak-dep-features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\

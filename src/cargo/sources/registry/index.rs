@@ -164,10 +164,28 @@ fn overflow_hyphen() {
     )
 }
 
+/// Manager for handling the on-disk index.
+///
+/// Note that local and remote registries store the index differently. Local
+/// is a simple on-disk tree of files of the raw index. Remote registries are
+/// stored as a raw git repository. The different means of access are handled
+/// via the [`RegistryData`] trait abstraction.
+///
+/// This transparently handles caching of the index in a more efficient format.
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
+    /// Root directory of the index for the registry.
     path: Filesystem,
+    /// Cache of summary data.
+    ///
+    /// This is keyed off the package name. The [`Summaries`] value handles
+    /// loading the summary data. It keeps an optimized on-disk representation
+    /// of the JSON files, which is created in an as-needed fashion. If it
+    /// hasn't been cached already, it uses [`RegistryData::load`] to access
+    /// to JSON files from the index, and the creates the optimized on-disk
+    /// summary cache.
     summaries_cache: HashMap<InternedString, Summaries>,
+    /// [`Config`] reference for convenience.
     config: &'cfg Config,
 }
 

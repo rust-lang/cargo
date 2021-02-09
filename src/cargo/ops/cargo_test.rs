@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use crate::core::compiler::{Compilation, CompileKind, Doctest};
+use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
 use crate::core::shell::Verbosity;
 use crate::core::Workspace;
 use crate::ops;
@@ -78,10 +78,15 @@ fn run_unit_tests(
     let cwd = config.cwd();
     let mut errors = Vec::new();
 
-    for (unit, exe) in compilation.tests.iter() {
+    for UnitOutput {
+        unit,
+        path,
+        script_meta,
+    } in compilation.tests.iter()
+    {
         let test = unit.target.name().to_string();
-        let exe_display = exe.strip_prefix(cwd).unwrap_or(exe).display();
-        let mut cmd = compilation.target_process(exe, unit.kind, &unit.pkg)?;
+        let exe_display = path.strip_prefix(cwd).unwrap_or(path).display();
+        let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
         cmd.args(test_args);
         if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
             cmd.arg("--quiet");
@@ -145,6 +150,7 @@ fn run_doc_tests(
             unstable_opts,
             unit,
             linker,
+            script_meta,
         } = doctest_info;
 
         if !doctest_xcompile {
@@ -160,7 +166,7 @@ fn run_doc_tests(
         }
 
         config.shell().status("Doc-tests", unit.target.name())?;
-        let mut p = compilation.rustdoc_process(unit)?;
+        let mut p = compilation.rustdoc_process(unit, *script_meta)?;
         p.arg("--test")
             .arg(unit.target.src_path().path().unwrap())
             .arg("--crate-name")
@@ -203,23 +209,12 @@ fn run_doc_tests(
             p.arg("--test-args").arg(arg);
         }
 
-        if let Some(cfgs) = compilation.cfgs.get(&unit.pkg.package_id()) {
-            for cfg in cfgs.iter() {
-                p.arg("--cfg").arg(cfg);
-            }
-        }
-
-        for arg in args {
-            p.arg(arg);
-        }
+        p.args(args);
 
         if *unstable_opts {
             p.arg("-Zunstable-options");
         }
 
-        if let Some(flags) = compilation.rustdocflags.get(&unit.pkg.package_id()) {
-            p.args(flags);
-        }
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;

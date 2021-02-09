@@ -14,6 +14,7 @@ fn binary_with_debug() {
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -86,6 +87,7 @@ fn dynamic_library_with_debug() {
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -165,6 +167,7 @@ fn include_only_the_binary_from_the_current_package() {
 
     p.cargo("build -Z unstable-options --bin foo --out-dir out")
         .masquerade_as_nightly_cargo()
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -239,6 +242,7 @@ fn avoid_build_scripts() {
 
     p.cargo("build -Z unstable-options --out-dir out -vv")
         .masquerade_as_nightly_cargo()
+        .enable_mac_dsym()
         .with_stdout_contains("[a 0.0.1] hello-build-a")
         .with_stdout_contains("[b 0.0.1] hello-build-b")
         .run();
@@ -266,6 +270,7 @@ fn cargo_build_out_dir() {
 
     p.cargo("build -Z unstable-options")
         .masquerade_as_nightly_cargo()
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),

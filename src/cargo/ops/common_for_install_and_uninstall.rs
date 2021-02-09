@@ -120,7 +120,7 @@ impl InstallTracker {
                 serde_json::from_str(&contents)
                     .chain_err(|| format_err!("invalid JSON found for metadata"))?
             };
-            v2.sync_v1(&v1)?;
+            v2.sync_v1(&v1);
             Ok(v2)
         })()
         .chain_err(|| {
@@ -367,7 +367,7 @@ impl CrateListingV2 {
     /// where v2 is in use, and a v1 update is made, then v2 is used again.
     /// i.e., `cargo +new install foo ; cargo +old install bar ; cargo +new install bar`
     /// For now, v1 is the source of truth, so its values are trusted over v2.
-    fn sync_v1(&mut self, v1: &CrateListingV1) -> CargoResult<()> {
+    fn sync_v1(&mut self, v1: &CrateListingV1) {
         // Make the `bins` entries the same.
         for (pkg_id, bins) in &v1.v1 {
             self.installs
@@ -385,7 +385,6 @@ impl CrateListingV2 {
         for pkg_id in to_remove {
             self.installs.remove(&pkg_id);
         }
-        Ok(())
     }
 
     fn package_for_bin(&self, bin_name: &str) -> Option<PackageId> {
