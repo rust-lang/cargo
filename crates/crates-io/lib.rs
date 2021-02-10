@@ -56,6 +56,8 @@ pub struct NewCrate {
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v: Option<u32>,
 }
 
 #[derive(Serialize)]
