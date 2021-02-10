@@ -2170,3 +2170,33 @@ fn package_lock_inside_package_is_overwritten() {
 
     assert_eq!(ok.metadata().unwrap().len(), 2);
 }
+
+#[cargo_test]
+fn ignores_unknown_index_version() {
+    // If the version field is not understood, it is ignored.
+    Package::new("bar", "1.0.0").publish();
+    Package::new("bar", "1.0.1").schema_version(9999).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree")
+        .with_stdout(
+            "foo v0.1.0 [..]\n\
+             └── bar v1.0.0\n\
+            ",
+        )
+        .run();
+}
