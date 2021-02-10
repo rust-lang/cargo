@@ -1,6 +1,5 @@
 //! Tests for config settings.
 
-use cargo::core::profiles::Strip;
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
@@ -1446,7 +1445,7 @@ fn string_list_advanced_env() {
 }
 
 #[cargo_test]
-fn parse_enum() {
+fn parse_strip_with_string() {
     write_config(
         "\
 [profile.release]
@@ -1458,28 +1457,5 @@ strip = 'debuginfo'
 
     let p: toml::TomlProfile = config.get("profile.release").unwrap();
     let strip = p.strip.unwrap();
-    assert_eq!(strip, Strip::DebugInfo);
-}
-
-#[cargo_test]
-fn parse_enum_fail() {
-    write_config(
-        "\
-[profile.release]
-strip = 'invalid'
-",
-    );
-
-    let config = new_config();
-
-    assert_error(
-        config
-            .get::<toml::TomlProfile>("profile.release")
-            .unwrap_err(),
-        "\
-error in [..]/.cargo/config: could not load config key `profile.release.strip`
-
-Caused by:
-  unknown variant `invalid`, expected one of `debuginfo`, `none`, `symbols`",
-    );
+    assert_eq!(strip, toml::StringOrBool::String("debuginfo".to_string()));
 }
