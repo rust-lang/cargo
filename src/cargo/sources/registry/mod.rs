@@ -258,6 +258,13 @@ pub struct RegistryPackage<'a> {
     #[serde(borrow)]
     deps: Vec<RegistryDependency<'a>>,
     features: BTreeMap<InternedString, Vec<InternedString>>,
+    /// This field contains features with new, extended syntax. Specifically,
+    /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
+    ///
+    /// This is separated from `features` because versions older than 1.19
+    /// will fail to load due to not being able to parse the new syntax, even
+    /// with a `Cargo.lock` file.
+    features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     cksum: String,
     /// If `true`, Cargo will skip this version when resolving.
     ///
@@ -274,10 +281,12 @@ pub struct RegistryPackage<'a> {
     /// If this is None, it defaults to version 1. Entries with unknown
     /// versions are ignored.
     ///
+    /// Version `2` format adds the `features2` field.
+    ///
     /// This provides a method to safely introduce changes to index entries
     /// and allow older versions of cargo to ignore newer entries it doesn't
     /// understand. This is honored as of 1.51, so unfortunately older
-    /// versions will ignore it, and potentially misinterpret version 1 and
+    /// versions will ignore it, and potentially misinterpret version 2 and
     /// newer entries.
     ///
     /// The intent is that versions older than 1.51 will work with a

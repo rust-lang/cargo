@@ -308,7 +308,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         // minimize the amount of work being done here and parse as little as
         // necessary.
         let raw_data = &summaries.raw_data;
-        let max_version = 1;
+        let max_version = if namespaced_features || weak_dep_features {
+            2
+        } else {
+            1
+        };
         Ok(summaries
             .versions
             .iter_mut()
@@ -770,7 +774,8 @@ impl IndexSummary {
             vers,
             cksum,
             deps,
-            features,
+            mut features,
+            features2,
             yanked,
             links,
             v,
@@ -782,6 +787,11 @@ impl IndexSummary {
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
+        if let Some(features2) = features2 {
+            for (name, values) in features2 {
+                features.entry(name).or_default().extend(values);
+            }
+        }
         let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
