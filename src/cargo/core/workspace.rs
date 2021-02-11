@@ -461,7 +461,7 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        for path in paths::ancestors(manifest_path).skip(2) {
+        for path in paths::ancestors(manifest_path, None).skip(2) {
             if path.ends_with("target/package") {
                 break;
             }
