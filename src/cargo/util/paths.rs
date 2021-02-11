@@ -306,8 +306,8 @@ pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
     }
 }
 
-pub fn ancestors(path: &Path) -> PathAncestors<'_> {
-    PathAncestors::new(path)
+pub fn ancestors<'a>(path: &'a Path, stop_root_at: Option<&Path>) -> PathAncestors<'a> {
+    PathAncestors::new(path, stop_root_at)
 }
 
 pub struct PathAncestors<'a> {
@@ -316,11 +316,15 @@ pub struct PathAncestors<'a> {
 }
 
 impl<'a> PathAncestors<'a> {
-    fn new(path: &Path) -> PathAncestors<'_> {
+    fn new(path: &'a Path, stop_root_at: Option<&Path>) -> PathAncestors<'a> {
+        let stop_at = env::var("__CARGO_TEST_ROOT")
+            .ok()
+            .map(PathBuf::from)
+            .or_else(|| stop_root_at.map(|p| p.to_path_buf()));
         PathAncestors {
             current: Some(path),
             //HACK: avoid reading `~/.cargo/config` when testing Cargo itself.
-            stop_at: env::var("__CARGO_TEST_ROOT").ok().map(PathBuf::from),
+            stop_at,
         }
     }
 }

@@ -132,6 +132,8 @@ pub struct Config {
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
     cwd: PathBuf,
+    /// Directory where config file searching should stop (inclusive).
+    search_stop_path: Option<PathBuf>,
     /// The location of the cargo executable (path to current process)
     cargo_exe: LazyCell<PathBuf>,
     /// The location of the rustdoc executable
@@ -218,6 +220,7 @@ impl Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             cwd,
+            search_stop_path: None,
             values: LazyCell::new(),
             cli_config: None,
             cargo_exe: LazyCell::new(),
@@ -420,6 +423,14 @@ impl Config {
             Ok(()) => Ok(()),
             Err(_) => bail!("could not fill values"),
         }
+    }
+
+    /// Sets the path where ancestor config file searching will stop. The
+    /// given path is included, but its ancestors are not.
+    pub fn set_search_stop_path<P: Into<PathBuf>>(&mut self, path: P) {
+        let path = path.into();
+        debug_assert!(self.cwd.starts_with(&path));
+        self.search_stop_path = Some(path);
     }
 
     /// Reloads on-disk configuration values, starting at the given path and
@@ -1028,7 +1039,7 @@ impl Config {
     {
         let mut stash: HashSet<PathBuf> = HashSet::new();
 
-        for current in paths::ancestors(pwd) {
+        for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
             if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
                 walk(&path)?;
                 stash.insert(path);

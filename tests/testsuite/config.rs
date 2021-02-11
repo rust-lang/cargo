@@ -77,6 +77,7 @@ impl ConfigBuilder {
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
         config.set_env(self.env.clone());
+        config.set_search_stop_path(paths::root());
         config.configure(
             0,
             false,

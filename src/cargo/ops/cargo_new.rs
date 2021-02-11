@@ -872,7 +872,7 @@ fn find_tests_git_config(path: &Path) -> Option<GitConfig> {
     // Don't escape the test sandbox when looking for a git repository.
     // NOTE: libgit2 has support to define the path ceiling in
     // git_repository_discover, but the git2 bindings do not expose that.
-    for path in paths::ancestors(path) {
+    for path in paths::ancestors(path, None) {
         if let Ok(repo) = GitRepository::open(path) {
             return Some(repo.config().expect("test repo should have valid config"));
         }
