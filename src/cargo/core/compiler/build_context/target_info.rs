@@ -552,7 +552,7 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 ///
 /// Note that if a `target` is specified, no args will be passed to host code (plugins, build
 /// scripts, ...), even if it is the same as the target.
-pub fn env_args(
+fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],
     host_triple: &str,

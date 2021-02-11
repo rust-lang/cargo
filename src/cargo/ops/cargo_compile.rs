@@ -27,13 +27,11 @@ use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::sync::Arc;
 
-use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::{
-    env_args, CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit,
-};
+use crate::core::compiler::{standard_lib, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
+use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
@@ -314,16 +312,9 @@ pub fn print<'a>(
         if index != 0 {
             drop_println!(config);
         }
-        let rustflags = env_args(
-            config,
-            &build_config.requested_kinds,
-            &rustc.host,
-            None,
-            *kind,
-            "RUSTFLAGS",
-        )?;
+        let target_info = TargetInfo::new(config, &build_config.requested_kinds, &rustc, *kind)?;
         let mut process = rustc.process();
-        process.args(&rustflags);
+        process.args(&target_info.rustflags);
         if let Some(args) = target_rustc_args {
             process.args(args);
         }
