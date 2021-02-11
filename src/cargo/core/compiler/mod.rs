@@ -33,7 +33,7 @@ use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{
-    env_args, output_err_info, BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo,
+    env_args, BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo,
 };
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest, UnitOutput};

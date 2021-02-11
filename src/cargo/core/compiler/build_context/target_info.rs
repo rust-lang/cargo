@@ -519,7 +519,7 @@ fn parse_crate_type(
 }
 
 /// Helper for creating an error message when parsing rustc output fails.
-pub fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
+fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
     let mut result = format!("command was: {}\n", cmd);
     if !stdout.is_empty() {
         result.push_str("\n--- stdout\n");
