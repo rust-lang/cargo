@@ -213,12 +213,14 @@ impl Config {
             })
             .collect();
 
-        let mut upper_case_env : HashMap<String, String> = HashMap::new();
+        let mut upper_case_env: HashMap<String, String> = HashMap::new();
 
         if !cfg!(windows) {
-            upper_case_env = env.clone().into_iter().map(|(k, _)| {
-                (k.to_uppercase().replace("-", "_"), k)
-            }).collect();
+            upper_case_env = env
+                .clone()
+                .into_iter()
+                .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k))
+                .collect();
         }
 
         let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO") {
@@ -539,7 +541,7 @@ impl Config {
             None => {
                 self.check_environment_key_case_mismatch(key);
                 Ok(None)
-            },
+            }
         }
     }
 
@@ -568,14 +570,15 @@ impl Config {
         if cfg!(windows) {
             return;
         }
-        match self.upper_case_env.get(key.as_env_key()){
+        match self.upper_case_env.get(key.as_env_key()) {
             Some(env_key) => {
-                let _ = self.shell().warn(
-                format!("Variables in environment require uppercase,
-                        but given variable: {}, contains lowercase or dash.", env_key)
-                );
-            },
-            None => {},
+                let _ = self.shell().warn(format!(
+                    "Variables in environment require uppercase,
+                        but given variable: {}, contains lowercase or dash.",
+                    env_key
+                ));
+            }
+            None => {}
         }
     }
 
@@ -673,8 +676,8 @@ impl Config {
             Some(v) => v,
             None => {
                 self.check_environment_key_case_mismatch(key);
-                return Ok(())
-            },
+                return Ok(());
+            }
         };
 
         let def = Definition::Environment(key.as_env_key().to_string());
