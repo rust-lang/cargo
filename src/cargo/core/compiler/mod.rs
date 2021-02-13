@@ -32,7 +32,9 @@ use lazycell::LazyCell;
 use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
-pub use self::build_context::{BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo};
+pub use self::build_context::{
+    BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
+};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
@@ -586,7 +588,6 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     if let CompileKind::Target(target) = unit.kind {
         rustdoc.arg("--target").arg(target.rustc_target());
     }
-
     let doc_dir = cx.files().out_dir(unit);
 
     // Create the documentation directory ahead of time as rustdoc currently has
