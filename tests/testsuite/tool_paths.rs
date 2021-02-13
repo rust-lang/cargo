@@ -355,6 +355,7 @@ fn custom_linker_env() {
 
 
 #[cargo_test]
+#[cfg(not(windows))]
 fn target_in_environment_contains_lower_case() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
