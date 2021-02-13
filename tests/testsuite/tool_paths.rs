@@ -389,7 +389,12 @@ fn target_in_environment_contains_lower_case_on_windows() {
     for target_key in &target_keys {
         p.cargo("build -v --target x86_64-unknown-linux-musl")
             .env(target_key, "nonexistent-linker")
-            .with_status(0)
+            .with_status(101)
+            .with_stderr_does_not_contain(format!(
+                "warning: Environment variables require uppercase letters, \
+                        but the variable: `{}` contains lowercase letters or dashes.",
+                target_key
+            ))
             .run();
     }
 }
