@@ -364,7 +364,7 @@ fn target_in_environment_contains_lower_case() {
     ];
 
     for target_key in &target_keys {
-        p.cargo("build -v --target X86_64_unknown_linux_musl")
+        p.cargo("build -v --target x86_64-unknown-linux-musl")
             .env(target_key, "nonexistent-linker")
             .with_status(101)
             .with_stderr_contains(format!(
