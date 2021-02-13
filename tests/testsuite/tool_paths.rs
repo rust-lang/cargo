@@ -368,10 +368,28 @@ fn target_in_environment_contains_lower_case() {
             .env(target_key, "nonexistent-linker")
             .with_status(101)
             .with_stderr_contains(format!(
-                "warning: Variables in environment require uppercase,
-                        but given variable: {}, contains lowercase or dash.",
+                "warning: Environment variables require uppercase letters, \
+                        but the variable: `{}` contains lowercase letters or dashes.",
                 target_key
             ))
+            .run();
+    }
+}
+
+#[cargo_test]
+#[cfg(windows)]
+fn target_in_environment_contains_lower_case_on_windows() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let target_keys = [
+        "CARGO_TARGET_X86_64_UNKNOWN_LINUX_musl_LINKER",
+        "CARGO_TARGET_x86_64_unknown_linux_musl_LINKER",
+    ];
+
+    for target_key in &target_keys {
+        p.cargo("build -v --target x86_64-unknown-linux-musl")
+            .env(target_key, "nonexistent-linker")
+            .without_status()
             .run();
     }
 }
