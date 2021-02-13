@@ -389,7 +389,7 @@ fn target_in_environment_contains_lower_case_on_windows() {
     for target_key in &target_keys {
         p.cargo("build -v --target x86_64-unknown-linux-musl")
             .env(target_key, "nonexistent-linker")
-            .without_status()
+            .with_status(0)
             .run();
     }
 }
