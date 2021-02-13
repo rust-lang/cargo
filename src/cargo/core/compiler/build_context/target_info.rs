@@ -778,9 +778,7 @@ impl RustDocFingerprint {
             .iter()
             .filter(|path| path.exists())
             .map(|path| paths::remove_dir_all(&path))
-            .filter(|res| res.is_err())
-            .collect::<CargoResult<Vec<()>>>()
-            .map(|_| ())
+            .collect::<CargoResult<()>>()
     }
 
     /// This function checks whether the latest version of `Rustc` used to compile this
