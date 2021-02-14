@@ -368,8 +368,8 @@ fn target_in_environment_contains_lower_case() {
             .env(target_key, "nonexistent-linker")
             .with_status(101)
             .with_stderr_contains(format!(
-                "warning: Environment variables require uppercase letters, \
-                        but the variable: `{}` contains lowercase letters or dashes.",
+                "warning: Environment variables are expected to use uppercase letters and underscores, \
+                the variable {} will be ignored and have no effect",
                 target_key
             ))
             .run();
@@ -391,8 +391,8 @@ fn target_in_environment_contains_lower_case_on_windows() {
             .env(target_key, "nonexistent-linker")
             .with_status(101)
             .with_stderr_does_not_contain(format!(
-                "warning: Environment variables require uppercase letters, \
-                        but the variable: `{}` contains lowercase letters or dashes.",
+                "warning: Environment variables are expected to use uppercase letters and underscores, \
+                the variable {} will be ignored and have no effect",
                 target_key
             ))
             .run();

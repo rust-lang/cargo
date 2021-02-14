@@ -572,15 +572,12 @@ impl Config {
             return;
         }
 
-        match self.upper_case_env.get(key.as_env_key()) {
-            Some(env_key) => {
-                let _ = self.shell().warn(format!(
-                    "Environment variables require uppercase letters, \
-                            but the variable: `{}` contains lowercase letters or dashes.",
-                    env_key
-                ));
-            }
-            None => {}
+        if let Some(env_key) = self.upper_case_env.get(key.as_env_key()) {
+            let _ = self.shell().warn(format!(
+                "Environment variables are expected to use uppercase letters and underscores, \
+                the variable {} will be ignored and have no effect",
+                env_key
+            ));
         }
     }
 
