@@ -167,6 +167,8 @@ pub struct Config {
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
     env: HashMap<String, String>,
+    /// Environment variables, converted to uppercase to check for case mismatch
+    upper_case_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Lock, if held, of the global package cache along with the number of
@@ -211,6 +213,15 @@ impl Config {
             })
             .collect();
 
+        let upper_case_env = if cfg!(windows) {
+            HashMap::new()
+        } else {
+            env.clone()
+                .into_iter()
+                .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k))
+                .collect()
+        };
+
         let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO") {
             Some(cache) => cache != "0",
             _ => true,
@@ -244,6 +255,7 @@ impl Config {
             creation_time: Instant::now(),
             target_dir: None,
             env,
+            upper_case_env,
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
@@ -525,7 +537,10 @@ impl Config {
                     definition,
                 }))
             }
-            None => Ok(None),
+            None => {
+                self.check_environment_key_case_mismatch(key);
+                Ok(None)
+            }
         }
     }
 
@@ -545,7 +560,25 @@ impl Config {
                 return true;
             }
         }
+        self.check_environment_key_case_mismatch(key);
+
         false
+    }
+
+    fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
+        if cfg!(windows) {
+            // In the case of windows the check for case mismatch in keys can be skipped
+            // as windows already converts its environment keys into the desired format.
+            return;
+        }
+
+        if let Some(env_key) = self.upper_case_env.get(key.as_env_key()) {
+            let _ = self.shell().warn(format!(
+                "Environment variables are expected to use uppercase letters and underscores, \
+                the variable `{}` will be ignored and have no effect",
+                env_key
+            ));
+        }
     }
 
     /// Get a string config value.
@@ -640,7 +673,10 @@ impl Config {
     ) -> CargoResult<()> {
         let env_val = match self.env.get(key.as_env_key()) {
             Some(v) => v,
-            None => return Ok(()),
+            None => {
+                self.check_environment_key_case_mismatch(key);
+                return Ok(());
+            }
         };
 
         let def = Definition::Environment(key.as_env_key().to_string());
