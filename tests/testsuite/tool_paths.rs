@@ -369,7 +369,7 @@ fn target_in_environment_contains_lower_case() {
             .with_status(101)
             .with_stderr_contains(format!(
                 "warning: Environment variables are expected to use uppercase letters and underscores, \
-                the variable {} will be ignored and have no effect",
+                the variable `{}` will be ignored and have no effect",
                 target_key
             ))
             .run();
@@ -392,7 +392,7 @@ fn target_in_environment_contains_lower_case_on_windows() {
             .with_status(101)
             .with_stderr_does_not_contain(format!(
                 "warning: Environment variables are expected to use uppercase letters and underscores, \
-                the variable {} will be ignored and have no effect",
+                the variable `{}` will be ignored and have no effect",
                 target_key
             ))
             .run();
