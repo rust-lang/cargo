@@ -49,10 +49,12 @@
 //! translate from `ConfigValue` and environment variables to the caller's
 //! desired type.
 
+use std::borrow::Cow;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -62,8 +64,6 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Once;
 use std::time::Instant;
-use std::borrow::Cow;
-use std::ffi::OsStr;
 
 use anyhow::{anyhow, bail, format_err};
 use curl::easy::Easy;
@@ -1278,9 +1278,7 @@ impl Config {
     }
 
     pub fn env_config(&self) -> CargoResult<&EnvConfig> {
-        self.env_config.try_borrow_with(|| {
-            self.get_env_config()
-        })
+        self.env_config.try_borrow_with(|| self.get_env_config())
     }
 
     /// This is used to validate the `term` table has valid syntax.
@@ -2006,7 +2004,7 @@ impl EnvConfigValue {
         EnvConfigValue {
             value,
             force: false,
-            relative: false
+            relative: false,
         }
     }
 

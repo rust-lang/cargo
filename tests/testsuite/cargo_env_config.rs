@@ -6,16 +6,19 @@ use cargo_test_support::{basic_bin_manifest, project};
 fn env_basic() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", r#"
+        .file(
+            "src/main.rs",
+            r#"
         use std::env;
         fn main() {
             println!( "compile-time:{}", env!("ENV_TEST_1233") );
             println!( "run-time:{}", env::var("ENV_TEST_1233").unwrap());
         }
-        "#)
+        "#,
+        )
         .file(
-        ".cargo/config",
-        r#"
+            ".cargo/config",
+            r#"
                 [env]
                 ENV_TEST_1233 = "Hello"
             "#,
@@ -32,13 +35,16 @@ fn env_basic() {
 fn env_invalid() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", r#"
+        .file(
+            "src/main.rs",
+            r#"
         fn main() {
         }
-        "#)
+        "#,
+        )
         .file(
-        ".cargo/config",
-        r#"
+            ".cargo/config",
+            r#"
                 [env]
                 ENV_TEST_BOOL = false
             "#,
@@ -55,16 +61,19 @@ fn env_invalid() {
 fn env_force() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", r#"
+        .file(
+            "src/main.rs",
+            r#"
         use std::env;
         fn main() {
             println!( "ENV_TEST_FORCED:{}", env!("ENV_TEST_FORCED") );
             println!( "ENV_TEST_UNFORCED:{}", env!("ENV_TEST_UNFORCED") );
         }
-        "#)
+        "#,
+        )
         .file(
-        ".cargo/config",
-        r#"
+            ".cargo/config",
+            r#"
                 [env]
                 ENV_TEST_UNFORCED = "from-config"
                 ENV_TEST_FORCED = { value = "from-config", force = true }
@@ -84,7 +93,9 @@ fn env_force() {
 fn env_relative() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo2"))
-        .file("src/main.rs", r#"
+        .file(
+            "src/main.rs",
+            r#"
         use std::env;
         use std::path::Path;
         fn main() {
@@ -94,10 +105,11 @@ fn env_relative() {
             assert!( Path::new(env!("ENV_TEST_ABSOLUTE")).is_absolute() );
             assert!( !Path::new(env!("ENV_TEST_RELATIVE")).is_absolute() );
         }
-        "#)
+        "#,
+        )
         .file(
-        ".cargo/config",
-        r#"
+            ".cargo/config",
+            r#"
                 [env]
                 ENV_TEST_RELATIVE = "Cargo.toml"
                 ENV_TEST_ABSOLUTE = { value = "Cargo.toml", relative = true }
@@ -105,6 +117,5 @@ fn env_relative() {
         )
         .build();
 
-    p.cargo("run")
-        .run();
+    p.cargo("run").run();
 }

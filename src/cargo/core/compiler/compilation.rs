@@ -339,7 +339,6 @@ impl<'cfg> Compilation<'cfg> {
             )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
-        
 
         // Apply any environment variables from the config
         for (key, value) in self.config.env_config()?.iter() {
