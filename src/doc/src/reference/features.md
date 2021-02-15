@@ -252,7 +252,7 @@ pub fn function_that_requires_std() {
 }
 ```
 
-[`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
+[`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
 [features section]: resolver.md#features
 
 #### Mutually exclusive features
