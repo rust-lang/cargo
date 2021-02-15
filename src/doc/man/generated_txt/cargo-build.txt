@@ -190,24 +190,28 @@ OPTIONS
            times and consists of comma-separated values. Valid values:
 
            o  human (default): Display in a human-readable text format.
+              Conflicts with short and json.
 
-           o  short: Emit shorter, human-readable text messages.
+           o  short: Emit shorter, human-readable text messages. Conflicts with
+              human and json.
 
            o  json: Emit JSON messages to stdout. See the reference
               <https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages>
-              for more details.
+              for more details. Conflicts with human and short.
 
            o  json-diagnostic-short: Ensure the rendered field of JSON messages
-              contains the "short" rendering from rustc.
+              contains the "short" rendering from rustc. Cannot be used with
+              human or short.
 
            o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
               messages contains embedded ANSI color codes for respecting
-              rustc's default color scheme.
+              rustc's default color scheme. Cannot be used with human or short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
               diagnostics in in JSON messages printed, but instead Cargo itself
               should render the JSON diagnostics coming from rustc. Cargo's own
               JSON diagnostics and others coming from rustc are still emitted.
+              Cannot be used with human or short.
 
        --build-plan
            Outputs a series of JSON messages to stdout that indicate the
