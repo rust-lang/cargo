@@ -340,10 +340,12 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
 
-        // Apply any environment variables from the config
-        for (key, value) in self.config.env_config()?.iter() {
-            if value.is_force() || cmd.get_env(&key).is_none() {
-                cmd.env(&key, value.resolve(&self.config));
+        if self.config.cli_unstable().configurable_env {
+            // Apply any environment variables from the config
+            for (key, value) in self.config.env_config()?.iter() {
+                if value.is_force() || cmd.get_env(&key).is_none() {
+                    cmd.env(&key, value.resolve(&self.config));
+                }
             }
         }
 
