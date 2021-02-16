@@ -1328,7 +1328,7 @@ your decisions on how to apply versioning to your application, or at least
 document what your commitments are.
 
 [`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
-[`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
+[`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
 [`pub use`]: ../../reference/items/use-declarations.html
 [Cargo feature]: features.md
 [Cargo features]: features.md
