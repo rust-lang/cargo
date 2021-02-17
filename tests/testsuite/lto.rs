@@ -254,9 +254,9 @@ fn off_in_manifest_works() {
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
 [COMPILING] test [..]
-[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
 [RUNNING] `rustc --crate-name test src/main.rs [..]--crate-type bin [..]-C lto=off[..]
 [FINISHED] [..]
 ",

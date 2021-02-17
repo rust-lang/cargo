@@ -968,7 +968,10 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     match cx.lto[unit] {
         lto::Lto::Run(None) => push("lto"),
         lto::Lto::Run(Some(s)) => push(&format!("lto={}", s)),
-        lto::Lto::Off => push("lto=off"),
+        lto::Lto::Off => {
+            push("lto=off");
+            push("embed-bitcode=no");
+        }
         lto::Lto::ObjectAndBitcode => {} // this is rustc's default
         lto::Lto::OnlyBitcode => push("linker-plugin-lto"),
         lto::Lto::OnlyObject => push("embed-bitcode=no"),
