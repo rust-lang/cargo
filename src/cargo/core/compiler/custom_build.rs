@@ -5,6 +5,7 @@ use crate::core::compiler::job_queue::JobState;
 use crate::core::nightly_features_allowed;
 use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{self, internal, paths, profile};
 use cargo_platform::Cfg;
@@ -268,7 +269,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             }
         })
         .collect::<Vec<_>>();
-    let pkg_name = unit.pkg.to_string();
+    let pkg_name = unit.pkg.name();
+    let pkg_descr = unit.pkg.to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
     let output_file = script_run_dir.join("output");
@@ -277,7 +279,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let host_target_root = cx.files().host_dest().to_path_buf();
     let all = (
         id,
-        pkg_name.clone(),
+        pkg_name,
+        pkg_descr.clone(),
         Arc::clone(&build_script_outputs),
         output_file.clone(),
         script_out_dir.clone(),
@@ -395,7 +398,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
         let parsed_output = BuildOutput::parse(
             &output.stdout,
-            &pkg_name,
+            pkg_name,
+            &pkg_descr,
             &script_out_dir,
             &script_out_dir,
             extra_link_arg,
@@ -415,12 +419,13 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     // itself to run when we actually end up just discarding what we calculated
     // above.
     let fresh = Work::new(move |state| {
-        let (id, pkg_name, build_script_outputs, output_file, script_out_dir) = all;
+        let (id, pkg_name, pkg_descr, build_script_outputs, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
             None => BuildOutput::parse_file(
                 &output_file,
-                &pkg_name,
+                pkg_name,
+                &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
                 extra_link_arg,
@@ -470,7 +475,8 @@ fn insert_warnings_in_build_outputs(
 impl BuildOutput {
     pub fn parse_file(
         path: &Path,
-        pkg_name: &str,
+        pkg_name: InternedString,
+        pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
         extra_link_arg: bool,
@@ -479,6 +485,7 @@ impl BuildOutput {
         BuildOutput::parse(
             &contents,
             pkg_name,
+            pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
             extra_link_arg,
@@ -489,7 +496,8 @@ impl BuildOutput {
     // The `pkg_name` is used for error messages.
     pub fn parse(
         input: &[u8],
-        pkg_name: &str,
+        pkg_name: InternedString,
+        pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
         extra_link_arg: bool,
@@ -503,7 +511,7 @@ impl BuildOutput {
         let mut rerun_if_changed = Vec::new();
         let mut rerun_if_env_changed = Vec::new();
         let mut warnings = Vec::new();
-        let whence = format!("build script of `{}`", pkg_name);
+        let whence = format!("build script of `{}`", pkg_descr);
 
         for line in input.split(|b| *b == b'\n') {
             let line = match str::from_utf8(line) {
@@ -585,10 +593,11 @@ impl BuildOutput {
                             // Abort with an error.
                             anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
-                                help: If you're sure you want to do this in your project, use `RUSTC_BOOTSTRAP=1 cargo build` instead.\n\
+                                help: If you're sure you want to do this in your project, use `RUSTC_BOOTSTRAP={} cargo build` instead.\n\
                                 help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
                                 val,
-                                whence
+                                whence,
+                                pkg_name,
                             );
                         }
                     } else {
@@ -845,6 +854,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
     (
         BuildOutput::parse_file(
             &output_file,
+            unit.pkg.name(),
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
