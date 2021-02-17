@@ -108,7 +108,7 @@ fn rerun_if_env_or_file_changes() {
 }
 
 #[cargo_test]
-fn rustc_bootstrap_is_disallowed() {
+fn rustc_bootstrap() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
@@ -121,7 +121,12 @@ fn rustc_bootstrap_is_disallowed() {
         )
         .build();
     p.cargo("build")
-        .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP` [..]")
+        .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("help: [..] use `RUSTC_BOOTSTRAP=1 cargo build` [..]")
         .with_status(101)
+        .run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
 }

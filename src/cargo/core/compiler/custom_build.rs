@@ -2,6 +2,7 @@ use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
+use crate::core::nightly_features_allowed;
 use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::machine_message::{self, Message};
@@ -564,16 +565,35 @@ impl BuildOutput {
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => {
                     let (key, val) = BuildOutput::parse_rustc_env(&value, &whence)?;
-                    // See https://github.com/rust-lang/cargo/issues/7088
+                    // Build scripts aren't allowed to set RUSTC_BOOTSTRAP.
+                    // See https://github.com/rust-lang/cargo/issues/7088.
                     if key == "RUSTC_BOOTSTRAP" {
-                        anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP` from {}.\n\
-                            note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
-                            help: If you're sure you want to do this in your project, use `RUSTC_BOOTSTRAP=1 cargo build` instead.
-                            help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
-                            whence
-                        );
+                        // If RUSTC_BOOTSTRAP is already set, the user of Cargo knows about
+                        // bootstrap and still wants to override the channel. Give them a way to do
+                        // so, but still emit a warning that the current crate shouldn't be trying
+                        // to set RUSTC_BOOTSTRAP.
+                        // If this is a nightly build, setting RUSTC_BOOTSTRAP wouldn't affect the
+                        // behavior, so still only give a warning.
+                        if nightly_features_allowed() {
+                            warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
+                                help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
+                                val, whence
+                            ));
+                        } else {
+                            // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
+                            // Abort with an error.
+                            anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
+                                help: If you're sure you want to do this in your project, use `RUSTC_BOOTSTRAP=1 cargo build` instead.\n\
+                                help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
+                                val,
+                                whence
+                            );
+                        }
+                    } else {
+                        env.push((key, val));
                     }
-                    env.push((key, val));
                 }
                 "warning" => warnings.push(value.to_string()),
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),

@@ -822,7 +822,7 @@ pub fn nightly_features_allowed() -> bool {
         return true;
     }
     match &channel()[..] {
-        "nightly" | "dev" => NIGHTLY_FEATURES_ALLOWED.with(|c| c.get()),
+        "nightly" | "dev" => true, //NIGHTLY_FEATURES_ALLOWED.with(|c| c.get()),
         _ => false,
     }
 }
