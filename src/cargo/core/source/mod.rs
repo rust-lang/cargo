@@ -271,20 +271,12 @@ impl<'src> SourceMap<'src> {
 
     /// Like `HashMap::get`.
     pub fn get(&self, id: SourceId) -> Option<&(dyn Source + 'src)> {
-        let source = self.map.get(&id);
-
-        source.map(|s| {
-            let s: &(dyn Source + 'src) = &**s;
-            s
-        })
+        self.map.get(&id).map(|s| s.as_ref())
     }
 
     /// Like `HashMap::get_mut`.
     pub fn get_mut(&mut self, id: SourceId) -> Option<&mut (dyn Source + 'src)> {
-        self.map.get_mut(&id).map(|s| {
-            let s: &mut (dyn Source + 'src) = &mut **s;
-            s
-        })
+        self.map.get_mut(&id).map(|s| s.as_mut())
     }
 
     /// Like `HashMap::get`, but first calculates the `SourceId` from a `PackageId`.
