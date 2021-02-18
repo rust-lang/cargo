@@ -52,7 +52,7 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
-use crate::core::{Edition, Feature, PackageId, Target};
+use crate::core::{Feature, PackageId, Target};
 use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::Message;
@@ -782,9 +782,7 @@ fn build_base_args(
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     let edition = unit.target.edition();
-    if edition != Edition::Edition2015 {
-        cmd.arg(format!("--edition={}", edition));
-    }
+    edition.cmd_edition_arg(cmd);
 
     add_path_args(bcx, unit, cmd);
     add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));

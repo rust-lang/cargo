@@ -1061,6 +1061,15 @@ impl TomlManifest {
         } else {
             Edition::Edition2015
         };
+        if edition == Edition::Edition2021 {
+            features.require(Feature::edition2021())?;
+        } else if !edition.is_stable() {
+            // Guard in case someone forgets to add .require()
+            return Err(util::errors::internal(format!(
+                "edition {} should be gated",
+                edition
+            )));
+        }
 
         let rust_version = if let Some(rust_version) = &project.rust_version {
             if features.require(Feature::rust_version()).is_err() {

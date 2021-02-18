@@ -1064,6 +1064,26 @@ version = "0.0.1"
 rust-version = "1.42"
 ```
 
+### edition 2021
+
+Support for the 2021 [edition] can be enabled by adding the `edition2021`
+unstable feature to the top of `Cargo.toml`:
+
+```toml
+cargo-features = ["edition2021"]
+
+[package]
+name = "my-package"
+version = "0.1.0"
+edition = "2021"
+```
+
+This feature is very unstable, and is only intended for early testing and
+experimentation. Future nightly releases may introduce changes for the 2021
+edition that may break your build.
+
+[edition]: ../../edition-guide/index.html
+
 <script>
 (function() {
     var fragments = {

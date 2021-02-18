@@ -101,7 +101,7 @@ use anyhow::{bail, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
-use crate::util::indented_lines;
+use crate::util::{indented_lines, ProcessBuilder};
 
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
@@ -119,12 +119,39 @@ pub enum Edition {
 }
 
 impl Edition {
+    /// The latest edition (may or may not be stable).
+    pub const LATEST: Edition = Edition::Edition2021;
+
+    /// Returns the first version that a particular edition was released on
+    /// stable.
     pub(crate) fn first_version(&self) -> Option<semver::Version> {
         use Edition::*;
         match self {
             Edition2015 => None,
             Edition2018 => Some(semver::Version::new(1, 31, 0)),
+            // FIXME: This will likely be 1.56, update when that seems more likely.
             Edition2021 => Some(semver::Version::new(1, 62, 0)),
+        }
+    }
+
+    /// Returns `true` if this edition is stable in this release.
+    pub fn is_stable(&self) -> bool {
+        use Edition::*;
+        match self {
+            Edition2015 => true,
+            Edition2018 => true,
+            Edition2021 => false,
+        }
+    }
+
+    /// Updates the given [`ProcessBuilder`] to include the appropriate flags
+    /// for setting the edition.
+    pub(crate) fn cmd_edition_arg(&self, cmd: &mut ProcessBuilder) {
+        if *self != Edition::Edition2015 {
+            cmd.arg(format!("--edition={}", self));
+        }
+        if !self.is_stable() {
+            cmd.arg("-Z").arg("unstable-options");
         }
     }
 }
@@ -282,6 +309,9 @@ features! {
 
     // Specifying a minimal 'rust-version' attribute for crates
     (unstable, rust_version, "", "reference/unstable.html#rust-version"),
+
+    // Support for 2021 edition.
+    (unstable, edition2021, "", "reference/unstable.html#edition-2021"),
 }
 
 const PUBLISH_LOCKFILE_REMOVED: &str = "The publish-lockfile key in Cargo.toml \
