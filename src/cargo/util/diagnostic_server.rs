@@ -13,6 +13,7 @@ use anyhow::{Context, Error};
 use log::warn;
 use serde::{Deserialize, Serialize};
 
+use crate::core::Edition;
 use crate::util::errors::CargoResult;
 use crate::util::{Config, ProcessBuilder};
 
@@ -28,7 +29,7 @@ const PLEASE_REPORT_THIS_BUG: &str =
      fixing code with the `--broken-code` flag\n\n\
      ";
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Hash, Eq, PartialEq, Clone)]
 pub enum Message {
     Fixing {
         file: String,
@@ -45,12 +46,7 @@ pub enum Message {
     },
     EditionAlreadyEnabled {
         file: String,
-        edition: String,
-    },
-    IdiomEditionMismatch {
-        file: String,
-        idioms: String,
-        edition: Option<String>,
+        edition: Edition,
     },
 }
 
@@ -80,16 +76,14 @@ impl Message {
 
 pub struct DiagnosticPrinter<'a> {
     config: &'a Config,
-    edition_already_enabled: HashSet<String>,
-    idiom_mismatch: HashSet<String>,
+    dedupe: HashSet<Message>,
 }
 
 impl<'a> DiagnosticPrinter<'a> {
     pub fn new(config: &'a Config) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             config,
-            edition_already_enabled: HashSet::new(),
-            idiom_mismatch: HashSet::new(),
+            dedupe: HashSet::new(),
         }
     }
 
@@ -158,8 +152,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 Ok(())
             }
             Message::EditionAlreadyEnabled { file, edition } => {
-                // Like above, only warn once per file
-                if !self.edition_already_enabled.insert(file.clone()) {
+                if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
 
@@ -179,35 +172,6 @@ information about transitioning to the {0} edition see:
                     file,
                 );
                 self.config.shell().error(&msg)?;
-                Ok(())
-            }
-            Message::IdiomEditionMismatch {
-                file,
-                idioms,
-                edition,
-            } => {
-                // Same as above
-                if !self.idiom_mismatch.insert(file.clone()) {
-                    return Ok(());
-                }
-                self.config.shell().error(&format!(
-                    "\
-cannot migrate to the idioms of the {} edition for `{}`
-because it is compiled {}, which doesn't match {0}
-
-consider migrating to the {0} edition by adding `edition = '{0}'` to
-`Cargo.toml` and then rerunning this command; a more detailed transition
-guide can be found at
-
-  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
-",
-                    idioms,
-                    file,
-                    match edition {
-                        Some(s) => format!("with the {} edition", s),
-                        None => "without an edition".to_string(),
-                    },
-                ))?;
                 Ok(())
             }
         }

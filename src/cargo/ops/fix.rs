@@ -45,7 +45,7 @@ use std::path::{Path, PathBuf};
 use std::process::{self, Command, ExitStatus};
 use std::str;
 
-use anyhow::{Context, Error};
+use anyhow::{bail, Context, Error};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
@@ -130,7 +130,7 @@ fn check_version_control(config: &Config, opts: &FixOptions<'_>) -> CargoResult<
         return Ok(());
     }
     if !existing_vcs_repo(config.cwd(), config.cwd()) {
-        anyhow::bail!(
+        bail!(
             "no VCS found for this package and `cargo fix` can potentially \
              perform destructive changes; if you'd like to suppress this \
              error pass `--allow-no-vcs`"
@@ -185,7 +185,7 @@ fn check_version_control(config: &Config, opts: &FixOptions<'_>) -> CargoResult<
         files_list.push_str(" (staged)\n");
     }
 
-    anyhow::bail!(
+    bail!(
         "the working directory of this package has uncommitted changes, and \
          `cargo fix` can potentially perform destructive changes; if you'd \
          like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
@@ -197,6 +197,14 @@ fn check_version_control(config: &Config, opts: &FixOptions<'_>) -> CargoResult<
     );
 }
 
+/// Entry point for `cargo` running as a proxy for `rustc`.
+///
+/// This is called every time `cargo` is run to check if it is in proxy mode.
+///
+/// Returns `false` if `fix` is not being run (not in proxy mode). Returns
+/// `true` if in `fix` proxy mode, and the fix was complete without any
+/// warnings or errors. If there are warnings or errors, this does not return,
+/// and the process exits with the corresponding `rustc` exit code.
 pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     let lock_addr = match env::var(FIX_ENV) {
         Ok(s) => s,
@@ -206,17 +214,13 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     let args = FixArgs::get()?;
     trace!("cargo-fix as rustc got file {:?}", args.file);
 
-    let rustc = args.rustc.as_ref().expect("fix wrapper rustc was not set");
     let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
-    let rustc = util::process(rustc).wrapped(workspace_rustc.as_ref());
+    let rustc = util::process(&args.rustc).wrapped(workspace_rustc.as_ref());
 
-    let mut fixes = FixedCrate::default();
-    if let Some(path) = &args.file {
-        trace!("start rustfixing {:?}", path);
-        fixes = rustfix_crate(&lock_addr, &rustc, path, &args)?;
-    }
+    trace!("start rustfixing {:?}", args.file);
+    let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args)?;
 
     // Ok now we have our final goal of testing out the changes that we applied.
     // If these changes went awry and actually started to cause the crate to
@@ -287,6 +291,10 @@ struct FixedFile {
     original_code: String,
 }
 
+/// Attempts to apply fixes to a single crate.
+///
+/// This runs `rustc` (possibly multiple times) to gather suggestions from the
+/// compiler and applies them to the files on disk.
 fn rustfix_crate(
     lock_addr: &str,
     rustc: &ProcessBuilder,
@@ -578,70 +586,92 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Default)]
+/// Various command-line options and settings used when `cargo` is running as
+/// a proxy for `rustc` during the fix operation.
 struct FixArgs {
-    file: Option<PathBuf>,
-    prepare_for_edition: PrepareFor,
+    /// This is the `.rs` file that is being fixed.
+    file: PathBuf,
+    /// If `--edition` is used to migrate to the next edition, this is the
+    /// edition we are migrating towards.
+    prepare_for_edition: Option<Edition>,
+    /// `true` if `--edition-idioms` is enabled.
     idioms: bool,
+    /// The current edition.
+    ///
+    /// `None` if on 2015.
     enabled_edition: Option<Edition>,
+    /// Other command-line arguments not reflected by other fields in
+    /// `FixArgs`.
     other: Vec<OsString>,
-    rustc: Option<PathBuf>,
+    /// Path to the `rustc` executable.
+    rustc: PathBuf,
+    /// Console output flags (`--error-format`, `--json`, etc.).
+    ///
+    /// The normal fix procedure always uses `--json`, so it overrides what
+    /// Cargo normally passes when applying fixes. When displaying warnings or
+    /// errors, it will use these flags.
     format_args: Vec<String>,
-}
-
-enum PrepareFor {
-    Next,
-    Edition(Edition),
-    None,
-}
-
-impl Default for PrepareFor {
-    fn default() -> PrepareFor {
-        PrepareFor::None
-    }
 }
 
 impl FixArgs {
     fn get() -> Result<FixArgs, Error> {
-        let mut ret = FixArgs::default();
-
-        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
+        let rustc = env::args_os()
+            .nth(1)
+            .map(PathBuf::from)
+            .ok_or_else(|| anyhow::anyhow!("expected rustc as first argument"))?;
+        let mut file = None;
+        let mut enabled_edition = None;
+        let mut other = Vec::new();
+        let mut format_args = Vec::new();
 
         for arg in env::args_os().skip(2) {
             let path = PathBuf::from(arg);
             if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
-                ret.file = Some(path);
+                file = Some(path);
                 continue;
             }
             if let Some(s) = path.to_str() {
                 if let Some(edition) = s.strip_prefix("--edition=") {
-                    ret.enabled_edition = Some(edition.parse()?);
+                    enabled_edition = Some(edition.parse()?);
                     continue;
                 }
                 if s.starts_with("--error-format=") || s.starts_with("--json=") {
                     // Cargo may add error-format in some cases, but `cargo
                     // fix` wants to add its own.
-                    ret.format_args.push(s.to_string());
+                    format_args.push(s.to_string());
                     continue;
                 }
             }
-            ret.other.push(path.into());
+            other.push(path.into());
         }
-        if let Ok(s) = env::var(PREPARE_FOR_ENV) {
-            ret.prepare_for_edition = PrepareFor::Edition(s.parse()?);
-        } else if env::var(EDITION_ENV).is_ok() {
-            ret.prepare_for_edition = PrepareFor::Next;
-        }
+        let file = file.ok_or_else(|| anyhow::anyhow!("could not find .rs file in rustc args"))?;
+        let idioms = env::var(IDIOMS_ENV).is_ok();
 
-        ret.idioms = env::var(IDIOMS_ENV).is_ok();
-        Ok(ret)
+        let prepare_for_edition = if let Ok(s) = env::var(PREPARE_FOR_ENV) {
+            Some(s.parse()?)
+        } else if env::var(EDITION_ENV).is_ok() {
+            match enabled_edition {
+                None | Some(Edition::Edition2015) => Some(Edition::Edition2018),
+                Some(Edition::Edition2018) => Some(Edition::Edition2018), // TODO: Change to 2021 when rustc is ready for it.
+                Some(Edition::Edition2021) => Some(Edition::Edition2021),
+            }
+        } else {
+            None
+        };
+
+        Ok(FixArgs {
+            file,
+            prepare_for_edition,
+            idioms,
+            enabled_edition,
+            other,
+            rustc,
+            format_args,
+        })
     }
 
     fn apply(&self, cmd: &mut Command) {
-        if let Some(path) = &self.file {
-            cmd.arg(path);
-        }
-
+        cmd.arg(&self.file);
         cmd.args(&self.other).arg("--cap-lints=warn");
         if let Some(edition) = self.enabled_edition {
             cmd.arg("--edition").arg(edition.to_string());
@@ -650,7 +680,7 @@ impl FixArgs {
             }
         }
 
-        if let Some(edition) = self.prepare_for_edition_resolve() {
+        if let Some(edition) = self.prepare_for_edition {
             cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
         }
     }
@@ -663,7 +693,7 @@ impl FixArgs {
     /// actually be able to fix anything! If it looks like this is happening
     /// then yield an error to the user, indicating that this is happening.
     fn verify_not_preparing_for_enabled_edition(&self) -> CargoResult<()> {
-        let edition = match self.prepare_for_edition_resolve() {
+        let edition = match self.prepare_for_edition {
             Some(s) => s,
             None => return Ok(()),
         };
@@ -674,33 +704,13 @@ impl FixArgs {
         if edition != enabled {
             return Ok(());
         }
-        let path = match &self.file {
-            Some(s) => s,
-            None => return Ok(()),
-        };
 
         Message::EditionAlreadyEnabled {
-            file: path.display().to_string(),
-            edition: edition.to_string(),
+            file: self.file.display().to_string(),
+            edition,
         }
         .post()?;
 
         process::exit(1);
-    }
-
-    fn prepare_for_edition_resolve(&self) -> Option<Edition> {
-        match self.prepare_for_edition {
-            PrepareFor::Edition(s) => Some(s),
-            PrepareFor::Next => Some(self.next_edition()),
-            PrepareFor::None => None,
-        }
-    }
-
-    fn next_edition(&self) -> Edition {
-        match self.enabled_edition {
-            None | Some(Edition::Edition2015) => Edition::Edition2018,
-            Some(Edition::Edition2018) => Edition::Edition2018, // TODO: Change to 2021 when rustc is ready for it.
-            Some(Edition::Edition2021) => Edition::Edition2021,
-        }
     }
 }
