@@ -11,19 +11,15 @@ cargo\-fix \- Automatically fix lint warnings reported by rustc
 This Cargo subcommand will automatically take rustc's suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
 to help automate tasks that rustc itself already knows how to tell you to fix!
-The \fBcargo fix\fR subcommand is also being developed for the Rust 2018 edition
-to provide code the ability to easily opt\-in to the new edition without having
-to worry about any breakage.
 .sp
 Executing \fBcargo fix\fR will under the hood execute \fBcargo\-check\fR(1). Any warnings
 applicable to your crate will be automatically fixed (if possible) and all
 remaining warnings will be displayed when the check process is finished. For
-example if you'd like to prepare for the 2018 edition, you can do so by
-executing:
+example if you'd like to apply all fixes to the current package, you can run:
 .sp
 .RS 4
 .nf
-cargo fix \-\-edition
+cargo fix
 .fi
 .RE
 .sp
@@ -35,7 +31,7 @@ will need to enable those features for that code to be analyzed:
 .sp
 .RS 4
 .nf
-cargo fix \-\-edition \-\-features foo
+cargo fix \-\-features foo
 .fi
 .RE
 .sp
@@ -44,13 +40,34 @@ pass \fB\-\-target\fR to fix code for the given target.
 .sp
 .RS 4
 .nf
-cargo fix \-\-edition \-\-target x86_64\-pc\-windows\-gnu
+cargo fix \-\-target x86_64\-pc\-windows\-gnu
 .fi
 .RE
 .sp
 If you encounter any problems with \fBcargo fix\fR or otherwise have any questions
 or feature requests please don't hesitate to file an issue at
-<https://github.com/rust\-lang/cargo>
+<https://github.com/rust\-lang/cargo>\&.
+.SS "Edition migration"
+The \fBcargo fix\fR subcommand can also be used to migrate a package from one
+\fIedition\fR <https://doc.rust\-lang.org/edition\-guide/editions/transitioning\-an\-existing\-project\-to\-a\-new\-edition.html> to the next. The general procedure is:
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Run \fBcargo fix \-\-edition\fR
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Modify \fBCargo.toml\fR to set the \fIedition field\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html#the\-edition\-field> to the new edition.
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'Run your project tests to verify that everything still works.
+.RE
+.sp
+And hopefully that's it! Just keep in mind of the caveats mentioned above that
+\fBcargo fix\fR cannot update code for inactive features or \fBcfg\fR expressions.
+Also, in some rare cases the compiler is unable to automatically migrate all
+code to the new edition, and this may require manual changes after building
+with the new edition.
 .SH "OPTIONS"
 .SS "Fix options"
 .sp
@@ -63,9 +80,9 @@ code in the working directory for you to inspect and manually fix.
 .sp
 \fB\-\-edition\fR
 .RS 4
-Apply changes that will update the code to the latest edition. This will not
+Apply changes that will update the code to the next edition. This will not
 update the edition in the \fBCargo.toml\fR manifest, which must be updated
-manually.
+manually after \fBcargo fix \-\-edition\fR has finished.
 .RE
 .sp
 \fB\-\-edition\-idioms\fR
@@ -476,7 +493,7 @@ cargo fix
 .RE
 .sp
 .RS 4
-\h'-04' 2.\h'+01'Convert a 2015 edition to 2018:
+\h'-04' 2.\h'+01'Update a package to prepare it for the next edition:
 .sp
 .RS 4
 .nf
