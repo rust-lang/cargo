@@ -144,6 +144,18 @@ impl Edition {
         }
     }
 
+    /// Returns the previous edition from this edition.
+    ///
+    /// Returns `None` for 2015.
+    pub fn previous(&self) -> Option<Edition> {
+        use Edition::*;
+        match self {
+            Edition2015 => None,
+            Edition2018 => Some(Edition2015),
+            Edition2021 => Some(Edition2018),
+        }
+    }
+
     /// Updates the given [`ProcessBuilder`] to include the appropriate flags
     /// for setting the edition.
     pub(crate) fn cmd_edition_arg(&self, cmd: &mut ProcessBuilder) {
@@ -152,6 +164,20 @@ impl Edition {
         }
         if !self.is_stable() {
             cmd.arg("-Z").arg("unstable-options");
+        }
+    }
+
+    /// Whether or not this edition supports the `rust_*_compatibility` lint.
+    ///
+    /// Ideally this would not be necessary, but currently 2021 does not have
+    /// any lints, and thus `rustc` doesn't recognize it. Perhaps `rustc`
+    /// could create an empty group instead?
+    pub(crate) fn supports_compat_lint(&self) -> bool {
+        use Edition::*;
+        match self {
+            Edition2015 => false,
+            Edition2018 => true,
+            Edition2021 => false,
         }
     }
 }

@@ -180,24 +180,10 @@ impl<'a> DiagnosticPrinter<'a> {
                 if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
-
-                let msg = format!(
-                    "\
-cannot prepare for the {} edition when it is enabled, so cargo cannot
-automatically fix errors in `{}`
-
-To prepare for the {0} edition you should first remove `edition = '{0}'` from
-your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
-then you can re-enable the `edition` key in `Cargo.toml`. For some more
-information about transitioning to the {0} edition see:
-
-  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
-",
-                    edition,
-                    file,
-                );
-                self.config.shell().error(&msg)?;
-                Ok(())
+                self.config.shell().warn(&format!(
+                    "`{}` is already on the latest edition ({}), unable to migrate further",
+                    file, edition
+                ))
             }
         }
     }

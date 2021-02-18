@@ -1078,6 +1078,10 @@ version = "0.1.0"
 edition = "2021"
 ```
 
+If you want to transition an existing project from a previous edition, then
+`cargo fix --edition` can be used on the nightly channel. After running `cargo
+fix`, you can switch the edition to 2021 as illustrated above.
+
 This feature is very unstable, and is only intended for early testing and
 experimentation. Future nightly releases may introduce changes for the 2021
 edition that may break your build.

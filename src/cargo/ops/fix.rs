@@ -50,7 +50,7 @@ use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
-use crate::core::{Edition, Workspace};
+use crate::core::{nightly_features_allowed, Edition, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
@@ -652,7 +652,7 @@ impl FixArgs {
         } else if env::var(EDITION_ENV).is_ok() {
             match enabled_edition {
                 None | Some(Edition::Edition2015) => Some(Edition::Edition2018),
-                Some(Edition::Edition2018) => Some(Edition::Edition2018), // TODO: Change to 2021 when rustc is ready for it.
+                Some(Edition::Edition2018) => Some(Edition::Edition2021),
                 Some(Edition::Edition2021) => Some(Edition::Edition2021),
             }
         } else {
@@ -681,7 +681,9 @@ impl FixArgs {
         }
 
         if let Some(edition) = self.prepare_for_edition {
-            cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+            if edition.supports_compat_lint() {
+                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+            }
         }
     }
 
@@ -697,14 +699,32 @@ impl FixArgs {
                 .post();
             }
         };
+        // Unfortunately determining which cargo targets are being built
+        // isn't easy, and each target can be a different edition. The
+        // cargo-as-rustc fix wrapper doesn't know anything about the
+        // workspace, so it can't check for the `cargo-features` unstable
+        // opt-in. As a compromise, this just restricts to the nightly
+        // toolchain.
+        //
+        // Unfortunately this results in a pretty poor error message when
+        // multiple jobs run in parallel (the error appears multiple
+        // times). Hopefully this doesn't happen often in practice.
+        if !to_edition.is_stable() && !nightly_features_allowed() {
+            bail!(
+                "cannot migrate {} to edition {to_edition}\n\
+                 Edition {to_edition} is unstable and not allowed in this release, \
+                 consider trying the nightly release channel.",
+                self.file.display(),
+                to_edition = to_edition
+            );
+        }
         let from_edition = self.enabled_edition.unwrap_or(Edition::Edition2015);
         if from_edition == to_edition {
             Message::EditionAlreadyEnabled {
                 file: self.file.display().to_string(),
                 edition: to_edition,
             }
-            .post()?;
-            process::exit(1);
+            .post()
         } else {
             Message::Migrating {
                 file: self.file.display().to_string(),

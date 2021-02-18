@@ -791,35 +791,181 @@ fn fix_all_targets_by_default() {
 }
 
 #[cargo_test]
-fn prepare_for_and_enable() {
+fn prepare_for_unstable() {
+    // During the period where a new edition is coming up, but not yet stable,
+    // this test will verify that it cannot be migrated to on stable. If there
+    // is no next edition, it does nothing.
+    let next = Edition::LATEST;
+    if next.is_stable() {
+        eprintln!("Next edition is currently not available, skipping test.");
+        return;
+    }
+    let latest_stable = next.previous().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
-                name = 'foo'
-                version = '0.1.0'
-                edition = '2018'
+                name = "foo"
+                version = "0.1.0"
+                edition = "{}"
             "#,
+                latest_stable
+            ),
         )
         .file("src/lib.rs", "")
         .build();
 
-    let stderr = "\
-error: cannot prepare for the 2018 edition when it is enabled, so cargo cannot
-automatically fix errors in `src/lib.rs`
-
-To prepare for the 2018 edition you should first remove `edition = '2018'` from
-your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
-then you can re-enable the `edition` key in `Cargo.toml`. For some more
-information about transitioning to the 2018 edition see:
-
-  https://[..]
-
-";
-    p.cargo("fix --edition --allow-no-vcs")
-        .with_stderr_contains(stderr)
+    // -j1 to make the error more deterministic (otherwise there can be
+    // multiple errors since they run in parallel).
+    p.cargo("fix --edition --allow-no-vcs -j1")
         .with_status(101)
+        .with_stderr(&format!("\
+[CHECKING] foo [..]
+[ERROR] cannot migrate src/lib.rs to edition {next}
+Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
+error: could not compile `foo`
+
+To learn more, run the command again with --verbose.
+", next=next))
+        .run();
+
+    if !is_nightly() {
+        // The rest of this test is fundamentally always nightly.
+        return;
+    }
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(&format!(
+            "\
+[CHECKING] foo [..]
+[MIGRATING] src/lib.rs from {latest_stable} edition to {next}
+[FINISHED] [..]
+",
+            latest_stable = latest_stable,
+            next = next,
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn prepare_for_latest_stable() {
+    // This is the stable counterpart of prepare_for_unstable.
+    let latest = Edition::LATEST;
+    let latest_stable = if latest.is_stable() {
+        latest
+    } else {
+        latest.previous().unwrap()
+    };
+    let previous = latest_stable.previous().unwrap();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '{}'
+            "#,
+                previous
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr(&format!(
+            "\
+[CHECKING] foo [..]
+[MIGRATING] src/lib.rs from {} edition to {}
+[FINISHED] [..]
+",
+            previous, latest_stable
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn prepare_for_already_on_latest_unstable() {
+    // During the period where a new edition is coming up, but not yet stable,
+    // this test will check what happens if you are already on the latest. If
+    // there is no next edition, it does nothing.
+    if !is_nightly() {
+        // This test is fundamentally always nightly.
+        return;
+    }
+    let next_edition = Edition::LATEST;
+    if next_edition.is_stable() {
+        eprintln!("Next edition is currently not available, skipping test.");
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["edition{}"]
+
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '{}'
+            "#,
+                next_edition, next_edition
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(&format!(
+            "\
+[CHECKING] foo [..]
+[WARNING] `src/lib.rs` is already on the latest edition ({next_edition}), unable to migrate further
+[FINISHED] [..]
+",
+            next_edition = next_edition
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn prepare_for_already_on_latest_stable() {
+    // Stable counterpart of prepare_for_already_on_latest_unstable.
+    if !Edition::LATEST.is_stable() {
+        eprintln!("This test cannot run while the latest edition is unstable, skipping.");
+        return;
+    }
+    let latest_stable = Edition::LATEST;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '{}'
+            "#,
+                latest_stable
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr_contains(&format!(
+            "\
+[CHECKING] foo [..]
+[WARNING] `src/lib.rs` is already on the latest edition ({latest_stable}), unable to migrate further
+[FINISHED] [..]
+",
+            latest_stable = latest_stable
+        ))
         .run();
 }
 
