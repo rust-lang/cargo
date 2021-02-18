@@ -286,6 +286,7 @@ fn prepare_for_2018() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
@@ -324,6 +325,7 @@ fn local_paths() {
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ",
@@ -409,6 +411,7 @@ fn specify_rustflags() {
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ",
@@ -842,6 +845,7 @@ fn fix_overlapping() {
         .with_stderr(
             "\
 [CHECKING] foo [..]
+[MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
 [FINISHED] dev [..]
 ",
@@ -1164,6 +1168,7 @@ fn only_warn_for_relevant_crates() {
             "\
 [CHECKING] a v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

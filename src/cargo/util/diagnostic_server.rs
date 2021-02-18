@@ -31,6 +31,11 @@ const PLEASE_REPORT_THIS_BUG: &str =
 
 #[derive(Deserialize, Serialize, Hash, Eq, PartialEq, Clone)]
 pub enum Message {
+    Migrating {
+        file: String,
+        from_edition: Edition,
+        to_edition: Edition,
+    },
     Fixing {
         file: String,
     },
@@ -92,6 +97,19 @@ impl<'a> DiagnosticPrinter<'a> {
 
     pub fn print(&mut self, msg: &Message) -> CargoResult<()> {
         match msg {
+            Message::Migrating {
+                file,
+                from_edition,
+                to_edition,
+            } => {
+                if !self.dedupe.insert(msg.clone()) {
+                    return Ok(());
+                }
+                self.config.shell().status(
+                    "Migrating",
+                    &format!("{} from {} edition to {}", file, from_edition, to_edition),
+                )
+            }
             Message::Fixing { file } => self
                 .config
                 .shell()

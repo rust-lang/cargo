@@ -1535,6 +1535,7 @@ fn substitute_macros(input: &str) -> String {
         ("[LOGOUT]", "      Logout"),
         ("[YANK]", "        Yank"),
         ("[OWNER]", "       Owner"),
+        ("[MIGRATING]", "   Migrating"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

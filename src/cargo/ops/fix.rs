@@ -301,7 +301,7 @@ fn rustfix_crate(
     filename: &Path,
     args: &FixArgs,
 ) -> Result<FixedCrate, Error> {
-    args.verify_not_preparing_for_enabled_edition()?;
+    args.check_edition_and_send_status()?;
 
     // First up, we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
@@ -685,15 +685,10 @@ impl FixArgs {
         }
     }
 
-    /// Verifies that we're not both preparing for an enabled edition and enabling
-    /// the edition.
-    ///
-    /// This indicates that `cargo fix --prepare-for` is being executed out of
-    /// order with enabling the edition itself, meaning that we wouldn't
-    /// actually be able to fix anything! If it looks like this is happening
-    /// then yield an error to the user, indicating that this is happening.
-    fn verify_not_preparing_for_enabled_edition(&self) -> CargoResult<()> {
-        let edition = match self.prepare_for_edition {
+    /// Validates the edition, and sends a message indicating what is being
+    /// done.
+    fn check_edition_and_send_status(&self) -> CargoResult<()> {
+        let to_edition = match self.prepare_for_edition {
             Some(s) => s,
             None => {
                 return Message::Fixing {
@@ -702,20 +697,21 @@ impl FixArgs {
                 .post();
             }
         };
-        let enabled = match self.enabled_edition {
-            Some(s) => s,
-            None => return Ok(()),
-        };
-        if edition != enabled {
-            return Ok(());
+        let from_edition = self.enabled_edition.unwrap_or(Edition::Edition2015);
+        if from_edition == to_edition {
+            Message::EditionAlreadyEnabled {
+                file: self.file.display().to_string(),
+                edition: to_edition,
+            }
+            .post()?;
+            process::exit(1);
+        } else {
+            Message::Migrating {
+                file: self.file.display().to_string(),
+                from_edition,
+                to_edition,
+            }
+            .post()
         }
-
-        Message::EditionAlreadyEnabled {
-            file: self.file.display().to_string(),
-            edition,
-        }
-        .post()?;
-
-        process::exit(1);
     }
 }
