@@ -1082,7 +1082,10 @@ This feature is very unstable, and is only intended for early testing and
 experimentation. Future nightly releases may introduce changes for the 2021
 edition that may break your build.
 
+The 2021 edition will set the default [resolver version] to "2".
+
 [edition]: ../../edition-guide/index.html
+[resolver version]: resolver.md#resolver-versions
 
 <script>
 (function() {
