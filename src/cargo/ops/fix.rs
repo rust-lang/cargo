@@ -238,7 +238,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
 
         if output.status.success() {
             for (path, file) in fixes.files.iter() {
-                Message::Fixing {
+                Message::Fixed {
                     file: path.clone(),
                     fixes: file.fixes_applied,
                 }
@@ -695,7 +695,12 @@ impl FixArgs {
     fn verify_not_preparing_for_enabled_edition(&self) -> CargoResult<()> {
         let edition = match self.prepare_for_edition {
             Some(s) => s,
-            None => return Ok(()),
+            None => {
+                return Message::Fixing {
+                    file: self.file.display().to_string(),
+                }
+                .post();
+            }
         };
         let enabled = match self.enabled_edition {
             Some(s) => s,

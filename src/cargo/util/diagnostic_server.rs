@@ -33,6 +33,9 @@ const PLEASE_REPORT_THIS_BUG: &str =
 pub enum Message {
     Fixing {
         file: String,
+    },
+    Fixed {
+        file: String,
         fixes: u32,
     },
     FixFailed {
@@ -89,10 +92,14 @@ impl<'a> DiagnosticPrinter<'a> {
 
     pub fn print(&mut self, msg: &Message) -> CargoResult<()> {
         match msg {
-            Message::Fixing { file, fixes } => {
+            Message::Fixing { file } => self
+                .config
+                .shell()
+                .verbose(|shell| shell.status("Fixing", file)),
+            Message::Fixed { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
                 let msg = format!("{} ({} {})", file, fixes, msg);
-                self.config.shell().status("Fixing", msg)
+                self.config.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
                 let msg = format!("error applying suggestions to `{}`\n", file);

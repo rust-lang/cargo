@@ -1,8 +1,9 @@
 //! Tests for the `cargo fix` command.
 
+use cargo::core::Edition;
 use cargo_test_support::git;
 use cargo_test_support::paths;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -161,7 +162,7 @@ fn broken_fixes_backed_out() {
         )
         .with_stderr_contains("Original diagnostics will follow.")
         .with_stderr_contains("[WARNING] variable does not need to be mutable")
-        .with_stderr_does_not_contain("[..][FIXING][..]")
+        .with_stderr_does_not_contain("[..][FIXED][..]")
         .run();
 
     // Make sure the fix which should have been applied was backed out
@@ -213,9 +214,9 @@ fn fix_path_deps() {
         .with_stderr_unordered(
             "\
 [CHECKING] bar v0.1.0 ([..])
-[FIXING] bar/src/lib.rs (1 fix)
+[FIXED] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ",
         )
@@ -285,7 +286,7 @@ fn prepare_for_2018() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (2 fixes)
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     p.cargo("fix --edition --allow-no-vcs")
@@ -319,14 +320,14 @@ fn local_paths() {
         )
         .build();
 
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
-[FINISHED] [..]
-";
-
     p.cargo("fix --edition --allow-no-vcs")
-        .with_stderr(stderr)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([..])
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] [..]
+",
+        )
         .with_stdout("")
         .run();
 
@@ -372,7 +373,7 @@ fn upgrade_extern_crate() {
     let stderr = "\
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -403,14 +404,15 @@ fn specify_rustflags() {
         )
         .build();
 
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
-[FINISHED] [..]
-";
     p.cargo("fix --edition --allow-no-vcs")
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr(stderr)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([..])
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] [..]
+",
+        )
         .with_stdout("")
         .run();
 }
@@ -445,7 +447,7 @@ fn fixes_extra_mut() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -472,7 +474,7 @@ fn fixes_two_missing_ampersands() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (2 fixes)
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -498,7 +500,7 @@ fn tricky() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (2 fixes)
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -594,8 +596,8 @@ fn fix_two_files() {
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
-        .with_stderr_contains("[FIXING] src/lib.rs (1 fix)")
+        .with_stderr_contains("[FIXED] src/bar.rs (1 fix)")
+        .with_stderr_contains("[FIXED] src/lib.rs (1 fix)")
         .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(!p.read_file("src/bar.rs").contains("let mut x = 3;"));
@@ -629,16 +631,16 @@ fn fixes_missing_ampersand() {
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
         .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
-        .with_stderr_contains("[FIXING] build.rs (1 fix)")
+        .with_stderr_contains("[FIXED] build.rs (1 fix)")
         // Don't assert number of fixes for this one, as we don't know if we're
         // fixing it once or twice! We run this all concurrently, and if we
         // compile (and fix) in `--test` mode first, we get two fixes. Otherwise
         // we'll fix one non-test thing, and then fix another one later in
         // test mode.
-        .with_stderr_contains("[FIXING] src/lib.rs[..]")
-        .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
-        .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
-        .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
+        .with_stderr_contains("[FIXED] src/lib.rs[..]")
+        .with_stderr_contains("[FIXED] src/main.rs (1 fix)")
+        .with_stderr_contains("[FIXED] examples/foo.rs (1 fix)")
+        .with_stderr_contains("[FIXED] tests/a.rs (1 fix)")
         .with_stderr_contains("[FINISHED] [..]")
         .run();
     p.cargo("build").run();
@@ -836,14 +838,14 @@ fn fix_overlapping() {
         )
         .build();
 
-    let stderr = "\
-[CHECKING] foo [..]
-[FIXING] src/lib.rs (2 fixes)
-[FINISHED] dev [..]
-";
-
     p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib")
-        .with_stderr(stderr)
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[FIXED] src/lib.rs (2 fixes)
+[FINISHED] dev [..]
+",
+        )
         .run();
 
     let contents = p.read_file("src/lib.rs");
@@ -876,7 +878,7 @@ fn fix_idioms() {
 
     let stderr = "\
 [CHECKING] foo [..]
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     p.cargo("fix --edition-idioms --allow-no-vcs")
