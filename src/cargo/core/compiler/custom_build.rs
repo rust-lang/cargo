@@ -295,6 +295,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_out_dir)?;
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
+    let nightly_features_allowed = nightly_features_allowed(cx.bcx.config);
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -369,7 +370,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 },
                 true,
             )
-            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_name));
+            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_descr));
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(
@@ -403,6 +404,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             &script_out_dir,
             &script_out_dir,
             extra_link_arg,
+            nightly_features_allowed,
         )?;
 
         if json_messages {
@@ -429,6 +431,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 &prev_script_out_dir,
                 &script_out_dir,
                 extra_link_arg,
+                nightly_features_allowed,
             )?,
         };
 
@@ -480,6 +483,7 @@ impl BuildOutput {
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
         extra_link_arg: bool,
+        nightly_features_allowed: bool,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
@@ -489,6 +493,7 @@ impl BuildOutput {
             script_out_dir_when_generated,
             script_out_dir,
             extra_link_arg,
+            nightly_features_allowed,
         )
     }
 
@@ -501,6 +506,7 @@ impl BuildOutput {
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
         extra_link_arg: bool,
+        nightly_features_allowed: bool,
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -582,7 +588,7 @@ impl BuildOutput {
                         // to set RUSTC_BOOTSTRAP.
                         // If this is a nightly build, setting RUSTC_BOOTSTRAP wouldn't affect the
                         // behavior, so still only give a warning.
-                        if nightly_features_allowed() {
+                        if nightly_features_allowed {
                             warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
                                 help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
@@ -850,6 +856,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
         .unwrap_or_else(|_| script_out_dir.clone());
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
+    let nightly_features_allowed = nightly_features_allowed(cx.bcx.config);
 
     (
         BuildOutput::parse_file(
@@ -859,6 +866,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &prev_script_out_dir,
             &script_out_dir,
             extra_link_arg,
+            nightly_features_allowed,
         )
         .ok(),
         prev_script_out_dir,

@@ -700,8 +700,8 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pi
     }
     cmd.arg(json);
 
-    if nightly_features_allowed() {
-        let config = cx.bcx.config;
+    let config = cx.bcx.config;
+    if nightly_features_allowed(config) {
         match (
             config.cli_unstable().terminal_width,
             config.shell().err_width().diagnostic_terminal_width(),

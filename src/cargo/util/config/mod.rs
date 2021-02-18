@@ -184,6 +184,8 @@ pub struct Config {
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
     env_config: LazyCell<EnvConfig>,
+    pub(crate) enable_nightly_features: bool,
+    pub(crate) maybe_allow_nightly_features: bool,
 }
 
 impl Config {
@@ -268,6 +270,8 @@ impl Config {
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
+            enable_nightly_features: false,
+            maybe_allow_nightly_features: false,
         }
     }
 
@@ -755,7 +759,11 @@ impl Config {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
-        for warning in self.unstable_flags.parse(unstable_flags)? {
+        let nightly_features_allowed = nightly_features_allowed(&self);
+        for warning in self
+            .unstable_flags
+            .parse(unstable_flags, nightly_features_allowed)?
+        {
             self.shell().warn(warning)?;
         }
         if !unstable_flags.is_empty() {
@@ -821,7 +829,7 @@ impl Config {
     fn load_unstable_flags_from_config(&mut self) -> CargoResult<()> {
         // If nightly features are enabled, allow setting Z-flags from config
         // using the `unstable` table. Ignore that block otherwise.
-        if nightly_features_allowed() {
+        if nightly_features_allowed(self) {
             self.unstable_flags = self
                 .get::<Option<CliUnstable>>("unstable")?
                 .unwrap_or_default();
@@ -830,7 +838,7 @@ impl Config {
                 //     allows the CLI to override config files for both enabling
                 //     and disabling, and doing it up top allows CLI Zflags to
                 //     control config parsing behavior.
-                self.unstable_flags.parse(unstable_flags_cli)?;
+                self.unstable_flags.parse(unstable_flags_cli, true)?;
             }
         }
 

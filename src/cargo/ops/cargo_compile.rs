@@ -287,7 +287,7 @@ pub fn compile_ws<'a>(
     let interner = UnitInterner::new();
     let bcx = create_bcx(ws, options, &interner)?;
     if options.build_config.unit_graph {
-        unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph)?;
+        unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.config())?;
         return Compilation::new(&bcx);
     }
     let _p = profile::start("compiling");

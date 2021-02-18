@@ -4,6 +4,7 @@ use crate::core::profiles::{Profile, UnitFor};
 use crate::core::{nightly_features_allowed, PackageId, Target};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use crate::Config;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -62,8 +63,12 @@ struct SerializedUnitDep {
     // internal detail that is mostly used for building the graph.
 }
 
-pub fn emit_serialized_unit_graph(root_units: &[Unit], unit_graph: &UnitGraph) -> CargoResult<()> {
-    let is_nightly = nightly_features_allowed();
+pub fn emit_serialized_unit_graph(
+    root_units: &[Unit],
+    unit_graph: &UnitGraph,
+    config: &Config,
+) -> CargoResult<()> {
+    let is_nightly = nightly_features_allowed(config);
     let mut units: Vec<(&Unit, &Vec<UnitDep>)> = unit_graph.iter().collect();
     units.sort_unstable();
     // Create a map for quick lookup for dependencies.

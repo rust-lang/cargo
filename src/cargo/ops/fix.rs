@@ -201,7 +201,7 @@ fn check_version_control(config: &Config, opts: &FixOptions) -> CargoResult<()> 
 /// `true` if in `fix` proxy mode, and the fix was complete without any
 /// warnings or errors. If there are warnings or errors, this does not return,
 /// and the process exits with the corresponding `rustc` exit code.
-pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
+pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     let lock_addr = match env::var(FIX_ENV) {
         Ok(s) => s,
         Err(_) => return Ok(false),
@@ -216,7 +216,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     let rustc = util::process(&args.rustc).wrapped(workspace_rustc.as_ref());
 
     trace!("start rustfixing {:?}", args.file);
-    let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args)?;
+    let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
 
     // Ok now we have our final goal of testing out the changes that we applied.
     // If these changes went awry and actually started to cause the crate to
@@ -296,8 +296,9 @@ fn rustfix_crate(
     rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
+    config: &Config,
 ) -> Result<FixedCrate, Error> {
-    args.check_edition_and_send_status()?;
+    args.check_edition_and_send_status(config)?;
 
     // First up, we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
@@ -679,7 +680,7 @@ impl FixArgs {
 
     /// Validates the edition, and sends a message indicating what is being
     /// done.
-    fn check_edition_and_send_status(&self) -> CargoResult<()> {
+    fn check_edition_and_send_status(&self, config: &Config) -> CargoResult<()> {
         let to_edition = match self.prepare_for_edition {
             Some(s) => s,
             None => {
@@ -699,7 +700,7 @@ impl FixArgs {
         // Unfortunately this results in a pretty poor error message when
         // multiple jobs run in parallel (the error appears multiple
         // times). Hopefully this doesn't happen often in practice.
-        if !to_edition.is_stable() && !nightly_features_allowed() {
+        if !to_edition.is_stable() && !nightly_features_allowed(config) {
             bail!(
                 "cannot migrate {} to edition {to_edition}\n\
                  Edition {to_edition} is unstable and not allowed in this release, \

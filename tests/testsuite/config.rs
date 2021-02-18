@@ -20,6 +20,7 @@ pub struct ConfigBuilder {
     unstable: Vec<String>,
     config_args: Vec<String>,
     cwd: Option<PathBuf>,
+    enable_nightly_features: bool,
 }
 
 impl ConfigBuilder {
@@ -29,6 +30,7 @@ impl ConfigBuilder {
             unstable: Vec::new(),
             config_args: Vec::new(),
             cwd: None,
+            enable_nightly_features: false,
         }
     }
 
@@ -41,6 +43,12 @@ impl ConfigBuilder {
     /// Sets an environment variable.
     pub fn env(&mut self, key: impl Into<String>, val: impl Into<String>) -> &mut Self {
         self.env.insert(key.into(), val.into());
+        self
+    }
+
+    /// Unconditionaly enable nightly features, even on stable channels.
+    pub fn enable_nightly_features(&mut self) -> &mut Self {
+        self.enable_nightly_features = true;
         self
     }
 
@@ -67,15 +75,14 @@ impl ConfigBuilder {
 
     /// Creates the `Config`, returning a Result.
     pub fn build_err(&self) -> CargoResult<Config> {
-        if !self.unstable.is_empty() {
-            // This is unfortunately global. Some day that should be fixed.
-            enable_nightly_features();
-        }
         let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
         let shell = Shell::from_write(output);
         let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
+        if self.enable_nightly_features || !self.unstable.is_empty() {
+            enable_nightly_features(&mut config);
+        }
         config.set_env(self.env.clone());
         config.set_search_stop_path(paths::root());
         config.configure(
@@ -1095,40 +1102,37 @@ Caused by:
 /// Assert that unstable options can be configured with the `unstable` table in
 /// cargo config files
 fn unstable_table_notation() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 [unstable]
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().enable_nightly_features().build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
 /// Assert that dotted notation works for configuring unstable options
 fn unstable_dotted_notation() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().enable_nightly_features().build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
 /// Assert that Zflags on the CLI take precedence over those from config
 fn unstable_cli_precedence() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().enable_nightly_features().build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 
     let config = ConfigBuilder::new()
