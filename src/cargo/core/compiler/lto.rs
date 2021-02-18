@@ -45,7 +45,8 @@ pub fn generate(bcx: &BuildContext<'_, '_>) -> CargoResult<HashMap<Unit, Lto>> {
     for unit in bcx.roots.iter() {
         let root_lto = match unit.profile.lto {
             // LTO not requested, no need for bitcode.
-            profiles::Lto::Bool(false) | profiles::Lto::Off => Lto::OnlyObject,
+            profiles::Lto::Bool(false) => Lto::OnlyObject,
+            profiles::Lto::Off => Lto::Off,
             _ => {
                 let crate_types = unit.target.rustc_crate_types();
                 if unit.target.for_host() {
@@ -127,8 +128,8 @@ fn calculate(
             (Lto::Run(_), false) => Lto::OnlyBitcode,
             // LTO when something needs object code.
             (Lto::Run(_), true) | (Lto::OnlyBitcode, true) => lto_when_needs_object(&crate_types),
-            // LTO is disabled, no need for bitcode.
-            (Lto::Off, _) => Lto::OnlyObject,
+            // LTO is disabled, continue to disable it.
+            (Lto::Off, _) => Lto::Off,
             // If this doesn't have any requirements, or the requirements are
             // already satisfied, then stay with our parent.
             (_, false) | (Lto::OnlyObject, true) | (Lto::ObjectAndBitcode, true) => parent_lto,
