@@ -279,7 +279,8 @@ impl fmt::Display for PackageIdSpec {
         match self.url {
             Some(ref url) => {
                 if url.scheme() == "cargo" {
-                    write!(f, "{}{}", url.host().unwrap(), url.path())?;
+                    let host = url.host().unwrap_or(url::Host::Domain(""));
+                    write!(f, "{}{}", host, url.path())?;
                 } else {
                     write!(f, "{}", url)?;
                 }
