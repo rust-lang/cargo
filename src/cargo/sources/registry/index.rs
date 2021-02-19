@@ -68,7 +68,7 @@
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_V_MAX};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
@@ -76,6 +76,7 @@ use anyhow::bail;
 use log::{debug, info};
 use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use std::str;
@@ -309,7 +310,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // necessary.
         let raw_data = &summaries.raw_data;
         let max_version = if namespaced_features || weak_dep_features {
-            2
+            INDEX_V_MAX
         } else {
             1
         };
@@ -571,6 +572,14 @@ impl Summaries {
                 let summary = match IndexSummary::parse(config, line, source_id) {
                     Ok(summary) => summary,
                     Err(e) => {
+                        // This should only happen when there is an index
+                        // entry from a future version of cargo that this
+                        // version doesn't understand. Hopefully, those future
+                        // versions of cargo correctly set INDEX_V_MAX and
+                        // CURRENT_CACHE_VERSION, otherwise this will skip
+                        // entries in the cache preventing those newer
+                        // versions from reading them (that is, until the
+                        // cache is rebuilt).
                         log::info!("failed to parse {:?} registry package: {}", relative, e);
                         continue;
                     }
@@ -658,9 +667,9 @@ impl Summaries {
 // Implementation of serializing/deserializing the cache of summaries on disk.
 // Currently the format looks like:
 //
-// +--------------+-------------+---+
-// | version byte | git sha rev | 0 |
-// +--------------+-------------+---+
+// +--------------------+----------------------+-------------+---+
+// | cache version byte | index format version | git sha rev | 0 |
+// +--------------------+----------------------+-------------+---+
 //
 // followed by...
 //
@@ -677,8 +686,14 @@ impl Summaries {
 // versions of Cargo share the same cache they don't get too confused. The git
 // sha lets us know when the file needs to be regenerated (it needs regeneration
 // whenever the index itself updates).
+//
+// Cache versions:
+// * `1`: The original version.
+// * `2`: Added the "index format version" field so that if the index format
+//   changes, different versions of cargo won't get confused reading each
+//   other's caches.
 
-const CURRENT_CACHE_VERSION: u8 = 1;
+const CURRENT_CACHE_VERSION: u8 = 2;
 
 impl<'a> SummariesCache<'a> {
     fn parse(data: &'a [u8], last_index_update: &str) -> CargoResult<SummariesCache<'a>> {
@@ -689,6 +704,19 @@ impl<'a> SummariesCache<'a> {
         if *first_byte != CURRENT_CACHE_VERSION {
             bail!("looks like a different Cargo's cache, bailing out");
         }
+        let index_v_bytes = rest
+            .get(..4)
+            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index version"))?;
+        let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
+        if index_v > INDEX_V_MAX {
+            bail!(
+                "index format version {} is greater than the newest version I know ({})",
+                index_v,
+                INDEX_V_MAX
+            );
+        }
+        let rest = &rest[4..];
+
         let mut iter = split(rest, 0);
         if let Some(update) = iter.next() {
             if update != last_index_update.as_bytes() {
@@ -720,6 +748,7 @@ impl<'a> SummariesCache<'a> {
             .sum();
         let mut contents = Vec::with_capacity(size);
         contents.push(CURRENT_CACHE_VERSION);
+        contents.extend(&u32::to_le_bytes(INDEX_V_MAX));
         contents.extend_from_slice(index_version.as_bytes());
         contents.push(0);
         for (version, data) in self.versions.iter() {
@@ -769,6 +798,12 @@ impl IndexSummary {
     ///
     /// The `line` provided is expected to be valid JSON.
     fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
+        // ****CAUTION**** Please be extremely careful with returning errors
+        // from this function. Entries that error are not included in the
+        // index cache, and can cause cargo to get confused when switching
+        // between different versions that understand the index differently.
+        // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
+        // values carefully when making changes here.
         let RegistryPackage {
             name,
             vers,

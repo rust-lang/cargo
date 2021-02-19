@@ -14,7 +14,7 @@ use cargo::util::{ProcessBuilder, ProcessError};
 use cargo::CargoResult;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{self, Dependency, Package};
-use cargo_test_support::{cargo_exe, paths, process, project, rustc_host};
+use cargo_test_support::{cargo_exe, execs, paths, process, project, rustc_host};
 use semver::Version;
 use std::fs;
 
@@ -498,4 +498,89 @@ fn new_features() {
     if has_err {
         panic!("at least one toolchain did not run as expected");
     }
+}
+
+#[cargo_test]
+#[ignore]
+fn index_cache_rebuild() {
+    // Checks that the index cache gets rebuilt.
+    //
+    // 1.48 will not cache entries with features with the same name as a
+    // dependency. If the cache does not get rebuilt, then running with
+    // `-Znamespaced-features` would prevent the new cargo from seeing those
+    // entries. The index cache version was changed to prevent this from
+    // happening, and switching between versions should work correctly
+    // (although it will thrash the cash, that's better than not working
+    // correctly.
+    Package::new("baz", "1.0.0").publish();
+    Package::new("bar", "1.0.0").publish();
+    Package::new("bar", "1.0.1")
+        .add_dep(Dependency::new("baz", "1.0").optional(true))
+        .feature("baz", &["dep:baz"])
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // This version of Cargo errors on index entries that have overlapping
+    // feature names, so 1.0.1 will be missing.
+    execs()
+        .with_process_builder(tc_process("cargo", "1.48.0"))
+        .arg("check")
+        .cwd(p.root())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    fs::remove_file(p.root().join("Cargo.lock")).unwrap();
+
+    // This should rebuild the cache and use 1.0.1.
+    p.cargo("check -Znamespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.1 [..]
+[CHECKING] bar v1.0.1
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    fs::remove_file(p.root().join("Cargo.lock")).unwrap();
+
+    // Verify 1.48 can still resolve, and is at 1.0.0.
+    execs()
+        .with_process_builder(tc_process("cargo", "1.48.0"))
+        .arg("tree")
+        .cwd(p.root())
+        .with_stdout(
+            "\
+foo v0.1.0 [..]
+└── bar v1.0.0
+",
+        )
+        .run();
 }

@@ -250,6 +250,10 @@ pub struct RegistryConfig {
     pub api: Option<String>,
 }
 
+/// The maximum version of the `v` field in the index this version of cargo
+/// understands.
+pub(crate) const INDEX_V_MAX: u32 = 2;
+
 /// A single line in the index representing a single version of a package.
 #[derive(Deserialize)]
 pub struct RegistryPackage<'a> {
