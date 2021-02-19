@@ -119,17 +119,15 @@ pub fn install(
         // able to run these commands.
         let dst = root.join("bin").into_path_unlocked();
         let path = env::var_os("PATH").unwrap_or_default();
-        for path in env::split_paths(&path) {
-            if path == dst {
-                return Ok(());
-            }
-        }
+        let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
-        config.shell().warn(&format!(
-            "be sure to add `{}` to your PATH to be \
+        if !dst_in_path {
+            config.shell().warn(&format!(
+                "be sure to add `{}` to your PATH to be \
              able to run the installed binaries",
-            dst.display()
-        ))?;
+                dst.display()
+            ))?;
+        }
     }
 
     if scheduled_error {
