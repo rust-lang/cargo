@@ -1132,13 +1132,7 @@ impl TomlManifest {
             project.resolver.as_ref(),
             me.workspace.as_ref().and_then(|ws| ws.resolver.as_ref()),
         ) {
-            (None, None) => {
-                if edition == Edition::Edition2021 {
-                    Some(ResolveBehavior::V2)
-                } else {
-                    None
-                }
-            }
+            (None, None) => None,
             (Some(s), None) | (None, Some(s)) => Some(ResolveBehavior::from_manifest(s)?),
             (Some(_), Some(_)) => {
                 bail!("cannot specify `resolver` field in both `[workspace]` and `[package]`")
