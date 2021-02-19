@@ -43,13 +43,19 @@ DESCRIPTION
        <https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html>
        to the next. The general procedure is:
 
-       1. Run cargo fix --edition
+       1. Run cargo fix --edition. Consider also using the --all-features flag
+          if your project has multiple features. You may also want to run cargo
+          fix --edition multiple times with different --target flags if your
+          project has platform-specific code gated by cfg attributes.
 
        2. Modify Cargo.toml to set the edition field
           <https://doc.rust-lang.org/cargo/reference/manifest.html#the-edition-field>
           to the new edition.
 
-       3. Run your project tests to verify that everything still works.
+       3. Run your project tests to verify that everything still works. If new
+          warnings are issued, you may want to consider running cargo fix again
+          (without the --edition flag) to apply any suggestions given by the
+          compiler.
 
        And hopefully that's it! Just keep in mind of the caveats mentioned
        above that cargo fix cannot update code for inactive features or cfg

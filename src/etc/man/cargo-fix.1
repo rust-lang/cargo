@@ -52,7 +52,9 @@ The \fBcargo fix\fR subcommand can also be used to migrate a package from one
 \fIedition\fR <https://doc.rust\-lang.org/edition\-guide/editions/transitioning\-an\-existing\-project\-to\-a\-new\-edition.html> to the next. The general procedure is:
 .sp
 .RS 4
-\h'-04' 1.\h'+01'Run \fBcargo fix \-\-edition\fR
+\h'-04' 1.\h'+01'Run \fBcargo fix \-\-edition\fR\&. Consider also using the \fB\-\-all\-features\fR flag if
+your project has multiple features. You may also want to run \fBcargo fix \-\-edition\fR multiple times with different \fB\-\-target\fR flags if your project
+has platform\-specific code gated by \fBcfg\fR attributes.
 .RE
 .sp
 .RS 4
@@ -60,7 +62,10 @@ The \fBcargo fix\fR subcommand can also be used to migrate a package from one
 .RE
 .sp
 .RS 4
-\h'-04' 3.\h'+01'Run your project tests to verify that everything still works.
+\h'-04' 3.\h'+01'Run your project tests to verify that everything still works. If new
+warnings are issued, you may want to consider running \fBcargo fix\fR again
+(without the \fB\-\-edition\fR flag) to apply any suggestions given by the
+compiler.
 .RE
 .sp
 And hopefully that's it! Just keep in mind of the caveats mentioned above that
