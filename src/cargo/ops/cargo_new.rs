@@ -1,4 +1,4 @@
-use crate::core::{Shell, Workspace};
+use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{paths, restricted_names, Config};
@@ -743,7 +743,7 @@ edition = {}
             },
             match opts.edition {
                 Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String("2018".to_string()),
+                None => toml::Value::String(Edition::LATEST_STABLE.to_string()),
             },
             match opts.registry {
                 Some(registry) => format!(

@@ -675,8 +675,8 @@ impl FixArgs {
         cmd.args(&self.other).arg("--cap-lints=warn");
         if let Some(edition) = self.enabled_edition {
             cmd.arg("--edition").arg(edition.to_string());
-            if self.idioms && edition >= Edition::Edition2018 {
-                cmd.arg("-Wrust-2018-idioms");
+            if self.idioms && edition.supports_idiom_lint() {
+                cmd.arg(format!("-Wrust-{}-idioms", edition));
             }
         }
 

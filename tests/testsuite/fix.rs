@@ -795,12 +795,14 @@ fn prepare_for_unstable() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will verify that it cannot be migrated to on stable. If there
     // is no next edition, it does nothing.
-    let next = Edition::LATEST;
-    if next.is_stable() {
-        eprintln!("Next edition is currently not available, skipping test.");
-        return;
-    }
-    let latest_stable = next.previous().unwrap();
+    let next = match Edition::LATEST_UNSTABLE {
+        Some(next) => next,
+        None => {
+            eprintln!("Next edition is currently not available, skipping test.");
+            return;
+        }
+    };
+    let latest_stable = Edition::LATEST_STABLE;
     let p = project()
         .file(
             "Cargo.toml",
@@ -853,12 +855,7 @@ To learn more, run the command again with --verbose.
 #[cargo_test]
 fn prepare_for_latest_stable() {
     // This is the stable counterpart of prepare_for_unstable.
-    let latest = Edition::LATEST;
-    let latest_stable = if latest.is_stable() {
-        latest
-    } else {
-        latest.previous().unwrap()
-    };
+    let latest_stable = Edition::LATEST_STABLE;
     let previous = latest_stable.previous().unwrap();
     let p = project()
         .file(
@@ -897,11 +894,13 @@ fn prepare_for_already_on_latest_unstable() {
         // This test is fundamentally always nightly.
         return;
     }
-    let next_edition = Edition::LATEST;
-    if next_edition.is_stable() {
-        eprintln!("Next edition is currently not available, skipping test.");
-        return;
-    }
+    let next_edition = match Edition::LATEST_UNSTABLE {
+        Some(next) => next,
+        None => {
+            eprintln!("Next edition is currently not available, skipping test.");
+            return;
+        }
+    };
     let p = project()
         .file(
             "Cargo.toml",
@@ -936,11 +935,11 @@ fn prepare_for_already_on_latest_unstable() {
 #[cargo_test]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
-    if !Edition::LATEST.is_stable() {
+    if Edition::LATEST_UNSTABLE.is_some() {
         eprintln!("This test cannot run while the latest edition is unstable, skipping.");
         return;
     }
-    let latest_stable = Edition::LATEST;
+    let latest_stable = Edition::LATEST_STABLE;
     let p = project()
         .file(
             "Cargo.toml",

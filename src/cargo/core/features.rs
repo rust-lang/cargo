@@ -118,9 +118,35 @@ pub enum Edition {
     Edition2021,
 }
 
+// Adding a new edition:
+// - Add the next edition to the enum.
+// - Update every match expression that now fails to compile.
+// - Update the `FromStr` impl.
+// - Update CLI_VALUES to include the new edition.
+// - Set LATEST_UNSTABLE to Some with the new edition.
+// - Add an unstable feature to the features! macro below for the new edition.
+// - Gate on that new feature in TomlManifest::to_real_manifest.
+// - Update the shell completion files.
+// - Update any failing tests (hopefully there are very few).
+//
+// Stabilization instructions:
+// - Set LATEST_UNSTABLE to None.
+// - Set LATEST_STABLE to the new version.
+// - Update `is_stable` to `true`.
+// - Set the editionNNNN feature to stable in the features macro below.
+// - Update the man page for the --edition flag.
 impl Edition {
-    /// The latest edition (may or may not be stable).
-    pub const LATEST: Edition = Edition::Edition2021;
+    /// The latest edition that is unstable.
+    ///
+    /// This is `None` if there is no next unstable edition.
+    pub const LATEST_UNSTABLE: Option<Edition> = Some(Edition::Edition2021);
+    /// The latest stable edition.
+    pub const LATEST_STABLE: Edition = Edition::Edition2018;
+    /// Possible values allowed for the `--edition` CLI flag.
+    ///
+    /// This requires a static value due to the way clap works, otherwise I
+    /// would have built this dynamically.
+    pub const CLI_VALUES: &'static [&'static str] = &["2015", "2018", "2021"];
 
     /// Returns the first version that a particular edition was released on
     /// stable.
@@ -173,6 +199,18 @@ impl Edition {
     /// any lints, and thus `rustc` doesn't recognize it. Perhaps `rustc`
     /// could create an empty group instead?
     pub(crate) fn supports_compat_lint(&self) -> bool {
+        use Edition::*;
+        match self {
+            Edition2015 => false,
+            Edition2018 => true,
+            Edition2021 => false,
+        }
+    }
+
+    /// Whether or not this edition supports the `rust_*_idioms` lint.
+    ///
+    /// Ideally this would not be necessary...
+    pub(crate) fn supports_idiom_lint(&self) -> bool {
         use Edition::*;
         match self {
             Edition2015 => false,

@@ -1,5 +1,5 @@
 use crate::core::compiler::{BuildConfig, MessageFormat};
-use crate::core::Workspace;
+use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -188,7 +188,7 @@ pub trait AppExt: Sized {
         ._arg(opt("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
-                .possible_values(&["2015", "2018", "2021"])
+                .possible_values(Edition::CLI_VALUES)
                 .value_name("YEAR"),
         )
         ._arg(

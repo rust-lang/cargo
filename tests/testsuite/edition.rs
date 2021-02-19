@@ -39,11 +39,13 @@ fn edition_unstable_gated() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will verify that it cannot be used on stable. If there is no
     // next edition, it does nothing.
-    let next = Edition::LATEST;
-    if next.is_stable() {
-        eprintln!("Next edition is currently not available, skipping test.");
-        return;
-    }
+    let next = match Edition::LATEST_UNSTABLE {
+        Some(next) => next,
+        None => {
+            eprintln!("Next edition is currently not available, skipping test.");
+            return;
+        }
+    };
     let p = project()
         .file(
             "Cargo.toml",
@@ -87,11 +89,13 @@ fn edition_unstable() {
         // This test is fundamentally always nightly.
         return;
     }
-    let next = Edition::LATEST;
-    if next.is_stable() {
-        eprintln!("Next edition is currently not available, skipping test.");
-        return;
-    }
+    let next = match Edition::LATEST_UNSTABLE {
+        Some(next) => next,
+        None => {
+            eprintln!("Next edition is currently not available, skipping test.");
+            return;
+        }
+    };
     let p = project()
         .file(
             "Cargo.toml",
