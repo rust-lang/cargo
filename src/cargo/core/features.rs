@@ -182,6 +182,17 @@ impl Edition {
         }
     }
 
+    /// Returns the next edition from this edition, returning the last edition
+    /// if this is already the last one.
+    pub fn saturating_next(&self) -> Edition {
+        use Edition::*;
+        match self {
+            Edition2015 => Edition2018,
+            Edition2018 => Edition2021,
+            Edition2021 => Edition2021,
+        }
+    }
+
     /// Updates the given [`ProcessBuilder`] to include the appropriate flags
     /// for setting the edition.
     pub(crate) fn cmd_edition_arg(&self, cmd: &mut ProcessBuilder) {

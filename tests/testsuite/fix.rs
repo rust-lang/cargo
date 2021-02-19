@@ -986,7 +986,7 @@ fn fix_overlapping() {
         )
         .build();
 
-    p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib")
+    p.cargo("fix --allow-no-vcs --edition --lib")
         .with_stderr(
             "\
 [CHECKING] foo [..]
@@ -1042,25 +1042,6 @@ fn idioms_2015_ok() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("fix --edition-idioms --allow-no-vcs").run();
-}
-
-#[cargo_test]
-fn both_edition_migrate_flags() {
-    let p = project().file("src/lib.rs", "").build();
-
-    let stderr = "\
-error: The argument '--edition' cannot be used with '--prepare-for <prepare-for>'
-
-USAGE:
-    cargo[..] fix --edition
-
-For more information try --help
-";
-
-    p.cargo("fix --prepare-for 2018 --edition")
-        .with_status(1)
-        .with_stderr(stderr)
-        .run();
 }
 
 #[cargo_test]

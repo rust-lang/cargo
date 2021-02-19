@@ -59,13 +59,11 @@ use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
-const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
 
-pub struct FixOptions<'a> {
+pub struct FixOptions {
     pub edition: bool,
-    pub prepare_for: Option<&'a str>,
     pub idioms: bool,
     pub compile_opts: CompileOptions,
     pub allow_dirty: bool,
@@ -74,7 +72,7 @@ pub struct FixOptions<'a> {
     pub broken_code: bool,
 }
 
-pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
+pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
     check_version_control(ws.config(), opts)?;
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
@@ -91,8 +89,6 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
 
     if opts.edition {
         wrapper.env(EDITION_ENV, "1");
-    } else if let Some(edition) = opts.prepare_for {
-        wrapper.env(PREPARE_FOR_ENV, edition);
     }
     if opts.idioms {
         wrapper.env(IDIOMS_ENV, "1");
@@ -125,7 +121,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_version_control(config: &Config, opts: &FixOptions<'_>) -> CargoResult<()> {
+fn check_version_control(config: &Config, opts: &FixOptions) -> CargoResult<()> {
     if opts.allow_no_vcs {
         return Ok(());
     }
@@ -647,17 +643,11 @@ impl FixArgs {
         let file = file.ok_or_else(|| anyhow::anyhow!("could not find .rs file in rustc args"))?;
         let idioms = env::var(IDIOMS_ENV).is_ok();
 
-        let prepare_for_edition = if let Ok(s) = env::var(PREPARE_FOR_ENV) {
-            Some(s.parse()?)
-        } else if env::var(EDITION_ENV).is_ok() {
-            match enabled_edition {
-                None | Some(Edition::Edition2015) => Some(Edition::Edition2018),
-                Some(Edition::Edition2018) => Some(Edition::Edition2021),
-                Some(Edition::Edition2021) => Some(Edition::Edition2021),
-            }
-        } else {
-            None
-        };
+        let prepare_for_edition = env::var(EDITION_ENV).ok().map(|_| {
+            enabled_edition
+                .unwrap_or(Edition::Edition2015)
+                .saturating_next()
+        });
 
         Ok(FixArgs {
             file,
