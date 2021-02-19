@@ -97,6 +97,9 @@ impl PackageIdSpec {
 
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
+        if url.host().is_none() {
+            bail!("pkgid urls must have a host: {}", url)
+        }
         if url.query().is_some() {
             bail!("cannot have a query string in a pkgid: {}", url)
         }
@@ -405,6 +408,8 @@ mod tests {
         assert!(PackageIdSpec::parse("baz:1.0").is_err());
         assert!(PackageIdSpec::parse("https://baz:1.0").is_err());
         assert!(PackageIdSpec::parse("https://#baz:1.0").is_err());
+        assert!(PackageIdSpec::parse("file:///baz").is_err());
+        assert!(PackageIdSpec::parse("/baz").is_err());
     }
 
     #[test]
