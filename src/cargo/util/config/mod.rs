@@ -1248,37 +1248,9 @@ impl Config {
         &self.progress_config
     }
 
-    /// Create an EnvConfigValue hashmap from the "env" table
-    fn get_env_config(&self) -> CargoResult<EnvConfig> {
-        // We cannot use pure serde handling for this. The Value<_> type does not
-        // work when parsing the env table to a hashmap. So iterator through each
-        // entry in the "env" table, determine it's type and then use `get` method
-        // to deserialize it.
-        let env_table = &self.get_table(&ConfigKey::from_str("env"))?;
-        let mut vars = EnvConfig::new();
-
-        if env_table.is_none() {
-            return Ok(vars);
-        }
-
-        let env_table = &env_table.as_ref().unwrap().val;
-
-        for (key, value) in env_table.iter() {
-            let full_key = format!("env.{}", key);
-            let e = match value {
-                ConfigValue::Table(..) => self.get::<EnvConfigValue>(&full_key)?,
-                _ => {
-                    let v = self.get::<Value<String>>(&full_key)?;
-                    EnvConfigValue::from_value(v)
-                }
-            };
-            vars.insert(key.clone(), e);
-        }
-        Ok(vars)
-    }
-
     pub fn env_config(&self) -> CargoResult<&EnvConfig> {
-        self.env_config.try_borrow_with(|| self.get_env_config())
+        self.env_config
+            .try_borrow_with(|| self.get::<EnvConfig>("env"))
     }
 
     /// This is used to validate the `term` table has valid syntax.
@@ -1991,33 +1963,47 @@ where
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum EnvConfigValueInner {
+    Simple(String),
+    WithOptions {
+        value: String,
+        #[serde(default)]
+        force: bool,
+        #[serde(default)]
+        relative: bool,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
 pub struct EnvConfigValue {
-    value: Value<String>,
-    #[serde(default)]
-    force: bool,
-    #[serde(default)]
-    relative: bool,
+    inner: Value<EnvConfigValueInner>,
 }
 
 impl EnvConfigValue {
-    fn from_value(value: Value<String>) -> EnvConfigValue {
-        EnvConfigValue {
-            value,
-            force: false,
-            relative: false,
+    pub fn is_force(&self) -> bool {
+        match self.inner.val {
+            EnvConfigValueInner::Simple(_) => false,
+            EnvConfigValueInner::WithOptions { force, .. } => force,
         }
     }
 
-    pub fn is_force(&self) -> bool {
-        self.force
-    }
-
     pub fn resolve<'a>(&'a self, config: &Config) -> Cow<'a, OsStr> {
-        if self.relative {
-            let p = self.value.definition.root(config).join(&self.value.val);
-            Cow::Owned(p.into_os_string())
-        } else {
-            Cow::Borrowed(OsStr::new(&self.value.val))
+        match self.inner.val {
+            EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
+            EnvConfigValueInner::WithOptions {
+                ref value,
+                relative,
+                ..
+            } => {
+                if relative {
+                    let p = self.inner.definition.root(config).join(&value);
+                    Cow::Owned(p.into_os_string())
+                } else {
+                    Cow::Borrowed(OsStr::new(value.as_str()))
+                }
+            }
         }
     }
 }

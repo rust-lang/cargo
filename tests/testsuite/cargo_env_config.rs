@@ -55,7 +55,7 @@ fn env_invalid() {
     p.cargo("build -Zconfigurable-env")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains("[..]`env.ENV_TEST_BOOL` expected a string, but found a boolean")
+        .with_stderr_contains("[..]could not load config key `env.ENV_TEST_BOOL`")
         .run();
 }
 
@@ -70,6 +70,7 @@ fn env_force() {
         fn main() {
             println!( "ENV_TEST_FORCED:{}", env!("ENV_TEST_FORCED") );
             println!( "ENV_TEST_UNFORCED:{}", env!("ENV_TEST_UNFORCED") );
+            println!( "ENV_TEST_UNFORCED_DEFAULT:{}", env!("ENV_TEST_UNFORCED_DEFAULT") );
         }
         "#,
         )
@@ -77,7 +78,8 @@ fn env_force() {
             ".cargo/config",
             r#"
                 [env]
-                ENV_TEST_UNFORCED = "from-config"
+                ENV_TEST_UNFORCED_DEFAULT = "from-config"
+                ENV_TEST_UNFORCED = { value = "from-config", force = false }
                 ENV_TEST_FORCED = { value = "from-config", force = true }
             "#,
         )
@@ -87,8 +89,10 @@ fn env_force() {
         .masquerade_as_nightly_cargo()
         .env("ENV_TEST_FORCED", "from-env")
         .env("ENV_TEST_UNFORCED", "from-env")
+        .env("ENV_TEST_UNFORCED_DEFAULT", "from-env")
         .with_stdout_contains("ENV_TEST_FORCED:from-config")
         .with_stdout_contains("ENV_TEST_UNFORCED:from-env")
+        .with_stdout_contains("ENV_TEST_UNFORCED_DEFAULT:from-env")
         .run();
 }
 
@@ -102,11 +106,13 @@ fn env_relative() {
         use std::env;
         use std::path::Path;
         fn main() {
+            println!( "ENV_TEST_REGULAR:{}", env!("ENV_TEST_REGULAR") );
+            println!( "ENV_TEST_REGULAR_DEFAULT:{}", env!("ENV_TEST_REGULAR_DEFAULT") );
             println!( "ENV_TEST_RELATIVE:{}", env!("ENV_TEST_RELATIVE") );
-            println!( "ENV_TEST_ABSOLUTE:{}", env!("ENV_TEST_ABSOLUTE") );
 
-            assert!( Path::new(env!("ENV_TEST_ABSOLUTE")).is_absolute() );
-            assert!( !Path::new(env!("ENV_TEST_RELATIVE")).is_absolute() );
+            assert!( Path::new(env!("ENV_TEST_RELATIVE")).is_absolute() );
+            assert!( !Path::new(env!("ENV_TEST_REGULAR")).is_absolute() );
+            assert!( !Path::new(env!("ENV_TEST_REGULAR_DEFAULT")).is_absolute() );
         }
         "#,
         )
@@ -114,8 +120,9 @@ fn env_relative() {
             ".cargo/config",
             r#"
                 [env]
-                ENV_TEST_RELATIVE = "Cargo.toml"
-                ENV_TEST_ABSOLUTE = { value = "Cargo.toml", relative = true }
+                ENV_TEST_REGULAR = { value = "Cargo.toml", relative = false }
+                ENV_TEST_REGULAR_DEFAULT = "Cargo.toml"
+                ENV_TEST_RELATIVE = { value = "Cargo.toml", relative = true }
             "#,
         )
         .build();
