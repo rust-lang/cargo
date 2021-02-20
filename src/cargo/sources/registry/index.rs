@@ -708,9 +708,9 @@ impl<'a> SummariesCache<'a> {
             .get(..4)
             .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index version"))?;
         let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
-        if index_v > INDEX_V_MAX {
+        if index_v != INDEX_V_MAX {
             bail!(
-                "index format version {} is greater than the newest version I know ({})",
+                "index format version {} doesn't match the version I know ({})",
                 index_v,
                 INDEX_V_MAX
             );
