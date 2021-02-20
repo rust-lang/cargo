@@ -218,7 +218,10 @@ target artifacts are placed in a separate directory. See the
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to a new temporary folder located in the
-temporary directory of the platform.</dd>
+temporary directory of the platform. </p>
+<p>When using <code>--path</code>, by default it will use <code>target</code> directory in the workspace
+of the local crate unless <code>--target-dir</code>
+is specified.</dd>
 
 
 
