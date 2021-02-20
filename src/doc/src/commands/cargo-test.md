@@ -47,9 +47,6 @@ writing doc tests.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-test---include-ignored"><a class="option-anchor" href="#option-cargo-test---include-ignored"></a><code>--include-ignored</code></dt>
-<dd class="option-desc">Include tests that are marked with #[ignore].</dd>
-
 <dt class="option-term" id="option-cargo-test---no-run"><a class="option-anchor" href="#option-cargo-test---no-run"></a><code>--no-run</code></dt>
 <dd class="option-desc">Compile, but don't run tests.</dd>
 
