@@ -322,11 +322,7 @@ pub fn print<'a>(
             process.arg("--target").arg(t.short_name());
         }
         process.arg("--print").arg(print_opt_value);
-        let output = process.exec_with_output()?;
-        let stdout = std::io::stdout();
-        let mut lock = stdout.lock();
-        lock.write_all(&output.stdout)?;
-        drop(lock);
+        process.exec()?;
     }
     Ok(())
 }
