@@ -56,6 +56,15 @@ impl PackageIdSpec {
                 return PackageIdSpec::from_url(url);
             }
             if !spec.contains("://") {
+                if spec.starts_with('/') {
+                    // This is out of current pkgid spec.
+                    // Only for fixing rust-lang/cargo#9041
+                    bail!(
+                        "pkgid urls with local paths must be prefixed \
+                         with a `file://` scheme: {}",
+                        spec
+                    )
+                }
                 if let Ok(url) = Url::parse(&format!("cargo://{}", spec)) {
                     return PackageIdSpec::from_url(url);
                 }
@@ -97,9 +106,6 @@ impl PackageIdSpec {
 
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
-        if url.host().is_none() {
-            bail!("pkgid urls must have a host: {}", url)
-        }
         if url.query().is_some() {
             bail!("cannot have a query string in a pkgid: {}", url)
         }
@@ -279,8 +285,7 @@ impl fmt::Display for PackageIdSpec {
         match self.url {
             Some(ref url) => {
                 if url.scheme() == "cargo" {
-                    let host = url.host().unwrap_or(url::Host::Domain(""));
-                    write!(f, "{}{}", host, url.path())?;
+                    write!(f, "{}{}", url.host().unwrap(), url.path())?;
                 } else {
                     write!(f, "{}", url)?;
                 }
@@ -409,7 +414,6 @@ mod tests {
         assert!(PackageIdSpec::parse("baz:1.0").is_err());
         assert!(PackageIdSpec::parse("https://baz:1.0").is_err());
         assert!(PackageIdSpec::parse("https://#baz:1.0").is_err());
-        assert!(PackageIdSpec::parse("file:///baz").is_err());
         assert!(PackageIdSpec::parse("/baz").is_err());
     }
 
