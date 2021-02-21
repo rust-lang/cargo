@@ -42,7 +42,7 @@ fn cargo_test_simple() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test test_hello ... ok")
         .run();
@@ -309,7 +309,7 @@ fn cargo_test_failing_test_in_bin() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [ERROR] test failed, to rerun pass '--bin foo'",
         )
         .with_stdout_contains(
@@ -357,8 +357,8 @@ fn cargo_test_failing_test_in_test() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/footest-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/footest-[..][EXE])
 [ERROR] test failed, to rerun pass '--test footest'",
         )
         .with_stdout_contains("running 0 tests")
@@ -396,7 +396,7 @@ fn cargo_test_failing_test_in_lib() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [ERROR] test failed, to rerun pass '--lib'",
         )
         .with_stdout_contains(
@@ -470,8 +470,8 @@ fn test_with_lib_dep() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/baz-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/baz-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test lib_test ... ok")
@@ -524,7 +524,7 @@ fn test_with_deep_lib_dep() {
 [COMPILING] bar v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]
+[RUNNING] [..] (target[..])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test bar_test ... ok")
@@ -573,8 +573,8 @@ fn external_test_explicit() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/test-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/test-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test internal_test ... ok")
@@ -633,8 +633,8 @@ fn external_test_implicit() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/external-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/external-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test internal_test ... ok")
@@ -674,7 +674,7 @@ fn pass_through_command_line() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 ",
         )
         .with_stdout_contains("running 1 test")
@@ -685,7 +685,7 @@ fn pass_through_command_line() {
         .with_stderr(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 ",
         )
         .with_stdout_contains("running 1 test")
@@ -750,8 +750,8 @@ fn lib_bin_same_name() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains_n("test [..] ... ok", 2)
@@ -791,8 +791,8 @@ fn lib_with_standard_name() {
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/syntax-[..][EXE]
-[RUNNING] target/debug/deps/test-[..][EXE]
+[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])
+[RUNNING] [..] (target/debug/deps/test-[..][EXE])
 [DOCTEST] syntax",
         )
         .with_stdout_contains("test foo_test ... ok")
@@ -837,7 +837,7 @@ fn lib_with_standard_name2() {
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/syntax-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -878,7 +878,7 @@ fn lib_without_name() {
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/syntax-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -1190,8 +1190,8 @@ fn test_dylib() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/test-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/test-[..][EXE])",
         )
         .with_stdout_contains_n("test foo ... ok", 2)
         .run();
@@ -1201,8 +1201,8 @@ fn test_dylib() {
         .with_stderr(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/test-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/test-[..][EXE])",
         )
         .with_stdout_contains_n("test foo ... ok", 2)
         .run();
@@ -1230,7 +1230,7 @@ fn test_twice_with_build_cmd() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test foo ... ok")
@@ -1241,7 +1241,7 @@ fn test_twice_with_build_cmd() {
         .with_stderr(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test foo ... ok")
@@ -1258,7 +1258,7 @@ fn test_then_build() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test foo ... ok")
@@ -1313,7 +1313,7 @@ fn test_run_specific_bin_target() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/bin2-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/bin2-[..][EXE])",
         )
         .with_stdout_contains("test test2 ... ok")
         .run();
@@ -1354,7 +1354,7 @@ fn test_run_implicit_bin_target() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/mybin-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])",
         )
         .with_stdout_contains("test test_in_bin ... ok")
         .run();
@@ -1374,7 +1374,7 @@ fn test_run_specific_test_target() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/b-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/b-[..][EXE])",
         )
         .with_stdout_contains("test test_b ... ok")
         .run();
@@ -1414,8 +1414,8 @@ fn test_run_implicit_test_target() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/mybin-[..][EXE]
-[RUNNING] target/debug/deps/mytest-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])
+[RUNNING] [..] (target/debug/deps/mytest-[..][EXE])",
         )
         .with_stdout_contains("test test_in_test ... ok")
         .run();
@@ -1455,8 +1455,8 @@ fn test_run_implicit_bench_target() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/mybin-[..][EXE]
-[RUNNING] target/debug/deps/mybench-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])
+[RUNNING] [..] (target/debug/deps/mybench-[..][EXE])",
         )
         .with_stdout_contains("test test_in_bench ... ok")
         .run();
@@ -1598,7 +1598,7 @@ fn test_no_harness() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/bar-[..][EXE]
+[RUNNING] [..] (target/debug/deps/bar-[..][EXE])
 ",
         )
         .run();
@@ -1670,8 +1670,8 @@ fn selective_testing() {
             "\
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/d1-[..][EXE]
-[RUNNING] target/debug/deps/d1-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/d1-[..][EXE])
+[RUNNING] [..] (target/debug/deps/d1-[..][EXE])",
         )
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
@@ -1682,8 +1682,8 @@ fn selective_testing() {
             "\
 [COMPILING] d2 v0.0.1 ([CWD]/d2)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/d2-[..][EXE]
-[RUNNING] target/debug/deps/d2-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/d2-[..][EXE])
+[RUNNING] [..] (target/debug/deps/d2-[..][EXE])",
         )
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
@@ -1694,7 +1694,7 @@ fn selective_testing() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("running 0 tests")
         .run();
@@ -1875,7 +1875,7 @@ fn selective_testing_with_docs() {
             "\
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/d1[..][EXE]
+[RUNNING] [..] (target/debug/deps/d1[..][EXE])
 [DOCTEST] d1",
         )
         .with_stdout_contains_n("running 0 tests", 2)
@@ -2038,7 +2038,7 @@ fn doctest_feature() {
             "\
 [COMPILING] foo [..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("running 0 tests")
@@ -2115,7 +2115,7 @@ fn filter_no_doc_tests() {
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo[..][EXE])",
         )
         .with_stdout_contains("running 0 tests")
         .run();
@@ -2241,7 +2241,7 @@ fn cyclic_dev_dep_doc_test() {
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("running 0 tests")
@@ -2337,13 +2337,13 @@ fn no_fail_fast() {
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
-[RUNNING] target/debug/deps/test_add_one-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/debug/deps/test_add_one-[..][EXE])",
         )
         .with_stdout_contains("running 0 tests")
         .with_stderr_contains(
             "\
-[RUNNING] target/debug/deps/test_sub_one-[..][EXE]
+[RUNNING] [..] (target/debug/deps/test_sub_one-[..][EXE])
 [DOCTEST] foo",
         )
         .with_stdout_contains("test result: FAILED. [..]")
@@ -2405,8 +2405,8 @@ fn test_multiple_packages() {
     let p = p.build();
 
     p.cargo("test -p d1 -p d2")
-        .with_stderr_contains("[RUNNING] target/debug/deps/d1-[..][EXE]")
-        .with_stderr_contains("[RUNNING] target/debug/deps/d2-[..][EXE]")
+        .with_stderr_contains("[RUNNING] [..] (target/debug/deps/d1-[..][EXE])")
+        .with_stderr_contains("[RUNNING] [..] (target/debug/deps/d2-[..][EXE])")
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
 }
@@ -3690,7 +3690,7 @@ fn doctest_skip_staticlib() {
             "\
 [COMPILING] foo [..]
 [FINISHED] test [..]
-[RUNNING] target/debug/deps/foo-[..]",
+[RUNNING] [..] (target/debug/deps/foo-[..])",
         )
         .run();
 }
@@ -3718,7 +3718,7 @@ pub fn foo() -> u8 { 1 }
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..]
+[RUNNING] [..] (target/debug/deps/foo-[..])
 [DOCTEST] foo
 ",
         )
@@ -3742,7 +3742,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
         .with_stderr(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..]\n",
+[RUNNING] [..] (target/debug/deps/foo-[..])\n",
         )
         .with_stdout(
             "

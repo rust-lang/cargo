@@ -1301,7 +1301,7 @@ fn dev_deps_with_testing() {
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test tests::foo ... ok")
         .run();

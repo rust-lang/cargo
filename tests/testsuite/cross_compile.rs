@@ -350,8 +350,8 @@ fn cross_tests() {
             "\
 [COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
-[RUNNING] target/{triple}/debug/deps/bar-[..][EXE]",
+[RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{triple}/debug/deps/bar-[..][EXE])",
             triple = target
         ))
         .with_stdout_contains("test test_foo ... ok")
@@ -380,7 +380,7 @@ fn no_cross_doctests() {
     let host_output = "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [DOCTEST] foo
 ";
 
@@ -395,7 +395,7 @@ fn no_cross_doctests() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
+[RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo
 ",
             triple = target
@@ -1060,8 +1060,8 @@ fn cross_test_dylib() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/{arch}/debug/deps/foo-[..][EXE]
-[RUNNING] target/{arch}/debug/deps/test-[..][EXE]",
+[RUNNING] [..] (target/{arch}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{arch}/debug/deps/test-[..][EXE])",
             arch = cross_compile::alternate()
         ))
         .with_stdout_contains_n("test foo ... ok", 2)
