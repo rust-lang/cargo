@@ -502,3 +502,74 @@ windows
         )
         .run();
 }
+
+#[cargo_test]
+fn rustc_with_print_cfg_multiple_targets() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {} "#)
+        .build();
+
+    p.cargo("rustc -Z unstable-options -Z multitarget --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains(
+            "\
+debug_assertions
+target_arch=\"x86\"
+target_endian=\"little\"
+target_env=\"gnu\"
+target_family=\"unix\"
+target_feature=\"fxsr\"
+target_feature=\"sse\"
+target_feature=\"sse2\"
+target_has_atomic=\"16\"
+target_has_atomic=\"32\"
+target_has_atomic=\"64\"
+target_has_atomic=\"8\"
+target_has_atomic=\"ptr\"
+target_has_atomic_equal_alignment=\"16\"
+target_has_atomic_equal_alignment=\"32\"
+target_has_atomic_equal_alignment=\"8\"
+target_has_atomic_equal_alignment=\"ptr\"
+target_has_atomic_load_store=\"16\"
+target_has_atomic_load_store=\"32\"
+target_has_atomic_load_store=\"64\"
+target_has_atomic_load_store=\"8\"
+target_has_atomic_load_store=\"ptr\"
+target_os=\"linux\"
+target_pointer_width=\"32\"
+target_thread_local
+target_vendor=\"unknown\"
+unix
+
+debug_assertions
+target_arch=\"x86_64\"
+target_endian=\"little\"
+target_env=\"msvc\"
+target_family=\"windows\"
+target_feature=\"fxsr\"
+target_feature=\"sse\"
+target_feature=\"sse2\"
+target_has_atomic=\"16\"
+target_has_atomic=\"32\"
+target_has_atomic=\"64\"
+target_has_atomic=\"8\"
+target_has_atomic=\"ptr\"
+target_has_atomic_equal_alignment=\"16\"
+target_has_atomic_equal_alignment=\"32\"
+target_has_atomic_equal_alignment=\"64\"
+target_has_atomic_equal_alignment=\"8\"
+target_has_atomic_equal_alignment=\"ptr\"
+target_has_atomic_load_store=\"16\"
+target_has_atomic_load_store=\"32\"
+target_has_atomic_load_store=\"64\"
+target_has_atomic_load_store=\"8\"
+target_has_atomic_load_store=\"ptr\"
+target_os=\"windows\"
+target_pointer_width=\"64\"
+target_thread_local
+target_vendor=\"pc\"
+windows",
+        )
+        .run();
+}
