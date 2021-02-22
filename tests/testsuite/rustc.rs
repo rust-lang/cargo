@@ -468,39 +468,15 @@ fn rustc_with_print_cfg_single_target() {
 
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains(
-            "\
-debug_assertions
-panic=\"unwind\"
-target_arch=\"x86_64\"
-target_endian=\"little\"
-target_env=\"msvc\"
-target_family=\"windows\"
-target_feature=\"fxsr\"
-target_feature=\"sse\"
-target_feature=\"sse2\"
-target_has_atomic=\"16\"
-target_has_atomic=\"32\"
-target_has_atomic=\"64\"
-target_has_atomic=\"8\"
-target_has_atomic=\"ptr\"
-target_has_atomic_equal_alignment=\"16\"
-target_has_atomic_equal_alignment=\"32\"
-target_has_atomic_equal_alignment=\"64\"
-target_has_atomic_equal_alignment=\"8\"
-target_has_atomic_equal_alignment=\"ptr\"
-target_has_atomic_load_store=\"16\"
-target_has_atomic_load_store=\"32\"
-target_has_atomic_load_store=\"64\"
-target_has_atomic_load_store=\"8\"
-target_has_atomic_load_store=\"ptr\"
-target_os=\"windows\"
-target_pointer_width=\"64\"
-target_thread_local
-target_vendor=\"pc\"
-windows
-",
-        )
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
         .run();
 }
 
@@ -513,66 +489,21 @@ fn rustc_with_print_cfg_multiple_targets() {
 
     p.cargo("rustc -Z unstable-options -Z multitarget --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains(
-            "\
-debug_assertions
-target_arch=\"x86\"
-target_endian=\"little\"
-target_env=\"gnu\"
-target_family=\"unix\"
-target_feature=\"fxsr\"
-target_feature=\"sse\"
-target_feature=\"sse2\"
-target_has_atomic=\"16\"
-target_has_atomic=\"32\"
-target_has_atomic=\"64\"
-target_has_atomic=\"8\"
-target_has_atomic=\"ptr\"
-target_has_atomic_equal_alignment=\"16\"
-target_has_atomic_equal_alignment=\"32\"
-target_has_atomic_equal_alignment=\"8\"
-target_has_atomic_equal_alignment=\"ptr\"
-target_has_atomic_load_store=\"16\"
-target_has_atomic_load_store=\"32\"
-target_has_atomic_load_store=\"64\"
-target_has_atomic_load_store=\"8\"
-target_has_atomic_load_store=\"ptr\"
-target_os=\"linux\"
-target_pointer_width=\"32\"
-target_thread_local
-target_vendor=\"unknown\"
-unix
-
-debug_assertions
-panic=\"unwind\"
-target_arch=\"x86_64\"
-target_endian=\"little\"
-target_env=\"msvc\"
-target_family=\"windows\"
-target_feature=\"fxsr\"
-target_feature=\"sse\"
-target_feature=\"sse2\"
-target_has_atomic=\"16\"
-target_has_atomic=\"32\"
-target_has_atomic=\"64\"
-target_has_atomic=\"8\"
-target_has_atomic=\"ptr\"
-target_has_atomic_equal_alignment=\"16\"
-target_has_atomic_equal_alignment=\"32\"
-target_has_atomic_equal_alignment=\"64\"
-target_has_atomic_equal_alignment=\"8\"
-target_has_atomic_equal_alignment=\"ptr\"
-target_has_atomic_load_store=\"16\"
-target_has_atomic_load_store=\"32\"
-target_has_atomic_load_store=\"64\"
-target_has_atomic_load_store=\"8\"
-target_has_atomic_load_store=\"ptr\"
-target_os=\"windows\"
-target_pointer_width=\"64\"
-target_thread_local
-target_vendor=\"pc\"
-windows",
-        )
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
+        .with_stdout_contains("target_env=\"gnu\"")
+        .with_stdout_contains("target_family=\"unix\"")
+        .with_stdout_contains("target_pointer_width=\"32\"")
+        .with_stdout_contains("target_vendor=\"unknown\"")
+        .with_stdout_contains("target_os=\"linux\"")
+        .with_stdout_contains("unix")
         .run();
 }
 
@@ -586,40 +517,16 @@ fn rustc_with_print_cfg_rustflags_env_var() {
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
         .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
-        .with_stdout_contains(
-            "\
-debug_assertions
-panic=\"unwind\"
-target_arch=\"x86_64\"
-target_endian=\"little\"
-target_env=\"msvc\"
-target_family=\"windows\"
-target_feature=\"crt-static\"
-target_feature=\"fxsr\"
-target_feature=\"sse\"
-target_feature=\"sse2\"
-target_has_atomic=\"16\"
-target_has_atomic=\"32\"
-target_has_atomic=\"64\"
-target_has_atomic=\"8\"
-target_has_atomic=\"ptr\"
-target_has_atomic_equal_alignment=\"16\"
-target_has_atomic_equal_alignment=\"32\"
-target_has_atomic_equal_alignment=\"64\"
-target_has_atomic_equal_alignment=\"8\"
-target_has_atomic_equal_alignment=\"ptr\"
-target_has_atomic_load_store=\"16\"
-target_has_atomic_load_store=\"32\"
-target_has_atomic_load_store=\"64\"
-target_has_atomic_load_store=\"8\"
-target_has_atomic_load_store=\"ptr\"
-target_os=\"windows\"
-target_pointer_width=\"64\"
-target_thread_local
-target_vendor=\"pc\"
-windows
-",
-        )
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_feature=\"crt-static\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
         .run();
 }
 
@@ -640,39 +547,15 @@ rustflags = ["-C", "target-feature=+crt-static"]
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
         .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
-        .with_stdout_contains(
-            "\
-debug_assertions
-panic=\"unwind\"
-target_arch=\"x86_64\"
-target_endian=\"little\"
-target_env=\"msvc\"
-target_family=\"windows\"
-target_feature=\"crt-static\"
-target_feature=\"fxsr\"
-target_feature=\"sse\"
-target_feature=\"sse2\"
-target_has_atomic=\"16\"
-target_has_atomic=\"32\"
-target_has_atomic=\"64\"
-target_has_atomic=\"8\"
-target_has_atomic=\"ptr\"
-target_has_atomic_equal_alignment=\"16\"
-target_has_atomic_equal_alignment=\"32\"
-target_has_atomic_equal_alignment=\"64\"
-target_has_atomic_equal_alignment=\"8\"
-target_has_atomic_equal_alignment=\"ptr\"
-target_has_atomic_load_store=\"16\"
-target_has_atomic_load_store=\"32\"
-target_has_atomic_load_store=\"64\"
-target_has_atomic_load_store=\"8\"
-target_has_atomic_load_store=\"ptr\"
-target_os=\"windows\"
-target_pointer_width=\"64\"
-target_thread_local
-target_vendor=\"pc\"
-windows
-",
-        )
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_feature=\"crt-static\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
         .run();
 }
