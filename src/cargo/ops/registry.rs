@@ -305,6 +305,7 @@ fn transmit(
             license_file: license_file.clone(),
             badges: badges.clone(),
             links: links.clone(),
+            v: None,
         },
         tarball,
     );

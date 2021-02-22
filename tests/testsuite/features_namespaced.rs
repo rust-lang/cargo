@@ -1106,3 +1106,105 @@ feat = ["opt-dep1"]
         )],
     );
 }
+
+#[cargo_test]
+fn publish() {
+    // Publish behavior with explicit dep: syntax.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "MIT"
+                homepage = "https://example.com/"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                feat1 = []
+                feat2 = ["dep:bar"]
+                feat3 = ["feat2"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --token sekrit -Z namespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[VERIFYING] foo v0.1.0 [..]
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[UPLOADING] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "bar",
+              "optional": true,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {
+            "feat1": [],
+            "feat2": ["dep:bar"],
+            "feat3": ["feat2"]
+          },
+          "homepage": "https://example.com/",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.1.0"
+          }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"[..]
+[package]
+name = "foo"
+version = "0.1.0"
+description = "foo"
+homepage = "https://example.com/"
+license = "MIT"
+[dependencies.bar]
+version = "1.0"
+optional = true
+
+[features]
+feat1 = []
+feat2 = ["dep:bar"]
+feat3 = ["feat2"]
+"#,
+        )],
+    );
+}

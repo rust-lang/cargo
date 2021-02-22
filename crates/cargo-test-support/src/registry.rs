@@ -4,7 +4,7 @@ use cargo::sources::CRATES_IO_INDEX;
 use cargo::util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
@@ -319,7 +319,7 @@ pub struct Package {
     deps: Vec<Dependency>,
     files: Vec<PackageFile>,
     yanked: bool,
-    features: HashMap<String, Vec<String>>,
+    features: FeatureMap,
     local: bool,
     alternative: bool,
     invalid_json: bool,
@@ -327,7 +327,10 @@ pub struct Package {
     links: Option<String>,
     rust_version: Option<String>,
     cargo_features: Vec<String>,
+    v: Option<u32>,
 }
+
+type FeatureMap = BTreeMap<String, Vec<String>>;
 
 #[derive(Clone)]
 pub struct Dependency {
@@ -393,7 +396,7 @@ impl Package {
             deps: Vec::new(),
             files: Vec::new(),
             yanked: false,
-            features: HashMap::new(),
+            features: BTreeMap::new(),
             local: false,
             alternative: false,
             invalid_json: false,
@@ -401,6 +404,7 @@ impl Package {
             links: None,
             rust_version: None,
             cargo_features: Vec::new(),
+            v: None,
         }
     }
 
@@ -554,6 +558,14 @@ impl Package {
         self
     }
 
+    /// Sets the index schema version for this package.
+    ///
+    /// See [`cargo::sources::registry::RegistryPackage`] for more information.
+    pub fn schema_version(&mut self, version: u32) -> &mut Package {
+        self.v = Some(version);
+        self
+    }
+
     /// Creates the package and place it in the registry.
     ///
     /// This does not actually use Cargo's publishing system, but instead
@@ -599,16 +611,25 @@ impl Package {
         } else {
             serde_json::json!(self.name)
         };
-        let line = serde_json::json!({
+        // This emulates what crates.io may do in the future.
+        let (features, features2) = split_index_features(self.features.clone());
+        let mut json = serde_json::json!({
             "name": name,
             "vers": self.vers,
             "deps": deps,
             "cksum": cksum,
-            "features": self.features,
+            "features": features,
             "yanked": self.yanked,
             "links": self.links,
-        })
-        .to_string();
+        });
+        if let Some(f2) = &features2 {
+            json["features2"] = serde_json::json!(f2);
+            json["v"] = serde_json::json!(2);
+        }
+        if let Some(v) = self.v {
+            json["v"] = serde_json::json!(v);
+        }
+        let line = json.to_string();
 
         let file = match self.name.len() {
             1 => format!("1/{}", self.name),
@@ -835,5 +856,23 @@ impl Dependency {
     pub fn optional(&mut self, optional: bool) -> &mut Self {
         self.optional = optional;
         self
+    }
+}
+
+fn split_index_features(mut features: FeatureMap) -> (FeatureMap, Option<FeatureMap>) {
+    let mut features2 = FeatureMap::new();
+    for (feat, values) in features.iter_mut() {
+        if values
+            .iter()
+            .any(|value| value.starts_with("dep:") || value.contains("?/"))
+        {
+            let new_values = values.drain(..).collect();
+            features2.insert(feat.clone(), new_values);
+        }
+    }
+    if features2.is_empty() {
+        (features, None)
+    } else {
+        (features, Some(features2))
     }
 }
