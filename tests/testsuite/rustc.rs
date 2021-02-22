@@ -582,7 +582,7 @@ fn rustc_with_print_cfg_rustflags_env_var() {
         .build();
 
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
-     .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
         .with_stdout_contains(
             "\
@@ -624,15 +624,18 @@ windows
 fn rustc_with_print_cfg_config_toml() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(".cargo/config.toml", r#"
+        .file(
+            ".cargo/config.toml",
+            r#"
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
-"#)
+"#,
+        )
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
-     .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
         .with_stdout_contains(
             "\
