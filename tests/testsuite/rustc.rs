@@ -471,6 +471,7 @@ fn rustc_with_print_cfg_single_target() {
         .with_stdout_contains(
             "\
 debug_assertions
+panic=\"unwind\"
 target_arch=\"x86_64\"
 target_endian=\"little\"
 target_env=\"msvc\"
@@ -543,6 +544,7 @@ target_vendor=\"unknown\"
 unix
 
 debug_assertions
+panic=\"unwind\"
 target_arch=\"x86_64\"
 target_endian=\"little\"
 target_env=\"msvc\"
@@ -587,6 +589,7 @@ fn rustc_with_print_cfg_rustflags_env_var() {
         .with_stdout_contains(
             "\
 debug_assertions
+panic=\"unwind\"
 target_arch=\"x86_64\"
 target_endian=\"little\"
 target_env=\"msvc\"
@@ -640,6 +643,7 @@ rustflags = ["-C", "target-feature=+crt-static"]
         .with_stdout_contains(
             "\
 debug_assertions
+panic=\"unwind\"
 target_arch=\"x86_64\"
 target_endian=\"little\"
 target_env=\"msvc\"
