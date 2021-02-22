@@ -365,5 +365,5 @@ fn closed_output_ok() {
         .unwrap();
     let status = child.wait().unwrap();
     assert!(status.success());
-    assert!(s.is_empty(), s);
+    assert!(s.is_empty(), "{}", s);
 }

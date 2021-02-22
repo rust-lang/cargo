@@ -14,6 +14,8 @@ use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };
 use cargo_test_support::paths;
+use std::env;
+use std::path::PathBuf;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -108,6 +110,65 @@ fn multiple_pkgs() {
 [ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+[ERROR] some crates failed to install
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
+
+    cargo_process("uninstall foo bar")
+        .with_stderr(
+            "\
+[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]
+[REMOVING] [CWD]/home/.cargo/bin/bar[EXE]
+[SUMMARY] Successfully uninstalled foo, bar!
+",
+        )
+        .run();
+
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(cargo_home(), "bar");
+}
+
+fn path() -> Vec<PathBuf> {
+    env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
+}
+
+#[cargo_test]
+fn multiple_pkgs_path_set() {
+    // confirm partial failure results in 101 status code and does not have the
+    //      '[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries'
+    //  even if CARGO_HOME/bin is in the PATH
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.2");
+
+    // add CARGO_HOME/bin to path
+    let mut path = path();
+    path.push(cargo_home().join("bin"));
+    let new_path = env::join_paths(path).unwrap();
+    cargo_process("install foo bar baz")
+        .env("PATH", new_path)
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `[CWD]/registry`)
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry `[CWD]/registry`)
+[INSTALLING] bar v0.0.2
+[COMPILING] bar v0.0.2
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
+[INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
+[ERROR] could not find `baz` in registry `[..]` with version `*`
+[SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [ERROR] some crates failed to install
 ",
         )
