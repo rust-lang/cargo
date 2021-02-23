@@ -472,7 +472,6 @@ pub trait ArgMatchesExt {
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
-
         let opts = CompileOptions {
             build_config,
             features: self._values_of("features"),
