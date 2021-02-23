@@ -13,6 +13,7 @@ use anyhow::{Context, Error};
 use log::warn;
 use serde::{Deserialize, Serialize};
 
+use crate::core::Edition;
 use crate::util::errors::CargoResult;
 use crate::util::{Config, ProcessBuilder};
 
@@ -28,9 +29,17 @@ const PLEASE_REPORT_THIS_BUG: &str =
      fixing code with the `--broken-code` flag\n\n\
      ";
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Hash, Eq, PartialEq, Clone)]
 pub enum Message {
+    Migrating {
+        file: String,
+        from_edition: Edition,
+        to_edition: Edition,
+    },
     Fixing {
+        file: String,
+    },
+    Fixed {
         file: String,
         fixes: u32,
     },
@@ -45,12 +54,7 @@ pub enum Message {
     },
     EditionAlreadyEnabled {
         file: String,
-        edition: String,
-    },
-    IdiomEditionMismatch {
-        file: String,
-        idioms: String,
-        edition: Option<String>,
+        edition: Edition,
     },
 }
 
@@ -80,25 +84,40 @@ impl Message {
 
 pub struct DiagnosticPrinter<'a> {
     config: &'a Config,
-    edition_already_enabled: HashSet<String>,
-    idiom_mismatch: HashSet<String>,
+    dedupe: HashSet<Message>,
 }
 
 impl<'a> DiagnosticPrinter<'a> {
     pub fn new(config: &'a Config) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             config,
-            edition_already_enabled: HashSet::new(),
-            idiom_mismatch: HashSet::new(),
+            dedupe: HashSet::new(),
         }
     }
 
     pub fn print(&mut self, msg: &Message) -> CargoResult<()> {
         match msg {
-            Message::Fixing { file, fixes } => {
+            Message::Migrating {
+                file,
+                from_edition,
+                to_edition,
+            } => {
+                if !self.dedupe.insert(msg.clone()) {
+                    return Ok(());
+                }
+                self.config.shell().status(
+                    "Migrating",
+                    &format!("{} from {} edition to {}", file, from_edition, to_edition),
+                )
+            }
+            Message::Fixing { file } => self
+                .config
+                .shell()
+                .verbose(|shell| shell.status("Fixing", file)),
+            Message::Fixed { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
                 let msg = format!("{} ({} {})", file, fixes, msg);
-                self.config.shell().status("Fixing", msg)
+                self.config.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
                 let msg = format!("error applying suggestions to `{}`\n", file);
@@ -158,57 +177,13 @@ impl<'a> DiagnosticPrinter<'a> {
                 Ok(())
             }
             Message::EditionAlreadyEnabled { file, edition } => {
-                // Like above, only warn once per file
-                if !self.edition_already_enabled.insert(file.clone()) {
+                if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
-
-                let msg = format!(
-                    "\
-cannot prepare for the {} edition when it is enabled, so cargo cannot
-automatically fix errors in `{}`
-
-To prepare for the {0} edition you should first remove `edition = '{0}'` from
-your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
-then you can re-enable the `edition` key in `Cargo.toml`. For some more
-information about transitioning to the {0} edition see:
-
-  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
-",
-                    edition,
-                    file,
-                );
-                self.config.shell().error(&msg)?;
-                Ok(())
-            }
-            Message::IdiomEditionMismatch {
-                file,
-                idioms,
-                edition,
-            } => {
-                // Same as above
-                if !self.idiom_mismatch.insert(file.clone()) {
-                    return Ok(());
-                }
-                self.config.shell().error(&format!(
-                    "\
-cannot migrate to the idioms of the {} edition for `{}`
-because it is compiled {}, which doesn't match {0}
-
-consider migrating to the {0} edition by adding `edition = '{0}'` to
-`Cargo.toml` and then rerunning this command; a more detailed transition
-guide can be found at
-
-  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
-",
-                    idioms,
-                    file,
-                    match edition {
-                        Some(s) => format!("with the {} edition", s),
-                        None => "without an edition".to_string(),
-                    },
-                ))?;
-                Ok(())
+                self.config.shell().warn(&format!(
+                    "`{}` is already on the latest edition ({}), unable to migrate further",
+                    file, edition
+                ))
             }
         }
     }

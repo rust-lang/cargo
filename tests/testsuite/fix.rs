@@ -1,8 +1,9 @@
 //! Tests for the `cargo fix` command.
 
+use cargo::core::Edition;
 use cargo_test_support::git;
 use cargo_test_support::paths;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -161,7 +162,7 @@ fn broken_fixes_backed_out() {
         )
         .with_stderr_contains("Original diagnostics will follow.")
         .with_stderr_contains("[WARNING] variable does not need to be mutable")
-        .with_stderr_does_not_contain("[..][FIXING][..]")
+        .with_stderr_does_not_contain("[..][FIXED][..]")
         .run();
 
     // Make sure the fix which should have been applied was backed out
@@ -213,9 +214,9 @@ fn fix_path_deps() {
         .with_stderr_unordered(
             "\
 [CHECKING] bar v0.1.0 ([..])
-[FIXING] bar/src/lib.rs (1 fix)
+[FIXED] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ",
         )
@@ -285,7 +286,8 @@ fn prepare_for_2018() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (2 fixes)
+[MIGRATING] src/lib.rs from 2015 edition to 2018
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     p.cargo("fix --edition --allow-no-vcs")
@@ -319,14 +321,15 @@ fn local_paths() {
         )
         .build();
 
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
-[FINISHED] [..]
-";
-
     p.cargo("fix --edition --allow-no-vcs")
-        .with_stderr(stderr)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] [..]
+",
+        )
         .with_stdout("")
         .run();
 
@@ -372,7 +375,7 @@ fn upgrade_extern_crate() {
     let stderr = "\
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -403,14 +406,16 @@ fn specify_rustflags() {
         )
         .build();
 
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
-[FINISHED] [..]
-";
     p.cargo("fix --edition --allow-no-vcs")
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr(stderr)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] [..]
+",
+        )
         .with_stdout("")
         .run();
 }
@@ -445,7 +450,7 @@ fn fixes_extra_mut() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -472,7 +477,7 @@ fn fixes_two_missing_ampersands() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (2 fixes)
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -498,7 +503,7 @@ fn tricky() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (2 fixes)
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     p.cargo("fix --allow-no-vcs")
@@ -594,8 +599,8 @@ fn fix_two_files() {
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
-        .with_stderr_contains("[FIXING] src/lib.rs (1 fix)")
+        .with_stderr_contains("[FIXED] src/bar.rs (1 fix)")
+        .with_stderr_contains("[FIXED] src/lib.rs (1 fix)")
         .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(!p.read_file("src/bar.rs").contains("let mut x = 3;"));
@@ -629,16 +634,16 @@ fn fixes_missing_ampersand() {
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
         .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
-        .with_stderr_contains("[FIXING] build.rs (1 fix)")
+        .with_stderr_contains("[FIXED] build.rs (1 fix)")
         // Don't assert number of fixes for this one, as we don't know if we're
         // fixing it once or twice! We run this all concurrently, and if we
         // compile (and fix) in `--test` mode first, we get two fixes. Otherwise
         // we'll fix one non-test thing, and then fix another one later in
         // test mode.
-        .with_stderr_contains("[FIXING] src/lib.rs[..]")
-        .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
-        .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
-        .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
+        .with_stderr_contains("[FIXED] src/lib.rs[..]")
+        .with_stderr_contains("[FIXED] src/main.rs (1 fix)")
+        .with_stderr_contains("[FIXED] examples/foo.rs (1 fix)")
+        .with_stderr_contains("[FIXED] tests/a.rs (1 fix)")
         .with_stderr_contains("[FINISHED] [..]")
         .run();
     p.cargo("build").run();
@@ -786,35 +791,180 @@ fn fix_all_targets_by_default() {
 }
 
 #[cargo_test]
-fn prepare_for_and_enable() {
+fn prepare_for_unstable() {
+    // During the period where a new edition is coming up, but not yet stable,
+    // this test will verify that it cannot be migrated to on stable. If there
+    // is no next edition, it does nothing.
+    let next = match Edition::LATEST_UNSTABLE {
+        Some(next) => next,
+        None => {
+            eprintln!("Next edition is currently not available, skipping test.");
+            return;
+        }
+    };
+    let latest_stable = Edition::LATEST_STABLE;
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
-                name = 'foo'
-                version = '0.1.0'
-                edition = '2018'
+                name = "foo"
+                version = "0.1.0"
+                edition = "{}"
             "#,
+                latest_stable
+            ),
         )
         .file("src/lib.rs", "")
         .build();
 
-    let stderr = "\
-error: cannot prepare for the 2018 edition when it is enabled, so cargo cannot
-automatically fix errors in `src/lib.rs`
-
-To prepare for the 2018 edition you should first remove `edition = '2018'` from
-your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
-then you can re-enable the `edition` key in `Cargo.toml`. For some more
-information about transitioning to the 2018 edition see:
-
-  https://[..]
-
-";
-    p.cargo("fix --edition --allow-no-vcs")
-        .with_stderr_contains(stderr)
+    // -j1 to make the error more deterministic (otherwise there can be
+    // multiple errors since they run in parallel).
+    p.cargo("fix --edition --allow-no-vcs -j1")
         .with_status(101)
+        .with_stderr(&format!("\
+[CHECKING] foo [..]
+[ERROR] cannot migrate src/lib.rs to edition {next}
+Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
+error: could not compile `foo`
+
+To learn more, run the command again with --verbose.
+", next=next))
+        .run();
+
+    if !is_nightly() {
+        // The rest of this test is fundamentally always nightly.
+        return;
+    }
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(&format!(
+            "\
+[CHECKING] foo [..]
+[MIGRATING] src/lib.rs from {latest_stable} edition to {next}
+[FINISHED] [..]
+",
+            latest_stable = latest_stable,
+            next = next,
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn prepare_for_latest_stable() {
+    // This is the stable counterpart of prepare_for_unstable.
+    let latest_stable = Edition::LATEST_STABLE;
+    let previous = latest_stable.previous().unwrap();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '{}'
+            "#,
+                previous
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr(&format!(
+            "\
+[CHECKING] foo [..]
+[MIGRATING] src/lib.rs from {} edition to {}
+[FINISHED] [..]
+",
+            previous, latest_stable
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn prepare_for_already_on_latest_unstable() {
+    // During the period where a new edition is coming up, but not yet stable,
+    // this test will check what happens if you are already on the latest. If
+    // there is no next edition, it does nothing.
+    if !is_nightly() {
+        // This test is fundamentally always nightly.
+        return;
+    }
+    let next_edition = match Edition::LATEST_UNSTABLE {
+        Some(next) => next,
+        None => {
+            eprintln!("Next edition is currently not available, skipping test.");
+            return;
+        }
+    };
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["edition{}"]
+
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '{}'
+            "#,
+                next_edition, next_edition
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(&format!(
+            "\
+[CHECKING] foo [..]
+[WARNING] `src/lib.rs` is already on the latest edition ({next_edition}), unable to migrate further
+[FINISHED] [..]
+",
+            next_edition = next_edition
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn prepare_for_already_on_latest_stable() {
+    // Stable counterpart of prepare_for_already_on_latest_unstable.
+    if Edition::LATEST_UNSTABLE.is_some() {
+        eprintln!("This test cannot run while the latest edition is unstable, skipping.");
+        return;
+    }
+    let latest_stable = Edition::LATEST_STABLE;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '{}'
+            "#,
+                latest_stable
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr_contains(&format!(
+            "\
+[CHECKING] foo [..]
+[WARNING] `src/lib.rs` is already on the latest edition ({latest_stable}), unable to migrate further
+[FINISHED] [..]
+",
+            latest_stable = latest_stable
+        ))
         .run();
 }
 
@@ -836,14 +986,15 @@ fn fix_overlapping() {
         )
         .build();
 
-    let stderr = "\
+    p.cargo("fix --allow-no-vcs --edition --lib")
+        .with_stderr(
+            "\
 [CHECKING] foo [..]
-[FIXING] src/lib.rs (2 fixes)
+[MIGRATING] src/lib.rs from 2015 edition to 2018
+[FIXED] src/lib.rs (2 fixes)
 [FINISHED] dev [..]
-";
-
-    p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib")
-        .with_stderr(stderr)
+",
+        )
         .run();
 
     let contents = p.read_file("src/lib.rs");
@@ -876,7 +1027,7 @@ fn fix_idioms() {
 
     let stderr = "\
 [CHECKING] foo [..]
-[FIXING] src/lib.rs (1 fix)
+[FIXED] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     p.cargo("fix --edition-idioms --allow-no-vcs")
@@ -891,25 +1042,6 @@ fn idioms_2015_ok() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("fix --edition-idioms --allow-no-vcs").run();
-}
-
-#[cargo_test]
-fn both_edition_migrate_flags() {
-    let p = project().file("src/lib.rs", "").build();
-
-    let stderr = "\
-error: The argument '--edition' cannot be used with '--prepare-for <prepare-for>'
-
-USAGE:
-    cargo[..] fix --edition
-
-For more information try --help
-";
-
-    p.cargo("fix --prepare-for 2018 --edition")
-        .with_status(1)
-        .with_stderr(stderr)
-        .run();
 }
 
 #[cargo_test]
@@ -1162,6 +1294,7 @@ fn only_warn_for_relevant_crates() {
             "\
 [CHECKING] a v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
+[MIGRATING] src/lib.rs from 2015 edition to 2018
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

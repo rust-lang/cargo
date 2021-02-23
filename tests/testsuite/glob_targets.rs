@@ -150,6 +150,7 @@ fn fix_example() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name example1 [..]`
+[FIXING] examples/example1.rs
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -164,6 +165,7 @@ fn fix_bin() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name bin1 [..]`
+[FIXING] src/bin/bin1.rs
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -178,6 +180,7 @@ fn fix_bench() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name bench1 [..]`
+[FIXING] benches/bench1.rs
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -192,6 +195,7 @@ fn fix_test() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name test1 [..]`
+[FIXING] tests/test1.rs
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

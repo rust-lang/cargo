@@ -1064,6 +1064,33 @@ version = "0.0.1"
 rust-version = "1.42"
 ```
 
+### edition 2021
+
+Support for the 2021 [edition] can be enabled by adding the `edition2021`
+unstable feature to the top of `Cargo.toml`:
+
+```toml
+cargo-features = ["edition2021"]
+
+[package]
+name = "my-package"
+version = "0.1.0"
+edition = "2021"
+```
+
+If you want to transition an existing project from a previous edition, then
+`cargo fix --edition` can be used on the nightly channel. After running `cargo
+fix`, you can switch the edition to 2021 as illustrated above.
+
+This feature is very unstable, and is only intended for early testing and
+experimentation. Future nightly releases may introduce changes for the 2021
+edition that may break your build.
+
+The 2021 edition will set the default [resolver version] to "2".
+
+[edition]: ../../edition-guide/index.html
+[resolver version]: resolver.md#resolver-versions
+
 <script>
 (function() {
     var fragments = {

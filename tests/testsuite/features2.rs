@@ -2324,3 +2324,77 @@ fn doc_proc_macro() {
     // so rustdoc can load it).
     p.cargo("doc").run();
 }
+
+#[cargo_test]
+fn edition_2021_default_2() {
+    // edition = 2021 defaults to v2 resolver.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("bar", "1.0.0")
+        .add_dep(
+            Dependency::new("common", "1.0")
+                .target("cfg(whatever)")
+                .enable_features(&["f1"]),
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                common = "1.0"
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // First without edition.
+    p.cargo("tree -f")
+        .arg("{p} feats:{f}")
+        .with_stdout(
+            "\
+foo v0.1.0 [..]
+├── bar v1.0.0 feats:
+└── common v1.0.0 feats:f1
+",
+        )
+        .run();
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            cargo-features = ["edition2021"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2021"
+
+            [dependencies]
+            common = "1.0"
+            bar = "1.0"
+        "#,
+    );
+
+    // Importantly, this does not include `f1` on `common`.
+    p.cargo("tree -f")
+        .arg("{p} feats:{f}")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+foo v0.1.0 [..]
+├── bar v1.0.0 feats:
+└── common v1.0.0 feats:
+",
+        )
+        .run();
+}

@@ -14,17 +14,13 @@ cargo-fix - Automatically fix lint warnings reported by rustc
 This Cargo subcommand will automatically take rustc's suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
 to help automate tasks that rustc itself already knows how to tell you to fix!
-The `cargo fix` subcommand is also being developed for the Rust 2018 edition
-to provide code the ability to easily opt-in to the new edition without having
-to worry about any breakage.
 
 Executing `cargo fix` will under the hood execute {{man "cargo-check" 1}}. Any warnings
 applicable to your crate will be automatically fixed (if possible) and all
 remaining warnings will be displayed when the check process is finished. For
-example if you'd like to prepare for the 2018 edition, you can do so by
-executing:
+example if you'd like to apply all fixes to the current package, you can run:
 
-    cargo fix --edition
+    cargo fix
 
 which behaves the same as `cargo check --all-targets`.
 
@@ -32,16 +28,40 @@ which behaves the same as `cargo check --all-targets`.
 `cargo check`. If code is conditionally enabled with optional features, you
 will need to enable those features for that code to be analyzed:
 
-    cargo fix --edition --features foo
+    cargo fix --features foo
 
 Similarly, other `cfg` expressions like platform-specific code will need to
 pass `--target` to fix code for the given target.
 
-    cargo fix --edition --target x86_64-pc-windows-gnu
+    cargo fix --target x86_64-pc-windows-gnu
 
 If you encounter any problems with `cargo fix` or otherwise have any questions
 or feature requests please don't hesitate to file an issue at
-<https://github.com/rust-lang/cargo>
+<https://github.com/rust-lang/cargo>.
+
+### Edition migration
+
+The `cargo fix` subcommand can also be used to migrate a package from one
+[edition] to the next. The general procedure is:
+
+1. Run `cargo fix --edition`. Consider also using the `--all-features` flag if
+   your project has multiple features. You may also want to run `cargo fix
+   --edition` multiple times with different `--target` flags if your project
+   has platform-specific code gated by `cfg` attributes.
+2. Modify `Cargo.toml` to set the [edition field] to the new edition.
+3. Run your project tests to verify that everything still works. If new
+   warnings are issued, you may want to consider running `cargo fix` again
+   (without the `--edition` flag) to apply any suggestions given by the
+   compiler.
+
+And hopefully that's it! Just keep in mind of the caveats mentioned above that
+`cargo fix` cannot update code for inactive features or `cfg` expressions.
+Also, in some rare cases the compiler is unable to automatically migrate all
+code to the new edition, and this may require manual changes after building
+with the new edition.
+
+[edition]: https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+[edition field]: ../reference/manifest.html#the-edition-field
 
 ## OPTIONS
 
@@ -56,9 +76,9 @@ code in the working directory for you to inspect and manually fix.
 {{/option}}
 
 {{#option "`--edition`" }}
-Apply changes that will update the code to the latest edition. This will not
+Apply changes that will update the code to the next edition. This will not
 update the edition in the `Cargo.toml` manifest, which must be updated
-manually.
+manually after `cargo fix --edition` has finished.
 {{/option}}
 
 {{#option "`--edition-idioms`" }}
@@ -146,7 +166,7 @@ When no target selection options are given, `cargo fix` will fix all targets
 
        cargo fix
 
-2. Convert a 2015 edition to 2018:
+2. Update a package to prepare it for the next edition:
 
        cargo fix --edition
 

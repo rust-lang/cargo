@@ -13,7 +13,7 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::RequestedFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, PackageId, PackageIdSpec};
+use crate::core::{Dependency, Edition, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::PathSource;
@@ -88,7 +88,7 @@ pub struct Workspace<'cfg> {
     ignore_lock: bool,
 
     /// The resolver behavior specified with the `resolver` field.
-    resolve_behavior: Option<ResolveBehavior>,
+    resolve_behavior: ResolveBehavior,
 
     /// Workspace-level custom metadata
     custom_metadata: Option<toml::Value>,
@@ -164,10 +164,7 @@ impl<'cfg> Workspace<'cfg> {
             .load_workspace_config()?
             .and_then(|cfg| cfg.custom_metadata);
         ws.find_members()?;
-        ws.resolve_behavior = match ws.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().resolve_behavior(),
-            MaybePackage::Virtual(vm) => vm.resolve_behavior(),
-        };
+        ws.set_resolve_behavior();
         ws.validate()?;
         Ok(ws)
     }
@@ -189,7 +186,7 @@ impl<'cfg> Workspace<'cfg> {
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
-            resolve_behavior: None,
+            resolve_behavior: ResolveBehavior::V1,
             custom_metadata: None,
         }
     }
@@ -203,11 +200,11 @@ impl<'cfg> Workspace<'cfg> {
         let mut ws = Workspace::new_default(current_manifest, config);
         ws.root_manifest = Some(root_path.join("Cargo.toml"));
         ws.target_dir = config.target_dir()?;
-        ws.resolve_behavior = manifest.resolve_behavior();
         ws.packages
             .packages
             .insert(root_path, MaybePackage::Virtual(manifest));
         ws.find_members()?;
+        ws.set_resolve_behavior();
         // TODO: validation does not work because it walks up the directory
         // tree looking for the root which is a fake file that doesn't exist.
         Ok(ws)
@@ -231,7 +228,6 @@ impl<'cfg> Workspace<'cfg> {
         let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
-        ws.resolve_behavior = package.manifest().resolve_behavior();
         let key = ws.current_manifest.parent().unwrap();
         let id = package.package_id();
         let package = MaybePackage::Package(package);
@@ -244,7 +240,26 @@ impl<'cfg> Workspace<'cfg> {
         ws.members.push(ws.current_manifest.clone());
         ws.member_ids.insert(id);
         ws.default_members.push(ws.current_manifest.clone());
+        ws.set_resolve_behavior();
         Ok(ws)
+    }
+
+    fn set_resolve_behavior(&mut self) {
+        // - If resolver is specified in the workspace definition, use that.
+        // - If the root package specifies the resolver, use that.
+        // - If the root package specifies edition 2021, use v2.
+        // - Otherwise, use the default v1.
+        self.resolve_behavior = match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().resolve_behavior().or_else(|| {
+                if p.manifest().edition() >= Edition::Edition2021 {
+                    Some(ResolveBehavior::V2)
+                } else {
+                    None
+                }
+            }),
+            MaybePackage::Virtual(vm) => vm.resolve_behavior(),
+        }
+        .unwrap_or(ResolveBehavior::V1);
     }
 
     /// Returns the current package of this workspace.
@@ -634,7 +649,7 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     pub fn resolve_behavior(&self) -> ResolveBehavior {
-        self.resolve_behavior.unwrap_or(ResolveBehavior::V1)
+        self.resolve_behavior
     }
 
     /// Returns `true` if this workspace uses the new CLI features behavior.
@@ -843,11 +858,11 @@ impl<'cfg> Workspace<'cfg> {
                 if !manifest.patch().is_empty() {
                     emit_warning("patch")?;
                 }
-                if manifest.resolve_behavior().is_some()
-                    && manifest.resolve_behavior() != self.resolve_behavior
-                {
-                    // Only warn if they don't match.
-                    emit_warning("resolver")?;
+                if let Some(behavior) = manifest.resolve_behavior() {
+                    if behavior != self.resolve_behavior {
+                        // Only warn if they don't match.
+                        emit_warning("resolver")?;
+                    }
                 }
             }
         }

@@ -42,17 +42,6 @@ pub fn cli() -> App {
                 .help("Fix in preparation for the next edition"),
         )
         .arg(
-            // This is a deprecated argument, we'll want to phase it out
-            // eventually.
-            Arg::with_name("prepare-for")
-                .long("prepare-for")
-                .help("Fix warnings in preparation of an edition upgrade")
-                .takes_value(true)
-                .possible_values(&["2018"])
-                .conflicts_with("edition")
-                .hidden(true),
-        )
-        .arg(
             Arg::with_name("idioms")
                 .long("edition-idioms")
                 .help("Fix warnings to migrate to the idioms of an edition"),
@@ -111,7 +100,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         &ws,
         &mut ops::FixOptions {
             edition: args.is_present("edition"),
-            prepare_for: args.value_of("prepare-for"),
             idioms: args.is_present("idioms"),
             compile_opts: opts,
             allow_dirty: args.is_present("allow-dirty"),
