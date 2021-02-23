@@ -1,15 +1,90 @@
 # Changelog
 
-## Cargo 1.51 (2021-03-25)
-[75d5d8cf...HEAD](https://github.com/rust-lang/cargo/compare/75d5d8cf...HEAD)
+## Cargo 1.52 (2021-05-06)
+[34170fcd...HEAD](https://github.com/rust-lang/cargo/compare/34170fcd...HEAD)
 
 ### Added
 
 ### Changed
+- 🔥 Cargo now supports git repositories where the default `HEAD` branch is not
+  "master". This also includes a switch to the version 3 `Cargo.lock` format
+  which can handle default branches correctly.
+  [#9133](https://github.com/rust-lang/cargo/pull/9133)
 
 ### Fixed
 
 ### Nightly only
+- The `strip` profile option now supports `true` and `false` values.
+  [#9153](https://github.com/rust-lang/cargo/pull/9153)
+
+## Cargo 1.51 (2021-03-25)
+[75d5d8cf...rust-1.51.0](https://github.com/rust-lang/cargo/compare/75d5d8cf...rust-1.51.0)
+
+### Added
+- 🔥 Added the `split-debuginfo` profile option.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#split-debuginfo)
+  [#9112](https://github.com/rust-lang/cargo/pull/9112)
+- Added the `path` field to `cargo metadata` for the package dependencies list
+  to show the path for "path" dependencies.
+  [#8994](https://github.com/rust-lang/cargo/pull/8994)
+- 🔥 Added a new feature resolver, and new CLI feature flag behavior. See the
+  new [features](https://doc.rust-lang.org/nightly/cargo/reference/features.html#feature-resolver-version-2)
+  and [resolver](https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#feature-resolver-version-2)
+  documentation for the `resolver = "2"` option. See the
+  [CLI](https://doc.rust-lang.org/nightly/cargo/reference/features.html#command-line-feature-options)
+  and [resolver 2 CLI](https://doc.rust-lang.org/nightly/cargo/reference/features.html#resolver-version-2-command-line-flags)
+  options for the new CLI behavior. And, finally, see
+  [RFC 2957](https://github.com/rust-lang/rfcs/blob/master/text/2957-cargo-features2.md)
+  for a detailed look at what has changed.
+  [#8997](https://github.com/rust-lang/cargo/pull/8997)
+
+### Changed
+- `cargo install --locked` now emits a warning if `Cargo.lock` is not found.
+  [#9108](https://github.com/rust-lang/cargo/pull/9108)
+- Unknown or ambiguous package IDs passed on the command-line now display
+  suggestions for the correct package ID.
+  [#9095](https://github.com/rust-lang/cargo/pull/9095)
+- Slightly optimize `cargo vendor`
+  [#8937](https://github.com/rust-lang/cargo/pull/8937)
+  [#9131](https://github.com/rust-lang/cargo/pull/9131)
+  [#9132](https://github.com/rust-lang/cargo/pull/9132)
+
+### Fixed
+- Fixed environment variables and cfg settings emitted by a build script that
+  are set for `cargo test` and `cargo run` when the build script runs multiple
+  times during the same build session.
+  [#9122](https://github.com/rust-lang/cargo/pull/9122)
+- Fixed a panic with `cargo doc` and the new feature resolver. This also
+  introduces some heuristics to try to avoid path collisions with `rustdoc` by
+  only documenting one variant of a package if there are multiple (such as
+  multiple versions, or the same package shared for host and target
+  platforms).
+  [#9077](https://github.com/rust-lang/cargo/pull/9077)
+- Fixed a bug in Cargo's cyclic dep graph detection that caused a stack
+  overflow.
+  [#9075](https://github.com/rust-lang/cargo/pull/9075)
+- Fixed build script `links` environment variables (`DEP_*`) not showing up
+  for testing packages in some cases.
+  [#9065](https://github.com/rust-lang/cargo/pull/9065)
+- Fixed features being selected in a nondeterministic way for a specific
+  scenario when building an entire workspace with all targets with a
+  proc-macro in the workspace with `resolver="2"`.
+  [#9059](https://github.com/rust-lang/cargo/pull/9059)
+- Fixed to use `http.proxy` setting in `~/.gitconfig`.
+  [#8986](https://github.com/rust-lang/cargo/pull/8986)
+
+### Nightly only
+- Removed the `publish-lockfile` unstable feature, it was stabilized without
+  the need for an explicit flag 1.5 years ago.
+  [#9092](https://github.com/rust-lang/cargo/pull/9092)
+- Added better diagnostics, help messages, and documentation for nightly
+  features (such as those passed with the `-Z` flag, or specified with
+  `cargo-features` in `Cargo.toml`).
+  [#9092](https://github.com/rust-lang/cargo/pull/9092)
+- Added support for Rust edition 2021.
+  [#8922](https://github.com/rust-lang/cargo/pull/8922)
+- Added support for the `rust-version` field in project metadata.
+  [#8037](https://github.com/rust-lang/cargo/pull/8037)
 
 ## Cargo 1.50 (2021-02-11)
 [8662ab42...rust-1.50.0](https://github.com/rust-lang/cargo/compare/8662ab42...rust-1.50.0)
@@ -39,13 +114,9 @@
 - The `rerun-if-changed` build script directive can now point to a directory,
   in which case Cargo will check if any file in that directory changes.
   [#8973](https://github.com/rust-lang/cargo/pull/8973)
-- Slightly optimize `cargo vendor`
-  [#8937](https://github.com/rust-lang/cargo/pull/8937)
 - If Cargo cannot determine the username or email address, `cargo new` will no
   longer fail, and instead create an empty authors list.
   [#8912](https://github.com/rust-lang/cargo/pull/8912)
-- Add period to allowed feature name characters.
-  [#8932](https://github.com/rust-lang/cargo/pull/8932)
 - The progress bar width has been reduced to provide more room to display the
   crates currently being built.
   [#8892](https://github.com/rust-lang/cargo/pull/8892)
@@ -112,6 +183,9 @@
   [#8814](https://github.com/rust-lang/cargo/pull/8814)
 - `-p` without a value will now print a list of workspace package names.
   [#8808](https://github.com/rust-lang/cargo/pull/8808)
+- Add period to allowed feature name characters.
+  [#8932](https://github.com/rust-lang/cargo/pull/8932)
+  [#8943](https://github.com/rust-lang/cargo/pull/8943)
 
 ### Fixed
 - Fixed building a library with both "dylib" and "rlib" crate types with LTO enabled.

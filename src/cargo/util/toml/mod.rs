@@ -16,7 +16,6 @@ use url::Url;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::nightly_features_allowed;
-use crate::core::profiles::Strip;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -445,7 +444,7 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
-    pub strip: Option<Strip>,
+    pub strip: Option<StringOrBool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -689,8 +688,8 @@ impl TomlProfile {
             self.dir_name = Some(*v);
         }
 
-        if let Some(v) = profile.strip {
-            self.strip = Some(v);
+        if let Some(v) = &profile.strip {
+            self.strip = Some(v.clone());
         }
     }
 }

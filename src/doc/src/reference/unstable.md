@@ -765,8 +765,11 @@ cargo-features = ["strip"]
 strip = "debuginfo"
 ```
 
-Other possible values of `strip` are `none` and `symbols`. The default is
-`none`.
+Other possible string values of `strip` are `none`, `symbols`, and `off`. The default is `none`.
+
+You can also configure this option with the two absolute boolean values
+`true` and `false`. The former enables `strip` at its higher level, `symbols`,
+whilst the later disables `strip` completely.
 
 ### rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)

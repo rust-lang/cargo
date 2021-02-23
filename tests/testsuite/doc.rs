@@ -1,5 +1,6 @@
 //! Tests for the `cargo doc` command.
 
+use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
@@ -1637,4 +1638,256 @@ fn crate_versions_flag_is_overridden() {
 
     p.cargo("rustdoc -- --crate-version 2.0.3").run();
     asserts(output_documentation());
+}
+
+#[cargo_test]
+fn doc_test_in_workspace() {
+    if !is_nightly() {
+        // -Zdoctest-in-workspace is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "crate-a",
+                    "crate-b",
+                ]
+            "#,
+        )
+        .file(
+            "crate-a/Cargo.toml",
+            r#"
+                [project]
+                name = "crate-a"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "crate-a/src/lib.rs",
+            "\
+                //! ```
+                //! assert_eq!(1, 1);
+                //! ```
+            ",
+        )
+        .file(
+            "crate-b/Cargo.toml",
+            r#"
+                [project]
+                name = "crate-b"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "crate-b/src/lib.rs",
+            "\
+                //! ```
+                //! assert_eq!(1, 1);
+                //! ```
+            ",
+        )
+        .build();
+    p.cargo("test -Zdoctest-in-workspace --doc -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[DOCTEST] crate-a")
+        .with_stdout_contains(
+            "
+running 1 test
+test crate-a/src/lib.rs - (line 1) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+
+",
+        )
+        .with_stderr_contains("[DOCTEST] crate-b")
+        .with_stdout_contains(
+            "
+running 1 test
+test crate-b/src/lib.rs - (line 1) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_fingerprint_is_versioning_consistent() {
+    // Random rustc verbose version
+    let old_rustc_verbose_version = format!(
+        "\
+rustc 1.41.1 (f3e1a954d 2020-02-24)
+binary: rustc
+commit-hash: f3e1a954d2ead4e2fc197c7da7d71e6c61bad196
+commit-date: 2020-02-24
+host: {}
+release: 1.41.1
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    // Create the dummy project.
+    let dummy_project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "//! These are the docs!")
+        .build();
+
+    dummy_project.cargo("doc").run();
+
+    let fingerprint: RustDocFingerprint =
+        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+            .expect("JSON Serde fail");
+
+    // Check that the fingerprint contains the actual rustc version
+    // which has been used to compile the docs.
+    let output = std::process::Command::new("rustc")
+        .arg("-vV")
+        .output()
+        .expect("Failed to get actual rustc verbose version");
+    assert_eq!(
+        fingerprint.rustc_vv,
+        (String::from_utf8_lossy(&output.stdout).as_ref())
+    );
+
+    // As the test shows above. Now we have generated the `doc/` folder and inside
+    // the rustdoc fingerprint file is located with the correct rustc version.
+    // So we will remove it and create a new fingerprint with an old rustc version
+    // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
+    // it gets removed as we expect on the next doc compilation.
+    dummy_project.change_file(
+        "target/.rustdoc_fingerprint.json",
+        &old_rustc_verbose_version,
+    );
+
+    fs::write(
+        dummy_project.build_dir().join("doc/bogus_file"),
+        String::from("This is a bogus file and should be removed!"),
+    )
+    .expect("Error writing test bogus file");
+
+    // Now if we trigger another compilation, since the fingerprint contains an old version
+    // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
+    // and generating another one with the actual version.
+    // It should also remove the bogus file we created above.
+    dummy_project.cargo("doc").run();
+
+    assert!(!dummy_project.build_dir().join("doc/bogus_file").exists());
+
+    let fingerprint: RustDocFingerprint =
+        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+            .expect("JSON Serde fail");
+
+    // Check that the fingerprint contains the actual rustc version
+    // which has been used to compile the docs.
+    assert_eq!(
+        fingerprint.rustc_vv,
+        (String::from_utf8_lossy(&output.stdout).as_ref())
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[cargo_test]
+fn doc_fingerprint_respects_target_paths() {
+    // Random rustc verbose version
+    let old_rustc_verbose_version = format!(
+        "\
+rustc 1.41.1 (f3e1a954d 2020-02-24)
+binary: rustc
+commit-hash: f3e1a954d2ead4e2fc197c7da7d71e6c61bad196
+commit-date: 2020-02-24
+host: {}
+release: 1.41.1
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    // Create the dummy project.
+    let dummy_project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "//! These are the docs!")
+        .build();
+
+    dummy_project
+        .cargo("doc --target x86_64-unknown-linux-gnu")
+        .run();
+
+    let fingerprint: RustDocFingerprint =
+        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+            .expect("JSON Serde fail");
+
+    // Check that the fingerprint contains the actual rustc version
+    // which has been used to compile the docs.
+    let output = std::process::Command::new("rustc")
+        .arg("-vV")
+        .output()
+        .expect("Failed to get actual rustc verbose version");
+    assert_eq!(
+        fingerprint.rustc_vv,
+        (String::from_utf8_lossy(&output.stdout).as_ref())
+    );
+
+    // As the test shows above. Now we have generated the `doc/` folder and inside
+    // the rustdoc fingerprint file is located with the correct rustc version.
+    // So we will remove it and create a new fingerprint with an old rustc version
+    // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
+    // it gets removed as we expect on the next doc compilation.
+    dummy_project.change_file(
+        "target/.rustdoc_fingerprint.json",
+        &old_rustc_verbose_version,
+    );
+
+    fs::write(
+        dummy_project
+            .build_dir()
+            .join("x86_64-unknown-linux-gnu/doc/bogus_file"),
+        String::from("This is a bogus file and should be removed!"),
+    )
+    .expect("Error writing test bogus file");
+
+    // Now if we trigger another compilation, since the fingerprint contains an old version
+    // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
+    // and generating another one with the actual version.
+    // It should also remove the bogus file we created above.
+    dummy_project
+        .cargo("doc --target x86_64-unknown-linux-gnu")
+        .run();
+
+    assert!(!dummy_project
+        .build_dir()
+        .join("x86_64-unknown-linux-gnu/doc/bogus_file")
+        .exists());
+
+    let fingerprint: RustDocFingerprint =
+        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+            .expect("JSON Serde fail");
+
+    // Check that the fingerprint contains the actual rustc version
+    // which has been used to compile the docs.
+    assert_eq!(
+        fingerprint.rustc_vv,
+        (String::from_utf8_lossy(&output.stdout).as_ref())
+    );
 }

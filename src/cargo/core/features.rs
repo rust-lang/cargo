@@ -433,6 +433,7 @@ pub struct CliUnstable {
     pub build_std_features: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
+    pub doctest_in_workspace: bool,
     pub panic_abort_tests: bool,
     pub jobserver_per_rustc: bool,
     pub features: Option<Vec<String>>,
@@ -444,6 +445,7 @@ pub struct CliUnstable {
     pub weak_dep_features: bool,
     pub extra_link_arg: bool,
     pub credential_process: bool,
+    pub configurable_env: bool,
     pub path_bases: bool,
 }
 
@@ -597,8 +599,10 @@ impl CliUnstable {
             "build-std-features" => self.build_std_features = Some(parse_features(v)),
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
+            "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
+            "configurable-env" => self.configurable_env = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some
                 // unstable options like "compare"). This should be removed at

@@ -74,10 +74,7 @@ fn sync(
     opts: &VendorOptions<'_>,
 ) -> CargoResult<VendorConfig> {
     let canonical_destination = opts.destination.canonicalize();
-    let canonical_destination = canonical_destination
-        .as_ref()
-        .map(|p| &**p)
-        .unwrap_or(opts.destination);
+    let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
 
     paths::create_dir_all(&canonical_destination)?;
     let mut to_remove = HashSet::new();

@@ -285,7 +285,7 @@ impl ser::Serialize for Target {
             edition: &self.edition().to_string(),
             required_features: self
                 .required_features()
-                .map(|rf| rf.iter().map(|s| &**s).collect()),
+                .map(|rf| rf.iter().map(|s| s.as_str()).collect()),
             doc: self.documented(),
             doctest: self.doctested() && self.doctestable(),
             test: self.tested(),

@@ -32,7 +32,9 @@ use lazycell::LazyCell;
 use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
-pub use self::build_context::{BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo};
+pub use self::build_context::{
+    BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
+};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
@@ -55,7 +57,7 @@ use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, Verbo
 use crate::util::interning::InternedString;
 use crate::util::machine_message::Message;
 use crate::util::{self, machine_message, ProcessBuilder};
-use crate::util::{internal, join_paths, paths, profile};
+use crate::util::{add_path_args, internal, join_paths, paths, profile};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -580,13 +582,12 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
-    add_path_args(bcx, unit, &mut rustdoc);
+    add_path_args(bcx.ws, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
     if let CompileKind::Target(target) = unit.kind {
         rustdoc.arg("--target").arg(target.rustc_target());
     }
-
     let doc_dir = cx.files().out_dir(unit);
 
     // Create the documentation directory ahead of time as rustdoc currently has
@@ -659,41 +660,6 @@ fn append_crate_version_flag(unit: &Unit, rustdoc: &mut ProcessBuilder) {
     rustdoc
         .arg(RUSTDOC_CRATE_VERSION_FLAG)
         .arg(unit.pkg.version().to_string());
-}
-
-// The path that we pass to rustc is actually fairly important because it will
-// show up in error messages (important for readability), debug information
-// (important for caching), etc. As a result we need to be pretty careful how we
-// actually invoke rustc.
-//
-// In general users don't expect `cargo build` to cause rebuilds if you change
-// directories. That could be if you just change directories in the package or
-// if you literally move the whole package wholesale to a new directory. As a
-// result we mostly don't factor in `cwd` to this calculation. Instead we try to
-// track the workspace as much as possible and we update the current directory
-// of rustc/rustdoc where appropriate.
-//
-// The first returned value here is the argument to pass to rustc, and the
-// second is the cwd that rustc should operate in.
-fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit) -> (PathBuf, PathBuf) {
-    let ws_root = bcx.ws.root();
-    let src = match unit.target.src_path() {
-        TargetSourcePath::Path(path) => path.to_path_buf(),
-        TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(bcx.ws.target_dir()),
-    };
-    assert!(src.is_absolute());
-    if unit.pkg.package_id().source_id().is_path() {
-        if let Ok(path) = src.strip_prefix(ws_root) {
-            return (path.to_path_buf(), ws_root.to_path_buf());
-        }
-    }
-    (src, unit.pkg.root().to_path_buf())
-}
-
-fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
-    let (arg, cwd) = path_args(bcx, unit);
-    cmd.arg(arg);
-    cmd.cwd(cwd);
 }
 
 fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
@@ -785,7 +751,7 @@ fn build_base_args(
         cmd.arg(format!("--edition={}", edition));
     }
 
-    add_path_args(bcx, unit, cmd);
+    add_path_args(bcx.ws, unit, cmd);
     add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
 
     if !test {
@@ -967,7 +933,10 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     match cx.lto[unit] {
         lto::Lto::Run(None) => push("lto"),
         lto::Lto::Run(Some(s)) => push(&format!("lto={}", s)),
-        lto::Lto::Off => push("lto=off"),
+        lto::Lto::Off => {
+            push("lto=off");
+            push("embed-bitcode=no");
+        }
         lto::Lto::ObjectAndBitcode => {} // this is rustc's default
         lto::Lto::OnlyBitcode => push("linker-plugin-lto"),
         lto::Lto::OnlyObject => push("embed-bitcode=no"),

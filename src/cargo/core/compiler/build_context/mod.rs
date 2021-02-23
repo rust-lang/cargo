@@ -11,7 +11,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 mod target_info;
-pub use self::target_info::{FileFlavor, FileType, RustcTargetData, TargetInfo};
+pub use self::target_info::{
+    FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
+};
 
 /// The build context, containing all information about a build task.
 ///

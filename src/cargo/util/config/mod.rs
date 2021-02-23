@@ -49,10 +49,12 @@
 //! translate from `ConfigValue` and environment variables to the caller's
 //! desired type.
 
+use std::borrow::Cow;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -132,6 +134,8 @@ pub struct Config {
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
     cwd: PathBuf,
+    /// Directory where config file searching should stop (inclusive).
+    search_stop_path: Option<PathBuf>,
     /// The location of the cargo executable (path to current process)
     cargo_exe: LazyCell<PathBuf>,
     /// The location of the rustdoc executable
@@ -165,6 +169,8 @@ pub struct Config {
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
     env: HashMap<String, String>,
+    /// Environment variables, converted to uppercase to check for case mismatch
+    upper_case_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Lock, if held, of the global package cache along with the number of
@@ -177,6 +183,7 @@ pub struct Config {
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
+    env_config: LazyCell<EnvConfig>,
 }
 
 impl Config {
@@ -209,6 +216,15 @@ impl Config {
             })
             .collect();
 
+        let upper_case_env = if cfg!(windows) {
+            HashMap::new()
+        } else {
+            env.clone()
+                .into_iter()
+                .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k))
+                .collect()
+        };
+
         let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO") {
             Some(cache) => cache != "0",
             _ => true,
@@ -218,6 +234,7 @@ impl Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             cwd,
+            search_stop_path: None,
             values: LazyCell::new(),
             cli_config: None,
             cargo_exe: LazyCell::new(),
@@ -241,6 +258,7 @@ impl Config {
             creation_time: Instant::now(),
             target_dir: None,
             env,
+            upper_case_env,
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
@@ -249,6 +267,7 @@ impl Config {
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
+            env_config: LazyCell::new(),
         }
     }
 
@@ -422,6 +441,14 @@ impl Config {
         }
     }
 
+    /// Sets the path where ancestor config file searching will stop. The
+    /// given path is included, but its ancestors are not.
+    pub fn set_search_stop_path<P: Into<PathBuf>>(&mut self, path: P) {
+        let path = path.into();
+        debug_assert!(self.cwd.starts_with(&path));
+        self.search_stop_path = Some(path);
+    }
+
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
@@ -514,7 +541,10 @@ impl Config {
                     definition,
                 }))
             }
-            None => Ok(None),
+            None => {
+                self.check_environment_key_case_mismatch(key);
+                Ok(None)
+            }
         }
     }
 
@@ -534,7 +564,25 @@ impl Config {
                 return true;
             }
         }
+        self.check_environment_key_case_mismatch(key);
+
         false
+    }
+
+    fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
+        if cfg!(windows) {
+            // In the case of windows the check for case mismatch in keys can be skipped
+            // as windows already converts its environment keys into the desired format.
+            return;
+        }
+
+        if let Some(env_key) = self.upper_case_env.get(key.as_env_key()) {
+            let _ = self.shell().warn(format!(
+                "Environment variables are expected to use uppercase letters and underscores, \
+                the variable `{}` will be ignored and have no effect",
+                env_key
+            ));
+        }
     }
 
     /// Get a string config value.
@@ -629,7 +677,10 @@ impl Config {
     ) -> CargoResult<()> {
         let env_val = match self.env.get(key.as_env_key()) {
             Some(v) => v,
-            None => return Ok(()),
+            None => {
+                self.check_environment_key_case_mismatch(key);
+                return Ok(());
+            }
         };
 
         let def = Definition::Environment(key.as_env_key().to_string());
@@ -1028,7 +1079,7 @@ impl Config {
     {
         let mut stash: HashSet<PathBuf> = HashSet::new();
 
-        for current in paths::ancestors(pwd) {
+        for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
             if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
                 walk(&path)?;
                 stash.insert(path);
@@ -1195,6 +1246,11 @@ impl Config {
 
     pub fn progress_config(&self) -> &ProgressConfig {
         &self.progress_config
+    }
+
+    pub fn env_config(&self) -> CargoResult<&EnvConfig> {
+        self.env_config
+            .try_borrow_with(|| self.get::<EnvConfig>("env"))
     }
 
     /// This is used to validate the `term` table has valid syntax.
@@ -1905,6 +1961,54 @@ where
 
     deserializer.deserialize_option(ProgressVisitor)
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum EnvConfigValueInner {
+    Simple(String),
+    WithOptions {
+        value: String,
+        #[serde(default)]
+        force: bool,
+        #[serde(default)]
+        relative: bool,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
+pub struct EnvConfigValue {
+    inner: Value<EnvConfigValueInner>,
+}
+
+impl EnvConfigValue {
+    pub fn is_force(&self) -> bool {
+        match self.inner.val {
+            EnvConfigValueInner::Simple(_) => false,
+            EnvConfigValueInner::WithOptions { force, .. } => force,
+        }
+    }
+
+    pub fn resolve<'a>(&'a self, config: &Config) -> Cow<'a, OsStr> {
+        match self.inner.val {
+            EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
+            EnvConfigValueInner::WithOptions {
+                ref value,
+                relative,
+                ..
+            } => {
+                if relative {
+                    let p = self.inner.definition.root(config).join(&value);
+                    Cow::Owned(p.into_os_string())
+                } else {
+                    Cow::Borrowed(OsStr::new(value.as_str()))
+                }
+            }
+        }
+    }
+}
+
+pub type EnvConfig = HashMap<String, EnvConfigValue>;
 
 /// A type to deserialize a list of strings from a toml file.
 ///

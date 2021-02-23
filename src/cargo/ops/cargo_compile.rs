@@ -26,9 +26,9 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::{standard_lib, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -37,6 +37,7 @@ use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, SourceId, TargetKind, Workspace};
+use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
@@ -289,10 +290,40 @@ pub fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph)?;
         return Compilation::new(&bcx);
     }
-
     let _p = profile::start("compiling");
     let cx = Context::new(&bcx)?;
     cx.compile(exec)
+}
+
+pub fn print<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions,
+    print_opt_value: &str,
+) -> CargoResult<()> {
+    let CompileOptions {
+        ref build_config,
+        ref target_rustc_args,
+        ..
+    } = *options;
+    let config = ws.config();
+    let rustc = config.load_global_rustc(Some(ws))?;
+    for (index, kind) in build_config.requested_kinds.iter().enumerate() {
+        if index != 0 {
+            drop_println!(config);
+        }
+        let target_info = TargetInfo::new(config, &build_config.requested_kinds, &rustc, *kind)?;
+        let mut process = rustc.process();
+        process.args(&target_info.rustflags);
+        if let Some(args) = target_rustc_args {
+            process.args(args);
+        }
+        if let CompileKind::Target(t) = kind {
+            process.arg("--target").arg(t.short_name());
+        }
+        process.arg("--print").arg(print_opt_value);
+        process.exec()?;
+    }
+    Ok(())
 }
 
 pub fn create_bcx<'a, 'cfg>(

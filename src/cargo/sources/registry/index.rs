@@ -68,13 +68,15 @@
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_V_MAX};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
-use log::info;
+use anyhow::bail;
+use log::{debug, info};
 use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use std::str;
@@ -233,6 +235,8 @@ enum MaybeIndexSummary {
 pub struct IndexSummary {
     pub summary: Summary,
     pub yanked: bool,
+    /// Schema version, see [`RegistryPackage`].
+    v: u32,
 }
 
 /// A representation of the cache on disk that Cargo maintains of summaries.
@@ -305,6 +309,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         // minimize the amount of work being done here and parse as little as
         // necessary.
         let raw_data = &summaries.raw_data;
+        let max_version = if namespaced_features || weak_dep_features {
+            INDEX_V_MAX
+        } else {
+            1
+        };
         Ok(summaries
             .versions
             .iter_mut()
@@ -318,6 +327,19 @@ impl<'cfg> RegistryIndex<'cfg> {
                     }
                 },
             )
+            .filter(move |is| {
+                if is.v > max_version {
+                    debug!(
+                        "unsupported schema version {} ({} {})",
+                        is.v,
+                        is.summary.name(),
+                        is.summary.version()
+                    );
+                    false
+                } else {
+                    true
+                }
+            })
             .filter(move |is| {
                 is.summary
                     .unstable_gate(namespaced_features, weak_dep_features)
@@ -550,6 +572,14 @@ impl Summaries {
                 let summary = match IndexSummary::parse(config, line, source_id) {
                     Ok(summary) => summary,
                     Err(e) => {
+                        // This should only happen when there is an index
+                        // entry from a future version of cargo that this
+                        // version doesn't understand. Hopefully, those future
+                        // versions of cargo correctly set INDEX_V_MAX and
+                        // CURRENT_CACHE_VERSION, otherwise this will skip
+                        // entries in the cache preventing those newer
+                        // versions from reading them (that is, until the
+                        // cache is rebuilt).
                         log::info!("failed to parse {:?} registry package: {}", relative, e);
                         continue;
                     }
@@ -578,7 +608,14 @@ impl Summaries {
         // actually happens to verify that our cache is indeed fresh and
         // computes exactly the same value as before.
         if cfg!(debug_assertions) && cache_contents.is_some() {
-            assert_eq!(cache_bytes, cache_contents);
+            if cache_bytes != cache_contents {
+                panic!(
+                    "original cache contents:\n{:?}\n\
+                     does not equal new cache contents:\n{:?}\n",
+                    cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
+                    cache_bytes.as_ref().map(|s| String::from_utf8_lossy(s)),
+                );
+            }
         }
 
         // Once we have our `cache_bytes` which represents the `Summaries` we're
@@ -630,9 +667,9 @@ impl Summaries {
 // Implementation of serializing/deserializing the cache of summaries on disk.
 // Currently the format looks like:
 //
-// +--------------+-------------+---+
-// | version byte | git sha rev | 0 |
-// +--------------+-------------+---+
+// +--------------------+----------------------+-------------+---+
+// | cache version byte | index format version | git sha rev | 0 |
+// +--------------------+----------------------+-------------+---+
 //
 // followed by...
 //
@@ -649,8 +686,14 @@ impl Summaries {
 // versions of Cargo share the same cache they don't get too confused. The git
 // sha lets us know when the file needs to be regenerated (it needs regeneration
 // whenever the index itself updates).
+//
+// Cache versions:
+// * `1`: The original version.
+// * `2`: Added the "index format version" field so that if the index format
+//   changes, different versions of cargo won't get confused reading each
+//   other's caches.
 
-const CURRENT_CACHE_VERSION: u8 = 1;
+const CURRENT_CACHE_VERSION: u8 = 2;
 
 impl<'a> SummariesCache<'a> {
     fn parse(data: &'a [u8], last_index_update: &str) -> CargoResult<SummariesCache<'a>> {
@@ -659,19 +702,32 @@ impl<'a> SummariesCache<'a> {
             .split_first()
             .ok_or_else(|| anyhow::format_err!("malformed cache"))?;
         if *first_byte != CURRENT_CACHE_VERSION {
-            anyhow::bail!("looks like a different Cargo's cache, bailing out");
+            bail!("looks like a different Cargo's cache, bailing out");
         }
+        let index_v_bytes = rest
+            .get(..4)
+            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index version"))?;
+        let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
+        if index_v != INDEX_V_MAX {
+            bail!(
+                "index format version {} doesn't match the version I know ({})",
+                index_v,
+                INDEX_V_MAX
+            );
+        }
+        let rest = &rest[4..];
+
         let mut iter = split(rest, 0);
         if let Some(update) = iter.next() {
             if update != last_index_update.as_bytes() {
-                anyhow::bail!(
+                bail!(
                     "cache out of date: current index ({}) != cache ({})",
                     last_index_update,
                     str::from_utf8(update)?,
                 )
             }
         } else {
-            anyhow::bail!("malformed file");
+            bail!("malformed file");
         }
         let mut ret = SummariesCache::default();
         while let Some(version) = iter.next() {
@@ -692,6 +748,7 @@ impl<'a> SummariesCache<'a> {
             .sum();
         let mut contents = Vec::with_capacity(size);
         contents.push(CURRENT_CACHE_VERSION);
+        contents.extend(&u32::to_le_bytes(INDEX_V_MAX));
         contents.extend_from_slice(index_version.as_bytes());
         contents.push(0);
         for (version, data) in self.versions.iter() {
@@ -741,26 +798,41 @@ impl IndexSummary {
     ///
     /// The `line` provided is expected to be valid JSON.
     fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
+        // ****CAUTION**** Please be extremely careful with returning errors
+        // from this function. Entries that error are not included in the
+        // index cache, and can cause cargo to get confused when switching
+        // between different versions that understand the index differently.
+        // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
+        // values carefully when making changes here.
         let RegistryPackage {
             name,
             vers,
             cksum,
             deps,
-            features,
+            mut features,
+            features2,
             yanked,
             links,
+            v,
         } = serde_json::from_slice(line)?;
+        let v = v.unwrap_or(1);
         log::trace!("json parsed registry {}/{}", name, vers);
         let pkgid = PackageId::new(name, &vers, source_id)?;
         let deps = deps
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
+        if let Some(features2) = features2 {
+            for (name, values) in features2 {
+                features.entry(name).or_default().extend(values);
+            }
+        }
         let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,
             yanked: yanked.unwrap_or(false),
+            v,
         })
     }
 }

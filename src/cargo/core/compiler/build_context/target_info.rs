@@ -1,12 +1,15 @@
-use crate::core::compiler::{BuildOutput, CompileKind, CompileMode, CompileTarget, CrateType};
+use crate::core::compiler::{
+    BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
+};
 use crate::core::{Dependency, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
-use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
+use crate::util::{paths, CargoResult, CargoResultExt, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -752,5 +755,79 @@ impl RustcTargetData {
     /// Host or Target.
     pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
         self.target_config(kind).links_overrides.get(lib_name)
+    }
+}
+
+/// Structure used to deal with Rustdoc fingerprinting
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RustDocFingerprint {
+    pub rustc_vv: String,
+}
+
+impl RustDocFingerprint {
+    /// Read the `RustDocFingerprint` info from the fingerprint file.
+    fn read<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<Self> {
+        let rustdoc_data = paths::read(&cx.files().host_root().join(".rustdoc_fingerprint.json"))?;
+        serde_json::from_str(&rustdoc_data).map_err(|e| anyhow::anyhow!("{:?}", e))
+    }
+
+    /// Write the `RustDocFingerprint` info into the fingerprint file.
+    fn write<'a, 'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<()> {
+        paths::write(
+            &cx.files().host_root().join(".rustdoc_fingerprint.json"),
+            serde_json::to_string(&self)?.as_bytes(),
+        )
+    }
+
+    fn remove_doc_dirs(doc_dirs: &Vec<&Path>) -> CargoResult<()> {
+        doc_dirs
+            .iter()
+            .filter(|path| path.exists())
+            .map(|path| paths::remove_dir_all(&path))
+            .collect::<CargoResult<()>>()
+    }
+
+    /// This function checks whether the latest version of `Rustc` used to compile this
+    /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
+    /// call.
+    ///
+    /// In case it's not, it takes care of removing the `doc/` folder as well as overwriting
+    /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
+    /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
+    /// any versioning.
+    pub fn check_rustdoc_fingerprint<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<()> {
+        let actual_rustdoc_target_data = RustDocFingerprint {
+            rustc_vv: cx.bcx.rustc().verbose_version.clone(),
+        };
+
+        // Collect all of the target doc paths for which the docs need to be compiled for.
+        let doc_dirs: Vec<&Path> = cx
+            .bcx
+            .all_kinds
+            .iter()
+            .map(|kind| cx.files().layout(*kind).doc())
+            .collect();
+
+        // Check wether `.rustdoc_fingerprint.json` exists
+        match Self::read(cx) {
+            Ok(fingerprint) => {
+                // Check if rustc_version matches the one we just used. Otherways,
+                // remove the `doc` folder to trigger a re-compilation of the docs.
+                if fingerprint.rustc_vv != actual_rustdoc_target_data.rustc_vv {
+                    Self::remove_doc_dirs(&doc_dirs)?;
+                    actual_rustdoc_target_data.write(cx)?
+                }
+            }
+            // If the file does not exist, then we cannot assume that the docs were compiled
+            // with the actual Rustc instance version. Therefore, we try to remove the
+            // `doc` directory forcing the recompilation of the docs. If the directory doesn't
+            // exists neither, we simply do nothing and continue.
+            Err(_) => {
+                // We don't care if this succeeds as explained above.
+                let _ = Self::remove_doc_dirs(&doc_dirs);
+                actual_rustdoc_target_data.write(cx)?
+            }
+        }
+        Ok(())
     }
 }

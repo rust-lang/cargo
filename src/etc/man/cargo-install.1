@@ -246,8 +246,13 @@ target artifacts are placed in a separate directory. See the
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
 specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
-\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
-to \fBtarget\fR in the root of the workspace.
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+Defaults to a new temporary folder located in the
+temporary directory of the platform. 
+.sp
+When using \fB\-\-path\fR, by default it will use \fBtarget\fR directory in the workspace
+of the local crate unless \fB\-\-target\-dir\fR
+is specified.
 .RE
 .sp
 \fB\-\-debug\fR

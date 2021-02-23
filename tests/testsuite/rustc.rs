@@ -458,3 +458,104 @@ fn rustc_test_with_implicit_bin() {
         )
         .run();
 }
+
+#[cargo_test]
+fn rustc_with_print_cfg_single_target() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {} "#)
+        .build();
+
+    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
+        .run();
+}
+
+#[cargo_test]
+fn rustc_with_print_cfg_multiple_targets() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {} "#)
+        .build();
+
+    p.cargo("rustc -Z unstable-options -Z multitarget --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
+        .with_stdout_contains("target_env=\"gnu\"")
+        .with_stdout_contains("target_family=\"unix\"")
+        .with_stdout_contains("target_pointer_width=\"32\"")
+        .with_stdout_contains("target_vendor=\"unknown\"")
+        .with_stdout_contains("target_os=\"linux\"")
+        .with_stdout_contains("unix")
+        .run();
+}
+
+#[cargo_test]
+fn rustc_with_print_cfg_rustflags_env_var() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {} "#)
+        .build();
+
+    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-feature=+crt-static")
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_feature=\"crt-static\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
+        .run();
+}
+
+#[cargo_test]
+fn rustc_with_print_cfg_config_toml() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            ".cargo/config.toml",
+            r#"
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+"#,
+        )
+        .file("src/main.rs", r#"fn main() {} "#)
+        .build();
+
+    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-feature=+crt-static")
+        .with_stdout_contains("debug_assertions")
+        .with_stdout_contains("target_arch=\"x86_64\"")
+        .with_stdout_contains("target_endian=\"little\"")
+        .with_stdout_contains("target_env=\"msvc\"")
+        .with_stdout_contains("target_family=\"windows\"")
+        .with_stdout_contains("target_feature=\"crt-static\"")
+        .with_stdout_contains("target_os=\"windows\"")
+        .with_stdout_contains("target_pointer_width=\"64\"")
+        .with_stdout_contains("target_vendor=\"pc\"")
+        .with_stdout_contains("windows")
+        .run();
+}

@@ -96,7 +96,7 @@ fn resolve_to_string_orig(
         f.read_to_string(&mut s)?;
         Ok(s)
     });
-    let out = serialize_resolve(resolve, orig.as_ref().ok().map(|s| &**s));
+    let out = serialize_resolve(resolve, orig.as_deref().ok());
     (orig.ok(), out, ws_root)
 }
 

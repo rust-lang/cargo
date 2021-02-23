@@ -195,8 +195,8 @@ used.
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
 specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
-\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
-to \fBtarget\fR in the root of the workspace.
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+Defaults to \fBtarget\fR in the root of the workspace.
 .RE
 .SS "Display Options"
 .sp
@@ -242,35 +242,37 @@ The output format for diagnostic messages. Can be specified multiple times
 and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format.
+\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format. Conflicts with
+\fBshort\fR and \fBjson\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages.
+\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages. Conflicts with \fBhuman\fR
+and \fBjson\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\fR: Emit JSON messages to stdout. See
 \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
-for more details.
+for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
-the "short" rendering from rustc.
+the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
 contains embedded ANSI color codes for respecting rustc's default color
-scheme.
+scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
-coming from rustc are still emitted.
+coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .RE
 .SS "Manifest Options"

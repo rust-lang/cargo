@@ -62,7 +62,7 @@ Then, in various places in the code ([example1][wasm-bindgen-cfg1],
 [example2][wasm-bindgen-cfg2]), it uses `#[cfg(feature = "std")]` attributes
 to conditionally enable extra functionality that requires `std`.
 
-[`no_std`]: ../../reference/crates-and-source-files.html#preludes-and-no_std
+[`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
 [`wasm-bindgen`]: https://crates.io/crates/wasm-bindgen
 [`std` prelude]: ../../std/prelude/index.html
 [wasm-bindgen-std]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/Cargo.toml#L25

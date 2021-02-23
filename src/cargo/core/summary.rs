@@ -37,6 +37,9 @@ impl Summary {
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
     ) -> CargoResult<Summary> {
+        // ****CAUTION**** If you change anything here than may raise a new
+        // error, be sure to coordinate that change with either the index
+        // schema field or the SummariesCache version.
         let mut has_overlapping_features = None;
         for dep in dependencies.iter() {
             let dep_name = dep.name_in_toml();
