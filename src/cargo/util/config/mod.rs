@@ -49,10 +49,12 @@
 //! translate from `ConfigValue` and environment variables to the caller's
 //! desired type.
 
+use std::borrow::Cow;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -181,6 +183,7 @@ pub struct Config {
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
+    env_config: LazyCell<EnvConfig>,
 }
 
 impl Config {
@@ -264,6 +267,7 @@ impl Config {
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
+            env_config: LazyCell::new(),
         }
     }
 
@@ -1244,6 +1248,11 @@ impl Config {
         &self.progress_config
     }
 
+    pub fn env_config(&self) -> CargoResult<&EnvConfig> {
+        self.env_config
+            .try_borrow_with(|| self.get::<EnvConfig>("env"))
+    }
+
     /// This is used to validate the `term` table has valid syntax.
     ///
     /// This is necessary because loading the term settings happens very
@@ -1952,6 +1961,54 @@ where
 
     deserializer.deserialize_option(ProgressVisitor)
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum EnvConfigValueInner {
+    Simple(String),
+    WithOptions {
+        value: String,
+        #[serde(default)]
+        force: bool,
+        #[serde(default)]
+        relative: bool,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
+pub struct EnvConfigValue {
+    inner: Value<EnvConfigValueInner>,
+}
+
+impl EnvConfigValue {
+    pub fn is_force(&self) -> bool {
+        match self.inner.val {
+            EnvConfigValueInner::Simple(_) => false,
+            EnvConfigValueInner::WithOptions { force, .. } => force,
+        }
+    }
+
+    pub fn resolve<'a>(&'a self, config: &Config) -> Cow<'a, OsStr> {
+        match self.inner.val {
+            EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
+            EnvConfigValueInner::WithOptions {
+                ref value,
+                relative,
+                ..
+            } => {
+                if relative {
+                    let p = self.inner.definition.root(config).join(&value);
+                    Cow::Owned(p.into_os_string())
+                } else {
+                    Cow::Borrowed(OsStr::new(value.as_str()))
+                }
+            }
+        }
+    }
+}
+
+pub type EnvConfig = HashMap<String, EnvConfigValue>;
 
 /// A type to deserialize a list of strings from a toml file.
 ///

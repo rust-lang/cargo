@@ -444,6 +444,7 @@ pub struct CliUnstable {
     pub weak_dep_features: bool,
     pub extra_link_arg: bool,
     pub credential_process: bool,
+    pub configurable_env: bool,
 }
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -598,6 +599,7 @@ impl CliUnstable {
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
+            "configurable-env" => self.configurable_env = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some
                 // unstable options like "compare"). This should be removed at
