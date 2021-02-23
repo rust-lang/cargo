@@ -4256,6 +4256,7 @@ fn test_workspaces_cwd() {
             r#"
                 //! ```
                 //! assert_eq!("{expected}", std::fs::read_to_string("file.txt").unwrap());
+                //! assert_eq!("{expected}", include_str!("../file.txt"));
                 //! assert_eq!(
                 //!     std::path::PathBuf::from(std::env!("CARGO_MANIFEST_DIR")),
                 //!     std::env::current_dir().unwrap(),
@@ -4265,6 +4266,7 @@ fn test_workspaces_cwd() {
                 #[test]
                 fn test_unit_{expected}_cwd() {{
                     assert_eq!("{expected}", std::fs::read_to_string("file.txt").unwrap());
+                    assert_eq!("{expected}", include_str!("../file.txt"));
                     assert_eq!(
                         std::path::PathBuf::from(std::env!("CARGO_MANIFEST_DIR")),
                         std::env::current_dir().unwrap(),
@@ -4280,6 +4282,7 @@ fn test_workspaces_cwd() {
                 #[test]
                 fn test_integration_{expected}_cwd() {{
                     assert_eq!("{expected}", std::fs::read_to_string("file.txt").unwrap());
+                    assert_eq!("{expected}", include_str!("../file.txt"));
                     assert_eq!(
                         std::path::PathBuf::from(std::env!("CARGO_MANIFEST_DIR")),
                         std::env::current_dir().unwrap(),
