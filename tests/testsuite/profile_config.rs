@@ -392,7 +392,7 @@ fn named_config_profile() {
         "#,
     )
     .unwrap();
-    let config = ConfigBuilder::new().enable_nightly_features().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     let profile_name = InternedString::new("foo");
     let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();

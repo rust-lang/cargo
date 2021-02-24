@@ -47,8 +47,8 @@ impl ConfigBuilder {
     }
 
     /// Unconditionaly enable nightly features, even on stable channels.
-    pub fn enable_nightly_features(&mut self) -> &mut Self {
-        self.enable_nightly_features = true;
+    pub fn nightly_features_allowed(&mut self, allowed: bool) -> &mut Self {
+        self.enable_nightly_features = allowed;
         self
     }
 
@@ -80,9 +80,7 @@ impl ConfigBuilder {
         let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
-        if self.enable_nightly_features || !self.unstable.is_empty() {
-            config.nightly_features_allowed = true;
-        }
+        config.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
         config.set_env(self.env.clone());
         config.set_search_stop_path(paths::root());
         config.configure(
@@ -1108,7 +1106,7 @@ fn unstable_table_notation() {
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().enable_nightly_features().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
@@ -1120,7 +1118,7 @@ fn unstable_dotted_notation() {
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().enable_nightly_features().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
@@ -1132,7 +1130,7 @@ fn unstable_cli_precedence() {
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().enable_nightly_features().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 
     let config = ConfigBuilder::new()
@@ -1163,7 +1161,8 @@ fn unstable_flags_ignored_on_stable() {
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    // Enforce stable channel even when testing on nightly.
+    let config = ConfigBuilder::new().nightly_features_allowed(false).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, false);
 }
 
