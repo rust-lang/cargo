@@ -276,6 +276,7 @@ macro_rules! features {
         pub struct Features {
             $($feature: bool,)*
             activated: Vec<String>,
+            nightly_features_allowed: bool,
         }
 
         impl Feature {
@@ -416,6 +417,7 @@ impl Features {
             ret.add(feature, config, warnings)?;
             ret.activated.push(feature.to_string());
         }
+        ret.nightly_features_allowed = config.nightly_features_allowed;
         Ok(ret)
     }
 
@@ -497,9 +499,7 @@ impl Features {
             let feature = feature.name.replace("_", "-");
             let mut msg = format!("feature `{}` is required", feature);
 
-            // TODO
-            let channel = channel();
-            if channel == "nightly" || channel == "dev" {
+            if self.nightly_features_allowed {
                 let s = format!(
                     "\n\nconsider adding `cargo-features = [\"{0}\"]` \
                      to the manifest",
