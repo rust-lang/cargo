@@ -125,14 +125,13 @@ set to the latest edition. Setting the `edition` key in
 `[package]` will affect all targets/crates in the package, including test
 suites, benchmarks, binaries, examples, etc.
 
-If the `edition` key is not set to a specific [Rust Edition] in your
-`Cargo.toml`, Cargo will default to 2018.
-
 ```toml
 [package]
 # ...
 edition = '2018'
 ```
+
+If the `edition` key is not set in your `Cargo.toml` file, Cargo will default to 2015.
 
 #### The `description` field
 
