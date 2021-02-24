@@ -357,25 +357,28 @@ fn custom_linker_env() {
 fn target_in_environment_contains_lower_case() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let target_keys = [
-        "CARGO_TARGET_X86_64_UNKNOWN_LINUX_musl_LINKER",
-        "CARGO_TARGET_x86_64_unknown_linux_musl_LINKER",
-    ];
+    let target = rustc_host();
+    let env_key = format!(
+        "CARGO_TARGET_{}_LINKER",
+        target.to_lowercase().replace('-', "_")
+    );
 
-    for target_key in &target_keys {
-        let mut execs = p.cargo("build -v --target x86_64-unknown-linux-musl");
-        execs.env(target_key, "nonexistent-linker").with_status(101);
-        if cfg!(windows) {
-            execs.with_stderr_does_not_contain("warning:[..]");
-        } else {
-            execs.with_stderr_contains(format!(
-                "warning: Environment variables are expected to use uppercase letters and underscores, \
-                the variable `{}` will be ignored and have no effect",
-                target_key
-            ));
-        }
-        execs.run();
+    let mut execs = p.cargo("build -v --target");
+    execs.arg(target).env(&env_key, "nonexistent-linker");
+    if cfg!(windows) {
+        // Windows env keys are case insensitive, so no warning, but it will
+        // fail due to the missing linker.
+        execs
+            .with_stderr_does_not_contain("warning:[..]")
+            .with_status(101);
+    } else {
+        execs.with_stderr_contains(format!(
+            "warning: Environment variables are expected to use uppercase letters and underscores, \
+            the variable `{}` will be ignored and have no effect",
+            env_key
+        ));
     }
+    execs.run();
 }
 
 #[cargo_test]
