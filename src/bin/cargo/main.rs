@@ -30,7 +30,6 @@ fn main() {
             cargo::exit_with_error(e.into(), &mut shell)
         }
     };
-    cargo::core::maybe_allow_nightly_features(&mut config);
 
     let result = match cargo::ops::fix_maybe_exec_rustc(&config) {
         Ok(true) => Ok(()),

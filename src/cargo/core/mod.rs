@@ -1,6 +1,6 @@
 pub use self::dependency::Dependency;
 pub use self::features::{
-    enable_nightly_features, maybe_allow_nightly_features, nightly_features_allowed,
+    enable_nightly_features, nightly_features_allowed,
 };
 pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};

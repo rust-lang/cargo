@@ -74,7 +74,7 @@ use url::Url;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{features, nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
@@ -185,7 +185,6 @@ pub struct Config {
     progress_config: ProgressConfig,
     env_config: LazyCell<EnvConfig>,
     pub(crate) enable_nightly_features: bool,
-    pub(crate) maybe_allow_nightly_features: bool,
 }
 
 impl Config {
@@ -270,8 +269,10 @@ impl Config {
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
-            enable_nightly_features: false,
-            maybe_allow_nightly_features: false,
+            enable_nightly_features: match &*features::channel() {
+                "nightly" | "dev" => true,
+                _ => false,
+            }
         }
     }
 

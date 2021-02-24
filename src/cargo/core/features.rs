@@ -830,24 +830,10 @@ pub fn channel() -> String {
 /// - this is a integration test that uses `ProcessBuilder`
 ///       that called `masquerade_as_nightly_cargo`
 pub fn nightly_features_allowed(config: &Config) -> bool {
-    if config.enable_nightly_features {
-        return true;
-    }
-    match &channel()[..] {
-        "nightly" | "dev" => config.maybe_allow_nightly_features,
-        _ => false,
-    }
+    config.enable_nightly_features
 }
 
-/// Allows nightly features to be enabled for this thread, but only if the
-/// development channel is nightly or dev.
-///
-/// Used by cargo main to ensure that a cargo build from source has nightly features
-pub fn maybe_allow_nightly_features(config: &mut Config) {
-    config.maybe_allow_nightly_features = true;
-}
-
-/// Forcibly enables nightly features for this thread.
+/// Forcibly enables nightly features for this config.
 ///
 /// Used by tests to allow the use of nightly features.
 /// NOTE: this should be called before `configure()`. Consider using `ConfigBuilder::enable_nightly_features` instead.
