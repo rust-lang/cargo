@@ -10,8 +10,9 @@ use cargo::{
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, git, is_nightly, lines_match_unordered,
-    main_file, paths, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly,
+    lines_match_unordered, main_file, paths, process, project, rustc_host, sleep_ms,
+    symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs;
@@ -5254,6 +5255,85 @@ hello stderr!
     p.build_dir().rm_rf();
     let stdout = spawn(true);
     lines_match_unordered("hello stdout!\n", &stdout).unwrap();
+}
+
+#[cargo_test]
+fn close_output_during_drain() {
+    // Test to close the output during the build phase (drain_the_queue).
+    // There was a bug where it would hang.
+
+    // Server to know when rustc has spawned.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    // Create a wrapper so the test can know when compiling has started.
+    let rustc_wrapper = {
+        let p = project()
+            .at("compiler")
+            .file("Cargo.toml", &basic_manifest("compiler", "1.0.0"))
+            .file(
+                "src/main.rs",
+                &r#"
+                    use std::process::Command;
+                    use std::env;
+                    use std::io::Read;
+
+                    fn main() {
+                        // Only wait on the first dependency.
+                        if matches!(env::var("CARGO_PKG_NAME").as_deref(), Ok("dep")) {
+                            let mut socket = std::net::TcpStream::connect("__ADDR__").unwrap();
+                            // Wait for the test to tell us to start printing.
+                            let mut buf = [0];
+                            drop(socket.read_exact(&mut buf));
+                        }
+                        let mut cmd = Command::new("rustc");
+                        for arg in env::args_os().skip(1) {
+                            cmd.arg(arg);
+                        }
+                        std::process::exit(cmd.status().unwrap().code().unwrap());
+                    }
+                "#
+                .replace("__ADDR__", &addr.to_string()),
+            )
+            .build();
+        p.cargo("build").run();
+        p.bin("compiler")
+    };
+
+    Package::new("dep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                dep = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Spawn cargo, wait for the first rustc to start, and then close stderr.
+    let mut cmd = process(&cargo_exe())
+        .arg("check")
+        .cwd(p.root())
+        .env("RUSTC", rustc_wrapper)
+        .build_command();
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = cmd.spawn().expect("cargo should spawn");
+    // Wait for the rustc wrapper to start.
+    let rustc_conn = listener.accept().unwrap().0;
+    // Close stderr to force an error.
+    drop(child.stderr.take());
+    // Tell the wrapper to continue.
+    drop(rustc_conn);
+    match child.wait() {
+        Ok(status) => assert!(!status.success()),
+        Err(e) => panic!("child wait failed: {}", e),
+    }
 }
 
 use cargo_test_support::registry::Dependency;

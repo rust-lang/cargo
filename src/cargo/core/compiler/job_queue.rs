@@ -149,7 +149,7 @@ struct DrainState<'cfg> {
     pending_queue: Vec<(Unit, Job)>,
     print: DiagnosticPrinter<'cfg>,
 
-    // How many jobs we've finished
+    /// How many jobs we've finished
     finished: usize,
 }
 
@@ -469,7 +469,15 @@ impl<'cfg> DrainState<'cfg> {
         // we're able to perform some parallel work.
         while self.has_extra_tokens() && !self.pending_queue.is_empty() {
             let (unit, job) = self.pending_queue.remove(0);
-            self.run(&unit, job, cx, scope)?;
+            *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
+            if !cx.bcx.build_config.build_plan {
+                // Print out some nice progress information.
+                // NOTE: An error here will drop the job without starting it.
+                // That should be OK, since we want to exit as soon as
+                // possible during an error.
+                self.note_working_on(cx.bcx.config, &unit, job.freshness())?;
+            }
+            self.run(&unit, job, cx, scope);
         }
 
         Ok(())
@@ -835,30 +843,21 @@ impl<'cfg> DrainState<'cfg> {
         }
     }
 
-    /// Executes a job, pushing the spawned thread's handled onto `threads`.
-    fn run(
-        &mut self,
-        unit: &Unit,
-        job: Job,
-        cx: &Context<'_, '_>,
-        scope: &Scope<'_>,
-    ) -> CargoResult<()> {
+    /// Executes a job.
+    ///
+    /// Fresh jobs block until finished (which should be very fast!), Dirty
+    /// jobs will spawn a thread in the background and return immediately.
+    fn run(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &Scope<'_>) {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
         info!("start {}: {:?}", id, unit);
 
         assert!(self.active.insert(id, unit.clone()).is_none());
-        *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
 
         let messages = self.messages.clone();
         let fresh = job.freshness();
         let rmeta_required = cx.rmeta_required(unit);
-
-        if !cx.bcx.build_config.build_plan {
-            // Print out some nice progress information.
-            self.note_working_on(cx.bcx.config, unit, fresh)?;
-        }
 
         let doit = move |state: JobState<'_>| {
             let mut sender = FinishOnDrop {
@@ -934,8 +933,6 @@ impl<'cfg> DrainState<'cfg> {
                 });
             }
         }
-
-        Ok(())
     }
 
     fn emit_warnings(
