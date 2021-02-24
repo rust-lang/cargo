@@ -1,5 +1,5 @@
 use cargo::core::dependency::DepKind;
-use cargo::core::{enable_nightly_features, Dependency};
+use cargo::core::Dependency;
 use cargo::util::{is_ci, Config};
 
 use resolver_tests::{
@@ -56,7 +56,7 @@ proptest! {
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     ) {
         let mut config = Config::default().unwrap();
-        enable_nightly_features(&mut config);
+        config.nightly_features_allowed = true;
         config
             .configure(
                 1,
@@ -566,7 +566,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
     // possible version of a package should be selected. "util 1.0.0" can't be
     // selected because of the requirements of "bar", so the minimum version
     // must be 1.1.1.
-    enable_nightly_features(&mut config);
+    config.nightly_features_allowed = true;
     config
         .configure(
             1,

@@ -2,7 +2,6 @@ use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
-use crate::core::nightly_features_allowed;
 use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
@@ -295,7 +294,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_out_dir)?;
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
-    let nightly_features_allowed = nightly_features_allowed(cx.bcx.config);
+    let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -856,7 +855,6 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
         .unwrap_or_else(|_| script_out_dir.clone());
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
-    let nightly_features_allowed = nightly_features_allowed(cx.bcx.config);
 
     (
         BuildOutput::parse_file(
@@ -866,7 +864,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &prev_script_out_dir,
             &script_out_dir,
             extra_link_arg,
-            nightly_features_allowed,
+            cx.bcx.config.nightly_features_allowed,
         )
         .ok(),
         prev_script_out_dir,

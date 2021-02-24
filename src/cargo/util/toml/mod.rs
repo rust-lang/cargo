@@ -15,7 +15,6 @@ use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
-use crate::core::nightly_features_allowed;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -1076,7 +1075,7 @@ impl TomlManifest {
                 let mut msg =
                     "`rust-version` is not supported on this version of Cargo and will be ignored"
                         .to_string();
-                if nightly_features_allowed(config) {
+                if config.nightly_features_allowed {
                     msg.push_str(
                         "\n\n\
                         consider adding `cargo-features = [\"rust-version\"]` to the manifest",

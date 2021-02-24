@@ -1,7 +1,7 @@
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::{nightly_features_allowed, PackageId, Target};
+use crate::core::{PackageId, Target};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use crate::Config;
@@ -68,7 +68,6 @@ pub fn emit_serialized_unit_graph(
     unit_graph: &UnitGraph,
     config: &Config,
 ) -> CargoResult<()> {
-    let is_nightly = nightly_features_allowed(config);
     let mut units: Vec<(&Unit, &Vec<UnitDep>)> = unit_graph.iter().collect();
     units.sort_unstable();
     // Create a map for quick lookup for dependencies.
@@ -85,7 +84,7 @@ pub fn emit_serialized_unit_graph(
                 .iter()
                 .map(|unit_dep| {
                     // https://github.com/rust-lang/rust/issues/64260 when stabilized.
-                    let (public, noprelude) = if is_nightly {
+                    let (public, noprelude) = if config.nightly_features_allowed {
                         (Some(unit_dep.public), Some(unit_dep.noprelude))
                     } else {
                         (None, None)

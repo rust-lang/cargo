@@ -49,7 +49,6 @@ pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
-use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Feature, PackageId, Target};
@@ -701,7 +700,7 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pi
     cmd.arg(json);
 
     let config = cx.bcx.config;
-    if nightly_features_allowed(config) {
+    if config.nightly_features_allowed {
         match (
             config.cli_unstable().terminal_width,
             config.shell().err_width().diagnostic_terminal_width(),

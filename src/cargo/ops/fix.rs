@@ -50,7 +50,7 @@ use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
-use crate::core::{nightly_features_allowed, Edition, Workspace};
+use crate::core::{Edition, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
@@ -700,7 +700,7 @@ impl FixArgs {
         // Unfortunately this results in a pretty poor error message when
         // multiple jobs run in parallel (the error appears multiple
         // times). Hopefully this doesn't happen often in practice.
-        if !to_edition.is_stable() && !nightly_features_allowed(config) {
+        if !to_edition.is_stable() && !config.nightly_features_allowed {
             bail!(
                 "cannot migrate {} to edition {to_edition}\n\
                  Edition {to_edition} is unstable and not allowed in this release, \

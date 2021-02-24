@@ -462,7 +462,7 @@ impl Features {
                 );
                 warnings.push(warning);
             }
-            Status::Unstable if !nightly_features_allowed(config) => bail!(
+            Status::Unstable if !config.nightly_features_allowed => bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel\n\
                  {}\n{}",
@@ -814,29 +814,4 @@ pub fn channel() -> String {
         .cfg_info
         .map(|c| c.release_channel)
         .unwrap_or_else(|| String::from("dev"))
-}
-
-/// This is a little complicated.
-/// This should return false if:
-/// - this is an artifact of the rustc distribution process for "stable" or for "beta"
-/// - this is an `#[test]` that does not opt in with `enable_nightly_features`
-/// - this is a integration test that uses `ProcessBuilder`
-///      that does not opt in with `masquerade_as_nightly_cargo`
-/// This should return true if:
-/// - this is an artifact of the rustc distribution process for "nightly"
-/// - this is being used in the rustc distribution process internally
-/// - this is a cargo executable that was built from source
-/// - this is an `#[test]` that called `enable_nightly_features`
-/// - this is a integration test that uses `ProcessBuilder`
-///       that called `masquerade_as_nightly_cargo`
-pub fn nightly_features_allowed(config: &Config) -> bool {
-    config.enable_nightly_features
-}
-
-/// Forcibly enables nightly features for this config.
-///
-/// Used by tests to allow the use of nightly features.
-/// NOTE: this should be called before `configure()`. Consider using `ConfigBuilder::enable_nightly_features` instead.
-pub fn enable_nightly_features(config: &mut Config) {
-    config.enable_nightly_features = true;
 }

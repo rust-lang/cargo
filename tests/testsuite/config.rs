@@ -1,6 +1,6 @@
 //! Tests for config settings.
 
-use cargo::core::{enable_nightly_features, Shell};
+use cargo::core::Shell;
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
@@ -81,7 +81,7 @@ impl ConfigBuilder {
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
         if self.enable_nightly_features || !self.unstable.is_empty() {
-            enable_nightly_features(&mut config);
+            config.nightly_features_allowed = true;
         }
         config.set_env(self.env.clone());
         config.set_search_stop_path(paths::root());
