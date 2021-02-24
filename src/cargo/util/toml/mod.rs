@@ -1531,9 +1531,12 @@ impl TomlManifest {
         Ok(replace)
     }
 
-    fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+    fn patch_(
+        table: Option<&BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
         let mut patch = HashMap::new();
-        for (url, deps) in self.patch.iter().flatten() {
+        for (url, deps) in table.into_iter().flatten() {
             let url = match &url[..] {
                 CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
                 _ => cx
@@ -1552,6 +1555,25 @@ impl TomlManifest {
             );
         }
         Ok(patch)
+    }
+
+    fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+        let from_manifest = Self::patch_(self.patch.as_ref(), cx)?;
+
+        let config_patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>> =
+            cx.config.get("patch")?;
+
+        if config_patch.is_some() && !cx.config.cli_unstable().patch_in_config {
+            cx.warnings.push("`[patch]` in .cargo/config.toml ignored, the -Zpatch-in-config command-line flag is required".to_owned());
+            return Ok(from_manifest);
+        }
+
+        let mut from_config = Self::patch_(config_patch.as_ref(), cx)?;
+        if from_config.is_empty() {
+            return Ok(from_manifest);
+        }
+        from_config.extend(from_manifest);
+        Ok(from_config)
     }
 
     /// Returns the path to the build script if one exists for this crate.

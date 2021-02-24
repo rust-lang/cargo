@@ -551,6 +551,7 @@ pub struct CliUnstable {
     pub extra_link_arg: bool,
     pub credential_process: bool,
     pub configurable_env: bool,
+    pub patch_in_config: bool,
 }
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -707,6 +708,7 @@ impl CliUnstable {
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "configurable-env" => self.configurable_env = parse_empty(k, v)?,
+            "patch-in-config" => self.patch_in_config = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some
                 // unstable options like "compare"). This should be removed at
