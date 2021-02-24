@@ -1,4 +1,4 @@
-//! Tests for build.rs rerun-if-env-changed.
+//! Tests for build.rs rerun-if-env-changed and rustc-env
 
 use cargo_test_support::project;
 use cargo_test_support::sleep_ms;
