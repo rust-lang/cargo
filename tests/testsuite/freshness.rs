@@ -252,7 +252,7 @@ fn changing_profiles_caches_targets() {
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
+[RUNNING] [..] (target[..]debug[..]deps[..]foo-[..][EXE])
 [DOCTEST] foo
 ",
         )
@@ -268,7 +268,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
+[RUNNING] [..] (target[..]debug[..]deps[..]foo-[..][EXE])
 ",
         )
         .run();
@@ -2441,7 +2441,7 @@ fn linking_interrupted() {
             "\
 [COMPILING] foo [..]
 [FINISHED] [..]
-[RUNNING] target/debug/deps/t1[..]
+[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
 ",
         )
         .run();

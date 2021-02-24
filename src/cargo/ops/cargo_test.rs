@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
 use crate::core::shell::Verbosity;
-use crate::core::Workspace;
+use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{add_path_args, CargoTestError, Config, ProcessError, Test};
@@ -85,7 +85,24 @@ fn run_unit_tests(
     } in compilation.tests.iter()
     {
         let test = unit.target.name().to_string();
-        let exe_display = path.strip_prefix(cwd).unwrap_or(path).display();
+
+        let test_path = unit.target.src_path().path().unwrap();
+        let exe_display = if let TargetKind::Test = unit.target.kind() {
+            format!(
+                "{} ({})",
+                test_path
+                    .strip_prefix(unit.pkg.root())
+                    .unwrap_or(&test_path)
+                    .display(),
+                path.strip_prefix(cwd).unwrap_or(path).display()
+            )
+        } else {
+            format!(
+                "unittests ({})",
+                path.strip_prefix(cwd).unwrap_or(path).display()
+            )
+        };
+
         let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
         cmd.args(test_args);
         if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
