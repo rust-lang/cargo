@@ -119,7 +119,7 @@ brackets at the end of each author.
 <a id="the-edition-field-optional"></a>
 #### The `edition` field
 
-The `edition` key is an optional key that affects which edition your package
+The `edition` key is an optional key that affects which [Rust Edition] your package
 is compiled with. [`cargo new`] will generate a package with the `edition` key
 set to the latest edition. Setting the `edition` key in
 `[package]` will affect all targets/crates in the package, including test
@@ -131,7 +131,7 @@ suites, benchmarks, binaries, examples, etc.
 edition = '2018'
 ```
 
-If the `edition` key is not set, or the value is not a valid [Rust edition] in your `Cargo.toml`, Cargo will default to 2015.
+If the `edition` key is not set in your `Cargo.toml`, Cargo will default to 2015.
 
 #### The `description` field
 
