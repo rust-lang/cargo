@@ -92,7 +92,6 @@
 //!    of that page. Update the rest of the documentation to add the new
 //!    feature.
 
-use std::cell::Cell;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -816,11 +815,6 @@ pub fn channel() -> String {
         .map(|c| c.release_channel)
         .unwrap_or_else(|| String::from("dev"))
 }
-
-thread_local!(
-    static NIGHTLY_FEATURES_ALLOWED: Cell<bool> = Cell::new(false);
-    static ENABLE_NIGHTLY_FEATURES: Cell<bool> = Cell::new(false);
-);
 
 /// This is a little complicated.
 /// This should return false if:
