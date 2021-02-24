@@ -122,7 +122,7 @@ fn rustc_bootstrap() {
         .build();
     p.cargo("build")
         .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
-        .with_stderr_contains("help: [..] use `RUSTC_BOOTSTRAP=foo cargo build` [..]")
+        .with_stderr_contains("help: [..] set the environment variable `RUSTC_BOOTSTRAP=foo` [..]")
         .with_status(101)
         .run();
     p.cargo("build")
