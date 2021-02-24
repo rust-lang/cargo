@@ -131,7 +131,7 @@ suites, benchmarks, binaries, examples, etc.
 edition = '2018'
 ```
 
-If the `edition` key is not set in your `Cargo.toml` file, Cargo will default to 2015.
+If the `edition` key is not set, or the value is not a valid [Rust edition] in your `Cargo.toml`, Cargo will default to 2015.
 
 #### The `description` field
 
