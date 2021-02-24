@@ -1497,6 +1497,17 @@ target-dir = ''
 
     assert_error(
         config.target_dir().unwrap_err(),
-        "the target directory is set to an empty string",
+        "the target directory is set to an empty string in the config.toml file.",
     );
+}
+
+#[cargo_test]
+fn cargo_target_empty_env() {
+    let project = project().build();
+
+    project.cargo("build")
+        .env("CARGO_TARGET_DIR", "")
+        .with_stderr("error: the target directory is set to an empty string in the CARGO_TARGET_DIR environment variable.")
+        .with_status(101)
+        .run()
 }
