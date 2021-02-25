@@ -589,8 +589,7 @@ impl BuildOutput {
                         // behavior, so still only give a warning.
                         if nightly_features_allowed {
                             warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
-                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
-                                help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
+                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
                                 val, whence
                             ));
                         } else {
@@ -598,8 +597,7 @@ impl BuildOutput {
                             // Abort with an error.
                             anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
-                                help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.\n\
-                                help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
+                                help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,
                                 whence,
                                 pkg_name,
