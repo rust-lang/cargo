@@ -413,20 +413,16 @@ impl Features {
         warnings: &mut Vec<String>,
     ) -> CargoResult<Features> {
         let mut ret = Features::default();
+        ret.nightly_features_allowed = config.nightly_features_allowed;
         for feature in features {
-            ret.add(feature, config, warnings)?;
+            ret.add(feature, warnings)?;
             ret.activated.push(feature.to_string());
         }
-        ret.nightly_features_allowed = config.nightly_features_allowed;
         Ok(ret)
     }
 
-    fn add(
-        &mut self,
-        feature_name: &str,
-        config: &Config,
-        warnings: &mut Vec<String>,
-    ) -> CargoResult<()> {
+    fn add(&mut self, feature_name: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
+        let nightly_features_allowed = self.nightly_features_allowed;
         let (slot, feature) = match self.status(feature_name) {
             Some(p) => p,
             None => bail!("unknown cargo feature `{}`", feature_name),
@@ -464,7 +460,7 @@ impl Features {
                 );
                 warnings.push(warning);
             }
-            Status::Unstable if !config.nightly_features_allowed => bail!(
+            Status::Unstable if !nightly_features_allowed => bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel\n\
                  {}\n{}",
