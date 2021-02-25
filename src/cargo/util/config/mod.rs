@@ -452,7 +452,7 @@ impl Config {
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             // Check if the CARGO_TARGET_DIR environment variable is set to an empty string.
             if dir.to_string_lossy() == "" {
-                anyhow::bail!("the target directory is set to an empty string in the CARGO_TARGET_DIR environment variable.")
+                anyhow::bail!("the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
@@ -461,9 +461,10 @@ impl Config {
 
             // Check if the target directory is set to an empty string in the config.toml file.
             if val.raw_value() == "" {
-                anyhow::bail!(
-                    "the target directory is set to an empty string in the config.toml file.",
-                )
+                anyhow::bail!(format!(
+                    "the target directory is set to an empty string in {}",
+                    val.value().definition
+                ),)
             }
 
             Ok(Some(Filesystem::new(path)))

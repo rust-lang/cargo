@@ -1497,7 +1497,7 @@ target-dir = ''
 
     assert_error(
         config.target_dir().unwrap_err(),
-        "the target directory is set to an empty string in the config.toml file.",
+        "the target directory is set to an empty string in [..]/.cargo/config",
     );
 }
 
