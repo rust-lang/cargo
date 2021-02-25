@@ -1507,7 +1507,7 @@ fn cargo_target_empty_env() {
 
     project.cargo("build")
         .env("CARGO_TARGET_DIR", "")
-        .with_stderr("error: the target directory is set to an empty string in the CARGO_TARGET_DIR environment variable.")
+        .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
         .with_status(101)
         .run()
 }
