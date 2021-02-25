@@ -19,7 +19,7 @@ use semver::Version;
 use std::fs;
 
 fn tc_process(cmd: &str, toolchain: &str) -> ProcessBuilder {
-    if toolchain == "this" {
+    let mut p = if toolchain == "this" {
         if cmd == "cargo" {
             process(&cargo_exe())
         } else {
@@ -29,7 +29,10 @@ fn tc_process(cmd: &str, toolchain: &str) -> ProcessBuilder {
         let mut cmd = process(cmd);
         cmd.arg(format!("+{}", toolchain));
         cmd
-    }
+    };
+    // Reset PATH since `process` modifies it to remove rustup.
+    p.env("PATH", std::env::var_os("PATH").unwrap());
+    p
 }
 
 /// Returns a sorted list of all toolchains.
