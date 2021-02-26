@@ -240,7 +240,7 @@ pub fn resolve_with_previous<'cfg>(
     // locked.
     let mut avoid_patch_ids = HashSet::new();
     if register_patches {
-        for (url, patches) in ws.root_patch() {
+        for (url, patches) in ws.root_patch().iter() {
             let previous = match previous {
                 Some(r) => r,
                 None => {

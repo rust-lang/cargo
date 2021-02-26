@@ -74,7 +74,7 @@ use url::Url;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{nightly_features_allowed, CliUnstable, Dependency, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
@@ -176,6 +176,8 @@ pub struct Config {
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
+    /// `[patch]` section parsed from configuration.
+    patch: LazyCell<HashMap<Url, Vec<Dependency>>>,
     /// Cached configuration parsed by Cargo
     http_config: LazyCell<CargoHttpConfig>,
     net_config: LazyCell<CargoNetConfig>,
@@ -261,6 +263,7 @@ impl Config {
             upper_case_env,
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
+            patch: LazyCell::new(),
             http_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
@@ -1289,6 +1292,17 @@ impl Config {
         F: FnMut() -> CargoResult<SourceId>,
     {
         Ok(*(self.crates_io_source_id.try_borrow_with(f)?))
+    }
+
+    pub fn maybe_init_patch<F>(&self, f: F) -> CargoResult<&HashMap<Url, Vec<Dependency>>>
+    where
+        F: FnMut() -> CargoResult<HashMap<Url, Vec<Dependency>>>,
+    {
+        self.patch.try_borrow_with(f)
+    }
+
+    pub fn patch(&self) -> Option<&HashMap<Url, Vec<Dependency>>> {
+        self.patch.borrow()
     }
 
     pub fn creation_time(&self) -> Instant {

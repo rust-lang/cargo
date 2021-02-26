@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -365,11 +366,46 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
-    pub fn root_patch(&self) -> &HashMap<Url, Vec<Dependency>> {
-        match self.root_maybe() {
+    pub fn root_patch(&self) -> Cow<'_, HashMap<Url, Vec<Dependency>>> {
+        let from_manifest = match self.root_maybe() {
             MaybePackage::Package(p) => p.manifest().patch(),
             MaybePackage::Virtual(vm) => vm.patch(),
+        };
+
+        let from_config = self
+            .config
+            .patch()
+            .expect("config [patch] was never parsed");
+        if from_config.is_empty() {
+            return Cow::Borrowed(from_manifest);
         }
+        if from_manifest.is_empty() {
+            return Cow::Borrowed(from_config);
+        }
+
+        // We could just chain from_manifest and from_config,
+        // but that's not quite right as it won't deal with overlaps.
+        let mut combined = from_manifest.clone();
+        for (url, cdeps) in from_config {
+            if let Some(deps) = combined.get_mut(url) {
+                // We want from_manifest to take precedence for each patched name.
+                // NOTE: This is inefficient if the number of patches is large!
+                let mut left = cdeps.clone();
+                for dep in &mut *deps {
+                    if let Some(i) = left.iter().position(|cdep| {
+                        // XXX: should this also take into account version numbers?
+                        dep.name_in_toml() == cdep.name_in_toml()
+                    }) {
+                        left.swap_remove(i);
+                    }
+                }
+                // Whatever is left does not exist in manifest dependencies.
+                deps.extend(left);
+            } else {
+                combined.insert(url.clone(), cdeps.clone());
+            }
+        }
+        Cow::Owned(combined)
     }
 
     /// Returns an iterator over all packages in this workspace

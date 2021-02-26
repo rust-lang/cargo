@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use log::{debug, trace};
 use semver::{self, VersionReq};
@@ -1558,22 +1558,20 @@ impl TomlManifest {
     }
 
     fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
-        let from_manifest = Self::patch_(self.patch.as_ref(), cx)?;
+        let _ = cx.config.maybe_init_patch(|| {
+            // Parse out the patches from .config while we're at it.
+            let config_patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>> =
+                cx.config.get("patch")?;
 
-        let config_patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>> =
-            cx.config.get("patch")?;
+            if config_patch.is_some() && !cx.config.cli_unstable().patch_in_config {
+                cx.warnings.push("`[patch]` in .cargo/config.toml ignored, the -Zpatch-in-config command-line flag is required".to_owned());
+                return Ok(HashMap::new());
+            }
 
-        if config_patch.is_some() && !cx.config.cli_unstable().patch_in_config {
-            cx.warnings.push("`[patch]` in .cargo/config.toml ignored, the -Zpatch-in-config command-line flag is required".to_owned());
-            return Ok(from_manifest);
-        }
+            Self::patch_(config_patch.as_ref(), cx)
+        }).context("parse `[patch]` from .cargo/config.toml")?;
 
-        let mut from_config = Self::patch_(config_patch.as_ref(), cx)?;
-        if from_config.is_empty() {
-            return Ok(from_manifest);
-        }
-        from_config.extend(from_manifest);
-        Ok(from_config)
+        Self::patch_(self.patch.as_ref(), cx)
     }
 
     /// Returns the path to the build script if one exists for this crate.
