@@ -81,7 +81,10 @@ fn simple_add() {
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index
-error: failed to invite owners to crate foo: EOF while parsing a value at line 1 column 0",
+error: failed to invite owners to crate `foo` on registry at file://[..]
+
+Caused by:
+  EOF while parsing a value at line 1 column 0",
         )
         .run();
 }
@@ -111,7 +114,7 @@ fn simple_remove() {
         .with_stderr(
             "    Updating `[..]` index
        Owner removing [\"username\"] from crate foo
-error: failed to remove owners from crate foo
+error: failed to remove owners from crate `foo` on registry at file://[..]
 
 Caused by:
   EOF while parsing a value at line 1 column 0",
