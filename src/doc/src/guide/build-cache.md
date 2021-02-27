@@ -2,7 +2,7 @@
 
 Cargo stores the output of a build into the "target" directory. By default,
 this is the directory named `target` in the root of your
-[*workspace*][def-worksapce]. To change the location, you can set the
+[*workspace*][def-workspace]. To change the location, you can set the
 `CARGO_TARGET_DIR` [environment variable], the [`build.target-dir`] config
 value, or the `--target-dir` command-line flag.
 
