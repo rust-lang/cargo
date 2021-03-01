@@ -1490,7 +1490,56 @@ fn api_error_json() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] api errors (status 403 Forbidden): you must be logged in
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  the remote server responded with an error (status 403 Forbidden): you must be logged in
+",
+        )
+        .run();
+
+    t.join().unwrap();
+}
+
+#[cargo_test]
+fn api_error_200() {
+    // Registry returns an API error with a 200 status code.
+    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| {
+        (
+            200,
+            &r#"{"errors": [{"detail": "max upload size is 123"}]}"#,
+        )
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 [..]
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  the remote server responded with an error: max upload size is 123
 ",
         )
         .run();
@@ -1528,13 +1577,16 @@ fn api_error_code() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] failed to get a 200 OK response, got 400
-headers:
-<tab>HTTP/1.1 400
-<tab>Content-Length: 7
-<tab>
-body:
-go away
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  failed to get a 200 OK response, got 400
+  headers:
+  <tab>HTTP/1.1 400
+  <tab>Content-Length: 7
+  <tab>
+  body:
+  go away
 ",
         )
         .run();
@@ -1577,7 +1629,10 @@ fn api_curl_error() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] [52] [..]
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  [52] [..]
 ",
         )
         .run();
@@ -1616,7 +1671,10 @@ fn api_other_error() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] invalid response from server
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  invalid response from server
 
 Caused by:
   response body was not valid utf-8
