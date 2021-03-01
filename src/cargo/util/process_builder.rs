@@ -276,9 +276,9 @@ impl ProcessBuilder {
         })()
         .chain_err(|| process_error(&format!("could not execute process {}", self), None, None))?;
         let output = Output {
+            status,
             stdout,
             stderr,
-            status,
         };
 
         {

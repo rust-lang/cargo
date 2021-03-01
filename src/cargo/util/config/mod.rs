@@ -315,10 +315,9 @@ impl Config {
 
     /// Gets the default Cargo registry.
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
-        Ok(match self.get_string("registry.default")? {
-            Some(registry) => Some(registry.val),
-            None => None,
-        })
+        Ok(self
+            .get_string("registry.default")?
+            .map(|registry| registry.val))
     }
 
     /// Gets a reference to the shell, e.g., for writing error messages.
@@ -808,10 +807,7 @@ impl Config {
             (false, _, false) => Verbosity::Normal,
         };
 
-        let cli_target_dir = match target_dir.as_ref() {
-            Some(dir) => Some(Filesystem::new(dir.clone())),
-            None => None,
-        };
+        let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color)?;

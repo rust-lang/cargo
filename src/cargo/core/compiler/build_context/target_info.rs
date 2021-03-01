@@ -699,10 +699,10 @@ impl RustcTargetData {
 
         Ok(RustcTargetData {
             rustc,
-            target_config,
-            target_info,
             host_config,
             host_info,
+            target_config,
+            target_info,
         })
     }
 
@@ -766,7 +766,7 @@ pub struct RustDocFingerprint {
 
 impl RustDocFingerprint {
     /// Read the `RustDocFingerprint` info from the fingerprint file.
-    fn read<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<Self> {
+    fn read(cx: &Context<'_, '_>) -> CargoResult<Self> {
         let rustdoc_data = paths::read(&cx.files().host_root().join(".rustdoc_fingerprint.json"))?;
         serde_json::from_str(&rustdoc_data).map_err(|e| anyhow::anyhow!("{:?}", e))
     }
@@ -779,7 +779,7 @@ impl RustDocFingerprint {
         )
     }
 
-    fn remove_doc_dirs(doc_dirs: &Vec<&Path>) -> CargoResult<()> {
+    fn remove_doc_dirs(doc_dirs: &[&Path]) -> CargoResult<()> {
         doc_dirs
             .iter()
             .filter(|path| path.exists())
@@ -795,7 +795,7 @@ impl RustDocFingerprint {
     /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
     /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
     /// any versioning.
-    pub fn check_rustdoc_fingerprint<'a, 'cfg>(cx: &Context<'a, 'cfg>) -> CargoResult<()> {
+    pub fn check_rustdoc_fingerprint(cx: &Context<'_, '_>) -> CargoResult<()> {
         let actual_rustdoc_target_data = RustDocFingerprint {
             rustc_vv: cx.bcx.rustc().verbose_version.clone(),
         };

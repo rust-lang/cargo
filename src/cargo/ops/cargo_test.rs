@@ -92,7 +92,7 @@ fn run_unit_tests(
                 "{} ({})",
                 test_path
                     .strip_prefix(unit.pkg.root())
-                    .unwrap_or(&test_path)
+                    .unwrap_or(test_path)
                     .display(),
                 path.strip_prefix(cwd).unwrap_or(path).display()
             )
