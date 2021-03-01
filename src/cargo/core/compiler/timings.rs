@@ -461,7 +461,7 @@ impl<'cfg> Timings<'cfg> {
             self.total_dirty,
             self.total_fresh + self.total_dirty,
             max_concurrency,
-            bcx.build_config.jobs,
+            bcx.jobs(),
             num_cpus::get(),
             self.start_str,
             total_time,

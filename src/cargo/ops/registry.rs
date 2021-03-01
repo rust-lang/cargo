@@ -47,7 +47,7 @@ pub struct PublishOpts<'cfg> {
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
-    pub jobs: Option<u32>,
+    pub jobs: Option<i32>,
     pub targets: Vec<String>,
     pub dry_run: bool,
     pub registry: Option<String>,

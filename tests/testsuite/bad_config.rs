@@ -139,32 +139,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn bad_cargo_config_jobs() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-                [build]
-                jobs = -1
-            "#,
-        )
-        .build();
-    p.cargo("build -v")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] error in [..].cargo/config: \
-could not load config key `build.jobs`
-
-Caused by:
-  invalid value: integer `-1`, expected u32
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn invalid_global_config() {
     let p = project()
         .file(

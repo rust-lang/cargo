@@ -27,7 +27,7 @@ pub struct PackageOpts<'cfg> {
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
-    pub jobs: Option<u32>,
+    pub jobs: Option<i32>,
     pub targets: Vec<String>,
     pub features: Vec<String>,
     pub all_features: bool,

@@ -95,8 +95,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let jobserver = match bcx.config.jobserver_from_env() {
             Some(c) => c.clone(),
             None => {
-                let client = Client::new(bcx.build_config.jobs as usize)
-                    .chain_err(|| "failed to create jobserver")?;
+                let client =
+                    Client::new(bcx.jobs() as usize).chain_err(|| "failed to create jobserver")?;
                 client.acquire_raw()?;
                 client
             }
@@ -558,7 +558,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn new_jobserver(&mut self) -> CargoResult<Client> {
-        let tokens = self.bcx.build_config.jobs as usize;
+        let tokens = self.bcx.jobs() as usize;
         let client = Client::new(tokens).chain_err(|| "failed to create jobserver")?;
 
         // Drain the client fully
