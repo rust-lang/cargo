@@ -83,12 +83,12 @@ controls whether debug information, if generated, is either placed in the
 executable itself or adjacent to it.
 
 This option is a string and acceptable values are the same as those the
-[compiler accepts][`-C split-debuginfo` flag]. This option is currently not
-passed by default on platforms other than macOS, where it defaults to
-`unpacked`. The default may change in the future for platforms using DWARF
-debugging information and ELF executables to `unpacked` as well once it is
-stabilized in the compiler.
+[compiler accepts][`-C split-debuginfo` flag]. See that documentation for the
+default behavior, which is platform-specific. Some options are only available
+on the [nightly channel]. The default may change in the future once more
+testing has been performed, and support for DWARF is stabilized.
 
+[nightly channel]: ../../book/appendix-07-nightly-rust.html
 [`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo
 
 #### debug-assertions
@@ -230,6 +230,7 @@ The default settings for the `dev` profile are:
 [profile.dev]
 opt-level = 0
 debug = true
+split-debuginfo = '...'  # Platform-specific.
 debug-assertions = true
 overflow-checks = true
 lto = false
@@ -251,6 +252,7 @@ The default settings for the `release` profile are:
 [profile.release]
 opt-level = 3
 debug = false
+split-debuginfo = '...'  # Platform-specific.
 debug-assertions = false
 overflow-checks = false
 lto = false
@@ -271,6 +273,7 @@ The default settings for the `test` profile are:
 [profile.test]
 opt-level = 0
 debug = 2
+split-debuginfo = '...'  # Platform-specific.
 debug-assertions = true
 overflow-checks = true
 lto = false
@@ -291,6 +294,7 @@ The default settings for the `bench` profile are:
 [profile.bench]
 opt-level = 3
 debug = false
+split-debuginfo = '...'  # Platform-specific.
 debug-assertions = false
 overflow-checks = false
 lto = false
