@@ -584,7 +584,7 @@ fn preserve_top_comment() {
     let mut lines = lockfile.lines().collect::<Vec<_>>();
     lines.insert(2, "# some other comment");
     let mut lockfile = lines.join("\n");
-    lockfile.push_str("\n"); // .lines/.join loses the last newline
+    lockfile.push('\n'); // .lines/.join loses the last newline
     println!("saving Cargo.lock contents:\n{}", lockfile);
 
     p.change_file("Cargo.lock", &lockfile);
