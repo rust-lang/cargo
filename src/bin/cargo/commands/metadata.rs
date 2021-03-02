@@ -53,6 +53,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
 
     let result = ops::output_metadata(&ws, &options)?;
-    config.shell().print_json(&result);
+    config.shell().print_json(&result)?;
     Ok(())
 }

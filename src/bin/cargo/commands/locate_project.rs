@@ -51,7 +51,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let location = ProjectLocation { root };
 
     match MessageFormat::parse(args)? {
-        MessageFormat::Json => config.shell().print_json(&location),
+        MessageFormat::Json => config.shell().print_json(&location)?,
         MessageFormat::Plain => drop_println!(config, "{}", location.root),
     }
 
