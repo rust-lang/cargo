@@ -305,7 +305,12 @@ fn install_one(
     // *something* to install. Explicit `--bin` or `--example` flags will be
     // checked at the start of `compile_ws`.
     if !opts.filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
-        bail!("specified package `{}` has no binaries", pkg);
+        bail!(
+            "there is nothing to install in `{}`, because it has no binaries\n\
+             `cargo install` is only for installing programs, and can't be used with libraries.\n\
+             To use a library crate, add it as a dependency in a Cargo project instead.",
+            pkg
+        );
     }
 
     // Helper for --no-track flag to make sure it doesn't overwrite anything.
