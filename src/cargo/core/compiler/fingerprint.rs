@@ -60,10 +60,10 @@
 //! `cargo rustc` extra args                   | ✓           | ✓
 //! CompileMode                                | ✓           | ✓
 //! Target Name                                | ✓           | ✓
-//! Target CompileKind (bin/lib/etc.)          | ✓           | ✓
+//! TargetKind (bin/lib/etc.)                  | ✓           | ✓
 //! Enabled Features                           | ✓           | ✓
 //! Immediate dependency’s hashes              | ✓[^1]       | ✓
-//! Target or Host mode                        |             | ✓
+//! CompileKind (host/target)                  | ✓           | ✓
 //! __CARGO_DEFAULT_LIB_METADATA[^4]           |             | ✓
 //! package_id                                 |             | ✓
 //! authors, description, homepage, repo       | ✓           |
@@ -542,6 +542,9 @@ pub struct Fingerprint {
     metadata: u64,
     /// Hash of various config settings that change how things are compiled.
     config: u64,
+    /// The rustc target. This is only relevant for `.json` files, otherwise
+    /// the metadata hash segregates the units.
+    compile_kind: u64,
     /// Description of whether the filesystem status for this unit is up to date
     /// or should be considered stale.
     #[serde(skip)]
@@ -780,6 +783,7 @@ impl Fingerprint {
             rustflags: Vec::new(),
             metadata: 0,
             config: 0,
+            compile_kind: 0,
             fs_status: FsStatus::Stale,
             outputs: Vec::new(),
         }
@@ -842,6 +846,9 @@ impl Fingerprint {
         }
         if self.config != old.config {
             bail!("configuration settings have changed")
+        }
+        if self.compile_kind != old.compile_kind {
+            bail!("compile kind (rustc target) changed")
         }
         let my_local = self.local.lock().unwrap();
         let old_local = old.local.lock().unwrap();
@@ -1090,12 +1097,22 @@ impl hash::Hash for Fingerprint {
             ref local,
             metadata,
             config,
+            compile_kind,
             ref rustflags,
             ..
         } = *self;
         let local = local.lock().unwrap();
         (
-            rustc, features, target, path, profile, &*local, metadata, config, rustflags,
+            rustc,
+            features,
+            target,
+            path,
+            profile,
+            &*local,
+            metadata,
+            config,
+            compile_kind,
+            rustflags,
         )
             .hash(h);
 
@@ -1318,6 +1335,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     } else {
         0
     };
+    let compile_kind = unit.kind.fingerprint_hash();
     Ok(Fingerprint {
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),
@@ -1331,6 +1349,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         memoized_hash: Mutex::new(None),
         metadata,
         config,
+        compile_kind,
         rustflags: extra_flags,
         fs_status: FsStatus::Stale,
         outputs,
