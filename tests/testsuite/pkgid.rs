@@ -96,4 +96,17 @@ Did you mean one of these?
 ",
         )
         .run();
+
+    // Bad file URL.
+    p.cargo("pkgid ./Cargo.toml")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `./Cargo.toml`
+
+Caused by:
+  package ID specification `./Cargo.toml` looks like a file path, maybe try file://[..]/Cargo.toml
+",
+        )
+        .run();
 }
