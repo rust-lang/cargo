@@ -38,12 +38,9 @@ impl PackageIdSpec {
     /// use cargo::core::PackageIdSpec;
     ///
     /// let specs = vec![
+    ///     "https://crates.io/foo",
     ///     "https://crates.io/foo#1.2.3",
     ///     "https://crates.io/foo#bar:1.2.3",
-    ///     "crates.io/foo",
-    ///     "crates.io/foo#1.2.3",
-    ///     "crates.io/foo#bar",
-    ///     "crates.io/foo#bar:1.2.3",
     ///     "foo",
     ///     "foo:1.2.3",
     /// ];
