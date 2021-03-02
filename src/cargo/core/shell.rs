@@ -185,10 +185,7 @@ impl Shell {
 
     /// Erase from cursor to end of line.
     pub fn err_erase_line(&mut self) {
-        if let ShellOut::Stream {
-            stderr_tty: true, ..
-        } = self.output
-        {
+        if self.err_supports_color() {
             imp::err_erase_line(self);
             self.needs_clear = false;
         }
