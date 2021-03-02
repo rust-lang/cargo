@@ -163,5 +163,9 @@ details on environment variables that Cargo reads.
 
        cargo pkgid https://github.com/rust-lang/crates.io-index#foo
 
+4. Retrieve package specification for `foo` from a local package:
+
+       cargo pkgid file:///path/to/local/package#foo
+
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-generate-lockfile(1)](cargo-generate-lockfile.html), [cargo-metadata(1)](cargo-metadata.html)
