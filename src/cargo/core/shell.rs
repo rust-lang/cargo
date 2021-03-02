@@ -342,9 +342,12 @@ impl Shell {
         Ok(())
     }
 
-    pub fn print_json<T: serde::ser::Serialize>(&mut self, obj: &T) {
-        let encoded = serde_json::to_string(&obj).unwrap();
+    pub fn print_json<T: serde::ser::Serialize>(&mut self, obj: &T) -> CargoResult<()> {
+        // Path may fail to serialize to JSON ...
+        let encoded = serde_json::to_string(&obj)?;
+        // ... but don't fail due to a closed pipe.
         drop(writeln!(self.out(), "{}", encoded));
+        Ok(())
     }
 }
 

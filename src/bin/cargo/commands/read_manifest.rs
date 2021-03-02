@@ -15,6 +15,8 @@ Deprecated, use `cargo metadata --no-deps` instead.\
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    config.shell().print_json(&ws.current()?.serialized(config));
+    config
+        .shell()
+        .print_json(&ws.current()?.serialized(config))?;
     Ok(())
 }
