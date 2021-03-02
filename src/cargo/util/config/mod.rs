@@ -471,10 +471,13 @@ impl Config {
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
-        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+        } else if let Some(dir) = self.env.get("CARGO_TARGET_DIR") {
             // Check if the CARGO_TARGET_DIR environment variable is set to an empty string.
-            if dir.to_string_lossy() == "" {
-                anyhow::bail!("the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
+            if dir.is_empty() {
+                bail!(
+                    "the target directory is set to an empty string in the \
+                     `CARGO_TARGET_DIR` environment variable"
+                )
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
@@ -482,11 +485,11 @@ impl Config {
             let path = val.resolve_path(self);
 
             // Check if the target directory is set to an empty string in the config.toml file.
-            if val.raw_value() == "" {
-                anyhow::bail!(format!(
+            if val.raw_value().is_empty() {
+                bail!(
                     "the target directory is set to an empty string in {}",
                     val.value().definition
-                ),)
+                )
             }
 
             Ok(Some(Filesystem::new(path)))
