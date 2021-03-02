@@ -81,5 +81,9 @@ Get the package ID for the given package instead of the current package.
 
        cargo pkgid https://github.com/rust-lang/crates.io-index#foo
 
+4. Retrieve package specification for `foo` from a local package:
+
+       cargo pkgid file:///path/to/local/package#foo
+
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}}
