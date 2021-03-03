@@ -2953,3 +2953,29 @@ fn dep_kinds_workspace() {
         )
         .run();
 }
+
+// Creating non-utf8 path is an OS-specific pain, so let's run this only on
+// linux, where arbitrary bytes work.
+#[cfg(target_os = "linux")]
+#[cargo_test]
+fn cargo_metadata_non_utf8() {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+    use std::path::PathBuf;
+
+    let base = PathBuf::from(OsString::from_vec(vec![255]));
+
+    let p = project()
+        .no_manifest()
+        .file(base.join("./src/lib.rs"), "")
+        .file(base.join("./Cargo.toml"), &basic_lib_manifest("foo"))
+        .build();
+
+    p.cargo("metadata")
+        .cwd(p.root().join(base))
+        .arg("--format-version")
+        .arg("1")
+        .with_stderr("error: path contains invalid UTF-8 characters")
+        .with_status(101)
+        .run();
+}

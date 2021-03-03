@@ -22,7 +22,6 @@ fn main() {
     pretty_env_logger::init_custom_env("CARGO_LOG");
     #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init_from_env("CARGO_LOG");
-    cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {
         Ok(cfg) => cfg,
@@ -32,7 +31,7 @@ fn main() {
         }
     };
 
-    let result = match cargo::ops::fix_maybe_exec_rustc() {
+    let result = match cargo::ops::fix_maybe_exec_rustc(&config) {
         Ok(true) => Ok(()),
         Ok(false) => {
             let _token = cargo::util::job::setup();
@@ -76,9 +75,8 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
         Err(_) => config.get::<Option<Vec<String>>>(&alias_name)?,
     };
 
-    let result = user_alias.or_else(|| match builtin_aliases_execs(command) {
-        Some(command_str) => Some(vec![command_str.1.to_string()]),
-        None => None,
+    let result = user_alias.or_else(|| {
+        builtin_aliases_execs(command).map(|command_str| vec![command_str.1.to_string()])
     });
     Ok(result)
 }

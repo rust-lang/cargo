@@ -49,7 +49,7 @@ impl Rustc {
 
         let mut cmd = util::process(&path);
         cmd.arg("-vV");
-        let verbose_version = cache.cached_output(&cmd)?.0;
+        let verbose_version = cache.cached_output(&cmd, 0)?.0;
 
         let extract = |field: &str| -> CargoResult<&str> {
             verbose_version
@@ -100,8 +100,25 @@ impl Rustc {
         util::process(&self.path)
     }
 
-    pub fn cached_output(&self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
-        self.cache.lock().unwrap().cached_output(cmd)
+    /// Gets the output for the given command.
+    ///
+    /// This will return the cached value if available, otherwise it will run
+    /// the command and cache the output.
+    ///
+    /// `extra_fingerprint` is extra data to include in the cache fingerprint.
+    /// Use this if there is other information about the environment that may
+    /// affect the output that is not part of `cmd`.
+    ///
+    /// Returns a tuple of strings `(stdout, stderr)`.
+    pub fn cached_output(
+        &self,
+        cmd: &ProcessBuilder,
+        extra_fingerprint: u64,
+    ) -> CargoResult<(String, String)> {
+        self.cache
+            .lock()
+            .unwrap()
+            .cached_output(cmd, extra_fingerprint)
     }
 }
 
@@ -187,8 +204,12 @@ impl Cache {
         }
     }
 
-    fn cached_output(&mut self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
-        let key = process_fingerprint(cmd);
+    fn cached_output(
+        &mut self,
+        cmd: &ProcessBuilder,
+        extra_fingerprint: u64,
+    ) -> CargoResult<(String, String)> {
+        let key = process_fingerprint(cmd, extra_fingerprint);
         if self.data.outputs.contains_key(&key) {
             debug!("rustc info cache hit");
         } else {
@@ -295,8 +316,9 @@ fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
     Ok(hasher.finish())
 }
 
-fn process_fingerprint(cmd: &ProcessBuilder) -> u64 {
+fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
     let mut hasher = StableHasher::new();
+    extra_fingerprint.hash(&mut hasher);
     cmd.get_args().hash(&mut hasher);
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
     env.sort_unstable();

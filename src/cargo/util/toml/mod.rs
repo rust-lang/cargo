@@ -15,7 +15,6 @@ use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
-use crate::core::nightly_features_allowed;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -1037,7 +1036,7 @@ impl TomlManifest {
         // Parse features first so they will be available when parsing other parts of the TOML.
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(cargo_features, &mut warnings)?;
+        let features = Features::new(cargo_features, config, &mut warnings)?;
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| anyhow!("no `package` section found"))?;
@@ -1076,7 +1075,7 @@ impl TomlManifest {
                 let mut msg =
                     "`rust-version` is not supported on this version of Cargo and will be ignored"
                         .to_string();
-                if nightly_features_allowed() {
+                if config.nightly_features_allowed {
                     msg.push_str(
                         "\n\n\
                         consider adding `cargo-features = [\"rust-version\"]` to the manifest",
@@ -1432,7 +1431,7 @@ impl TomlManifest {
         let mut deps = Vec::new();
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(cargo_features, &mut warnings)?;
+        let features = Features::new(cargo_features, config, &mut warnings)?;
 
         let (replace, patch) = {
             let mut cx = Context {

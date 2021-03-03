@@ -1582,6 +1582,24 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
             p.env_remove(&k);
         }
     }
+    if env::var_os("RUSTUP_TOOLCHAIN").is_some() {
+        // Override the PATH to avoid executing the rustup wrapper thousands
+        // of times. This makes the testsuite run substantially faster.
+        let path = env::var_os("PATH").unwrap_or_default();
+        let paths = env::split_paths(&path);
+        let mut outer_cargo = PathBuf::from(env::var_os("CARGO").unwrap());
+        outer_cargo.pop();
+        let new_path = env::join_paths(std::iter::once(outer_cargo).chain(paths)).unwrap();
+        p.env("PATH", new_path);
+    }
+
+    if cfg!(target_os = "macos") {
+        // This makes the test suite run substantially faster.
+        p.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "unpacked")
+            .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "unpacked")
+            .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "unpacked")
+            .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "unpacked");
+    }
 
     p.cwd(&paths::root())
         .env("HOME", paths::home())

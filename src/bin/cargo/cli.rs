@@ -48,7 +48,7 @@ Available unstable (nightly-only) flags:
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
-        if !features::nightly_features_allowed() {
+        if !config.nightly_features_allowed {
             drop_println!(
                 config,
                 "\nUnstable flags are only available on the nightly channel \

@@ -1656,9 +1656,7 @@ fn lto_build() {
         --emit=[..]link \
         -C opt-level=3 \
         -C lto \
-        -C metadata=[..] \
-        --out-dir [CWD]/target/release/deps \
-        -L dependency=[CWD]/target/release/deps`
+        [..]
 [FINISHED] release [optimized] target(s) in [..]
 ",
         )

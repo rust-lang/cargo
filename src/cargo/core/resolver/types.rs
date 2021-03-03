@@ -173,7 +173,7 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    pub fn flatten<'a>(&'a self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
+    pub fn flatten(&self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
         self.remaining_siblings
             .clone()
             .map(move |(d, _, _)| (self.parent.package_id(), d))
@@ -247,7 +247,7 @@ impl RemainingDeps {
         }
         None
     }
-    pub fn iter<'a>(&'a mut self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
+    pub fn iter(&mut self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
         self.data.iter().flat_map(|(other, _)| other.flatten())
     }
 }

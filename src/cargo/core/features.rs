@@ -92,7 +92,6 @@
 //!    of that page. Update the rest of the documentation to add the new
 //!    feature.
 
-use std::cell::Cell;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -102,6 +101,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
 use crate::util::{indented_lines, ProcessBuilder};
+use crate::Config;
 
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
@@ -276,6 +276,7 @@ macro_rules! features {
         pub struct Features {
             $($feature: bool,)*
             activated: Vec<String>,
+            nightly_features_allowed: bool,
         }
 
         impl Feature {
@@ -406,8 +407,13 @@ pub struct Feature {
 }
 
 impl Features {
-    pub fn new(features: &[String], warnings: &mut Vec<String>) -> CargoResult<Features> {
+    pub fn new(
+        features: &[String],
+        config: &Config,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<Features> {
         let mut ret = Features::default();
+        ret.nightly_features_allowed = config.nightly_features_allowed;
         for feature in features {
             ret.add(feature, warnings)?;
             ret.activated.push(feature.to_string());
@@ -416,6 +422,7 @@ impl Features {
     }
 
     fn add(&mut self, feature_name: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
+        let nightly_features_allowed = self.nightly_features_allowed;
         let (slot, feature) = match self.status(feature_name) {
             Some(p) => p,
             None => bail!("unknown cargo feature `{}`", feature_name),
@@ -453,7 +460,7 @@ impl Features {
                 );
                 warnings.push(warning);
             }
-            Status::Unstable if !nightly_features_allowed() => bail!(
+            Status::Unstable if !nightly_features_allowed => bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel\n\
                  {}\n{}",
@@ -488,7 +495,7 @@ impl Features {
             let feature = feature.name.replace("_", "-");
             let mut msg = format!("feature `{}` is required", feature);
 
-            if nightly_features_allowed() {
+            if self.nightly_features_allowed {
                 let s = format!(
                     "\n\nconsider adding `cargo-features = [\"{0}\"]` \
                      to the manifest",
@@ -603,8 +610,12 @@ where
 }
 
 impl CliUnstable {
-    pub fn parse(&mut self, flags: &[String]) -> CargoResult<Vec<String>> {
-        if !flags.is_empty() && !nightly_features_allowed() {
+    pub fn parse(
+        &mut self,
+        flags: &[String],
+        nightly_features_allowed: bool,
+    ) -> CargoResult<Vec<String>> {
+        if !flags.is_empty() && !nightly_features_allowed {
             bail!(
                 "the `-Z` flag is only accepted on the nightly channel of Cargo, \
                  but this is the `{}` channel\n\
@@ -761,7 +772,9 @@ impl CliUnstable {
                  information about the `{}` flag.",
                 issue, flag
             );
-            if nightly_features_allowed() {
+            // NOTE: a `config` isn't available here, check the channel directly
+            let channel = channel();
+            if channel == "nightly" || channel == "dev" {
                 bail!(
                     "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
                      {}",
@@ -775,7 +788,7 @@ impl CliUnstable {
                      {}\n\
                      {}",
                     flag,
-                    channel(),
+                    channel,
                     SEE_CHANNELS,
                     see
                 );
@@ -799,47 +812,4 @@ pub fn channel() -> String {
         .cfg_info
         .map(|c| c.release_channel)
         .unwrap_or_else(|| String::from("dev"))
-}
-
-thread_local!(
-    static NIGHTLY_FEATURES_ALLOWED: Cell<bool> = Cell::new(false);
-    static ENABLE_NIGHTLY_FEATURES: Cell<bool> = Cell::new(false);
-);
-
-/// This is a little complicated.
-/// This should return false if:
-/// - this is an artifact of the rustc distribution process for "stable" or for "beta"
-/// - this is an `#[test]` that does not opt in with `enable_nightly_features`
-/// - this is a integration test that uses `ProcessBuilder`
-///      that does not opt in with `masquerade_as_nightly_cargo`
-/// This should return true if:
-/// - this is an artifact of the rustc distribution process for "nightly"
-/// - this is being used in the rustc distribution process internally
-/// - this is a cargo executable that was built from source
-/// - this is an `#[test]` that called `enable_nightly_features`
-/// - this is a integration test that uses `ProcessBuilder`
-///       that called `masquerade_as_nightly_cargo`
-pub fn nightly_features_allowed() -> bool {
-    if ENABLE_NIGHTLY_FEATURES.with(|c| c.get()) {
-        return true;
-    }
-    match &channel()[..] {
-        "nightly" | "dev" => NIGHTLY_FEATURES_ALLOWED.with(|c| c.get()),
-        _ => false,
-    }
-}
-
-/// Allows nightly features to be enabled for this thread, but only if the
-/// development channel is nightly or dev.
-///
-/// Used by cargo main to ensure that a cargo build from source has nightly features
-pub fn maybe_allow_nightly_features() {
-    NIGHTLY_FEATURES_ALLOWED.with(|c| c.set(true));
-}
-
-/// Forcibly enables nightly features for this thread.
-///
-/// Used by tests to allow the use of nightly features.
-pub fn enable_nightly_features() {
-    ENABLE_NIGHTLY_FEATURES.with(|c| c.set(true));
 }

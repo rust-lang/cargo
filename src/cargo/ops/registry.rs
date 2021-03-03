@@ -286,65 +286,62 @@ fn transmit(
         None => BTreeMap::new(),
     };
 
-    let publish = registry.publish(
-        &NewCrate {
-            name: pkg.name().to_string(),
-            vers: pkg.version().to_string(),
-            deps,
-            features: string_features,
-            authors: authors.clone(),
-            description: description.clone(),
-            homepage: homepage.clone(),
-            documentation: documentation.clone(),
-            keywords: keywords.clone(),
-            categories: categories.clone(),
-            readme: readme_content,
-            readme_file: readme.clone(),
-            repository: repository.clone(),
-            license: license.clone(),
-            license_file: license_file.clone(),
-            badges: badges.clone(),
-            links: links.clone(),
-            v: None,
-        },
-        tarball,
-    );
+    let warnings = registry
+        .publish(
+            &NewCrate {
+                name: pkg.name().to_string(),
+                vers: pkg.version().to_string(),
+                deps,
+                features: string_features,
+                authors: authors.clone(),
+                description: description.clone(),
+                homepage: homepage.clone(),
+                documentation: documentation.clone(),
+                keywords: keywords.clone(),
+                categories: categories.clone(),
+                readme: readme_content,
+                readme_file: readme.clone(),
+                repository: repository.clone(),
+                license: license.clone(),
+                license_file: license_file.clone(),
+                badges: badges.clone(),
+                links: links.clone(),
+                v: None,
+            },
+            tarball,
+        )
+        .chain_err(|| format!("failed to publish to registry at {}", registry.host()))?;
 
-    match publish {
-        Ok(warnings) => {
-            if !warnings.invalid_categories.is_empty() {
-                let msg = format!(
-                    "the following are not valid category slugs and were \
-                     ignored: {}. Please see https://crates.io/category_slugs \
-                     for the list of all category slugs. \
-                     ",
-                    warnings.invalid_categories.join(", ")
-                );
-                config.shell().warn(&msg)?;
-            }
-
-            if !warnings.invalid_badges.is_empty() {
-                let msg = format!(
-                    "the following are not valid badges and were ignored: {}. \
-                     Either the badge type specified is unknown or a required \
-                     attribute is missing. Please see \
-                     https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
-                     for valid badge types and their required attributes.",
-                    warnings.invalid_badges.join(", ")
-                );
-                config.shell().warn(&msg)?;
-            }
-
-            if !warnings.other.is_empty() {
-                for msg in warnings.other {
-                    config.shell().warn(&msg)?;
-                }
-            }
-
-            Ok(())
-        }
-        Err(e) => Err(e),
+    if !warnings.invalid_categories.is_empty() {
+        let msg = format!(
+            "the following are not valid category slugs and were \
+             ignored: {}. Please see https://crates.io/category_slugs \
+             for the list of all category slugs. \
+             ",
+            warnings.invalid_categories.join(", ")
+        );
+        config.shell().warn(&msg)?;
     }
+
+    if !warnings.invalid_badges.is_empty() {
+        let msg = format!(
+            "the following are not valid badges and were ignored: {}. \
+             Either the badge type specified is unknown or a required \
+             attribute is missing. Please see \
+             https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
+             for valid badge types and their required attributes.",
+            warnings.invalid_badges.join(", ")
+        );
+        config.shell().warn(&msg)?;
+    }
+
+    if !warnings.other.is_empty() {
+        for msg in warnings.other {
+            config.shell().warn(&msg)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Returns the index and token from the config file for the given registry.
@@ -731,9 +728,9 @@ pub fn registry_login(
             input
                 .lock()
                 .read_line(&mut line)
-                .chain_err(|| "failed to read stdin")
-                .map_err(anyhow::Error::from)?;
-            // Automatically remove `cargo login` from an inputted token to allow direct pastes from `registry.host()`/me.
+                .chain_err(|| "failed to read stdin")?;
+            // Automatically remove `cargo login` from an inputted token to
+            // allow direct pastes from `registry.host()`/me.
             line.replace("cargo login", "").trim().to_string()
         }
     };
@@ -820,9 +817,13 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry
-            .add_owners(&name, &v)
-            .map_err(|e| format_err!("failed to invite owners to crate {}: {}", name, e))?;
+        let msg = registry.add_owners(&name, &v).chain_err(|| {
+            format!(
+                "failed to invite owners to crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
 
         config.shell().status("Owner", msg)?;
     }
@@ -832,15 +833,23 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         config
             .shell()
             .status("Owner", format!("removing {:?} from crate {}", v, name))?;
-        registry
-            .remove_owners(&name, &v)
-            .chain_err(|| format!("failed to remove owners from crate {}", name))?;
+        registry.remove_owners(&name, &v).chain_err(|| {
+            format!(
+                "failed to remove owners from crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
     }
 
     if opts.list {
-        let owners = registry
-            .list_owners(&name)
-            .chain_err(|| format!("failed to list owners of crate {}", name))?;
+        let owners = registry.list_owners(&name).chain_err(|| {
+            format!(
+                "failed to list owners of crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
         for owner in owners.iter() {
             drop_print!(config, "{}", owner.login);
             match (owner.name.as_ref(), owner.email.as_ref()) {
@@ -882,16 +891,19 @@ pub fn yank(
         config
             .shell()
             .status("Unyank", format!("{}:{}", name, version))?;
-        registry
-            .unyank(&name, &version)
-            .chain_err(|| "failed to undo a yank")?;
+        registry.unyank(&name, &version).chain_err(|| {
+            format!(
+                "failed to undo a yank from the registry at {}",
+                registry.host()
+            )
+        })?;
     } else {
         config
             .shell()
             .status("Yank", format!("{}:{}", name, version))?;
         registry
             .yank(&name, &version)
-            .chain_err(|| "failed to yank")?;
+            .chain_err(|| format!("failed to yank from the registry at {}", registry.host()))?;
     }
 
     Ok(())
@@ -937,9 +949,12 @@ pub fn search(
     }
 
     let (mut registry, _, source_id) = registry(config, None, index, reg, false, false)?;
-    let (crates, total_crates) = registry
-        .search(query, limit)
-        .chain_err(|| "failed to retrieve search results from the registry")?;
+    let (crates, total_crates) = registry.search(query, limit).chain_err(|| {
+        format!(
+            "failed to retrieve search results from the registry at {}",
+            registry.host()
+        )
+    })?;
 
     let names = crates
         .iter()

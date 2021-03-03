@@ -39,7 +39,7 @@ fn simple() {
         .with_stderr(
             "    Updating `[..]` index
       Unyank foo:0.0.1
-error: failed to undo a yank
+error: failed to undo a yank from the registry at file:///[..]
 
 Caused by:
   EOF while parsing a value at line 1 column 0",

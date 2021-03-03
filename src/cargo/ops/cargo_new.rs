@@ -831,10 +831,7 @@ fn discover_author(path: &Path) -> (Option<String>, Option<String>) {
         .or_else(|| git_config.and_then(|g| g.get_string("user.name").ok()))
         .or_else(|| get_environment_variable(&name_variables[3..]));
 
-    let name = match name {
-        Some(namestr) => Some(namestr.trim().to_string()),
-        None => None,
-    };
+    let name = name.map(|namestr| namestr.trim().to_string());
 
     let email_variables = [
         "CARGO_EMAIL",

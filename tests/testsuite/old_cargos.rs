@@ -19,7 +19,7 @@ use semver::Version;
 use std::fs;
 
 fn tc_process(cmd: &str, toolchain: &str) -> ProcessBuilder {
-    if toolchain == "this" {
+    let mut p = if toolchain == "this" {
         if cmd == "cargo" {
             process(&cargo_exe())
         } else {
@@ -29,7 +29,10 @@ fn tc_process(cmd: &str, toolchain: &str) -> ProcessBuilder {
         let mut cmd = process(cmd);
         cmd.arg(format!("+{}", toolchain));
         cmd
-    }
+    };
+    // Reset PATH since `process` modifies it to remove rustup.
+    p.env("PATH", std::env::var_os("PATH").unwrap());
+    p
 }
 
 /// Returns a sorted list of all toolchains.
@@ -390,7 +393,7 @@ fn new_features() {
                 ..
             }) = err.downcast_ref::<ProcessError>()
             {
-                let stderr = std::str::from_utf8(&stderr).unwrap();
+                let stderr = std::str::from_utf8(stderr).unwrap();
                 if !stderr.contains(contents) {
                     tc_result.push(format!(
                         "{} expected to see error contents:\n{}\nbut saw:\n{}",
@@ -425,7 +428,7 @@ fn new_features() {
         }
 
         let which = "locked bar 1.0.0";
-        lock_bar_to(&version, 100);
+        lock_bar_to(version, 100);
         match run_cargo() {
             Ok(behavior) => {
                 check_lock!(tc_result, "bar", which, behavior.bar, "1.0.0");
@@ -438,7 +441,7 @@ fn new_features() {
         }
 
         let which = "locked bar 1.0.1";
-        lock_bar_to(&version, 101);
+        lock_bar_to(version, 101);
         match run_cargo() {
             Ok(behavior) => {
                 check_lock!(tc_result, "bar", which, behavior.bar, "1.0.1");
@@ -460,7 +463,7 @@ fn new_features() {
         }
 
         let which = "locked bar 1.0.2";
-        lock_bar_to(&version, 102);
+        lock_bar_to(version, 102);
         match run_cargo() {
             Ok(behavior) => {
                 check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");

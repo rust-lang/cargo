@@ -434,11 +434,11 @@ impl<'cfg> PackageSet<'cfg> {
         })
     }
 
-    pub fn package_ids<'a>(&'a self) -> impl Iterator<Item = PackageId> + 'a {
+    pub fn package_ids(&self) -> impl Iterator<Item = PackageId> + '_ {
         self.packages.keys().cloned()
     }
 
-    pub fn packages<'a>(&'a self) -> impl Iterator<Item = &'a Package> + 'a {
+    pub fn packages(&self) -> impl Iterator<Item = &Package> {
         self.packages.values().filter_map(|p| p.borrow())
     }
 

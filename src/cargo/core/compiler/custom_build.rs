@@ -4,6 +4,7 @@ use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{self, internal, paths, profile};
 use cargo_platform::Cfg;
@@ -267,7 +268,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             }
         })
         .collect::<Vec<_>>();
-    let pkg_name = unit.pkg.to_string();
+    let pkg_name = unit.pkg.name();
+    let pkg_descr = unit.pkg.to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
     let output_file = script_run_dir.join("output");
@@ -276,7 +278,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let host_target_root = cx.files().host_dest().to_path_buf();
     let all = (
         id,
-        pkg_name.clone(),
+        pkg_name,
+        pkg_descr.clone(),
         Arc::clone(&build_script_outputs),
         output_file.clone(),
         script_out_dir.clone(),
@@ -291,6 +294,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_out_dir)?;
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
+    let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -365,7 +369,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 },
                 true,
             )
-            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_name));
+            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_descr));
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(
@@ -394,10 +398,12 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
         let parsed_output = BuildOutput::parse(
             &output.stdout,
-            &pkg_name,
+            pkg_name,
+            &pkg_descr,
             &script_out_dir,
             &script_out_dir,
             extra_link_arg,
+            nightly_features_allowed,
         )?;
 
         if json_messages {
@@ -414,15 +420,17 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     // itself to run when we actually end up just discarding what we calculated
     // above.
     let fresh = Work::new(move |state| {
-        let (id, pkg_name, build_script_outputs, output_file, script_out_dir) = all;
+        let (id, pkg_name, pkg_descr, build_script_outputs, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
             None => BuildOutput::parse_file(
                 &output_file,
-                &pkg_name,
+                pkg_name,
+                &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
                 extra_link_arg,
+                nightly_features_allowed,
             )?,
         };
 
@@ -469,18 +477,22 @@ fn insert_warnings_in_build_outputs(
 impl BuildOutput {
     pub fn parse_file(
         path: &Path,
-        pkg_name: &str,
+        pkg_name: InternedString,
+        pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
         extra_link_arg: bool,
+        nightly_features_allowed: bool,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
             &contents,
             pkg_name,
+            pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
             extra_link_arg,
+            nightly_features_allowed,
         )
     }
 
@@ -488,10 +500,12 @@ impl BuildOutput {
     // The `pkg_name` is used for error messages.
     pub fn parse(
         input: &[u8],
-        pkg_name: &str,
+        pkg_name: InternedString,
+        pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
         extra_link_arg: bool,
+        nightly_features_allowed: bool,
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -502,7 +516,7 @@ impl BuildOutput {
         let mut rerun_if_changed = Vec::new();
         let mut rerun_if_env_changed = Vec::new();
         let mut warnings = Vec::new();
-        let whence = format!("build script of `{}`", pkg_name);
+        let whence = format!("build script of `{}`", pkg_descr);
 
         for line in input.split(|b| *b == b'\n') {
             let line = match str::from_utf8(line) {
@@ -562,7 +576,37 @@ impl BuildOutput {
                     }
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
-                "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
+                "rustc-env" => {
+                    let (key, val) = BuildOutput::parse_rustc_env(&value, &whence)?;
+                    // Build scripts aren't allowed to set RUSTC_BOOTSTRAP.
+                    // See https://github.com/rust-lang/cargo/issues/7088.
+                    if key == "RUSTC_BOOTSTRAP" {
+                        // If RUSTC_BOOTSTRAP is already set, the user of Cargo knows about
+                        // bootstrap and still wants to override the channel. Give them a way to do
+                        // so, but still emit a warning that the current crate shouldn't be trying
+                        // to set RUSTC_BOOTSTRAP.
+                        // If this is a nightly build, setting RUSTC_BOOTSTRAP wouldn't affect the
+                        // behavior, so still only give a warning.
+                        if nightly_features_allowed {
+                            warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
+                                val, whence
+                            ));
+                        } else {
+                            // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
+                            // Abort with an error.
+                            anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
+                                help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
+                                val,
+                                whence,
+                                pkg_name,
+                            );
+                        }
+                    } else {
+                        env.push((key, val));
+                    }
+                }
                 "warning" => warnings.push(value.to_string()),
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
@@ -813,10 +857,12 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
     (
         BuildOutput::parse_file(
             &output_file,
+            unit.pkg.name(),
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
             extra_link_arg,
+            cx.bcx.config.nightly_features_allowed,
         )
         .ok(),
         prev_script_out_dir,

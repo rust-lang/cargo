@@ -15,12 +15,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if let Err(e) = args.workspace(config) {
         let mut h = HashMap::new();
         h.insert("invalid".to_string(), e.to_string());
-        config.shell().print_json(&h);
+        config.shell().print_json(&h)?;
         process::exit(1)
     }
 
     let mut h = HashMap::new();
     h.insert("success".to_string(), "true".to_string());
-    config.shell().print_json(&h);
+    config.shell().print_json(&h)?;
     Ok(())
 }

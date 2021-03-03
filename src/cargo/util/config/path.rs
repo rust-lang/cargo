@@ -10,6 +10,11 @@ use std::path::PathBuf;
 pub struct ConfigRelativePath(Value<String>);
 
 impl ConfigRelativePath {
+    /// Returns the underlying value.
+    pub fn value(&self) -> &Value<String> {
+        &self.0
+    }
+
     /// Returns the raw underlying configuration value for this key.
     pub fn raw_value(&self) -> &str {
         &self.0.val

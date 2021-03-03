@@ -1,6 +1,6 @@
 //! Tests for config settings.
 
-use cargo::core::{enable_nightly_features, Shell};
+use cargo::core::Shell;
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
@@ -20,6 +20,7 @@ pub struct ConfigBuilder {
     unstable: Vec<String>,
     config_args: Vec<String>,
     cwd: Option<PathBuf>,
+    enable_nightly_features: bool,
 }
 
 impl ConfigBuilder {
@@ -29,6 +30,7 @@ impl ConfigBuilder {
             unstable: Vec::new(),
             config_args: Vec::new(),
             cwd: None,
+            enable_nightly_features: false,
         }
     }
 
@@ -41,6 +43,12 @@ impl ConfigBuilder {
     /// Sets an environment variable.
     pub fn env(&mut self, key: impl Into<String>, val: impl Into<String>) -> &mut Self {
         self.env.insert(key.into(), val.into());
+        self
+    }
+
+    /// Unconditionaly enable nightly features, even on stable channels.
+    pub fn nightly_features_allowed(&mut self, allowed: bool) -> &mut Self {
+        self.enable_nightly_features = allowed;
         self
     }
 
@@ -67,15 +75,12 @@ impl ConfigBuilder {
 
     /// Creates the `Config`, returning a Result.
     pub fn build_err(&self) -> CargoResult<Config> {
-        if !self.unstable.is_empty() {
-            // This is unfortunately global. Some day that should be fixed.
-            enable_nightly_features();
-        }
         let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
         let shell = Shell::from_write(output);
         let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
+        config.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
         config.set_env(self.env.clone());
         config.set_search_stop_path(paths::root());
         config.configure(
@@ -1095,40 +1100,37 @@ Caused by:
 /// Assert that unstable options can be configured with the `unstable` table in
 /// cargo config files
 fn unstable_table_notation() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 [unstable]
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
 /// Assert that dotted notation works for configuring unstable options
 fn unstable_dotted_notation() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
 /// Assert that Zflags on the CLI take precedence over those from config
 fn unstable_cli_precedence() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 
     let config = ConfigBuilder::new()
@@ -1159,7 +1161,8 @@ fn unstable_flags_ignored_on_stable() {
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    // Enforce stable channel even when testing on nightly.
+    let config = ConfigBuilder::new().nightly_features_allowed(false).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, false);
 }
 
@@ -1459,4 +1462,32 @@ strip = 'debuginfo'
     let p: toml::TomlProfile = config.get("profile.release").unwrap();
     let strip = p.strip.unwrap();
     assert_eq!(strip, toml::StringOrBool::String("debuginfo".to_string()));
+}
+
+#[cargo_test]
+fn cargo_target_empty_cfg() {
+    write_config(
+        "\
+[build]
+target-dir = ''
+",
+    );
+
+    let config = new_config();
+
+    assert_error(
+        config.target_dir().unwrap_err(),
+        "the target directory is set to an empty string in [..]/.cargo/config",
+    );
+}
+
+#[cargo_test]
+fn cargo_target_empty_env() {
+    let project = project().build();
+
+    project.cargo("build")
+        .env("CARGO_TARGET_DIR", "")
+        .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
+        .with_status(101)
+        .run()
 }
