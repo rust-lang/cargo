@@ -13,6 +13,7 @@ use std::path::Path;
 use std::str;
 
 // Helper for testing dep-info files in the fingerprint dir.
+#[track_caller]
 fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(u8, &str)])) {
     let mut files = project
         .glob(fingerprint)

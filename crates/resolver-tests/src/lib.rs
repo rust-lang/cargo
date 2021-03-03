@@ -969,12 +969,14 @@ fn meta_test_multiple_versions_strategy() {
 }
 
 /// Assert `xs` contains `elems`
+#[track_caller]
 pub fn assert_contains<A: PartialEq>(xs: &[A], elems: &[A]) {
     for elem in elems {
         assert!(xs.contains(elem));
     }
 }
 
+#[track_caller]
 pub fn assert_same<A: PartialEq>(a: &[A], b: &[A]) {
     assert_eq!(a.len(), b.len());
     assert_contains(b, a);
