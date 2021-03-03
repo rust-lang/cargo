@@ -16,7 +16,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if !(unstable.credential_process || unstable.unstable_options) {
         const SEE: &str = "See https://github.com/rust-lang/cargo/issues/8933 for more \
         information about the `cargo logout` command.";
-        if features::nightly_features_allowed() {
+        if config.nightly_features_allowed {
             return Err(format_err!(
                 "the `cargo logout` command is unstable, pass `-Z unstable-options` to enable it\n\
                 {}",

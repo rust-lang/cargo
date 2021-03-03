@@ -343,12 +343,10 @@ fn named_config_profile() {
     // middle exists in Cargo.toml, the others in .cargo/config
     use super::config::ConfigBuilder;
     use cargo::core::compiler::CompileMode;
-    use cargo::core::enable_nightly_features;
     use cargo::core::profiles::{Profiles, UnitFor};
     use cargo::core::{PackageId, Workspace};
     use cargo::util::interning::InternedString;
     use std::fs;
-    enable_nightly_features();
     paths::root().join(".cargo").mkdir_p();
     fs::write(
         paths::root().join(".cargo/config"),
@@ -394,7 +392,7 @@ fn named_config_profile() {
         "#,
     )
     .unwrap();
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     let profile_name = InternedString::new("foo");
     let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();

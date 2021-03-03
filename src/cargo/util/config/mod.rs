@@ -74,7 +74,7 @@ use url::Url;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
@@ -184,6 +184,22 @@ pub struct Config {
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
     env_config: LazyCell<EnvConfig>,
+    /// This should be false if:
+    /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
+    /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
+    /// - this is a integration test that uses `ProcessBuilder`
+    ///      that does not opt in with `masquerade_as_nightly_cargo`
+    /// This should be true if:
+    /// - this is an artifact of the rustc distribution process for "nightly"
+    /// - this is being used in the rustc distribution process internally
+    /// - this is a cargo executable that was built from source
+    /// - this is an `#[test]` that called `enable_nightly_features`
+    /// - this is a integration test that uses `ProcessBuilder`
+    ///       that called `masquerade_as_nightly_cargo`
+    /// It's public to allow tests use nightly features.
+    /// NOTE: this should be set before `configure()`. If calling this from an integration test,
+    /// consider using `ConfigBuilder::enable_nightly_features` instead.
+    pub nightly_features_allowed: bool,
 }
 
 impl Config {
@@ -268,6 +284,7 @@ impl Config {
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
+            nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
         }
     }
 
@@ -771,7 +788,10 @@ impl Config {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
-        for warning in self.unstable_flags.parse(unstable_flags)? {
+        for warning in self
+            .unstable_flags
+            .parse(unstable_flags, self.nightly_features_allowed)?
+        {
             self.shell().warn(warning)?;
         }
         if !unstable_flags.is_empty() {
@@ -834,7 +854,7 @@ impl Config {
     fn load_unstable_flags_from_config(&mut self) -> CargoResult<()> {
         // If nightly features are enabled, allow setting Z-flags from config
         // using the `unstable` table. Ignore that block otherwise.
-        if nightly_features_allowed() {
+        if self.nightly_features_allowed {
             self.unstable_flags = self
                 .get::<Option<CliUnstable>>("unstable")?
                 .unwrap_or_default();
@@ -843,7 +863,7 @@ impl Config {
                 //     allows the CLI to override config files for both enabling
                 //     and disabling, and doing it up top allows CLI Zflags to
                 //     control config parsing behavior.
-                self.unstable_flags.parse(unstable_flags_cli)?;
+                self.unstable_flags.parse(unstable_flags_cli, true)?;
             }
         }
 

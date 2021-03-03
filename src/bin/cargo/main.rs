@@ -22,7 +22,6 @@ fn main() {
     pretty_env_logger::init_custom_env("CARGO_LOG");
     #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init_from_env("CARGO_LOG");
-    cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {
         Ok(cfg) => cfg,
@@ -32,7 +31,7 @@ fn main() {
         }
     };
 
-    let result = match cargo::ops::fix_maybe_exec_rustc() {
+    let result = match cargo::ops::fix_maybe_exec_rustc(&config) {
         Ok(true) => Ok(()),
         Ok(false) => {
             let _token = cargo::util::job::setup();
