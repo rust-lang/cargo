@@ -12,6 +12,7 @@ fn oldest_lockfile_still_works() {
     }
 }
 
+#[track_caller]
 fn assert_lockfiles_eq(expected: &str, actual: &str) {
     for (l, r) in expected.lines().zip(actual.lines()) {
         assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);

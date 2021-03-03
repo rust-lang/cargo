@@ -732,6 +732,7 @@ impl Execs {
         self
     }
 
+    #[track_caller]
     pub fn run(&mut self) {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
@@ -740,6 +741,7 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     pub fn run_output(&mut self, output: &Output) {
         self.ran = true;
         if let Err(e) = self.match_output(output) {

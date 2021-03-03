@@ -409,6 +409,7 @@ fn package_cleans_all_the_things() {
 }
 
 // Ensures that all files for the package have been deleted.
+#[track_caller]
 fn assert_all_clean(build_dir: &Path) {
     let walker = walkdir::WalkDir::new(build_dir).into_iter();
     for entry in walker.filter_entry(|e| {
