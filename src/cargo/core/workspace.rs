@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -366,7 +365,7 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
-    pub fn root_patch(&self) -> Cow<'_, HashMap<Url, Vec<Dependency>>> {
+    pub fn root_patch(&self) -> HashMap<Url, Vec<Dependency>> {
         let from_manifest = match self.root_maybe() {
             MaybePackage::Package(p) => p.manifest().patch(),
             MaybePackage::Virtual(vm) => vm.patch(),
@@ -377,10 +376,10 @@ impl<'cfg> Workspace<'cfg> {
             .patch()
             .expect("config [patch] was never parsed");
         if from_config.is_empty() {
-            return Cow::Borrowed(from_manifest);
+            return from_manifest.clone();
         }
         if from_manifest.is_empty() {
-            return Cow::Borrowed(from_config);
+            return from_config.clone();
         }
 
         // We could just chain from_manifest and from_config,
@@ -405,7 +404,7 @@ impl<'cfg> Workspace<'cfg> {
                 combined.insert(url.clone(), cdeps.clone());
             }
         }
-        Cow::Owned(combined)
+        combined
     }
 
     /// Returns an iterator over all packages in this workspace
