@@ -1,8 +1,8 @@
 use crate::command_prelude::*;
 use anyhow::anyhow;
 use cargo::core::compiler::future_incompat::{OnDiskReport, FUTURE_INCOMPAT_FILE};
-use cargo::core::nightly_features_allowed;
 use cargo::drop_eprint;
+use cargo::util::CargoResultExt;
 use std::io::Read;
 
 pub fn cli() -> App {
@@ -19,7 +19,7 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    if !nightly_features_allowed() {
+    if !config.nightly_features_allowed {
         return Err(anyhow!(
             "`cargo describe-future-incompatibilities` can only be used on the nightly channel"
         )
@@ -37,12 +37,19 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     report_file
         .file()
         .read_to_string(&mut file_contents)
-        .map_err(|e| anyhow!("Failed to read report: {:?}", e))?;
-    let on_disk_report: OnDiskReport = serde_json::from_str(&file_contents).unwrap();
+        .chain_err(|| "failed to read report")?;
+    let on_disk_report: OnDiskReport =
+        serde_json::from_str(&file_contents).chain_err(|| "failed to load report")?;
 
     let id = args.value_of("id").unwrap();
     if id != on_disk_report.id {
-        return Err(anyhow!("Expected an id of `{}`, but `{}` was provided on the command line. Your report may have been overwritten by a different one.", on_disk_report.id, id).into());
+        return Err(anyhow!(
+            "Expected an id of `{}`, but `{}` was provided on the command line.\
+                           Your report may have been overwritten by a different one.",
+            on_disk_report.id,
+            id
+        )
+        .into());
     }
 
     drop_eprint!(config, "{}", on_disk_report.report);

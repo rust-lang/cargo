@@ -157,7 +157,6 @@ struct DrainState<'cfg> {
 
     /// How many jobs we've finished
     finished: usize,
-    show_future_incompat_report: bool,
     per_crate_future_incompat_reports: Vec<FutureIncompatReportCrate>,
 }
 
@@ -429,7 +428,6 @@ impl<'cfg> JobQueue<'cfg> {
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(cx.bcx.config),
             finished: 0,
-            show_future_incompat_report: cx.bcx.build_config.future_incompat_report,
             per_crate_future_incompat_reports: Vec::new(),
         };
 
@@ -613,12 +611,9 @@ impl<'cfg> DrainState<'cfg> {
                 }
             }
             Message::FutureIncompatReport(id, report) => {
-                let unit = self.active[&id].clone();
+                let package_id = self.active[&id].pkg.package_id();
                 self.per_crate_future_incompat_reports
-                    .push(FutureIncompatReportCrate {
-                        package_id: unit.pkg.package_id(),
-                        report,
-                    });
+                    .push(FutureIncompatReportCrate { package_id, report });
             }
             Message::Token(acquired_token) => {
                 let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
@@ -820,12 +815,14 @@ impl<'cfg> DrainState<'cfg> {
             let crates_and_versions = self
                 .per_crate_future_incompat_reports
                 .iter()
-                .map(|r| format!("{}", r.package_id))
+                .map(|r| r.package_id.to_string())
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            drop(cx.bcx.config.shell().warn(&format!("the following crates contain code that will be rejected by a future version of Rust: {}",
-                                                     crates_and_versions)));
+            drop(cx.bcx.config.shell().warn(&format!(
+                "the following crates contain code that will be rejected by a future version of Rust: {}",
+                crates_and_versions
+            )));
 
             let mut full_report = String::new();
             let mut rng = thread_rng();
@@ -837,7 +834,10 @@ impl<'cfg> DrainState<'cfg> {
                 .collect();
 
             for report in std::mem::take(&mut self.per_crate_future_incompat_reports) {
-                full_report.push_str(&format!("The crate `{}` currently triggers the following future incompatibility lints:\n", report.package_id));
+                full_report.push_str(&format!(
+                    "The crate `{}` currently triggers the following future incompatibility lints:\n",
+                    report.package_id
+                ));
                 for item in report.report {
                     let rendered = if cx.bcx.config.shell().err_supports_color() {
                         item.diagnostic.rendered
@@ -868,13 +868,14 @@ impl<'cfg> DrainState<'cfg> {
                 })
                 .err();
             if let Some(e) = err {
-                drop(cx.bcx.config.shell().warn(&format!(
-                    "Failed to open on-disk future incompat report: {:?}",
-                    e
-                )));
+                crate::display_warning_with_error(
+                    "failed to write on-disk future incompat report",
+                    &e,
+                    &mut cx.bcx.config.shell(),
+                );
             }
 
-            if self.show_future_incompat_report {
+            if cx.bcx.build_config.future_incompat_report {
                 drop_eprint!(cx.bcx.config, "{}", full_report);
                 drop(cx.bcx.config.shell().note(
                     &format!("this report can be shown with `cargo describe-future-incompatibilities -Z future-incompat-report --id {}`", id)

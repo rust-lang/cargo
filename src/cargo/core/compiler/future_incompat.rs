@@ -15,7 +15,7 @@ pub struct FutureBreakageItem {
     pub diagnostic: Diagnostic,
 }
 
-/// A diagnostic emitted by the compiler a a JSON message.
+/// A diagnostic emitted by the compiler as a JSON message.
 /// We only care about the 'rendered' field
 #[derive(Serialize, Deserialize)]
 pub struct Diagnostic {

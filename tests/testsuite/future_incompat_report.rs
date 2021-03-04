@@ -11,7 +11,7 @@ fn no_output_on_stable() {
 
     p.cargo("build")
         .with_stderr_contains("  = note: `#[warn(array_into_iter)]` on by default")
-        .with_stderr_does_not_contain("warning: the following crates contain code that will be rejected by a future version of Rust: `foo` v0.0.0")
+        .with_stderr_does_not_contain("[..]crates[..]")
         .run();
 }
 
@@ -66,7 +66,7 @@ fn test_single_crate() {
             .masquerade_as_nightly_cargo()
             .with_stderr_contains("  = note: `#[warn(array_into_iter)]` on by default")
             .with_stderr_contains("warning: the following crates contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
-            .with_stderr_does_not_contain("[..] future incompatibility lints:")
+            .with_stderr_does_not_contain("[..]incompatibility[..]")
             .run();
 
         p.cargo(command).arg("-Zfuture-incompat-report").arg("-Zunstable-options").arg("--future-incompat-report")
@@ -108,25 +108,23 @@ fn test_multi_crate() {
         .build();
 
     for command in &["build", "check", "rustc"] {
-        p.cargo(&format!("{} -Z future-incompat-report", command))
+        p.cargo(command).arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
-            .with_stderr_does_not_contain("  = note: `#[warn(array_into_iter)]` on by default")
+            .with_stderr_does_not_contain("[..]array_into_iter[..]")
             .with_stderr_contains("warning: the following crates contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
-            .with_stderr_does_not_contain("The crate `foo` v0.0.0 currently triggers the following future incompatibility lints:")
+            // Check that we don't have the 'triggers' message shown at the bottom of this loop
+            .with_stderr_does_not_contain("[..]triggers[..]")
             .run();
 
         p.cargo("describe-future-incompatibilities -Z future-incompat-report --id bad-id")
             .masquerade_as_nightly_cargo()
-            .with_stderr_does_not_contain("  = note: `#[warn(array_into_iter)]` on by default")
             .with_stderr_contains("error: Expected an id of [..]")
-            .with_stderr_does_not_contain("The crate `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
-            .with_stderr_does_not_contain("The crate `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
+            .with_stderr_does_not_contain("[..]triggers[..]")
             .with_status(101)
             .run();
 
-        p.cargo(&format!("{} -Z unstable-options -Z future-incompat-report --future-incompat-report", command))
+        p.cargo(command).arg("-Zunstable-options").arg("-Zfuture-incompat-report").arg("--future-incompat-report")
             .masquerade_as_nightly_cargo()
-            .with_stderr_does_not_contain("  = note: `#[warn(array_into_iter)]` on by default")
             .with_stderr_contains("warning: the following crates contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
             .with_stderr_contains("The crate `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stderr_contains("The crate `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
@@ -158,7 +156,6 @@ fn test_multi_crate() {
 
     p.cargo(&format!("describe-future-incompatibilities -Z future-incompat-report --id {}", id))
         .masquerade_as_nightly_cargo()
-        .with_stderr_does_not_contain("warning: Expected an id of [..]")
         .with_stderr_contains("The crate `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
         .with_stderr_contains("The crate `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
         .run();
