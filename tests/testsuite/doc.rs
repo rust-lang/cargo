@@ -1414,6 +1414,7 @@ fn doc_message_format() {
                     "spans": "{...}"
                 },
                 "package_id": "foo [..]",
+                "manifest_path": "[..]",
                 "reason": "compiler-message",
                 "target": "{...}"
             }
