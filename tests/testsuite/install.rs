@@ -567,8 +567,9 @@ fn no_binaries() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] specified package `foo v0.0.1 ([..])` has no binaries
-",
+[ERROR] there is nothing to install in `foo v0.0.1 ([..])`, because it has no binaries[..]
+[..]
+[..]",
         )
         .run();
 }
