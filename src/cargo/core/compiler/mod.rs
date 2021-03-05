@@ -7,6 +7,7 @@ mod context;
 mod crate_type;
 mod custom_build;
 mod fingerprint;
+pub mod future_incompat;
 mod job;
 mod job_queue;
 mod layout;
@@ -48,6 +49,7 @@ pub(crate) use self::layout::Layout;
 pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
+use crate::core::compiler::future_incompat::FutureIncompatReport;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
@@ -172,18 +174,17 @@ fn compile<'cfg>(
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
-            let work = if unit.show_warnings(bcx.config) {
-                replay_output_cache(
-                    unit.pkg.package_id(),
-                    PathBuf::from(unit.pkg.manifest_path()),
-                    &unit.target,
-                    cx.files().message_cache_path(unit),
-                    cx.bcx.build_config.message_format,
-                    cx.bcx.config.shell().err_supports_color(),
-                )
-            } else {
-                Work::noop()
-            };
+            // We always replay the output cache,
+            // since it might contain future-incompat-report messages
+            let work = replay_output_cache(
+                unit.pkg.package_id(),
+                PathBuf::from(unit.pkg.manifest_path()),
+                &unit.target,
+                cx.files().message_cache_path(unit),
+                cx.bcx.build_config.message_format,
+                cx.bcx.config.shell().err_supports_color(),
+                unit.show_warnings(bcx.config),
+            );
             // Need to link targets on both the dirty and fresh.
             work.then(link_targets(cx, unit, true)?)
         });
@@ -924,6 +925,10 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
+    if bcx.config.cli_unstable().enable_future_incompat_feature {
+        cmd.arg("-Z").arg("emit-future-incompat-report");
+    }
+
     // Add `CARGO_BIN_` environment variables for building tests.
     if unit.target.is_test() || unit.target.is_bench() {
         for bin_target in unit
@@ -1128,6 +1133,10 @@ struct OutputOptions {
     /// of empty files are not created. If this is None, the output will not
     /// be cached (such as when replaying cached messages).
     cache_cell: Option<(PathBuf, LazyCell<File>)>,
+    /// If `true`, display any recorded warning messages.
+    /// Other types of messages are processed regardless
+    /// of the value of this flag
+    show_warnings: bool,
 }
 
 impl OutputOptions {
@@ -1143,6 +1152,7 @@ impl OutputOptions {
             look_for_metadata_directive,
             color,
             cache_cell,
+            show_warnings: true,
         }
     }
 }
@@ -1210,6 +1220,11 @@ fn on_stderr_line_inner(
         }
     };
 
+    if let Ok(report) = serde_json::from_str::<FutureIncompatReport>(compiler_message.get()) {
+        state.future_incompat_report(report.future_incompat_report);
+        return Ok(true);
+    }
+
     // Depending on what we're emitting from Cargo itself, we figure out what to
     // do with this JSON message.
     match options.format {
@@ -1241,7 +1256,9 @@ fn on_stderr_line_inner(
                         .map(|v| String::from_utf8(v).expect("utf8"))
                         .expect("strip should never fail")
                 };
-                state.stderr(rendered)?;
+                if options.show_warnings {
+                    state.stderr(rendered)?;
+                }
                 return Ok(true);
             }
         }
@@ -1322,6 +1339,11 @@ fn on_stderr_line_inner(
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
+
+    if !options.show_warnings {
+        return Ok(true);
+    }
+
     let msg = machine_message::FromCompiler {
         package_id,
         manifest_path,
@@ -1344,6 +1366,7 @@ fn replay_output_cache(
     path: PathBuf,
     format: MessageFormat,
     color: bool,
+    show_warnings: bool,
 ) -> Work {
     let target = target.clone();
     let mut options = OutputOptions {
@@ -1351,6 +1374,7 @@ fn replay_output_cache(
         look_for_metadata_directive: true,
         color,
         cache_cell: None,
+        show_warnings,
     };
     Work::new(move |state| {
         if !path.exists() {

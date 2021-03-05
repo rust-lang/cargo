@@ -1122,3 +1122,11 @@ The 2021 edition will set the default [resolver version] to "2".
     }
 })();
 </script>
+
+### future incompat report
+* RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
+* rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
+
+The `-Z future-incompat-report` flag enables the creation of a future-incompat report
+for all dependencies. This makes users aware if any of their crate's dependencies
+might stop compiling with a future version of Rust.

@@ -37,6 +37,8 @@ pub struct BuildConfig {
     // Note that, although the cmd-line flag name is `out-dir`, in code we use
     // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
     pub export_dir: Option<PathBuf>,
+    /// `true` to output a future incompatibility report at the end of the build
+    pub future_incompat_report: bool,
 }
 
 impl BuildConfig {
@@ -80,6 +82,7 @@ impl BuildConfig {
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,
+            future_incompat_report: false,
         })
     }
 
