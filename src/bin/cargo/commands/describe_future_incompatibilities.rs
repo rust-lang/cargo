@@ -44,8 +44,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let id = args.value_of("id").unwrap();
     if id != on_disk_report.id {
         return Err(anyhow!(
-            "Expected an id of `{}`, but `{}` was provided on the command line.\
-                           Your report may have been overwritten by a different one.",
+            "Expected an id of `{}`, but `{}` was provided on the command line. \
+             Your report may have been overwritten by a different one.",
             on_disk_report.id,
             id
         )
