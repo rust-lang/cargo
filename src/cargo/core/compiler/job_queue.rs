@@ -772,13 +772,14 @@ impl<'cfg> DrainState<'cfg> {
             }
         }
         if cx.bcx.build_config.emit_json() {
+            let mut shell = cx.bcx.config.shell();
             let msg = machine_message::BuildFinished {
                 success: error.is_none(),
             }
             .to_json_string();
-            if let Err(e) = writeln!(cx.bcx.config.shell().out(), "{}", msg) {
+            if let Err(e) = writeln!(shell.out(), "{}", msg) {
                 if error.is_some() {
-                    crate::display_error(&e.into(), &mut cx.bcx.config.shell());
+                    crate::display_error(&e.into(), &mut shell);
                 } else {
                     return Some(e.into());
                 }
