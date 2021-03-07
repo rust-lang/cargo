@@ -1130,3 +1130,29 @@ The 2021 edition will set the default [resolver version] to "2".
 The `-Z future-incompat-report` flag enables the creation of a future-incompat report
 for all dependencies. This makes users aware if any of their crate's dependencies
 might stop compiling with a future version of Rust.
+
+### configurable-env
+* Original Pull Request: [#9175](https://github.com/rust-lang/cargo/pull/9175)
+
+The `-Z configurable-env` flag enables the `[env]` section in the
+`.cargo/config.toml` file. This section allows you to set additional environment
+variables for build scripts, rustc invocations, `cargo run` and `cargo build`.
+
+```toml
+[env]
+OPENSSL_DIR = "/opt/openssl"
+```
+
+By default, the variables specified will not override values that already exist
+in the environment. This behavior can be changed by setting the `force` flag.
+
+Setting the `relative` flag evaluates the value as a config-relative path that
+is relative to the parent directory of the `.cargo` directory that contains the
+`config.toml` file. The value of the environment variable will be the full
+absolute path.
+
+```toml
+[env]
+TMPDIR = { value = "/home/tmp", force = true }
+OPENSSL_DIR = { value = "vendor/openssl", relative = true }
+```
