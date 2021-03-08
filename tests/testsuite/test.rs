@@ -3536,6 +3536,7 @@ fn json_artifact_includes_test_flag() {
                     "executable": "[..]/foo-[..]",
                     "features": [],
                     "package_id":"foo 0.0.1 ([..])",
+                    "manifest_path": "[..]",
                     "target":{
                         "kind":["lib"],
                         "crate_types":["lib"],
@@ -3572,6 +3573,7 @@ fn json_artifact_includes_executable_for_library_tests() {
                     "filenames": "{...}",
                     "fresh": false,
                     "package_id": "foo 0.0.1 ([..])",
+                    "manifest_path": "[..]",
                     "profile": "{...}",
                     "reason": "compiler-artifact",
                     "target": {
@@ -3610,6 +3612,7 @@ fn json_artifact_includes_executable_for_integration_tests() {
                     "filenames": "{...}",
                     "fresh": false,
                     "package_id": "foo 0.0.1 ([..])",
+                    "manifest_path": "[..]",
                     "profile": "{...}",
                     "reason": "compiler-artifact",
                     "target": {

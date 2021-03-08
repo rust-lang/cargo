@@ -20,6 +20,7 @@ pub trait Message: ser::Serialize {
 #[derive(Serialize)]
 pub struct FromCompiler<'a> {
     pub package_id: PackageId,
+    pub manifest_path: &'a Path,
     pub target: &'a Target,
     pub message: Box<RawValue>,
 }
@@ -33,6 +34,7 @@ impl<'a> Message for FromCompiler<'a> {
 #[derive(Serialize)]
 pub struct Artifact<'a> {
     pub package_id: PackageId,
+    pub manifest_path: PathBuf,
     pub target: &'a Target,
     pub profile: ArtifactProfile,
     pub features: Vec<String>,

@@ -189,6 +189,7 @@ fn symlink_config_to_config_toml() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
+#[track_caller]
 pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
@@ -206,6 +207,7 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
     assert_match(msgs, &causes);
 }
 
+#[track_caller]
 pub fn assert_match(expected: &str, actual: &str) {
     if !normalized_lines_match(expected, actual, None) {
         panic!(

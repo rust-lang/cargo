@@ -7,6 +7,7 @@ mod context;
 mod crate_type;
 mod custom_build;
 mod fingerprint;
+pub mod future_incompat;
 mod job;
 mod job_queue;
 mod layout;
@@ -48,6 +49,7 @@ pub(crate) use self::layout::Layout;
 pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
+use crate::core::compiler::future_incompat::FutureIncompatReport;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
@@ -172,17 +174,17 @@ fn compile<'cfg>(
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
-            let work = if unit.show_warnings(bcx.config) {
-                replay_output_cache(
-                    unit.pkg.package_id(),
-                    &unit.target,
-                    cx.files().message_cache_path(unit),
-                    cx.bcx.build_config.message_format,
-                    cx.bcx.config.shell().err_supports_color(),
-                )
-            } else {
-                Work::noop()
-            };
+            // We always replay the output cache,
+            // since it might contain future-incompat-report messages
+            let work = replay_output_cache(
+                unit.pkg.package_id(),
+                PathBuf::from(unit.pkg.manifest_path()),
+                &unit.target,
+                cx.files().message_cache_path(unit),
+                cx.bcx.build_config.message_format,
+                cx.bcx.config.shell().err_supports_color(),
+                unit.show_warnings(bcx.config),
+            );
             // Need to link targets on both the dirty and fresh.
             work.then(link_targets(cx, unit, true)?)
         });
@@ -219,6 +221,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // Prepare the native lib state (extra `-L` and `-l` flags).
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let current_id = unit.pkg.package_id();
+    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let build_scripts = cx.build_scripts.get(unit).cloned();
 
     // If we are a binary and the package also contains a library, then we
@@ -316,7 +319,16 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 &target,
                 mode,
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
+                &mut |line| {
+                    on_stderr_line(
+                        state,
+                        line,
+                        package_id,
+                        &manifest_path,
+                        &target,
+                        &mut output_options,
+                    )
+                },
             )
             .map_err(verbose_if_simple_exit_code)
             .chain_err(|| format!("could not compile `{}`", name))?;
@@ -414,6 +426,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id();
+    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let profile = unit.profile;
     let unit_mode = unit.mode;
     let features = unit.features.iter().map(|s| s.to_string()).collect();
@@ -467,6 +480,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
 
             let msg = machine_message::Artifact {
                 package_id,
+                manifest_path,
                 target: &target,
                 profile: art_profile,
                 features,
@@ -618,10 +632,10 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let package_id = unit.pkg.package_id();
+    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
-
     Ok(Work::new(move |state| {
         if let Some(script_metadata) = script_metadata {
             if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
@@ -638,7 +652,16 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
+                &mut |line| {
+                    on_stderr_line(
+                        state,
+                        line,
+                        package_id,
+                        &manifest_path,
+                        &target,
+                        &mut output_options,
+                    )
+                },
                 false,
             )
             .chain_err(|| format!("could not document `{}`", name))?;
@@ -902,6 +925,10 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
+    if bcx.config.cli_unstable().enable_future_incompat_feature {
+        cmd.arg("-Z").arg("emit-future-incompat-report");
+    }
+
     // Add `CARGO_BIN_` environment variables for building tests.
     if unit.target.is_test() || unit.target.is_bench() {
         for bin_target in unit
@@ -1106,6 +1133,10 @@ struct OutputOptions {
     /// of empty files are not created. If this is None, the output will not
     /// be cached (such as when replaying cached messages).
     cache_cell: Option<(PathBuf, LazyCell<File>)>,
+    /// If `true`, display any recorded warning messages.
+    /// Other types of messages are processed regardless
+    /// of the value of this flag
+    show_warnings: bool,
 }
 
 impl OutputOptions {
@@ -1121,6 +1152,7 @@ impl OutputOptions {
             look_for_metadata_directive,
             color,
             cache_cell,
+            show_warnings: true,
         }
     }
 }
@@ -1139,10 +1171,11 @@ fn on_stderr_line(
     state: &JobState<'_>,
     line: &str,
     package_id: PackageId,
+    manifest_path: &std::path::Path,
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<()> {
-    if on_stderr_line_inner(state, line, package_id, target, options)? {
+    if on_stderr_line_inner(state, line, package_id, manifest_path, target, options)? {
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
@@ -1160,6 +1193,7 @@ fn on_stderr_line_inner(
     state: &JobState<'_>,
     line: &str,
     package_id: PackageId,
+    manifest_path: &std::path::Path,
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<bool> {
@@ -1185,6 +1219,11 @@ fn on_stderr_line_inner(
             return Ok(true);
         }
     };
+
+    if let Ok(report) = serde_json::from_str::<FutureIncompatReport>(compiler_message.get()) {
+        state.future_incompat_report(report.future_incompat_report);
+        return Ok(true);
+    }
 
     // Depending on what we're emitting from Cargo itself, we figure out what to
     // do with this JSON message.
@@ -1217,7 +1256,9 @@ fn on_stderr_line_inner(
                         .map(|v| String::from_utf8(v).expect("utf8"))
                         .expect("strip should never fail")
                 };
-                state.stderr(rendered)?;
+                if options.show_warnings {
+                    state.stderr(rendered)?;
+                }
                 return Ok(true);
             }
         }
@@ -1298,8 +1339,14 @@ fn on_stderr_line_inner(
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
+
+    if !options.show_warnings {
+        return Ok(true);
+    }
+
     let msg = machine_message::FromCompiler {
         package_id,
+        manifest_path,
         target,
         message: compiler_message,
     }
@@ -1314,10 +1361,12 @@ fn on_stderr_line_inner(
 
 fn replay_output_cache(
     package_id: PackageId,
+    manifest_path: PathBuf,
     target: &Target,
     path: PathBuf,
     format: MessageFormat,
     color: bool,
+    show_warnings: bool,
 ) -> Work {
     let target = target.clone();
     let mut options = OutputOptions {
@@ -1325,6 +1374,7 @@ fn replay_output_cache(
         look_for_metadata_directive: true,
         color,
         cache_cell: None,
+        show_warnings,
     };
     Work::new(move |state| {
         if !path.exists() {
@@ -1343,7 +1393,14 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &target, &mut options)?;
+            on_stderr_line(
+                state,
+                trimmed,
+                package_id,
+                &manifest_path,
+                &target,
+                &mut options,
+            )?;
             line.clear();
         }
         Ok(())

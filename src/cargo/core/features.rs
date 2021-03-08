@@ -556,9 +556,10 @@ pub struct CliUnstable {
     pub namespaced_features: bool,
     pub weak_dep_features: bool,
     pub extra_link_arg: bool,
+    pub patch_in_config: bool,
     pub credential_process: bool,
     pub configurable_env: bool,
-    pub patch_in_config: bool,
+    pub enable_future_incompat_feature: bool,
 }
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -756,6 +757,7 @@ impl CliUnstable {
             "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
+            "future-incompat-report" => self.enable_future_incompat_feature = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

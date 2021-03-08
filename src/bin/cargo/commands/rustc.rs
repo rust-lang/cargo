@@ -40,6 +40,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_unit_graph()
         .arg_ignore_rust_version()
+        .arg_future_incompat_report()
         .after_help("Run `cargo help rustc` for more detailed information.\n")
 }
 
