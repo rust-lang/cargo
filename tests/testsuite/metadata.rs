@@ -2057,6 +2057,7 @@ fn filter_platform() {
     // Just needs to be a valid target that is different from host.
     // Presumably nobody runs these tests on wasm. 🙃
     let alt_target = "wasm32-unknown-unknown";
+    let host_target = rustc_host();
     let p = project()
         .file(
             "Cargo.toml",
@@ -2078,8 +2079,7 @@ fn filter_platform() {
                 [target.'cfg(foobar)'.dependencies]
                 cfg-dep = "0.0.1"
                 "#,
-                rustc_host(),
-                alt_target
+                host_target, alt_target
             ),
         )
         .file("src/lib.rs", "")
@@ -2253,16 +2253,10 @@ fn filter_platform() {
     }
     "#;
 
-    let foo = r#"
-    {
-      "name": "foo",
-      "version": "0.1.0",
-      "id": "foo 0.1.0 (path+file:[..]foo)",
-      "license": null,
-      "license_file": null,
-      "description": null,
-      "source": null,
-      "dependencies": [
+    // The dependencies are stored in sorted order by target and then by name.
+    // Since the testsuite may run on different targets, this needs to be
+    // sorted before it can be compared.
+    let mut foo_deps = serde_json::json!([
         {
           "name": "normal-dep",
           "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -2296,7 +2290,7 @@ fn filter_platform() {
           "optional": false,
           "uses_default_features": true,
           "features": [],
-          "target": "$ALT_TRIPLE",
+          "target": alt_target,
           "registry": null
         },
         {
@@ -2308,10 +2302,30 @@ fn filter_platform() {
           "optional": false,
           "uses_default_features": true,
           "features": [],
-          "target": "$HOST_TRIPLE",
+          "target": host_target,
           "registry": null
         }
-      ],
+    ]);
+    foo_deps.as_array_mut().unwrap().sort_by(|a, b| {
+        // This really should be `rename`, but not needed here.
+        // Also, sorting on `name` isn't really necessary since this test
+        // only has one package per target, but leaving it here to be safe.
+        let a = (a["target"].as_str(), a["name"].as_str());
+        let b = (b["target"].as_str(), b["name"].as_str());
+        a.cmp(&b)
+    });
+
+    let foo = r#"
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "foo 0.1.0 (path+file:[..]foo)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies":
+        $FOO_DEPS,
       "targets": [
         {
           "kind": [
@@ -2344,7 +2358,8 @@ fn filter_platform() {
     }
     "#
     .replace("$ALT_TRIPLE", alt_target)
-    .replace("$HOST_TRIPLE", &rustc_host());
+    .replace("$HOST_TRIPLE", &host_target)
+    .replace("$FOO_DEPS", &foo_deps.to_string());
 
     // We're going to be checking that we don't download excessively,
     // so we need to ensure that downloads will happen.
@@ -2468,7 +2483,7 @@ fn filter_platform() {
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
-            .replace("$HOST_TRIPLE", &rustc_host())
+            .replace("$HOST_TRIPLE", &host_target)
             .replace("$ALT_DEP", alt_dep)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
@@ -2562,7 +2577,7 @@ fn filter_platform() {
 
     // Filter on host, removes alt and cfg.
     p.cargo("metadata --filter-platform")
-        .arg(rustc_host())
+        .arg(&host_target)
         .with_stderr_unordered(
             "\
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
@@ -2633,7 +2648,7 @@ fn filter_platform() {
   "metadata": null
 }
 "#
-            .replace("$HOST_TRIPLE", &rustc_host())
+            .replace("$HOST_TRIPLE", &host_target)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),
@@ -2643,7 +2658,7 @@ fn filter_platform() {
 
     // Filter host with cfg, removes alt only
     p.cargo("metadata --filter-platform")
-        .arg(rustc_host())
+        .arg(&host_target)
         .env("RUSTFLAGS", "--cfg=foobar")
         .with_stderr_unordered(
             "\
@@ -2734,7 +2749,7 @@ fn filter_platform() {
   "metadata": null
 }
 "#
-            .replace("$HOST_TRIPLE", &rustc_host())
+            .replace("$HOST_TRIPLE", &host_target)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
