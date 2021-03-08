@@ -98,7 +98,7 @@ fn from_config_without_z() {
     p.cargo("build")
         .with_stderr(
             "\
-[WARNING] `[patch]` in .cargo/config.toml ignored, the -Zpatch-in-config command-line flag is required
+[WARNING] `[patch]` in cargo config was ignored, the -Zpatch-in-config command-line flag is required
 [UPDATING] `[ROOT][..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
@@ -132,6 +132,48 @@ fn from_config() {
             r#"
                 [patch.crates-io]
                 bar = { path = 'bar' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build -Zpatch-in-config")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] `[ROOT][..]` index
+[COMPILING] bar v0.1.1 ([..])
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn from_config_relative() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file(
+            "../.cargo/config.toml",
+            r#"
+                [patch.crates-io]
+                bar = { path = 'foo/bar' }
             "#,
         )
         .file("src/lib.rs", "")

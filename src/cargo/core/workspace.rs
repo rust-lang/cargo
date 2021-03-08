@@ -16,12 +16,12 @@ use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Edition, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
-use crate::sources::PathSource;
+use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::toml::{read_manifest, TomlProfiles};
-use crate::util::{Config, Filesystem};
+use crate::util::toml::{read_manifest, TomlDependency, TomlProfiles};
+use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///
@@ -362,31 +362,89 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
+    fn config_patch(&self) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+        let config_patch: Option<
+            BTreeMap<String, BTreeMap<String, TomlDependency<ConfigRelativePath>>>,
+        > = self.config.get("patch")?;
+
+        if config_patch.is_some() && !self.config.cli_unstable().patch_in_config {
+            self.config.shell().warn("`[patch]` in cargo config was ignored, the -Zpatch-in-config command-line flag is required".to_owned())?;
+            return Ok(HashMap::new());
+        }
+
+        let source = SourceId::for_path(self.root())?;
+
+        let mut warnings = Vec::new();
+        let mut nested_paths = Vec::new();
+
+        let mut patch = HashMap::new();
+        for (url, deps) in config_patch.into_iter().flatten() {
+            let url = match &url[..] {
+                CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
+                url => self
+                    .config
+                    .get_registry_index(url)
+                    .or_else(|_| url.into_url())
+                    .chain_err(|| {
+                        format!("[patch] entry `{}` should be a URL or registry name", url)
+                    })?,
+            };
+            patch.insert(
+                url,
+                deps.iter()
+                    .map(|(name, dep)| {
+                        dep.to_dependency_split(
+                            name,
+                            /* pkg_id */ None,
+                            source,
+                            &mut nested_paths,
+                            self.config,
+                            &mut warnings,
+                            /* platform */ None,
+                            // NOTE: Since we use ConfigRelativePath, this root isn't used as
+                            // any relative paths are resolved before they'd be joined with root.
+                            self.root(),
+                            self.unstable_features(),
+                            None,
+                        )
+                    })
+                    .collect::<CargoResult<Vec<_>>>()?,
+            );
+        }
+
+        for message in warnings {
+            self.config
+                .shell()
+                .warn(format!("[patch] in cargo config: {}", message))?
+        }
+
+        let _ = nested_paths;
+
+        Ok(patch)
+    }
+
     /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
-    pub fn root_patch(&self) -> HashMap<Url, Vec<Dependency>> {
+    pub fn root_patch(&self) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
         let from_manifest = match self.root_maybe() {
             MaybePackage::Package(p) => p.manifest().patch(),
             MaybePackage::Virtual(vm) => vm.patch(),
         };
 
-        let from_config = self
-            .config
-            .patch()
-            .expect("config [patch] was never parsed");
+        let from_config = self.config_patch()?;
         if from_config.is_empty() {
-            return from_manifest.clone();
+            return Ok(from_manifest.clone());
         }
         if from_manifest.is_empty() {
-            return from_config.clone();
+            return Ok(from_config.clone());
         }
 
         // We could just chain from_manifest and from_config,
         // but that's not quite right as it won't deal with overlaps.
         let mut combined = from_manifest.clone();
         for (url, cdeps) in from_config {
-            if let Some(deps) = combined.get_mut(url) {
+            if let Some(deps) = combined.get_mut(&url) {
                 // We want from_manifest to take precedence for each patched name.
                 // NOTE: This is inefficient if the number of patches is large!
                 let mut left = cdeps.clone();
@@ -404,7 +462,7 @@ impl<'cfg> Workspace<'cfg> {
                 combined.insert(url.clone(), cdeps.clone());
             }
         }
-        combined
+        Ok(combined)
     }
 
     /// Returns an iterator over all packages in this workspace

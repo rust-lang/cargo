@@ -154,7 +154,7 @@ impl EncodableResolve {
     /// primary uses is to be used with `resolve_with_previous` to guide the
     /// resolver to create a complete Resolve.
     pub fn into_resolve(self, original: &str, ws: &Workspace<'_>) -> CargoResult<Resolve> {
-        let path_deps = build_path_deps(ws);
+        let path_deps = build_path_deps(ws)?;
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
@@ -402,7 +402,7 @@ impl EncodableResolve {
     }
 }
 
-fn build_path_deps(ws: &Workspace<'_>) -> HashMap<String, SourceId> {
+fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>> {
     // If a crate is **not** a path source, then we're probably in a situation
     // such as `cargo install` with a lock file from a remote dependency. In
     // that case we don't need to fixup any path dependencies (as they're not
@@ -424,7 +424,7 @@ fn build_path_deps(ws: &Workspace<'_>) -> HashMap<String, SourceId> {
     for member in members.iter() {
         build_pkg(member, ws, &mut ret, &mut visited);
     }
-    for deps in ws.root_patch().values() {
+    for deps in ws.root_patch()?.values() {
         for dep in deps {
             build_dep(dep, ws, &mut ret, &mut visited);
         }
@@ -433,7 +433,7 @@ fn build_path_deps(ws: &Workspace<'_>) -> HashMap<String, SourceId> {
         build_dep(dep, ws, &mut ret, &mut visited);
     }
 
-    return ret;
+    return Ok(ret);
 
     fn build_pkg(
         pkg: &Package,
