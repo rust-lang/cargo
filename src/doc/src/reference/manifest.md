@@ -135,7 +135,7 @@ with the latest stable edition. By default `cargo new` creates a manifest with
 the 2018 edition currently.
 
 If the `edition` field is not present in `Cargo.toml`, then the 2015 edition is
-assumed for backwards compatibility with Rust 1.0. Note that all manifests
+assumed for backwards compatibility. Note that all manifests
 created with [`cargo new`] will not use this historical fallback because they
 will have `edition` explicitly specified to a newer value.
 
