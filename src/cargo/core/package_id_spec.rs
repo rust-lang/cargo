@@ -38,12 +38,9 @@ impl PackageIdSpec {
     /// use cargo::core::PackageIdSpec;
     ///
     /// let specs = vec![
+    ///     "https://crates.io/foo",
     ///     "https://crates.io/foo#1.2.3",
     ///     "https://crates.io/foo#bar:1.2.3",
-    ///     "crates.io/foo",
-    ///     "crates.io/foo#1.2.3",
-    ///     "crates.io/foo#bar",
-    ///     "crates.io/foo#bar:1.2.3",
     ///     "foo",
     ///     "foo:1.2.3",
     /// ];
@@ -51,14 +48,21 @@ impl PackageIdSpec {
     ///     assert!(PackageIdSpec::parse(spec).is_ok());
     /// }
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
-        if spec.contains('/') {
+        if spec.contains("://") {
             if let Ok(url) = spec.into_url() {
                 return PackageIdSpec::from_url(url);
             }
-            if !spec.contains("://") {
-                if let Ok(url) = Url::parse(&format!("cargo://{}", spec)) {
-                    return PackageIdSpec::from_url(url);
-                }
+        } else if spec.contains('/') || spec.contains('\\') {
+            let abs = std::env::current_dir().unwrap_or_default().join(spec);
+            if abs.exists() {
+                let maybe_url = Url::from_file_path(abs)
+                    .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
+                bail!(
+                    "package ID specification `{}` looks like a file path, \
+                    maybe try {}",
+                    spec,
+                    maybe_url
+                );
             }
         }
         let mut parts = spec.splitn(2, ':');
@@ -80,8 +84,11 @@ impl PackageIdSpec {
     where
         I: IntoIterator<Item = PackageId>,
     {
-        let spec = PackageIdSpec::parse(spec)
-            .chain_err(|| anyhow::format_err!("invalid package ID specification: `{}`", spec))?;
+        let i: Vec<_> = i.into_iter().collect();
+        let spec = PackageIdSpec::parse(spec).chain_err(|| {
+            let suggestion = lev_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
+            anyhow::format_err!("invalid package ID specification: `{}`{}", spec, suggestion)
+        })?;
         spec.query(i)
     }
 
@@ -275,11 +282,7 @@ impl fmt::Display for PackageIdSpec {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
-                if url.scheme() == "cargo" {
-                    write!(f, "{}{}", url.host().unwrap(), url.path())?;
-                } else {
-                    write!(f, "{}", url)?;
-                }
+                write!(f, "{}", url)?;
                 if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
@@ -333,6 +336,14 @@ mod tests {
         }
 
         ok(
+            "https://crates.io/foo",
+            PackageIdSpec {
+                name: InternedString::new("foo"),
+                version: None,
+                url: Some(Url::parse("https://crates.io/foo").unwrap()),
+            },
+        );
+        ok(
             "https://crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: InternedString::new("foo"),
@@ -346,38 +357,6 @@ mod tests {
                 name: InternedString::new("bar"),
                 version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
-            },
-        );
-        ok(
-            "crates.io/foo",
-            PackageIdSpec {
-                name: InternedString::new("foo"),
-                version: None,
-                url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
-            },
-        );
-        ok(
-            "crates.io/foo#1.2.3",
-            PackageIdSpec {
-                name: InternedString::new("foo"),
-                version: Some("1.2.3".to_semver().unwrap()),
-                url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
-            },
-        );
-        ok(
-            "crates.io/foo#bar",
-            PackageIdSpec {
-                name: InternedString::new("bar"),
-                version: None,
-                url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
-            },
-        );
-        ok(
-            "crates.io/foo#bar:1.2.3",
-            PackageIdSpec {
-                name: InternedString::new("bar"),
-                version: Some("1.2.3".to_semver().unwrap()),
-                url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
         ok(

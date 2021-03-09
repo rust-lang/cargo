@@ -54,6 +54,7 @@ fn suggestion_bad_pkgid() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file("cratesio", "")
         .build();
 
     p.cargo("generate-lockfile").run();
@@ -93,6 +94,34 @@ Did you mean one of these?
 
   two-ver:0.1.0
   two-ver:0.2.0
+",
+        )
+        .run();
+
+    // Bad file URL.
+    p.cargo("pkgid ./Cargo.toml")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `./Cargo.toml`
+
+Caused by:
+  package ID specification `./Cargo.toml` looks like a file path, maybe try file://[..]/Cargo.toml
+",
+        )
+        .run();
+
+    // Bad file URL with simliar name.
+    p.cargo("pkgid './cratesio'")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `./cratesio`
+
+<tab>Did you mean `crates-io`?
+
+Caused by:
+  package ID specification `./cratesio` looks like a file path, maybe try file://[..]/cratesio
 ",
         )
         .run();
