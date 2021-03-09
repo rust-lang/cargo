@@ -120,10 +120,9 @@ brackets at the end of each author.
 #### The `edition` field
 
 The `edition` key is an optional key that affects which [Rust Edition] your package
-is compiled with. [`cargo new`] will generate a package with the `edition` key
-set to the latest edition. Setting the `edition` key in
-`[package]` will affect all targets/crates in the package, including test
-suites, benchmarks, binaries, examples, etc.
+is compiled with. Setting the `edition` key in `[package]` will affect all
+targets/crates in the package, including test suites, benchmarks, binaries,
+examples, etc.
 
 ```toml
 [package]
@@ -131,7 +130,14 @@ suites, benchmarks, binaries, examples, etc.
 edition = '2018'
 ```
 
-If the `edition` key is not set in your `Cargo.toml`, Cargo will default to 2015.
+Most manifests have the `edition` field filled in automatically by [`cargo new`]
+with the latest stable edition. By default `cargo new` creates a manifest with
+the 2018 edition currently.
+
+If the `edition` field is not present in `Cargo.toml`, then the 2015 edition is
+assumed for backwards compatibility. Note that all manifests
+created with [`cargo new`] will not use this historical fallback because they
+will have `edition` explicitly specified to a newer value.
 
 #### The `description` field
 
