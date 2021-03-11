@@ -235,33 +235,28 @@ fn compute_deps(
     }
 
     let id = unit.pkg.package_id();
-    let filtered_deps = state
-        .deps(unit, unit_for)
-        .into_iter()
-        .filter(|&(_id, deps)| {
-            deps.iter().any(|dep| {
-                // If this target is a build command, then we only want build
-                // dependencies, otherwise we want everything *other than* build
-                // dependencies.
-                if unit.target.is_custom_build() != dep.is_build() {
-                    return false;
-                }
+    let filtered_deps = state.deps(unit, unit_for, &|dep| {
+        // If this target is a build command, then we only want build
+        // dependencies, otherwise we want everything *other than* build
+        // dependencies.
+        if unit.target.is_custom_build() != dep.is_build() {
+            return false;
+        }
 
-                // If this dependency is **not** a transitive dependency, then it
-                // only applies to test/example targets.
-                if !dep.is_transitive()
-                    && !unit.target.is_test()
-                    && !unit.target.is_example()
-                    && !unit.mode.is_any_test()
-                {
-                    return false;
-                }
+        // If this dependency is **not** a transitive dependency, then it
+        // only applies to test/example targets.
+        if !dep.is_transitive()
+            && !unit.target.is_test()
+            && !unit.target.is_example()
+            && !unit.mode.is_any_test()
+        {
+            return false;
+        }
 
-                // If we've gotten past all that, then this dependency is
-                // actually used!
-                true
-            })
-        });
+        // If we've gotten past all that, then this dependency is
+        // actually used!
+        true
+    });
 
     let mut ret = Vec::new();
     let mut dev_deps = Vec::new();
@@ -419,10 +414,7 @@ fn compute_deps_doc(
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep>> {
-    let deps = state
-        .deps(unit, unit_for)
-        .into_iter()
-        .filter(|&(_id, deps)| deps.iter().any(|dep| dep.kind() == DepKind::Normal));
+    let deps = state.deps(unit, unit_for, &|dep| dep.kind() == DepKind::Normal);
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
@@ -780,7 +772,12 @@ impl<'a, 'cfg> State<'a, 'cfg> {
     }
 
     /// Returns a filtered set of dependencies for the given unit.
-    fn deps(&self, unit: &Unit, unit_for: UnitFor) -> Vec<(PackageId, &HashSet<Dependency>)> {
+    fn deps(
+        &self,
+        unit: &Unit,
+        unit_for: UnitFor,
+        filter: &dyn Fn(&Dependency) -> bool,
+    ) -> Vec<(PackageId, &HashSet<Dependency>)> {
         let pkg_id = unit.pkg.package_id();
         let kind = unit.kind;
         self.resolve()
@@ -788,6 +785,9 @@ impl<'a, 'cfg> State<'a, 'cfg> {
             .filter(|&(_id, deps)| {
                 assert!(!deps.is_empty());
                 deps.iter().any(|dep| {
+                    if !filter(dep) {
+                        return false;
+                    }
                     // If this dependency is only available for certain platforms,
                     // make sure we're only enabling it for that platform.
                     if !self.target_data.dep_platform_activated(dep, kind) {
