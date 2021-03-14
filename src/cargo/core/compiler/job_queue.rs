@@ -807,9 +807,16 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     fn emit_future_incompat(&mut self, cx: &mut Context<'_, '_>) {
-        if cx.bcx.config.cli_unstable().enable_future_incompat_feature
-            && !self.per_crate_future_incompat_reports.is_empty()
-        {
+        if cx.bcx.config.cli_unstable().enable_future_incompat_feature {
+            if self.per_crate_future_incompat_reports.is_empty() {
+                drop(
+                    cx.bcx
+                        .config
+                        .shell()
+                        .note("0 dependencies had future-incompat warnings"),
+                );
+                return;
+            }
             self.per_crate_future_incompat_reports
                 .sort_by_key(|r| r.package_id);
 
