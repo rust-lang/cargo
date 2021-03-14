@@ -3,6 +3,7 @@
 use cargo::core::Edition;
 use cargo_test_support::git;
 use cargo_test_support::paths;
+use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
@@ -1432,5 +1433,65 @@ fn fix_color_message() {
         .with_stderr_contains("error: color test")
         .with_stderr_does_not_contain("[..]\x1b[[..]")
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn edition_v2_resolver_report() {
+    // Show a report if the V2 resolver shows differences.
+    if !is_nightly() {
+        // 2021 is unstable
+        return;
+    }
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("bar", "1.0.0")
+        .add_dep(
+            Dependency::new("common", "1.0")
+                .target("cfg(whatever)")
+                .enable_features(&["f1"]),
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                common = "1.0"
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered("\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] common v1.0.0 [..]
+[DOWNLOADED] bar v1.0.0 [..]
+note: Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.
+This may cause dependencies to resolve with a different set of features.
+More information about the resolver changes may be found at https://doc.rust-lang.org/cargo/reference/features.html#feature-resolver-version-2
+The following differences were detected with the current configuration:
+
+  common v1.0.0 removed features `f1`
+
+[CHECKING] common v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[MIGRATING] src/lib.rs from 2018 edition to 2021
+[FINISHED] [..]
+")
         .run();
 }

@@ -803,6 +803,15 @@ impl CompileFilter {
         }
     }
 
+    pub fn is_all_targets(&self) -> bool {
+        match *self {
+            CompileFilter::Only {
+                all_targets: true, ..
+            } => true,
+            _ => false,
+        }
+    }
+
     pub(crate) fn contains_glob_patterns(&self) -> bool {
         match self {
             CompileFilter::Default { .. } => false,

@@ -103,7 +103,7 @@ struct Packages<'cfg> {
 }
 
 #[derive(Debug)]
-enum MaybePackage {
+pub enum MaybePackage {
     Package(Package),
     Virtual(VirtualManifest),
 }
@@ -342,7 +342,7 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     /// Returns the root Package or VirtualManifest.
-    fn root_maybe(&self) -> &MaybePackage {
+    pub fn root_maybe(&self) -> &MaybePackage {
         self.packages.get(self.root_manifest())
     }
 
