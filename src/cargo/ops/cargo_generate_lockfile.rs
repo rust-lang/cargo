@@ -45,7 +45,12 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     }
 
     if opts.config.offline() {
-        anyhow::bail!("you can't update in the offline mode");
+        match opts.precise {
+            None => {
+                anyhow::bail!("you can't update in the offline mode without precise packages");
+            }
+            Some(_) => {}
+        }
     }
 
     // Updates often require a lot of modifications to the registry, so ensure
