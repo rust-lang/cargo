@@ -44,13 +44,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         anyhow::bail!("you can't generate a lockfile for an empty workspace.")
     }
 
-    if opts.config.offline() {
-        match opts.precise {
-            None => {
-                anyhow::bail!("you can't update in the offline mode without precise packages");
-            }
-            Some(_) => {}
-        }
+    if opts.config.offline() && opts.precise.is_none() {
+        anyhow::bail!("you can't update in the offline mode without precise packages");
     }
 
     // Updates often require a lot of modifications to the registry, so ensure
