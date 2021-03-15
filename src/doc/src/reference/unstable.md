@@ -1159,6 +1159,7 @@ OPENSSL_DIR = { value = "vendor/openssl", relative = true }
 
 ### patch-in-config
 * Original Pull Request: [#9204](https://github.com/rust-lang/cargo/pull/9204)
+* Tracking Issue: [#9269](https://github.com/rust-lang/cargo/issues/9269)
 
 The `-Z patch-in-config` flag enables the use of `[patch]` sections in
 cargo configuration files (`.cargo/config.toml`). The format of such
