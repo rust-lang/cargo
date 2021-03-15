@@ -403,9 +403,9 @@ impl<'cfg> Workspace<'cfg> {
                             /* platform */ None,
                             // NOTE: Since we use ConfigRelativePath, this root isn't used as
                             // any relative paths are resolved before they'd be joined with root.
-                            self.root(),
+                            &Path::new("unused-relative-path"),
                             self.unstable_features(),
-                            None,
+                            /* kind */ None,
                         )
                     })
                     .collect::<CargoResult<Vec<_>>>()?,
@@ -417,8 +417,6 @@ impl<'cfg> Workspace<'cfg> {
                 .shell()
                 .warn(format!("[patch] in cargo config: {}", message))?
         }
-
-        let _ = nested_paths;
 
         Ok(patch)
     }
