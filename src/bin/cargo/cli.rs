@@ -45,6 +45,7 @@ Available unstable (nightly-only) flags:
     -Z terminal-width      -- Provide a terminal width to rustc for error truncation
     -Z namespaced-features -- Allow features with `dep:` prefix
     -Z weak-dep-features   -- Allow `dep_name?/feature` feature syntax
+    -Z patch-in-config     -- Allow `[patch]` sections in .cargo/config.toml files
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
