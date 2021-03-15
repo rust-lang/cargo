@@ -1157,7 +1157,7 @@ TMPDIR = { value = "/home/tmp", force = true }
 OPENSSL_DIR = { value = "vendor/openssl", relative = true }
 ```
 
-### `[patch]` in .cargo/config.toml
+### patch-in-config
 * Original Pull Request: [#9204](https://github.com/rust-lang/cargo/pull/9204)
 
 The `-Z patch-in-config` flag enables the use of `[patch]` sections in
