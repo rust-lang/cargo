@@ -62,7 +62,7 @@ fn test_single_crate() {
         .file("src/main.rs", "fn main() { [true].into_iter(); }")
         .build();
 
-    for command in &["build", "check", "rustc"] {
+    for command in &["build", "check", "rustc", "test"] {
         p.cargo(command).arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stderr_contains("  = note: `#[warn(array_into_iter)]` on by default")
@@ -108,7 +108,7 @@ fn test_multi_crate() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    for command in &["build", "check", "rustc"] {
+    for command in &["build", "check", "rustc", "test"] {
         p.cargo(command).arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stderr_does_not_contain("[..]array_into_iter[..]")
