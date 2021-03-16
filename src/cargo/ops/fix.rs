@@ -50,12 +50,16 @@ use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
-use crate::core::{Edition, Workspace};
+use crate::core::compiler::RustcTargetData;
+use crate::core::resolver::features::{FeatureOpts, FeatureResolver, RequestedFeatures};
+use crate::core::resolver::{HasDevUnits, ResolveBehavior, ResolveOpts};
+use crate::core::{Edition, MaybePackage, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
 use crate::util::{self, paths, Config, ProcessBuilder};
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
+use crate::{drop_eprint, drop_eprintln};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
@@ -74,6 +78,9 @@ pub struct FixOptions {
 
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
     check_version_control(ws.config(), opts)?;
+    if opts.edition {
+        check_resolver_change(ws, opts)?;
+    }
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
@@ -191,6 +198,108 @@ fn check_version_control(config: &Config, opts: &FixOptions) -> CargoResult<()> 
          ",
         files_list
     );
+}
+
+fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<()> {
+    let root = ws.root_maybe();
+    match root {
+        MaybePackage::Package(root_pkg) => {
+            if root_pkg.manifest().resolve_behavior().is_some() {
+                // If explicitly specified by the user, no need to check.
+                return Ok(());
+            }
+            // Only trigger if updating the root package from 2018.
+            let pkgs = opts.compile_opts.spec.get_packages(ws)?;
+            if !pkgs.iter().any(|&pkg| pkg == root_pkg) {
+                // The root is not being migrated.
+                return Ok(());
+            }
+            if root_pkg.manifest().edition() != Edition::Edition2018 {
+                // V1 to V2 only happens on 2018 to 2021.
+                return Ok(());
+            }
+        }
+        MaybePackage::Virtual(_vm) => {
+            // Virtual workspaces don't have a global edition to set (yet).
+            return Ok(());
+        }
+    }
+    // 2018 without `resolver` set must be V1
+    assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
+    let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
+    let resolve_opts = ResolveOpts::new(
+        /*dev_deps*/ true,
+        RequestedFeatures::from_command_line(
+            &opts.compile_opts.features,
+            opts.compile_opts.all_features,
+            !opts.compile_opts.no_default_features,
+        ),
+    );
+    let target_data = RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
+    // HasDevUnits::No because that may uncover more differences.
+    // This is not the same as what `cargo fix` is doing, since it is doing
+    // `--all-targets` which includes dev dependencies.
+    let ws_resolve = ops::resolve_ws_with_opts(
+        ws,
+        &target_data,
+        &opts.compile_opts.build_config.requested_kinds,
+        &resolve_opts,
+        &specs,
+        HasDevUnits::No,
+        crate::core::resolver::features::ForceAllTargets::No,
+    )?;
+
+    let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, HasDevUnits::No);
+    let v2_features = FeatureResolver::resolve(
+        ws,
+        &target_data,
+        &ws_resolve.targeted_resolve,
+        &ws_resolve.pkg_set,
+        &resolve_opts.features,
+        &specs,
+        &opts.compile_opts.build_config.requested_kinds,
+        feature_opts,
+    )?;
+
+    let differences = v2_features.compare_legacy(&ws_resolve.resolved_features);
+    if differences.features.is_empty() && differences.optional_deps.is_empty() {
+        // Nothing is different, nothing to report.
+        return Ok(());
+    }
+    let config = ws.config();
+    config.shell().note(
+        "Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.",
+    )?;
+    drop_eprintln!(
+        config,
+        "This may cause dependencies to resolve with a different set of features."
+    );
+    drop_eprintln!(
+        config,
+        "More information about the resolver changes may be found \
+         at https://doc.rust-lang.org/cargo/reference/features.html#feature-resolver-version-2"
+    );
+    drop_eprintln!(
+        config,
+        "The following differences were detected with the current configuration:\n"
+    );
+    let report = |changes: crate::core::resolver::features::DiffMap, what| {
+        for ((pkg_id, for_host), removed) in changes {
+            drop_eprint!(config, "  {}", pkg_id);
+            if for_host {
+                drop_eprint!(config, " (as build dependency)");
+            }
+            if !removed.is_empty() {
+                let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
+                drop_eprint!(config, " removed {} `{}`", what, joined.join(","));
+            }
+            drop_eprint!(config, "\n");
+        }
+    };
+    report(differences.features, "features");
+    report(differences.optional_deps, "optional dependency");
+    drop_eprint!(config, "\n");
+    Ok(())
 }
 
 /// Entry point for `cargo` running as a proxy for `rustc`.

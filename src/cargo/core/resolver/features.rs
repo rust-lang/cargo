@@ -42,7 +42,7 @@ use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 /// Map of activated features.
@@ -71,7 +71,7 @@ pub struct ResolvedFeatures {
 
 /// Options for how the feature resolver works.
 #[derive(Default)]
-struct FeatureOpts {
+pub struct FeatureOpts {
     /// Use the new resolver instead of the old one.
     new_resolver: bool,
     /// Build deps and proc-macros will not share share features with other dep kinds.
@@ -123,7 +123,7 @@ impl FeaturesFor {
 }
 
 impl FeatureOpts {
-    fn new(
+    pub fn new(
         ws: &Workspace<'_>,
         has_dev_units: HasDevUnits,
         force_all_targets: ForceAllTargets,
@@ -179,6 +179,20 @@ impl FeatureOpts {
             opts.new_resolver = true;
         }
         Ok(opts)
+    }
+
+    /// Creates a new FeatureOpts for the given behavior.
+    pub fn new_behavior(behavior: ResolveBehavior, has_dev_units: HasDevUnits) -> FeatureOpts {
+        match behavior {
+            ResolveBehavior::V1 => FeatureOpts::default(),
+            ResolveBehavior::V2 => FeatureOpts {
+                new_resolver: true,
+                decouple_host_deps: true,
+                decouple_dev_deps: has_dev_units == HasDevUnits::No,
+                ignore_inactive_targets: true,
+                compare: false,
+            },
+        }
     }
 }
 
@@ -286,6 +300,66 @@ impl ResolvedFeatures {
             }
         }
     }
+
+    /// Compares the result against the original resolver behavior.
+    ///
+    /// Used by `cargo fix --edition` to display any differences.
+    pub fn compare_legacy(&self, legacy: &ResolvedFeatures) -> FeatureDifferences {
+        let legacy_features = legacy.legacy_features.as_ref().unwrap();
+        let features = self
+            .activated_features
+            .iter()
+            .filter_map(|((pkg_id, for_host), new_features)| {
+                let old_features = match legacy_features.get(pkg_id) {
+                    Some(feats) => feats.iter().cloned().collect(),
+                    None => BTreeSet::new(),
+                };
+                // The new resolver should never add features.
+                assert_eq!(new_features.difference(&old_features).next(), None);
+                let removed_features: BTreeSet<_> =
+                    old_features.difference(&new_features).cloned().collect();
+                if removed_features.is_empty() {
+                    None
+                } else {
+                    Some(((*pkg_id, *for_host), removed_features))
+                }
+            })
+            .collect();
+        let legacy_deps = legacy.legacy_dependencies.as_ref().unwrap();
+        let optional_deps = self
+            .activated_dependencies
+            .iter()
+            .filter_map(|((pkg_id, for_host), new_deps)| {
+                let old_deps = match legacy_deps.get(pkg_id) {
+                    Some(deps) => deps.iter().cloned().collect(),
+                    None => BTreeSet::new(),
+                };
+                // The new resolver should never add dependencies.
+                assert_eq!(new_deps.difference(&old_deps).next(), None);
+                let removed_deps: BTreeSet<_> = old_deps.difference(&new_deps).cloned().collect();
+                if removed_deps.is_empty() {
+                    None
+                } else {
+                    Some(((*pkg_id, *for_host), removed_deps))
+                }
+            })
+            .collect();
+        FeatureDifferences {
+            features,
+            optional_deps,
+        }
+    }
+}
+
+/// Map of differences.
+///
+/// Key is `(pkg_id, for_host)`. Value is a set of features or dependencies removed.
+pub type DiffMap = BTreeMap<(PackageId, bool), BTreeSet<InternedString>>;
+
+/// Differences between resolvers.
+pub struct FeatureDifferences {
+    pub features: DiffMap,
+    pub optional_deps: DiffMap,
 }
 
 pub struct FeatureResolver<'a, 'cfg> {
@@ -334,13 +408,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         requested_features: &RequestedFeatures,
         specs: &[PackageIdSpec],
         requested_targets: &[CompileKind],
-        has_dev_units: HasDevUnits,
-        force_all_targets: ForceAllTargets,
+        opts: FeatureOpts,
     ) -> CargoResult<ResolvedFeatures> {
         use crate::util::profile;
         let _p = profile::start("resolve features");
 
-        let opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
         if !opts.new_resolver {
             // Legacy mode.
             return Ok(ResolvedFeatures {
