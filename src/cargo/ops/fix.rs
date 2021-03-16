@@ -224,12 +224,6 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
             return Ok(());
         }
     }
-    if !opts.compile_opts.filter.is_all_targets() {
-        // When migrating specific targets, we can't know if the user intends
-        // to set the global edition at this time or not. Conservatively
-        // assume the user will figure things out.
-        return Ok(());
-    }
     // 2018 without `resolver` set must be V1
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
