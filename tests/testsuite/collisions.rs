@@ -478,3 +478,69 @@ fn collision_doc_target() {
         )
         .run();
 }
+
+#[cargo_test]
+fn collision_with_root() {
+    // Check for a doc collision between a root package and a dependency.
+    // In this case, `foo-macro` comes from both the workspace and crates.io.
+    // This checks that the duplicate correction code doesn't choke on this
+    // by removing the root unit.
+    Package::new("foo-macro", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["abc", "foo-macro"]
+            "#,
+        )
+        .file(
+            "abc/Cargo.toml",
+            r#"
+                [package]
+                name = "abc"
+                version = "1.0.0"
+
+                [dependencies]
+                foo-macro = "1.0"
+            "#,
+        )
+        .file("abc/src/lib.rs", "")
+        .file(
+            "foo-macro/Cargo.toml",
+            r#"
+                [package]
+                name = "foo-macro"
+                version = "1.0.0"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                abc = {path="../abc"}
+            "#,
+        )
+        .file("foo-macro/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr_unordered("\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo-macro v1.0.0 [..]
+warning: output filename collision.
+The lib target `foo-macro` in package `foo-macro v1.0.0` has the same output filename as the lib target `foo-macro` in package `foo-macro v1.0.0 [..]`.
+Colliding filename is: [CWD]/target/doc/foo_macro/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+[CHECKING] foo-macro v1.0.0
+[DOCUMENTING] foo-macro v1.0.0
+[CHECKING] abc v1.0.0 [..]
+[DOCUMENTING] foo-macro v1.0.0 [..]
+[DOCUMENTING] abc v1.0.0 [..]
+[FINISHED] [..]
+")
+        .run();
+}
