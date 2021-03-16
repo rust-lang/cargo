@@ -458,3 +458,34 @@ fn resolver1_member_features() {
         .with_stdout("m1-feature set")
         .run();
 }
+
+#[cargo_test]
+fn resolver1_non_member_optional_feature() {
+    // --features x/y for an optional dependency `x` with the v1 resolver.
+    Package::new("bar", "1.0.0")
+        .feature("feat1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+                #[cfg(not(feature = "feat1"))]
+                compile_error!("feat1 should be activated");
+            "#,
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { version="1.0", optional=true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -p bar --features bar/feat1").run();
+}
