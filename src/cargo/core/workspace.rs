@@ -1182,7 +1182,8 @@ impl<'cfg> Workspace<'cfg> {
         for feature in requested_features.features.iter() {
             if let Some(index) = feature.find('/') {
                 let name = &feature[..index];
-                if specs.iter().any(|spec| spec.name() == name) {
+                let is_member = self.members().any(|member| member.name() == name);
+                if is_member && specs.iter().any(|spec| spec.name() == name) {
                     member_specific_features
                         .entry(name)
                         .or_default()
