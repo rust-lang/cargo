@@ -1,0 +1,320 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Issue Tracker - Cargo Contributor Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="issues.html" class="active"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="process/index.html"><strong aria-hidden="true">3.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="process/working-on-cargo.html"><strong aria-hidden="true">3.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="process/release.html"><strong aria-hidden="true">3.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="process/unstable.html"><strong aria-hidden="true">3.3.</strong> Unstable features</a></li></ol></li><li class="chapter-item expanded "><a href="architecture/index.html"><strong aria-hidden="true">4.</strong> Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="architecture/codebase.html"><strong aria-hidden="true">4.1.</strong> Codebase Overview</a></li><li class="chapter-item expanded "><a href="architecture/subcommands.html"><strong aria-hidden="true">4.2.</strong> SubCommands</a></li><li class="chapter-item expanded "><a href="architecture/console.html"><strong aria-hidden="true">4.3.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="architecture/packages.html"><strong aria-hidden="true">4.4.</strong> Packages and Resolution</a></li><li class="chapter-item expanded "><a href="architecture/compilation.html"><strong aria-hidden="true">4.5.</strong> Compilation</a></li><li class="chapter-item expanded "><a href="architecture/files.html"><strong aria-hidden="true">4.6.</strong> Files</a></li></ol></li><li class="chapter-item expanded "><a href="tests/index.html"><strong aria-hidden="true">5.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="tests/running.html"><strong aria-hidden="true">5.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="tests/writing.html"><strong aria-hidden="true">5.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="tests/profiling.html"><strong aria-hidden="true">5.3.</strong> Profiling</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">6.</strong> Design Principles</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#issue-tracker" id="issue-tracker">Issue Tracker</a></h1>
+<p>Cargo's issue tracker is located at
+<a href="https://github.com/rust-lang/cargo/issues/">https://github.com/rust-lang/cargo/issues/</a>. This is the primary spot where
+we track bugs and small feature requests. See <a href="process/index.html">Process</a> for more about our
+process for proposing changes.</p>
+<h2><a class="header" href="#filing-issues" id="filing-issues">Filing issues</a></h2>
+<p>We can't fix what we don't know about, so please report problems liberally.
+This includes problems with understanding the documentation, unhelpful error
+messages, and unexpected behavior.</p>
+<p><strong>If you think that you have identified an issue with Cargo that might
+compromise its users' security, please do not open a public issue on GitHub.
+Instead, we ask you to refer to Rust's <a href="https://www.rust-lang.org/security.html">security policy</a>.</strong></p>
+<p>Opening an issue is as easy as following <a href="https://github.com/rust-lang/cargo/issues/new/choose">this link</a>. There are
+several templates for different issue kinds, but if none of them fit your
+issue, don't hesitate to modify one of the templates, or click the <a href="https://github.com/rust-lang/cargo/issues/new">Open a
+blank issue</a> link.</p>
+<p>The Rust tools are spread across multiple repositories in the Rust
+organization. It may not always be clear where to file an issue. No worries!
+If you file in the wrong tracker, someone will either transfer it to the
+correct one or ask you to move it. Some other repositories that may be
+relevant are:</p>
+<ul>
+<li><a href="https://github.com/rust-lang/rust"><code>rust-lang/rust</code></a> — Home for the <a href="https://doc.rust-lang.org/rustc/"><code>rustc</code></a> compiler and <a href="https://doc.rust-lang.org/rustdoc/"><code>rustdoc</code></a>.</li>
+<li><a href="https://github.com/rust-lang/rustup"><code>rust-lang/rustup</code></a> — Home for the <a href="https://rust-lang.github.io/rustup/"><code>rustup</code></a> toolchain installer.</li>
+<li><a href="https://github.com/rust-lang/rustfmt"><code>rust-lang/rustfmt</code></a> — Home for the <code>rustfmt</code> tool, which also includes <code>cargo fmt</code>.</li>
+<li><a href="https://github.com/rust-lang/rust-clippy"><code>rust-lang/rust-clippy</code></a> — Home for the <code>clippy</code> tool, which also includes <code>cargo clippy</code>.</li>
+<li><a href="https://github.com/rust-lang/crates.io"><code>rust-lang/crates.io</code></a> — Home for the <a href="https://crates.io/">crates.io</a> website.</li>
+</ul>
+<p>Issues with <a href="https://doc.rust-lang.org/cargo/commands/cargo-fix.html"><code>cargo fix</code></a> can be tricky to know where they should be filed,
+since the fixes are driven by <code>rustc</code>, processed by <a href="https://github.com/rust-lang/rustfix/"><code>rustfix</code></a>, and the
+front-interface is implemented in Cargo. Feel free to file in the Cargo issue
+tracker, and it will get moved to one of the other issue trackers if
+necessary.</p>
+<h2><a class="header" href="#issue-labels" id="issue-labels">Issue labels</a></h2>
+<p><a href="https://github.com/rust-lang/cargo/labels">Issue labels</a> are very helpful to identify the types of issues and which
+category they are related to. The Cargo team typically manages assigning
+labels. The labels use a naming convention with short prefixes and colors to
+indicate the kind of label:</p>
+<ul>
+<li>
+<p>Yellow, <strong>A</strong>-prefixed labels state which <strong>area</strong> of the project an issue
+relates to.</p>
+</li>
+<li>
+<p>Light purple, <strong>C</strong>-prefixed labels represent the <strong>category</strong> of an issue.
+In particular, <strong><a href="https://github.com/rust-lang/cargo/labels/C-feature-request">C-feature-request</a></strong> marks <em>proposals</em> for new features. If
+an issue is <strong>C-feature-request</strong>, but is not <strong><a href="https://github.com/rust-lang/cargo/labels/Feature%20accepted">Feature accepted</a></strong> or
+<strong><a href="https://github.com/rust-lang/cargo/labels/I-nominated">I-nominated</a></strong>, then it was not thoroughly discussed, and might need some
+additional design or perhaps should be implemented as an external subcommand
+first. Ping @rust-lang/cargo if you want to send a PR for such issue.</p>
+</li>
+<li>
+<p>Dark purple, <strong>Command</strong>-prefixed labels mean the issue has to do with a
+specific cargo command.</p>
+</li>
+<li>
+<p>Green, <strong>E</strong>-prefixed labels indicate the level of <strong>experience</strong> or
+<strong>effort</strong> necessary to fix the issue. <strong><a href="https://github.com/rust-lang/cargo/labels/E-mentor">E-mentor</a></strong> issues also
+have some instructions on how to get started. Generally, all of the
+<strong>E</strong>-prefixed labels are issues that are ready for someone to contribute
+to!</p>
+</li>
+<li>
+<p>Red, <strong>I</strong>-prefixed labels indicate the <strong>importance</strong> of the issue. The
+<strong><a href="https://github.com/rust-lang/cargo/labels/I-nominated">I-nominated</a></strong> label indicates that an issue has been nominated for
+prioritizing at the next triage meeting.</p>
+</li>
+<li>
+<p>Purple gray, <strong>O</strong>-prefixed labels are the <strong>operating system</strong> or platform
+that this issue is specific to.</p>
+</li>
+<li>
+<p>Orange, <strong>P</strong>-prefixed labels indicate a bug's <strong>priority</strong>.</p>
+</li>
+<li>
+<p><strong>S</strong>-prefixed labels are &quot;status&quot; labels, typically used for PRs, but can
+also indicate an issue is <strong><a href="https://github.com/rust-lang/cargo/labels/S-blocked">S-blocked</a></strong>.</p>
+</li>
+<li>
+<p>The light orange <strong><a href="https://github.com/rust-lang/cargo/issues?q=label%3Arelnotes">relnotes</a></strong> label marks issues that should be highlighted
+in the <a href="https://github.com/rust-lang/rust/blob/master/RELEASES.md">Rust release notes</a> of the next release.</p>
+</li>
+<li>
+<p>Dark blue, <strong>Z</strong>-prefixed labels are for unstable, <a href="https://doc.rust-lang.org/nightly/cargo/reference/unstable.html">nightly features</a>.</p>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="process/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="process/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Writing Tests - Cargo Contributor Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="../process/index.html"><strong aria-hidden="true">3.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../process/working-on-cargo.html"><strong aria-hidden="true">3.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="../process/release.html"><strong aria-hidden="true">3.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="../process/unstable.html"><strong aria-hidden="true">3.3.</strong> Unstable features</a></li></ol></li><li class="chapter-item expanded "><a href="../architecture/index.html"><strong aria-hidden="true">4.</strong> Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../architecture/codebase.html"><strong aria-hidden="true">4.1.</strong> Codebase Overview</a></li><li class="chapter-item expanded "><a href="../architecture/subcommands.html"><strong aria-hidden="true">4.2.</strong> SubCommands</a></li><li class="chapter-item expanded "><a href="../architecture/console.html"><strong aria-hidden="true">4.3.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="../architecture/packages.html"><strong aria-hidden="true">4.4.</strong> Packages and Resolution</a></li><li class="chapter-item expanded "><a href="../architecture/compilation.html"><strong aria-hidden="true">4.5.</strong> Compilation</a></li><li class="chapter-item expanded "><a href="../architecture/files.html"><strong aria-hidden="true">4.6.</strong> Files</a></li></ol></li><li class="chapter-item expanded "><a href="../tests/index.html"><strong aria-hidden="true">5.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../tests/running.html"><strong aria-hidden="true">5.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="../tests/writing.html" class="active"><strong aria-hidden="true">5.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="../tests/profiling.html"><strong aria-hidden="true">5.3.</strong> Profiling</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">6.</strong> Design Principles</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#writing-tests" id="writing-tests">Writing Tests</a></h1>
+<p>The following focuses on writing an integration test. However, writing unit
+tests is also encouraged!</p>
+<h2><a class="header" href="#testsuite" id="testsuite">Testsuite</a></h2>
+<p>Cargo has a wide variety of integration tests that execute the <code>cargo</code> binary
+and verify its behavior, located in the <a href="https://github.com/rust-lang/cargo/tree/master/tests/testsuite/"><code>testsuite</code></a> directory. The
+<a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs"><code>support</code></a> crate contains many helpers to make this process easy.</p>
+<p>These tests typically work by creating a temporary &quot;project&quot; with a
+<code>Cargo.toml</code> file, executing the <code>cargo</code> binary process, and checking the
+stdout and stderr output against the expected output.</p>
+<h3><a class="header" href="#cargo_test-attribute" id="cargo_test-attribute"><code>cargo_test</code> attribute</a></h3>
+<p>Cargo's tests use the <code>#[cargo_test]</code> attribute instead of <code>#[test]</code>. This
+attribute injects some code which does some setup before starting the test,
+creating the little &quot;sandbox&quot; described below.</p>
+<h3><a class="header" href="#basic-test-structure" id="basic-test-structure">Basic test structure</a></h3>
+<p>The general form of a test involves creating a &quot;project&quot;, running <code>cargo</code>, and
+checking the result. Projects are created with the <a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L225-L231"><code>ProjectBuilder</code></a> where
+you specify some files to create. The general form looks like this:</p>
+<pre><code class="language-rust ignore">let p = project()
+    .file(&quot;src/main.rs&quot;, r#&quot;fn main() { println!(&quot;hi!&quot;); }&quot;#)
+    .build();
+</code></pre>
+<p>The project creates a mini sandbox under the &quot;cargo integration test&quot;
+directory with each test getting a separate directory such as
+<code>/path/to/cargo/target/cit/t123/</code>. Each project appears as a separate
+directory. There is also an empty <code>home</code> directory created that will be used
+as a home directory instead of your normal home directory.</p>
+<p>If you do not specify a <code>Cargo.toml</code> manifest using <code>file()</code>, one is
+automatically created with a project name of <code>foo</code> using <code>basic_manifest()</code>.</p>
+<p>To run Cargo, call the <code>cargo</code> method and make assertions on the execution:</p>
+<pre><code class="language-rust ignore">p.cargo(&quot;run --bin foo&quot;)
+    .with_stderr(
+        &quot;\
+[COMPILING] foo [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/foo`
+&quot;,
+    )
+    .with_stdout(&quot;hi!&quot;)
+    .run();
+</code></pre>
+<p>This uses the <a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L558-L579"><code>Execs</code></a> struct to build up a command to execute, along with
+the expected output.</p>
+<p>See <a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L1322-L1332"><code>support::lines_match</code></a> for an explanation of the string pattern matching.
+Patterns are used to make it easier to match against the expected output.</p>
+<p>Browse the <code>pub</code> functions in the <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs"><code>support</code></a> crate for a variety of other
+helpful utilities.</p>
+<h3><a class="header" href="#testing-nightly-features" id="testing-nightly-features">Testing Nightly Features</a></h3>
+<p>If you are testing a Cargo feature that only works on &quot;nightly&quot; Cargo, then
+you need to call <code>masquerade_as_nightly_cargo</code> on the process builder like
+this:</p>
+<pre><code class="language-rust ignore">p.cargo(&quot;build&quot;).masquerade_as_nightly_cargo()
+</code></pre>
+<p>If you are testing a feature that only works on <em>nightly rustc</em> (such as
+benchmarks), then you should exit the test if it is not running with nightly
+rust, like this:</p>
+<pre><code class="language-rust ignore">if !is_nightly() {
+    // Add a comment here explaining why this is necessary.
+    return;
+}
+</code></pre>
+<h3><a class="header" href="#platform-specific-notes" id="platform-specific-notes">Platform-specific Notes</a></h3>
+<p>When checking output, use <code>/</code> for paths even on Windows: the actual output
+of <code>\</code> on Windows will be replaced with <code>/</code>.</p>
+<p>Be careful when executing binaries on Windows. You should not rename, delete,
+or overwrite a binary immediately after running it. Under some conditions
+Windows will fail with errors like &quot;directory not empty&quot; or &quot;failed to remove&quot;
+or &quot;access is denied&quot;.</p>
+<h3><a class="header" href="#specifying-dependencies" id="specifying-dependencies">Specifying Dependencies</a></h3>
+<p>You should not write any tests that use the network such as contacting
+crates.io. Typically, simple path dependencies are the easiest way to add a
+dependency. Example:</p>
+<pre><code class="language-rust ignore">let p = project()
+    .file(&quot;Cargo.toml&quot;, r#&quot;
+        [package]
+        name = &quot;foo&quot;
+        version = &quot;1.0.0&quot;
+
+        [dependencies]
+        bar = {path = &quot;bar&quot;}
+    &quot;#)
+    .file(&quot;src/lib.rs&quot;, &quot;extern crate bar;&quot;)
+    .file(&quot;bar/Cargo.toml&quot;, &amp;basic_manifest(&quot;bar&quot;, &quot;1.0.0&quot;))
+    .file(&quot;bar/src/lib.rs&quot;, &quot;&quot;)
+    .build();
+</code></pre>
+<p>If you need to test with registry dependencies, see
+<a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/registry.rs#L73-L149"><code>support::registry::Package</code></a> for creating packages you can depend on.</p>
+<p>If you need to test git dependencies, see <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs"><code>support::git</code></a> to create a git
+dependency.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../tests/running.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../tests/profiling.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../tests/running.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../tests/profiling.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

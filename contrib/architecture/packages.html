@@ -1,0 +1,303 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Packages and Resolution - Cargo Contributor Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="../process/index.html"><strong aria-hidden="true">3.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../process/working-on-cargo.html"><strong aria-hidden="true">3.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="../process/release.html"><strong aria-hidden="true">3.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="../process/unstable.html"><strong aria-hidden="true">3.3.</strong> Unstable features</a></li></ol></li><li class="chapter-item expanded "><a href="../architecture/index.html"><strong aria-hidden="true">4.</strong> Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../architecture/codebase.html"><strong aria-hidden="true">4.1.</strong> Codebase Overview</a></li><li class="chapter-item expanded "><a href="../architecture/subcommands.html"><strong aria-hidden="true">4.2.</strong> SubCommands</a></li><li class="chapter-item expanded "><a href="../architecture/console.html"><strong aria-hidden="true">4.3.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="../architecture/packages.html" class="active"><strong aria-hidden="true">4.4.</strong> Packages and Resolution</a></li><li class="chapter-item expanded "><a href="../architecture/compilation.html"><strong aria-hidden="true">4.5.</strong> Compilation</a></li><li class="chapter-item expanded "><a href="../architecture/files.html"><strong aria-hidden="true">4.6.</strong> Files</a></li></ol></li><li class="chapter-item expanded "><a href="../tests/index.html"><strong aria-hidden="true">5.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../tests/running.html"><strong aria-hidden="true">5.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="../tests/writing.html"><strong aria-hidden="true">5.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="../tests/profiling.html"><strong aria-hidden="true">5.3.</strong> Profiling</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">6.</strong> Design Principles</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#packages-and-resolution" id="packages-and-resolution">Packages and Resolution</a></h1>
+<h2><a class="header" href="#workspaces" id="workspaces">Workspaces</a></h2>
+<p>The <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/workspace.rs"><code>Workspace</code></a> object is usually created very early by calling the
+<a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/util/command_prelude.rs#L298-L318"><code>workspace</code></a> helper method. This discovers the root of the
+workspace, and loads all the workspace members as a <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/package.rs"><code>Package</code></a> object. Each
+package corresponds to a single <code>Cargo.toml</code> (which is deserialized into a
+<a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/manifest.rs#L27-L51"><code>Manifest</code></a>), and may define several <a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/manifest.rs#L181-L206"><code>Target</code></a>s, such as the library,
+binaries, integration test or examples. Targets are crates (each target
+defines a crate root, like <code>src/lib.rs</code> or <code>examples/foo.rs</code>) and are what is
+actually compiled by <code>rustc</code>.</p>
+<h2><a class="header" href="#packages-and-sources" id="packages-and-sources">Packages and Sources</a></h2>
+<p>There are several data structures that are important to understand how
+packages are found and loaded:</p>
+<ul>
+<li><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/package.rs"><code>Package</code></a> — A package, which is a <code>Cargo.toml</code> manifest and its associated
+source files.
+<ul>
+<li><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/package_id.rs"><code>PackageId</code></a> — A unique identifier for a package.</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/source/mod.rs"><code>Source</code></a> — An abstraction for something that can fetch packages (a remote
+registry, a git repo, the local filesystem, etc.). Check out the <a href="https://github.com/rust-lang/cargo/tree/master/src/cargo/sources">source
+implementations</a> for all the details about registries, indexes, git
+dependencies, etc.
+<ul>
+<li><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/source/source_id.rs"><code>SourceId</code></a> — A unique identifier for a source.</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/source/mod.rs#L245-L249"><code>SourceMap</code></a> — Map of all available sources.</li>
+<li><a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/registry.rs#L36-L81"><code>PackageRegistry</code></a> — This is the main interface for how the dependency
+resolver finds packages. It contains the <code>SourceMap</code>, and handles things
+like the <code>[patch]</code> table. The <code>Registry</code> trait provides a generic interface
+to the <code>PackageRegistry</code>, but this is only used for providing an alternate
+implementation of the <code>PackageRegistry</code> for testing. The dependency resolver
+sends a query to the <code>PackageRegistry</code> to &quot;get me all packages that match
+this dependency declaration&quot;.</li>
+<li><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/summary.rs"><code>Summary</code></a> — A summary is a subset of a <a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/manifest.rs#L27-L51"><code>Manifest</code></a>, and is essentially
+the information that can be found in a registry index. Queries against the
+<code>PackageRegistry</code> yields a <code>Summary</code>. The resolver uses the summary
+information to build the dependency graph.</li>
+<li><a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/package.rs#L283-L296"><code>PackageSet</code></a> — Contains all of the <code>Package</code> objects. This works with the
+<a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/core/package.rs#L298-L352"><code>Downloads</code></a> struct to coordinate downloading packages. It has a reference
+to the <code>SourceMap</code> to get the <code>Source</code> objects which tell the <code>Downloads</code>
+struct which URLs to fetch.</li>
+</ul>
+<p>All of these come together in the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/resolve.rs"><code>ops::resolve</code></a> module. This module
+contains the primary functions for performing resolution (described below). It
+also handles downloading of packages. It is essentially where all of the data
+structures above come together.</p>
+<h2><a class="header" href="#resolver" id="resolver">Resolver</a></h2>
+<p><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/resolver/resolve.rs"><code>Resolve</code></a> is the representation of a directed graph of package dependencies,
+which uses <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/package_id.rs"><code>PackageId</code></a>s for nodes. This is the data structure that is saved
+to the <code>Cargo.lock</code> file. If there is no lock file, Cargo constructs a resolve
+by finding a graph of packages which matches declared dependency specification
+according to SemVer.</p>
+<p><a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/resolve.rs"><code>ops::resolve</code></a> is the front-end for creating a <code>Resolve</code>. It handles loading
+the <code>Cargo.lock</code> file, checking if it needs updating, etc.</p>
+<p>Resolution is currently performed twice. It is performed once with all
+features enabled. This is the resolve that gets saved to <code>Cargo.lock</code>. It then
+runs again with only the specific features the user selected on the
+command-line. Ideally this second run will get removed in the future when
+transitioning to the new feature resolver.</p>
+<h3><a class="header" href="#feature-resolver" id="feature-resolver">Feature resolver</a></h3>
+<p>A new feature-specific resolver was added in 2020 which adds more
+sophisticated feature resolution. It is located in the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/resolver/features.rs#L259"><code>resolver::features</code></a>
+module. The original dependency resolver still performs feature unification,
+as it can help reduce the dependencies it has to consider during resolution
+(rather than assuming every optional dependency of every package is enabled).
+Checking if a feature is enabled must go through the new feature resolver.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../architecture/console.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../architecture/compilation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../architecture/console.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../architecture/compilation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

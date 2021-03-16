@@ -1,0 +1,301 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Process - Cargo Contributor Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="../process/index.html" class="active"><strong aria-hidden="true">3.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../process/working-on-cargo.html"><strong aria-hidden="true">3.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="../process/release.html"><strong aria-hidden="true">3.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="../process/unstable.html"><strong aria-hidden="true">3.3.</strong> Unstable features</a></li></ol></li><li class="chapter-item expanded "><a href="../architecture/index.html"><strong aria-hidden="true">4.</strong> Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../architecture/codebase.html"><strong aria-hidden="true">4.1.</strong> Codebase Overview</a></li><li class="chapter-item expanded "><a href="../architecture/subcommands.html"><strong aria-hidden="true">4.2.</strong> SubCommands</a></li><li class="chapter-item expanded "><a href="../architecture/console.html"><strong aria-hidden="true">4.3.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="../architecture/packages.html"><strong aria-hidden="true">4.4.</strong> Packages and Resolution</a></li><li class="chapter-item expanded "><a href="../architecture/compilation.html"><strong aria-hidden="true">4.5.</strong> Compilation</a></li><li class="chapter-item expanded "><a href="../architecture/files.html"><strong aria-hidden="true">4.6.</strong> Files</a></li></ol></li><li class="chapter-item expanded "><a href="../tests/index.html"><strong aria-hidden="true">5.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../tests/running.html"><strong aria-hidden="true">5.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="../tests/writing.html"><strong aria-hidden="true">5.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="../tests/profiling.html"><strong aria-hidden="true">5.3.</strong> Profiling</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">6.</strong> Design Principles</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#process" id="process">Process</a></h1>
+<p>This chapter gives an overview of how Cargo comes together, and how you can be
+a part of that process.</p>
+<p>See the <a href="working-on-cargo.html">Working on Cargo</a> chapter for an overview of the contribution
+process.</p>
+<h2><a class="header" href="#cargo-team" id="cargo-team">Cargo team</a></h2>
+<p>Cargo is managed by a <a href="https://www.rust-lang.org/governance/teams/dev-tools#cargo">team</a> of volunteers. The Cargo Team reviews all
+changes, and sets the direction for the project.</p>
+<p>The team meets on a weekly basis on a video chat. If you are interested in
+participating, feel free to contact us on <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo">Zulip</a>.</p>
+<h2><a class="header" href="#roadmap" id="roadmap">Roadmap</a></h2>
+<p>The Cargo team typically establishes a roadmap each year that sets which areas
+they will be focusing on. This is usually posted on the Inside Rust Blog (such
+as <a href="https://blog.rust-lang.org/inside-rust/2020/01/10/cargo-in-2020.html">the 2020 roadmap</a>).</p>
+<p>The <a href="https://github.com/rust-lang/cargo/projects/1">Roadmap Project Board</a> is used for tracking major initiatives. This gives
+an overview of the things the team is interested in and thinking about.</p>
+<p>The <a href="https://github.com/rust-lang/cargo/projects/2">RFC Project Board</a> is used for tracking <a href="https://github.com/rust-lang/rfcs/">RFCs</a>.</p>
+<h2><a class="header" href="#working-on-small-bugs" id="working-on-small-bugs">Working on small bugs</a></h2>
+<p>Issues labeled with the <a href="https://github.com/rust-lang/cargo/labels/E-help-wanted">E-help-wanted</a>, <a href="https://github.com/rust-lang/cargo/labels/E-easy">E-easy</a>, or <a href="https://github.com/rust-lang/cargo/labels/E-mentor">E-mentor</a> <a href="../issues.html#issue-labels">labels</a> are
+typically issues that the Cargo team wants to see addressed, and are
+relatively easy to get started with. If you are interested in one of those,
+and it has not already been assigned to someone, leave a comment. See <a href="#issue-assignment">Issue
+assignment</a> below for assigning yourself.</p>
+<p>If there is a specific issue that you are interested in, but it doesn't have
+one of the <code>E-</code> labels, leave a comment on the issue. If a Cargo team member
+has the time to help out, they will respond to help with the next steps.</p>
+<h2><a class="header" href="#working-on-large-bugs" id="working-on-large-bugs">Working on large bugs</a></h2>
+<p>Some issues may be difficult to fix. They may require significant code
+changes, or major design decisions. The <a href="https://github.com/rust-lang/cargo/labels/E-medium">E-medium</a> and <a href="https://github.com/rust-lang/cargo/labels/E-hard">E-hard</a> <a href="../issues.html#issue-labels">labels</a> can
+be used to tag such issues. These will typically involve some discussion with
+the Cargo team on how to tackle it.</p>
+<h2><a class="header" href="#working-on-small-features" id="working-on-small-features">Working on small features</a></h2>
+<p>Small feature requests are typically managed on the <a href="https://github.com/rust-lang/cargo/labels/C-feature-request">issue
+tracker</a>. Features that the Cargo team have approved
+will have the <a href="https://github.com/rust-lang/cargo/labels/Feature%20accepted">Feature accepted</a> label or the <a href="https://github.com/rust-lang/cargo/labels/E-mentor">E-mentor</a> label. If there is a
+feature request that you are interested in, feel free to leave a comment
+expressing your interest. If a Cargo team member has the time to help out,
+they will respond to help with the next steps. Keep in mind that the Cargo
+team has limited time, and may not be able to help with every feature request.
+Most of them require some design work, which can be difficult. Check out the
+<a href="../design.html">design principles chapter</a> for some guidance.</p>
+<h2><a class="header" href="#working-on-large-features" id="working-on-large-features">Working on large features</a></h2>
+<p>Cargo follows the Rust model of evolution. Major features usually go through
+an <a href="https://github.com/rust-lang/rfcs/">RFC process</a>. Therefore, before opening a feature request issue create a
+Pre-RFC thread on the <a href="https://internals.rust-lang.org/">internals</a> forum to get preliminary feedback.
+Implementing a feature as a <a href="https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands">custom subcommand</a> is encouraged as
+it helps demonstrate the demand for the functionality and is a great way to
+deliver a working solution faster as it can iterate outside of Cargo's release
+cadence.</p>
+<p>See the <a href="unstable.html">unstable chapter</a> for how new major features are typically
+implemented.</p>
+<h2><a class="header" href="#bots-and-infrastructure" id="bots-and-infrastructure">Bots and infrastructure</a></h2>
+<p>The Cargo project uses several bots:</p>
+<ul>
+<li><a href="https://github.com/features/actions">GitHub Actions</a> are used to automatically run all tests for each PR.</li>
+<li><a href="https://github.com/rust-highfive">rust-highfive</a> automatically assigns reviewers for PRs.</li>
+<li><a href="https://buildbot2.rust-lang.org/homu/">bors</a> is used to merge PRs. See <a href="working-on-cargo.html#the-merging-process">The merging process</a>.</li>
+<li><a href="https://github.com/rust-lang/triagebot/wiki">triagebot</a> is used for assigning issues to non-members, see <a href="#issue-assignment">Issue
+assignment</a>.</li>
+<li><a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a> is used for making asynchronous decisions by team members.</li>
+</ul>
+<h2><a class="header" href="#issue-assignment" id="issue-assignment">Issue assignment</a></h2>
+<p>Normally, if you plan to work on an issue that has been marked with one of the
+<code>E-</code> tags or <a href="https://github.com/rust-lang/cargo/labels/Feature%20accepted">Feature accepted</a>, it is sufficient just to leave a comment that
+you are working on it. We also have a bot that allows you to formally &quot;claim&quot;
+an issue by entering the text <code>@rustbot claim</code> in a comment. See the
+<a href="https://github.com/rust-lang/triagebot/wiki/Assignment">Assignment</a> docs on how this works.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../process/working-on-cargo.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../process/working-on-cargo.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
