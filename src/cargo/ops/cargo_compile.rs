@@ -1558,8 +1558,11 @@ fn remove_duplicate_doc(
     // Keep track of units to remove so that they can be efficiently removed
     // from the unit_deps.
     let mut removed_units: HashSet<Unit> = HashSet::new();
-    let mut remove = |units: Vec<Unit>, reason: &str| {
-        for unit in units {
+    let mut remove = |units: Vec<Unit>, reason: &str, cb: &dyn Fn(&Unit) -> bool| -> Vec<Unit> {
+        let (to_remove, remaining_units): (Vec<Unit>, Vec<Unit>) = units
+            .into_iter()
+            .partition(|unit| cb(unit) && !root_units.contains(unit));
+        for unit in to_remove {
             log::debug!(
                 "removing duplicate doc due to {} for package {} target `{}`",
                 reason,
@@ -1569,6 +1572,7 @@ fn remove_duplicate_doc(
             unit_graph.remove(&unit);
             removed_units.insert(unit);
         }
+        remaining_units
     };
     // Iterate over the duplicates and try to remove them from unit_graph.
     for (_crate_name, mut units) in all_docs {
@@ -1581,14 +1585,11 @@ fn remove_duplicate_doc(
             .iter()
             .all(CompileKind::is_host)
         {
-            let (to_remove, remaining_units): (Vec<Unit>, Vec<Unit>) =
-                units.into_iter().partition(|unit| unit.kind.is_host());
             // Note these duplicates may not be real duplicates, since they
             // might get merged in rebuild_unit_graph_shared. Either way, it
             // shouldn't hurt to remove them early (although the report in the
             // log might be confusing).
-            remove(to_remove, "host/target merger");
-            units = remaining_units;
+            units = remove(units, "host/target merger", &|unit| unit.kind.is_host());
             if units.len() == 1 {
                 continue;
             }
@@ -1610,10 +1611,9 @@ fn remove_duplicate_doc(
                 units.sort_by(|a, b| a.pkg.version().partial_cmp(b.pkg.version()).unwrap());
                 // Remove any entries with version < newest.
                 let newest_version = units.last().unwrap().pkg.version().clone();
-                let (to_remove, keep_units): (Vec<Unit>, Vec<Unit>) = units
-                    .into_iter()
-                    .partition(|unit| unit.pkg.version() < &newest_version);
-                remove(to_remove, "older version");
+                let keep_units = remove(units, "older version", &|unit| {
+                    unit.pkg.version() < &newest_version
+                });
                 remaining_units.extend(keep_units);
             } else {
                 remaining_units.extend(units);
