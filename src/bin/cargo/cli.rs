@@ -35,6 +35,7 @@ pub fn main(config: &mut Config) -> CliResult {
             "
 Available unstable (nightly-only) flags:
 
+    -Z allow-features      -- Allow *only* the listed unstable features
     -Z avoid-dev-deps      -- Avoid installing dev-dependencies if possible
     -Z extra-link-arg      -- Allow `cargo:rustc-link-arg` in build scripts
     -Z minimal-versions    -- Install minimal dependency versions instead of maximum

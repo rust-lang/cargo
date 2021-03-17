@@ -92,6 +92,7 @@
 //!    of that page. Update the rest of the documentation to add the new
 //!    feature.
 
+use std::collections::HashSet;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -415,13 +416,18 @@ impl Features {
         let mut ret = Features::default();
         ret.nightly_features_allowed = config.nightly_features_allowed;
         for feature in features {
-            ret.add(feature, warnings)?;
+            ret.add(feature, config, warnings)?;
             ret.activated.push(feature.to_string());
         }
         Ok(ret)
     }
 
-    fn add(&mut self, feature_name: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
+    fn add(
+        &mut self,
+        feature_name: &str,
+        config: &Config,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
         let (slot, feature) = match self.status(feature_name) {
             Some(p) => p,
@@ -469,6 +475,24 @@ impl Features {
                 SEE_CHANNELS,
                 see_docs()
             ),
+            Status::Unstable
+                if !config
+                    .cli_unstable()
+                    .allow_features
+                    .as_ref()
+                    .map(|f| f.contains(feature_name))
+                    .unwrap_or(true) =>
+            {
+                bail!(
+                    "the feature `{}` is not in the list of allowed features: {:?}",
+                    feature_name,
+                    config
+                        .cli_unstable()
+                        .allow_features
+                        .as_ref()
+                        .expect("!unwrap_or(true) == false")
+                )
+            }
             Status::Unstable => {}
             Status::Removed => bail!(
                 "the cargo feature `{}` has been removed\n\
@@ -530,6 +554,8 @@ impl Features {
 #[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
+    pub allow_features: Option<HashSet<String>>,
+
     pub unstable_options: bool,
     pub no_index_update: bool,
     pub avoid_dev_deps: bool,
@@ -627,7 +653,32 @@ impl CliUnstable {
         }
         let mut warnings = Vec::new();
         for flag in flags {
-            self.add(flag, &mut warnings)?;
+            if flag.starts_with("allow-features=") {
+                self.add(flag, &mut warnings)?;
+            }
+        }
+        if let Some(allowed) = self.allow_features.take() {
+            for flag in flags {
+                let k = flag
+                    .splitn(2, '=')
+                    .next()
+                    .expect("split always yields >=1 item");
+                if k == "allow-features" {
+                } else if allowed.contains(k) {
+                    self.add(flag, &mut warnings)?;
+                } else {
+                    bail!(
+                        "the feature `{}` is not in the list of allowed features: {:?}",
+                        k,
+                        allowed
+                    );
+                }
+            }
+            self.allow_features = Some(allowed);
+        } else {
+            for flag in flags {
+                self.add(flag, &mut warnings)?;
+            }
         }
         Ok(warnings)
     }
@@ -655,6 +706,7 @@ impl CliUnstable {
         fn parse_features(value: Option<&str>) -> Vec<String> {
             match value {
                 None => Vec::new(),
+                Some("") => Vec::new(),
                 Some(v) => v.split(',').map(|s| s.to_string()).collect(),
             }
         }
@@ -699,6 +751,7 @@ impl CliUnstable {
 
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
+            "allow-features" => self.allow_features = Some(parse_features(v).into_iter().collect()),
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,

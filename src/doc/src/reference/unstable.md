@@ -58,6 +58,27 @@ Each new feature described below should explain how to use it.
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [stabilized]: https://doc.crates.io/contrib/process/unstable.html#stabilization
 
+### allow-features
+
+This permanently-unstable flag makes it so that only a listed set of
+unstable features can be used. Specifically, if you pass
+`-Zallow-features=foo,bar`, you'll continue to be able to pass `-Zfoo`
+and `-Zbar` to `cargo`, but you will be unable to pass `-Zbaz`. You can
+pass an empty string (`-Zallow-features=`) to disallow all unstable
+features.
+
+`-Zallow-features` also restricts which unstable features can be passed
+to the `cargo-features` entry in `Cargo.toml`. If, for example, you want
+to allow
+
+```toml
+cargo-features = ["test-dummy-unstable"]
+```
+
+where `test-dummy-unstable` is unstable, that features would also be
+disallowed by `-Zallow-features=`, and allowed with
+`-Zallow-features=test-dummy-unstable`.
+
 ### extra-link-arg
 * Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
 
