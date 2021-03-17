@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::slice;
 
+use anyhow::bail;
 use glob::glob;
 use log::debug;
 use url::Url;
@@ -152,7 +153,7 @@ impl<'cfg> Workspace<'cfg> {
         ws.target_dir = config.target_dir()?;
 
         if manifest_path.is_relative() {
-            anyhow::bail!(
+            bail!(
                 "manifest_path:{:?} is not an absolute path. Please provide an absolute path.",
                 manifest_path
             )
@@ -523,7 +524,7 @@ impl<'cfg> Workspace<'cfg> {
                     return Ok(Some(root_config.clone()));
                 }
 
-                _ => anyhow::bail!(
+                _ => bail!(
                     "root of a workspace inferred but wasn't a root: {}",
                     root_path.display()
                 ),
@@ -663,7 +664,7 @@ impl<'cfg> Workspace<'cfg> {
                     if exclude {
                         continue;
                     }
-                    anyhow::bail!(
+                    bail!(
                         "package `{}` is listed in workspace’s default-members \
                          but is not a member.",
                         path.display()
@@ -785,7 +786,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Virtual(_) => continue,
             };
             if let Some(prev) = names.insert(name, member) {
-                anyhow::bail!(
+                bail!(
                     "two packages named `{}` in this workspace:\n\
                          - {}\n\
                          - {}",
@@ -810,7 +811,7 @@ impl<'cfg> Workspace<'cfg> {
             .collect();
         match roots.len() {
             1 => Ok(()),
-            0 => anyhow::bail!(
+            0 => bail!(
                 "`package.workspace` configuration points to a crate \
                  which is not configured with [workspace]: \n\
                  configuration at: {}\n\
@@ -819,7 +820,7 @@ impl<'cfg> Workspace<'cfg> {
                 self.root_manifest.as_ref().unwrap().display()
             ),
             _ => {
-                anyhow::bail!(
+                bail!(
                     "multiple workspace roots found in the same workspace:\n{}",
                     roots
                         .iter()
@@ -840,7 +841,7 @@ impl<'cfg> Workspace<'cfg> {
 
             match root {
                 Some(root) => {
-                    anyhow::bail!(
+                    bail!(
                         "package `{}` is a member of the wrong workspace\n\
                          expected: {}\n\
                          actual:   {}",
@@ -850,7 +851,7 @@ impl<'cfg> Workspace<'cfg> {
                     );
                 }
                 None => {
-                    anyhow::bail!(
+                    bail!(
                         "workspace member `{}` is not hierarchically below \
                          the workspace root `{}`",
                         member.display(),
@@ -907,7 +908,7 @@ impl<'cfg> Workspace<'cfg> {
                 }
             }
         };
-        anyhow::bail!(
+        bail!(
             "current package believes it's in a workspace when it's not:\n\
                  current:   {}\n\
                  workspace: {}\n\n{}\n\
@@ -963,7 +964,7 @@ impl<'cfg> Workspace<'cfg> {
     pub fn load(&self, manifest_path: &Path) -> CargoResult<Package> {
         match self.packages.maybe_get(manifest_path) {
             Some(&MaybePackage::Package(ref p)) => return Ok(p.clone()),
-            Some(&MaybePackage::Virtual(_)) => anyhow::bail!("cannot load workspace root"),
+            Some(&MaybePackage::Virtual(_)) => bail!("cannot load workspace root"),
             None => {}
         }
 
@@ -1143,7 +1144,7 @@ impl<'cfg> Workspace<'cfg> {
                 && !requested_features.all_features
                 && requested_features.uses_default_features)
             {
-                anyhow::bail!("cannot specify features for packages outside of workspace");
+                bail!("cannot specify features for packages outside of workspace");
             }
             // Add all members from the workspace so we can ensure `-p nonmember`
             // is in the resolve graph.
@@ -1159,7 +1160,7 @@ impl<'cfg> Workspace<'cfg> {
                 .copied()
                 .collect();
             // TODO: typo suggestions would be good here.
-            anyhow::bail!(
+            bail!(
                 "none of the selected packages contains these features: {}",
                 missing.join(", ")
             );
