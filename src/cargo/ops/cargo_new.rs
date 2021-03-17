@@ -3,12 +3,9 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
 use cargo_util::paths;
-use git2::Config as GitConfig;
-use git2::Repository as GitRepository;
 use serde::de;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::env;
 use std::fmt;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
@@ -129,8 +126,6 @@ impl NewOptions {
 
 #[derive(Deserialize)]
 struct CargoNewConfig {
-    name: Option<String>,
-    email: Option<String>,
     #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
 }
@@ -666,32 +661,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let (discovered_name, discovered_email) = discover_author(path);
-
-    // "Name <email>" or "Name" or "<email>" or None if neither name nor email is obtained
-    // cfg takes priority over the discovered ones
-    let author_name = cfg.name.or(discovered_name);
-    let author_email = cfg.email.or(discovered_email);
-
-    let author = match (author_name, author_email) {
-        (Some(name), Some(email)) => {
-            if email.is_empty() {
-                Some(name)
-            } else {
-                Some(format!("{} <{}>", name, email))
-            }
-        }
-        (Some(name), None) => Some(name),
-        (None, Some(email)) => {
-            if email.is_empty() {
-                None
-            } else {
-                Some(format!("<{}>", email))
-            }
-        }
-        (None, None) => None,
-    };
-
     let mut cargotoml_path_specifier = String::new();
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
@@ -730,7 +699,6 @@ path = {}
             r#"[package]
 name = "{}"
 version = "0.1.0"
-authors = [{}]
 edition = {}
 {}
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -738,10 +706,6 @@ edition = {}
 [dependencies]
 {}"#,
             name,
-            match author {
-                Some(value) => format!("{}", toml::Value::String(value)),
-                None => format!(""),
-            },
             match opts.edition {
                 Some(edition) => toml::Value::String(edition.to_string()),
                 None => toml::Value::String(Edition::LATEST_STABLE.to_string()),
@@ -810,77 +774,4 @@ mod tests {
     }
 
     Ok(())
-}
-
-fn get_environment_variable(variables: &[&str]) -> Option<String> {
-    variables.iter().filter_map(|var| env::var(var).ok()).next()
-}
-
-fn discover_author(path: &Path) -> (Option<String>, Option<String>) {
-    let git_config = find_git_config(path);
-    let git_config = git_config.as_ref();
-
-    let name_variables = [
-        "CARGO_NAME",
-        "GIT_AUTHOR_NAME",
-        "GIT_COMMITTER_NAME",
-        "USER",
-        "USERNAME",
-        "NAME",
-    ];
-    let name = get_environment_variable(&name_variables[0..3])
-        .or_else(|| git_config.and_then(|g| g.get_string("user.name").ok()))
-        .or_else(|| get_environment_variable(&name_variables[3..]));
-
-    let name = name.map(|namestr| namestr.trim().to_string());
-
-    let email_variables = [
-        "CARGO_EMAIL",
-        "GIT_AUTHOR_EMAIL",
-        "GIT_COMMITTER_EMAIL",
-        "EMAIL",
-    ];
-    let email = get_environment_variable(&email_variables[0..3])
-        .or_else(|| git_config.and_then(|g| g.get_string("user.email").ok()))
-        .or_else(|| get_environment_variable(&email_variables[3..]));
-
-    let email = email.map(|s| {
-        let mut s = s.trim();
-
-        // In some cases emails will already have <> remove them since they
-        // are already added when needed.
-        if s.starts_with('<') && s.ends_with('>') {
-            s = &s[1..s.len() - 1];
-        }
-
-        s.to_string()
-    });
-
-    (name, email)
-}
-
-fn find_git_config(path: &Path) -> Option<GitConfig> {
-    match env::var("__CARGO_TEST_ROOT") {
-        Ok(_) => find_tests_git_config(path),
-        Err(_) => find_real_git_config(path),
-    }
-}
-
-fn find_tests_git_config(path: &Path) -> Option<GitConfig> {
-    // Don't escape the test sandbox when looking for a git repository.
-    // NOTE: libgit2 has support to define the path ceiling in
-    // git_repository_discover, but the git2 bindings do not expose that.
-    for path in paths::ancestors(path, None) {
-        if let Ok(repo) = GitRepository::open(path) {
-            return Some(repo.config().expect("test repo should have valid config"));
-        }
-    }
-    GitConfig::open_default().ok()
-}
-
-fn find_real_git_config(path: &Path) -> Option<GitConfig> {
-    GitRepository::discover(path)
-        .and_then(|repo| repo.config())
-        .or_else(|_| GitConfig::open_default())
-        .ok()
 }
