@@ -88,30 +88,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn bad4() {
-    let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-                [cargo-new]
-                  name = false
-            "#,
-        )
-        .build();
-    p.cargo("new -v foo")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] Failed to create package `foo` at `[..]`
-
-Caused by:
-  error in [..]config: `cargo-new.name` expected a string, but found a boolean
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn bad6() {
     let p = project()
         .file("src/lib.rs", "")

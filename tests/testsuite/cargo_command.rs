@@ -246,32 +246,6 @@ fn displays_subcommand_on_error() {
 }
 
 #[cargo_test]
-fn override_cargo_home() {
-    let root = paths::root();
-    let my_home = root.join("my_home");
-    fs::create_dir(&my_home).unwrap();
-    fs::write(
-        &my_home.join("config"),
-        r#"
-            [cargo-new]
-            name = "foo"
-            email = "bar"
-            git = false
-        "#,
-    )
-    .unwrap();
-
-    cargo_process("new foo")
-        .env("USER", "foo")
-        .env("CARGO_HOME", &my_home)
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
-}
-
-#[cargo_test]
 fn cargo_subcommand_env() {
     let src = format!(
         r#"
