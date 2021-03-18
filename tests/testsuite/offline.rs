@@ -332,7 +332,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn update_offline() {
+fn update_offline_not_cached() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -350,7 +350,15 @@ fn update_offline() {
         .build();
     p.cargo("update --offline")
         .with_status(101)
-        .with_stderr("error: you can't update in the offline mode[..]")
+        .with_stderr(
+            "\
+[ERROR] no matching package named `bar` found
+location searched: registry `[..]`
+required by package `foo v0.0.1 ([..]/foo)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause \
+surprising resolution failures, if this error is too confusing you may wish to \
+retry without the offline flag.",
+        )
         .run();
 }
 
@@ -561,4 +569,119 @@ fn offline_with_all_patched() {
         .build();
 
     p.cargo("check --offline").run();
+}
+
+#[cargo_test]
+fn update_offline_cached() {
+    // Cache a few versions to update against
+    let p = project().file("src/lib.rs", "").build();
+    let versions = ["1.2.3", "1.2.5", "1.2.9"];
+    for vers in versions.iter() {
+        Package::new("present_dep", vers)
+            .file("Cargo.toml", &basic_manifest("present_dep", vers))
+            .file(
+                "src/lib.rs",
+                format!(r#"pub fn get_version()->&'static str {{ "{}" }}"#, vers).as_str(),
+            )
+            .publish();
+        // make package cached
+        p.change_file(
+            "Cargo.toml",
+            format!(
+                r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                present_dep = "={}"
+                "#,
+                vers
+            )
+            .as_str(),
+        );
+        p.cargo("build").run();
+    }
+
+    let p2 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            present_dep = "1.2"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "\
+extern crate present_dep;
+fn main(){
+    println!(\"{}\", present_dep::get_version());
+}",
+        )
+        .build();
+
+    p2.cargo("build --offline")
+        .with_stderr(
+            "\
+[COMPILING] present_dep v1.2.9
+[COMPILING] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p2.rename_run("foo", "with_1_2_9")
+        .with_stdout("1.2.9")
+        .run();
+    // updates happen without updating the index
+    p2.cargo("update -p present_dep --precise 1.2.3 --offline")
+        .with_status(0)
+        .with_stderr(
+            "\
+[UPDATING] present_dep v1.2.9 -> v1.2.3
+",
+        )
+        .run();
+
+    p2.cargo("build --offline")
+        .with_stderr(
+            "\
+[COMPILING] present_dep v1.2.3
+[COMPILING] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p2.rename_run("foo", "with_1_2_3")
+        .with_stdout("1.2.3")
+        .run();
+
+    // Offline update should only print package details and not index updating
+    p2.cargo("update --offline")
+        .with_status(0)
+        .with_stderr(
+            "\
+[UPDATING] present_dep v1.2.3 -> v1.2.9
+",
+        )
+        .run();
+
+    // No v1.2.8 loaded into the cache so expect failure.
+    p2.cargo("update -p present_dep --precise 1.2.8 --offline")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] no matching package named `present_dep` found
+location searched: registry `[..]`
+required by package `foo v0.1.0 ([..]/foo)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause \
+surprising resolution failures, if this error is too confusing you may wish to \
+retry without the offline flag.
+",
+        )
+        .run();
 }
