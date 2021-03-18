@@ -564,7 +564,7 @@ fn offline_with_all_patched() {
 }
 
 #[cargo_test]
-fn offline_precise_update() {
+fn offline_update() {
     // Cache a few versions to update against
     let p = project().file("src/lib.rs", "").build();
     let versions = ["1.2.3", "1.2.5", "1.2.9"];
@@ -648,8 +648,18 @@ fn main(){
 ",
         )
         .run();
-    p2.rename_run("foo", "with_1_2_9")
+    p2.rename_run("foo", "with_1_2_3")
         .with_stdout("1.2.3")
+        .run();
+
+    // Offline update should only print package details and not index updating
+    p2.cargo("update --offline")
+        .with_status(0)
+        .with_stderr(
+            "\
+[UPDATING] present_dep v1.2.3 -> v1.2.9
+",
+        )
         .run();
 
     // No v1.2.8 loaded into the cache so expect failure.
