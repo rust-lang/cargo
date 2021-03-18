@@ -12,44 +12,6 @@ DESCRIPTION
        source file, and a VCS ignore file. If the directory is not already in a
        VCS repository, then a new repository is created (see --vcs below).
 
-       The "authors" field in the manifest is determined from the environment
-       or configuration settings. A name is required and is determined from
-       (first match wins):
-
-       o  cargo-new.name Cargo config value
-
-       o  CARGO_NAME environment variable
-
-       o  GIT_AUTHOR_NAME environment variable
-
-       o  GIT_COMMITTER_NAME environment variable
-
-       o  user.name git configuration value
-
-       o  USER environment variable
-
-       o  USERNAME environment variable
-
-       o  NAME environment variable
-
-       The email address is optional and is determined from:
-
-       o  cargo-new.email Cargo config value
-
-       o  CARGO_EMAIL environment variable
-
-       o  GIT_AUTHOR_EMAIL environment variable
-
-       o  GIT_COMMITTER_EMAIL environment variable
-
-       o  user.email git configuration value
-
-       o  EMAIL environment variable
-
-       See the reference
-       <https://doc.rust-lang.org/cargo/reference/config.html> for more
-       information about configuration files.
-
        See cargo-init(1) for a similar command which will create a new manifest
        in an existing directory.
 

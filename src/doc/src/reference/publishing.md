@@ -34,7 +34,6 @@ Check out the [metadata you can specify](manifest.md) in `Cargo.toml` to
 ensure your crate can be discovered more easily! Before publishing, make sure
 you have filled out the following fields:
 
-- [`authors`]
 - [`license` or `license-file`]
 - [`description`]
 - [`homepage`]
