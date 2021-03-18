@@ -257,4 +257,4 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
 
 If after trying to debug your issue, however, you're still running into problems
 then feel free to [open an
-issue](https://github.com/rust-lang/cargo/issuses/new)!
+issue](https://github.com/rust-lang/cargo/issues/new)!
