@@ -332,7 +332,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn update_offline() {
+fn update_offline_not_cached() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -350,7 +350,15 @@ fn update_offline() {
         .build();
     p.cargo("update --offline")
         .with_status(101)
-        .with_stderr("error: you can't update in the offline mode[..]")
+        .with_stderr(
+            "\
+[ERROR] no matching package named `bar` found
+location searched: registry `[..]`
+required by package `foo v0.0.1 ([..]/foo)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause \
+surprising resolution failures, if this error is too confusing you may wish to \
+retry without the offline flag.",
+        )
         .run();
 }
 
@@ -564,7 +572,7 @@ fn offline_with_all_patched() {
 }
 
 #[cargo_test]
-fn offline_update() {
+fn update_offline_cached() {
     // Cache a few versions to update against
     let p = project().file("src/lib.rs", "").build();
     let versions = ["1.2.3", "1.2.5", "1.2.9"];
