@@ -264,7 +264,7 @@ impl GlobalArgs {
     }
 }
 
-fn cli() -> App {
+pub fn cli() -> App {
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"

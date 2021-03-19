@@ -12,7 +12,7 @@ use cargo::core::shell::Shell;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
 use cargo::util::{CliError, ProcessError};
 
-mod cli;
+pub mod cli;
 mod commands;
 
 use crate::command_prelude::*;
