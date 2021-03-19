@@ -15,6 +15,7 @@ use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
+use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
@@ -51,9 +52,7 @@ pub struct PublishOpts<'cfg> {
     pub targets: Vec<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
-    pub features: Vec<String>,
-    pub all_features: bool,
-    pub no_default_features: bool,
+    pub cli_features: CliFeatures,
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
@@ -111,9 +110,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             targets: opts.targets.clone(),
             jobs: opts.jobs,
-            features: opts.features.clone(),
-            all_features: opts.all_features,
-            no_default_features: opts.no_default_features,
+            cli_features: opts.cli_features.clone(),
         },
     )?
     .unwrap();

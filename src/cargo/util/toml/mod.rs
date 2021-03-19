@@ -1773,6 +1773,35 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
             }
         }
 
+        // Early detection of potentially misused feature syntax
+        // instead of generating a "feature not found" error.
+        if let Some(features) = &self.features {
+            for feature in features {
+                if feature.contains('/') {
+                    bail!(
+                        "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
+                         If you want to enable features of a transitive dependency, \
+                         the direct dependency needs to re-export those features from \
+                         the `[features]` table.",
+                        feature,
+                        name_in_toml
+                    );
+                }
+                if feature.starts_with("dep:") {
+                    bail!(
+                        "feature `{}` in dependency `{}` is not allowed to use explicit \
+                        `dep:` syntax\n\
+                         If you want to enable an optional dependency, specify the name \
+                         of the optional dependency without the `dep:` prefix, or specify \
+                         a feature from the dependency's `[features]` table that enables \
+                         the optional dependency.",
+                        feature,
+                        name_in_toml
+                    );
+                }
+            }
+        }
+
         let new_source_id = match (
             self.git.as_ref(),
             self.path.as_ref(),

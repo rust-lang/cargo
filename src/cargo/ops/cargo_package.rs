@@ -12,6 +12,7 @@ use log::debug;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::resolver::CliFeatures;
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
 use crate::sources::PathSource;
@@ -29,9 +30,7 @@ pub struct PackageOpts<'cfg> {
     pub verify: bool,
     pub jobs: Option<u32>,
     pub targets: Vec<String>,
-    pub features: Vec<String>,
-    pub all_features: bool,
-    pub no_default_features: bool,
+    pub cli_features: CliFeatures,
 }
 
 const VCS_INFO_FILE: &str = ".cargo_vcs_info.json";
@@ -690,9 +689,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
         &ws,
         &ops::CompileOptions {
             build_config: BuildConfig::new(config, opts.jobs, &opts.targets, CompileMode::Build)?,
-            features: opts.features.clone(),
-            no_default_features: opts.no_default_features,
-            all_features: opts.all_features,
+            cli_features: opts.cli_features.clone(),
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,

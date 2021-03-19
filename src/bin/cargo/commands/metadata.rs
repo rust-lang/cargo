@@ -44,9 +44,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
 
     let options = OutputMetadataOptions {
-        features: values(args, "features"),
-        all_features: args.is_present("all-features"),
-        no_default_features: args.is_present("no-default-features"),
+        cli_features: args.cli_features()?,
         no_deps: args.is_present("no-deps"),
         filter_platforms: args._values_of("filter-platform"),
         version,

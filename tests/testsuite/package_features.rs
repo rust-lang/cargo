@@ -1,8 +1,9 @@
 //! Tests for feature selection on the command-line.
 
 use super::features2::switch_to_resolver_2;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
+use std::fmt::Write;
 
 #[cargo_test]
 fn virtual_no_default_features() {
@@ -460,32 +461,162 @@ fn resolver1_member_features() {
 }
 
 #[cargo_test]
-fn resolver1_non_member_optional_feature() {
-    // --features x/y for an optional dependency `x` with the v1 resolver.
+fn non_member_feature() {
+    // --features for a non-member
+    Package::new("jazz", "1.0.0").publish();
     Package::new("bar", "1.0.0")
-        .feature("feat1", &[])
-        .file(
-            "src/lib.rs",
-            r#"
-                #[cfg(not(feature = "feat1"))]
-                compile_error!("feat1 should be activated");
-            "#,
-        )
+        .add_dep(Dependency::new("jazz", "1.0").optional(true))
         .publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
+    let make_toml = |resolver, optional| {
+        let mut s = String::new();
+        write!(
+            s,
             r#"
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                resolver = "{}"
 
                 [dependencies]
-                bar = { version="1.0", optional=true }
             "#,
+            resolver
         )
+        .unwrap();
+        if optional {
+            s.push_str(r#"bar = { version = "1.0", optional = true } "#);
+        } else {
+            s.push_str(r#"bar = "1.0""#)
+        }
+        s.push('\n');
+        s
+    };
+    let p = project()
+        .file("Cargo.toml", &make_toml("1", false))
         .file("src/lib.rs", "")
         .build();
+    p.cargo("fetch").run();
+    ///////////////////////// V1 non-optional
+    eprintln!("V1 non-optional");
+    p.cargo("check -p bar")
+        .with_stderr(
+            "\
+[CHECKING] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check --features bar/jazz")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] jazz v1.0.0 [..]
+[CHECKING] jazz v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check -p bar --features bar/jazz -v")
+        .with_stderr(
+            "\
+[FRESH] jazz v1.0.0
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
 
-    p.cargo("check -p bar --features bar/feat1").run();
+    ///////////////////////// V1 optional
+    eprintln!("V1 optional");
+    p.change_file("Cargo.toml", &make_toml("1", true));
+
+    // This error isn't great, but is probably unlikely to be common in
+    // practice, so I'm not going to put much effort into improving it.
+    p.cargo("check -p bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+
+    p.cargo("check -p bar --features bar -v")
+        .with_stderr(
+            "\
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check -p bar --features bar/jazz -v")
+        .with_stderr(
+            "\
+[FRESH] jazz v1.0.0
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    ///////////////////////// V2 non-optional
+    eprintln!("V2 non-optional");
+    p.change_file("Cargo.toml", &make_toml("2", false));
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check --features bar/jazz -v")
+        .with_stderr(
+            "\
+[FRESH] jazz v1.0.0
+[FRESH] bar v1.0.0
+[FRESH] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check -p bar -v")
+        .with_stderr(
+            "\
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check -p bar --features bar/jazz")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
+
+    ///////////////////////// V2 optional
+    eprintln!("V2 optional");
+    p.change_file("Cargo.toml", &make_toml("2", true));
+    p.cargo("check -p bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+    // New --features behavior does not look at cwd.
+    p.cargo("check -p bar --features bar")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
+    p.cargo("check -p bar --features bar/jazz")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
+    p.cargo("check -p bar --features foo/bar")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
 }

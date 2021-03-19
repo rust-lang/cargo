@@ -190,9 +190,7 @@ subtree of the package given to -p.\n\
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let opts = tree::TreeOptions {
-        features: values(args, "features"),
-        all_features: args.is_present("all-features"),
-        no_default_features: args.is_present("no-default-features"),
+        cli_features: args.cli_features()?,
         packages,
         target,
         edge_kinds,

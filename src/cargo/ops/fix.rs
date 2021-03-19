@@ -51,8 +51,8 @@ use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::features::{FeatureOpts, FeatureResolver, RequestedFeatures};
-use crate::core::resolver::{HasDevUnits, ResolveBehavior, ResolveOpts};
+use crate::core::resolver::features::{FeatureOpts, FeatureResolver};
+use crate::core::resolver::{HasDevUnits, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -227,14 +227,6 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     // 2018 without `resolver` set must be V1
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
-        RequestedFeatures::from_command_line(
-            &opts.compile_opts.features,
-            opts.compile_opts.all_features,
-            !opts.compile_opts.no_default_features,
-        ),
-    );
     let target_data = RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
     // HasDevUnits::No because that may uncover more differences.
     // This is not the same as what `cargo fix` is doing, since it is doing
@@ -243,7 +235,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         ws,
         &target_data,
         &opts.compile_opts.build_config.requested_kinds,
-        &resolve_opts,
+        &opts.compile_opts.cli_features,
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
@@ -255,7 +247,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         &target_data,
         &ws_resolve.targeted_resolve,
         &ws_resolve.pkg_set,
-        &resolve_opts.features,
+        &opts.compile_opts.cli_features,
         &specs,
         &opts.compile_opts.build_config.requested_kinds,
         feature_opts,

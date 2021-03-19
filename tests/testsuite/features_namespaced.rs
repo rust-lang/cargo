@@ -1,5 +1,6 @@
 //! Tests for namespaced features.
 
+use super::features2::switch_to_resolver_2;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{project, publish};
 
@@ -633,8 +634,11 @@ fn crate_syntax_in_dep() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[ERROR] feature value `dep:baz` is not allowed to use explicit `dep:` syntax
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  feature `dep:baz` in dependency `bar` is not allowed to use explicit `dep:` syntax
+  If you want to enable [..]
 ",
         )
         .run();
@@ -664,8 +668,18 @@ fn crate_syntax_cli() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[ERROR] feature value `dep:bar` is not allowed to use explicit `dep:` syntax
+[ERROR] feature `dep:bar` is not allowed to use explicit `dep:` syntax
+",
+        )
+        .run();
+
+    switch_to_resolver_2(&p);
+    p.cargo("check -Z namespaced-features --features dep:bar")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] feature `dep:bar` is not allowed to use explicit `dep:` syntax
 ",
         )
         .run();
@@ -993,6 +1007,57 @@ bar v1.0.0
 │       └── foo feature \"default\" (command-line)
 └── bar feature \"feat1\"
     └── foo v0.1.0 ([ROOT]/foo) (*)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn tree_no_implicit() {
+    // tree without an implicit feature
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { version = "1.0", optional=true }
+
+                [features]
+                a = ["dep:bar"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features -Z namespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("foo v0.1.0 ([ROOT]/foo)")
+        .run();
+
+    p.cargo("tree -e features --all-features -Z namespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar feature \"default\"
+    └── bar v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -e features -i bar --all-features -Z namespaced-features")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+bar v1.0.0
+└── bar feature \"default\"
+    └── foo v0.1.0 ([ROOT]/foo)
+        └── foo feature \"a\" (command-line)
 ",
         )
         .run();
