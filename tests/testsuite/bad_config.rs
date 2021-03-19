@@ -1309,7 +1309,7 @@ fn bad_debuginfo() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string \"a\", expected a boolean or an integer for [..]
+  expected a boolean or an integer for [..]
 ",
         )
         .run();
@@ -1338,7 +1338,7 @@ fn bad_opt_level() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: integer `3`, expected a boolean or a string for key [..]
+  expected a boolean or a string for key [..]
 ",
         )
         .run();
