@@ -10,7 +10,9 @@ description = "Miscellaneous support code used by Cargo."
 
 [dependencies]
 anyhow = "1.0.34"
+crypto-hash = "0.3.1"
 filetime = "0.2.9"
+hex = "0.4.2"
 jobserver = "0.1.21"
 libc = "0.2.88"
 log = "0.4.6"

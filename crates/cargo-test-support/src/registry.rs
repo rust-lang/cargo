@@ -1,7 +1,7 @@
 use crate::git::repo;
 use crate::paths;
 use cargo::sources::CRATES_IO_INDEX;
-use cargo::util::Sha256;
+use cargo_util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::collections::BTreeMap;

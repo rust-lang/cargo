@@ -6,8 +6,8 @@ use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Config, Sha256};
-use cargo_util::paths;
+use crate::util::Config;
+use cargo_util::{paths, Sha256};
 use serde::Deserialize;
 
 pub struct DirectorySource<'cfg> {

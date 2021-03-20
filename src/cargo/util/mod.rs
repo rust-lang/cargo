@@ -18,7 +18,6 @@ pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
 pub use self::restricted_names::validate_package_name;
 pub use self::rustc::Rustc;
-pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{
@@ -51,7 +50,6 @@ mod progress;
 mod queue;
 pub mod restricted_names;
 pub mod rustc;
-mod sha256;
 pub mod to_semver;
 pub mod toml;
 mod vcs;

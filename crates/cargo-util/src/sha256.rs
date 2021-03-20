@@ -1,5 +1,5 @@
-use crate::util::{CargoResult, CargoResultExt};
-use cargo_util::paths;
+use super::paths;
+use anyhow::{Context, Result};
 use crypto_hash::{Algorithm, Hasher};
 use std::fs::File;
 use std::io::{self, Read, Write};
@@ -29,11 +29,11 @@ impl Sha256 {
         }
     }
 
-    pub fn update_path<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<&mut Sha256> {
+    pub fn update_path<P: AsRef<Path>>(&mut self, path: P) -> Result<&mut Sha256> {
         let path = path.as_ref();
         let file = paths::open(path)?;
         self.update_file(&file)
-            .chain_err(|| format!("failed to read `{}`", path.display()))?;
+            .with_context(|| format!("failed to read `{}`", path.display()))?;
         Ok(self)
     }
 
