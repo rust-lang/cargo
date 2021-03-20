@@ -15,7 +15,7 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use cargo::util::{CargoResult, Rustc};
+use cargo::util::CargoResult;
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
@@ -1549,25 +1549,44 @@ fn substitute_macros(input: &str) -> String {
 
 pub mod install;
 
-thread_local!(
-pub static RUSTC: Rustc = Rustc::new(
-    PathBuf::from("rustc"),
-    None,
-    None,
-    Path::new("should be path to rustup rustc, but we don't care in tests"),
-    None,
-).unwrap()
-);
+struct RustcInfo {
+    verbose_version: String,
+    host: String,
+}
+
+impl RustcInfo {
+    fn new() -> RustcInfo {
+        let output = ProcessBuilder::new("rustc")
+            .arg("-vV")
+            .exec_with_output()
+            .expect("rustc should exec");
+        let verbose_version = String::from_utf8(output.stdout).expect("utf8 output");
+        let host = verbose_version
+            .lines()
+            .filter_map(|line| line.strip_prefix("host: "))
+            .next()
+            .expect("verbose version has host: field")
+            .to_string();
+        RustcInfo {
+            verbose_version,
+            host,
+        }
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref RUSTC_INFO: RustcInfo = RustcInfo::new();
+}
 
 /// The rustc host such as `x86_64-unknown-linux-gnu`.
-pub fn rustc_host() -> String {
-    RUSTC.with(|r| r.host.to_string())
+pub fn rustc_host() -> &'static str {
+    &RUSTC_INFO.host
 }
 
 pub fn is_nightly() -> bool {
+    let vv = &RUSTC_INFO.verbose_version;
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
-        && RUSTC
-            .with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
+        && (vv.contains("-nightly") || vv.contains("-dev"))
 }
 
 pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
