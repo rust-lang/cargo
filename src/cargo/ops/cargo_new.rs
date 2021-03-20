@@ -126,6 +126,14 @@ impl NewOptions {
 
 #[derive(Deserialize)]
 struct CargoNewConfig {
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[allow(dead_code)]
+    name: Option<String>,
+
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[allow(dead_code)]
+    email: Option<String>,
+
     #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
 }

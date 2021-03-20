@@ -246,6 +246,29 @@ fn displays_subcommand_on_error() {
 }
 
 #[cargo_test]
+fn override_cargo_home() {
+    let root = paths::root();
+    let my_home = root.join("my_home");
+    fs::create_dir(&my_home).unwrap();
+    fs::write(
+        &my_home.join("config"),
+        r#"
+            [cargo-new]
+            vcs = "none"
+        "#,
+    )
+    .unwrap();
+
+    cargo_process("new foo").env("CARGO_HOME", &my_home).run();
+
+    assert!(!paths::root().join("foo/.git").is_dir());
+
+    cargo_process("new foo2").run();
+
+    assert!(paths::root().join("foo2/.git").is_dir());
+}
+
+#[cargo_test]
 fn cargo_subcommand_env() {
     let src = format!(
         r#"
