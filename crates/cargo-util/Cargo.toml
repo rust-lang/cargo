@@ -1,0 +1,11 @@
+[package]
+name = "cargo-util"
+version = "0.1.0"
+authors = ["The Cargo Project Developers"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/rust-lang/cargo"
+repository = "https://github.com/rust-lang/cargo"
+description = "Miscellaneous support code used by Cargo."
+
+[dependencies]
