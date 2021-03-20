@@ -1,5 +1,5 @@
-use crate::util::paths;
 use crate::util::CargoResult;
+use cargo_util::paths;
 use cargo_util::ProcessBuilder;
 use std::path::Path;
 

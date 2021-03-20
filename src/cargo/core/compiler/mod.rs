@@ -56,10 +56,9 @@ use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Feature, PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, VerboseError};
 use crate::util::interning::InternedString;
-use crate::util::machine_message::Message;
-use crate::util::{self, machine_message};
-use crate::util::{add_path_args, internal, join_paths, paths, profile};
-use cargo_util::{ProcessBuilder, ProcessError};
+use crate::util::machine_message::{self, Message};
+use crate::util::{add_path_args, internal, profile};
+use cargo_util::{paths, ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -505,7 +504,7 @@ fn add_plugin_deps(
     build_scripts: &BuildScripts,
     root_output: &Path,
 ) -> CargoResult<()> {
-    let var = util::dylib_path_envvar();
+    let var = paths::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for (pkg_id, metadata) in &build_scripts.plugins {
@@ -517,7 +516,7 @@ fn add_plugin_deps(
             root_output,
         ));
     }
-    let search_path = join_paths(&search_path, var)?;
+    let search_path = paths::join_paths(&search_path, var)?;
     rustc.env(var, &search_path);
     Ok(())
 }

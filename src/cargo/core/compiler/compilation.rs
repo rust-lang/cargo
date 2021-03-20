@@ -4,13 +4,13 @@ use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
-use cargo_util::ProcessBuilder;
+use cargo_util::{paths, ProcessBuilder};
 use semver::Version;
 
 use super::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
 use crate::core::Package;
-use crate::util::{self, config, join_paths, CargoResult, Config};
+use crate::util::{config, CargoResult, Config};
 
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
@@ -279,7 +279,7 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
-        let dylib_path = util::dylib_path();
+        let dylib_path = paths::dylib_path();
         let dylib_path_is_empty = dylib_path.is_empty();
         search_path.extend(dylib_path.into_iter());
         if cfg!(target_os = "macos") && dylib_path_is_empty {
@@ -292,9 +292,9 @@ impl<'cfg> Compilation<'cfg> {
             search_path.push(PathBuf::from("/usr/local/lib"));
             search_path.push(PathBuf::from("/usr/lib"));
         }
-        let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
+        let search_path = paths::join_paths(&search_path, paths::dylib_path_envvar())?;
 
-        cmd.env(util::dylib_path_envvar(), &search_path);
+        cmd.env(paths::dylib_path_envvar(), &search_path);
         if let Some(meta) = script_meta {
             if let Some(env) = self.extra_env.get(&meta) {
                 for (k, v) in env {

@@ -1,4 +1,5 @@
-use crate::util::{paths, CargoResult, CargoResultExt};
+use crate::util::{CargoResult, CargoResultExt};
+use cargo_util::paths;
 use crypto_hash::{Algorithm, Hasher};
 use std::fs::File;
 use std::io::{self, Read, Write};

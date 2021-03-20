@@ -1,15 +1,14 @@
 //! Tests for build.rs scripts.
 
-use std::env;
-use std::fs;
-use std::io;
-use std::thread;
-
-use cargo::util::paths::remove_dir_all;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
+use cargo_util::paths::remove_dir_all;
+use std::env;
+use std::fs;
+use std::io;
+use std::thread;
 
 #[cargo_test]
 fn custom_build_script_failed() {

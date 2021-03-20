@@ -4,12 +4,11 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use cargo_util::{ProcessBuilder, ProcessError};
+use cargo_util::{paths, ProcessBuilder, ProcessError};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::util::interning::InternedString;
-use crate::util::paths;
 use crate::util::{profile, CargoResult, CargoResultExt, StableHasher};
 
 /// Information on the `rustc` executable

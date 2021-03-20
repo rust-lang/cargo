@@ -3,10 +3,9 @@
 
 use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
 use crate::util::{network, Config, IntoUrl, Progress};
 use anyhow::{anyhow, Context};
-use cargo_util::ProcessBuilder;
+use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
 use git2::{self, ErrorClass, ObjectType};
 use log::{debug, info};

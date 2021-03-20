@@ -3,17 +3,17 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use anyhow::{bail, format_err};
-use semver::VersionReq;
-use tempfile::Builder as TempFileBuilder;
-
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{paths, Config, Filesystem, Rustc, ToSemver};
+use crate::util::{Config, Filesystem, Rustc, ToSemver};
 use crate::{drop_println, ops};
+use anyhow::{bail, format_err};
+use cargo_util::paths;
+use semver::VersionReq;
+use tempfile::Builder as TempFileBuilder;
 
 struct Transaction {
     bins: Vec<PathBuf>,

@@ -3,13 +3,13 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use log::{info, trace};
-
 use crate::core::{EitherManifest, Package, PackageId, SourceId};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
-use crate::util::{self, Config};
+use crate::util::Config;
+use cargo_util::paths;
+use log::{info, trace};
 
 pub fn read_package(
     path: &Path,
@@ -192,7 +192,7 @@ fn read_nested_packages(
     // TODO: filesystem/symlink implications?
     if !source_id.is_registry() {
         for p in nested.iter() {
-            let path = util::normalize_path(&path.join(p));
+            let path = paths::normalize_path(&path.join(p));
             let result =
                 read_nested_packages(&path, all_packages, source_id, config, visited, errors);
             // Ignore broken manifests found on git repositories.

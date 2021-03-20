@@ -6,20 +6,19 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use flate2::read::GzDecoder;
-use flate2::{Compression, GzBuilder};
-use log::debug;
-use tar::{Archive, Builder, EntryType, Header, HeaderMode};
-
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
 use crate::util::toml::TomlManifest;
 use crate::util::{self, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
+use cargo_util::paths;
+use flate2::read::GzDecoder;
+use flate2::{Compression, GzBuilder};
+use log::debug;
+use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -480,7 +479,7 @@ fn tar(
     // Prepare the encoder and its header.
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
-        .filename(util::path2bytes(filename)?)
+        .filename(paths::path2bytes(filename)?)
         .write(dst, Compression::best());
 
     // Put all package files into a compressed archive.

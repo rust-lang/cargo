@@ -65,12 +65,6 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::Instant;
 
-use anyhow::{anyhow, bail, format_err};
-use curl::easy::Easy;
-use lazycell::LazyCell;
-use serde::Deserialize;
-use url::Url;
-
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
@@ -78,8 +72,14 @@ use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
-use crate::util::{paths, validate_package_name};
+use crate::util::validate_package_name;
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
+use anyhow::{anyhow, bail, format_err};
+use cargo_util::paths;
+use curl::easy::Easy;
+use lazycell::LazyCell;
+use serde::Deserialize;
+use url::Url;
 
 mod de;
 use de::Deserializer;

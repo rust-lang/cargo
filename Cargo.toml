@@ -51,7 +51,6 @@ num_cpus = "1.0"
 opener = "0.4"
 percent-encoding = "2.0"
 rustfix = "0.5.0"
-same-file = "1"
 semver = { version = "0.10", features = ["serde"] }
 serde = { version = "1.0.123", features = ["derive"] }
 serde_ignored = "0.1.0"
@@ -74,9 +73,6 @@ im-rc = "15.0.0"
 # for more information.
 rustc-workspace-hack = "1.0.0"
 rand = "0.8.3"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = { version = "0.9.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 fwdansi = "1.1.0"

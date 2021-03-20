@@ -5,8 +5,8 @@ use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
-use crate::util::paths;
 use crate::util::Config;
+use cargo_util::paths;
 use std::fs;
 use std::path::Path;
 

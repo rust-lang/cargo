@@ -8,6 +8,7 @@ use std::time::Duration;
 use std::{cmp, env};
 
 use anyhow::{bail, format_err};
+use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
@@ -22,8 +23,8 @@ use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::validate_package_name;
 use crate::util::IntoUrl;
-use crate::util::{paths, validate_package_name};
 use crate::{drop_print, drop_println, version};
 
 mod auth;
