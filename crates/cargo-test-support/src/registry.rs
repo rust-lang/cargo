@@ -1,6 +1,5 @@
 use crate::git::repo;
 use crate::paths;
-use cargo::sources::CRATES_IO_INDEX;
 use cargo_util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -585,7 +584,9 @@ impl Package {
                 let registry_url = match (self.alternative, dep.registry.as_deref()) {
                     (false, None) => None,
                     (false, Some("alternative")) => Some(alt_registry_url().to_string()),
-                    (true, None) => Some(CRATES_IO_INDEX.to_string()),
+                    (true, None) => {
+                        Some("https://github.com/rust-lang/crates.io-index".to_string())
+                    }
                     (true, Some("alternative")) => None,
                     _ => panic!("registry_dep currently only supports `alternative`"),
                 };
