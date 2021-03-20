@@ -559,7 +559,7 @@ impl Package {
 
     /// Sets the index schema version for this package.
     ///
-    /// See [`cargo::sources::registry::RegistryPackage`] for more information.
+    /// See `cargo::sources::registry::RegistryPackage` for more information.
     pub fn schema_version(&mut self, version: u32) -> &mut Package {
         self.v = Some(version);
         self
