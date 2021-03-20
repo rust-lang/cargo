@@ -236,6 +236,9 @@ fn git_prefers_command_line() {
 
     cargo_process("new foo --vcs git").run();
     assert!(paths::root().join("foo/.gitignore").exists());
+    assert!(!fs::read_to_string(paths::root().join("foo/Cargo.toml"))
+        .unwrap()
+        .contains("authors ="));
 }
 
 #[cargo_test]
