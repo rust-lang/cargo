@@ -15,7 +15,6 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use cargo::util::CargoResult;
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
@@ -702,7 +701,7 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> CargoResult<Output> {
+    pub fn exec_with_output(&mut self) -> anyhow::Result<Output> {
         self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();

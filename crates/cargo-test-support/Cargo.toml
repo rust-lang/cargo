@@ -9,6 +9,7 @@ edition = "2018"
 doctest = false
 
 [dependencies]
+anyhow = "1.0.34"
 cargo = { path = "../.." }
 cargo-test-macro = { path = "../cargo-test-macro" }
 cargo-util = { path = "../cargo-util" }
