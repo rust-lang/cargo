@@ -15,7 +15,6 @@ fn create_empty_gitconfig() {
 #[cargo_test]
 fn simple_lib() {
     cargo_process("new --lib foo --vcs none --edition 2015")
-        .env("USER", "foo")
         .with_stderr("[CREATED] library `foo` package")
         .run();
 
@@ -44,7 +43,6 @@ mod tests {
 #[cargo_test]
 fn simple_bin() {
     cargo_process("new --bin foo --edition 2015")
-        .env("USER", "foo")
         .with_stderr("[CREATED] binary (application) `foo` package")
         .run();
 
@@ -61,7 +59,6 @@ fn simple_bin() {
 #[cargo_test]
 fn both_lib_and_bin() {
     cargo_process("new --lib --bin foo")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr("[ERROR] can't specify both lib and binary outputs")
         .run();
@@ -69,9 +66,7 @@ fn both_lib_and_bin() {
 
 #[cargo_test]
 fn simple_git() {
-    cargo_process("new --lib foo --edition 2015")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new --lib foo --edition 2015").run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("foo/Cargo.toml").is_file());
@@ -169,7 +164,6 @@ If you need a package name to not match the directory name, consider using --nam
         .run();
 
     cargo_process("new --lib incremental")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] the name `incremental` will not support binary executables with that name, \
@@ -205,7 +199,6 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn std_name() {
     cargo_process("new core")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] the name `core` is part of Rust's standard library
@@ -241,22 +234,20 @@ fn git_prefers_command_line() {
     )
     .unwrap();
 
-    cargo_process("new foo --vcs git").env("USER", "foo").run();
+    cargo_process("new foo --vcs git").run();
     assert!(paths::root().join("foo/.gitignore").exists());
 }
 
 #[cargo_test]
 fn subpackage_no_git() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     assert!(paths::root().join("foo/.git").is_dir());
     assert!(paths::root().join("foo/.gitignore").is_file());
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
-    cargo_process("new foo/components/subcomponent")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo/components/subcomponent").run();
 
     assert!(!paths::root()
         .join("foo/components/subcomponent/.git")
@@ -268,7 +259,7 @@ fn subpackage_no_git() {
 
 #[cargo_test]
 fn subpackage_git_with_gitignore() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     assert!(paths::root().join("foo/.git").is_dir());
     assert!(paths::root().join("foo/.gitignore").is_file());
@@ -278,9 +269,7 @@ fn subpackage_git_with_gitignore() {
 
     let subpackage = paths::root().join("foo/components");
     fs::create_dir(&subpackage).unwrap();
-    cargo_process("new foo/components/subcomponent")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo/components/subcomponent").run();
 
     assert!(paths::root()
         .join("foo/components/subcomponent/.git")
@@ -292,13 +281,11 @@ fn subpackage_git_with_gitignore() {
 
 #[cargo_test]
 fn subpackage_git_with_vcs_arg() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
-    cargo_process("new foo/components/subcomponent --vcs git")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo/components/subcomponent --vcs git").run();
 
     assert!(paths::root()
         .join("foo/components/subcomponent/.git")
@@ -343,32 +330,27 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
-        .env("USER", "foo")
         .with_stderr("[CREATED] library `bar` package")
         .run();
 }
 
 #[cargo_test]
 fn new_with_edition_2015() {
-    cargo_process("new --edition 2015 foo")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new --edition 2015 foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2015\""));
 }
 
 #[cargo_test]
 fn new_with_edition_2018() {
-    cargo_process("new --edition 2018 foo")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new --edition 2018 foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2018\""));
 }
 
 #[cargo_test]
 fn new_default_edition() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2018\""));
 }
@@ -376,7 +358,6 @@ fn new_default_edition() {
 #[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
-        .env("USER", "foo")
         .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
         .with_status(1)
         .run();
@@ -384,7 +365,7 @@ fn new_with_bad_edition() {
 
 #[cargo_test]
 fn new_with_reference_link() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(contents.contains("# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html"))
@@ -392,7 +373,7 @@ fn new_with_reference_link() {
 
 #[cargo_test]
 fn lockfile_constant_during_new() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
     let before = fs::read_to_string(paths::root().join("foo/Cargo.lock")).unwrap();
@@ -405,7 +386,6 @@ fn lockfile_constant_during_new() {
 fn restricted_windows_name() {
     if cfg!(windows) {
         cargo_process("new nul")
-            .env("USER", "foo")
             .with_status(101)
             .with_stderr(
                 "\
@@ -416,7 +396,6 @@ If you need a package name to not match the directory name, consider using --nam
             .run();
     } else {
         cargo_process("new nul")
-            .env("USER", "foo")
             .with_stderr(
                 "\
 [WARNING] the name `nul` is a reserved Windows filename
@@ -431,7 +410,6 @@ This package will not work on Windows platforms.
 #[cargo_test]
 fn non_ascii_name() {
     cargo_process("new Привет")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] the name `Привет` contains non-ASCII characters
@@ -446,7 +424,6 @@ Support for non-ASCII crate names is experimental and only valid on the nightly 
 fn non_ascii_name_invalid() {
     // These are alphanumeric characters, but not Unicode XID.
     cargo_process("new ⒶⒷⒸ")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -467,7 +444,6 @@ or change the name in Cargo.toml with:
         .run();
 
     cargo_process("new a¼")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -492,7 +468,7 @@ or change the name in Cargo.toml with:
 fn git_default_branch() {
     // Check for init.defaultBranch support.
     create_empty_gitconfig();
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
     let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
     assert_eq!(head.symbolic_target().unwrap(), "refs/heads/master");
@@ -505,7 +481,7 @@ fn git_default_branch() {
         "#,
     )
     .unwrap();
-    cargo_process("new bar").env("USER", "foo").run();
+    cargo_process("new bar").run();
     let repo = git2::Repository::open(paths::root().join("bar")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
     assert_eq!(head.symbolic_target().unwrap(), "refs/heads/hello");
