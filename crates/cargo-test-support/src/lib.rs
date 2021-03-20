@@ -15,8 +15,8 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use cargo::util::{is_ci, CargoResult, Rustc};
-use cargo_util::{ProcessBuilder, ProcessError};
+use cargo::util::{CargoResult, Rustc};
+use cargo_util::{is_ci, ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
 
