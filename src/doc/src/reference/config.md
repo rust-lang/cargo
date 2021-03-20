@@ -399,6 +399,14 @@ schedule overlapping invocations of `rustc` in parallel when possible.
 
 The `[cargo-new]` table defines defaults for the [`cargo new`] command.
 
+##### `cargo-new.name`
+
+This option is deprecated and unused.
+
+##### `cargo-new.email`
+
+This option is deprecated and unused.
+
 ##### `cargo-new.vcs`
 * Type: string
 * Default: "git" or "none"

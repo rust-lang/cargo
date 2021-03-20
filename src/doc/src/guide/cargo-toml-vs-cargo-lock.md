@@ -27,7 +27,6 @@ depend on another package:
 [package]
 name = "hello_world"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
 
 [dependencies]
 rand = { git = "https://github.com/rust-lang-nursery/rand.git" }
@@ -63,7 +62,6 @@ manifest like this:
 [package]
 name = "hello_world"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
 
 [dependencies]
 rand = { git = "https://github.com/rust-lang-nursery/rand.git" }
