@@ -3,8 +3,9 @@ use crate::core::compiler::{
 };
 use crate::core::{Dependency, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
-use crate::util::{paths, CargoResult, CargoResultExt, ProcessBuilder, Rustc};
+use crate::util::{paths, CargoResult, CargoResultExt, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
+use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};

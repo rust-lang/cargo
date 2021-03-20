@@ -15,7 +15,8 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo::util::{is_ci, CargoResult, Rustc};
+use cargo_util::{ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
 
@@ -1569,12 +1570,12 @@ pub fn is_nightly() -> bool {
             .with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
 }
 
-pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
+pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
     _process(t.as_ref())
 }
 
-fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
-    let mut p = cargo::util::process(t);
+fn _process(t: &OsStr) -> ProcessBuilder {
+    let mut p = ProcessBuilder::new(t);
 
     // In general just clear out all cargo-specific configuration already in the
     // environment. Our tests all assume a "default configuration" unless
@@ -1643,7 +1644,7 @@ pub trait ChannelChanger: Sized {
     fn masquerade_as_nightly_cargo(&mut self) -> &mut Self;
 }
 
-impl ChannelChanger for cargo::util::ProcessBuilder {
+impl ChannelChanger for ProcessBuilder {
     fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }

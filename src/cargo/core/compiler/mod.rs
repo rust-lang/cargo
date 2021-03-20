@@ -54,11 +54,12 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Feature, PackageId, Target};
-use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
+use crate::util::errors::{CargoResult, CargoResultExt, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::Message;
-use crate::util::{self, machine_message, ProcessBuilder};
+use crate::util::{self, machine_message};
 use crate::util::{add_path_args, internal, join_paths, paths, profile};
+use cargo_util::{ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -303,7 +304,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 .as_ref()
                 .and_then(|perr| perr.code)
             {
-                Some(n) if errors::is_simple_exit_code(n) => VerboseError::new(err).into(),
+                Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
                 _ => err,
             }
         }

@@ -322,6 +322,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use anyhow::{bail, format_err};
+use cargo_util::ProcessBuilder;
 use filetime::FileTime;
 use log::{debug, info};
 use serde::de;
@@ -334,7 +335,7 @@ use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{internal, path_args, profile, ProcessBuilder};
+use crate::util::{internal, path_args, profile};
 
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};

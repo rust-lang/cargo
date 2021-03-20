@@ -9,3 +9,11 @@ repository = "https://github.com/rust-lang/cargo"
 description = "Miscellaneous support code used by Cargo."
 
 [dependencies]
+anyhow = "1.0"
+jobserver = "0.1.21"
+libc = "0.2"
+shell-escape = "0.1.4"
+
+[target.'cfg(windows)'.dependencies]
+miow = "0.3.6"
+winapi = { version = "0.3", features = ["consoleapi", "minwindef"] }

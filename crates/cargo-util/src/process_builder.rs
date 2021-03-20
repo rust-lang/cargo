@@ -1,5 +1,6 @@
-use crate::util::{process_error, read2, CargoResult, CargoResultExt};
-use anyhow::bail;
+use crate::process_error::ProcessError;
+use crate::read2;
+use anyhow::{bail, Context, Result};
 use jobserver::Client;
 use shell_escape::escape;
 use std::collections::BTreeMap;
@@ -10,7 +11,7 @@ use std::iter::once;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
-/// A builder object for an external process, similar to `std::process::Command`.
+/// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
 pub struct ProcessBuilder {
     /// The program to execute.
@@ -21,10 +22,10 @@ pub struct ProcessBuilder {
     env: BTreeMap<String, Option<OsString>>,
     /// The directory to run the program from.
     cwd: Option<OsString>,
-    /// The `make` jobserver. See the [jobserver crate][jobserver_docs] for
+    /// The `make` jobserver. See the [jobserver crate] for
     /// more information.
     ///
-    /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
+    /// [jobserver crate]: https://docs.rs/jobserver/
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
@@ -58,6 +59,18 @@ impl fmt::Display for ProcessBuilder {
 }
 
 impl ProcessBuilder {
+    /// Creates a new [`ProcessBuilder`] with the given executable path.
+    pub fn new<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
+        ProcessBuilder {
+            program: cmd.as_ref().to_os_string(),
+            args: Vec::new(),
+            cwd: None,
+            env: BTreeMap::new(),
+            jobserver: None,
+            display_env_vars: false,
+        }
+    }
+
     /// (chainable) Sets the executable for the process.
     pub fn program<T: AsRef<OsStr>>(&mut self, program: T) -> &mut ProcessBuilder {
         self.program = program.as_ref().to_os_string();
@@ -149,16 +162,16 @@ impl ProcessBuilder {
     }
 
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
-    pub fn exec(&self) -> CargoResult<()> {
+    pub fn exec(&self) -> Result<()> {
         let mut command = self.build_command();
-        let exit = command.status().chain_err(|| {
-            process_error(&format!("could not execute process {}", self), None, None)
+        let exit = command.status().with_context(|| {
+            ProcessError::new(&format!("could not execute process {}", self), None, None)
         })?;
 
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(
+            Err(ProcessError::new(
                 &format!("process didn't exit successfully: {}", self),
                 Some(exit),
                 None,
@@ -182,22 +195,22 @@ impl ProcessBuilder {
     /// include our child process. If the child terminates then we'll reap them in Cargo
     /// pretty quickly, and if the child handles the signal then we won't terminate
     /// (and we shouldn't!) until the process itself later exits.
-    pub fn exec_replace(&self) -> CargoResult<()> {
+    pub fn exec_replace(&self) -> Result<()> {
         imp::exec_replace(self)
     }
 
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
-    pub fn exec_with_output(&self) -> CargoResult<Output> {
+    pub fn exec_with_output(&self) -> Result<Output> {
         let mut command = self.build_command();
 
-        let output = command.output().chain_err(|| {
-            process_error(&format!("could not execute process {}", self), None, None)
+        let output = command.output().with_context(|| {
+            ProcessError::new(&format!("could not execute process {}", self), None, None)
         })?;
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(
+            Err(ProcessError::new(
                 &format!("process didn't exit successfully: {}", self),
                 Some(output.status),
                 Some(&output),
@@ -217,10 +230,10 @@ impl ProcessBuilder {
     /// output.
     pub fn exec_with_streaming(
         &self,
-        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+        on_stdout_line: &mut dyn FnMut(&str) -> Result<()>,
+        on_stderr_line: &mut dyn FnMut(&str) -> Result<()>,
         capture_output: bool,
-    ) -> CargoResult<Output> {
+    ) -> Result<Output> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
@@ -274,7 +287,9 @@ impl ProcessBuilder {
             })?;
             child.wait()
         })()
-        .chain_err(|| process_error(&format!("could not execute process {}", self), None, None))?;
+        .with_context(|| {
+            ProcessError::new(&format!("could not execute process {}", self), None, None)
+        })?;
         let output = Output {
             status,
             stdout,
@@ -284,14 +299,14 @@ impl ProcessBuilder {
         {
             let to_print = if capture_output { Some(&output) } else { None };
             if let Some(e) = callback_error {
-                let cx = process_error(
+                let cx = ProcessError::new(
                     &format!("failed to parse process output: {}", self),
                     Some(output.status),
                     to_print,
                 );
                 bail!(anyhow::Error::new(cx).context(e));
             } else if !output.status.success() {
-                bail!(process_error(
+                bail!(ProcessError::new(
                     &format!("process didn't exit successfully: {}", self),
                     Some(output.status),
                     to_print,
@@ -333,9 +348,9 @@ impl ProcessBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cargo::util::{ProcessBuilder, process};
+    /// use cargo_util::ProcessBuilder;
     /// // Running this would execute `rustc`
-    /// let cmd: ProcessBuilder = process("rustc");
+    /// let cmd = ProcessBuilder::new("rustc");
     ///
     /// // Running this will execute `sccache rustc`
     /// let cmd = cmd.wrapped(Some("sccache"));
@@ -360,28 +375,16 @@ impl ProcessBuilder {
     }
 }
 
-/// A helper function to create a `ProcessBuilder`.
-pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
-    ProcessBuilder {
-        program: cmd.as_ref().to_os_string(),
-        args: Vec::new(),
-        cwd: None,
-        env: BTreeMap::new(),
-        jobserver: None,
-        display_env_vars: false,
-    }
-}
-
 #[cfg(unix)]
 mod imp {
-    use crate::util::{process_error, ProcessBuilder};
-    use crate::CargoResult;
+    use super::{ProcessBuilder, ProcessError};
+    use anyhow::Result;
     use std::os::unix::process::CommandExt;
 
-    pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         let mut command = process_builder.build_command();
         let error = command.exec();
-        Err(anyhow::Error::from(error).context(process_error(
+        Err(anyhow::Error::from(error).context(ProcessError::new(
             &format!("could not execute process {}", process_builder),
             None,
             None,
@@ -391,8 +394,8 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    use crate::util::{process_error, ProcessBuilder};
-    use crate::CargoResult;
+    use super::{ProcessBuilder, ProcessError};
+    use anyhow::Result;
     use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
     use winapi::um::consoleapi::SetConsoleCtrlHandler;
 
@@ -401,10 +404,10 @@ mod imp {
         TRUE
     }
 
-    pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         unsafe {
             if SetConsoleCtrlHandler(Some(ctrlc_handler), TRUE) == FALSE {
-                return Err(process_error("Could not set Ctrl-C handler.", None, None).into());
+                return Err(ProcessError::new("Could not set Ctrl-C handler.", None, None).into());
             }
         }
 

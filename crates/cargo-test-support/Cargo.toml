@@ -11,6 +11,7 @@ doctest = false
 [dependencies]
 cargo = { path = "../.." }
 cargo-test-macro = { path = "../cargo-test-macro" }
+cargo-util = { path = "../cargo-util" }
 filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
 git2 = "0.13.16"

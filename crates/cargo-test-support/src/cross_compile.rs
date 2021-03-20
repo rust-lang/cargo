@@ -10,8 +10,8 @@
 //! These tests are all disabled on rust-lang/rust's CI, but run in Cargo's CI.
 
 use crate::{basic_manifest, main_file, project};
-use cargo::util::ProcessError;
 use cargo::CargoResult;
+use cargo_util::ProcessError;
 use std::env;
 use std::fmt::Write;
 use std::process::{Command, Output};

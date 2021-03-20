@@ -4,9 +4,9 @@
 use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::process_builder::process;
 use crate::util::{network, Config, IntoUrl, Progress};
 use anyhow::{anyhow, Context};
+use cargo_util::ProcessBuilder;
 use curl::easy::List;
 use git2::{self, ErrorClass, ObjectType};
 use log::{debug, info};
@@ -835,7 +835,7 @@ fn fetch_with_cli(
     tags: bool,
     config: &Config,
 ) -> CargoResult<()> {
-    let mut cmd = process("git");
+    let mut cmd = ProcessBuilder::new("git");
     cmd.arg("fetch");
     if tags {
         cmd.arg("--tags");

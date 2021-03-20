@@ -56,7 +56,6 @@ semver = { version = "0.10", features = ["serde"] }
 serde = { version = "1.0.123", features = ["derive"] }
 serde_ignored = "0.1.0"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
-shell-escape = "0.1.4"
 strip-ansi-escapes = "0.1.0"
 tar = { version = "0.4.26", default-features = false }
 tempfile = "3.0"
@@ -80,7 +79,6 @@ rand = "0.8.3"
 core-foundation = { version = "0.9.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
-miow = "0.3.6"
 fwdansi = "1.1.0"
 
 [target.'cfg(windows)'.dependencies.winapi]
