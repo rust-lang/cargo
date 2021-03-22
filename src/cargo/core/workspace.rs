@@ -5,15 +5,16 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::slice;
 
+use anyhow::bail;
 use glob::glob;
 use log::debug;
 use url::Url;
 
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::RequestedFeatures;
+use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, Edition, PackageId, PackageIdSpec};
+use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -152,7 +153,7 @@ impl<'cfg> Workspace<'cfg> {
         ws.target_dir = config.target_dir()?;
 
         if manifest_path.is_relative() {
-            anyhow::bail!(
+            bail!(
                 "manifest_path:{:?} is not an absolute path. Please provide an absolute path.",
                 manifest_path
             )
@@ -523,7 +524,7 @@ impl<'cfg> Workspace<'cfg> {
                     return Ok(Some(root_config.clone()));
                 }
 
-                _ => anyhow::bail!(
+                _ => bail!(
                     "root of a workspace inferred but wasn't a root: {}",
                     root_path.display()
                 ),
@@ -663,7 +664,7 @@ impl<'cfg> Workspace<'cfg> {
                     if exclude {
                         continue;
                     }
-                    anyhow::bail!(
+                    bail!(
                         "package `{}` is listed in workspace’s default-members \
                          but is not a member.",
                         path.display()
@@ -785,7 +786,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Virtual(_) => continue,
             };
             if let Some(prev) = names.insert(name, member) {
-                anyhow::bail!(
+                bail!(
                     "two packages named `{}` in this workspace:\n\
                          - {}\n\
                          - {}",
@@ -810,7 +811,7 @@ impl<'cfg> Workspace<'cfg> {
             .collect();
         match roots.len() {
             1 => Ok(()),
-            0 => anyhow::bail!(
+            0 => bail!(
                 "`package.workspace` configuration points to a crate \
                  which is not configured with [workspace]: \n\
                  configuration at: {}\n\
@@ -819,7 +820,7 @@ impl<'cfg> Workspace<'cfg> {
                 self.root_manifest.as_ref().unwrap().display()
             ),
             _ => {
-                anyhow::bail!(
+                bail!(
                     "multiple workspace roots found in the same workspace:\n{}",
                     roots
                         .iter()
@@ -840,7 +841,7 @@ impl<'cfg> Workspace<'cfg> {
 
             match root {
                 Some(root) => {
-                    anyhow::bail!(
+                    bail!(
                         "package `{}` is a member of the wrong workspace\n\
                          expected: {}\n\
                          actual:   {}",
@@ -850,7 +851,7 @@ impl<'cfg> Workspace<'cfg> {
                     );
                 }
                 None => {
-                    anyhow::bail!(
+                    bail!(
                         "workspace member `{}` is not hierarchically below \
                          the workspace root `{}`",
                         member.display(),
@@ -907,7 +908,7 @@ impl<'cfg> Workspace<'cfg> {
                 }
             }
         };
-        anyhow::bail!(
+        bail!(
             "current package believes it's in a workspace when it's not:\n\
                  current:   {}\n\
                  workspace: {}\n\n{}\n\
@@ -963,7 +964,7 @@ impl<'cfg> Workspace<'cfg> {
     pub fn load(&self, manifest_path: &Path) -> CargoResult<Package> {
         match self.packages.maybe_get(manifest_path) {
             Some(&MaybePackage::Package(ref p)) => return Ok(p.clone()),
-            Some(&MaybePackage::Virtual(_)) => anyhow::bail!("cannot load workspace root"),
+            Some(&MaybePackage::Virtual(_)) => bail!("cannot load workspace root"),
             None => {}
         }
 
@@ -1046,10 +1047,10 @@ impl<'cfg> Workspace<'cfg> {
     pub fn members_with_features(
         &self,
         specs: &[PackageIdSpec],
-        requested_features: &RequestedFeatures,
-    ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+        cli_features: &CliFeatures,
+    ) -> CargoResult<Vec<(&Package, CliFeatures)>> {
         assert!(
-            !specs.is_empty() || requested_features.all_features,
+            !specs.is_empty() || cli_features.all_features,
             "no specs requires all_features"
         );
         if specs.is_empty() {
@@ -1057,13 +1058,13 @@ impl<'cfg> Workspace<'cfg> {
             // all features enabled.
             return Ok(self
                 .members()
-                .map(|m| (m, RequestedFeatures::new_all(true)))
+                .map(|m| (m, CliFeatures::new_all(true)))
                 .collect());
         }
         if self.allows_new_cli_feature_behavior() {
-            self.members_with_features_new(specs, requested_features)
+            self.members_with_features_new(specs, cli_features)
         } else {
-            Ok(self.members_with_features_old(specs, requested_features))
+            Ok(self.members_with_features_old(specs, cli_features))
         }
     }
 
@@ -1072,17 +1073,17 @@ impl<'cfg> Workspace<'cfg> {
     fn members_with_features_new(
         &self,
         specs: &[PackageIdSpec],
-        requested_features: &RequestedFeatures,
-    ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+        cli_features: &CliFeatures,
+    ) -> CargoResult<Vec<(&Package, CliFeatures)>> {
         // Keep track of which features matched *any* member, to produce an error
         // if any of them did not match anywhere.
-        let mut found: BTreeSet<InternedString> = BTreeSet::new();
+        let mut found: BTreeSet<FeatureValue> = BTreeSet::new();
 
         // Returns the requested features for the given member.
         // This filters out any named features that the member does not have.
-        let mut matching_features = |member: &Package| -> RequestedFeatures {
-            if requested_features.features.is_empty() || requested_features.all_features {
-                return requested_features.clone();
+        let mut matching_features = |member: &Package| -> CliFeatures {
+            if cli_features.features.is_empty() || cli_features.all_features {
+                return cli_features.clone();
             }
             // Only include features this member defines.
             let summary = member.summary();
@@ -1098,40 +1099,54 @@ impl<'cfg> Workspace<'cfg> {
                         .any(|dep| dep.is_optional() && dep.name_in_toml() == feature)
             };
 
-            for feature in requested_features.features.iter() {
-                let mut split = feature.splitn(2, '/');
-                let split = (split.next().unwrap(), split.next());
-                if let (pkg, Some(pkg_feature)) = split {
-                    let pkg = InternedString::new(pkg);
-                    let pkg_feature = InternedString::new(pkg_feature);
-                    if summary
-                        .dependencies()
-                        .iter()
-                        .any(|dep| dep.name_in_toml() == pkg)
-                    {
-                        // pkg/feat for a dependency.
-                        // Will rely on the dependency resolver to validate `feat`.
-                        features.insert(*feature);
-                        found.insert(*feature);
-                    } else if pkg == member.name() && contains(pkg_feature) {
-                        // member/feat where "feat" is a feature in member.
-                        features.insert(pkg_feature);
-                        found.insert(*feature);
+            for feature in cli_features.features.iter() {
+                match feature {
+                    FeatureValue::Feature(f) => {
+                        if contains(*f) {
+                            // feature exists in this member.
+                            features.insert(feature.clone());
+                            found.insert(feature.clone());
+                        }
                     }
-                } else if contains(*feature) {
-                    // feature exists in this member.
-                    features.insert(*feature);
-                    found.insert(*feature);
+                    // This should be enforced by CliFeatures.
+                    FeatureValue::Dep { .. }
+                    | FeatureValue::DepFeature {
+                        dep_prefix: true, ..
+                    } => panic!("unexpected dep: syntax {}", feature),
+                    FeatureValue::DepFeature {
+                        dep_name,
+                        dep_feature,
+                        dep_prefix: _,
+                        weak: _,
+                    } => {
+                        if summary
+                            .dependencies()
+                            .iter()
+                            .any(|dep| dep.name_in_toml() == *dep_name)
+                        {
+                            // pkg/feat for a dependency.
+                            // Will rely on the dependency resolver to validate `dep_feature`.
+                            features.insert(feature.clone());
+                            found.insert(feature.clone());
+                        } else if *dep_name == member.name() && contains(*dep_feature) {
+                            // member/feat where "feat" is a feature in member.
+                            //
+                            // `weak` can be ignored here, because the member
+                            // either is or isn't being built.
+                            features.insert(FeatureValue::Feature(*dep_feature));
+                            found.insert(feature.clone());
+                        }
+                    }
                 }
             }
-            RequestedFeatures {
+            CliFeatures {
                 features: Rc::new(features),
                 all_features: false,
-                uses_default_features: requested_features.uses_default_features,
+                uses_default_features: cli_features.uses_default_features,
             }
         };
 
-        let members: Vec<(&Package, RequestedFeatures)> = self
+        let members: Vec<(&Package, CliFeatures)> = self
             .members()
             .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
             .map(|m| (m, matching_features(m)))
@@ -1139,27 +1154,28 @@ impl<'cfg> Workspace<'cfg> {
         if members.is_empty() {
             // `cargo build -p foo`, where `foo` is not a member.
             // Do not allow any command-line flags (defaults only).
-            if !(requested_features.features.is_empty()
-                && !requested_features.all_features
-                && requested_features.uses_default_features)
+            if !(cli_features.features.is_empty()
+                && !cli_features.all_features
+                && cli_features.uses_default_features)
             {
-                anyhow::bail!("cannot specify features for packages outside of workspace");
+                bail!("cannot specify features for packages outside of workspace");
             }
             // Add all members from the workspace so we can ensure `-p nonmember`
             // is in the resolve graph.
             return Ok(self
                 .members()
-                .map(|m| (m, RequestedFeatures::new_all(false)))
+                .map(|m| (m, CliFeatures::new_all(false)))
                 .collect());
         }
-        if *requested_features.features != found {
-            let missing: Vec<_> = requested_features
+        if *cli_features.features != found {
+            let mut missing: Vec<_> = cli_features
                 .features
                 .difference(&found)
-                .copied()
+                .map(|fv| fv.to_string())
                 .collect();
+            missing.sort();
             // TODO: typo suggestions would be good here.
-            anyhow::bail!(
+            bail!(
                 "none of the selected packages contains these features: {}",
                 missing.join(", ")
             );
@@ -1172,28 +1188,46 @@ impl<'cfg> Workspace<'cfg> {
     fn members_with_features_old(
         &self,
         specs: &[PackageIdSpec],
-        requested_features: &RequestedFeatures,
-    ) -> Vec<(&Package, RequestedFeatures)> {
+        cli_features: &CliFeatures,
+    ) -> Vec<(&Package, CliFeatures)> {
         // Split off any features with the syntax `member-name/feature-name` into a map
         // so that those features can be applied directly to those workspace-members.
-        let mut member_specific_features: HashMap<&str, BTreeSet<InternedString>> = HashMap::new();
+        let mut member_specific_features: HashMap<InternedString, BTreeSet<FeatureValue>> =
+            HashMap::new();
         // Features for the member in the current directory.
         let mut cwd_features = BTreeSet::new();
-        for feature in requested_features.features.iter() {
-            if let Some(index) = feature.find('/') {
-                let name = &feature[..index];
-                let is_member = self.members().any(|member| member.name() == name);
-                if is_member && specs.iter().any(|spec| spec.name() == name) {
-                    member_specific_features
-                        .entry(name)
-                        .or_default()
-                        .insert(InternedString::new(&feature[index + 1..]));
-                } else {
-                    cwd_features.insert(*feature);
+        for feature in cli_features.features.iter() {
+            match feature {
+                FeatureValue::Feature(_) => {
+                    cwd_features.insert(feature.clone());
                 }
-            } else {
-                cwd_features.insert(*feature);
-            };
+                // This should be enforced by CliFeatures.
+                FeatureValue::Dep { .. }
+                | FeatureValue::DepFeature {
+                    dep_prefix: true, ..
+                } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::DepFeature {
+                    dep_name,
+                    dep_feature,
+                    dep_prefix: _,
+                    weak: _,
+                } => {
+                    // I think weak can be ignored here.
+                    // * With `--features member?/feat -p member`, the ? doesn't
+                    //   really mean anything (either the member is built or it isn't).
+                    // * With `--features nonmember?/feat`, cwd_features will
+                    //   handle processing it correctly.
+                    let is_member = self.members().any(|member| member.name() == *dep_name);
+                    if is_member && specs.iter().any(|spec| spec.name() == *dep_name) {
+                        member_specific_features
+                            .entry(*dep_name)
+                            .or_default()
+                            .insert(FeatureValue::Feature(*dep_feature));
+                    } else {
+                        cwd_features.insert(feature.clone());
+                    }
+                }
+            }
         }
 
         let ms = self.members().filter_map(|member| {
@@ -1202,10 +1236,10 @@ impl<'cfg> Workspace<'cfg> {
                 // The features passed on the command-line only apply to
                 // the "current" package (determined by the cwd).
                 Some(current) if member_id == current.package_id() => {
-                    let feats = RequestedFeatures {
+                    let feats = CliFeatures {
                         features: Rc::new(cwd_features.clone()),
-                        all_features: requested_features.all_features,
-                        uses_default_features: requested_features.uses_default_features,
+                        all_features: cli_features.all_features,
+                        uses_default_features: cli_features.uses_default_features,
                     };
                     Some((member, feats))
                 }
@@ -1221,14 +1255,14 @@ impl<'cfg> Workspace<'cfg> {
                         // "current" package. As an extension, this allows
                         // member-name/feature-name to set member-specific
                         // features, which should be backwards-compatible.
-                        let feats = RequestedFeatures {
+                        let feats = CliFeatures {
                             features: Rc::new(
                                 member_specific_features
                                     .remove(member.name().as_str())
                                     .unwrap_or_default(),
                             ),
                             uses_default_features: true,
-                            all_features: requested_features.all_features,
+                            all_features: cli_features.all_features,
                         };
                         Some((member, feats))
                     } else {

@@ -33,8 +33,8 @@ use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{self, FeaturesFor, RequestedFeatures};
-use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
+use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
+use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, SourceId, TargetKind, Workspace};
 use crate::drop_println;
@@ -59,12 +59,8 @@ use anyhow::Context as _;
 pub struct CompileOptions {
     /// Configuration information for a rustc build
     pub build_config: BuildConfig,
-    /// Extra features to build for the root package
-    pub features: Vec<String>,
-    /// Flag whether all available features should be built for the root package
-    pub all_features: bool,
-    /// Flag if the default feature should be built for the root package
-    pub no_default_features: bool,
+    /// Feature flags requested by the user.
+    pub cli_features: CliFeatures,
     /// A set of packages to build.
     pub spec: Packages,
     /// Filter to apply to the root package to select which targets will be
@@ -89,9 +85,7 @@ impl<'a> CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
         Ok(CompileOptions {
             build_config: BuildConfig::new(config, None, &[], mode)?,
-            features: Vec::new(),
-            all_features: false,
-            no_default_features: false,
+            cli_features: CliFeatures::new_all(false),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {
                 required_features_filterable: false,
@@ -334,9 +328,7 @@ pub fn create_bcx<'a, 'cfg>(
     let CompileOptions {
         ref build_config,
         ref spec,
-        ref features,
-        all_features,
-        no_default_features,
+        ref cli_features,
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
@@ -372,11 +364,6 @@ pub fn create_bcx<'a, 'cfg>(
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
     let specs = spec.to_package_id_specs(ws)?;
-    let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
-    let opts = ResolveOpts::new(
-        dev_deps,
-        RequestedFeatures::from_command_line(features, all_features, !no_default_features),
-    );
     let has_dev_units = if filter.need_dev_deps(build_config.mode) {
         HasDevUnits::Yes
     } else {
@@ -386,7 +373,7 @@ pub fn create_bcx<'a, 'cfg>(
         ws,
         &target_data,
         &build_config.requested_kinds,
-        &opts,
+        cli_features,
         &specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,

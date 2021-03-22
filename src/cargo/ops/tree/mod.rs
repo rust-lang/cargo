@@ -3,9 +3,7 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{
-    features::RequestedFeatures, ForceAllTargets, HasDevUnits, ResolveOpts,
-};
+use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
@@ -21,9 +19,7 @@ mod graph;
 pub use {graph::EdgeKind, graph::Node};
 
 pub struct TreeOptions {
-    pub features: Vec<String>,
-    pub no_default_features: bool,
-    pub all_features: bool,
+    pub cli_features: CliFeatures,
     /// The packages to display the tree for.
     pub packages: Packages,
     /// The platform to filter for.
@@ -138,12 +134,6 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     let requested_kinds = CompileKind::from_requested_targets(ws.config(), &requested_targets)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let specs = opts.packages.to_package_id_specs(ws)?;
-    let requested_features = RequestedFeatures::from_command_line(
-        &opts.features,
-        opts.all_features,
-        !opts.no_default_features,
-    );
-    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features);
     let has_dev = if opts
         .edge_kinds
         .contains(&EdgeKind::Dep(DepKind::Development))
@@ -161,7 +151,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         ws,
         &target_data,
         &requested_kinds,
-        &resolve_opts,
+        &opts.cli_features,
         &specs,
         has_dev,
         force_all,
@@ -178,7 +168,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &ws_resolve.targeted_resolve,
         &ws_resolve.resolved_features,
         &specs,
-        &resolve_opts.features,
+        &opts.cli_features,
         &target_data,
         &requested_kinds,
         package_map,

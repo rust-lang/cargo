@@ -69,7 +69,7 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::features::{ForceAllTargets, HasDevUnits};
+pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
 
@@ -192,7 +192,7 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone());
+        let res = activate(&mut cx, registry, None, summary.clone(), opts);
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -378,9 +378,8 @@ fn activate_deps_loop(
             let pid = candidate.package_id();
             let opts = ResolveOpts {
                 dev_deps: false,
-                features: RequestedFeatures {
+                features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
-                    all_features: false,
                     uses_default_features: dep.uses_default_features(),
                 },
             };
@@ -391,7 +390,7 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts);
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &opts);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -603,7 +602,7 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
-    opts: ResolveOpts,
+    opts: &ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;

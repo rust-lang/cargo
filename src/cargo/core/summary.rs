@@ -250,6 +250,12 @@ fn build_feature_map(
                 feature
             );
         }
+        if feature.contains('/') {
+            bail!(
+                "feature named `{}` is not allowed to contain slashes",
+                feature
+            );
+        }
         validate_feature_name(config, pkg_id, feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
@@ -316,7 +322,20 @@ fn build_feature_map(
                         );
                     }
                 }
-                DepFeature { dep_name, weak, .. } => {
+                DepFeature {
+                    dep_name,
+                    dep_feature,
+                    weak,
+                    ..
+                } => {
+                    // Early check for some unlikely syntax.
+                    if dep_feature.contains('/') {
+                        bail!(
+                            "multiple slashes in feature `{}` (included by feature `{}`) are not allowed",
+                            fv,
+                            feature
+                        );
+                    }
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
                         bail!(
@@ -362,7 +381,7 @@ fn build_feature_map(
 }
 
 /// FeatureValue represents the types of dependencies a feature can have.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FeatureValue {
     /// A feature enabling another feature.
     Feature(InternedString),

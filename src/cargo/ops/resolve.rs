@@ -13,7 +13,7 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{
-    FeatureOpts, FeatureResolver, ForceAllTargets, ResolvedFeatures,
+    CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
 };
 use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion};
 use crate::core::summary::Summary;
@@ -80,7 +80,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData,
     requested_targets: &[CompileKind],
-    opts: &ResolveOpts,
+    cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
@@ -122,7 +122,8 @@ pub fn resolve_ws_with_opts<'cfg>(
     let resolved_with_overrides = resolve_with_previous(
         &mut registry,
         ws,
-        opts,
+        cli_features,
+        has_dev_units,
         resolve.as_ref(),
         None,
         specs,
@@ -132,7 +133,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
     let member_ids = ws
-        .members_with_features(specs, &opts.features)?
+        .members_with_features(specs, cli_features)?
         .into_iter()
         .map(|(p, _fts)| p.package_id())
         .collect::<Vec<_>>();
@@ -151,7 +152,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         target_data,
         &resolved_with_overrides,
         &pkg_set,
-        &opts.features,
+        cli_features,
         specs,
         requested_targets,
         feature_opts,
@@ -173,7 +174,8 @@ fn resolve_with_registry<'cfg>(
     let mut resolve = resolve_with_previous(
         registry,
         ws,
-        &ResolveOpts::everything(),
+        &CliFeatures::new_all(true),
+        HasDevUnits::Yes,
         prev.as_ref(),
         None,
         &[],
@@ -204,7 +206,8 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    opts: &ResolveOpts,
+    cli_features: &CliFeatures,
+    has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
@@ -316,16 +319,17 @@ pub fn resolve_with_previous<'cfg>(
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
+    let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
     let summaries: Vec<(Summary, ResolveOpts)> = ws
-        .members_with_features(specs, &opts.features)?
+        .members_with_features(specs, cli_features)?
         .into_iter()
         .map(|(member, features)| {
             let summary = registry.lock(member.summary().clone());
             (
                 summary,
                 ResolveOpts {
-                    dev_deps: opts.dev_deps,
-                    features,
+                    dev_deps,
+                    features: RequestedFeatures::CliFeatures(features),
                 },
             )
         })

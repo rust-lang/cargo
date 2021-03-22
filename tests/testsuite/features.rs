@@ -269,7 +269,15 @@ fn invalid8() {
 
     p.cargo("build --features foo")
         .with_status(101)
-        .with_stderr("[ERROR] feature names may not contain slashes: `foo/bar`")
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  feature `foo/bar` in dependency `bar` is not allowed to contain slashes
+  If you want to enable features [..]
+",
+        )
         .run();
 }
 
@@ -409,7 +417,14 @@ fn no_transitive_dep_feature_requirement() {
         .build();
     p.cargo("build")
         .with_status(101)
-        .with_stderr("[ERROR] feature names may not contain slashes: `bar/qux`")
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  multiple slashes in feature `derived/bar/qux` (included by feature `default`) are not allowed
+",
+        )
         .run();
 }
 
@@ -1192,7 +1207,7 @@ fn dep_feature_in_cmd_line() {
     // Hierarchical feature specification should still be disallowed
     p.cargo("build --features derived/bar/some-feat")
         .with_status(101)
-        .with_stderr("[ERROR] feature names may not contain slashes: `bar/some-feat`")
+        .with_stderr("[ERROR] multiple slashes in feature `derived/bar/some-feat` is not allowed")
         .run();
 }
 
@@ -1906,7 +1921,7 @@ fn nonexistent_required_features() {
 }
 
 #[cargo_test]
-fn invalid_feature_names() {
+fn invalid_feature_names_warning() {
     // Warnings for more restricted feature syntax.
     let p = project()
         .file(
@@ -1929,7 +1944,6 @@ fn invalid_feature_names() {
                 "+foo" = []
                 "-foo" = []
                 ".foo" = []
-                "foo/bar" = []
                 "foo:bar" = []
                 "foo?" = []
                 "?foo" = []
@@ -1961,9 +1975,6 @@ For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues
 [WARNING] invalid character `¼` in feature `a¼` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `/` in feature `foo/bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
 [WARNING] invalid character `:` in feature `foo:bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
@@ -1994,9 +2005,6 @@ For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues
 [WARNING] invalid character `¼` in feature `a¼` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `/` in feature `foo/bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
 [WARNING] invalid character `:` in feature `foo:bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
@@ -2015,5 +2023,36 @@ For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues
 [CHECKING] foo v0.1.0 [..]
 [FINISHED] [..]
 ")
+        .run();
+}
+
+#[cargo_test]
+fn invalid_feature_names_error() {
+    // Errors for more restricted feature syntax.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                "foo/bar" = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  feature named `foo/bar` is not allowed to contain slashes
+",
+        )
         .run();
 }

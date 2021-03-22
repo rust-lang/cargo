@@ -3,12 +3,13 @@ use std::env;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use anyhow::{bail, format_err};
 use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::Freshness;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId};
+use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -422,9 +423,9 @@ impl CrateListingV2 {
         if let Some(info) = self.installs.get_mut(&pkg.package_id()) {
             info.bins.append(&mut bins.clone());
             info.version_req = version_req;
-            info.features = feature_set(&opts.features);
-            info.all_features = opts.all_features;
-            info.no_default_features = opts.no_default_features;
+            info.features = feature_set(&opts.cli_features.features);
+            info.all_features = opts.cli_features.all_features;
+            info.no_default_features = !opts.cli_features.uses_default_features;
             info.profile = opts.build_config.requested_profile.to_string();
             info.target = Some(target.to_string());
             info.rustc = Some(rustc.to_string());
@@ -434,9 +435,9 @@ impl CrateListingV2 {
                 InstallInfo {
                     version_req,
                     bins: bins.clone(),
-                    features: feature_set(&opts.features),
-                    all_features: opts.all_features,
-                    no_default_features: opts.no_default_features,
+                    features: feature_set(&opts.cli_features.features),
+                    all_features: opts.cli_features.all_features,
+                    no_default_features: !opts.cli_features.uses_default_features,
                     profile: opts.build_config.requested_profile.to_string(),
                     target: Some(target.to_string()),
                     rustc: Some(rustc.to_string()),
@@ -489,9 +490,9 @@ impl InstallInfo {
     ///
     /// This does not do Package/Source/Version checking.
     fn is_up_to_date(&self, opts: &CompileOptions, target: &str, exes: &BTreeSet<String>) -> bool {
-        self.features == feature_set(&opts.features)
-            && self.all_features == opts.all_features
-            && self.no_default_features == opts.no_default_features
+        self.features == feature_set(&opts.cli_features.features)
+            && self.all_features == opts.cli_features.all_features
+            && self.no_default_features == !opts.cli_features.uses_default_features
             && self.profile.as_str() == opts.build_config.requested_profile.as_str()
             && (self.target.is_none() || self.target.as_deref() == Some(target))
             && &self.bins == exes
@@ -641,9 +642,9 @@ where
     }
 }
 
-/// Helper to convert features Vec to a BTreeSet.
-fn feature_set(features: &[String]) -> BTreeSet<String> {
-    features.iter().cloned().collect()
+/// Helper to convert features to a BTreeSet.
+fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
+    features.iter().map(|s| s.to_string()).collect()
 }
 
 /// Helper to get the executable names from a filter.

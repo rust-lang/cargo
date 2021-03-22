@@ -1,4 +1,5 @@
 use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
@@ -496,9 +497,7 @@ pub trait ArgMatchesExt {
 
         let opts = CompileOptions {
             build_config,
-            features: self._values_of("features"),
-            all_features: self._is_present("all-features"),
-            no_default_features: self._is_present("no-default-features"),
+            cli_features: self.cli_features()?,
             spec,
             filter: CompileFilter::from_raw_arguments(
                 self._is_present("lib"),
@@ -538,6 +537,14 @@ pub trait ArgMatchesExt {
         }
 
         Ok(opts)
+    }
+
+    fn cli_features(&self) -> CargoResult<CliFeatures> {
+        CliFeatures::from_command_line(
+            &self._values_of("features"),
+            self._is_present("all-features"),
+            !self._is_present("no-default-features"),
+        )
     }
 
     fn compile_options_for_single_package(
