@@ -49,7 +49,6 @@ try to fix the bug! Originally your manifest will look like:
 [package]
 name = "my-library"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 uuid = "1.0"
@@ -131,7 +130,6 @@ repository we'll edit our `Cargo.toml` to look like
 [package]
 name = "my-library"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 uuid = "1.0.1"
@@ -157,7 +155,6 @@ It's also worth noting that `[patch]` applies *transitively*. Let's say you use
 [package]
 name = "my-binary"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 my-library = { git = 'https://example.com/git/my-library' }
@@ -212,7 +209,6 @@ look at the `my-binary` manifest from above again as well:
 [package]
 name = "my-binary"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 my-library = { git = 'https://example.com/git/my-library' }

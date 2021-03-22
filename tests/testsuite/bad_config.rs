@@ -94,7 +94,7 @@ fn bad4() {
             ".cargo/config",
             r#"
                 [cargo-new]
-                  name = false
+                  vcs = false
             "#,
         )
         .build();
@@ -105,7 +105,7 @@ fn bad4() {
 [ERROR] Failed to create package `foo` at `[..]`
 
 Caused by:
-  error in [..]config: `cargo-new.name` expected a string, but found a boolean
+  error in [..]config: `cargo-new.vcs` expected a string, but found a boolean
 ",
         )
         .run();

@@ -46,8 +46,6 @@ system:
   will otherwise be used. See also [`build.incremental`] config value.
 * `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
-* `CARGO_NAME` — The author name to use for [`cargo new`].
-* `CARGO_EMAIL` — The author email to use for [`cargo new`].
 * `HTTPS_PROXY` or `https_proxy` or `http_proxy` — The HTTP proxy to use, see
   [`http.proxy`] for more detail.
 * `HTTP_TIMEOUT` — The HTTP timeout in seconds, see [`http.timeout`] for more
@@ -78,8 +76,6 @@ supported environment variables are:
 * `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
 * `CARGO_BUILD_PIPELINING` — Whether or not to use `rustc` pipelining, see [`build.pipelining`].
-* `CARGO_CARGO_NEW_NAME` — The author name to use with [`cargo new`], see [`cargo-new.name`].
-* `CARGO_CARGO_NEW_EMAIL` — The author email to use with [`cargo new`], see [`cargo-new.email`].
 * `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
 * `CARGO_HTTP_PROXY` — Enables HTTP proxy, see [`http.proxy`].

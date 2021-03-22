@@ -107,14 +107,19 @@ breaking change.
 <a id="the-authors-field-optional"></a>
 #### The `authors` field
 
-The `authors` field lists people or organizations that are considered the
-"authors" of the package. The exact meaning is open to interpretation — it may
-list the original or primary authors, current maintainers, or owners of the
-package. These names will be listed on the crate's page on
-[crates.io]. An optional email address may be included within angled
-brackets at the end of each author.
+The optional `authors` field lists people or organizations that are considered
+the "authors" of the package. The exact meaning is open to interpretation — it
+may list the original or primary authors, current maintainers, or owners of the
+package. An optional email address may be included within angled brackets at
+the end of each author entry.
 
-> **Note**: [crates.io] requires at least one author to be listed.
+This field is only surfaced in package metadata and in the `CARGO_PKG_AUTHORS`
+environment variable within `build.rs`. It is not displayed in the [crates.io]
+user interface.
+
+> **Warning**: Package manifests cannot be changed once published, so this
+> field cannot be changed or removed in already-published versions of a
+> package.
 
 <a id="the-edition-field-optional"></a>
 #### The `edition` field

@@ -33,7 +33,6 @@ This is all we need to get started. First, let’s check out `Cargo.toml`:
 [package]
 name = "hello_world"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
 edition = "2018"
 
 [dependencies]

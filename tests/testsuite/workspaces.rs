@@ -1031,7 +1031,6 @@ fn new_warns_you_this_will_not_work() {
     let p = p.build();
 
     p.cargo("new --lib bar")
-        .env("USER", "foo")
         .with_stderr(
             "\
 warning: compiling this new package may not work due to invalid workspace configuration
@@ -1053,7 +1052,6 @@ root: [..]
 fn new_warning_with_corrupt_ws() {
     let p = project().file("Cargo.toml", "asdf").build();
     p.cargo("new bar")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] compiling this new package may not work due to invalid workspace configuration
