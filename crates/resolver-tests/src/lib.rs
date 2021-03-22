@@ -123,7 +123,7 @@ pub fn resolve_with_config_raw(
     struct MyRegistry<'a> {
         list: &'a [Summary],
         used: HashSet<PackageId>,
-    };
+    }
     impl<'a> Registry for MyRegistry<'a> {
         fn query(
             &mut self,
