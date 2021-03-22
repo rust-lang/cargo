@@ -14,7 +14,8 @@ use serde::Serialize;
 use super::context::OutputFile;
 use super::{CompileKind, CompileMode, Context, Unit};
 use crate::core::TargetKind;
-use crate::util::{internal, CargoResult, Config, ProcessBuilder};
+use crate::util::{internal, CargoResult, Config};
+use cargo_util::ProcessBuilder;
 
 #[derive(Debug, Serialize)]
 struct Invocation {

@@ -1,9 +1,10 @@
 //! Registry authentication support.
 
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::{config, process_error, CargoResult, CargoResultExt, Config};
+use crate::util::{config, CargoResult, CargoResultExt, Config};
 use anyhow::bail;
 use anyhow::format_err;
+use cargo_util::ProcessError;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -197,7 +198,7 @@ fn run_command(
             Action::Store(_) => "failed to store token to registry",
             Action::Erase => "failed to erase token from registry",
         };
-        return Err(process_error(
+        return Err(ProcessError::new(
             &format!(
                 "registry credential process `{}` {} `{}`",
                 exe.display(),

@@ -97,10 +97,11 @@ use std::fmt;
 use std::str::FromStr;
 
 use anyhow::{bail, Error};
+use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
-use crate::util::{indented_lines, ProcessBuilder};
+use crate::util::indented_lines;
 use crate::Config;
 
 pub const SEE_CHANNELS: &str =

@@ -46,6 +46,7 @@ use std::process::{self, Command, ExitStatus};
 use std::str;
 
 use anyhow::{bail, Context, Error};
+use cargo_util::{paths, ProcessBuilder};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
@@ -57,7 +58,7 @@ use crate::core::{Edition, MaybePackage, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::{self, paths, Config, ProcessBuilder};
+use crate::util::Config;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
 
@@ -84,7 +85,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
-    let mut wrapper = util::process(env::current_exe()?);
+    let mut wrapper = ProcessBuilder::new(env::current_exe()?);
     wrapper.env(FIX_ENV, lock_server.addr().to_string());
     let _started = lock_server.start()?;
 
@@ -322,7 +323,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
-    let rustc = util::process(&args.rustc).wrapped(workspace_rustc.as_ref());
+    let rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
 
     trace!("start rustfixing {:?}", args.file);
     let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
@@ -595,7 +596,7 @@ fn rustfix_and_fix(
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep
         // going.
-        let code = match util::paths::read(file.as_ref()) {
+        let code = match paths::read(file.as_ref()) {
             Ok(s) => s,
             Err(e) => {
                 warn!("failed to read `{}`: {}", file, e);

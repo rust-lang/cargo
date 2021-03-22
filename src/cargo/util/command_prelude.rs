@@ -5,13 +5,14 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
+use crate::util::{toml::TomlProfile, validate_package_name};
 use crate::CargoResult;
 use anyhow::bail;
+use cargo_util::paths;
 use clap::{self, SubCommand};
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;

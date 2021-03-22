@@ -19,9 +19,9 @@ use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::paths;
 use crate::util::toml::{read_manifest, TomlDependency, TomlProfiles};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
+use cargo_util::paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///

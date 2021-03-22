@@ -1,3 +1,7 @@
+//! Various utilities for working with files and paths.
+
+use anyhow::{Context, Result};
+use filetime::FileTime;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
@@ -5,19 +9,21 @@ use std::io;
 use std::io::prelude::*;
 use std::iter;
 use std::path::{Component, Path, PathBuf};
-
-use filetime::FileTime;
 use tempfile::Builder as TempFileBuilder;
 
-use crate::util::errors::{CargoResult, CargoResultExt};
-
-pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
+/// Joins paths into a string suitable for the `PATH` environment variable.
+///
+/// This is equivalent to [`std::env::join_paths`], but includes a more
+/// detailed error message. The given `env` argument is the name of the
+/// environment variable this is will be used for, which is included in the
+/// error message.
+pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
     env::join_paths(paths.iter())
-        .chain_err(|| {
+        .with_context(|| {
             let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
             format!("failed to join path array: {:?}", paths)
         })
-        .chain_err(|| {
+        .with_context(|| {
             format!(
                 "failed to join search paths together\n\
                      Does ${} have an unterminated quote character?",
@@ -26,6 +32,8 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
         })
 }
 
+/// Returns the name of the environment variable used for searching for
+/// dynamic libraries.
 pub fn dylib_path_envvar() -> &'static str {
     if cfg!(windows) {
         "PATH"
@@ -51,6 +59,10 @@ pub fn dylib_path_envvar() -> &'static str {
     }
 }
 
+/// Returns a list of directories that are searched for dynamic libraries.
+///
+/// Note that some operating systems will have defaults if this is empty that
+/// will need to be dealt with.
 pub fn dylib_path() -> Vec<PathBuf> {
     match env::var_os(dylib_path_envvar()) {
         Some(var) => env::split_paths(&var).collect(),
@@ -58,6 +70,14 @@ pub fn dylib_path() -> Vec<PathBuf> {
     }
 }
 
+/// Normalize a path, removing things like `.` and `..`.
+///
+/// CAUTION: This does not resolve symlinks (unlike
+/// [`std::fs::canonicalize`]). This may cause incorrect or surprising
+/// behavior at times. This should be used carefully. Unfortunately,
+/// [`std::fs::canonicalize`] can be hard to use correctly, since it can often
+/// fail, or on Windows returns annoying device paths. This is a problem Cargo
+/// needs to improve on.
 pub fn normalize_path(path: &Path) -> PathBuf {
     let mut components = path.components().peekable();
     let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek().cloned() {
@@ -85,7 +105,11 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     ret
 }
 
-pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
+/// Returns the absolute path of where the given executable is located based
+/// on searching the `PATH` environment variable.
+///
+/// Returns an error if it cannot be found.
+pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
     if exec.components().count() == 1 {
         let paths = env::var_os("PATH").ok_or_else(|| anyhow::format_err!("no PATH"))?;
         let candidates = env::split_paths(&paths).flat_map(|path| {
@@ -111,24 +135,36 @@ pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
     }
 }
 
-pub fn read(path: &Path) -> CargoResult<String> {
+/// Reads a file to a string.
+///
+/// Equivalent to [`std::fs::read_to_string`] with better error messages.
+pub fn read(path: &Path) -> Result<String> {
     match String::from_utf8(read_bytes(path)?) {
         Ok(s) => Ok(s),
         Err(_) => anyhow::bail!("path at `{}` was not valid utf-8", path.display()),
     }
 }
 
-pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
-    fs::read(path).chain_err(|| format!("failed to read `{}`", path.display()))
+/// Reads a file into a bytes vector.
+///
+/// Equivalent to [`std::fs::read`] with better error messages.
+pub fn read_bytes(path: &Path) -> Result<Vec<u8>> {
+    fs::read(path).with_context(|| format!("failed to read `{}`", path.display()))
 }
 
-pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> CargoResult<()> {
+/// Writes a file to disk.
+///
+/// Equivalent to [`std::fs::write`] with better error messages.
+pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     let path = path.as_ref();
-    fs::write(path, contents.as_ref()).chain_err(|| format!("failed to write `{}`", path.display()))
+    fs::write(path, contents.as_ref())
+        .with_context(|| format!("failed to write `{}`", path.display()))
 }
 
-pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> CargoResult<()> {
-    (|| -> CargoResult<()> {
+/// Equivalent to [`write`], but does not write anything if the file contents
+/// are identical to the given contents.
+pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
+    (|| -> Result<()> {
         let contents = contents.as_ref();
         let mut f = OpenOptions::new()
             .read(true)
@@ -144,12 +180,14 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
         }
         Ok(())
     })()
-    .chain_err(|| format!("failed to write `{}`", path.as_ref().display()))?;
+    .with_context(|| format!("failed to write `{}`", path.as_ref().display()))?;
     Ok(())
 }
 
-pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
-    (|| -> CargoResult<()> {
+/// Equivalent to [`write`], but appends to the end instead of replacing the
+/// contents.
+pub fn append(path: &Path, contents: &[u8]) -> Result<()> {
+    (|| -> Result<()> {
         let mut f = OpenOptions::new()
             .write(true)
             .append(true)
@@ -159,31 +197,34 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
         f.write_all(contents)?;
         Ok(())
     })()
-    .chain_err(|| format!("failed to write `{}`", path.display()))?;
+    .with_context(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 
 /// Creates a new file.
-pub fn create<P: AsRef<Path>>(path: P) -> CargoResult<File> {
+pub fn create<P: AsRef<Path>>(path: P) -> Result<File> {
     let path = path.as_ref();
-    File::create(path).chain_err(|| format!("failed to create file `{}`", path.display()))
+    File::create(path).with_context(|| format!("failed to create file `{}`", path.display()))
 }
 
 /// Opens an existing file.
-pub fn open<P: AsRef<Path>>(path: P) -> CargoResult<File> {
+pub fn open<P: AsRef<Path>>(path: P) -> Result<File> {
     let path = path.as_ref();
-    File::open(path).chain_err(|| format!("failed to open file `{}`", path.display()))
+    File::open(path).with_context(|| format!("failed to open file `{}`", path.display()))
 }
 
-pub fn mtime(path: &Path) -> CargoResult<FileTime> {
-    let meta = fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
+/// Returns the last modification time of a file.
+pub fn mtime(path: &Path) -> Result<FileTime> {
+    let meta =
+        fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))?;
     Ok(FileTime::from_last_modification_time(&meta))
 }
 
 /// Returns the maximum mtime of the given path, recursing into
 /// subdirectories, and following symlinks.
-pub fn mtime_recursive(path: &Path) -> CargoResult<FileTime> {
-    let meta = fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
+pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
+    let meta =
+        fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))?;
     if !meta.is_dir() {
         return Ok(FileTime::from_last_modification_time(&meta));
     }
@@ -263,7 +304,7 @@ pub fn mtime_recursive(path: &Path) -> CargoResult<FileTime> {
 
 /// Record the current time on the filesystem (using the filesystem's clock)
 /// using a file at the given directory. Returns the current time.
-pub fn set_invocation_time(path: &Path) -> CargoResult<FileTime> {
+pub fn set_invocation_time(path: &Path) -> Result<FileTime> {
     // note that if `FileTime::from_system_time(SystemTime::now());` is determined to be sufficient,
     // then this can be removed.
     let timestamp = path.join("invoked.timestamp");
@@ -276,36 +317,47 @@ pub fn set_invocation_time(path: &Path) -> CargoResult<FileTime> {
     Ok(ft)
 }
 
-#[cfg(unix)]
-pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
-    use std::os::unix::prelude::*;
-    Ok(path.as_os_str().as_bytes())
-}
-#[cfg(windows)]
-pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
-    match path.as_os_str().to_str() {
-        Some(s) => Ok(s.as_bytes()),
-        None => Err(anyhow::format_err!(
-            "invalid non-unicode path: {}",
-            path.display()
-        )),
+/// Converts a path to UTF-8 bytes.
+pub fn path2bytes(path: &Path) -> Result<&[u8]> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::prelude::*;
+        Ok(path.as_os_str().as_bytes())
+    }
+    #[cfg(windows)]
+    {
+        match path.as_os_str().to_str() {
+            Some(s) => Ok(s.as_bytes()),
+            None => Err(anyhow::format_err!(
+                "invalid non-unicode path: {}",
+                path.display()
+            )),
+        }
     }
 }
 
-#[cfg(unix)]
-pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
-    use std::os::unix::prelude::*;
-    Ok(PathBuf::from(OsStr::from_bytes(bytes)))
-}
-#[cfg(windows)]
-pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
-    use std::str;
-    match str::from_utf8(bytes) {
-        Ok(s) => Ok(PathBuf::from(s)),
-        Err(..) => Err(anyhow::format_err!("invalid non-unicode path")),
+/// Converts UTF-8 bytes to a path.
+pub fn bytes2path(bytes: &[u8]) -> Result<PathBuf> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::prelude::*;
+        Ok(PathBuf::from(OsStr::from_bytes(bytes)))
+    }
+    #[cfg(windows)]
+    {
+        use std::str;
+        match str::from_utf8(bytes) {
+            Ok(s) => Ok(PathBuf::from(s)),
+            Err(..) => Err(anyhow::format_err!("invalid non-unicode path")),
+        }
     }
 }
 
+/// Returns an iterator that walks up the directory hierarchy towards the root.
+///
+/// Each item is a [`Path`]. It will start with the given path, finishing at
+/// the root. If the `stop_root_at` parameter is given, it will stop at the
+/// given path (which will be the last item).
 pub fn ancestors<'a>(path: &'a Path, stop_root_at: Option<&Path>) -> PathAncestors<'a> {
     PathAncestors::new(path, stop_root_at)
 }
@@ -349,22 +401,27 @@ impl<'a> Iterator for PathAncestors<'a> {
     }
 }
 
-pub fn create_dir_all(p: impl AsRef<Path>) -> CargoResult<()> {
+/// Equivalent to [`std::fs::create_dir_all`] with better error messages.
+pub fn create_dir_all(p: impl AsRef<Path>) -> Result<()> {
     _create_dir_all(p.as_ref())
 }
 
-fn _create_dir_all(p: &Path) -> CargoResult<()> {
-    fs::create_dir_all(p).chain_err(|| format!("failed to create directory `{}`", p.display()))?;
+fn _create_dir_all(p: &Path) -> Result<()> {
+    fs::create_dir_all(p)
+        .with_context(|| format!("failed to create directory `{}`", p.display()))?;
     Ok(())
 }
 
-pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
+/// Recursively remove all files and directories at the given directory.
+///
+/// This does *not* follow symlinks.
+pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
     _remove_dir_all(p.as_ref())
 }
 
-fn _remove_dir_all(p: &Path) -> CargoResult<()> {
+fn _remove_dir_all(p: &Path) -> Result<()> {
     if p.symlink_metadata()
-        .chain_err(|| format!("could not get metadata for `{}` to remove", p.display()))?
+        .with_context(|| format!("could not get metadata for `{}` to remove", p.display()))?
         .file_type()
         .is_symlink()
     {
@@ -372,7 +429,7 @@ fn _remove_dir_all(p: &Path) -> CargoResult<()> {
     }
     let entries = p
         .read_dir()
-        .chain_err(|| format!("failed to read directory `{}`", p.display()))?;
+        .with_context(|| format!("failed to read directory `{}`", p.display()))?;
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
@@ -385,20 +442,25 @@ fn _remove_dir_all(p: &Path) -> CargoResult<()> {
     remove_dir(&p)
 }
 
-pub fn remove_dir<P: AsRef<Path>>(p: P) -> CargoResult<()> {
+/// Equivalent to [`std::fs::remove_dir`] with better error messages.
+pub fn remove_dir<P: AsRef<Path>>(p: P) -> Result<()> {
     _remove_dir(p.as_ref())
 }
 
-fn _remove_dir(p: &Path) -> CargoResult<()> {
-    fs::remove_dir(p).chain_err(|| format!("failed to remove directory `{}`", p.display()))?;
+fn _remove_dir(p: &Path) -> Result<()> {
+    fs::remove_dir(p).with_context(|| format!("failed to remove directory `{}`", p.display()))?;
     Ok(())
 }
 
-pub fn remove_file<P: AsRef<Path>>(p: P) -> CargoResult<()> {
+/// Equivalent to [`std::fs::remove_file`] with better error messages.
+///
+/// If the file is readonly, this will attempt to change the permissions to
+/// force the file to be deleted.
+pub fn remove_file<P: AsRef<Path>>(p: P) -> Result<()> {
     _remove_file(p.as_ref())
 }
 
-fn _remove_file(p: &Path) -> CargoResult<()> {
+fn _remove_file(p: &Path) -> Result<()> {
     let mut err = match fs::remove_file(p) {
         Ok(()) => return Ok(()),
         Err(e) => e,
@@ -411,7 +473,7 @@ fn _remove_file(p: &Path) -> CargoResult<()> {
         }
     }
 
-    Err(err).chain_err(|| format!("failed to remove file `{}`", p.display()))?;
+    Err(err).with_context(|| format!("failed to remove file `{}`", p.display()))?;
     Ok(())
 }
 
@@ -428,13 +490,13 @@ fn set_not_readonly(p: &Path) -> io::Result<bool> {
 /// Hardlink (file) or symlink (dir) src to dst if possible, otherwise copy it.
 ///
 /// If the destination already exists, it is removed before linking.
-pub fn link_or_copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> CargoResult<()> {
+pub fn link_or_copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> {
     let src = src.as_ref();
     let dst = dst.as_ref();
     _link_or_copy(src, dst)
 }
 
-fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
+fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
     log::debug!("linking {} to {}", src.display(), dst.display());
     if same_file::is_same_file(src, dst).unwrap_or(false) {
         return Ok(());
@@ -486,7 +548,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
             log::debug!("link failed {}. falling back to fs::copy", err);
             fs::copy(src, dst).map(|_| ())
         })
-        .chain_err(|| {
+        .with_context(|| {
             format!(
                 "failed to link or copy `{}` to `{}`",
                 src.display(),
@@ -497,11 +559,13 @@ fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
 }
 
 /// Copies a file from one location to another.
-pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> CargoResult<u64> {
+///
+/// Equivalent to [`std::fs::copy`] with better error messages.
+pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
     let from = from.as_ref();
     let to = to.as_ref();
     fs::copy(from, to)
-        .chain_err(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))
+        .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))
 }
 
 /// Changes the filesystem mtime (and atime if possible) for the given file.
@@ -551,7 +615,7 @@ pub fn strip_prefix_canonical<P: AsRef<Path>>(
 ///
 /// This function is idempotent and in addition to that it won't exclude ``p`` from cache if it
 /// already exists.
-pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> CargoResult<()> {
+pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Result<()> {
     let path = p.as_ref();
     if path.is_dir() {
         return Ok(());

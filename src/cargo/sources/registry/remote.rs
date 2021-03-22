@@ -7,8 +7,8 @@ use crate::sources::registry::{
 };
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
-use crate::util::paths;
-use crate::util::{Config, Filesystem, Sha256};
+use crate::util::{Config, Filesystem};
+use cargo_util::{paths, Sha256};
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};

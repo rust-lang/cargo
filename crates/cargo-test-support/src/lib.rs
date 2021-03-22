@@ -15,7 +15,7 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo_util::{is_ci, ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
 
@@ -701,7 +701,7 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> CargoResult<Output> {
+    pub fn exec_with_output(&mut self) -> anyhow::Result<Output> {
         self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
@@ -1548,33 +1548,52 @@ fn substitute_macros(input: &str) -> String {
 
 pub mod install;
 
-thread_local!(
-pub static RUSTC: Rustc = Rustc::new(
-    PathBuf::from("rustc"),
-    None,
-    None,
-    Path::new("should be path to rustup rustc, but we don't care in tests"),
-    None,
-).unwrap()
-);
+struct RustcInfo {
+    verbose_version: String,
+    host: String,
+}
+
+impl RustcInfo {
+    fn new() -> RustcInfo {
+        let output = ProcessBuilder::new("rustc")
+            .arg("-vV")
+            .exec_with_output()
+            .expect("rustc should exec");
+        let verbose_version = String::from_utf8(output.stdout).expect("utf8 output");
+        let host = verbose_version
+            .lines()
+            .filter_map(|line| line.strip_prefix("host: "))
+            .next()
+            .expect("verbose version has host: field")
+            .to_string();
+        RustcInfo {
+            verbose_version,
+            host,
+        }
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref RUSTC_INFO: RustcInfo = RustcInfo::new();
+}
 
 /// The rustc host such as `x86_64-unknown-linux-gnu`.
-pub fn rustc_host() -> String {
-    RUSTC.with(|r| r.host.to_string())
+pub fn rustc_host() -> &'static str {
+    &RUSTC_INFO.host
 }
 
 pub fn is_nightly() -> bool {
+    let vv = &RUSTC_INFO.verbose_version;
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
-        && RUSTC
-            .with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
+        && (vv.contains("-nightly") || vv.contains("-dev"))
 }
 
-pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
+pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
     _process(t.as_ref())
 }
 
-fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
-    let mut p = cargo::util::process(t);
+fn _process(t: &OsStr) -> ProcessBuilder {
+    let mut p = ProcessBuilder::new(t);
 
     // In general just clear out all cargo-specific configuration already in the
     // environment. Our tests all assume a "default configuration" unless
@@ -1643,7 +1662,7 @@ pub trait ChannelChanger: Sized {
     fn masquerade_as_nightly_cargo(&mut self) -> &mut Self;
 }
 
-impl ChannelChanger for cargo::util::ProcessBuilder {
+impl ChannelChanger for ProcessBuilder {
     fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }

@@ -1,7 +1,8 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{paths, restricted_names, Config};
+use crate::util::{restricted_names, Config};
+use cargo_util::paths;
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 use serde::de;

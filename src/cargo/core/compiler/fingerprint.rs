@@ -322,6 +322,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use anyhow::{bail, format_err};
+use cargo_util::{paths, ProcessBuilder};
 use filetime::FileTime;
 use log::{debug, info};
 use serde::de;
@@ -333,8 +334,7 @@ use crate::core::Package;
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
-use crate::util::paths;
-use crate::util::{internal, path_args, profile, ProcessBuilder};
+use crate::util::{internal, path_args, profile};
 
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};
@@ -1915,7 +1915,7 @@ impl EncodedDepInfo {
                 _ => return None,
             };
             let bytes = read_bytes(bytes)?;
-            files.push((ty, util::bytes2path(bytes).ok()?));
+            files.push((ty, paths::bytes2path(bytes).ok()?));
         }
 
         let nenv = read_usize(bytes)?;
@@ -1960,7 +1960,7 @@ impl EncodedDepInfo {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
                 DepInfoPathType::TargetRootRelative => dst.push(1),
             }
-            write_bytes(dst, util::path2bytes(file)?);
+            write_bytes(dst, paths::path2bytes(file)?);
         }
 
         write_usize(dst, self.env.len());

@@ -3,14 +3,14 @@
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 
+use cargo::core::shell::Shell;
+use cargo::util::CliError;
+use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
+use cargo_util::{ProcessBuilder, ProcessError};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-use cargo::core::shell::Shell;
-use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
-use cargo::util::{CliError, ProcessError};
 
 mod cli;
 mod commands;
@@ -159,7 +159,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     };
 
     let cargo_exe = config.cargo_exe()?;
-    let err = match util::process(&command)
+    let err = match ProcessBuilder::new(&command)
         .env(cargo::CARGO_ENV, cargo_exe)
         .args(args)
         .exec_replace()

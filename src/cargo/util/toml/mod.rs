@@ -7,6 +7,7 @@ use std::str;
 
 use anyhow::{anyhow, bail};
 use cargo_platform::Platform;
+use cargo_util::paths;
 use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de;
@@ -23,9 +24,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::{
-    self, config::ConfigRelativePath, paths, validate_package_name, Config, IntoUrl,
-};
+use crate::util::{self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl};
 
 mod targets;
 use self::targets::targets;
@@ -1774,7 +1773,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
                 // built from.
                 if cx.source_id.is_path() {
                     let path = cx.root.join(path);
-                    let path = util::normalize_path(&path);
+                    let path = paths::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
                     cx.source_id

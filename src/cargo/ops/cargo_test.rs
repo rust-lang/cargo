@@ -1,11 +1,11 @@
-use std::ffi::OsString;
-
 use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{add_path_args, CargoTestError, Config, ProcessError, Test};
+use crate::util::{add_path_args, CargoTestError, Config, Test};
+use cargo_util::ProcessError;
+use std::ffi::OsString;
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,

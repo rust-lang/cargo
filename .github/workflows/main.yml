@@ -66,6 +66,7 @@ jobs:
     - run: cargo test --features 'deny-warnings'
     - run: cargo test --features 'deny-warnings' -p cargo-test-support
     - run: cargo test -p cargo-platform
+    - run: cargo test -p cargo-util
     - run: cargo test --manifest-path crates/mdman/Cargo.toml
     - run: cargo build --manifest-path crates/credential/cargo-credential-1password/Cargo.toml
     - run: cargo build --manifest-path crates/credential/cargo-credential-gnome-secret/Cargo.toml

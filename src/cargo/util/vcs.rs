@@ -1,5 +1,6 @@
-use crate::util::paths;
-use crate::util::{process, CargoResult};
+use crate::util::CargoResult;
+use cargo_util::paths;
+use cargo_util::ProcessBuilder;
 use std::path::Path;
 
 // Check if we are in an existing repo. We define that to be true if either:
@@ -41,11 +42,15 @@ impl GitRepo {
 
 impl HgRepo {
     pub fn init(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
-        process("hg").cwd(cwd).arg("init").arg(path).exec()?;
+        ProcessBuilder::new("hg")
+            .cwd(cwd)
+            .arg("init")
+            .arg(path)
+            .exec()?;
         Ok(HgRepo)
     }
     pub fn discover(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
-        process("hg")
+        ProcessBuilder::new("hg")
             .cwd(cwd)
             .arg("--cwd")
             .arg(path)
@@ -57,7 +62,11 @@ impl HgRepo {
 
 impl PijulRepo {
     pub fn init(path: &Path, cwd: &Path) -> CargoResult<PijulRepo> {
-        process("pijul").cwd(cwd).arg("init").arg(path).exec()?;
+        ProcessBuilder::new("pijul")
+            .cwd(cwd)
+            .arg("init")
+            .arg(path)
+            .exec()?;
         Ok(PijulRepo)
     }
 }
@@ -73,28 +82,28 @@ impl FossilRepo {
         db_path.push(db_fname);
 
         // then create the fossil DB in that location
-        process("fossil")
+        ProcessBuilder::new("fossil")
             .cwd(cwd)
             .arg("init")
             .arg(&db_path)
             .exec()?;
 
         // open it in that new directory
-        process("fossil")
+        ProcessBuilder::new("fossil")
             .cwd(&path)
             .arg("open")
             .arg(db_fname)
             .exec()?;
 
         // set `target` as ignoreable and cleanable
-        process("fossil")
+        ProcessBuilder::new("fossil")
             .cwd(cwd)
             .arg("settings")
             .arg("ignore-glob")
             .arg("target")
             .exec()?;
 
-        process("fossil")
+        ProcessBuilder::new("fossil")
             .cwd(cwd)
             .arg("settings")
             .arg("clean-glob")

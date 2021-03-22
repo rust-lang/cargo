@@ -57,6 +57,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::format_err;
+use cargo_util::ProcessBuilder;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
@@ -78,7 +79,7 @@ use crate::drop_eprint;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
 use crate::util::{self, internal, profile};
-use crate::util::{CargoResult, CargoResultExt, ProcessBuilder};
+use crate::util::{CargoResult, CargoResultExt};
 use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the

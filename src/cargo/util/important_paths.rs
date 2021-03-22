@@ -1,5 +1,5 @@
 use crate::util::errors::CargoResult;
-use crate::util::paths;
+use cargo_util::paths;
 use std::path::{Path, PathBuf};
 
 /// Finds the root `Cargo.toml`.
