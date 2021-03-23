@@ -1174,6 +1174,7 @@ fn ignored_git_revision() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file("bar/empty", "")
         .build();
 
     foo.cargo("build -v")

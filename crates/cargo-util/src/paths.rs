@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result};
 use filetime::FileTime;
-use normpath::BasePath;
+use normpath::{BasePath, BasePathBuf, PathExt};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
@@ -79,7 +79,7 @@ pub fn dylib_path() -> Vec<PathBuf> {
 /// [`std::fs::canonicalize`] can be hard to use correctly, since it can often
 /// fail, or on Windows returns annoying device paths. This is a problem Cargo
 /// needs to improve on.
-pub fn normalize_path(path: &Path) -> PathBuf {
+pub fn normalize_path_legacy(path: &Path) -> PathBuf {
     let mut components = path.components().peekable();
     let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek().cloned() {
         components.next();
@@ -106,17 +106,30 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     ret
 }
 
+/// Normalizes a path using "normpath" to return a reliable result. This
+/// function should usually be used instead of `normalize_path_legacy`.
+///
+/// The returned path will be absolute.
+///
+/// Returns an error if normalization fails or the path doesn't exist.
+pub fn normalize_path(path: &Path) -> Result<PathBuf> {
+    return path
+        .normalize()
+        .with_context(|| format!("failed to normalize `{}`", path.display()))
+        .map(BasePathBuf::into_path_buf);
+}
+
 /// Returns the normalized result of joining two paths. This function should be
 /// used when `base` can be a verbatim path. libstd `Path` doesn't normalize
 /// verbatim paths when joining.
 ///
-/// The returned path might be absolute.
+/// The returned path will be absolute.
 ///
-/// Returns an error if reading the current directory fails when needed to
-/// normalize the path.
+/// Returns an error if normalization fails or reading the current directory
+/// fails when needed to normalize the path.
 pub fn normalize_joined(base: &Path, path: &Path) -> Result<PathBuf> {
     let base = BasePath::new(base).with_context(|| "failed to read the current directory")?;
-    Ok(normalize_path(base.join(path).as_path()))
+    normalize_path(base.join(path).as_path())
 }
 
 /// Returns the absolute path of where the given executable is located based

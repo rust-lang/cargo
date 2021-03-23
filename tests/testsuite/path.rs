@@ -1044,18 +1044,23 @@ fn deep_path_error() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `c` as a dependency of package `b v0.1.0 [..]`
-    ... which is depended on by `a v0.1.0 [..]`
+[ERROR] failed to get `b` as a dependency of package `a v0.1.0 [..]`
     ... which is depended on by `foo v0.1.0 [..]`
 
 Caused by:
-  failed to load source for dependency `c`
+  failed to load source for dependency `b`
 
 Caused by:
-  Unable to update [..]/foo/c
+  Unable to update [..]/foo/b
 
 Caused by:
-  failed to read `[..]/foo/c/Cargo.toml`
+  failed to parse manifest at `[..]/foo/b/Cargo.toml`
+
+Caused by:
+  dependency (c) path does not exist
+
+Caused by:
+  failed to normalize `[..]/foo/b/../c`
 
 Caused by:
   [..]

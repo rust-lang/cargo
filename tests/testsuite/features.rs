@@ -91,6 +91,7 @@ fn invalid3() {
             "#,
         )
         .file("src/main.rs", "")
+        .file("foo/empty", "")
         .build();
 
     p.cargo("build")
@@ -168,6 +169,7 @@ fn invalid5() {
             "#,
         )
         .file("src/main.rs", "")
+        .file("bar/empty", "")
         .build();
 
     p.cargo("build")

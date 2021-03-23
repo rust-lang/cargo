@@ -199,7 +199,7 @@ fn build_ar_list(
     }
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
-        let abs_license_path = paths::normalize_path(&pkg.root().join(license_path));
+        let abs_license_path = paths::normalize_path_legacy(&pkg.root().join(license_path));
         if abs_license_path.exists() {
             match abs_license_path.strip_prefix(&pkg.root()) {
                 Ok(rel_license_path) => {

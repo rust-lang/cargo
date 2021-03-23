@@ -551,7 +551,7 @@ impl<'cfg> Workspace<'cfg> {
                 .join(root_link)
                 .join("Cargo.toml");
             debug!("find_root - pointer {}", path.display());
-            paths::normalize_path(&path)
+            paths::normalize_path_legacy(&path)
         }
 
         {
@@ -650,7 +650,7 @@ impl<'cfg> Workspace<'cfg> {
 
         if let Some(default) = default_members_paths {
             for path in default {
-                let normalized_path = paths::normalize_path(&path);
+                let normalized_path = paths::normalize_path_legacy(&path);
                 let manifest_path = normalized_path.join("Cargo.toml");
                 if !self.members.contains(&manifest_path) {
                     // default-members are allowed to be excluded, but they
@@ -687,7 +687,7 @@ impl<'cfg> Workspace<'cfg> {
         root_manifest: &Path,
         is_path_dep: bool,
     ) -> CargoResult<()> {
-        let manifest_path = paths::normalize_path(manifest_path);
+        let manifest_path = paths::normalize_path_legacy(manifest_path);
         if self.members.contains(&manifest_path) {
             return Ok(());
         }

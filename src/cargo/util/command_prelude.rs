@@ -305,7 +305,7 @@ pub trait ArgMatchesExt {
         if let Some(path) = self.value_of_path("manifest-path", config) {
             // In general, we try to avoid normalizing paths in Cargo,
             // but in this particular case we need it to fix #3586.
-            let path = paths::normalize_path(&path);
+            let path = paths::normalize_path_legacy(&path);
             if !path.ends_with("Cargo.toml") {
                 anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
             }

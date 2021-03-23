@@ -192,7 +192,7 @@ fn read_nested_packages(
     // TODO: filesystem/symlink implications?
     if !source_id.is_registry() {
         for p in nested.iter() {
-            let path = paths::normalize_path(&path.join(p));
+            let path = paths::normalize_path_legacy(&path.join(p));
             let result =
                 read_nested_packages(&path, all_packages, source_id, config, visited, errors);
             // Ignore broken manifests found on git repositories.

@@ -2236,6 +2236,7 @@ fn ws_warn_unused() {
                 ),
             )
             .file("a/src/lib.rs", "")
+            .file("a/bar/empty", "")
             .build();
         p.cargo("check")
             .with_stderr_contains(&format!(
@@ -2300,16 +2301,13 @@ fn invalid_missing() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `x` as a dependency of package `foo v0.1.0 [..]`
+[ERROR] failed to parse manifest at `[..]Cargo.toml`
 
 Caused by:
-  failed to load source for dependency `x`
+  dependency (x) path does not exist
 
 Caused by:
-  Unable to update [..]/foo/x
-
-Caused by:
-  failed to read `[..]foo/x/Cargo.toml`
+  failed to normalize `[..]x`
 
 Caused by:
   [..]
