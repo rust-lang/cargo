@@ -158,6 +158,50 @@ fn cargo_compile_manifest_path() {
     assert!(p.bin("foo").is_file());
 }
 
+// https://github.com/rust-lang/cargo/issues/6198
+#[cargo_test]
+fn cargo_compile_verbatim_manifest_path() {
+    let p = project()
+        .no_manifest()
+        .file(
+            "main/Cargo.toml",
+            r#"
+                [package]
+                name = "main"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies.dep_a]
+                path = "../dep_a"
+                [dependencies.dep_b]
+                path = "../dep_b"
+            "#,
+        )
+        .file("main/src/lib.rs", "")
+        .file(
+            "dep_a/Cargo.toml",
+            r#"
+                [package]
+                name = "dep_a"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies.dep_b]
+                path = "../dep_b"
+            "#,
+        )
+        .file("dep_a/src/lib.rs", "")
+        .file("dep_b/Cargo.toml", &basic_manifest("dep_b", "0.0.1"))
+        .file("dep_b/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .arg("--manifest-path")
+        // On Windows, canonicalization returns a verbatim path.
+        .arg(p.root().join("main/Cargo.toml").canonicalize().unwrap())
+        .run();
+}
+
 #[cargo_test]
 fn cargo_compile_with_invalid_manifest() {
     let p = project().file("Cargo.toml", "").build();

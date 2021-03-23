@@ -1801,8 +1801,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
                 // always end up hashing to the same value no matter where it's
                 // built from.
                 if cx.source_id.is_path() {
-                    let path = cx.root.join(path);
-                    let path = paths::normalize_path(&path);
+                    let path = paths::normalize_joined(cx.root, &path)?;
                     SourceId::for_path(&path)?
                 } else {
                     cx.source_id

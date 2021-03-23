@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use filetime::FileTime;
+use normpath::BasePath;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
@@ -103,6 +104,19 @@ pub fn normalize_path(path: &Path) -> PathBuf {
         }
     }
     ret
+}
+
+/// Returns the normalized result of joining two paths. This function should be
+/// used when `base` can be a verbatim path. libstd `Path` doesn't normalize
+/// verbatim paths when joining.
+///
+/// The returned path might be absolute.
+///
+/// Returns an error if reading the current directory fails when needed to
+/// normalize the path.
+pub fn normalize_joined(base: &Path, path: &Path) -> Result<PathBuf> {
+    let base = BasePath::new(base).with_context(|| "failed to read the current directory")?;
+    Ok(normalize_path(base.join(path).as_path()))
 }
 
 /// Returns the absolute path of where the given executable is located based
