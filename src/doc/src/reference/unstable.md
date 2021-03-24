@@ -79,6 +79,11 @@ where `test-dummy-unstable` is unstable, that features would also be
 disallowed by `-Zallow-features=`, and allowed with
 `-Zallow-features=test-dummy-unstable`.
 
+The list of features passed to cargo's `-Zallow-features` is also passed
+to any Rust tools that cargo ends up calling (like `rustc` or
+`rustdoc`). Thus, if you run `cargo -Zallow-features=`, no unstable
+Cargo _or_ Rust features can be used.
+
 ### extra-link-arg
 * Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
 

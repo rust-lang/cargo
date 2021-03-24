@@ -338,6 +338,19 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
 
+        if is_rustc_tool {
+            if let Some(allow) = &self.config.cli_unstable().allow_features {
+                let mut arg = String::from("-Zallow-features=");
+                for (i, a) in allow.iter().enumerate() {
+                    arg.push_str(a);
+                    if i != allow.len() - 1 {
+                        arg.push(',');
+                    }
+                }
+                cmd.arg(&arg);
+            }
+        }
+
         if self.config.cli_unstable().configurable_env {
             // Apply any environment variables from the config
             for (key, value) in self.config.env_config()?.iter() {

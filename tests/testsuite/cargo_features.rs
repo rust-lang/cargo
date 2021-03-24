@@ -131,8 +131,11 @@ fn allow_features() {
         .file("src/lib.rs", "")
         .build();
 
+    // NOTE: We need to use RUSTC_BOOTSTRAP here since we also need nightly rustc
+
     p.cargo("-Zallow-features=test-dummy-unstable build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -143,12 +146,14 @@ fn allow_features() {
 
     p.cargo("-Zallow-features=test-dummy-unstable,print-im-a-teapot -Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_stdout("im-a-teapot = true")
         .with_stderr("[FINISHED] [..]")
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -159,6 +164,7 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: {
 
     p.cargo("-Zallow-features= build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -166,6 +172,57 @@ error: failed to parse manifest at `[..]`
 
 Caused by:
   the feature `test-dummy-unstable` is not in the list of allowed features: {}
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn allow_features_to_rustc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![feature(test_2018_feature)]
+            "#,
+        )
+        .build();
+
+    // NOTE: We need to use RUSTC_BOOTSTRAP here since we also need nightly rustc
+
+    p.cargo("-Zallow-features= build")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] a [..]
+error[E0725]: the feature `test_2018_feature` is not in the list of allowed features
+",
+        )
+        .with_stderr_contains(
+            "\
+error: could not compile `a`
+",
+        )
+        .run();
+
+    p.cargo("-Zallow-features=test_2018_feature build")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
+        .with_stderr(
+            "\
+[COMPILING] a [..]
+[FINISHED] [..]
 ",
         )
         .run();
@@ -196,8 +253,11 @@ fn allow_features_in_cfg() {
         .file("src/lib.rs", "")
         .build();
 
+    // NOTE: We need to use RUSTC_BOOTSTRAP here since we also need nightly rustc
+
     p.cargo("build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -208,12 +268,14 @@ fn allow_features_in_cfg() {
 
     p.cargo("-Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_stdout("im-a-teapot = true")
         .with_stderr("[FINISHED] [..]")
         .run();
 
     p.cargo("-Zunstable-options build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -225,6 +287,7 @@ error: the feature `unstable-options` is not in the list of allowed features: {[
     // -Zallow-features overrides .cargo/config
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -235,6 +298,7 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: {
 
     p.cargo("-Zallow-features= build")
         .masquerade_as_nightly_cargo()
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
