@@ -148,6 +148,11 @@ verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
 progress.when = 'auto' # whether cargo shows progress bar
 progress.width = 80    # width of progress bar
+
+[env]
+FOO = "…"                              # set FOO to value
+BAR = { value = "…", relative = true } # set FOO as relative path
+BAZ = { value = "…", force = true }    # overwrite FOO
 ```
 
 ### Environment variables
@@ -917,6 +922,30 @@ Controls whether or not progress bar is shown in the terminal. Possible values:
 * Environment: `CARGO_TERM_PROGRESS_WIDTH`
 
 Sets the width for progress bar.
+
+#### `[env]`
+
+The `[env]` section sets additional environment variables for program invocations done
+by `cargo`.
+
+##### `env.<name>`
+* Type: string or map
+* Default: none
+  
+Sets environment variable `<name>`. Variables have optional `force` and `relative` flags:
+
+* `force` (boolean): The variable can override an existing environment variable.
+* `relative` (boolean): The variable represents a path relative to the location of the
+  directory that contains the `.cargo/` directory that contains the `config.toml` file.
+  A relative variable will have an absolute path prepended to it before setting it in the
+  environment.
+
+```toml
+[env]
+FOO = "foo"
+PATH_TO_SOME_TOOL = { value = "bin/tool", relative = true }
+USERNAME = { value = "test_user", force = true }
+```
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
