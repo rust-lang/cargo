@@ -172,6 +172,82 @@ Caused by:
 }
 
 #[cargo_test]
+fn allow_features_in_cfg() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["test-dummy-unstable"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [unstable]
+                allow-features = ["test-dummy-unstable", "print-im-a-teapot"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] a [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("-Zprint-im-a-teapot build")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("im-a-teapot = true")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+
+    p.cargo("-Zunstable-options build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the feature `unstable-options` is not in the list of allowed features: {[..]}
+",
+        )
+        .run();
+
+    // -Zallow-features overrides .cargo/config
+    p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the feature `print-im-a-teapot` is not in the list of allowed features: {\"test-dummy-unstable\"}
+",
+        )
+        .run();
+
+    p.cargo("-Zallow-features= build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  the feature `test-dummy-unstable` is not in the list of allowed features: {}
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn nightly_feature_requires_nightly() {
     let p = project()
         .file(
