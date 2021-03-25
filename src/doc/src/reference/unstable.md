@@ -1091,38 +1091,6 @@ The 2021 edition will set the default [resolver version] to "2".
 [edition]: ../../edition-guide/index.html
 [resolver version]: resolver.md#resolver-versions
 
-<script>
-(function() {
-    var fragments = {
-        "#edition": "manifest.html#the-edition-field",
-        "#compile-progress": "config.html#termprogresswhen",
-        "#rename-dependency": "specifying-dependencies.html#renaming-dependencies-in-cargotoml",
-        "#alternate-registries": "registries.html",
-        "#offline-mode": "../commands/cargo.html",
-        "#publish-lockfile": "../commands/cargo-package.html",
-        "#default-run": "manifest.html#the-default-run-field",
-        "#cache-messages": "https://github.com/rust-lang/cargo/pull/7450",
-        "#install-upgrade": "../commands/cargo-install.html",
-        "#profile-overrides": "profiles.html#overrides",
-        "#config-profiles": "config.html#profile",
-        "#crate-versions": "https://github.com/rust-lang/cargo/pull/8509",
-        "#features": "features.html#feature-resolver-version-2",
-        "#package-features": "features.html#resolver-version-2-command-line-flags",
-        "#resolver": "resolver.html#resolver-versions",
-    };
-    var target = fragments[window.location.hash];
-    if (target) {
-        if (target.startsWith('https')) {
-          window.location.replace(target);
-        } else {
-          var url = window.location.toString();
-          var base = url.substring(0, url.lastIndexOf('/'));
-          window.location.replace(base + "/" + target);
-        }
-    }
-})();
-</script>
-
 ### future incompat report
 * RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
 * rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
@@ -1181,3 +1149,35 @@ lowest precedence.
 
 Relative `path` dependencies in such a `[patch]` section are resolved
 relative to the configuration file they appear in.
+
+<script>
+(function() {
+    var fragments = {
+        "#edition": "manifest.html#the-edition-field",
+        "#compile-progress": "config.html#termprogresswhen",
+        "#rename-dependency": "specifying-dependencies.html#renaming-dependencies-in-cargotoml",
+        "#alternate-registries": "registries.html",
+        "#offline-mode": "../commands/cargo.html",
+        "#publish-lockfile": "../commands/cargo-package.html",
+        "#default-run": "manifest.html#the-default-run-field",
+        "#cache-messages": "https://github.com/rust-lang/cargo/pull/7450",
+        "#install-upgrade": "../commands/cargo-install.html",
+        "#profile-overrides": "profiles.html#overrides",
+        "#config-profiles": "config.html#profile",
+        "#crate-versions": "https://github.com/rust-lang/cargo/pull/8509",
+        "#features": "features.html#feature-resolver-version-2",
+        "#package-features": "features.html#resolver-version-2-command-line-flags",
+        "#resolver": "resolver.html#resolver-versions",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        if (target.startsWith('https')) {
+          window.location.replace(target);
+        } else {
+          var url = window.location.toString();
+          var base = url.substring(0, url.lastIndexOf('/'));
+          window.location.replace(base + "/" + target);
+        }
+    }
+})();
+</script>
