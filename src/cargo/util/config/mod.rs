@@ -804,6 +804,15 @@ impl Config {
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
             self.merge_cli_args()?;
         }
+        if self.unstable_flags.config_include {
+            // If the config was already loaded (like when fetching the
+            // `[alias]` table), it was loaded with includes disabled because
+            // the `unstable_flags` hadn't been set up, yet. Any values
+            // fetched before this step will not process includes, but that
+            // should be fine (`[alias]` is one of the only things loaded
+            // before configure). This can be removed when stabilized.
+            self.reload_rooted_at(self.cwd.clone())?;
+        }
         let extra_verbose = verbose >= 2;
         let verbose = verbose != 0;
 
@@ -956,10 +965,10 @@ impl Config {
     /// `seen` is used to check for cyclic includes.
     fn load_includes(&self, mut value: CV, seen: &mut HashSet<PathBuf>) -> CargoResult<CV> {
         // Get the list of files to load.
-        let (includes, def) = match &mut value {
+        let includes = match &mut value {
             CV::Table(table, _def) => match table.remove("include") {
-                Some(CV::String(s, def)) => (vec![(s, def.clone())], def),
-                Some(CV::List(list, def)) => (list, def),
+                Some(CV::String(s, def)) => vec![(s, def.clone())],
+                Some(CV::List(list, _def)) => list,
                 Some(other) => bail!(
                     "`include` expected a string or list, but found {} in `{}`",
                     other.desc(),
@@ -973,8 +982,6 @@ impl Config {
         };
         // Check unstable.
         if !self.cli_unstable().config_include {
-            self.shell().warn(format!("config `include` in `{}` ignored, the -Zconfig-include command-line flag is required",
-                def))?;
             return Ok(value);
         }
         // Accumulate all values here.

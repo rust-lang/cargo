@@ -1,22 +1,23 @@
 //! Tests for `include` config field.
 
-use super::config::{
-    assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
-};
-use cargo_test_support::{no_such_file_err_msg, paths};
+use super::config::{assert_error, write_config, write_config_at, ConfigBuilder};
+use cargo_test_support::{no_such_file_err_msg, paths, project};
 use std::fs;
 
 #[cargo_test]
 fn gated() {
     // Requires -Z flag.
     write_config("include='other'");
+    write_config_at(
+        ".cargo/other",
+        "
+        othervalue = 1
+        ",
+    );
     let config = ConfigBuilder::new().build();
-    let output = read_output(config);
-    let expected = "\
-warning: config `include` in `[..]/.cargo/config` ignored, \
-the -Zconfig-include command-line flag is required
-";
-    assert_match(expected, &output);
+    assert_eq!(config.get::<Option<i32>>("othervalue").unwrap(), None);
+    let config = ConfigBuilder::new().unstable_flag("config-include").build();
+    assert_eq!(config.get::<i32>("othervalue").unwrap(), 1);
 }
 
 #[cargo_test]
@@ -41,6 +42,45 @@ fn simple() {
     assert_eq!(config.get::<i32>("key1").unwrap(), 1);
     assert_eq!(config.get::<i32>("key2").unwrap(), 2);
     assert_eq!(config.get::<i32>("key3").unwrap(), 4);
+}
+
+#[cargo_test]
+fn works_with_cli() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = 'other.toml'
+        [build]
+        rustflags = ['-W', 'unused']
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        [build]
+        rustflags = ['-W', 'unsafe-code']
+        ",
+    );
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 [..]
+[RUNNING] `rustc [..]-W unused`
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("build -v -Z config-include")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 [..]
+[RUNNING] `rustc [..]-W unsafe-code -W unused`
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -77,9 +117,11 @@ fn left_to_right() {
 fn missing_file() {
     // Error when there's a missing file.
     write_config("include='missing'");
-    let config = ConfigBuilder::new().unstable_flag("config-include").build();
+    let config = ConfigBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
     assert_error(
-        config.get::<i32>("whatever").unwrap_err(),
+        config.unwrap_err(),
         &format!(
             "\
 could not load Cargo configuration
@@ -103,9 +145,11 @@ fn cycle() {
     write_config_at(".cargo/config", "include='one'");
     write_config_at(".cargo/one", "include='two'");
     write_config_at(".cargo/two", "include='config'");
-    let config = ConfigBuilder::new().unstable_flag("config-include").build();
+    let config = ConfigBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
     assert_error(
-        config.get::<i32>("whatever").unwrap_err(),
+        config.unwrap_err(),
         "\
 could not load Cargo configuration
 
@@ -147,9 +191,11 @@ fn cli_include() {
 fn bad_format() {
     // Not a valid format.
     write_config("include = 1");
-    let config = ConfigBuilder::new().unstable_flag("config-include").build();
+    let config = ConfigBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
     assert_error(
-        config.get::<i32>("whatever").unwrap_err(),
+        config.unwrap_err(),
         "\
 could not load Cargo configuration
 
