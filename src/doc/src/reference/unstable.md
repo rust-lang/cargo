@@ -1150,6 +1150,23 @@ lowest precedence.
 Relative `path` dependencies in such a `[patch]` section are resolved
 relative to the configuration file they appear in.
 
+## `cargo config`
+
+* Original Issue: [#2362](https://github.com/rust-lang/cargo/issues/2362)
+* Tracking Issue: [#9301](https://github.com/rust-lang/cargo/issues/9301)
+
+The `cargo config` subcommand provides a way to display the configuration
+files that cargo loads. It currently includes the `get` subcommand which
+can take an optional config value to display.
+
+```console
+cargo +nightly -Zunstable-options config get build.rustflags
+```
+
+If no config value is included, it will display all config values. See the
+`--help` output for more options available.
+
+
 <script>
 (function() {
     var fragments = {

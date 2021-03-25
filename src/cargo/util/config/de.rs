@@ -40,62 +40,6 @@ macro_rules! deserialize_method {
     };
 }
 
-impl<'config> Deserializer<'config> {
-    /// This is a helper for getting a CV from a file or env var.
-    ///
-    /// If this returns CV::List, then don't look at the value. Handling lists
-    /// is deferred to ConfigSeqAccess.
-    fn get_cv_with_env(&self) -> Result<Option<CV>, ConfigError> {
-        // Determine if value comes from env, cli, or file, and merge env if
-        // possible.
-        let cv = self.config.get_cv(&self.key)?;
-        let env = self.config.env.get(self.key.as_env_key());
-        let env_def = Definition::Environment(self.key.as_env_key().to_string());
-        let use_env = match (&cv, env) {
-            (Some(cv), Some(_)) => env_def.is_higher_priority(cv.definition()),
-            (None, Some(_)) => true,
-            _ => false,
-        };
-
-        if !use_env {
-            return Ok(cv);
-        }
-
-        // Future note: If you ever need to deserialize a non-self describing
-        // map type, this should implement a starts_with check (similar to how
-        // ConfigMapAccess does).
-        let env = env.unwrap();
-        if env == "true" {
-            Ok(Some(CV::Boolean(true, env_def)))
-        } else if env == "false" {
-            Ok(Some(CV::Boolean(false, env_def)))
-        } else if let Ok(i) = env.parse::<i64>() {
-            Ok(Some(CV::Integer(i, env_def)))
-        } else if self.config.cli_unstable().advanced_env
-            && env.starts_with('[')
-            && env.ends_with(']')
-        {
-            // Parsing is deferred to ConfigSeqAccess.
-            Ok(Some(CV::List(Vec::new(), env_def)))
-        } else {
-            // Try to merge if possible.
-            match cv {
-                Some(CV::List(cv_list, _cv_def)) => {
-                    // Merging is deferred to ConfigSeqAccess.
-                    Ok(Some(CV::List(cv_list, env_def)))
-                }
-                _ => {
-                    // Note: CV::Table merging is not implemented, as env
-                    // vars do not support table values. In the future, we
-                    // could check for `{}`, and interpret it as TOML if
-                    // that seems useful.
-                    Ok(Some(CV::String(env.to_string(), env_def)))
-                }
-            }
-        }
-    }
-}
-
 impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     type Error = ConfigError;
 
@@ -103,7 +47,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        let cv = self.get_cv_with_env()?;
+        let cv = self.config.get_cv_with_env(&self.key)?;
         if let Some(cv) = cv {
             let res: (Result<V::Value, ConfigError>, Definition) = match cv {
                 CV::Integer(i, def) => (visitor.visit_i64(i), def),

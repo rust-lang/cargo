@@ -1391,16 +1391,16 @@ fn bad_target_cfg() {
         .with_stderr(
             "\
 [ERROR] error in [..]/foo/.cargo/config: \
-could not load config key `target.cfg(not(target_os = \"none\")).runner`
+could not load config key `target.\"cfg(not(target_os = /\"none/\"))\".runner`
 
 Caused by:
   error in [..]/foo/.cargo/config: \
-  could not load config key `target.cfg(not(target_os = \"none\")).runner`
+  could not load config key `target.\"cfg(not(target_os = /\"none/\"))\".runner`
 
 Caused by:
-  invalid configuration for key `target.cfg(not(target_os = \"none\")).runner`
+  invalid configuration for key `target.\"cfg(not(target_os = /\"none/\"))\".runner`
   expected a string or array of strings, but found a boolean for \
-  `target.cfg(not(target_os = \"none\")).runner` in [..]/foo/.cargo/config
+  `target.\"cfg(not(target_os = /\"none/\"))\".runner` in [..]/foo/.cargo/config
 ",
         )
         .run();
