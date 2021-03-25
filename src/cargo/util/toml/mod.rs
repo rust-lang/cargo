@@ -815,8 +815,11 @@ pub struct TomlProject {
     license: Option<String>,
     license_file: Option<String>,
     repository: Option<String>,
-    metadata: Option<toml::Value>,
     resolver: Option<String>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -825,8 +828,11 @@ pub struct TomlWorkspace {
     #[serde(rename = "default-members")]
     default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
-    metadata: Option<toml::Value>,
     resolver: Option<String>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
 }
 
 impl TomlProject {
