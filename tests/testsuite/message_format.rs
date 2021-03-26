@@ -1,6 +1,6 @@
 //! Tests for --message-format flag.
 
-use cargo_test_support::{basic_lib_manifest, basic_manifest, is_nightly, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
 
 #[cargo_test]
 fn cannot_specify_two() {
@@ -112,11 +112,6 @@ fn cargo_renders_ansi() {
 
 #[cargo_test]
 fn cargo_renders_doctests() {
-    if !is_nightly() {
-        // --error-format=short support added in 1.51
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
