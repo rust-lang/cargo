@@ -37,7 +37,7 @@ fn custom_build_script_failed() {
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
 
 Caused by:
-  process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
+  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
         )
         .run();
 }
