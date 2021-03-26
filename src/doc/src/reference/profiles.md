@@ -83,10 +83,12 @@ controls whether debug information, if generated, is either placed in the
 executable itself or adjacent to it.
 
 This option is a string and acceptable values are the same as those the
-[compiler accepts][`-C split-debuginfo` flag]. See that documentation for the
-default behavior, which is platform-specific. Some options are only available
-on the [nightly channel]. The default may change in the future once more
-testing has been performed, and support for DWARF is stabilized.
+[compiler accepts][`-C split-debuginfo` flag]. The default value for this option
+is `unpacked` on macOS for profiles that have debug information otherwise
+enabled. Otherwise the default for this option is [documented with rustc][`-C
+split-debuginfo` flag] and is platform-specific. Some options are only
+available on the [nightly channel]. The Cargo default may change in the future
+once more testing has been performed, and support for DWARF is stabilized.
 
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo

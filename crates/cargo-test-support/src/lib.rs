@@ -1614,14 +1614,6 @@ fn _process(t: &OsStr) -> ProcessBuilder {
         p.env("PATH", new_path);
     }
 
-    if cfg!(target_os = "macos") {
-        // This makes the test suite run substantially faster.
-        p.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "unpacked")
-            .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "unpacked")
-            .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "unpacked")
-            .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "unpacked");
-    }
-
     p.cwd(&paths::root())
         .env("HOME", paths::home())
         .env("CARGO_HOME", paths::home().join(".cargo"))
