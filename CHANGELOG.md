@@ -1,21 +1,117 @@
 # Changelog
 
-## Cargo 1.52 (2021-05-06)
-[34170fcd...HEAD](https://github.com/rust-lang/cargo/compare/34170fcd...HEAD)
+## Cargo 1.53 (2021-06-17)
+[90691f2b...HEAD](https://github.com/rust-lang/cargo/compare/90691f2b...HEAD)
 
 ### Added
+
+### Changed
+
+- 🔥 macOS targets now default to `unpacked` debuginfo.
+  [#9298](https://github.com/rust-lang/cargo/pull/9298)
+- ❗ The `authors` field is no longer included in `Cargo.toml` for new
+  projects.
+  [#9282](https://github.com/rust-lang/cargo/pull/9282)
+- `cargo update` may now work with the `--offline` flag.
+  [#9279](https://github.com/rust-lang/cargo/pull/9279)
+
+### Fixed
+
+### Nightly only
+- Fixed config includes not working.
+  [#9299](https://github.com/rust-lang/cargo/pull/9299)
+- Emit note when `--future-incompat-report` had nothing to report.
+  [#9263](https://github.com/rust-lang/cargo/pull/9263)
+- Error messages for nightly features flags (like `-Z` and `cargo-features`)
+  should now provide more information.
+  [#9290](https://github.com/rust-lang/cargo/pull/9290)
+
+## Cargo 1.52 (2021-05-06)
+[34170fcd...rust-1.52.0](https://github.com/rust-lang/cargo/compare/34170fcd...rust-1.52.0)
+
+### Added
+- Added the `"manifest_path"` field to JSON messages for a package.
+  [#9022](https://github.com/rust-lang/cargo/pull/9022)
+  [#9247](https://github.com/rust-lang/cargo/pull/9247)
 
 ### Changed
 - 🔥 Cargo now supports git repositories where the default `HEAD` branch is not
   "master". This also includes a switch to the version 3 `Cargo.lock` format
   which can handle default branches correctly.
   [#9133](https://github.com/rust-lang/cargo/pull/9133)
+- Build scripts are now forbidden from setting `RUSTC_BOOTSTRAP` on stable.
+  [#9181](https://github.com/rust-lang/cargo/pull/9181)
+- crates.io now supports SPDX 3.11 licenses.
+  [#9209](https://github.com/rust-lang/cargo/pull/9209)
+- An error is now reported if `CARGO_TARGET_DIR` is an empty string.
+  [#8939](https://github.com/rust-lang/cargo/pull/8939)
+- Doc tests now pass the `--message-format` flag into the test so that the
+  "short" format can now be used for doc tests.
+  [#9128](https://github.com/rust-lang/cargo/pull/9128)
+- `cargo test` now prints a clearer indicator of which target is currently running.
+  [#9195](https://github.com/rust-lang/cargo/pull/9195)
+- The `CARGO_TARGET_<TRIPLE>` environment variable will now issue a warning if
+  it is using lowercase letters.
+  [#9169](https://github.com/rust-lang/cargo/pull/9169)
+- `cargo doc` will now erase the `doc` directory when switching between
+  different toolchain versions. There are shared, unversioned files (such as
+  the search index) that can become broken when using different versions.
+  [#8640](https://github.com/rust-lang/cargo/pull/8640)
 
 ### Fixed
+- Fixed publication of packages with metadata and resolver fields in `Cargo.toml`.
+  [#9300](https://github.com/rust-lang/cargo/pull/9300)
+  [#9304](https://github.com/rust-lang/cargo/pull/9304)
+- Fixed logic for determining prefer-dynamic for a dylib which differed in a
+  workspace vs a single package.
+  [#9252](https://github.com/rust-lang/cargo/pull/9252)
+- Fixed an issue where exclusive target-specific dependencies that overlapped
+  across dependency kinds (like regular and build-dependencies) would
+  incorrectly include the dependencies in both.
+  [#9255](https://github.com/rust-lang/cargo/pull/9255)
+- Fixed panic with certain styles of Package IDs when passed to the `-p` flag.
+  [#9188](https://github.com/rust-lang/cargo/pull/9188)
+- When running cargo with output not going to a TTY, and with the progress bar
+  and color force-enabled, the output will now correctly clear the progress
+  line.
+  [#9231](https://github.com/rust-lang/cargo/pull/9231)
+- Error instead of panic when JSON may contain non-utf8 paths.
+  [#9226](https://github.com/rust-lang/cargo/pull/9226)
+- Fixed a hang that can happen on broken stderr.
+  [#9201](https://github.com/rust-lang/cargo/pull/9201)
+- Fixed thin-local LTO not being disabled correctly when `lto=off` is set.
+  [#9182](https://github.com/rust-lang/cargo/pull/9182)
 
 ### Nightly only
 - The `strip` profile option now supports `true` and `false` values.
   [#9153](https://github.com/rust-lang/cargo/pull/9153)
+- `cargo fix --edition` now displays a report when switching to 2021 if the
+  new resolver changes features.
+  [#9268](https://github.com/rust-lang/cargo/pull/9268)
+- Added `[patch]` table support in `.cargo/config` files.
+  [#9204](https://github.com/rust-lang/cargo/pull/9204)
+- Added `cargo describe-future-incompatibilities` for generating a report on
+  dependencies that contain future-incompatible warnings.
+  [#8825](https://github.com/rust-lang/cargo/pull/8825)
+- Added easier support for testing the 2021 edition.
+  [#9184](https://github.com/rust-lang/cargo/pull/9184)
+- Switch the default resolver to "2" in the 2021 edition.
+  [#9184](https://github.com/rust-lang/cargo/pull/9184)
+- `cargo fix --edition` now supports 2021.
+  [#9184](https://github.com/rust-lang/cargo/pull/9184)
+- Added `--print` flag to `cargo rustc` to pass along to `rustc` to display
+  information from rustc.
+  [#9002](https://github.com/rust-lang/cargo/pull/9002)
+- Added `-Zdoctest-in-workspace` for changing the directory where doctests are
+  *run* versus where they are *compiled*.
+  [#9105](https://github.com/rust-lang/cargo/pull/9105)
+- Added support for an `[env]` section in `.cargo/config.toml` to set
+  environment variables when running cargo.
+  [#9175](https://github.com/rust-lang/cargo/pull/9175)
+- Added a schema field and `features2` field to the index.
+  [#9161](https://github.com/rust-lang/cargo/pull/9161)
+- Changes to JSON spec targets will now trigger a rebuild.
+  [#9223](https://github.com/rust-lang/cargo/pull/9223)
 
 ## Cargo 1.51 (2021-03-25)
 [75d5d8cf...rust-1.51.0](https://github.com/rust-lang/cargo/compare/75d5d8cf...rust-1.51.0)
@@ -72,6 +168,19 @@
   [#9059](https://github.com/rust-lang/cargo/pull/9059)
 - Fixed to use `http.proxy` setting in `~/.gitconfig`.
   [#8986](https://github.com/rust-lang/cargo/pull/8986)
+- Fixed --feature pkg/feat for V1 resolver for non-member.
+  [#9275](https://github.com/rust-lang/cargo/pull/9275)
+  [#9277](https://github.com/rust-lang/cargo/pull/9277)
+- Fixed panic in `cargo doc` when there are colliding output filenames in a workspace.
+  [#9276](https://github.com/rust-lang/cargo/pull/9276)
+  [#9277](https://github.com/rust-lang/cargo/pull/9277)
+- Fixed `cargo install` from exiting with success if one of several packages
+  did not install successfully.
+  [#9185](https://github.com/rust-lang/cargo/pull/9185)
+  [#9196](https://github.com/rust-lang/cargo/pull/9196)
+- Fix panic with doc collision orphan.
+  [#9142](https://github.com/rust-lang/cargo/pull/9142)
+  [#9196](https://github.com/rust-lang/cargo/pull/9196)
 
 ### Nightly only
 - Removed the `publish-lockfile` unstable feature, it was stabilized without
@@ -85,6 +194,9 @@
   [#8922](https://github.com/rust-lang/cargo/pull/8922)
 - Added support for the `rust-version` field in project metadata.
   [#8037](https://github.com/rust-lang/cargo/pull/8037)
+- Added a schema field to the index.
+  [#9161](https://github.com/rust-lang/cargo/pull/9161)
+  [#9196](https://github.com/rust-lang/cargo/pull/9196)
 
 ## Cargo 1.50 (2021-02-11)
 [8662ab42...rust-1.50.0](https://github.com/rust-lang/cargo/compare/8662ab42...rust-1.50.0)
