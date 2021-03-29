@@ -200,7 +200,14 @@ fn get_json() {
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
         .with_json(all_json)
-        .with_stderr("")
+        .with_stderr(
+            "\
+note: The following environment variables may affect the loaded values.
+CARGO_ALIAS_BAR=[..]cat dog[..]
+CARGO_BUILD_JOBS=100
+CARGO_HOME=[ROOT]/home/.cargo
+",
+        )
         .run();
 
     // json-value is the same for the entire root table
@@ -208,7 +215,12 @@ fn get_json() {
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo()
         .with_json(all_json)
-        .with_stderr("")
+        .with_stderr(
+            "\
+note: The following environment variables may affect the loaded values.
+CARGO_HOME=[ROOT]/home/.cargo
+",
+        )
         .run();
 
     cargo_process("config get --format=json build.jobs -Zunstable-options")

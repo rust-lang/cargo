@@ -1,8 +1,8 @@
 //! Implementation of `cargo config` subcommand.
 
-use crate::drop_println;
 use crate::util::config::{Config, ConfigKey, ConfigValue as CV, Definition};
 use crate::util::errors::CargoResult;
+use crate::{drop_eprintln, drop_println};
 use anyhow::{bail, format_err, Error};
 use serde_json::json;
 use std::borrow::Cow;
@@ -68,14 +68,15 @@ pub fn get(config: &Config, opts: &GetOptions<'_>) -> CargoResult<()> {
             .get_cv_with_env(&key)?
             .ok_or_else(|| format_err!("config value `{}` is not set", key))?;
         match opts.format {
-            ConfigFormat::Toml => {
-                print_toml(config, opts, &key, &cv);
-                if let Some(env) = maybe_env(config, &key, &cv) {
-                    print_toml_env(config, &env);
-                }
-            }
+            ConfigFormat::Toml => print_toml(config, opts, &key, &cv),
             ConfigFormat::Json => print_json(config, &key, &cv, true),
             ConfigFormat::JsonValue => print_json(config, &key, &cv, false),
+        }
+        if let Some(env) = maybe_env(config, &key, &cv) {
+            match opts.format {
+                ConfigFormat::Toml => print_toml_env(config, &env),
+                ConfigFormat::Json | ConfigFormat::JsonValue => print_json_env(config, &env),
+            }
         }
     } else {
         match &opts.format {
@@ -165,6 +166,17 @@ fn print_toml_env(config: &Config, env: &[(&String, &String)]) {
     for (env_key, env_value) in env {
         let val = shell_escape::escape(Cow::Borrowed(env_value));
         drop_println!(config, "# {}={}", env_key, val);
+    }
+}
+
+fn print_json_env(config: &Config, env: &[(&String, &String)]) {
+    drop_eprintln!(
+        config,
+        "note: The following environment variables may affect the loaded values."
+    );
+    for (env_key, env_value) in env {
+        let val = shell_escape::escape(Cow::Borrowed(env_value));
+        drop_eprintln!(config, "{}={}", env_key, val);
     }
 }
 
