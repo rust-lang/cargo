@@ -170,22 +170,7 @@ fn print_toml_env(config: &Config, env: &[(&String, &String)]) {
 
 fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
     let json_value = if key.is_root() || !include_key {
-        match cv {
-            CV::Boolean(val, _def) => json!(val),
-            CV::Integer(val, _def) => json!(val),
-            CV::String(val, _def) => json!(val),
-            CV::List(vals, _def) => {
-                let jvals: Vec<_> = vals.into_iter().map(|(val, _def)| json!(val)).collect();
-                json!(jvals)
-            }
-            CV::Table(map, _def) => {
-                let mut root_table = json!({});
-                for (key, val) in map {
-                    json_add(&mut root_table, key, val);
-                }
-                root_table
-            }
-        }
+        cv_to_json(cv)
     } else {
         let mut parts: Vec<_> = key.parts().collect();
         let last_part = parts.pop().unwrap();
@@ -196,30 +181,27 @@ fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
             table[part] = json!({});
             table = table.get_mut(part).unwrap();
         }
-        json_add(table, last_part, cv);
+        table[last_part] = cv_to_json(cv);
         root_table
     };
     drop_println!(config, "{}", serde_json::to_string(&json_value).unwrap());
 
     // Helper for recursively converting a CV to JSON.
-    fn json_add(table: &mut serde_json::Value, key: &str, cv: &CV) {
+    fn cv_to_json(cv: &CV) -> serde_json::Value {
         match cv {
-            CV::Boolean(val, _def) => table[key] = json!(val),
-            CV::Integer(val, _def) => table[key] = json!(val),
-            CV::String(val, _def) => table[key] = json!(val),
+            CV::Boolean(val, _def) => json!(val),
+            CV::Integer(val, _def) => json!(val),
+            CV::String(val, _def) => json!(val),
             CV::List(vals, _def) => {
                 let jvals: Vec<_> = vals.into_iter().map(|(val, _def)| json!(val)).collect();
-                table[key] = json!(jvals);
+                json!(jvals)
             }
-            CV::Table(val, _def) => {
-                table
-                    .as_object_mut()
-                    .unwrap()
-                    .insert(key.to_string(), json!({}));
-                let inner_table = &mut table[&key];
-                for (t_key, t_cv) in val {
-                    json_add(inner_table, t_key, t_cv);
+            CV::Table(map, _def) => {
+                let mut table = json!({});
+                for (key, val) in map {
+                    table[key] = cv_to_json(val);
                 }
+                table
             }
         }
     }
