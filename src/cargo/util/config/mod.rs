@@ -88,7 +88,7 @@ mod value;
 pub use value::{Definition, OptValue, Value};
 
 mod key;
-use key::ConfigKey;
+pub use key::ConfigKey;
 
 mod path;
 pub use path::{ConfigRelativePath, PathAndArgs};
@@ -522,6 +522,14 @@ impl Config {
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
         log::trace!("get cv {:?}", key);
         let vals = self.values()?;
+        if key.is_root() {
+            // Returning the entire root table (for example `cargo config get`
+            // with no key). The definition here shouldn't matter.
+            return Ok(Some(CV::Table(
+                vals.clone(),
+                Definition::Path(PathBuf::new()),
+            )));
+        }
         let mut parts = key.parts().enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
             Some(val) => val,
@@ -539,12 +547,14 @@ impl Config {
                 | CV::String(_, def)
                 | CV::List(_, def)
                 | CV::Boolean(_, def) => {
-                    let key_so_far: Vec<&str> = key.parts().take(i).collect();
+                    let mut key_so_far = ConfigKey::new();
+                    for part in key.parts().take(i) {
+                        key_so_far.push(part);
+                    }
                     bail!(
                         "expected table for configuration key `{}`, \
                          but found {} in {}",
-                        // This join doesn't handle quoting properly.
-                        key_so_far.join("."),
+                        key_so_far,
                         val.desc(),
                         def
                     )
@@ -554,9 +564,92 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
+    /// This is a helper for getting a CV from a file or env var.
+    pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
+        // Determine if value comes from env, cli, or file, and merge env if
+        // possible.
+        let cv = self.get_cv(key)?;
+        if key.is_root() {
+            // Root table can't have env value.
+            return Ok(cv);
+        }
+        let env = self.env.get(key.as_env_key());
+        let env_def = Definition::Environment(key.as_env_key().to_string());
+        let use_env = match (&cv, env) {
+            // Lists are always merged.
+            (Some(CV::List(..)), Some(_)) => true,
+            (Some(cv), Some(_)) => env_def.is_higher_priority(cv.definition()),
+            (None, Some(_)) => true,
+            _ => false,
+        };
+
+        if !use_env {
+            return Ok(cv);
+        }
+
+        // Future note: If you ever need to deserialize a non-self describing
+        // map type, this should implement a starts_with check (similar to how
+        // ConfigMapAccess does).
+        let env = env.unwrap();
+        if env == "true" {
+            Ok(Some(CV::Boolean(true, env_def)))
+        } else if env == "false" {
+            Ok(Some(CV::Boolean(false, env_def)))
+        } else if let Ok(i) = env.parse::<i64>() {
+            Ok(Some(CV::Integer(i, env_def)))
+        } else if self.cli_unstable().advanced_env && env.starts_with('[') && env.ends_with(']') {
+            match cv {
+                Some(CV::List(mut cv_list, cv_def)) => {
+                    // Merge with config file.
+                    self.get_env_list(key, &mut cv_list)?;
+                    Ok(Some(CV::List(cv_list, cv_def)))
+                }
+                Some(cv) => {
+                    // This can't assume StringList or UnmergedStringList.
+                    // Return an error, which is the behavior of merging
+                    // multiple config.toml files with the same scenario.
+                    bail!(
+                        "unable to merge array env for config `{}`\n\
+                        file: {:?}\n\
+                        env: {}",
+                        key,
+                        cv,
+                        env
+                    );
+                }
+                None => {
+                    let mut cv_list = Vec::new();
+                    self.get_env_list(key, &mut cv_list)?;
+                    Ok(Some(CV::List(cv_list, env_def)))
+                }
+            }
+        } else {
+            // Try to merge if possible.
+            match cv {
+                Some(CV::List(mut cv_list, cv_def)) => {
+                    // Merge with config file.
+                    self.get_env_list(key, &mut cv_list)?;
+                    Ok(Some(CV::List(cv_list, cv_def)))
+                }
+                _ => {
+                    // Note: CV::Table merging is not implemented, as env
+                    // vars do not support table values. In the future, we
+                    // could check for `{}`, and interpret it as TOML if
+                    // that seems useful.
+                    Ok(Some(CV::String(env.to_string(), env_def)))
+                }
+            }
+        }
+    }
+
     /// Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env;
+    }
+
+    /// Returns all environment variables.
+    pub(crate) fn env(&self) -> &HashMap<String, String> {
+        &self.env
     }
 
     fn get_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
@@ -912,6 +1005,39 @@ impl Config {
         self.load_values_from(&self.cwd)
     }
 
+    pub(crate) fn load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
+        let mut result = Vec::new();
+        let mut seen = HashSet::new();
+        let home = self.home_path.clone().into_path_unlocked();
+        self.walk_tree(&self.cwd, &home, |path| {
+            let mut cv = self._load_file(path, &mut seen, false)?;
+            if self.cli_unstable().config_include {
+                self.load_unmerged_include(&mut cv, &mut seen, &mut result)?;
+            }
+            result.push(cv);
+            Ok(())
+        })
+        .chain_err(|| "could not load Cargo configuration")?;
+        Ok(result)
+    }
+
+    fn load_unmerged_include(
+        &self,
+        cv: &mut CV,
+        seen: &mut HashSet<PathBuf>,
+        output: &mut Vec<CV>,
+    ) -> CargoResult<()> {
+        let includes = self.include_paths(cv, false)?;
+        for (path, abs_path, def) in includes {
+            let mut cv = self
+                ._load_file(&abs_path, seen, false)
+                .chain_err(|| format!("failed to load config include `{}` from `{}`", path, def))?;
+            self.load_unmerged_include(&mut cv, seen, output)?;
+            output.push(cv);
+        }
+        Ok(())
+    }
+
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         // This definition path is ignored, this is just a temporary container
         // representing the entire file.
@@ -919,7 +1045,7 @@ impl Config {
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
-            let value = self.load_file(path)?;
+            let value = self.load_file(path, true)?;
             cfg.merge(value, false)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
@@ -932,12 +1058,17 @@ impl Config {
         }
     }
 
-    fn load_file(&self, path: &Path) -> CargoResult<ConfigValue> {
+    fn load_file(&self, path: &Path, includes: bool) -> CargoResult<ConfigValue> {
         let mut seen = HashSet::new();
-        self._load_file(path, &mut seen)
+        self._load_file(path, &mut seen, includes)
     }
 
-    fn _load_file(&self, path: &Path, seen: &mut HashSet<PathBuf>) -> CargoResult<ConfigValue> {
+    fn _load_file(
+        &self,
+        path: &Path,
+        seen: &mut HashSet<PathBuf>,
+        includes: bool,
+    ) -> CargoResult<ConfigValue> {
         if !seen.insert(path.to_path_buf()) {
             bail!(
                 "config `include` cycle detected with path `{}`",
@@ -954,8 +1085,11 @@ impl Config {
                 path.display()
             )
         })?;
-        let value = self.load_includes(value, seen)?;
-        Ok(value)
+        if includes {
+            self.load_includes(value, seen)
+        } else {
+            Ok(value)
+        }
     }
 
     /// Load any `include` files listed in the given `value`.
@@ -965,33 +1099,15 @@ impl Config {
     /// `seen` is used to check for cyclic includes.
     fn load_includes(&self, mut value: CV, seen: &mut HashSet<PathBuf>) -> CargoResult<CV> {
         // Get the list of files to load.
-        let includes = match &mut value {
-            CV::Table(table, _def) => match table.remove("include") {
-                Some(CV::String(s, def)) => vec![(s, def.clone())],
-                Some(CV::List(list, _def)) => list,
-                Some(other) => bail!(
-                    "`include` expected a string or list, but found {} in `{}`",
-                    other.desc(),
-                    other.definition()
-                ),
-                None => {
-                    return Ok(value);
-                }
-            },
-            _ => unreachable!(),
-        };
+        let includes = self.include_paths(&mut value, true)?;
         // Check unstable.
         if !self.cli_unstable().config_include {
             return Ok(value);
         }
         // Accumulate all values here.
         let mut root = CV::Table(HashMap::new(), value.definition().clone());
-        for (path, def) in includes {
-            let abs_path = match &def {
-                Definition::Path(p) => p.parent().unwrap().join(&path),
-                Definition::Environment(_) | Definition::Cli => self.cwd().join(&path),
-            };
-            self._load_file(&abs_path, seen)
+        for (path, abs_path, def) in includes {
+            self._load_file(&abs_path, seen, true)
                 .and_then(|include| root.merge(include, true))
                 .chain_err(|| format!("failed to load config include `{}` from `{}`", path, def))?;
         }
@@ -999,13 +1115,54 @@ impl Config {
         Ok(root)
     }
 
-    /// Add config arguments passed on the command line.
-    fn merge_cli_args(&mut self) -> CargoResult<()> {
+    /// Converts the `include` config value to a list of absolute paths.
+    fn include_paths(
+        &self,
+        cv: &mut CV,
+        remove: bool,
+    ) -> CargoResult<Vec<(String, PathBuf, Definition)>> {
+        let abs = |path: &String, def: &Definition| -> (String, PathBuf, Definition) {
+            let abs_path = match def {
+                Definition::Path(p) => p.parent().unwrap().join(&path),
+                Definition::Environment(_) | Definition::Cli => self.cwd().join(&path),
+            };
+            (path.to_string(), abs_path, def.clone())
+        };
+        let table = match cv {
+            CV::Table(table, _def) => table,
+            _ => unreachable!(),
+        };
+        let owned;
+        let include = if remove {
+            owned = table.remove("include");
+            owned.as_ref()
+        } else {
+            table.get("include")
+        };
+        let includes = match include {
+            Some(CV::String(s, def)) => {
+                vec![abs(s, def)]
+            }
+            Some(CV::List(list, _def)) => list.iter().map(|(s, def)| abs(s, def)).collect(),
+            Some(other) => bail!(
+                "`include` expected a string or list, but found {} in `{}`",
+                other.desc(),
+                other.definition()
+            ),
+            None => {
+                return Ok(Vec::new());
+            }
+        };
+        Ok(includes)
+    }
+
+    /// Parses the CLI config args and returns them as a table.
+    pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
+        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli);
         let cli_args = match &self.cli_config {
             Some(cli_args) => cli_args,
-            None => return Ok(()),
+            None => return Ok(loaded_args),
         };
-        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli);
         for arg in cli_args {
             let arg_as_path = self.cwd.join(arg);
             let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
@@ -1044,13 +1201,18 @@ impl Config {
                 .merge(tmp_table, true)
                 .chain_err(|| format!("failed to merge --config argument `{}`", arg))?;
         }
-        // Force values to be loaded.
-        let _ = self.values()?;
-        let values = self.values_mut()?;
-        let loaded_map = match loaded_args {
+        Ok(loaded_args)
+    }
+
+    /// Add config arguments passed on the command line.
+    fn merge_cli_args(&mut self) -> CargoResult<()> {
+        let loaded_map = match self.cli_args_as_table()? {
             CV::Table(table, _def) => table,
             _ => unreachable!(),
         };
+        // Force values to be loaded.
+        let _ = self.values()?;
+        let values = self.values_mut()?;
         for (key, value) in loaded_map.into_iter() {
             match values.entry(key) {
                 Vacant(entry) => {
@@ -1187,7 +1349,7 @@ impl Config {
             None => return Ok(()),
         };
 
-        let mut value = self.load_file(&credentials)?;
+        let mut value = self.load_file(&credentials, true)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let (value_map, def) = match value {

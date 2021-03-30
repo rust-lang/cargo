@@ -1144,8 +1144,6 @@ impl Execs {
     }
 
     fn match_json(&self, expected: &str, line: &str) -> MatchResult {
-        let expected = self.normalize_matcher(expected);
-        let line = self.normalize_matcher(line);
         let actual = match line.parse() {
             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
             Ok(actual) => actual,
@@ -1155,7 +1153,8 @@ impl Execs {
             Ok(expected) => expected,
         };
 
-        find_json_mismatch(&expected, &actual)
+        let cwd = self.process_builder.as_ref().and_then(|p| p.get_cwd());
+        find_json_mismatch(&expected, &actual, cwd)
     }
 
     fn diff_lines<'a>(
@@ -1333,8 +1332,12 @@ fn lines_match_works() {
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
 /// (e.g., rustc) rather than Cargo itself).
-pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
-    match find_json_mismatch_r(expected, actual) {
+pub fn find_json_mismatch(
+    expected: &Value,
+    actual: &Value,
+    cwd: Option<&Path>,
+) -> Result<(), String> {
+    match find_json_mismatch_r(expected, actual, cwd) {
         Some((expected_part, actual_part)) => Err(format!(
             "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
             serde_json::to_string_pretty(expected).unwrap(),
@@ -1349,12 +1352,21 @@ pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String
 fn find_json_mismatch_r<'a>(
     expected: &'a Value,
     actual: &'a Value,
+    cwd: Option<&Path>,
 ) -> Option<(&'a Value, &'a Value)> {
     use serde_json::Value::*;
     match (expected, actual) {
         (&Number(ref l), &Number(ref r)) if l == r => None,
         (&Bool(l), &Bool(r)) if l == r => None,
-        (&String(ref l), &String(ref r)) if lines_match(l, r) => None,
+        (&String(ref l), _) if l == "{...}" => None,
+        (&String(ref l), &String(ref r)) => {
+            let normalized = normalize_matcher(r, cwd);
+            if lines_match(l, &normalized) {
+                None
+            } else {
+                Some((expected, actual))
+            }
+        }
         (&Array(ref l), &Array(ref r)) => {
             if l.len() != r.len() {
                 return Some((expected, actual));
@@ -1362,7 +1374,7 @@ fn find_json_mismatch_r<'a>(
 
             l.iter()
                 .zip(r.iter())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
                 .next()
         }
         (&Object(ref l), &Object(ref r)) => {
@@ -1373,12 +1385,11 @@ fn find_json_mismatch_r<'a>(
 
             l.values()
                 .zip(r.values())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
                 .next()
         }
         (&Null, &Null) => None,
         // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.
-        (&String(ref l), _) if l == "{...}" => None,
         _ => Some((expected, actual)),
     }
 }

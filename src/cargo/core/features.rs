@@ -765,9 +765,8 @@ impl CliUnstable {
         Ok(())
     }
 
-    /// Generates an error if `-Z unstable-options` was not used.
-    /// Intended to be used when a user passes a command-line flag that
-    /// requires `-Z unstable-options`.
+    /// Generates an error if `-Z unstable-options` was not used for a new,
+    /// unstable command-line flag.
     pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
         if !self.unstable_options {
             let see = format!(
@@ -798,6 +797,43 @@ impl CliUnstable {
             }
         }
         Ok(())
+    }
+
+    /// Generates an error if `-Z unstable-options` was not used for a new,
+    /// unstable subcommand.
+    pub fn fail_if_stable_command(
+        &self,
+        config: &Config,
+        command: &str,
+        issue: u32,
+    ) -> CargoResult<()> {
+        if self.unstable_options {
+            return Ok(());
+        }
+        let see = format!(
+            "See https://github.com/rust-lang/cargo/issues/{} for more \
+            information about the `cargo {}` command.",
+            issue, command
+        );
+        if config.nightly_features_allowed {
+            bail!(
+                "the `cargo {}` command is unstable, pass `-Z unstable-options` to enable it\n\
+                 {}",
+                command,
+                see
+            );
+        } else {
+            bail!(
+                "the `cargo {}` command is unstable, and only available on the \
+                 nightly channel of Cargo, but this is the `{}` channel\n\
+                 {}\n\
+                 {}",
+                command,
+                channel(),
+                SEE_CHANNELS,
+                see
+            );
+        }
     }
 }
 
