@@ -148,7 +148,6 @@ fn allow_features() {
         .masquerade_as_nightly_cargo()
         .env("RUSTC_BOOTSTRAP", "1")
         .with_stdout("im-a-teapot = true")
-        .with_stderr("[FINISHED] [..]")
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
@@ -203,17 +202,7 @@ fn allow_features_to_rustc() {
         .masquerade_as_nightly_cargo()
         .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] a [..]
-error[E0725]: the feature `test_2018_feature` is not in the list of allowed features
-",
-        )
-        .with_stderr_contains(
-            "\
-error: could not compile `a`
-",
-        )
+        .with_stderr_contains("[..]E0725[..]")
         .run();
 
     p.cargo("-Zallow-features=test_2018_feature build")
