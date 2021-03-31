@@ -647,33 +647,15 @@ impl CliUnstable {
             );
         }
         let mut warnings = Vec::new();
+        // We read flags twice, first to get allowed-features (if specified),
+        // and then to read the remaining unstable flags.
         for flag in flags {
             if flag.starts_with("allow-features=") {
                 self.add(flag, &mut warnings)?;
             }
         }
-        if let Some(allowed) = self.allow_features.take() {
-            for flag in flags {
-                let k = flag
-                    .splitn(2, '=')
-                    .next()
-                    .expect("split always yields >=1 item");
-                if k == "allow-features" {
-                } else if allowed.contains(k) {
-                    self.add(flag, &mut warnings)?;
-                } else {
-                    bail!(
-                        "the feature `{}` is not in the list of allowed features: {:?}",
-                        k,
-                        allowed
-                    );
-                }
-            }
-            self.allow_features = Some(allowed);
-        } else {
-            for flag in flags {
-                self.add(flag, &mut warnings)?;
-            }
+        for flag in flags {
+            self.add(flag, &mut warnings)?;
         }
         Ok(warnings)
     }
@@ -743,6 +725,16 @@ impl CliUnstable {
                 indented_lines(message)
             ))
         };
+
+        if let Some(allowed) = &self.allow_features {
+            if k != "allow-features" && !allowed.contains(k) {
+                bail!(
+                    "the feature `{}` is not in the list of allowed features: {:?}",
+                    k,
+                    allowed
+                );
+            }
+        }
 
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
