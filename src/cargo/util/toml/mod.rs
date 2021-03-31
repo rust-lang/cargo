@@ -7,6 +7,7 @@ use std::str;
 
 use anyhow::{anyhow, bail};
 use cargo_platform::Platform;
+use cargo_util::paths;
 use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de;
@@ -23,9 +24,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::{
-    self, config::ConfigRelativePath, paths, validate_package_name, Config, IntoUrl,
-};
+use crate::util::{self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl};
 
 mod targets;
 use self::targets::targets;
@@ -419,51 +418,11 @@ impl ser::Serialize for TomlOptLevel {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
-#[serde(untagged)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(untagged, expecting = "expected a boolean or an integer")]
 pub enum U32OrBool {
     U32(u32),
     Bool(bool),
-}
-
-impl<'de> de::Deserialize<'de> for U32OrBool {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = U32OrBool;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a boolean or an integer")
-            }
-
-            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(U32OrBool::Bool(b))
-            }
-
-            fn visit_i64<E>(self, u: i64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(U32OrBool::U32(u as u32))
-            }
-
-            fn visit_u64<E>(self, u: u64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(U32OrBool::U32(u as u32))
-            }
-        }
-
-        deserializer.deserialize_any(Visitor)
-    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
@@ -770,44 +729,11 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
-#[serde(untagged)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(untagged, expecting = "expected a boolean or a string")]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
-}
-
-impl<'de> de::Deserialize<'de> for StringOrBool {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = StringOrBool;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a boolean or a string")
-            }
-
-            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(StringOrBool::Bool(b))
-            }
-
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(StringOrBool::String(s.to_string()))
-            }
-        }
-
-        deserializer.deserialize_any(Visitor)
-    }
 }
 
 #[derive(PartialEq, Clone, Debug, Serialize)]
@@ -889,8 +815,11 @@ pub struct TomlProject {
     license: Option<String>,
     license_file: Option<String>,
     repository: Option<String>,
-    metadata: Option<toml::Value>,
     resolver: Option<String>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -899,8 +828,11 @@ pub struct TomlWorkspace {
     #[serde(rename = "default-members")]
     default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
-    metadata: Option<toml::Value>,
     resolver: Option<String>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
 }
 
 impl TomlProject {
@@ -1773,6 +1705,35 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
             }
         }
 
+        // Early detection of potentially misused feature syntax
+        // instead of generating a "feature not found" error.
+        if let Some(features) = &self.features {
+            for feature in features {
+                if feature.contains('/') {
+                    bail!(
+                        "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
+                         If you want to enable features of a transitive dependency, \
+                         the direct dependency needs to re-export those features from \
+                         the `[features]` table.",
+                        feature,
+                        name_in_toml
+                    );
+                }
+                if feature.starts_with("dep:") {
+                    bail!(
+                        "feature `{}` in dependency `{}` is not allowed to use explicit \
+                        `dep:` syntax\n\
+                         If you want to enable an optional dependency, specify the name \
+                         of the optional dependency without the `dep:` prefix, or specify \
+                         a feature from the dependency's `[features]` table that enables \
+                         the optional dependency.",
+                        feature,
+                        name_in_toml
+                    );
+                }
+            }
+        }
+
         let new_source_id = match (
             self.git.as_ref(),
             self.path.as_ref(),
@@ -1847,7 +1808,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
                 // built from.
                 if cx.source_id.is_path() {
                     let path = cx.root.join(path);
-                    let path = util::normalize_path(&path);
+                    let path = paths::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
                     cx.source_id

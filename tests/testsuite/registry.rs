@@ -1,11 +1,12 @@
 //! Tests for normal registry dependencies.
 
-use cargo::{core::SourceId, util::paths::remove_dir_all};
+use cargo::core::SourceId;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{self, registry_path, Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{cargo_process, registry::registry_url};
 use cargo_test_support::{git, install::cargo_home, t};
+use cargo_util::paths::remove_dir_all;
 use std::fs::{self, File};
 use std::path::Path;
 

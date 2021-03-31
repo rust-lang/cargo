@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt;
 
 /// Key for a configuration variable.
@@ -84,16 +85,32 @@ impl ConfigKey {
     }
 
     /// Returns an iterator of the key parts as strings.
-    pub(super) fn parts(&self) -> impl Iterator<Item = &str> {
+    pub(crate) fn parts(&self) -> impl Iterator<Item = &str> {
         self.parts.iter().map(|p| p.0.as_ref())
+    }
+
+    /// Returns whether or not this is a key for the root table.
+    pub fn is_root(&self) -> bool {
+        self.parts.is_empty()
     }
 }
 
 impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Note: This is not a perfect TOML representation. This really should
-        // check if the parts should be quoted.
-        let parts: Vec<&str> = self.parts().collect();
+        let parts: Vec<_> = self.parts().map(|part| escape_key_part(part)).collect();
         parts.join(".").fmt(f)
+    }
+}
+
+fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
+    let ok = part.chars().all(|c| match c {
+        'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => true,
+        _ => false,
+    });
+    if ok {
+        Cow::Borrowed(part)
+    } else {
+        // This is a bit messy, but toml doesn't expose a function to do this.
+        Cow::Owned(toml::to_string(&toml::Value::String(part.to_string())).unwrap())
     }
 }

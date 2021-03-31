@@ -100,8 +100,8 @@
 
 use crate::core::compiler::CompileTarget;
 use crate::core::Workspace;
-use crate::util::paths;
 use crate::util::{CargoResult, FileLock};
+use cargo_util::paths;
 use std::path::{Path, PathBuf};
 
 /// Contains the paths of all target output locations.

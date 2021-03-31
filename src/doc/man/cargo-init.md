@@ -20,8 +20,6 @@ will be used. If not, then a sample `src/main.rs` file will be created, or
 If the directory is not already in a VCS repository, then a new repository
 is created (see `--vcs` below).
 
-{{> description-new-authors }}
-
 See {{man "cargo-new" 1}} for a similar command which will create a new package in
 a new directory.
 

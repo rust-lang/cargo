@@ -31,6 +31,7 @@ pub use self::vendor::{vendor, VendorOptions};
 
 mod cargo_clean;
 mod cargo_compile;
+pub mod cargo_config;
 mod cargo_doc;
 mod cargo_fetch;
 mod cargo_generate_lockfile;

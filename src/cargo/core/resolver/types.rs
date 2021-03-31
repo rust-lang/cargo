@@ -1,4 +1,4 @@
-use super::features::RequestedFeatures;
+use super::features::{CliFeatures, RequestedFeatures};
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -133,6 +133,7 @@ pub struct ResolveOpts {
     /// Whether or not dev-dependencies should be included.
     ///
     /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
+    /// It also gets set to `false` when activating dependencies in the resolver.
     pub dev_deps: bool,
     /// Set of features requested on the command-line.
     pub features: RequestedFeatures,
@@ -143,7 +144,7 @@ impl ResolveOpts {
     pub fn everything() -> ResolveOpts {
         ResolveOpts {
             dev_deps: true,
-            features: RequestedFeatures::new_all(true),
+            features: RequestedFeatures::CliFeatures(CliFeatures::new_all(true)),
         }
     }
 

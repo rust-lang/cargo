@@ -45,9 +45,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),
             registry,
-            features: args._values_of("features"),
-            all_features: args.is_present("all-features"),
-            no_default_features: args.is_present("no-default-features"),
+            cli_features: args.cli_features()?,
         },
     )?;
     Ok(())

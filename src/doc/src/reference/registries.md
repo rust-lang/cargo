@@ -385,7 +385,7 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
         "extras": ["rand/simd_support"]
     },
     // List of strings of the authors.
-    // May be empty. crates.io requires at least one entry.
+    // May be empty.
     "authors": ["Alice <a@example.com>"],
     // Description field from the manifest.
     // May be null. crates.io requires at least some content.

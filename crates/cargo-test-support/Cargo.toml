@@ -9,8 +9,9 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-cargo = { path = "../.." }
+anyhow = "1.0.34"
 cargo-test-macro = { path = "../cargo-test-macro" }
+cargo-util = { path = "../cargo-util" }
 filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
 git2 = "0.13.16"

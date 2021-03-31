@@ -1,17 +1,19 @@
 use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
+use crate::util::{toml::TomlProfile, validate_package_name};
 use crate::CargoResult;
 use anyhow::bail;
+use cargo_util::paths;
 use clap::{self, SubCommand};
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
@@ -495,9 +497,7 @@ pub trait ArgMatchesExt {
 
         let opts = CompileOptions {
             build_config,
-            features: self._values_of("features"),
-            all_features: self._is_present("all-features"),
-            no_default_features: self._is_present("no-default-features"),
+            cli_features: self.cli_features()?,
             spec,
             filter: CompileFilter::from_raw_arguments(
                 self._is_present("lib"),
@@ -537,6 +537,14 @@ pub trait ArgMatchesExt {
         }
 
         Ok(opts)
+    }
+
+    fn cli_features(&self) -> CargoResult<CliFeatures> {
+        CliFeatures::from_command_line(
+            &self._values_of("features"),
+            self._is_present("all-features"),
+            !self._is_present("no-default-features"),
+        )
     }
 
     fn compile_options_for_single_package(

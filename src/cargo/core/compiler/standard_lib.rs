@@ -3,8 +3,8 @@
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{FeaturesFor, RequestedFeatures, ResolvedFeatures};
-use crate::core::resolver::{HasDevUnits, ResolveOpts};
+use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
+use crate::core::resolver::HasDevUnits;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
@@ -107,18 +107,14 @@ pub fn resolve_std<'cfg>(
             "default".to_string(),
         ],
     };
-    // dev_deps setting shouldn't really matter here.
-    let opts = ResolveOpts::new(
-        /*dev_deps*/ false,
-        RequestedFeatures::from_command_line(
-            &features, /*all_features*/ false, /*uses_default_features*/ false,
-        ),
-    );
+    let cli_features = CliFeatures::from_command_line(
+        &features, /*all_features*/ false, /*uses_default_features*/ false,
+    )?;
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
         requested_targets,
-        &opts,
+        &cli_features,
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
@@ -162,17 +158,18 @@ pub fn generate_std_roots(
         // in time is minimal, and the difference in caching is
         // significant.
         let mode = CompileMode::Build;
-        let profile = profiles.get_profile(
-            pkg.package_id(),
-            /*is_member*/ false,
-            /*is_local*/ false,
-            unit_for,
-            mode,
-        );
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
 
         for kind in kinds {
             let list = ret.entry(*kind).or_insert_with(Vec::new);
+            let profile = profiles.get_profile(
+                pkg.package_id(),
+                /*is_member*/ false,
+                /*is_local*/ false,
+                unit_for,
+                mode,
+                *kind,
+            );
             list.push(interner.intern(
                 pkg,
                 lib,

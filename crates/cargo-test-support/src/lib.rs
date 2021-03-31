@@ -15,7 +15,7 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo_util::{is_ci, ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
 
@@ -701,7 +701,7 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> CargoResult<Output> {
+    pub fn exec_with_output(&mut self) -> anyhow::Result<Output> {
         self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
@@ -1144,8 +1144,6 @@ impl Execs {
     }
 
     fn match_json(&self, expected: &str, line: &str) -> MatchResult {
-        let expected = self.normalize_matcher(expected);
-        let line = self.normalize_matcher(line);
         let actual = match line.parse() {
             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
             Ok(actual) => actual,
@@ -1155,7 +1153,8 @@ impl Execs {
             Ok(expected) => expected,
         };
 
-        find_json_mismatch(&expected, &actual)
+        let cwd = self.process_builder.as_ref().and_then(|p| p.get_cwd());
+        find_json_mismatch(&expected, &actual, cwd)
     }
 
     fn diff_lines<'a>(
@@ -1333,8 +1332,12 @@ fn lines_match_works() {
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
 /// (e.g., rustc) rather than Cargo itself).
-pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
-    match find_json_mismatch_r(expected, actual) {
+pub fn find_json_mismatch(
+    expected: &Value,
+    actual: &Value,
+    cwd: Option<&Path>,
+) -> Result<(), String> {
+    match find_json_mismatch_r(expected, actual, cwd) {
         Some((expected_part, actual_part)) => Err(format!(
             "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
             serde_json::to_string_pretty(expected).unwrap(),
@@ -1349,12 +1352,21 @@ pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String
 fn find_json_mismatch_r<'a>(
     expected: &'a Value,
     actual: &'a Value,
+    cwd: Option<&Path>,
 ) -> Option<(&'a Value, &'a Value)> {
     use serde_json::Value::*;
     match (expected, actual) {
         (&Number(ref l), &Number(ref r)) if l == r => None,
         (&Bool(l), &Bool(r)) if l == r => None,
-        (&String(ref l), &String(ref r)) if lines_match(l, r) => None,
+        (&String(ref l), _) if l == "{...}" => None,
+        (&String(ref l), &String(ref r)) => {
+            let normalized = normalize_matcher(r, cwd);
+            if lines_match(l, &normalized) {
+                None
+            } else {
+                Some((expected, actual))
+            }
+        }
         (&Array(ref l), &Array(ref r)) => {
             if l.len() != r.len() {
                 return Some((expected, actual));
@@ -1362,7 +1374,7 @@ fn find_json_mismatch_r<'a>(
 
             l.iter()
                 .zip(r.iter())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
                 .next()
         }
         (&Object(ref l), &Object(ref r)) => {
@@ -1373,12 +1385,11 @@ fn find_json_mismatch_r<'a>(
 
             l.values()
                 .zip(r.values())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
                 .next()
         }
         (&Null, &Null) => None,
         // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.
-        (&String(ref l), _) if l == "{...}" => None,
         _ => Some((expected, actual)),
     }
 }
@@ -1548,33 +1559,52 @@ fn substitute_macros(input: &str) -> String {
 
 pub mod install;
 
-thread_local!(
-pub static RUSTC: Rustc = Rustc::new(
-    PathBuf::from("rustc"),
-    None,
-    None,
-    Path::new("should be path to rustup rustc, but we don't care in tests"),
-    None,
-).unwrap()
-);
+struct RustcInfo {
+    verbose_version: String,
+    host: String,
+}
+
+impl RustcInfo {
+    fn new() -> RustcInfo {
+        let output = ProcessBuilder::new("rustc")
+            .arg("-vV")
+            .exec_with_output()
+            .expect("rustc should exec");
+        let verbose_version = String::from_utf8(output.stdout).expect("utf8 output");
+        let host = verbose_version
+            .lines()
+            .filter_map(|line| line.strip_prefix("host: "))
+            .next()
+            .expect("verbose version has host: field")
+            .to_string();
+        RustcInfo {
+            verbose_version,
+            host,
+        }
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref RUSTC_INFO: RustcInfo = RustcInfo::new();
+}
 
 /// The rustc host such as `x86_64-unknown-linux-gnu`.
-pub fn rustc_host() -> String {
-    RUSTC.with(|r| r.host.to_string())
+pub fn rustc_host() -> &'static str {
+    &RUSTC_INFO.host
 }
 
 pub fn is_nightly() -> bool {
+    let vv = &RUSTC_INFO.verbose_version;
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
-        && RUSTC
-            .with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
+        && (vv.contains("-nightly") || vv.contains("-dev"))
 }
 
-pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
+pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
     _process(t.as_ref())
 }
 
-fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
-    let mut p = cargo::util::process(t);
+fn _process(t: &OsStr) -> ProcessBuilder {
+    let mut p = ProcessBuilder::new(t);
 
     // In general just clear out all cargo-specific configuration already in the
     // environment. Our tests all assume a "default configuration" unless
@@ -1593,14 +1623,6 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
         outer_cargo.pop();
         let new_path = env::join_paths(std::iter::once(outer_cargo).chain(paths)).unwrap();
         p.env("PATH", new_path);
-    }
-
-    if cfg!(target_os = "macos") {
-        // This makes the test suite run substantially faster.
-        p.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "unpacked")
-            .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "unpacked")
-            .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "unpacked")
-            .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "unpacked");
     }
 
     p.cwd(&paths::root())
@@ -1643,7 +1665,7 @@ pub trait ChannelChanger: Sized {
     fn masquerade_as_nightly_cargo(&mut self) -> &mut Self;
 }
 
-impl ChannelChanger for cargo::util::ProcessBuilder {
+impl ChannelChanger for ProcessBuilder {
     fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }

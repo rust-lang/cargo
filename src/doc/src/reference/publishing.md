@@ -34,7 +34,6 @@ Check out the [metadata you can specify](manifest.md) in `Cargo.toml` to
 ensure your crate can be discovered more easily! Before publishing, make sure
 you have filled out the following fields:
 
-- [`authors`]
 - [`license` or `license-file`]
 - [`description`]
 - [`homepage`]
@@ -258,7 +257,6 @@ request the org owner to do so.
 
 [RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
 [Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
-[`authors`]: manifest.md#the-authors-field
 [`cargo login`]: ../commands/cargo-login.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md

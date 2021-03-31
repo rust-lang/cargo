@@ -69,7 +69,7 @@ fn std_docs() {
     // For local developers, skip this test if docs aren't installed.
     let docs = std::path::Path::new(&paths::sysroot()).join("share/doc/rust/html");
     if !docs.exists() {
-        if cargo::util::is_ci() {
+        if cargo_util::is_ci() {
             panic!("std docs are not installed, check that the rust-docs component is installed");
         } else {
             eprintln!(

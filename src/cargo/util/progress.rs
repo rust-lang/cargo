@@ -4,8 +4,8 @@ use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
 use crate::util::config::ProgressWhen;
-use crate::util::{is_ci, CargoResult, Config};
-
+use crate::util::{CargoResult, Config};
+use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;
 
 pub struct Progress<'cfg> {

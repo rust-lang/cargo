@@ -12,7 +12,9 @@
 use crate::core::resolver::context::Context;
 use crate::core::resolver::errors::describe_path;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
-use crate::core::resolver::{ActivateError, ActivateResult, ResolveOpts};
+use crate::core::resolver::{
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts,
+};
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
@@ -281,15 +283,6 @@ pub fn resolve_features<'b>(
             .unwrap_or(&default_dep)
             .clone();
         base.extend(dep.features().iter());
-        for feature in base.iter() {
-            if feature.contains('/') {
-                return Err(anyhow::format_err!(
-                    "feature names may not contain slashes: `{}`",
-                    feature
-                )
-                .into());
-            }
-        }
         ret.push((dep.clone(), Rc::new(base)));
     }
 
@@ -317,30 +310,46 @@ fn build_requirements<'a, 'b: 'a>(
 ) -> ActivateResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
-    if opts.features.all_features {
-        for key in s.features().keys() {
-            if let Err(e) = reqs.require_feature(*key) {
+    let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
+        if uses_default_features && s.features().contains_key("default") {
+            if let Err(e) = reqs.require_feature(InternedString::new("default")) {
                 return Err(e.into_activate_error(parent, s));
             }
         }
-    } else {
-        for &f in opts.features.features.iter() {
-            let fv = FeatureValue::new(f);
-            if fv.has_dep_prefix() {
-                return Err(ActivateError::Fatal(anyhow::format_err!(
-                    "feature value `{}` is not allowed to use explicit `dep:` syntax",
-                    fv
-                )));
-            }
-            if let Err(e) = reqs.require_value(&fv) {
-                return Err(e.into_activate_error(parent, s));
-            }
-        }
-    }
+        Ok(())
+    };
 
-    if opts.features.uses_default_features && s.features().contains_key("default") {
-        if let Err(e) = reqs.require_feature(InternedString::new("default")) {
-            return Err(e.into_activate_error(parent, s));
+    match &opts.features {
+        RequestedFeatures::CliFeatures(CliFeatures {
+            features,
+            all_features,
+            uses_default_features,
+        }) => {
+            if *all_features {
+                for key in s.features().keys() {
+                    if let Err(e) = reqs.require_feature(*key) {
+                        return Err(e.into_activate_error(parent, s));
+                    }
+                }
+            } else {
+                for fv in features.iter() {
+                    if let Err(e) = reqs.require_value(&fv) {
+                        return Err(e.into_activate_error(parent, s));
+                    }
+                }
+                handle_default(*uses_default_features, &mut reqs)?;
+            }
+        }
+        RequestedFeatures::DepFeatures {
+            features,
+            uses_default_features,
+        } => {
+            for feature in features.iter() {
+                if let Err(e) = reqs.require_feature(*feature) {
+                    return Err(e.into_activate_error(parent, s));
+                }
+            }
+            handle_default(*uses_default_features, &mut reqs)?;
         }
     }
 

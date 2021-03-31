@@ -1,6 +1,7 @@
 use cargo::core::dependency::DepKind;
 use cargo::core::Dependency;
-use cargo::util::{is_ci, Config};
+use cargo::util::Config;
+use cargo_util::is_ci;
 
 use resolver_tests::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,

@@ -10,12 +10,13 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Context, Error};
+use cargo_util::ProcessBuilder;
 use log::warn;
 use serde::{Deserialize, Serialize};
 
 use crate::core::Edition;
 use crate::util::errors::CargoResult;
-use crate::util::{Config, ProcessBuilder};
+use crate::util::Config;
 
 const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 const PLEASE_REPORT_THIS_BUG: &str =

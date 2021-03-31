@@ -1,8 +1,8 @@
 use crate::core::compiler::CompileKind;
 use crate::util::interning::InternedString;
-use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 use anyhow::bail;
+use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;

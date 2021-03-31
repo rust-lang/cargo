@@ -3,12 +3,11 @@ use std::io;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
 
-use termcolor::Color::Cyan;
-
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
 use crate::util::Config;
+use cargo_util::paths;
 use sys::*;
+use termcolor::Color::Cyan;
 
 #[derive(Debug)]
 pub struct FileLock {

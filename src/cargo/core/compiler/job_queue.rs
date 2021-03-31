@@ -57,6 +57,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::format_err;
+use cargo_util::ProcessBuilder;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
@@ -78,7 +79,7 @@ use crate::drop_eprint;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
 use crate::util::{self, internal, profile};
-use crate::util::{CargoResult, CargoResultExt, ProcessBuilder};
+use crate::util::{CargoResult, CargoResultExt};
 use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -807,9 +808,16 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     fn emit_future_incompat(&mut self, cx: &mut Context<'_, '_>) {
-        if cx.bcx.config.cli_unstable().enable_future_incompat_feature
-            && !self.per_crate_future_incompat_reports.is_empty()
-        {
+        if cx.bcx.config.cli_unstable().enable_future_incompat_feature {
+            if self.per_crate_future_incompat_reports.is_empty() {
+                drop(
+                    cx.bcx
+                        .config
+                        .shell()
+                        .note("0 dependencies had future-incompat warnings"),
+                );
+                return;
+            }
             self.per_crate_future_incompat_reports
                 .sort_by_key(|r| r.package_id);
 

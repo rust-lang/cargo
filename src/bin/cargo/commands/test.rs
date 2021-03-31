@@ -1,7 +1,6 @@
 use crate::command_prelude::*;
 use anyhow::Error;
 use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
-use cargo::util::errors;
 
 pub fn cli() -> App {
     subcommand("test")
@@ -128,7 +127,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             let context = anyhow::format_err!("{}", err.hint(&ws, &ops.compile_opts));
             let e = match err.code {
                 // Don't show "process didn't exit successfully" for simple errors.
-                Some(i) if errors::is_simple_exit_code(i) => CliError::new(context, i),
+                Some(i) if cargo_util::is_simple_exit_code(i) => CliError::new(context, i),
                 Some(i) => CliError::new(Error::from(err).context(context), i),
                 None => CliError::new(Error::from(err).context(context), 101),
             };

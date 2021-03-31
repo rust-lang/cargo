@@ -369,6 +369,9 @@ For example:
 # This command is allowed with resolver = "2", regardless of which directory
 # you are in.
 cargo build -p foo -p bar --features foo-feat,bar-feat
+
+# This explicit equivalent works with any resolver version:
+cargo build -p foo -p bar --features foo/foo-feat,bar/bar-feat
 ```
 
 Additionally, with `resolver = "1"`, the `--no-default-features` flag only

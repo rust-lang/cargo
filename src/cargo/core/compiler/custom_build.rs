@@ -6,8 +6,9 @@ use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
-use crate::util::{self, internal, paths, profile};
+use crate::util::{internal, profile};
 use cargo_platform::Cfg;
+use cargo_util::paths;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -395,7 +396,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         // modified in the middle of the build.
         paths::set_file_time_no_err(output_file, timestamp);
         paths::write(&err_file, &output.stderr)?;
-        paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
+        paths::write(&root_output_file, paths::path2bytes(&script_out_dir)?)?;
         let parsed_output = BuildOutput::parse(
             &output.stdout,
             pkg_name,
@@ -849,7 +850,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
     let output_file = script_run_dir.join("output");
 
     let prev_script_out_dir = paths::read_bytes(&root_output_file)
-        .and_then(|bytes| util::bytes2path(&bytes))
+        .and_then(|bytes| paths::bytes2path(&bytes))
         .unwrap_or_else(|_| script_out_dir.clone());
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;

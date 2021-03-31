@@ -209,7 +209,7 @@ fn publish() {
 fn basic_unsupported() {
     // Non-action commands don't support login/logout.
     registry::RegistryBuilder::new().add_tokens(false).build();
-    cargo::util::paths::append(
+    cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         br#"
             [registry]
@@ -271,7 +271,7 @@ fn login() {
         .build();
     cred_proj.cargo("build").run();
 
-    cargo::util::paths::append(
+    cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         format!(
             r#"
@@ -323,7 +323,7 @@ fn logout() {
         .build();
     cred_proj.cargo("build").run();
 
-    cargo::util::paths::append(
+    cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         format!(
             r#"
@@ -390,7 +390,7 @@ fn owner() {
 fn libexec_path() {
     // cargo: prefixed names use the sysroot
     registry::RegistryBuilder::new().add_tokens(false).build();
-    cargo::util::paths::append(
+    cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         br#"
             [registry]
@@ -428,7 +428,7 @@ fn invalid_token_output() {
         .build();
     cred_proj.cargo("build").run();
 
-    cargo::util::paths::append(
+    cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         format!(
             r#"

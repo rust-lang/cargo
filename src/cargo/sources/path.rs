@@ -2,15 +2,15 @@ use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::core::source::MaybePackage;
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::ops;
+use crate::util::{internal, CargoResult, CargoResultExt, Config};
+use cargo_util::paths;
 use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use log::{trace, warn};
-
-use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use crate::ops;
-use crate::util::{internal, paths, CargoResult, CargoResultExt, Config};
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,

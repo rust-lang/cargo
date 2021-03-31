@@ -4,12 +4,12 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use cargo_util::{paths, ProcessBuilder, ProcessError};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::util::interning::InternedString;
-use crate::util::paths;
-use crate::util::{self, profile, CargoResult, CargoResultExt, ProcessBuilder, StableHasher};
+use crate::util::{profile, CargoResult, CargoResultExt, StableHasher};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -47,7 +47,7 @@ impl Rustc {
 
         let mut cache = Cache::load(&path, rustup_rustc, cache_location);
 
-        let mut cmd = util::process(&path);
+        let mut cmd = ProcessBuilder::new(&path);
         cmd.arg("-vV");
         let verbose_version = cache.cached_output(&cmd, 0)?.0;
 
@@ -86,18 +86,18 @@ impl Rustc {
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn process(&self) -> ProcessBuilder {
-        util::process(self.path.as_path()).wrapped(self.wrapper.as_ref())
+        ProcessBuilder::new(self.path.as_path()).wrapped(self.wrapper.as_ref())
     }
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn workspace_process(&self) -> ProcessBuilder {
-        util::process(self.path.as_path())
+        ProcessBuilder::new(self.path.as_path())
             .wrapped(self.workspace_wrapper.as_ref())
             .wrapped(self.wrapper.as_ref())
     }
 
     pub fn process_no_wrapper(&self) -> ProcessBuilder {
-        util::process(&self.path)
+        ProcessBuilder::new(&self.path)
     }
 
     /// Gets the output for the given command.
@@ -232,7 +232,7 @@ impl Cache {
                     status: if output.status.success() {
                         String::new()
                     } else {
-                        util::exit_status_to_string(output.status)
+                        cargo_util::exit_status_to_string(output.status)
                     },
                     code: output.status.code(),
                     stdout,
@@ -245,7 +245,7 @@ impl Cache {
         if output.success {
             Ok((output.stdout.clone(), output.stderr.clone()))
         } else {
-            Err(util::process_error_raw(
+            Err(ProcessError::new_raw(
                 &format!("process didn't exit successfully: {}", cmd),
                 output.code,
                 &output.status,

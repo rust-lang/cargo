@@ -76,7 +76,7 @@ fn _validate_upload(
     let actual_json = serde_json::from_slice(&json_bytes).expect("uploaded JSON should be valid");
     let expected_json = serde_json::from_str(expected_json).expect("expected JSON does not parse");
 
-    if let Err(e) = find_json_mismatch(&expected_json, &actual_json) {
+    if let Err(e) = find_json_mismatch(&expected_json, &actual_json, None) {
         panic!("{}", e);
     }
 

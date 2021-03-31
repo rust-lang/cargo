@@ -10,11 +10,11 @@
 //! cargo test --test testsuite -- old_cargos --nocapture --ignored
 //! ```
 
-use cargo::util::{ProcessBuilder, ProcessError};
 use cargo::CargoResult;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{self, Dependency, Package};
 use cargo_test_support::{cargo_exe, execs, paths, process, project, rustc_host};
+use cargo_util::{ProcessBuilder, ProcessError};
 use semver::Version;
 use std::fs;
 
@@ -68,7 +68,7 @@ fn collect_all_toolchains() -> Vec<(Version, String)> {
         format!("nightly-{}", host),
     ];
 
-    let output = cargo::util::process("rustup")
+    let output = ProcessBuilder::new("rustup")
         .args(&["toolchain", "list"])
         .exec_with_output()
         .expect("rustup should be installed");

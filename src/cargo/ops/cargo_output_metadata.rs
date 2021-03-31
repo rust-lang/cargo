@@ -1,7 +1,7 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
-use crate::core::resolver::{features::RequestedFeatures, HasDevUnits, Resolve, ResolveOpts};
+use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
 use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
@@ -14,9 +14,7 @@ use std::path::PathBuf;
 const VERSION: u32 = 1;
 
 pub struct OutputMetadataOptions {
-    pub features: Vec<String>,
-    pub no_default_features: bool,
-    pub all_features: bool,
+    pub cli_features: CliFeatures,
     pub no_deps: bool,
     pub version: u32,
     pub filter_platforms: Vec<String>,
@@ -115,12 +113,6 @@ fn build_resolve_graph(
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let requested_features = RequestedFeatures::from_command_line(
-        &metadata_opts.features,
-        metadata_opts.all_features,
-        !metadata_opts.no_default_features,
-    );
-    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features);
     let force_all = if metadata_opts.filter_platforms.is_empty() {
         crate::core::resolver::features::ForceAllTargets::Yes
     } else {
@@ -133,7 +125,7 @@ fn build_resolve_graph(
         ws,
         &target_data,
         &requested_kinds,
-        &resolve_opts,
+        &metadata_opts.cli_features,
         &specs,
         HasDevUnits::Yes,
         force_all,

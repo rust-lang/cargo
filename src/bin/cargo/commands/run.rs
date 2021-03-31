@@ -1,8 +1,8 @@
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::ProcessError;
 use cargo::core::Verbosity;
 use cargo::ops::{self, CompileFilter, Packages};
+use cargo_util::ProcessError;
 
 pub fn cli() -> App {
     subcommand("run")

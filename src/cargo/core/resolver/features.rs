@@ -42,6 +42,7 @@ use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use anyhow::bail;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
@@ -144,7 +145,7 @@ impl FeatureOpts {
                     }
                     "compare" => opts.compare = true,
                     "ws" => unimplemented!(),
-                    s => anyhow::bail!("-Zfeatures flag `{}` is not supported", s),
+                    s => bail!("-Zfeatures flag `{}` is not supported", s),
                 }
             }
             Ok(())
@@ -197,44 +198,93 @@ impl FeatureOpts {
 }
 
 /// Features flags requested for a package.
+///
+/// This should be cheap and fast to clone, it is used in the resolver for
+/// various caches.
+///
+/// This is split into enum variants because the resolver needs to handle
+/// features coming from different places (command-line and dependency
+/// declarations), but those different places have different constraints on
+/// which syntax is allowed. This helps ensure that every place dealing with
+/// features is properly handling those syntax restrictions.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RequestedFeatures {
-    pub features: FeaturesSet,
+pub enum RequestedFeatures {
+    /// Features requested on the command-line with flags.
+    CliFeatures(CliFeatures),
+    /// Features specified in a dependency declaration.
+    DepFeatures {
+        /// The `features` dependency field.
+        features: FeaturesSet,
+        /// The `default-features` dependency field.
+        uses_default_features: bool,
+    },
+}
+
+/// Features specified on the command-line.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct CliFeatures {
+    /// Features from the `--features` flag.
+    pub features: Rc<BTreeSet<FeatureValue>>,
+    /// The `--all-features` flag.
     pub all_features: bool,
+    /// Inverse of `--no-default-features` flag.
     pub uses_default_features: bool,
 }
 
-impl RequestedFeatures {
-    /// Creates a new RequestedFeatures from the given command-line flags.
+impl CliFeatures {
+    /// Creates a new CliFeatures from the given command-line flags.
     pub fn from_command_line(
         features: &[String],
         all_features: bool,
         uses_default_features: bool,
-    ) -> RequestedFeatures {
-        RequestedFeatures {
-            features: Rc::new(RequestedFeatures::split_features(features)),
+    ) -> CargoResult<CliFeatures> {
+        let features = Rc::new(CliFeatures::split_features(features));
+        // Some early validation to ensure correct syntax.
+        for feature in features.iter() {
+            match feature {
+                // Maybe call validate_feature_name here once it is an error?
+                FeatureValue::Feature(_) => {}
+                FeatureValue::Dep { .. }
+                | FeatureValue::DepFeature {
+                    dep_prefix: true, ..
+                } => {
+                    bail!(
+                        "feature `{}` is not allowed to use explicit `dep:` syntax",
+                        feature
+                    );
+                }
+                FeatureValue::DepFeature { dep_feature, .. } => {
+                    if dep_feature.contains('/') {
+                        bail!("multiple slashes in feature `{}` is not allowed", feature);
+                    }
+                }
+            }
+        }
+        Ok(CliFeatures {
+            features,
             all_features,
             uses_default_features,
-        }
+        })
     }
 
-    /// Creates a new RequestedFeatures with the given `all_features` setting.
-    pub fn new_all(all_features: bool) -> RequestedFeatures {
-        RequestedFeatures {
+    /// Creates a new CliFeatures with the given `all_features` setting.
+    pub fn new_all(all_features: bool) -> CliFeatures {
+        CliFeatures {
             features: Rc::new(BTreeSet::new()),
             all_features,
             uses_default_features: true,
         }
     }
 
-    fn split_features(features: &[String]) -> BTreeSet<InternedString> {
+    fn split_features(features: &[String]) -> BTreeSet<FeatureValue> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
             .map(InternedString::new)
-            .collect::<BTreeSet<InternedString>>()
+            .map(FeatureValue::new)
+            .collect()
     }
 }
 
@@ -296,7 +346,7 @@ impl ResolvedFeatures {
             if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
                 Ok(fs.iter().cloned().collect())
             } else {
-                anyhow::bail!("features did not find {:?} {:?}", pkg_id, is_build)
+                bail!("features did not find {:?} {:?}", pkg_id, is_build)
             }
         }
     }
@@ -405,7 +455,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         target_data: &RustcTargetData,
         resolve: &Resolve,
         package_set: &'a PackageSet<'cfg>,
-        requested_features: &RequestedFeatures,
+        cli_features: &CliFeatures,
         specs: &[PackageIdSpec],
         requested_targets: &[CompileKind],
         opts: FeatureOpts,
@@ -437,7 +487,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             track_for_host,
             deferred_weak_dependencies: HashMap::new(),
         };
-        r.do_resolve(specs, requested_features)?;
+        r.do_resolve(specs, cli_features)?;
         log::debug!("features={:#?}", r.activated_features);
         if r.opts.compare {
             r.compare();
@@ -455,11 +505,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn do_resolve(
         &mut self,
         specs: &[PackageIdSpec],
-        requested_features: &RequestedFeatures,
+        cli_features: &CliFeatures,
     ) -> CargoResult<()> {
-        let member_features = self.ws.members_with_features(specs, requested_features)?;
-        for (member, requested_features) in &member_features {
-            let fvs = self.fvs_from_requested(member.package_id(), requested_features);
+        let member_features = self.ws.members_with_features(specs, cli_features)?;
+        for (member, cli_features) in &member_features {
+            let fvs = self.fvs_from_requested(member.package_id(), cli_features);
             let for_host = self.track_for_host && self.is_proc_macro(member.package_id());
             self.activate_pkg(member.package_id(), for_host, &fvs)?;
             if for_host {
@@ -725,24 +775,19 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn fvs_from_requested(
         &self,
         pkg_id: PackageId,
-        requested_features: &RequestedFeatures,
+        cli_features: &CliFeatures,
     ) -> Vec<FeatureValue> {
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
-        if requested_features.all_features {
+        if cli_features.all_features {
             feature_map
                 .keys()
                 .map(|k| FeatureValue::Feature(*k))
                 .collect()
         } else {
-            let mut result: Vec<FeatureValue> = requested_features
-                .features
-                .as_ref()
-                .iter()
-                .map(|f| FeatureValue::new(*f))
-                .collect();
+            let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
             let default = InternedString::new("default");
-            if requested_features.uses_default_features && feature_map.contains_key(&default) {
+            if cli_features.uses_default_features && feature_map.contains_key(&default) {
                 result.push(FeatureValue::Feature(default));
             }
             result

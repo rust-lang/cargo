@@ -206,7 +206,7 @@ Defaults to <code>target</code> in the root of the workspace.</dd>
 <p>This option is unstable and available only on the
 <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
 and requires the <code>-Z unstable-options</code> flag to enable.
-See https://github.com/rust-lang/cargo/issues/6790 for more information.</dd>
+See <a href="https://github.com/rust-lang/cargo/issues/6790">https://github.com/rust-lang/cargo/issues/6790</a> for more information.</dd>
 
 
 </dl>

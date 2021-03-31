@@ -46,18 +46,19 @@ use std::process::{self, Command, ExitStatus};
 use std::str;
 
 use anyhow::{bail, Context, Error};
+use cargo_util::{paths, ProcessBuilder};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::features::{FeatureOpts, FeatureResolver, RequestedFeatures};
-use crate::core::resolver::{HasDevUnits, ResolveBehavior, ResolveOpts};
+use crate::core::resolver::features::{FeatureOpts, FeatureResolver};
+use crate::core::resolver::{HasDevUnits, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::{self, paths, Config, ProcessBuilder};
+use crate::util::Config;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
 
@@ -84,7 +85,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
-    let mut wrapper = util::process(env::current_exe()?);
+    let mut wrapper = ProcessBuilder::new(env::current_exe()?);
     wrapper.env(FIX_ENV, lock_server.addr().to_string());
     let _started = lock_server.start()?;
 
@@ -227,14 +228,6 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     // 2018 without `resolver` set must be V1
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
-        RequestedFeatures::from_command_line(
-            &opts.compile_opts.features,
-            opts.compile_opts.all_features,
-            !opts.compile_opts.no_default_features,
-        ),
-    );
     let target_data = RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
     // HasDevUnits::No because that may uncover more differences.
     // This is not the same as what `cargo fix` is doing, since it is doing
@@ -243,7 +236,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         ws,
         &target_data,
         &opts.compile_opts.build_config.requested_kinds,
-        &resolve_opts,
+        &opts.compile_opts.cli_features,
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
@@ -255,7 +248,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         &target_data,
         &ws_resolve.targeted_resolve,
         &ws_resolve.pkg_set,
-        &resolve_opts.features,
+        &opts.compile_opts.cli_features,
         &specs,
         &opts.compile_opts.build_config.requested_kinds,
         feature_opts,
@@ -322,7 +315,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
-    let rustc = util::process(&args.rustc).wrapped(workspace_rustc.as_ref());
+    let rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
 
     trace!("start rustfixing {:?}", args.file);
     let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
@@ -595,7 +588,7 @@ fn rustfix_and_fix(
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep
         // going.
-        let code = match util::paths::read(file.as_ref()) {
+        let code = match paths::read(file.as_ref()) {
             Ok(s) => s,
             Err(e) => {
                 warn!("failed to read `{}`: {}", file, e);

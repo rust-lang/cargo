@@ -5,7 +5,7 @@ use crate::core::compiler::unit::Unit;
 use crate::core::compiler::CompileKind;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::{internal, CargoResult};
-use crate::util::ProcessBuilder;
+use cargo_util::ProcessBuilder;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash;

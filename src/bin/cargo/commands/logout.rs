@@ -1,6 +1,4 @@
 use crate::command_prelude::*;
-use anyhow::format_err;
-use cargo::core::features;
 use cargo::ops;
 
 pub fn cli() -> App {
@@ -12,29 +10,10 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    let unstable = config.cli_unstable();
-    if !(unstable.credential_process || unstable.unstable_options) {
-        const SEE: &str = "See https://github.com/rust-lang/cargo/issues/8933 for more \
-        information about the `cargo logout` command.";
-        if config.nightly_features_allowed {
-            return Err(format_err!(
-                "the `cargo logout` command is unstable, pass `-Z unstable-options` to enable it\n\
-                {}",
-                SEE
-            )
-            .into());
-        } else {
-            return Err(format_err!(
-                "the `cargo logout` command is unstable, and only available on the \
-                 nightly channel of Cargo, but this is the `{}` channel\n\
-                 {}\n\
-                 {}",
-                features::channel(),
-                features::SEE_CHANNELS,
-                SEE
-            )
-            .into());
-        }
+    if !config.cli_unstable().credential_process {
+        config
+            .cli_unstable()
+            .fail_if_stable_command(config, "logout", 8933)?;
     }
     config.load_credentials()?;
     ops::registry_logout(config, args.value_of("registry").map(String::from))?;

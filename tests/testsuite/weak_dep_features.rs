@@ -1,5 +1,7 @@
 //! Tests for weak-dep-features.
 
+use super::features2::switch_to_resolver_2;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{project, publish};
 use std::fmt::Write;
@@ -272,6 +274,7 @@ fn optional_cli_syntax() {
         .file("src/lib.rs", "")
         .build();
 
+    // Does not build bar.
     p.cargo("check --features bar?/feat -Z weak-dep-features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
@@ -285,6 +288,33 @@ fn optional_cli_syntax() {
         )
         .run();
 
+    // Builds bar.
+    p.cargo("check --features bar?/feat,bar -Z weak-dep-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    eprintln!("check V2 resolver");
+    switch_to_resolver_2(&p);
+    p.build_dir().rm_rf();
+    // Does not build bar.
+    p.cargo("check --features bar?/feat -Z weak-dep-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // Builds bar.
     p.cargo("check --features bar?/feat,bar -Z weak-dep-features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
@@ -561,6 +591,32 @@ bar v1.0.0
 │       └── foo feature \"f1\" (command-line)
 └── bar feature \"feat\"
     └── foo feature \"f1\" (command-line)
+",
+        )
+        .run();
+
+    p.cargo("tree -Z weak-dep-features -e features --features bar?/feat")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("foo v0.1.0 ([ROOT]/foo)")
+        .run();
+
+    // This is a little strange in that it produces no output.
+    // Maybe `cargo tree` should print a note about why?
+    p.cargo("tree -Z weak-dep-features -e features -i bar --features bar?/feat")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("")
+        .run();
+
+    p.cargo("tree -Z weak-dep-features -e features -i bar --features bar?/feat,bar")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+bar v1.0.0
+├── bar feature \"default\"
+│   └── foo v0.1.0 ([ROOT]/foo)
+│       ├── foo feature \"bar\" (command-line)
+│       └── foo feature \"default\" (command-line)
+└── bar feature \"feat\" (command-line)
 ",
         )
         .run();

@@ -35,7 +35,6 @@ crates:
 [package]
 name = "hello_world"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
 edition = "2018"
 
 [dependencies]

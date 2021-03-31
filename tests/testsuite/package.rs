@@ -1954,3 +1954,25 @@ fn reproducible_output() {
         assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
 }
+
+#[cargo_test]
+fn package_with_resolver_and_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                resolver = '2'
+
+                [package.metadata.docs.rs]
+                all-features = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package").run();
+}

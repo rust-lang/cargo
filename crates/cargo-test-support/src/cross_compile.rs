@@ -10,8 +10,7 @@
 //! These tests are all disabled on rust-lang/rust's CI, but run in Cargo's CI.
 
 use crate::{basic_manifest, main_file, project};
-use cargo::util::ProcessError;
-use cargo::CargoResult;
+use cargo_util::ProcessError;
 use std::env;
 use std::fmt::Write;
 use std::process::{Command, Output};
@@ -41,7 +40,7 @@ pub fn disabled() -> bool {
 
     let cross_target = alternate();
 
-    let run_cross_test = || -> CargoResult<Output> {
+    let run_cross_test = || -> anyhow::Result<Output> {
         let p = project()
             .at("cross_test")
             .file("Cargo.toml", &basic_manifest("cross_test", "1.0.0"))

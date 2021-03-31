@@ -254,21 +254,18 @@ fn override_cargo_home() {
         &my_home.join("config"),
         r#"
             [cargo-new]
-            name = "foo"
-            email = "bar"
-            git = false
+            vcs = "none"
         "#,
     )
     .unwrap();
 
-    cargo_process("new foo")
-        .env("USER", "foo")
-        .env("CARGO_HOME", &my_home)
-        .run();
+    cargo_process("new foo").env("CARGO_HOME", &my_home).run();
 
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
+    assert!(!paths::root().join("foo/.git").is_dir());
+
+    cargo_process("new foo2").run();
+
+    assert!(paths::root().join("foo2/.git").is_dir());
 }
 
 #[cargo_test]

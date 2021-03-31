@@ -2,14 +2,13 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
-
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
-use crate::util::{Config, Sha256};
+use crate::util::Config;
+use cargo_util::{paths, Sha256};
+use serde::Deserialize;
 
 pub struct DirectorySource<'cfg> {
     source_id: SourceId,

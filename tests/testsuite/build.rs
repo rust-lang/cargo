@@ -4,7 +4,6 @@ use cargo::{
     core::compiler::CompileMode,
     core::{Shell, Workspace},
     ops::CompileOptions,
-    util::paths::dylib_path_envvar,
     Config,
 };
 use cargo_test_support::paths::{root, CargoPathExt};
@@ -14,6 +13,7 @@ use cargo_test_support::{
     lines_match_unordered, main_file, paths, process, project, rustc_host, sleep_ms,
     symlink_supported, t, Execs, ProjectBuilder,
 };
+use cargo_util::paths::dylib_path_envvar;
 use std::env;
 use std::fs;
 use std::io::Read;
@@ -5377,7 +5377,7 @@ fn reduced_reproduction_8249() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    cargo::util::paths::append(&p.root().join("Cargo.toml"), b"c = \"*\"").unwrap();
+    cargo_util::paths::append(&p.root().join("Cargo.toml"), b"c = \"*\"").unwrap();
     p.cargo("check").run();
     p.cargo("check").run();
 }
