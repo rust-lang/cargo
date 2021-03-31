@@ -475,25 +475,17 @@ impl Features {
                 SEE_CHANNELS,
                 see_docs()
             ),
-            Status::Unstable
-                if !config
-                    .cli_unstable()
-                    .allow_features
-                    .as_ref()
-                    .map(|f| f.contains(feature_name))
-                    .unwrap_or(true) =>
-            {
-                bail!(
-                    "the feature `{}` is not in the list of allowed features: {:?}",
-                    feature_name,
-                    config
-                        .cli_unstable()
-                        .allow_features
-                        .as_ref()
-                        .expect("!unwrap_or(true) == false")
-                )
+            Status::Unstable => {
+                if let Some(allow) = &config.cli_unstable().allow_features {
+                    if !allow.contains(feature_name) {
+                        bail!(
+                            "the feature `{}` is not in the list of allowed features: {:?}",
+                            feature_name,
+                            allow,
+                        );
+                    }
+                }
             }
-            Status::Unstable => {}
             Status::Removed => bail!(
                 "the cargo feature `{}` has been removed\n\
                 Remove the feature from Cargo.toml to remove this error.\n\
