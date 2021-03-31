@@ -101,7 +101,7 @@ use anyhow::{bail, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
-use crate::util::{indented_lines, ProcessBuilder};
+use crate::util::{indented_lines, iter_join, ProcessBuilder};
 use crate::Config;
 
 pub const SEE_CHANNELS: &str =
@@ -479,9 +479,9 @@ impl Features {
                 if let Some(allow) = &config.cli_unstable().allow_features {
                     if !allow.contains(feature_name) {
                         bail!(
-                            "the feature `{}` is not in the list of allowed features: {:?}",
+                            "the feature `{}` is not in the list of allowed features: [{}]",
                             feature_name,
-                            allow,
+                            iter_join(allow, ", "),
                         );
                     }
                 }
@@ -729,9 +729,9 @@ impl CliUnstable {
         if let Some(allowed) = &self.allow_features {
             if k != "allow-features" && !allowed.contains(k) {
                 bail!(
-                    "the feature `{}` is not in the list of allowed features: {:?}",
+                    "the feature `{}` is not in the list of allowed features: [{}]",
                     k,
-                    allowed
+                    iter_join(allowed, ", ")
                 );
             }
         }

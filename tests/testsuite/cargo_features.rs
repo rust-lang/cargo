@@ -157,7 +157,7 @@ fn allow_features() {
         .with_status(101)
         .with_stderr(
             "\
-error: the feature `print-im-a-teapot` is not in the list of allowed features: {\"test-dummy-unstable\"}
+error: the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
 ",
         )
         .run();
@@ -171,7 +171,7 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  the feature `test-dummy-unstable` is not in the list of allowed features: {}
+  the feature `test-dummy-unstable` is not in the list of allowed features: []
 ",
         )
         .run();
@@ -279,7 +279,7 @@ fn allow_features_in_cfg() {
         .with_status(101)
         .with_stderr(
             "\
-error: the feature `unstable-options` is not in the list of allowed features: {[..]}
+error: the feature `unstable-options` is not in the list of allowed features: [print-im-a-teapot, test-dummy-unstable]
 ",
         )
         .run();
@@ -291,7 +291,7 @@ error: the feature `unstable-options` is not in the list of allowed features: {[
         .with_status(101)
         .with_stderr(
             "\
-error: the feature `print-im-a-teapot` is not in the list of allowed features: {\"test-dummy-unstable\"}
+error: the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
 ",
         )
         .run();
@@ -305,7 +305,7 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  the feature `test-dummy-unstable` is not in the list of allowed features: {}
+  the feature `test-dummy-unstable` is not in the list of allowed features: []
 ",
         )
         .run();
