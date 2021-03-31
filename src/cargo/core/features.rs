@@ -92,7 +92,7 @@
 //!    of that page. Update the rest of the documentation to add the new
 //!    feature.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -554,7 +554,7 @@ impl Features {
 #[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
-    pub allow_features: Option<HashSet<String>>,
+    pub allow_features: Option<BTreeSet<String>>,
 
     pub unstable_options: bool,
     pub no_index_update: bool,
