@@ -57,7 +57,7 @@ use crate::core::{Feature, PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
-use crate::util::{add_path_args, internal, profile};
+use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
@@ -702,7 +702,7 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     if let Some(allow) = &cx.bcx.config.cli_unstable().allow_features {
         let mut arg = String::from("-Zallow-features=");
-        let _ = util::iter_join_onto(&mut arg, allow, ",");
+        let _ = iter_join_onto(&mut arg, allow, ",");
         cmd.arg(&arg);
     }
 }
