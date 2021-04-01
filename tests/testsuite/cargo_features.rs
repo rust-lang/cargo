@@ -1,6 +1,6 @@
 //! Tests for `cargo-features` definitions.
 
-use cargo_test_support::{project, registry};
+use cargo_test_support::{is_nightly, project, registry};
 
 #[cargo_test]
 fn feature_required() {
@@ -115,6 +115,12 @@ release and is no longer necessary to be listed in the manifest
 
 #[cargo_test]
 fn allow_features() {
+    if !is_nightly() {
+        // -Zallow-features on rustc is nightly only
+        eprintln!("skipping test allow_features without nightly rustc");
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -131,11 +137,8 @@ fn allow_features() {
         .file("src/lib.rs", "")
         .build();
 
-    // NOTE: We need to use RUSTC_BOOTSTRAP here since we also need nightly rustc
-
     p.cargo("-Zallow-features=test-dummy-unstable build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -146,13 +149,11 @@ fn allow_features() {
 
     p.cargo("-Zallow-features=test-dummy-unstable,print-im-a-teapot -Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_stdout("im-a-teapot = true")
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -163,7 +164,6 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: [
 
     p.cargo("-Zallow-features= build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -178,6 +178,12 @@ Caused by:
 
 #[cargo_test]
 fn allow_features_to_rustc() {
+    if !is_nightly() {
+        // -Zallow-features on rustc is nightly only
+        eprintln!("skipping test allow_features_to_rustc without nightly rustc");
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -196,18 +202,14 @@ fn allow_features_to_rustc() {
         )
         .build();
 
-    // NOTE: We need to use RUSTC_BOOTSTRAP here since we also need nightly rustc
-
     p.cargo("-Zallow-features= build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr_contains("[..]E0725[..]")
         .run();
 
     p.cargo("-Zallow-features=test_2018_feature build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -219,6 +221,12 @@ fn allow_features_to_rustc() {
 
 #[cargo_test]
 fn allow_features_in_cfg() {
+    if !is_nightly() {
+        // -Zallow-features on rustc is nightly only
+        eprintln!("skipping test allow_features_in_cfg without nightly rustc");
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -242,11 +250,8 @@ fn allow_features_in_cfg() {
         .file("src/lib.rs", "")
         .build();
 
-    // NOTE: We need to use RUSTC_BOOTSTRAP here since we also need nightly rustc
-
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -257,14 +262,12 @@ fn allow_features_in_cfg() {
 
     p.cargo("-Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_stdout("im-a-teapot = true")
         .with_stderr("[FINISHED] [..]")
         .run();
 
     p.cargo("-Zunstable-options build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -276,7 +279,6 @@ error: the feature `unstable-options` is not in the list of allowed features: [p
     // -Zallow-features overrides .cargo/config
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
@@ -287,7 +289,6 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: [
 
     p.cargo("-Zallow-features= build")
         .masquerade_as_nightly_cargo()
-        .env("RUSTC_BOOTSTRAP", "1")
         .with_status(101)
         .with_stderr(
             "\
