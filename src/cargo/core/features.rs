@@ -759,7 +759,11 @@ impl CliUnstable {
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
             "future-incompat-report" => self.enable_future_incompat_feature = parse_empty(k, v)?,
-            _ => bail!("unknown `-Z` flag specified: {}", k),
+            _ => bail!(
+                "unknown `-Z` flag specified: {0} (if meant for rustc and not cargo, \
+                 try rerunning with RUSTFLAGS=\"-Z {0}\")",
+                k
+            ),
         }
 
         Ok(())

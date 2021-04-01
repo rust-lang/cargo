@@ -297,7 +297,10 @@ fn z_flags_rejected() {
     p.cargo("build -Zarg")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("error: unknown `-Z` flag specified: arg")
+        .with_stderr(
+            "error: unknown `-Z` flag specified: arg (if meant for rustc \
+            and not cargo, try rerunning with RUSTFLAGS=\"-Z arg\")",
+        )
         .run();
 
     p.cargo("build -Zprint-im-a-teapot")
