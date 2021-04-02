@@ -190,5 +190,5 @@ pub fn is_simple_exit_code(code: i32) -> bool {
     // codes are very large. This is just a rough
     // approximation of which codes are "normal" and which
     // ones are abnormal termination.
-    code >= 0 && code <= 127
+    (0..=127).contains(&code)
 }
