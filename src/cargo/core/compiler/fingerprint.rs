@@ -1685,23 +1685,25 @@ pub fn parse_dep_info(
         Ok(data) => data,
         Err(_) => return Ok(None),
     };
-    let info = match EncodedDepInfo::parse(&data) {
+    let EncodedDepInfo {
+        files: ty_paths,
+        env,
+    } = match EncodedDepInfo::parse(&data) {
         Some(info) => info,
         None => {
             log::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
             return Ok(None);
         }
     };
-    let mut ret = RustcDepInfo::default();
-    ret.env = info.env;
-    for (ty, path) in info.files {
-        let path = match ty {
+    let files = ty_paths
+        .iter()
+        .map(|(ty, path)| match ty {
             DepInfoPathType::PackageRootRelative => pkg_root.join(path),
             // N.B. path might be absolute here in which case the join will have no effect
             DepInfoPathType::TargetRootRelative => target_root.join(path),
-        };
-        ret.files.push(path);
-    }
+        })
+        .collect();
+    let ret = RustcDepInfo { env, files };
     Ok(Some(ret))
 }
 
@@ -1819,12 +1821,10 @@ pub fn translate_dep_info(
     rustc_cmd: &ProcessBuilder,
     allow_package: bool,
 ) -> CargoResult<()> {
-    let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
+    let RustcDepInfo { files, mut env } = parse_rustc_dep_info(rustc_dep_info)?;
 
     let target_root = target_root.canonicalize()?;
     let pkg_root = pkg_root.canonicalize()?;
-    let mut on_disk_info = EncodedDepInfo::default();
-    on_disk_info.env = depinfo.env;
 
     // This is a bit of a tricky statement, but here we're *removing* the
     // dependency on environment variables that were defined specifically for
@@ -1850,34 +1850,39 @@ pub fn translate_dep_info(
     // you write a binary that does `println!("{}", env!("OUT_DIR"))` we won't
     // recompile that if you move the target directory. Hopefully that's not too
     // bad of an issue for now...
-    on_disk_info
-        .env
-        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key));
+    env.retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key));
 
-    for file in depinfo.files {
-        // The path may be absolute or relative, canonical or not. Make sure
-        // it is canonicalized so we are comparing the same kinds of paths.
-        let abs_file = rustc_cwd.join(file);
-        // If canonicalization fails, just use the abs path. There is currently
-        // a bug where --remap-path-prefix is affecting .d files, causing them
-        // to point to non-existent paths.
-        let canon_file = abs_file.canonicalize().unwrap_or_else(|_| abs_file.clone());
+    let ty_paths = files
+        .into_iter()
+        .filter_map(|file| {
+            // The path may be absolute or relative, canonical or not. Make sure
+            // it is canonicalized so we are comparing the same kinds of paths.
+            let abs_file = rustc_cwd.join(file);
+            // If canonicalization fails, just use the abs path. There is currently
+            // a bug where --remap-path-prefix is affecting .d files, causing them
+            // to point to non-existent paths.
+            let canon_file = abs_file.canonicalize().unwrap_or_else(|_| abs_file.clone());
 
-        let (ty, path) = if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
-            (DepInfoPathType::TargetRootRelative, stripped)
-        } else if let Ok(stripped) = canon_file.strip_prefix(&pkg_root) {
-            if !allow_package {
-                continue;
+            if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
+                Some((DepInfoPathType::TargetRootRelative, stripped.to_owned()))
+            } else if let Ok(stripped) = canon_file.strip_prefix(&pkg_root) {
+                if allow_package {
+                    Some((DepInfoPathType::PackageRootRelative, stripped.to_owned()))
+                } else {
+                    None
+                }
+            } else {
+                // It's definitely not target root relative, but this is an absolute path (since it was
+                // joined to rustc_cwd) and as such re-joining it later to the target root will have no
+                // effect.
+                Some((DepInfoPathType::TargetRootRelative, abs_file))
             }
-            (DepInfoPathType::PackageRootRelative, stripped)
-        } else {
-            // It's definitely not target root relative, but this is an absolute path (since it was
-            // joined to rustc_cwd) and as such re-joining it later to the target root will have no
-            // effect.
-            (DepInfoPathType::TargetRootRelative, &*abs_file)
-        };
-        on_disk_info.files.push((ty, path.to_owned()));
-    }
+        })
+        .collect();
+    let on_disk_info = EncodedDepInfo {
+        files: ty_paths,
+        env,
+    };
     paths::write(cargo_dep_info, on_disk_info.serialize()?)?;
     Ok(())
 }
