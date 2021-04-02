@@ -624,7 +624,7 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate, &opts, parent)?;
+    let activated = cx.flag_activated(&candidate, opts, parent)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
@@ -633,7 +633,7 @@ fn activate(
             // does. TBH it basically cause panics in the test suite if
             // `parent` is passed through here and `[replace]` is otherwise
             // on life support so it's not critical to fix bugs anyway per se.
-            if cx.flag_activated(replace, &opts, None)? && activated {
+            if cx.flag_activated(replace, opts, None)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -654,7 +654,7 @@ fn activate(
 
     let now = Instant::now();
     let (used_features, deps) =
-        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, &opts)?;
+        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, opts)?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {

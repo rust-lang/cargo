@@ -404,7 +404,7 @@ impl<'cfg> Workspace<'cfg> {
                             /* platform */ None,
                             // NOTE: Since we use ConfigRelativePath, this root isn't used as
                             // any relative paths are resolved before they'd be joined with root.
-                            &Path::new("unused-relative-path"),
+                            Path::new("unused-relative-path"),
                             self.unstable_features(),
                             /* kind */ None,
                         )
@@ -436,7 +436,7 @@ impl<'cfg> Workspace<'cfg> {
             return Ok(from_manifest.clone());
         }
         if from_manifest.is_empty() {
-            return Ok(from_config.clone());
+            return Ok(from_config);
         }
 
         // We could just chain from_manifest and from_config,

@@ -170,7 +170,7 @@ impl Context {
             // package again, which should only affect performance, but that
             // should be rare. Cycles should still be detected since those
             // will have `DepFeatures` edges.
-            RequestedFeatures::CliFeatures(_) => return Ok(false),
+            RequestedFeatures::CliFeatures(_) => Ok(false),
             RequestedFeatures::DepFeatures {
                 features,
                 uses_default_features,

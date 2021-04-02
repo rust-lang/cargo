@@ -2358,7 +2358,7 @@ fn filter_platform() {
     }
     "#
     .replace("$ALT_TRIPLE", alt_target)
-    .replace("$HOST_TRIPLE", &host_target)
+    .replace("$HOST_TRIPLE", host_target)
     .replace("$FOO_DEPS", &foo_deps.to_string());
 
     // We're going to be checking that we don't download excessively,
@@ -2483,7 +2483,7 @@ fn filter_platform() {
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
-            .replace("$HOST_TRIPLE", &host_target)
+            .replace("$HOST_TRIPLE", host_target)
             .replace("$ALT_DEP", alt_dep)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
@@ -2648,7 +2648,7 @@ fn filter_platform() {
   "metadata": null
 }
 "#
-            .replace("$HOST_TRIPLE", &host_target)
+            .replace("$HOST_TRIPLE", host_target)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),
@@ -2749,7 +2749,7 @@ fn filter_platform() {
   "metadata": null
 }
 "#
-            .replace("$HOST_TRIPLE", &host_target)
+            .replace("$HOST_TRIPLE", host_target)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)

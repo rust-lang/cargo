@@ -3985,7 +3985,7 @@ fn build_script_scan_eacces() {
         .file("secrets/stuff", "")
         .build();
     let path = p.root().join("secrets");
-    fs::set_permissions(&path, fs::Permissions::from_mode(0)).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o0)).unwrap();
     // The last "Caused by" is a string from libc such as the following:
     //   Permission denied (os error 13)
     p.cargo("build")

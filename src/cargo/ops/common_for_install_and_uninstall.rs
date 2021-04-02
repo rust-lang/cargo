@@ -492,7 +492,7 @@ impl InstallInfo {
     fn is_up_to_date(&self, opts: &CompileOptions, target: &str, exes: &BTreeSet<String>) -> bool {
         self.features == feature_set(&opts.cli_features.features)
             && self.all_features == opts.cli_features.all_features
-            && self.no_default_features == !opts.cli_features.uses_default_features
+            && self.no_default_features != opts.cli_features.uses_default_features
             && self.profile.as_str() == opts.build_config.requested_profile.as_str()
             && (self.target.is_none() || self.target.as_deref() == Some(target))
             && &self.bins == exes
