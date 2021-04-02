@@ -103,9 +103,9 @@ impl fmt::Display for ConfigKey {
 }
 
 fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
-    let ok = part.chars().all(|c| match c {
-        'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => true,
-        _ => false,
+    let ok = part.chars().all(|c| {
+        matches!(c,
+        'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_')
     });
     if ok {
         Cow::Borrowed(part)

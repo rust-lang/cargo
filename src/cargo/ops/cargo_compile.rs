@@ -791,12 +791,13 @@ impl CompileFilter {
     }
 
     pub fn is_all_targets(&self) -> bool {
-        match *self {
+        matches!(
+            *self,
             CompileFilter::Only {
-                all_targets: true, ..
-            } => true,
-            _ => false,
-        }
+                all_targets: true,
+                ..
+            }
+        )
     }
 
     pub(crate) fn contains_glob_patterns(&self) -> bool {

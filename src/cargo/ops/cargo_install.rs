@@ -703,21 +703,19 @@ fn remove_orphaned_bins(
     let all_self_names = exe_names(pkg, &filter);
     let mut to_remove: HashMap<PackageId, BTreeSet<String>> = HashMap::new();
     // For each package that we stomped on.
-    for other_pkg in duplicates.values() {
+    for other_pkg in duplicates.values().flatten() {
         // Only for packages with the same name.
-        if let Some(other_pkg) = other_pkg {
-            if other_pkg.name() == pkg.name() {
-                // Check what the old package had installed.
-                if let Some(installed) = tracker.installed_bins(*other_pkg) {
-                    // If the old install has any names that no longer exist,
-                    // add them to the list to remove.
-                    for installed_name in installed {
-                        if !all_self_names.contains(installed_name.as_str()) {
-                            to_remove
-                                .entry(*other_pkg)
-                                .or_default()
-                                .insert(installed_name.clone());
-                        }
+        if other_pkg.name() == pkg.name() {
+            // Check what the old package had installed.
+            if let Some(installed) = tracker.installed_bins(*other_pkg) {
+                // If the old install has any names that no longer exist,
+                // add them to the list to remove.
+                for installed_name in installed {
+                    if !all_self_names.contains(installed_name.as_str()) {
+                        to_remove
+                            .entry(*other_pkg)
+                            .or_default()
+                            .insert(installed_name.clone());
                     }
                 }
             }

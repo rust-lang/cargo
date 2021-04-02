@@ -201,7 +201,7 @@ fn itarget_proc_macro() {
     Package::new("hostdep", "1.0.0").publish();
     Package::new("pm", "1.0.0")
         .proc_macro(true)
-        .target_dep("hostdep", "1.0", &rustc_host())
+        .target_dep("hostdep", "1.0", rustc_host())
         .file("src/lib.rs", "extern crate hostdep;")
         .publish();
     let p = project()
@@ -1203,7 +1203,7 @@ fn build_dep_activated() {
     Package::new("targetdep", "1.0.0").publish();
     Package::new("hostdep", "1.0.0")
         // Check that "for_host" is sticky.
-        .target_dep("somedep", "1.0", &rustc_host())
+        .target_dep("somedep", "1.0", rustc_host())
         .feature("feat1", &[])
         .file(
             "src/lib.rs",

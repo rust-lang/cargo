@@ -367,7 +367,7 @@ fn filters_target() {
     Package::new("build_target_dep", "1.0.0").publish();
     Package::new("build_host_dep", "1.0.0")
         .target_dep("targetdep", "1.0", alternate())
-        .target_dep("hostdep", "1.0", &rustc_host())
+        .target_dep("hostdep", "1.0", rustc_host())
         .publish();
     Package::new("pm_target", "1.0.0")
         .proc_macro(true)

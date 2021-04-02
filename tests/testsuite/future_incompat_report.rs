@@ -164,7 +164,7 @@ fn test_multi_crate() {
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
 
     // Find '--id <ID>' in the output
-    let mut iter = stderr.split(" ");
+    let mut iter = stderr.split(' ');
     iter.find(|w| *w == "--id").unwrap();
     let id = iter
         .next()
