@@ -57,7 +57,7 @@ use crate::core::{Feature, PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
-use crate::util::{add_path_args, internal, profile};
+use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
@@ -615,6 +615,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     }
 
     add_error_format_and_color(cx, &mut rustdoc, false);
+    add_allow_features(cx, &mut rustdoc);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -697,6 +698,15 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
     }
 }
 
+/// Forward -Zallow-features if it is set for cargo.
+fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
+    if let Some(allow) = &cx.bcx.config.cli_unstable().allow_features {
+        let mut arg = String::from("-Zallow-features=");
+        let _ = iter_join_onto(&mut arg, allow, ",");
+        cmd.arg(&arg);
+    }
+}
+
 /// Add error-format flags to the command.
 ///
 /// Cargo always uses JSON output. This has several benefits, such as being
@@ -773,6 +783,7 @@ fn build_base_args(
 
     add_path_args(bcx.ws, unit, cmd);
     add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
+    add_allow_features(cx, cmd);
 
     if !test {
         for crate_type in crate_types.iter() {

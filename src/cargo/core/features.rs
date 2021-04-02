@@ -92,6 +92,7 @@
 //!    of that page. Update the rest of the documentation to add the new
 //!    feature.
 
+use std::collections::BTreeSet;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -101,7 +102,7 @@ use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
-use crate::util::indented_lines;
+use crate::util::{indented_lines, iter_join};
 use crate::Config;
 
 pub const SEE_CHANNELS: &str =
@@ -416,13 +417,18 @@ impl Features {
         let mut ret = Features::default();
         ret.nightly_features_allowed = config.nightly_features_allowed;
         for feature in features {
-            ret.add(feature, warnings)?;
+            ret.add(feature, config, warnings)?;
             ret.activated.push(feature.to_string());
         }
         Ok(ret)
     }
 
-    fn add(&mut self, feature_name: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
+    fn add(
+        &mut self,
+        feature_name: &str,
+        config: &Config,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
         let (slot, feature) = match self.status(feature_name) {
             Some(p) => p,
@@ -470,7 +476,17 @@ impl Features {
                 SEE_CHANNELS,
                 see_docs()
             ),
-            Status::Unstable => {}
+            Status::Unstable => {
+                if let Some(allow) = &config.cli_unstable().allow_features {
+                    if !allow.contains(feature_name) {
+                        bail!(
+                            "the feature `{}` is not in the list of allowed features: [{}]",
+                            feature_name,
+                            iter_join(allow, ", "),
+                        );
+                    }
+                }
+            }
             Status::Removed => bail!(
                 "the cargo feature `{}` has been removed\n\
                 Remove the feature from Cargo.toml to remove this error.\n\
@@ -530,37 +546,42 @@ impl Features {
 #[derive(Default, Debug, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
+    // Permanently unstable features:
+    pub allow_features: Option<BTreeSet<String>>,
     pub print_im_a_teapot: bool,
-    pub unstable_options: bool,
-    pub no_index_update: bool,
-    pub avoid_dev_deps: bool,
-    pub minimal_versions: bool,
+
+    // All other unstable features.
+    // Please keep this list lexiographically ordered.
     pub advanced_env: bool,
-    pub config_include: bool,
-    pub dual_proc_macros: bool,
-    pub mtime_on_use: bool,
-    pub named_profiles: bool,
+    pub avoid_dev_deps: bool,
     pub binary_dep_depinfo: bool,
     #[serde(deserialize_with = "deserialize_build_std")]
     pub build_std: Option<Vec<String>>,
     pub build_std_features: Option<Vec<String>>,
-    pub timings: Option<Vec<String>>,
-    pub doctest_xcompile: bool,
-    pub doctest_in_workspace: bool,
-    pub panic_abort_tests: bool,
-    pub jobserver_per_rustc: bool,
-    pub features: Option<Vec<String>>,
-    pub separate_nightlies: bool,
-    pub multitarget: bool,
-    pub rustdoc_map: bool,
-    pub terminal_width: Option<Option<usize>>,
-    pub namespaced_features: bool,
-    pub weak_dep_features: bool,
-    pub extra_link_arg: bool,
-    pub patch_in_config: bool,
-    pub credential_process: bool,
+    pub config_include: bool,
     pub configurable_env: bool,
+    pub credential_process: bool,
+    pub doctest_in_workspace: bool,
+    pub doctest_xcompile: bool,
+    pub dual_proc_macros: bool,
     pub enable_future_incompat_feature: bool,
+    pub extra_link_arg: bool,
+    pub features: Option<Vec<String>>,
+    pub jobserver_per_rustc: bool,
+    pub minimal_versions: bool,
+    pub mtime_on_use: bool,
+    pub multitarget: bool,
+    pub named_profiles: bool,
+    pub namespaced_features: bool,
+    pub no_index_update: bool,
+    pub panic_abort_tests: bool,
+    pub patch_in_config: bool,
+    pub rustdoc_map: bool,
+    pub separate_nightlies: bool,
+    pub terminal_width: Option<Option<usize>>,
+    pub timings: Option<Vec<String>>,
+    pub unstable_options: bool,
+    pub weak_dep_features: bool,
 }
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -627,6 +648,13 @@ impl CliUnstable {
             );
         }
         let mut warnings = Vec::new();
+        // We read flags twice, first to get allowed-features (if specified),
+        // and then to read the remaining unstable flags.
+        for flag in flags {
+            if flag.starts_with("allow-features=") {
+                self.add(flag, &mut warnings)?;
+            }
+        }
         for flag in flags {
             self.add(flag, &mut warnings)?;
         }
@@ -656,6 +684,7 @@ impl CliUnstable {
         fn parse_features(value: Option<&str>) -> Vec<String> {
             match value {
                 None => Vec::new(),
+                Some("") => Vec::new(),
                 Some(v) => v.split(',').map(|s| s.to_string()).collect(),
             }
         }
@@ -698,8 +727,19 @@ impl CliUnstable {
             ))
         };
 
+        if let Some(allowed) = &self.allow_features {
+            if k != "allow-features" && !allowed.contains(k) {
+                bail!(
+                    "the feature `{}` is not in the list of allowed features: [{}]",
+                    k,
+                    iter_join(allowed, ", ")
+                );
+            }
+        }
+
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
+            "allow-features" => self.allow_features = Some(parse_features(v).into_iter().collect()),
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,

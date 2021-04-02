@@ -1327,14 +1327,18 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
-    let config = if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
-        cx.bcx
-            .config
-            .doc_extern_map()
-            .map_or(0, |map| util::hash_u64(map))
-    } else {
-        0
-    };
+    let mut config = 0u64;
+    if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
+        config = config.wrapping_add(
+            cx.bcx
+                .config
+                .doc_extern_map()
+                .map_or(0, |map| util::hash_u64(map)),
+        );
+    }
+    if let Some(allow_features) = &cx.bcx.config.cli_unstable().allow_features {
+        config = config.wrapping_add(util::hash_u64(allow_features));
+    }
     let compile_kind = unit.kind.fingerprint_hash();
     Ok(Fingerprint {
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),

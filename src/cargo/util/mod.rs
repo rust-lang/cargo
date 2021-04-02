@@ -1,3 +1,4 @@
+use std::fmt;
 use std::time::Duration;
 
 pub use self::canonical_url::CanonicalUrl;
@@ -63,6 +64,32 @@ pub fn elapsed(duration: Duration) -> String {
     } else {
         format!("{}.{:02}s", secs, duration.subsec_nanos() / 10_000_000)
     }
+}
+
+pub fn iter_join_onto<W, I, T>(mut w: W, iter: I, delim: &str) -> fmt::Result
+where
+    W: fmt::Write,
+    I: IntoIterator<Item = T>,
+    T: std::fmt::Display,
+{
+    let mut it = iter.into_iter().peekable();
+    while let Some(n) = it.next() {
+        write!(w, "{}", n)?;
+        if it.peek().is_some() {
+            write!(w, "{}", delim)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn iter_join<I, T>(iter: I, delim: &str) -> String
+where
+    I: IntoIterator<Item = T>,
+    T: std::fmt::Display,
+{
+    let mut s = String::new();
+    let _ = iter_join_onto(&mut s, iter, delim);
+    s
 }
 
 pub fn indented_lines(text: &str) -> String {
