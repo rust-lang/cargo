@@ -123,14 +123,14 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
         format!(" # {}", def)
     };
     match cv {
-        CV::Boolean(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(&def)),
-        CV::Integer(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(&def)),
+        CV::Boolean(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(def)),
+        CV::Integer(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(def)),
         CV::String(val, def) => drop_println!(
             config,
             "{} = {}{}",
             key,
             toml::to_string(&val).unwrap(),
-            origin(&def)
+            origin(def)
         ),
         CV::List(vals, _def) => {
             if opts.show_origin {
@@ -145,13 +145,13 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
             }
         }
         CV::Table(table, _def) => {
-            let mut key_vals: Vec<_> = table.into_iter().collect();
-            key_vals.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut key_vals: Vec<_> = table.iter().collect();
+            key_vals.sort_by(|a, b| a.0.cmp(b.0));
             for (table_key, val) in key_vals {
                 let mut subkey = key.clone();
                 // push or push_sensitive shouldn't matter here, since this is
                 // not dealing with environment variables.
-                subkey.push(&table_key);
+                subkey.push(table_key);
                 print_toml(config, opts, &subkey, val);
             }
         }
@@ -205,7 +205,7 @@ fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
             CV::Integer(val, _def) => json!(val),
             CV::String(val, _def) => json!(val),
             CV::List(vals, _def) => {
-                let jvals: Vec<_> = vals.into_iter().map(|(val, _def)| json!(val)).collect();
+                let jvals: Vec<_> = vals.iter().map(|(val, _def)| json!(val)).collect();
                 json!(jvals)
             }
             CV::Table(map, _def) => {

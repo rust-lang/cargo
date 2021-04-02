@@ -36,7 +36,7 @@ fn simple_build() {
         .run();
 
     assert!(p.target_bin(t1, "foo").is_file());
-    assert!(p.target_bin(&t2, "foo").is_file());
+    assert!(p.target_bin(t2, "foo").is_file());
 }
 
 #[cargo_test]
@@ -140,5 +140,5 @@ fn same_value_twice() {
         .masquerade_as_nightly_cargo()
         .run();
 
-    assert!(p.target_bin(&t, "foo").is_file());
+    assert!(p.target_bin(t, "foo").is_file());
 }

@@ -333,7 +333,7 @@ fn build_requirements<'a, 'b: 'a>(
                 }
             } else {
                 for fv in features.iter() {
-                    if let Err(e) = reqs.require_value(&fv) {
+                    if let Err(e) = reqs.require_value(fv) {
                         return Err(e.into_activate_error(parent, s));
                     }
                 }

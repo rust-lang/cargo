@@ -367,7 +367,7 @@ impl ResolvedFeatures {
                 // The new resolver should never add features.
                 assert_eq!(new_features.difference(&old_features).next(), None);
                 let removed_features: BTreeSet<_> =
-                    old_features.difference(&new_features).cloned().collect();
+                    old_features.difference(new_features).cloned().collect();
                 if removed_features.is_empty() {
                     None
                 } else {
@@ -386,7 +386,7 @@ impl ResolvedFeatures {
                 };
                 // The new resolver should never add dependencies.
                 assert_eq!(new_deps.difference(&old_deps).next(), None);
-                let removed_deps: BTreeSet<_> = old_deps.difference(&new_deps).cloned().collect();
+                let removed_deps: BTreeSet<_> = old_deps.difference(new_deps).cloned().collect();
                 if removed_deps.is_empty() {
                     None
                 } else {
