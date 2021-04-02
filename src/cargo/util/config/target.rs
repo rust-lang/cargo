@@ -19,7 +19,7 @@ pub struct TargetCfgConfig {
     pub other: BTreeMap<String, toml::Value>,
 }
 
-/// Config definition of a `[target]` table.
+/// Config definition of a `[target]` table or `[host]`.
 #[derive(Debug, Clone)]
 pub struct TargetConfig {
     /// Process to run as a wrapper for `cargo run`, `test`, and `bench` commands.
@@ -62,6 +62,35 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
         }
     }
     Ok(result)
+}
+
+/// Loads a single `[host]` table for the given triple.
+pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
+    // This needs to get each field individually because it cannot fetch the
+    // struct all at once due to `links_overrides`. Can't use `serde(flatten)`
+    // because it causes serde to use `deserialize_map` which means the config
+    // deserializer does not know which keys to deserialize, which means
+    // environment variables would not work.
+    let host_triple_key = ConfigKey::from_str(&format!("host.{}", triple));
+    let host_prefix = match config.get_cv(&host_triple_key)? {
+        Some(_) => format!("host.{}", triple),
+        None => "host".to_string(),
+    };
+    let runner: OptValue<PathAndArgs> = config.get(&format!("{}.runner", host_prefix))?;
+    let rustflags: OptValue<StringList> = config.get(&format!("{}.rustflags", host_prefix))?;
+    let linker: OptValue<ConfigRelativePath> = config.get(&format!("{}.linker", host_prefix))?;
+    // Links do not support environment variables.
+    let target_key = ConfigKey::from_str(&host_prefix);
+    let links_overrides = match config.get_table(&target_key)? {
+        Some(links) => parse_links_overrides(&target_key, links.val, config)?,
+        None => BTreeMap::new(),
+    };
+    Ok(TargetConfig {
+        runner,
+        rustflags,
+        linker,
+        links_overrides,
+    })
 }
 
 /// Loads a single `[target]` table for the given triple.

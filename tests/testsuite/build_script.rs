@@ -165,6 +165,246 @@ fn custom_build_env_var_rustc_linker() {
 }
 
 #[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_host_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail since host == target when no target is set
+    p.cargo("build --verbose")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/linker [..]`
+[ERROR] linker `[..]/path/to/linker` not found
+"
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_host_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // no crate type set => linker never called => build succeeds if and
+    // only if build.rs succeeds, despite linker binary not existing.
+    p.cargo("build --target").arg(&target).run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_host() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    p.cargo("build --verbose --target")
+        .arg(&target)
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[ERROR] linker `[..]/path/to/host/linker` not found
+"
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [host.{}]
+                linker = "/path/to/host/arch/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                target, target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    p.cargo("build --verbose --target")
+        .arg(&target)
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/arch/linker [..]`
+[ERROR] linker `[..]/path/to/host/arch/linker` not found
+"
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_cross_arch_host() {
+    let target = rustc_host();
+    let cross_target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host.{}]
+                linker = "/path/to/host/arch/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                cross_target, target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    p.cargo("build --verbose --target").arg(&target).run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
+    let target = rustc_host();
+    let cross_target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [host.{}]
+                linker = "/path/to/host/arch/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                cross_target, target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    p.cargo("build --verbose --target")
+        .arg(&target)
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[ERROR] linker `[..]/path/to/host/linker` not found
+"
+        )
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_script_wrong_rustc_flags() {
     let p = project()
         .file(
