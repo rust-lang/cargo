@@ -388,12 +388,13 @@ impl Profiles {
     /// profile flags don't cause `build.rs` to needlessly run multiple
     /// times).
     pub fn get_profile_run_custom_build(&self, for_unit_profile: &Profile) -> Profile {
-        let mut result = Profile::default();
-        result.name = for_unit_profile.name;
-        result.root = for_unit_profile.root;
-        result.debuginfo = for_unit_profile.debuginfo;
-        result.opt_level = for_unit_profile.opt_level;
-        result
+        Profile {
+            name: for_unit_profile.name,
+            root: for_unit_profile.root,
+            debuginfo: for_unit_profile.debuginfo,
+            opt_level: for_unit_profile.opt_level,
+            ..Default::default()
+        }
     }
 
     /// This returns the base profile. This is currently used for the
@@ -860,7 +861,7 @@ pub struct UnitFor {
     /// uses the `get_profile_run_custom_build` method to get the correct
     /// profile information for the unit. `host` needs to be true so that all
     /// of the dependencies of that `RunCustomBuild` unit have this flag be
-    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// sticky (and forced to `true` for all further dependencies) — which is
     /// the whole point of `UnitFor`.
     host: bool,
     /// A target for a build dependency or proc-macro (or any of its
