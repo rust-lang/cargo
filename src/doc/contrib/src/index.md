@@ -8,7 +8,7 @@ There are many ways to contribute, such as [helping other users], [filing
 issues], [improving the documentation], [fixing bugs], and working on [small]
 and [large features].
 
-If you have a general question about Cargo or it's internals, feel free to ask
+If you have a general question about Cargo or its internals, feel free to ask
 on [Zulip].
 
 This guide assumes you have some familiarity with Rust, and how to use Cargo,
