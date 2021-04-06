@@ -118,7 +118,7 @@ fn exit_code() {
     );
     if !cfg!(unix) {
         output.push_str(
-            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
+            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit [..]: 2)",
         );
     }
     p.cargo("run").with_status(2).with_stderr(output).run();
@@ -140,7 +140,7 @@ fn exit_code_verbose() {
     );
     if !cfg!(unix) {
         output.push_str(
-            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
+            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit [..]: 2)",
         );
     }
 

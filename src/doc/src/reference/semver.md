@@ -634,7 +634,7 @@ pub trait Trait<T> {}
 use updated_crate::Trait;
 struct Foo;
 
-impl Trait for Foo {}  // Error: wrong number of type arguments
+impl Trait for Foo {}  // Error: missing generics
 ```
 
 Mitigating strategies:
@@ -943,7 +943,7 @@ pub fn foo<T, U>() {}
 use updated_crate::foo;
 
 fn main() {
-    foo::<u8>(); // Error: wrong number of type arguments
+    foo::<u8>(); // Error: this function takes 2 type arguments but only 1 type argument was supplied
 }
 ```
 
