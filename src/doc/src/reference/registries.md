@@ -178,7 +178,7 @@ in (harmless-but-inelegant) directory aliasing.  For example, `crate` and
 `CrateTwo` have `{prefix}` values of `cr/at` and `Cr/at`; these are distinct on
 Unix machines but alias to the same directory on Windows.  Using directories
 with normalized case avoids aliasing, but on case-sensitive filesystems it's
-harder to suport older versions of Cargo that lack `{prefix}`/`{lowerprefix}`.
+harder to support older versions of Cargo that lack `{prefix}`/`{lowerprefix}`.
 For example, nginx rewrite rules can easily construct `{prefix}` but can't
 perform case-conversion to construct `{lowerprefix}`.
 
