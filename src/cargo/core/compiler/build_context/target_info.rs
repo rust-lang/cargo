@@ -676,10 +676,30 @@ impl RustcTargetData {
     ) -> CargoResult<RustcTargetData> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
-        let host_config = config.target_cfg_triple(&rustc.host)?;
         let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
+
+        // This is a hack. The unit_dependency graph builder "pretends" that
+        // `CompileKind::Host` is `CompileKind::Target(host)` if the
+        // `--target` flag is not specified. Since the unit_dependency code
+        // needs access to the target config data, create a copy so that it
+        // can be found. See `rebuild_unit_graph_shared` for why this is done.
+        let host_config = if requested_kinds.iter().any(CompileKind::is_host) {
+            let ct = CompileTarget::new(&rustc.host)?;
+            target_info.insert(ct, host_info.clone());
+            let target_host_config = config.target_cfg_triple(&rustc.host)?;
+            target_config.insert(ct, target_host_config.clone());
+            target_host_config
+        } else {
+            TargetConfig {
+                runner: None,
+                rustflags: None,
+                linker: None,
+                links_overrides: Default::default(),
+            }
+        };
+
         for kind in requested_kinds {
             if let CompileKind::Target(target) = *kind {
                 let tcfg = config.target_cfg_triple(target.short_name())?;
@@ -689,17 +709,6 @@ impl RustcTargetData {
                     TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
                 );
             }
-        }
-
-        // This is a hack. The unit_dependency graph builder "pretends" that
-        // `CompileKind::Host` is `CompileKind::Target(host)` if the
-        // `--target` flag is not specified. Since the unit_dependency code
-        // needs access to the target config data, create a copy so that it
-        // can be found. See `rebuild_unit_graph_shared` for why this is done.
-        if requested_kinds.iter().any(CompileKind::is_host) {
-            let ct = CompileTarget::new(&rustc.host)?;
-            target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, host_config.clone());
         }
 
         Ok(RustcTargetData {
