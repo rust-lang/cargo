@@ -520,7 +520,7 @@ impl Manifest {
                 .require(Feature::per_package_target())
                 .chain_err(|| {
                     anyhow::format_err!(
-                        "the `package.default-kind` and `package.forced-kind` \
+                        "the `package.default-target` and `package.forced-target` \
                          manifest keys are unstable and may not work properly"
                     )
                 })?;
