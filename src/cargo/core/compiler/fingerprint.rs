@@ -1692,8 +1692,10 @@ pub fn parse_dep_info(
             return Ok(None);
         }
     };
-    let mut ret = RustcDepInfo::default();
-    ret.env = info.env;
+    let mut ret = RustcDepInfo {
+        env: info.env,
+        ..Default::default()
+    };
     for (ty, path) in info.files {
         let path = match ty {
             DepInfoPathType::PackageRootRelative => pkg_root.join(path),
@@ -1823,8 +1825,10 @@ pub fn translate_dep_info(
 
     let target_root = target_root.canonicalize()?;
     let pkg_root = pkg_root.canonicalize()?;
-    let mut on_disk_info = EncodedDepInfo::default();
-    on_disk_info.env = depinfo.env;
+    let mut on_disk_info = EncodedDepInfo {
+        env: depinfo.env,
+        ..Default::default()
+    };
 
     // This is a bit of a tricky statement, but here we're *removing* the
     // dependency on environment variables that were defined specifically for

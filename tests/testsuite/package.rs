@@ -1875,15 +1875,11 @@ fn long_file_names() {
         if let Err(e) = File::create(&test_path) {
             // write to stderr directly to avoid output from being captured
             // and always display text, even without --nocapture
-            use std::io::Write;
-            writeln!(
-                std::io::stderr(),
+            eprintln!(
                 "\nSkipping long_file_names test, this OS or filesystem does not \
                 appear to support long file paths: {:?}\n{:?}",
-                e,
-                test_path
-            )
-            .unwrap();
+                e, test_path
+            );
             return;
         }
     }

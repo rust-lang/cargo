@@ -102,7 +102,7 @@ impl fmt::Display for ConfigKey {
     }
 }
 
-fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
+fn escape_key_part(part: &str) -> Cow<'_, str> {
     let ok = part.chars().all(|c| {
         matches!(c,
         'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_')

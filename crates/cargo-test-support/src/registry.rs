@@ -222,7 +222,7 @@ impl RegistryBuilder {
             .alternative_api_url(&api_url)
             .build();
 
-        let t = thread::spawn(move || {
+        thread::spawn(move || {
             let mut conn = BufReader::new(server.accept().unwrap().0);
             let headers: Vec<_> = (&mut conn)
                 .lines()
@@ -243,9 +243,7 @@ impl RegistryBuilder {
             )
             .unwrap();
             stream.write_all(response).unwrap();
-        });
-
-        t
+        })
     }
 }
 

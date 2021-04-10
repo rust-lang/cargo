@@ -388,12 +388,13 @@ impl Profiles {
     /// profile flags don't cause `build.rs` to needlessly run multiple
     /// times).
     pub fn get_profile_run_custom_build(&self, for_unit_profile: &Profile) -> Profile {
-        let mut result = Profile::default();
-        result.name = for_unit_profile.name;
-        result.root = for_unit_profile.root;
-        result.debuginfo = for_unit_profile.debuginfo;
-        result.opt_level = for_unit_profile.opt_level;
-        result
+        Profile {
+            name: for_unit_profile.name,
+            root: for_unit_profile.root,
+            debuginfo: for_unit_profile.debuginfo,
+            opt_level: for_unit_profile.opt_level,
+            ..Default::default()
+        }
     }
 
     /// This returns the base profile. This is currently used for the

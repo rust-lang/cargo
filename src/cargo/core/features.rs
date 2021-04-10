@@ -414,8 +414,10 @@ impl Features {
         config: &Config,
         warnings: &mut Vec<String>,
     ) -> CargoResult<Features> {
-        let mut ret = Features::default();
-        ret.nightly_features_allowed = config.nightly_features_allowed;
+        let mut ret = Features {
+            nightly_features_allowed: config.nightly_features_allowed,
+            ..Default::default()
+        };
         for feature in features {
             ret.add(feature, config, warnings)?;
             ret.activated.push(feature.to_string());

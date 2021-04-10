@@ -215,13 +215,13 @@ pub fn can_run_on_host() -> bool {
     // simulator.
     if cfg!(target_os = "macos") {
         if CAN_RUN_ON_HOST.load(Ordering::SeqCst) {
-            return true;
+            true
         } else {
             println!("Note: Cannot run on host, skipping.");
-            return false;
+            false
         }
     } else {
         assert!(CAN_RUN_ON_HOST.load(Ordering::SeqCst));
-        return true;
+        true
     }
 }

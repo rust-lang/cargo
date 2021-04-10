@@ -10,11 +10,11 @@ use std::fmt::Write;
 fn require(enabled_features: &[&str], disabled_features: &[&str]) -> String {
     let mut s = String::new();
     for feature in enabled_features {
-        write!(s, "#[cfg(not(feature=\"{feature}\"))] compile_error!(\"expected feature {feature} to be enabled\");\n",
+        writeln!(s, "#[cfg(not(feature=\"{feature}\"))] compile_error!(\"expected feature {feature} to be enabled\");",
             feature=feature).unwrap();
     }
     for feature in disabled_features {
-        write!(s, "#[cfg(feature=\"{feature}\")] compile_error!(\"did not expect feature {feature} to be enabled\");\n",
+        writeln!(s, "#[cfg(feature=\"{feature}\")] compile_error!(\"did not expect feature {feature} to be enabled\");",
             feature=feature).unwrap();
     }
     s

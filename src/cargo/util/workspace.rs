@@ -26,7 +26,7 @@ fn get_available_targets<'a>(
         .map(Target::name)
         .collect();
 
-    targets.sort();
+    targets.sort_unstable();
 
     Ok(targets)
 }
