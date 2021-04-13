@@ -1,12 +1,8 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![cfg_attr(feature = "deny-warnings", deny(warnings))]
-#![allow(clippy::blacklisted_name)]
-#![allow(clippy::explicit_iter_loop)]
-#![allow(clippy::redundant_closure)]
-#![allow(clippy::blocks_in_if_conditions)] // clippy doesn't agree with rustfmt 😂
-#![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
+#![allow(clippy::all)]
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
+#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 #[macro_use]
 extern crate cargo_test_macro;

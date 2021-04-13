@@ -1,5 +1,4 @@
-#![allow(clippy::many_single_char_names)]
-#![allow(clippy::needless_range_loop)] // false positives
+#![allow(clippy::all)]
 
 use std::cell::RefCell;
 use std::cmp::PartialEq;

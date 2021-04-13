@@ -2,8 +2,9 @@
 //!
 //! See https://rust-lang.github.io/cargo/contrib/ for a guide on writing tests.
 
-#![allow(clippy::needless_doctest_main)] // according to @ehuss this lint is fussy
-#![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
+#![allow(clippy::all)]
+#![warn(clippy::needless_borrow)]
+#![warn(clippy::redundant_clone)]
 
 use std::env;
 use std::ffi::OsStr;
@@ -831,8 +832,8 @@ impl Execs {
             Some(_) => Err(format!(
                 "exited with {:?}\n--- stdout\n{}\n--- stderr\n{}",
                 code,
-                String::from_utf8_lossy(&stdout),
-                String::from_utf8_lossy(&stderr)
+                String::from_utf8_lossy(stdout),
+                String::from_utf8_lossy(stderr)
             )),
         }
     }
