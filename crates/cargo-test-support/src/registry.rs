@@ -192,7 +192,7 @@ impl RegistryBuilder {
                 alt_dl_url(),
                 self.alt_api_url
                     .as_ref()
-                    .map_or_else(alt_api_url, |url| Url::parse(&url).expect("valid url")),
+                    .map_or_else(alt_api_url, |url| Url::parse(url).expect("valid url")),
                 alt_api_path(),
             );
         }

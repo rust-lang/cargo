@@ -1,5 +1,5 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![allow(clippy::redundant_closure)] // there's a false positive
+#![allow(clippy::all)]
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 

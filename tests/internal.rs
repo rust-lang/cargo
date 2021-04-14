@@ -1,4 +1,7 @@
 //! Tests for internal code checks.
+
+#![allow(clippy::all)]
+
 use std::fs;
 
 #[test]

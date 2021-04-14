@@ -1,5 +1,4 @@
-#![allow(unknown_lints)]
-#![allow(clippy::identity_op)] // used for vertical alignment
+#![allow(clippy::all)]
 
 use std::collections::BTreeMap;
 use std::fmt;
