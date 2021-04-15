@@ -335,6 +335,7 @@ use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::{internal, path_args, profile};
+use crate::CARGO_ENV;
 
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};
@@ -712,6 +713,7 @@ impl LocalFingerprint {
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         pkg_root: &Path,
         target_root: &Path,
+        cargo_exe: &Path,
     ) -> CargoResult<Option<StaleItem>> {
         match self {
             // We need to parse `dep_info`, learn about the crate's dependencies.
@@ -727,7 +729,21 @@ impl LocalFingerprint {
                     None => return Ok(Some(StaleItem::MissingFile(dep_info))),
                 };
                 for (key, previous) in info.env.iter() {
-                    let current = env::var(key).ok();
+                    let current = if key == CARGO_ENV {
+                        Some(
+                            cargo_exe
+                                .to_str()
+                                .ok_or_else(|| {
+                                    format_err!(
+                                        "cargo exe path {} must be valid UTF-8",
+                                        cargo_exe.display()
+                                    )
+                                })?
+                                .to_string(),
+                        )
+                    } else {
+                        env::var(key).ok()
+                    };
                     if current == *previous {
                         continue;
                     }
@@ -980,6 +996,7 @@ impl Fingerprint {
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         pkg_root: &Path,
         target_root: &Path,
+        cargo_exe: &Path,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
@@ -1071,7 +1088,9 @@ impl Fingerprint {
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
-            if let Some(item) = local.find_stale_item(mtime_cache, pkg_root, target_root)? {
+            if let Some(item) =
+                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe)?
+            {
                 item.log();
                 return Ok(());
             }
@@ -1256,7 +1275,13 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let target_root = target_root(cx);
-    fingerprint.check_filesystem(&mut cx.mtime_cache, unit.pkg.root(), &target_root)?;
+    let cargo_exe = cx.bcx.config.cargo_exe()?;
+    fingerprint.check_filesystem(
+        &mut cx.mtime_cache,
+        unit.pkg.root(),
+        &target_root,
+        cargo_exe,
+    )?;
 
     let fingerprint = Arc::new(fingerprint);
     cx.fingerprints
@@ -1850,9 +1875,13 @@ pub fn translate_dep_info(
     // you write a binary that does `println!("{}", env!("OUT_DIR"))` we won't
     // recompile that if you move the target directory. Hopefully that's not too
     // bad of an issue for now...
+    //
+    // This also includes `CARGO` since if the code is explicitly wanting to
+    // know that path, it should be rebuilt if it changes. The CARGO path is
+    // not tracked elsewhere in the fingerprint.
     on_disk_info
         .env
-        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key));
+        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV);
 
     for file in depinfo.files {
         // The path may be absolute or relative, canonical or not. Make sure

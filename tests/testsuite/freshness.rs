@@ -2581,3 +2581,63 @@ fn env_build_script_no_rebuild() {
     p.cargo("build").run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
+
+#[cargo_test]
+fn cargo_env_changes() {
+    // Checks that changes to the env var CARGO in the dep-info file triggers
+    // a rebuild.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{:?}", env!("CARGO"));
+                }
+            "#,
+        )
+        .build();
+
+    let cargo_exe = cargo_test_support::cargo_exe();
+    let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
+    std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
+    let other_cargo = || {
+        let mut pb = cargo_test_support::process(&other_cargo_path);
+        pb.cwd(p.root());
+        cargo_test_support::execs().with_process_builder(pb)
+    };
+
+    p.cargo("check").run();
+    other_cargo()
+        .arg("check")
+        .arg("-v")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // And just to confirm that without using env! it doesn't rebuild.
+    p.change_file("src/main.rs", "fn main() {}");
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    other_cargo()
+        .arg("check")
+        .arg("-v")
+        .with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
