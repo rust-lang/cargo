@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -771,27 +771,6 @@ pub struct RustDocFingerprint {
 }
 
 impl RustDocFingerprint {
-    /// Read the `RustDocFingerprint` info from the fingerprint file.
-    fn read(cx: &Context<'_, '_>) -> CargoResult<Self> {
-        let rustdoc_data = paths::read(&cx.files().host_root().join(".rustdoc_fingerprint.json"))?;
-        serde_json::from_str(&rustdoc_data).map_err(|e| anyhow::anyhow!("{:?}", e))
-    }
-
-    /// Write the `RustDocFingerprint` info into the fingerprint file.
-    fn write<'a, 'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<()> {
-        paths::write(
-            &cx.files().host_root().join(".rustdoc_fingerprint.json"),
-            serde_json::to_string(&self)?.as_bytes(),
-        )
-    }
-
-    fn remove_doc_dirs(doc_dirs: &[&Path]) -> CargoResult<()> {
-        doc_dirs
-            .iter()
-            .filter(|path| path.exists())
-            .try_for_each(|path| paths::remove_dir_all(&path))
-    }
-
     /// This function checks whether the latest version of `Rustc` used to compile this
     /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
     /// call.
@@ -805,34 +784,43 @@ impl RustDocFingerprint {
             rustc_vv: cx.bcx.rustc().verbose_version.clone(),
         };
 
-        // Collect all of the target doc paths for which the docs need to be compiled for.
-        let doc_dirs: Vec<&Path> = cx
-            .bcx
+        let fingerprint_path = cx.files().host_root().join(".rustdoc_fingerprint.json");
+        let write_fingerprint = || -> CargoResult<()> {
+            paths::write(
+                &fingerprint_path,
+                serde_json::to_string(&actual_rustdoc_target_data)?,
+            )
+        };
+        let rustdoc_data = match paths::read(&fingerprint_path) {
+            Ok(rustdoc_data) => rustdoc_data,
+            // If the fingerprint does not exist, do not clear out the doc
+            // directories. Otherwise this ran into problems where projects
+            // like rustbuild were creating the doc directory before running
+            // `cargo doc` in a way that deleting it would break it.
+            Err(_) => return write_fingerprint(),
+        };
+        match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+            Ok(fingerprint) => {
+                if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
+                    return Ok(());
+                }
+            }
+            Err(e) => {
+                log::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
+            }
+        };
+        // Fingerprint does not match, delete the doc directories and write a new fingerprint.
+        log::debug!(
+            "fingerprint {:?} mismatch, clearing doc directories",
+            fingerprint_path
+        );
+        cx.bcx
             .all_kinds
             .iter()
             .map(|kind| cx.files().layout(*kind).doc())
-            .collect();
-
-        // Check wether `.rustdoc_fingerprint.json` exists
-        match Self::read(cx) {
-            Ok(fingerprint) => {
-                // Check if rustc_version matches the one we just used. Otherways,
-                // remove the `doc` folder to trigger a re-compilation of the docs.
-                if fingerprint.rustc_vv != actual_rustdoc_target_data.rustc_vv {
-                    Self::remove_doc_dirs(&doc_dirs)?;
-                    actual_rustdoc_target_data.write(cx)?
-                }
-            }
-            // If the file does not exist, then we cannot assume that the docs were compiled
-            // with the actual Rustc instance version. Therefore, we try to remove the
-            // `doc` directory forcing the recompilation of the docs. If the directory doesn't
-            // exists neither, we simply do nothing and continue.
-            Err(_) => {
-                // We don't care if this succeeds as explained above.
-                let _ = Self::remove_doc_dirs(&doc_dirs);
-                actual_rustdoc_target_data.write(cx)?
-            }
-        }
+            .filter(|path| path.exists())
+            .try_for_each(|path| paths::remove_dir_all(path))?;
+        write_fingerprint()?;
         Ok(())
     }
 }
