@@ -1800,7 +1800,6 @@ LLVM version: 9.0
     );
 }
 
-#[cfg(target_os = "linux")]
 #[cargo_test]
 fn doc_fingerprint_respects_target_paths() {
     // Random rustc verbose version
@@ -1831,9 +1830,7 @@ LLVM version: 9.0
         .file("src/lib.rs", "//! These are the docs!")
         .build();
 
-    dummy_project
-        .cargo("doc --target x86_64-unknown-linux-gnu")
-        .run();
+    dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
     let fingerprint: RustDocFingerprint =
         serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
@@ -1863,7 +1860,8 @@ LLVM version: 9.0
     fs::write(
         dummy_project
             .build_dir()
-            .join("x86_64-unknown-linux-gnu/doc/bogus_file"),
+            .join(rustc_host())
+            .join("doc/bogus_file"),
         String::from("This is a bogus file and should be removed!"),
     )
     .expect("Error writing test bogus file");
@@ -1872,13 +1870,12 @@ LLVM version: 9.0
     // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
     // and generating another one with the actual version.
     // It should also remove the bogus file we created above.
-    dummy_project
-        .cargo("doc --target x86_64-unknown-linux-gnu")
-        .run();
+    dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
     assert!(!dummy_project
         .build_dir()
-        .join("x86_64-unknown-linux-gnu/doc/bogus_file")
+        .join(rustc_host())
+        .join("doc/bogus_file")
         .exists());
 
     let fingerprint: RustDocFingerprint =
