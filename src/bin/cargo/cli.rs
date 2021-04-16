@@ -1,4 +1,4 @@
-use cargo::core::features;
+use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 
@@ -30,26 +30,20 @@ pub fn main(config: &mut Config) -> CliResult {
     };
 
     if args.value_of("unstable-features") == Some("help") {
+        let options = CliUnstable::help();
+        let help_lines: Vec<String> = options.iter().map(|(option_name, option_help_message)| {
+            format!("-Z {} -- {}", option_name, option_help_message)
+        }).collect();
+        let joined = help_lines.join("\n");
         drop_println!(
             config,
             "
 Available unstable (nightly-only) flags:
 
-    -Z allow-features      -- Allow *only* the listed unstable features
-    -Z avoid-dev-deps      -- Avoid installing dev-dependencies if possible
-    -Z extra-link-arg      -- Allow `cargo:rustc-link-arg` in build scripts
-    -Z minimal-versions    -- Install minimal dependency versions instead of maximum
-    -Z no-index-update     -- Do not update the registry, avoids a network request for benchmarking
-    -Z unstable-options    -- Allow the usage of unstable options
-    -Z timings             -- Display concurrency information
-    -Z doctest-xcompile    -- Compile and run doctests for non-host target using runner config
-    -Z terminal-width      -- Provide a terminal width to rustc for error truncation
-    -Z namespaced-features -- Allow features with `dep:` prefix
-    -Z weak-dep-features   -- Allow `dep_name?/feature` feature syntax
-    -Z patch-in-config     -- Allow `[patch]` sections in .cargo/config.toml files
+{}
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
-        );
+        , joined);
         if !config.nightly_features_allowed {
             drop_println!(
                 config,

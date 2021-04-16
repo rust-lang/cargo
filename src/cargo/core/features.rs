@@ -538,51 +538,67 @@ impl Features {
     }
 }
 
-/// A parsed representation of all unstable flags that Cargo accepts.
-///
-/// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
-/// gating unstable functionality to Cargo. These flags are only available on
-/// the nightly channel of Cargo.
-#[derive(Default, Debug, Deserialize)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct CliUnstable {
+macro_rules! help_struct {
+    ($name: ident, $($visibility: vis $element: ident: $ty: ty = ($help: literal $(, #[$meta:meta])?)),*) => {
+        /// A parsed representation of all unstable flags that Cargo accepts.
+        ///
+        /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
+        /// gating unstable functionality to Cargo. These flags are only available on
+        /// the nightly channel of Cargo.
+        #[derive(Default, Debug, Deserialize)]
+        #[serde(default, rename_all = "kebab-case")]
+        pub struct $name {
+            $(
+                $(#[$meta])?
+                $visibility $element: $ty
+            ),*
+        }
+        impl $name {
+            pub fn help() -> Vec<(&'static str, &'static str)> {
+                let fields = vec![$((stringify!($element), $help)),*];
+                fields
+            }
+        }
+    }
+}
+
+help_struct!(CliUnstable,
     // Permanently unstable features:
-    pub allow_features: Option<BTreeSet<String>>,
-    pub print_im_a_teapot: bool,
+    pub allow_features: Option<BTreeSet<String>> = ("Allow *only* the listed unstable features"),
+    pub print_im_a_teapot: bool= (""),
 
     // All other unstable features.
     // Please keep this list lexiographically ordered.
-    pub advanced_env: bool,
-    pub avoid_dev_deps: bool,
-    pub binary_dep_depinfo: bool,
-    #[serde(deserialize_with = "deserialize_build_std")]
-    pub build_std: Option<Vec<String>>,
-    pub build_std_features: Option<Vec<String>>,
-    pub config_include: bool,
-    pub configurable_env: bool,
-    pub credential_process: bool,
-    pub doctest_in_workspace: bool,
-    pub doctest_xcompile: bool,
-    pub dual_proc_macros: bool,
-    pub enable_future_incompat_feature: bool,
-    pub extra_link_arg: bool,
-    pub features: Option<Vec<String>>,
-    pub jobserver_per_rustc: bool,
-    pub minimal_versions: bool,
-    pub mtime_on_use: bool,
-    pub multitarget: bool,
-    pub named_profiles: bool,
-    pub namespaced_features: bool,
-    pub no_index_update: bool,
-    pub panic_abort_tests: bool,
-    pub patch_in_config: bool,
-    pub rustdoc_map: bool,
-    pub separate_nightlies: bool,
-    pub terminal_width: Option<Option<usize>>,
-    pub timings: Option<Vec<String>>,
-    pub unstable_options: bool,
-    pub weak_dep_features: bool,
-}
+    pub advanced_env: bool= (""),
+    pub avoid_dev_deps: bool= ("Avoid installing dev-dependencies if possible"),
+    pub binary_dep_depinfo: bool= (""),
+    pub build_std: Option<Vec<String>> = ("", #[serde(deserialize_with = "deserialize_build_std")]),
+    pub build_std_features: Option<Vec<String>> = (""),
+    pub config_include: bool= (""),
+    pub configurable_env: bool= (""),
+    pub credential_process: bool= (""),
+    pub doctest_in_workspace: bool= (""),
+    pub doctest_xcompile: bool= ("Compile and run doctests for non-host target using runner config"),
+    pub dual_proc_macros: bool= (""),
+    pub enable_future_incompat_feature: bool= (""),
+    pub extra_link_arg: bool= ("Allow `cargo:rustc-link-arg` in build scripts"),
+    pub features: Option<Vec<String>> = (""),
+    pub jobserver_per_rustc: bool= (""),
+    pub minimal_versions: bool= ("Install minimal dependency versions instead of maximum"),
+    pub mtime_on_use: bool= (""),
+    pub multitarget: bool= (""),
+    pub named_profiles: bool= (""),
+    pub namespaced_features: bool= ("Allow features with `dep:` prefix"),
+    pub no_index_update: bool= ("Do not update the registry, avoids a network request for benchmarking"),
+    pub panic_abort_tests: bool= (""),
+    pub patch_in_config: bool= ("Allow `[patch]` sections in .cargo/config.toml files"),
+    pub rustdoc_map: bool= (""),
+    pub separate_nightlies: bool= (""),
+    pub terminal_width: Option<Option<usize>> = ("Provide a terminal width to rustc for error truncation"),
+    pub timings: Option<Vec<String>> = ("Display concurrency information"),
+    pub unstable_options: bool= ("Allow the usage of unstable options"),
+    pub weak_dep_features: bool= ("Allow `dep_name?/feature` feature syntax")
+);
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
     enabled when used on an interactive console.\n\
