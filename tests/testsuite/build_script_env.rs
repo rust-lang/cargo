@@ -129,4 +129,16 @@ fn rustc_bootstrap() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
+    // RUSTC_BOOTSTRAP set to the name of the crate
+    p.cargo("build")
+        .env("RUSTC_BOOTSTRAP", "foo")
+        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .run();
+    // RUSTC_BOOTSTRAP set to some random value
+    p.cargo("build")
+        .env("RUSTC_BOOTSTRAP", "bar")
+        .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("help: [..] set the environment variable `RUSTC_BOOTSTRAP=foo` [..]")
+        .with_status(101)
+        .run();
 }

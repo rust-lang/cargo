@@ -589,7 +589,15 @@ impl BuildOutput {
                         // to set RUSTC_BOOTSTRAP.
                         // If this is a nightly build, setting RUSTC_BOOTSTRAP wouldn't affect the
                         // behavior, so still only give a warning.
-                        if nightly_features_allowed {
+                        // NOTE: cargo only allows nightly features on RUSTC_BOOTSTRAP=1, but we
+                        // want setting any value of RUSTC_BOOTSTRAP to downgrade this to a warning
+                        // (so that `RUSTC_BOOTSTRAP=pkg_name` will work)
+                        let rustc_bootstrap_allows = |name: &str| {
+                            std::env::var("RUSTC_BOOTSTRAP").map_or(false, |var| {
+                                var.split(',').any(|s| s == name)
+                            })
+                        };
+                        if nightly_features_allowed || rustc_bootstrap_allows(&*pkg_name) {
                             warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
                                 val, whence
