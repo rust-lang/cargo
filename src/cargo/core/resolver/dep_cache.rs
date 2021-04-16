@@ -16,8 +16,10 @@ use crate::core::resolver::{
     ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts,
 };
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+
+use anyhow::Context as _;
 use log::debug;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -222,7 +224,7 @@ impl<'a> RegistryQueryer<'a> {
         let mut deps = deps
             .into_iter()
             .map(|(dep, features)| {
-                let candidates = self.query(&dep).chain_err(|| {
+                let candidates = self.query(&dep).with_context(|| {
                     anyhow::format_err!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),

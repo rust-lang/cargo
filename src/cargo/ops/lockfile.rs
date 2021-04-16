@@ -1,9 +1,11 @@
 use std::io::prelude::*;
 
 use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
+
+use anyhow::Context as _;
 
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
@@ -15,14 +17,14 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 
     let mut s = String::new();
     f.read_to_string(&mut s)
-        .chain_err(|| format!("failed to read file: {}", f.path().display()))?;
+        .with_context(|| format!("failed to read file: {}", f.path().display()))?;
 
     let resolve = (|| -> CargoResult<Option<Resolve>> {
         let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
         let v: resolver::EncodableResolve = resolve.try_into()?;
         Ok(Some(v.into_resolve(&s, ws)?))
     })()
-    .chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
+    .with_context(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
 }
 
@@ -80,7 +82,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
             f.write_all(out.as_bytes())?;
             Ok(())
         })
-        .chain_err(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
+        .with_context(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
     Ok(())
 }
 

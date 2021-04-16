@@ -2,9 +2,9 @@
 //! authentication/cloning.
 
 use crate::core::GitReference;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{network, Config, IntoUrl, Progress};
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
 use git2::{self, ErrorClass, ObjectType};
@@ -206,7 +206,7 @@ impl GitReference {
                 let obj = obj.peel(ObjectType::Commit)?;
                 Ok(obj.id())
             })()
-            .chain_err(|| format!("failed to find tag `{}`", s))?,
+            .with_context(|| format!("failed to find tag `{}`", s))?,
 
             // Resolve the remote name since that's all we're configuring in
             // `fetch` below.
@@ -214,7 +214,7 @@ impl GitReference {
                 let name = format!("origin/{}", s);
                 let b = repo
                     .find_branch(&name, git2::BranchType::Remote)
-                    .chain_err(|| format!("failed to find branch `{}`", s))?;
+                    .with_context(|| format!("failed to find branch `{}`", s))?;
                 b.get()
                     .target()
                     .ok_or_else(|| anyhow::format_err!("branch `{}` did not have a target", s))?
@@ -349,7 +349,7 @@ impl<'a> GitCheckout<'a> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
-                update_submodule(repo, &mut child, cargo_config).chain_err(|| {
+                update_submodule(repo, &mut child, cargo_config).with_context(|| {
                     format!(
                         "failed to update submodule `{}`",
                         child.name().unwrap_or("")
@@ -402,7 +402,7 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            fetch(&mut repo, url, &reference, cargo_config).chain_err(|| {
+            fetch(&mut repo, url, &reference, cargo_config).with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),

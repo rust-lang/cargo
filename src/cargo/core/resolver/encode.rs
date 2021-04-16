@@ -113,10 +113,10 @@
 
 use super::{Resolve, ResolveVersion};
 use crate::core::{Dependency, GitReference, Package, PackageId, SourceId, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{internal, Graph};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use log::debug;
 use serde::de;
 use serde::ser;
@@ -333,7 +333,7 @@ impl EncodableResolve {
             let k = &k[prefix.len()..];
             let enc_id: EncodablePackageId = k
                 .parse()
-                .chain_err(|| internal("invalid encoding of checksum in lockfile"))?;
+                .with_context(|| internal("invalid encoding of checksum in lockfile"))?;
             let id = match lookup_id(&enc_id) {
                 Some(id) => id,
                 _ => continue,

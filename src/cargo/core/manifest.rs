@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use anyhow::Context as _;
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
@@ -496,7 +497,7 @@ impl Manifest {
         if self.im_a_teapot.is_some() {
             self.unstable_features
                 .require(Feature::test_dummy_unstable())
-                .chain_err(|| {
+                .with_context(|| {
                     anyhow::format_err!(
                         "the `im-a-teapot` manifest key is unstable and may \
                          not work properly in England"

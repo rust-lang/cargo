@@ -2,13 +2,14 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use anyhow::Context as _;
 use filetime::FileTime;
 use jobserver::Client;
 
 use crate::core::compiler::compilation::{self, UnitOutput};
 use crate::core::compiler::{self, Unit};
 use crate::core::PackageId;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use super::build_plan::BuildPlan;
@@ -96,7 +97,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some(c) => c.clone(),
             None => {
                 let client = Client::new(bcx.build_config.jobs as usize)
-                    .chain_err(|| "failed to create jobserver")?;
+                    .with_context(|| "failed to create jobserver")?;
                 client.acquire_raw()?;
                 client
             }
@@ -324,11 +325,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files_mut()
             .host
             .prepare()
-            .chain_err(|| "couldn't prepare build directories")?;
+            .with_context(|| "couldn't prepare build directories")?;
         for target in self.files.as_mut().unwrap().target.values_mut() {
             target
                 .prepare()
-                .chain_err(|| "couldn't prepare build directories")?;
+                .with_context(|| "couldn't prepare build directories")?;
         }
 
         let files = self.files.as_ref().unwrap();
@@ -559,11 +560,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     pub fn new_jobserver(&mut self) -> CargoResult<Client> {
         let tokens = self.bcx.build_config.jobs as usize;
-        let client = Client::new(tokens).chain_err(|| "failed to create jobserver")?;
+        let client = Client::new(tokens).with_context(|| "failed to create jobserver")?;
 
         // Drain the client fully
         for i in 0..tokens {
-            client.acquire_raw().chain_err(|| {
+            client.acquire_raw().with_context(|| {
                 format!(
                     "failed to fully drain {}/{} token from jobserver at startup",
                     i, tokens,

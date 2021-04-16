@@ -5,8 +5,10 @@ use std::path::{Path, PathBuf};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::Config;
+
+use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
 use serde::Deserialize;
 
@@ -72,7 +74,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
-        let entries = self.root.read_dir().chain_err(|| {
+        let entries = self.root.read_dir().with_context(|| {
             format!(
                 "failed to read root of directory source: {}",
                 self.root.display()
@@ -116,7 +118,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let mut pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
-            let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
+            let cksum = paths::read(&path.join(cksum_file)).with_context(|| {
                 format!(
                     "failed to load checksum `.cargo-checksum.json` \
                      of {} v{}",
@@ -124,7 +126,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                     pkg.package_id().version()
                 )
             })?;
-            let cksum: Checksum = serde_json::from_str(&cksum).chain_err(|| {
+            let cksum: Checksum = serde_json::from_str(&cksum).with_context(|| {
                 format!(
                     "failed to decode `.cargo-checksum.json` of \
                      {} v{}",
@@ -171,7 +173,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let file = pkg.root().join(file);
             let actual = Sha256::new()
                 .update_path(&file)
-                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?
+                .with_context(|| format!("failed to calculate checksum of: {}", file.display()))?
                 .finish_hex();
             if &*actual != cksum {
                 anyhow::bail!(

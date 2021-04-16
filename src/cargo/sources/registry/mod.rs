@@ -165,6 +165,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use anyhow::Context as _;
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::{Version, VersionReq};
@@ -175,7 +176,6 @@ use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
 use crate::core::{Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
-use crate::util::errors::CargoResultExt;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
@@ -600,10 +600,10 @@ impl<'cfg> RegistrySource<'cfg> {
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
         for entry in tar.entries()? {
-            let mut entry = entry.chain_err(|| "failed to iterate over archive")?;
+            let mut entry = entry.with_context(|| "failed to iterate over archive")?;
             let entry_path = entry
                 .path()
-                .chain_err(|| "failed to read entry path")?
+                .with_context(|| "failed to read entry path")?
                 .into_owned();
 
             // We're going to unpack this tarball into the global source
@@ -623,7 +623,7 @@ impl<'cfg> RegistrySource<'cfg> {
             // Unpacking failed
             let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
             if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
-                result = result.chain_err(|| {
+                result = result.with_context(|| {
                     format!(
                         "`{}` appears to contain a reserved Windows path, \
                         it cannot be extracted on Windows",
@@ -631,7 +631,8 @@ impl<'cfg> RegistrySource<'cfg> {
                     )
                 });
             }
-            result.chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
+            result
+                .with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
 
         // The lock file is created after unpacking so we overwrite a lock file
@@ -641,7 +642,7 @@ impl<'cfg> RegistrySource<'cfg> {
             .read(true)
             .write(true)
             .open(&path)
-            .chain_err(|| format!("failed to open `{}`", path.display()))?;
+            .with_context(|| format!("failed to open `{}`", path.display()))?;
 
         // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;
@@ -660,7 +661,7 @@ impl<'cfg> RegistrySource<'cfg> {
     fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
-            .chain_err(|| format!("failed to unpack package `{}`", package))?;
+            .with_context(|| format!("failed to unpack package `{}`", package))?;
         let mut src = PathSource::new(&path, self.source_id, self.config);
         src.update()?;
         let mut pkg = match src.download(package)? {

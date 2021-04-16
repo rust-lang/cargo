@@ -5,9 +5,10 @@ use crate::sources::registry::{
     RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
     VERSION_TEMPLATE,
 };
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, Filesystem};
+use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
 use lazycell::LazyCell;
 use log::{debug, trace};
@@ -97,7 +98,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
                     Ok(git2::Repository::init_opts(&path, &opts)
-                        .chain_err(|| "failed to initialize index git repository")?)
+                        .with_context(|| "failed to initialize index git repository")?)
                 }
             }
         })
@@ -241,7 +242,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url();
         let repo = self.repo.borrow_mut().unwrap();
         git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
-            .chain_err(|| format!("failed to fetch `{}`", url))?;
+            .with_context(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
 
         // Create a dummy file to record the mtime for when we updated the
@@ -312,7 +313,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .read(true)
             .write(true)
             .open(&path)
-            .chain_err(|| format!("failed to open `{}`", path.display()))?;
+            .with_context(|| format!("failed to open `{}`", path.display()))?;
         let meta = dst.metadata()?;
         if meta.len() > 0 {
             return Ok(dst);

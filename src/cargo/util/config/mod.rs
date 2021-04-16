@@ -70,11 +70,11 @@ use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::toml as cargo_toml;
 use crate::util::validate_package_name;
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
-use anyhow::{anyhow, bail, format_err};
+use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
@@ -294,8 +294,8 @@ impl Config {
     /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn default() -> CargoResult<Config> {
         let shell = Shell::new();
-        let cwd =
-            env::current_dir().chain_err(|| "couldn't get the current directory of the process")?;
+        let cwd = env::current_dir()
+            .with_context(|| "couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
@@ -411,7 +411,7 @@ impl Config {
 
                 let exe = from_current_exe()
                     .or_else(|_| from_argv())
-                    .chain_err(|| "couldn't get the path to cargo executable")?;
+                    .with_context(|| "couldn't get the path to cargo executable")?;
                 Ok(exe)
             })
             .map(AsRef::as_ref)
@@ -1017,7 +1017,7 @@ impl Config {
             result.push(cv);
             Ok(())
         })
-        .chain_err(|| "could not load Cargo configuration")?;
+        .with_context(|| "could not load Cargo configuration")?;
         Ok(result)
     }
 
@@ -1029,9 +1029,9 @@ impl Config {
     ) -> CargoResult<()> {
         let includes = self.include_paths(cv, false)?;
         for (path, abs_path, def) in includes {
-            let mut cv = self
-                ._load_file(&abs_path, seen, false)
-                .chain_err(|| format!("failed to load config include `{}` from `{}`", path, def))?;
+            let mut cv = self._load_file(&abs_path, seen, false).with_context(|| {
+                format!("failed to load config include `{}` from `{}`", path, def)
+            })?;
             self.load_unmerged_include(&mut cv, seen, output)?;
             output.push(cv);
         }
@@ -1046,11 +1046,12 @@ impl Config {
 
         self.walk_tree(path, &home, |path| {
             let value = self.load_file(path, true)?;
-            cfg.merge(value, false)
-                .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
+            cfg.merge(value, false).with_context(|| {
+                format!("failed to merge configuration at `{}`", path.display())
+            })?;
             Ok(())
         })
-        .chain_err(|| "could not load Cargo configuration")?;
+        .with_context(|| "could not load Cargo configuration")?;
 
         match cfg {
             CV::Table(map, _) => Ok(map),
@@ -1076,15 +1077,17 @@ impl Config {
             );
         }
         let contents = fs::read_to_string(path)
-            .chain_err(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = cargo_toml::parse(&contents, path, self)
-            .chain_err(|| format!("could not parse TOML configuration in `{}`", path.display()))?;
-        let value = CV::from_toml(Definition::Path(path.to_path_buf()), toml).chain_err(|| {
-            format!(
-                "failed to load TOML configuration from `{}`",
-                path.display()
-            )
+            .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
+        let toml = cargo_toml::parse(&contents, path, self).with_context(|| {
+            format!("could not parse TOML configuration in `{}`", path.display())
         })?;
+        let value =
+            CV::from_toml(Definition::Path(path.to_path_buf()), toml).with_context(|| {
+                format!(
+                    "failed to load TOML configuration from `{}`",
+                    path.display()
+                )
+            })?;
         if includes {
             self.load_includes(value, seen)
         } else {
@@ -1109,7 +1112,9 @@ impl Config {
         for (path, abs_path, def) in includes {
             self._load_file(&abs_path, seen, true)
                 .and_then(|include| root.merge(include, true))
-                .chain_err(|| format!("failed to load config include `{}` from `{}`", path, def))?;
+                .with_context(|| {
+                    format!("failed to load config include `{}` from `{}`", path, def)
+                })?;
         }
         root.merge(value, true)?;
         Ok(root)
@@ -1181,7 +1186,7 @@ impl Config {
                 // TODO: This should probably use a more narrow parser, reject
                 // comments, blank lines, [headers], etc.
                 let toml_v: toml::Value = toml::de::from_str(arg)
-                    .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
+                    .with_context(|| format!("failed to parse --config argument `{}`", arg))?;
                 let toml_table = toml_v.as_table().unwrap();
                 if toml_table.len() != 1 {
                     bail!(
@@ -1191,15 +1196,15 @@ impl Config {
                     );
                 }
                 CV::from_toml(Definition::Cli, toml_v)
-                    .chain_err(|| format!("failed to convert --config argument `{}`", arg))?
+                    .with_context(|| format!("failed to convert --config argument `{}`", arg))?
             };
             let mut seen = HashSet::new();
             let tmp_table = self
                 .load_includes(tmp_table, &mut seen)
-                .chain_err(|| "failed to load --config include".to_string())?;
+                .with_context(|| "failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
-                .chain_err(|| format!("failed to merge --config argument `{}`", arg))?;
+                .with_context(|| format!("failed to merge --config argument `{}`", arg))?;
         }
         Ok(loaded_args)
     }
@@ -1218,7 +1223,7 @@ impl Config {
                 Vacant(entry) => {
                     entry.insert(value);
                 }
-                Occupied(mut entry) => entry.get_mut().merge(value, true).chain_err(|| {
+                Occupied(mut entry) => entry.get_mut().merge(value, true).with_context(|| {
                     format!(
                         "failed to merge --config key `{}` into `{}`",
                         entry.key(),
@@ -1304,7 +1309,7 @@ impl Config {
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
         if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
-            self.resolve_registry_index(&index).chain_err(|| {
+            self.resolve_registry_index(&index).with_context(|| {
                 format!(
                     "invalid index URL for registry `{}` defined in {}",
                     registry, index.definition
@@ -1573,7 +1578,7 @@ impl Config {
                             return Ok(PackageCacheLock(self));
                         }
 
-                        Err(e).chain_err(|| "failed to acquire package cache lock")?;
+                        Err(e).with_context(|| "failed to acquire package cache lock")?;
                     }
                 }
             }
@@ -1725,7 +1730,7 @@ impl ConfigValue {
                 val.into_iter()
                     .map(|(key, value)| {
                         let value = CV::from_toml(def.clone(), value)
-                            .chain_err(|| format!("failed to parse key `{}`", key))?;
+                            .with_context(|| format!("failed to parse key `{}`", key))?;
                         Ok((key, value))
                     })
                     .collect::<CargoResult<_>>()?,
@@ -1771,7 +1776,7 @@ impl ConfigValue {
                         Occupied(mut entry) => {
                             let new_def = value.definition().clone();
                             let entry = entry.get_mut();
-                            entry.merge(value, force).chain_err(|| {
+                            entry.merge(value, force).with_context(|| {
                                 format!(
                                     "failed to merge key `{}` between \
                                      {} and {}",
@@ -1904,7 +1909,7 @@ pub fn save_credentials(
     };
 
     let mut contents = String::new();
-    file.read_to_string(&mut contents).chain_err(|| {
+    file.read_to_string(&mut contents).with_context(|| {
         format!(
             "failed to read configuration file `{}`",
             file.path().display()
@@ -1973,10 +1978,10 @@ pub fn save_credentials(
     let contents = toml.to_string();
     file.seek(SeekFrom::Start(0))?;
     file.write_all(contents.as_bytes())
-        .chain_err(|| format!("failed to write to `{}`", file.path().display()))?;
+        .with_context(|| format!("failed to write to `{}`", file.path().display()))?;
     file.file().set_len(contents.len() as u64)?;
     set_permissions(file.file(), 0o600)
-        .chain_err(|| format!("failed to set permissions of `{}`", file.path().display()))?;
+        .with_context(|| format!("failed to set permissions of `{}`", file.path().display()))?;
 
     return Ok(());
 

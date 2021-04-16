@@ -1,6 +1,8 @@
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
+
+use anyhow::Context as _;
 
 pub struct ReplacedSource<'cfg> {
     to_replace: SourceId,
@@ -47,7 +49,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
             .query(&dep, &mut |summary| {
                 f(summary.map_source(replace_with, to_replace))
             })
-            .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
+            .with_context(|| format!("failed to query replaced source {}", self.to_replace))?;
         Ok(())
     }
 
@@ -59,14 +61,14 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
             .fuzzy_query(&dep, &mut |summary| {
                 f(summary.map_source(replace_with, to_replace))
             })
-            .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
+            .with_context(|| format!("failed to query replaced source {}", self.to_replace))?;
         Ok(())
     }
 
     fn update(&mut self) -> CargoResult<()> {
         self.inner
             .update()
-            .chain_err(|| format!("failed to update replaced source {}", self.to_replace))?;
+            .with_context(|| format!("failed to update replaced source {}", self.to_replace))?;
         Ok(())
     }
 
@@ -75,7 +77,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         let pkg = self
             .inner
             .download(id)
-            .chain_err(|| format!("failed to download replaced source {}", self.to_replace))?;
+            .with_context(|| format!("failed to download replaced source {}", self.to_replace))?;
         Ok(match pkg {
             MaybePackage::Ready(pkg) => {
                 MaybePackage::Ready(pkg.map_source(self.replace_with, self.to_replace))
@@ -89,7 +91,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         let pkg = self
             .inner
             .finish_download(id, data)
-            .chain_err(|| format!("failed to download replaced source {}", self.to_replace))?;
+            .with_context(|| format!("failed to download replaced source {}", self.to_replace))?;
         Ok(pkg.map_source(self.replace_with, self.to_replace))
     }
 

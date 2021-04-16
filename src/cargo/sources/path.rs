@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::ops;
-use crate::util::{internal, CargoResult, CargoResultExt, Config};
+use crate::util::{internal, CargoResult, Config};
+use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
@@ -96,7 +97,7 @@ impl<'cfg> PathSource<'cfg> {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
-        self._list_files(pkg).chain_err(|| {
+        self._list_files(pkg).with_context(|| {
             format!(
                 "failed to determine list of files in {}",
                 pkg.root().display()
@@ -190,7 +191,7 @@ impl<'cfg> PathSource<'cfg> {
         };
         let index = repo
             .index()
-            .chain_err(|| format!("failed to open git index at {}", repo.path().display()))?;
+            .with_context(|| format!("failed to open git index at {}", repo.path().display()))?;
         let repo_root = repo.workdir().ok_or_else(|| {
             anyhow::format_err!(
                 "did not expect repo at {} to be bare",
@@ -411,7 +412,7 @@ impl<'cfg> PathSource<'cfg> {
         // TODO: drop `collect` and sort after transition period and dropping warning tests.
         // See rust-lang/cargo#4268 and rust-lang/cargo#4270.
         let mut entries: Vec<PathBuf> = fs::read_dir(path)
-            .chain_err(|| format!("cannot read {:?}", path))?
+            .with_context(|| format!("cannot read {:?}", path))?
             .map(|e| e.unwrap().path())
             .collect();
         entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
@@ -436,7 +437,7 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut max = FileTime::zero();
         let mut max_path = PathBuf::new();
-        for file in self.list_files(pkg).chain_err(|| {
+        for file in self.list_files(pkg).with_context(|| {
             format!(
                 "failed to determine the most recently modified file in {}",
                 pkg.root().display()

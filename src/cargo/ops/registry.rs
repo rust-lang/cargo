@@ -7,7 +7,7 @@ use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
-use anyhow::{bail, format_err};
+use anyhow::{bail, format_err, Context as _};
 use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
@@ -22,7 +22,7 @@ use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::validate_package_name;
 use crate::util::IntoUrl;
@@ -256,7 +256,7 @@ fn transmit(
         .as_ref()
         .map(|readme| {
             paths::read(&pkg.root().join(readme))
-                .chain_err(|| format!("failed to read `readme` file for package `{}`", pkg))
+                .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
         })
         .transpose()?;
     if let Some(ref file) = *license_file {
@@ -308,7 +308,7 @@ fn transmit(
             },
             tarball,
         )
-        .chain_err(|| format!("failed to publish to registry at {}", registry.host()))?;
+        .with_context(|| format!("failed to publish to registry at {}", registry.host()))?;
 
     if !warnings.invalid_categories.is_empty() {
         let msg = format!(
@@ -452,7 +452,7 @@ fn registry(
         let cfg = src.config();
         let mut updated_cfg = || {
             src.update()
-                .chain_err(|| format!("failed to update {}", sid))?;
+                .with_context(|| format!("failed to update {}", sid))?;
             src.config()
         };
 
@@ -726,7 +726,7 @@ pub fn registry_login(
             input
                 .lock()
                 .read_line(&mut line)
-                .chain_err(|| "failed to read stdin")?;
+                .with_context(|| "failed to read stdin")?;
             // Automatically remove `cargo login` from an inputted token to
             // allow direct pastes from `registry.host()`/me.
             line.replace("cargo login", "").trim().to_string()
@@ -815,7 +815,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry.add_owners(&name, &v).chain_err(|| {
+        let msg = registry.add_owners(&name, &v).with_context(|| {
             format!(
                 "failed to invite owners to crate `{}` on registry at {}",
                 name,
@@ -831,7 +831,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         config
             .shell()
             .status("Owner", format!("removing {:?} from crate {}", v, name))?;
-        registry.remove_owners(&name, &v).chain_err(|| {
+        registry.remove_owners(&name, &v).with_context(|| {
             format!(
                 "failed to remove owners from crate `{}` on registry at {}",
                 name,
@@ -841,7 +841,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     }
 
     if opts.list {
-        let owners = registry.list_owners(&name).chain_err(|| {
+        let owners = registry.list_owners(&name).with_context(|| {
             format!(
                 "failed to list owners of crate `{}` on registry at {}",
                 name,
@@ -889,7 +889,7 @@ pub fn yank(
         config
             .shell()
             .status("Unyank", format!("{}:{}", name, version))?;
-        registry.unyank(&name, &version).chain_err(|| {
+        registry.unyank(&name, &version).with_context(|| {
             format!(
                 "failed to undo a yank from the registry at {}",
                 registry.host()
@@ -901,7 +901,7 @@ pub fn yank(
             .status("Yank", format!("{}:{}", name, version))?;
         registry
             .yank(&name, &version)
-            .chain_err(|| format!("failed to yank from the registry at {}", registry.host()))?;
+            .with_context(|| format!("failed to yank from the registry at {}", registry.host()))?;
     }
 
     Ok(())
@@ -947,7 +947,7 @@ pub fn search(
     }
 
     let (mut registry, _, source_id) = registry(config, None, index, reg, false, false)?;
-    let (crates, total_crates) = registry.search(query, limit).chain_err(|| {
+    let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
             "failed to retrieve search results from the registry at {}",
             registry.host()
