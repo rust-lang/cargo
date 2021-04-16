@@ -28,8 +28,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
         extra_workspaces.push(ws);
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
-    let vendor_config =
-        sync(config, &workspaces, opts).with_context(|| "failed to sync".to_string())?;
+    let vendor_config = sync(config, &workspaces, opts).with_context(|| "failed to sync")?;
 
     if config.shell().verbosity() != Verbosity::Quiet {
         crate::drop_eprint!(

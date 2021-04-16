@@ -498,10 +498,8 @@ impl Manifest {
             self.unstable_features
                 .require(Feature::test_dummy_unstable())
                 .with_context(|| {
-                    anyhow::format_err!(
-                        "the `im-a-teapot` manifest key is unstable and may \
-                         not work properly in England"
-                    )
+                    "the `im-a-teapot` manifest key is unstable and may \
+                     not work properly in England"
                 })?;
         }
 

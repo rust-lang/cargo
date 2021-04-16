@@ -418,7 +418,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).with_context(|| {
-        anyhow::format_err!(
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -502,7 +502,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).with_context(|| {
-        anyhow::format_err!(
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()

@@ -1142,10 +1142,9 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
         .val
         .validate(name, ws.unstable_features(), &mut warnings)
         .with_context(|| {
-            anyhow::format_err!(
+            format!(
                 "config profile `{}` is not valid (defined in `{}`)",
-                name,
-                profile.definition
+                name, profile.definition
             )
         })?;
     for warning in warnings {

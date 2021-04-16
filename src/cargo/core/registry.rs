@@ -282,7 +282,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 // corresponding to this `dep`.
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .with_context(|| {
-                        anyhow::format_err!(
+                        format!(
                             "failed to load source for dependency `{}`",
                             dep.package_name()
                         )
@@ -322,7 +322,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 Ok(summary)
             })
             .collect::<CargoResult<Vec<_>>>()
-            .with_context(|| anyhow::format_err!("failed to resolve patches for `{}`", url))?;
+            .with_context(|| format!("failed to resolve patches for `{}`", url))?;
 
         let mut name_and_version = HashSet::new();
         for summary in unlocked_summaries.iter() {
@@ -390,7 +390,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
         })()
-        .with_context(|| anyhow::format_err!("Unable to update {}", source_id))?;
+        .with_context(|| format!("Unable to update {}", source_id))?;
         Ok(())
     }
 
@@ -542,7 +542,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 // Ensure the requested source_id is loaded
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .with_context(|| {
-                        anyhow::format_err!(
+                        format!(
                             "failed to load source for dependency `{}`",
                             dep.package_name()
                         )

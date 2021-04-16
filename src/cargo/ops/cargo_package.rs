@@ -123,7 +123,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     tar(ws, ar_files, dst.file(), &filename)
-        .with_context(|| anyhow::format_err!("failed to prepare local package for uploading"))?;
+        .with_context(|| "failed to prepare local package for uploading")?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
         run_verify(ws, &dst, opts).with_context(|| "failed to verify package tarball")?

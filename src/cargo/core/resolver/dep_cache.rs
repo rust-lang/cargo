@@ -225,7 +225,7 @@ impl<'a> RegistryQueryer<'a> {
             .into_iter()
             .map(|(dep, features)| {
                 let candidates = self.query(&dep).with_context(|| {
-                    anyhow::format_err!(
+                    format!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),
                         describe_path(&cx.parents.path_to_bottom(&candidate.package_id())),

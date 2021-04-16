@@ -1415,14 +1415,9 @@ impl WorkspaceRootConfig {
             Some(p) => p,
             None => return Ok(Vec::new()),
         };
-        let res = glob(path)
-            .with_context(|| anyhow::format_err!("could not parse pattern `{}`", &path))?;
+        let res = glob(path).with_context(|| format!("could not parse pattern `{}`", &path))?;
         let res = res
-            .map(|p| {
-                p.with_context(|| {
-                    anyhow::format_err!("unable to match path to pattern `{}`", &path)
-                })
-            })
+            .map(|p| p.with_context(|| format!("unable to match path to pattern `{}`", &path)))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
     }

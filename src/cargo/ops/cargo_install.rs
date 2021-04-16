@@ -357,7 +357,7 @@ fn install_one(
             td.into_path();
         }
 
-        format_err!(
+        format!(
             "failed to compile `{}`, intermediate artifacts can be \
              found at `{}`",
             pkg,
@@ -422,7 +422,7 @@ fn install_one(
         let dst = dst.join(bin);
         config.shell().status("Installing", dst.display())?;
         fs::rename(&src, &dst).with_context(|| {
-            format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+            format!("failed to move `{}` to `{}`", src.display(), dst.display())
         })?;
         installed.bins.push(dst);
         successful_bins.insert(bin.to_string());
@@ -437,7 +437,7 @@ fn install_one(
                 let dst = dst.join(bin);
                 config.shell().status("Replacing", dst.display())?;
                 fs::rename(&src, &dst).with_context(|| {
-                    format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+                    format!("failed to move `{}` to `{}`", src.display(), dst.display())
                 })?;
                 successful_bins.insert(bin.to_string());
             }

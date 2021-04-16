@@ -101,12 +101,11 @@ impl InstallTracker {
             if contents.is_empty() {
                 Ok(CrateListingV1::default())
             } else {
-                Ok(toml::from_str(&contents)
-                    .with_context(|| format_err!("invalid TOML found for metadata"))?)
+                Ok(toml::from_str(&contents).with_context(|| "invalid TOML found for metadata")?)
             }
         })()
         .with_context(|| {
-            format_err!(
+            format!(
                 "failed to parse crate metadata at `{}`",
                 v1_lock.path().to_string_lossy()
             )
@@ -119,13 +118,13 @@ impl InstallTracker {
                 CrateListingV2::default()
             } else {
                 serde_json::from_str(&contents)
-                    .with_context(|| format_err!("invalid JSON found for metadata"))?
+                    .with_context(|| "invalid JSON found for metadata")?
             };
             v2.sync_v1(&v1);
             Ok(v2)
         })()
         .with_context(|| {
-            format_err!(
+            format!(
                 "failed to parse crate metadata at `{}`",
                 v2_lock.path().to_string_lossy()
             )
@@ -279,14 +278,14 @@ impl InstallTracker {
     /// Save tracking information to disk.
     pub fn save(&self) -> CargoResult<()> {
         self.v1.save(&self.v1_lock).with_context(|| {
-            format_err!(
+            format!(
                 "failed to write crate metadata at `{}`",
                 self.v1_lock.path().to_string_lossy()
             )
         })?;
 
         self.v2.save(&self.v2_lock).with_context(|| {
-            format_err!(
+            format!(
                 "failed to write crate metadata at `{}`",
                 self.v2_lock.path().to_string_lossy()
             )

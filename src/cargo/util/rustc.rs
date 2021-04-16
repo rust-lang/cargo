@@ -222,10 +222,10 @@ impl Cache {
                 .with_context(|| format!("could not execute process {} (never executed)", cmd))?;
             let stdout = String::from_utf8(output.stdout)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .with_context(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
+                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
             let stderr = String::from_utf8(output.stderr)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .with_context(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
+                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
             self.data.outputs.insert(
                 key,
                 Output {
