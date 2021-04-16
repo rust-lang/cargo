@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
 use log::{debug, trace};
@@ -22,7 +22,7 @@ use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
+use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::{self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl};
 
@@ -50,7 +50,7 @@ pub fn read_manifest(
     let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
 
     do_read_manifest(&contents, path, source_id, config)
-        .chain_err(|| format!("failed to parse manifest at `{}`", path.display()))
+        .with_context(|| format!("failed to parse manifest at `{}`", path.display()))
         .map_err(|err| ManifestError::new(err, path.into()))
 }
 
@@ -1028,10 +1028,10 @@ impl TomlManifest {
         let edition = if let Some(ref edition) = project.edition {
             features
                 .require(Feature::edition())
-                .chain_err(|| "editions are unstable")?;
+                .with_context(|| "editions are unstable")?;
             edition
                 .parse()
-                .chain_err(|| "failed to parse the `edition` key")?
+                .with_context(|| "failed to parse the `edition` key")?
         } else {
             Edition::Edition2015
         };
@@ -1470,7 +1470,7 @@ impl TomlManifest {
         }
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flatten() {
-            let mut spec = PackageIdSpec::parse(spec).chain_err(|| {
+            let mut spec = PackageIdSpec::parse(spec).with_context(|| {
                 format!(
                     "replacements must specify a valid semver \
                      version to replace, but `{}` does not",
@@ -1514,7 +1514,7 @@ impl TomlManifest {
                     .config
                     .get_registry_index(url)
                     .or_else(|_| url.into_url())
-                    .chain_err(|| {
+                    .with_context(|| {
                         format!("[patch] entry `{}` should be a URL or registry name", url)
                     })?,
             };

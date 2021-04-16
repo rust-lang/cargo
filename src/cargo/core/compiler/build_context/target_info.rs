@@ -3,7 +3,8 @@ use crate::core::compiler::{
 };
 use crate::core::{Dependency, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
-use crate::util::{CargoResult, CargoResultExt, Rustc};
+use crate::util::{CargoResult, Rustc};
+use anyhow::Context as _;
 use cargo_platform::{Cfg, CfgExpr};
 use cargo_util::{paths, ProcessBuilder};
 use serde::{Deserialize, Serialize};
@@ -176,7 +177,7 @@ impl TargetInfo {
 
         let (output, error) = rustc
             .cached_output(&process, extra_fingerprint)
-            .chain_err(|| "failed to run `rustc` to learn about target-specific information")?;
+            .with_context(|| "failed to run `rustc` to learn about target-specific information")?;
 
         let mut lines = output.lines();
         let mut map = HashMap::new();
@@ -212,7 +213,7 @@ impl TargetInfo {
             .map(|line| Ok(Cfg::from_str(line)?))
             .filter(TargetInfo::not_user_specific_cfg)
             .collect::<CargoResult<Vec<_>>>()
-            .chain_err(|| {
+            .with_context(|| {
                 format!(
                     "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
                     output
@@ -413,7 +414,7 @@ impl TargetInfo {
 
         process.arg("--crate-type").arg(crate_type.as_str());
 
-        let output = process.exec_with_output().chain_err(|| {
+        let output = process.exec_with_output().with_context(|| {
             format!(
                 "failed to run `rustc` to learn about crate-type {} information",
                 crate_type

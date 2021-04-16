@@ -3,10 +3,10 @@ use std::collections::{HashMap, HashSet};
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{profile, CanonicalUrl, Config};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use log::{debug, trace};
 use semver::VersionReq;
 use url::Url;
@@ -281,8 +281,8 @@ impl<'cfg> PackageRegistry<'cfg> {
                 // normally would and then ask it directly for the list of summaries
                 // corresponding to this `dep`.
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
-                    .chain_err(|| {
-                        anyhow::format_err!(
+                    .with_context(|| {
+                        format!(
                             "failed to load source for dependency `{}`",
                             dep.package_name()
                         )
@@ -293,14 +293,16 @@ impl<'cfg> PackageRegistry<'cfg> {
                     .get_mut(dep.source_id())
                     .expect("loaded source not present");
                 let summaries = source.query_vec(dep)?;
-                let (summary, should_unlock) =
-                    summary_for_patch(orig_patch, locked, summaries, source).chain_err(|| {
-                        format!(
-                            "patch for `{}` in `{}` failed to resolve",
-                            orig_patch.package_name(),
-                            url,
-                        )
-                    })?;
+                let (summary, should_unlock) = summary_for_patch(
+                    orig_patch, locked, summaries, source,
+                )
+                .with_context(|| {
+                    format!(
+                        "patch for `{}` in `{}` failed to resolve",
+                        orig_patch.package_name(),
+                        url,
+                    )
+                })?;
                 debug!(
                     "patch summary is {:?} should_unlock={:?}",
                     summary, should_unlock
@@ -320,7 +322,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 Ok(summary)
             })
             .collect::<CargoResult<Vec<_>>>()
-            .chain_err(|| anyhow::format_err!("failed to resolve patches for `{}`", url))?;
+            .with_context(|| format!("failed to resolve patches for `{}`", url))?;
 
         let mut name_and_version = HashSet::new();
         for summary in unlocked_summaries.iter() {
@@ -388,7 +390,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
         })()
-        .chain_err(|| anyhow::format_err!("Unable to update {}", source_id))?;
+        .with_context(|| format!("Unable to update {}", source_id))?;
         Ok(())
     }
 
@@ -539,8 +541,8 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
                 // Ensure the requested source_id is loaded
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
-                    .chain_err(|| {
-                        anyhow::format_err!(
+                    .with_context(|| {
+                        format!(
                             "failed to load source for dependency `{}`",
                             dep.package_name()
                         )

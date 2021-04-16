@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use cargo_platform::Platform;
 use log::trace;
 use semver::ReqParseError;
@@ -8,7 +9,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::core::{PackageId, SourceId, Summary};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Config;
 
@@ -132,7 +133,7 @@ this warning.
         }
         Err(e) => {
             let err: CargoResult<VersionReq> = Err(e.into());
-            let v: VersionReq = err.chain_err(|| {
+            let v: VersionReq = err.with_context(|| {
                 format!(
                     "failed to parse the version requirement `{}` for dependency `{}`",
                     req, name

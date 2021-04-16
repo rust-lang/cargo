@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::slice;
 
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use glob::glob;
 use log::debug;
 use url::Url;
@@ -18,7 +18,7 @@ use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
+use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{read_manifest, TomlDependency, TomlProfiles};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
@@ -386,7 +386,7 @@ impl<'cfg> Workspace<'cfg> {
                     .config
                     .get_registry_index(url)
                     .or_else(|_| url.into_url())
-                    .chain_err(|| {
+                    .with_context(|| {
                         format!("[patch] entry `{}` should be a URL or registry name", url)
                     })?,
             };
@@ -1415,12 +1415,9 @@ impl WorkspaceRootConfig {
             Some(p) => p,
             None => return Ok(Vec::new()),
         };
-        let res =
-            glob(path).chain_err(|| anyhow::format_err!("could not parse pattern `{}`", &path))?;
+        let res = glob(path).with_context(|| format!("could not parse pattern `{}`", &path))?;
         let res = res
-            .map(|p| {
-                p.chain_err(|| anyhow::format_err!("unable to match path to pattern `{}`", &path))
-            })
+            .map(|p| p.with_context(|| format!("unable to match path to pattern `{}`", &path)))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
     }

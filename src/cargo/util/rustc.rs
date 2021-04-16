@@ -4,12 +4,13 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use anyhow::Context as _;
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::util::interning::InternedString;
-use crate::util::{profile, CargoResult, CargoResultExt, StableHasher};
+use crate::util::{profile, CargoResult, StableHasher};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -66,7 +67,7 @@ impl Rustc {
         };
 
         let host = InternedString::new(extract("host: ")?);
-        let version = semver::Version::parse(extract("release: ")?).chain_err(|| {
+        let version = semver::Version::parse(extract("release: ")?).with_context(|| {
             format!(
                 "rustc version does not appear to be a valid semver version, from:\n{}",
                 verbose_version
@@ -218,13 +219,13 @@ impl Cache {
             let output = cmd
                 .build_command()
                 .output()
-                .chain_err(|| format!("could not execute process {} (never executed)", cmd))?;
+                .with_context(|| format!("could not execute process {} (never executed)", cmd))?;
             let stdout = String::from_utf8(output.stdout)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .chain_err(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
+                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
             let stderr = String::from_utf8(output.stderr)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .chain_err(|| anyhow::anyhow!("`{}` didn't return utf8 output", cmd))?;
+                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
             self.data.outputs.insert(
                 key,
                 Output {

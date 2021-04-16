@@ -2,10 +2,12 @@ use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
 use crate::util::Config;
+
+use anyhow::Context as _;
 use cargo_util::paths;
 use std::fs;
 use std::path::Path;
@@ -222,14 +224,12 @@ fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
         config
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
-        paths::remove_dir_all(path)
-            .chain_err(|| anyhow::format_err!("could not remove build directory"))?;
+        paths::remove_dir_all(path).with_context(|| "could not remove build directory")?;
     } else if m.is_ok() {
         config
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
-        paths::remove_file(path)
-            .chain_err(|| anyhow::format_err!("failed to remove build artifact"))?;
+        paths::remove_file(path).with_context(|| "failed to remove build artifact")?;
     }
     Ok(())
 }

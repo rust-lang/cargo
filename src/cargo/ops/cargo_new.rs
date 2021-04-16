@@ -1,7 +1,8 @@
 use crate::core::{Edition, Shell, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
+use anyhow::Context as _;
 use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
@@ -416,8 +417,8 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).chain_err(|| {
-        anyhow::format_err!(
+    mk(config, &mkopts).with_context(|| {
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -500,8 +501,8 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).chain_err(|| {
-        anyhow::format_err!(
+    mk(config, &mkopts).with_context(|| {
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()

@@ -11,10 +11,11 @@ use crate::core::resolver::CliFeatures;
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;
 use crate::util::{self, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
+use anyhow::Context as _;
 use cargo_util::paths;
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
@@ -122,17 +123,17 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     tar(ws, ar_files, dst.file(), &filename)
-        .chain_err(|| anyhow::format_err!("failed to prepare local package for uploading"))?;
+        .with_context(|| "failed to prepare local package for uploading")?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
-        run_verify(ws, &dst, opts).chain_err(|| "failed to verify package tarball")?
+        run_verify(ws, &dst, opts).with_context(|| "failed to verify package tarball")?
     }
     dst.seek(SeekFrom::Start(0))?;
     {
         let src_path = dst.path();
         let dst_path = dst.parent().join(&filename);
         fs::rename(&src_path, &dst_path)
-            .chain_err(|| "failed to move temporary tarball into final location")?;
+            .with_context(|| "failed to move temporary tarball into final location")?;
     }
     Ok(Some(dst))
 }
@@ -501,16 +502,16 @@ fn tar(
         let mut header = Header::new_gnu();
         match contents {
             FileContents::OnDisk(disk_path) => {
-                let mut file = File::open(&disk_path).chain_err(|| {
+                let mut file = File::open(&disk_path).with_context(|| {
                     format!("failed to open for archiving: `{}`", disk_path.display())
                 })?;
-                let metadata = file.metadata().chain_err(|| {
+                let metadata = file.metadata().with_context(|| {
                     format!("could not learn metadata for: `{}`", disk_path.display())
                 })?;
                 header.set_metadata_in_mode(&metadata, HeaderMode::Deterministic);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, &mut file)
-                    .chain_err(|| {
+                    .with_context(|| {
                         format!("could not archive source file `{}`", disk_path.display())
                     })?;
             }
@@ -525,7 +526,7 @@ fn tar(
                 header.set_size(contents.len() as u64);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
-                    .chain_err(|| format!("could not archive source file `{}`", rel_str))?;
+                    .with_context(|| format!("could not archive source file `{}`", rel_str))?;
             }
         }
     }
@@ -739,7 +740,7 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
         }
         Ok(result)
     }
-    let result = wrap(path).chain_err(|| format!("failed to verify output at {:?}", path))?;
+    let result = wrap(path).with_context(|| format!("failed to verify output at {:?}", path))?;
     Ok(result)
 }
 

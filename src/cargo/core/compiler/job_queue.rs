@@ -56,7 +56,7 @@ use std::marker;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::format_err;
+use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
@@ -78,8 +78,8 @@ use crate::core::{PackageId, Shell, TargetKind};
 use crate::drop_eprint;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
+use crate::util::CargoResult;
 use crate::util::{self, internal, profile};
-use crate::util::{CargoResult, CargoResultExt};
 use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -440,7 +440,7 @@ impl<'cfg> JobQueue<'cfg> {
             .into_helper_thread(move |token| {
                 messages.push(Message::Token(token));
             })
-            .chain_err(|| "failed to create helper thread for jobserver management")?;
+            .with_context(|| "failed to create helper thread for jobserver management")?;
 
         // Create a helper thread to manage the diagnostics for rustfix if
         // necessary.
@@ -537,7 +537,7 @@ impl<'cfg> DrainState<'cfg> {
                 .push(token);
             client
                 .release_raw()
-                .chain_err(|| "failed to release jobserver token")?;
+                .with_context(|| "failed to release jobserver token")?;
         }
 
         Ok(())
@@ -617,7 +617,7 @@ impl<'cfg> DrainState<'cfg> {
                     .push(FutureIncompatReportCrate { package_id, report });
             }
             Message::Token(acquired_token) => {
-                let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
+                let token = acquired_token.with_context(|| "failed to acquire jobserver token")?;
                 self.tokens.push(token);
             }
             Message::NeedsToken(id) => {

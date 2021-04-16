@@ -7,9 +7,9 @@
 use crate::core::{GitReference, PackageId, Source, SourceId};
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::{self, ConfigRelativePath, OptValue};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{Config, IntoUrl};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use log::debug;
 use std::collections::{HashMap, HashSet};
 use url::Url;
@@ -280,7 +280,7 @@ restore the source replacement configuration to continue the build
         return Ok(());
 
         fn url(val: &config::Value<String>, key: &str) -> CargoResult<Url> {
-            let url = val.val.into_url().chain_err(|| {
+            let url = val.val.into_url().with_context(|| {
                 format!(
                     "configuration key `{}` specified an invalid \
                      URL (in {})",

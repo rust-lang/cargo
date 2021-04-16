@@ -321,7 +321,7 @@ use std::str;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use anyhow::{bail, format_err};
+use anyhow::{bail, format_err, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use filetime::FileTime;
 use log::{debug, info};
@@ -332,7 +332,7 @@ use serde::{Deserialize, Serialize};
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
 use crate::util;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{internal, path_args, profile};
 use crate::CARGO_ENV;
@@ -1311,7 +1311,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     let target_root = target_root(cx);
     let local = if unit.mode.is_doc() {
         // rustdoc does not have dep-info files.
-        let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg).chain_err(|| {
+        let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg).with_context(|| {
             format!(
                 "failed to determine package fingerprint for documenting {}",
                 unit.pkg
@@ -1400,7 +1400,7 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
     let local = (gen_local)(
         deps,
         Some(&|| {
-            pkg_fingerprint(cx.bcx, &unit.pkg).chain_err(|| {
+            pkg_fingerprint(cx.bcx, &unit.pkg).with_context(|| {
                 format!(
                     "failed to determine package fingerprint for build script for {}",
                     unit.pkg
@@ -1668,7 +1668,7 @@ fn compare_old_fingerprint(
 
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
     let old_fingerprint: Fingerprint = serde_json::from_str(&old_fingerprint_json)
-        .chain_err(|| internal("failed to deserialize json"))?;
+        .with_context(|| internal("failed to deserialize json"))?;
     // Fingerprint can be empty after a failed rebuild (see comment in prepare_target).
     if !old_fingerprint_short.is_empty() {
         debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);

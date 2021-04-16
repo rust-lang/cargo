@@ -28,7 +28,7 @@ use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
 use log::debug;
 
@@ -54,7 +54,7 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Feature, PackageId, Target};
-use crate::util::errors::{CargoResult, CargoResultExt, VerboseError};
+use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
@@ -331,7 +331,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 },
             )
             .map_err(verbose_if_simple_exit_code)
-            .chain_err(|| format!("could not compile `{}`", name))?;
+            .with_context(|| format!("could not compile `{}`", name))?;
         }
 
         if rustc_dep_info_loc.exists() {
@@ -345,7 +345,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
             )
-            .chain_err(|| {
+            .with_context(|| {
                 internal(format!(
                     "could not parse/generate dep info at: {}",
                     rustc_dep_info_loc.display()
@@ -665,7 +665,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 },
                 false,
             )
-            .chain_err(|| format!("could not document `{}`", name))?;
+            .with_context(|| format!("could not document `{}`", name))?;
         Ok(())
     }))
 }

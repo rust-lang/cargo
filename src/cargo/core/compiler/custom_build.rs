@@ -3,10 +3,11 @@ use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{internal, profile};
+use anyhow::Context as _;
 use cargo_platform::Cfg;
 use cargo_util::paths;
 use std::collections::hash_map::{Entry, HashMap};
@@ -308,7 +309,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
         paths::create_dir_all(&script_out_dir)
-            .chain_err(|| "failed to create script output directory for build command")?;
+            .with_context(|| "failed to create script output directory for build command")?;
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command. We're also careful to augment our
@@ -370,7 +371,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 },
                 true,
             )
-            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_descr));
+            .with_context(|| format!("failed to run custom build command for `{}`", pkg_descr));
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(

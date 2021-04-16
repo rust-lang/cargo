@@ -5,7 +5,7 @@ pub use self::canonical_url::CanonicalUrl;
 pub use self::config::{homedir, Config, ConfigValue};
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
-pub use self::errors::{internal, CargoResult, CargoResultExt, CliResult, Test};
+pub use self::errors::{internal, CargoResult, CliResult, Test};
 pub use self::errors::{CargoTestError, CliError};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;

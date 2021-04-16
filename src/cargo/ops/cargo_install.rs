@@ -7,10 +7,11 @@ use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, U
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem, Rustc, ToSemver};
 use crate::{drop_println, ops};
-use anyhow::{bail, format_err};
+
+use anyhow::{bail, format_err, Context as _};
 use cargo_util::paths;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
@@ -350,13 +351,13 @@ fn install_one(
     check_yanked_install(&ws)?;
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    let compile = ops::compile_ws(&ws, opts, &exec).chain_err(|| {
+    let compile = ops::compile_ws(&ws, opts, &exec).with_context(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
             td.into_path();
         }
 
-        format_err!(
+        format!(
             "failed to compile `{}`, intermediate artifacts can be \
              found at `{}`",
             pkg,
@@ -420,8 +421,8 @@ fn install_one(
         let src = staging_dir.path().join(bin);
         let dst = dst.join(bin);
         config.shell().status("Installing", dst.display())?;
-        fs::rename(&src, &dst).chain_err(|| {
-            format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+        fs::rename(&src, &dst).with_context(|| {
+            format!("failed to move `{}` to `{}`", src.display(), dst.display())
         })?;
         installed.bins.push(dst);
         successful_bins.insert(bin.to_string());
@@ -435,8 +436,8 @@ fn install_one(
                 let src = staging_dir.path().join(bin);
                 let dst = dst.join(bin);
                 config.shell().status("Replacing", dst.display())?;
-                fs::rename(&src, &dst).chain_err(|| {
-                    format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+                fs::rename(&src, &dst).with_context(|| {
+                    format!("failed to move `{}` to `{}`", src.display(), dst.display())
                 })?;
                 successful_bins.insert(bin.to_string());
             }
@@ -463,7 +464,7 @@ fn install_one(
         }
 
         match tracker.save() {
-            Err(err) => replace_result.chain_err(|| err)?,
+            Err(err) => replace_result.with_context(|| err)?,
             Ok(_) => replace_result?,
         }
     }
@@ -736,7 +737,7 @@ fn remove_orphaned_bins(
                     ),
                 )?;
                 paths::remove_file(&full_path)
-                    .chain_err(|| format!("failed to remove {:?}", full_path))?;
+                    .with_context(|| format!("failed to remove {:?}", full_path))?;
             }
         }
     }

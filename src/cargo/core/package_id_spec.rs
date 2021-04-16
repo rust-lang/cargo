@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
 use crate::core::PackageId;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
 use crate::util::{validate_package_name, IntoUrl, ToSemver};
@@ -85,9 +85,9 @@ impl PackageIdSpec {
         I: IntoIterator<Item = PackageId>,
     {
         let i: Vec<_> = i.into_iter().collect();
-        let spec = PackageIdSpec::parse(spec).chain_err(|| {
+        let spec = PackageIdSpec::parse(spec).with_context(|| {
             let suggestion = lev_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
-            anyhow::format_err!("invalid package ID specification: `{}`{}", spec, suggestion)
+            format!("invalid package ID specification: `{}`{}", spec, suggestion)
         })?;
         spec.query(i)
     }

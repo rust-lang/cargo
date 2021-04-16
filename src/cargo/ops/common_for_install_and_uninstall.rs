@@ -5,14 +5,14 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::{bail, format_err};
+use anyhow::{bail, format_err, Context as _};
 use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::Freshness;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::Config;
 use crate::util::{FileLock, Filesystem};
 
@@ -101,12 +101,11 @@ impl InstallTracker {
             if contents.is_empty() {
                 Ok(CrateListingV1::default())
             } else {
-                Ok(toml::from_str(&contents)
-                    .chain_err(|| format_err!("invalid TOML found for metadata"))?)
+                Ok(toml::from_str(&contents).with_context(|| "invalid TOML found for metadata")?)
             }
         })()
-        .chain_err(|| {
-            format_err!(
+        .with_context(|| {
+            format!(
                 "failed to parse crate metadata at `{}`",
                 v1_lock.path().to_string_lossy()
             )
@@ -119,13 +118,13 @@ impl InstallTracker {
                 CrateListingV2::default()
             } else {
                 serde_json::from_str(&contents)
-                    .chain_err(|| format_err!("invalid JSON found for metadata"))?
+                    .with_context(|| "invalid JSON found for metadata")?
             };
             v2.sync_v1(&v1);
             Ok(v2)
         })()
-        .chain_err(|| {
-            format_err!(
+        .with_context(|| {
+            format!(
                 "failed to parse crate metadata at `{}`",
                 v2_lock.path().to_string_lossy()
             )
@@ -278,15 +277,15 @@ impl InstallTracker {
 
     /// Save tracking information to disk.
     pub fn save(&self) -> CargoResult<()> {
-        self.v1.save(&self.v1_lock).chain_err(|| {
-            format_err!(
+        self.v1.save(&self.v1_lock).with_context(|| {
+            format!(
                 "failed to write crate metadata at `{}`",
                 self.v1_lock.path().to_string_lossy()
             )
         })?;
 
-        self.v2.save(&self.v2_lock).chain_err(|| {
-            format_err!(
+        self.v2.save(&self.v2_lock).with_context(|| {
+            format!(
                 "failed to write crate metadata at `{}`",
                 self.v2_lock.path().to_string_lossy()
             )

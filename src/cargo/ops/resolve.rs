@@ -23,8 +23,9 @@ use crate::core::{
 };
 use crate::ops;
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
+use anyhow::Context as _;
 use log::{debug, trace};
 use std::collections::HashSet;
 
@@ -412,7 +413,7 @@ pub fn add_overrides<'a>(
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, id, ws.config());
-        source.update().chain_err(|| {
+        source.update().with_context(|| {
             format!(
                 "failed to update path override `{}` \
                  (defined in `{}`)",

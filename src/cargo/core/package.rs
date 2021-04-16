@@ -26,7 +26,7 @@ use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{SourceMap, Summary, Workspace};
 use crate::ops;
 use crate::util::config::PackageCacheLock;
-use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
+use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::interning::InternedString;
 use crate::util::network::Retry;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
@@ -416,7 +416,7 @@ impl<'cfg> PackageSet<'cfg> {
         let multiplexing = config.http_config()?.multiplexing.unwrap_or(true);
         multi
             .pipelining(false, multiplexing)
-            .chain_err(|| "failed to enable multiplexing/pipelining in curl")?;
+            .with_context(|| "failed to enable multiplexing/pipelining in curl")?;
 
         // let's not flood crates.io with connections
         multi.set_max_host_connections(2)?;
@@ -612,7 +612,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// the package is ready and doesn't need to be downloaded.
     pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         self.start_inner(id)
-            .chain_err(|| format!("failed to download `{}`", id))
+            .with_context(|| format!("failed to download `{}`", id))
     }
 
     fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
@@ -636,7 +636,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
         let pkg = source
             .download(id)
-            .chain_err(|| anyhow::format_err!("unable to get packages from source"))?;
+            .with_context(|| "unable to get packages from source")?;
         let (url, descriptor) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);
@@ -810,7 +810,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                         }
                         Ok(())
                     })
-                    .chain_err(|| format!("failed to download from `{}`", dl.url))?
+                    .with_context(|| format!("failed to download from `{}`", dl.url))?
             };
             match ret {
                 Some(()) => break (dl, data),
@@ -908,7 +908,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 self.set
                     .multi
                     .perform()
-                    .chain_err(|| "failed to perform http requests")
+                    .with_context(|| "failed to perform http requests")
             })?;
             debug!("handles remaining: {}", n);
             let results = &mut self.results;
@@ -935,7 +935,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             self.set
                 .multi
                 .wait(&mut [], timeout)
-                .chain_err(|| "failed to wait on curl `Multi`")?;
+                .with_context(|| "failed to wait on curl `Multi`")?;
         }
     }
 

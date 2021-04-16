@@ -9,27 +9,6 @@ use std::path::PathBuf;
 
 pub type CargoResult<T> = anyhow::Result<T>;
 
-// TODO: should delete this trait and just use `with_context` instead
-pub trait CargoResultExt<T, E> {
-    fn chain_err<F, D>(self, f: F) -> CargoResult<T>
-    where
-        F: FnOnce() -> D,
-        D: fmt::Display + Send + Sync + 'static;
-}
-
-impl<T, E> CargoResultExt<T, E> for Result<T, E>
-where
-    E: Into<Error>,
-{
-    fn chain_err<F, D>(self, f: F) -> CargoResult<T>
-    where
-        F: FnOnce() -> D,
-        D: fmt::Display + Send + Sync + 'static,
-    {
-        self.map_err(|e| e.into().context(f()))
-    }
-}
-
 #[derive(Debug)]
 pub struct HttpNot200 {
     pub code: u32,

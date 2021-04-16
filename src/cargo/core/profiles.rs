@@ -1,11 +1,10 @@
 use crate::core::compiler::{CompileKind, CompileMode, Unit};
 use crate::core::resolver::features::FeaturesFor;
 use crate::core::{Feature, PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
-use crate::util::errors::CargoResultExt;
 use crate::util::interning::InternedString;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, config, CargoResult, Config};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
 use std::{cmp, env, fmt, hash};
@@ -1142,11 +1141,10 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
     profile
         .val
         .validate(name, ws.unstable_features(), &mut warnings)
-        .chain_err(|| {
-            anyhow::format_err!(
+        .with_context(|| {
+            format!(
                 "config profile `{}` is not valid (defined in `{}`)",
-                name,
-                profile.definition
+                name, profile.definition
             )
         })?;
     for warning in warnings {

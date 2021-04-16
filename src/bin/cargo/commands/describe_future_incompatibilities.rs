@@ -1,8 +1,7 @@
 use crate::command_prelude::*;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _};
 use cargo::core::compiler::future_incompat::{OnDiskReport, FUTURE_INCOMPAT_FILE};
 use cargo::drop_eprint;
-use cargo::util::CargoResultExt;
 use std::io::Read;
 
 pub fn cli() -> App {
@@ -37,9 +36,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     report_file
         .file()
         .read_to_string(&mut file_contents)
-        .chain_err(|| "failed to read report")?;
+        .with_context(|| "failed to read report")?;
     let on_disk_report: OnDiskReport =
-        serde_json::from_str(&file_contents).chain_err(|| "failed to load report")?;
+        serde_json::from_str(&file_contents).with_context(|| "failed to load report")?;
 
     let id = args.value_of("id").unwrap();
     if id != on_disk_report.id {
