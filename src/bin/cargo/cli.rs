@@ -31,9 +31,21 @@ pub fn main(config: &mut Config) -> CliResult {
 
     if args.value_of("unstable-features") == Some("help") {
         let options = CliUnstable::help();
-        let help_lines: Vec<String> = options.iter().map(|(option_name, option_help_message)| {
-            format!("-Z {} -- {}", option_name, option_help_message)
-        }).collect();
+        let longest_option = options
+            .iter()
+            .map(|(option_name, _)| option_name.len())
+            .max()
+            .unwrap_or(0);
+        let help_lines: Vec<String> = options
+            .iter()
+            .map(|(option_name, option_help_message)| {
+                let padding = " ".repeat(longest_option - option_name.len()); // safe to substract
+                format!(
+                    "    -Z {}{} -- {}",
+                    option_name, padding, option_help_message
+                )
+            })
+            .collect();
         let joined = help_lines.join("\n");
         drop_println!(
             config,
@@ -42,8 +54,9 @@ Available unstable (nightly-only) flags:
 
 {}
 
-Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
-        , joined);
+Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
+            joined
+        );
         if !config.nightly_features_allowed {
             drop_println!(
                 config,
