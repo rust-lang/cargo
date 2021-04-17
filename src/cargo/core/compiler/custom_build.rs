@@ -267,12 +267,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             }
         })
         .collect::<Vec<_>>();
-    let library_name = unit
-        .pkg
-        .targets()
-        .iter()
-        .find(|t| t.is_lib())
-        .map(|t| t.crate_name());
+    let library_name = unit.pkg.library().map(|t| t.crate_name());
     let pkg_descr = unit.pkg.to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
@@ -879,11 +874,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
     (
         BuildOutput::parse_file(
             &output_file,
-            unit.pkg
-                .targets()
-                .iter()
-                .find(|t| t.is_lib())
-                .map(|t| t.crate_name()),
+            unit.pkg.library().map(|t| t.crate_name()),
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
