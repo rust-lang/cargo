@@ -645,7 +645,13 @@ impl<'cfg> Workspace<'cfg> {
         };
 
         for path in &members_paths {
-            self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
+            self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)
+                .with_context(|| {
+                    format!(
+                        "failed to load manifest for workspace member `{}`",
+                        path.display()
+                    )
+                })?;
         }
 
         if let Some(default) = default_members_paths {

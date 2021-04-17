@@ -408,7 +408,10 @@ fn invalid_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+[ERROR] failed to load manifest for workspace member `[..]/foo`
+
+Caused by:
+  failed to read `[..]foo/foo/Cargo.toml`
 
 Caused by:
   [..]
@@ -1869,7 +1872,10 @@ fn glob_syntax_invalid_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+[ERROR] failed to load manifest for workspace member `[..]/crates/bar`
+
+Caused by:
+  failed to read `[..]foo/crates/bar/Cargo.toml`
 
 Caused by:
   [..]
