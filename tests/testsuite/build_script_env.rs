@@ -128,9 +128,12 @@ fn rustc_bootstrap() {
         )
         .with_status(101)
         .run();
-    // RUSTC_BOOTSTRAP unset on nightly should warn
+    // nightly should warn whether or not RUSTC_BOOTSTRAP is set
     p.cargo("build")
         .masquerade_as_nightly_cargo()
+        // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
+        // (this matters when tests are being run with a beta or stable cargo)
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP set to the name of the library should warn
@@ -151,21 +154,22 @@ fn rustc_bootstrap() {
     // Tests for binaries instead of libraries
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
-        .file("src/main.rs", "#![feature(rustc_attrs)] fn main()")
+        .file("src/main.rs", "#![feature(rustc_attrs)] fn main() {}")
         .file("build.rs", build_rs)
         .build();
-    // RUSTC_BOOTSTRAP unconditionally set when there's no library should warn
+    // nightly should warn when there's no library whether or not RUSTC_BOOTSTRAP is set
     p.cargo("build")
         .masquerade_as_nightly_cargo()
+        // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
+        // (this matters when tests are being run with a beta or stable cargo)
+        .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP conditionally set when there's no library should error (regardless of the value)
     p.cargo("build")
         .env("RUSTC_BOOTSTRAP", "foo")
         .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
-        .with_stderr_does_not_contain(
-            "help: [..] set the environment variable `RUSTC_BOOTSTRAP=1` [..]",
-        )
+        .with_stderr_contains("help: [..] set the environment variable `RUSTC_BOOTSTRAP=1` [..]")
         .with_status(101)
         .run();
 }
