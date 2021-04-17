@@ -269,7 +269,12 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             }
         })
         .collect::<Vec<_>>();
-    let crate_name = unit.target.crate_name();
+    let library_name = unit
+        .pkg
+        .targets()
+        .iter()
+        .find(|t| t.is_lib())
+        .map(|t| t.crate_name());
     let pkg_descr = unit.pkg.to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
@@ -279,7 +284,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let host_target_root = cx.files().host_dest().to_path_buf();
     let all = (
         id,
-        crate_name.clone(),
+        library_name.clone(),
         pkg_descr.clone(),
         Arc::clone(&build_script_outputs),
         output_file.clone(),
@@ -399,7 +404,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         paths::write(&root_output_file, paths::path2bytes(&script_out_dir)?)?;
         let parsed_output = BuildOutput::parse(
             &output.stdout,
-            crate_name,
+            library_name,
             &pkg_descr,
             &script_out_dir,
             &script_out_dir,
@@ -421,12 +426,12 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     // itself to run when we actually end up just discarding what we calculated
     // above.
     let fresh = Work::new(move |state| {
-        let (id, crate_name, pkg_descr, build_script_outputs, output_file, script_out_dir) = all;
+        let (id, library_name, pkg_descr, build_script_outputs, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
             None => BuildOutput::parse_file(
                 &output_file,
-                crate_name,
+                library_name,
                 &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
@@ -478,7 +483,7 @@ fn insert_warnings_in_build_outputs(
 impl BuildOutput {
     pub fn parse_file(
         path: &Path,
-        crate_name: String,
+        library_name: Option<String>,
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
@@ -488,7 +493,7 @@ impl BuildOutput {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
             &contents,
-            crate_name,
+            library_name,
             pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
@@ -499,11 +504,11 @@ impl BuildOutput {
 
     // Parses the output of a script.
     // The `pkg_descr` is used for error messages.
-    // The `crate_name` is used for determining if RUSTC_BOOTSTRAP should be allowed.
+    // The `library_name` is used for determining if RUSTC_BOOTSTRAP should be allowed.
     pub fn parse(
         input: &[u8],
         // Takes String instead of InternedString so passing `unit.pkg.name()` will give a compile error.
-        crate_name: String,
+        library_name: Option<String>,
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
@@ -592,12 +597,21 @@ impl BuildOutput {
                         // behavior, so still only give a warning.
                         // NOTE: cargo only allows nightly features on RUSTC_BOOTSTRAP=1, but we
                         // want setting any value of RUSTC_BOOTSTRAP to downgrade this to a warning
-                        // (so that `RUSTC_BOOTSTRAP=crate_name` will work)
-                        let rustc_bootstrap_allows = |name: &str| {
+                        // (so that `RUSTC_BOOTSTRAP=library_name` will work)
+                        let rustc_bootstrap_allows = |name: Option<&str>| {
+                            let name = match name {
+                                // as of 2021, no binaries on crates.io use RUSTC_BOOTSTRAP, so
+                                // fine-grained opt-outs aren't needed. end-users can always use
+                                // RUSTC_BOOTSTRAP=1 from the top-level if it's really a problem.
+                                None => return false,
+                                Some(n) => n,
+                            };
                             std::env::var("RUSTC_BOOTSTRAP")
                                 .map_or(false, |var| var.split(',').any(|s| s == name))
                         };
-                        if nightly_features_allowed || rustc_bootstrap_allows(&*crate_name) {
+                        if nightly_features_allowed
+                            || rustc_bootstrap_allows(library_name.as_deref())
+                        {
                             warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
                                 val, whence
@@ -610,7 +624,7 @@ impl BuildOutput {
                                 help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,
                                 whence,
-                                crate_name,
+                                library_name.as_deref().unwrap_or("1"),
                             );
                         }
                     } else {
@@ -867,7 +881,11 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
     (
         BuildOutput::parse_file(
             &output_file,
-            unit.target.crate_name(),
+            unit.pkg
+                .targets()
+                .iter()
+                .find(|t| t.is_lib())
+                .map(|t| t.crate_name()),
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
