@@ -5,6 +5,7 @@ use clap::{AppSettings, Arg, ArgMatches};
 use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
+use cargo::core::features::HIDDEN;
 
 pub fn main(config: &mut Config) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
@@ -31,18 +32,24 @@ pub fn main(config: &mut Config) -> CliResult {
 
     if args.value_of("unstable-features") == Some("help") {
         let options = CliUnstable::help();
-        let longest_option = options
+        let non_hidden_options: Vec<(String, String)> = options
+            .iter()
+            .filter(|(_, help_message)| *help_message != HIDDEN)
+            .map(|(name, help)| (name.to_string(), help.to_string()))
+            .collect();
+        let longest_option = non_hidden_options
             .iter()
             .map(|(option_name, _)| option_name.len())
             .max()
             .unwrap_or(0);
-        let help_lines: Vec<String> = options
+        let help_lines: Vec<String> = non_hidden_options
             .iter()
             .map(|(option_name, option_help_message)| {
+                let option_name_kebab_case = option_name.replace("_", "-");
                 let padding = " ".repeat(longest_option - option_name.len()); // safe to substract
                 format!(
                     "    -Z {}{} -- {}",
-                    option_name, padding, option_help_message
+                    option_name_kebab_case, padding, option_help_message
                 )
             })
             .collect();

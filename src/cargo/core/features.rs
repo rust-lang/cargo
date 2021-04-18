@@ -105,6 +105,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{indented_lines, iter_join};
 use crate::Config;
 
+pub const HIDDEN: &str = "";
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
@@ -542,7 +543,10 @@ macro_rules! cli_options {
     (
         $(#[$struct_meta:meta])*
         $name: ident,
-        $($visibility: vis $element: ident: $ty: ty = ($help: literal $(, #[$meta:meta])?)),*
+        $(
+            $(#[$meta:meta])?
+            $visibility: vis $element: ident: $ty: ty = ($help: expr )
+        ),*
     ) => {
         $(#[$struct_meta])*
         pub struct $name {
@@ -571,35 +575,36 @@ cli_options!(
     CliUnstable,
     // Permanently unstable features:
     pub allow_features: Option<BTreeSet<String>> = ("Allow *only* the listed unstable features"),
-    pub print_im_a_teapot: bool= (""),
+    pub print_im_a_teapot: bool= (HIDDEN),
 
     // All other unstable features.
     // Please keep this list lexiographically ordered.
-    pub advanced_env: bool = (""),
+    pub advanced_env: bool = (HIDDEN),
     pub avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
-    pub binary_dep_depinfo: bool = (""),
-    pub build_std: Option<Vec<String>>  = ("", #[serde(deserialize_with = "deserialize_build_std")]),
-    pub build_std_features: Option<Vec<String>>  = (""),
-    pub config_include: bool = (""),
-    pub configurable_env: bool = (""),
-    pub credential_process: bool = (""),
-    pub doctest_in_workspace: bool = (""),
+    pub binary_dep_depinfo: bool = ("Track binary dependencies change"),
+    #[serde(deserialize_with = "deserialize_build_std")]
+    pub build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
+    pub build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    pub config_include: bool = ("Enable the `include` key in config files"),
+    pub configurable_env: bool = ("Enable the [env] section in the .cargo/config.toml file"),
+    pub credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
+    pub doctest_in_workspace: bool = ("TODO"),
     pub doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
-    pub dual_proc_macros: bool = (""),
-    pub enable_future_incompat_feature: bool = (""),
+    pub dual_proc_macros: bool = ("TODO"),
+    pub enable_future_incompat_feature: bool = ("TODO"),
     pub extra_link_arg: bool = ("Allow `cargo:rustc-link-arg` in build scripts"),
-    pub features: Option<Vec<String>>  = (""),
-    pub jobserver_per_rustc: bool = (""),
+    pub features: Option<Vec<String>>  = (HIDDEN),
+    pub jobserver_per_rustc: bool = ("TODO"),
     pub minimal_versions: bool = ("Install minimal dependency versions instead of maximum"),
-    pub mtime_on_use: bool = (""),
-    pub multitarget: bool = (""),
-    pub named_profiles: bool = (""),
+    pub mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
+    pub multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
+    pub named_profiles: bool = ("Allow defining custom profiles"),
     pub namespaced_features: bool = ("Allow features with `dep:` prefix"),
     pub no_index_update: bool = ("Do not update the registry, avoids a network request for benchmarking"),
-    pub panic_abort_tests: bool = (""),
+    pub panic_abort_tests: bool = ("Enable nightly support to compile test harness crates with -Cpanic=abort"),
     pub patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
-    pub rustdoc_map: bool = (""),
-    pub separate_nightlies: bool = (""),
+    pub rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
+    pub separate_nightlies: bool = (HIDDEN),
     pub terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
     pub timings: Option<Vec<String>>  = ("Display concurrency information"),
     pub unstable_options: bool = ("Allow the usage of unstable options"),

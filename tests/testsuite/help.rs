@@ -49,7 +49,7 @@ fn z_flags_help() {
     // all the `-Z` flags.
     cargo_process("-Z help")
         .with_stdout_contains(
-            "    -Z allow_features[..]-- Allow *only* the listed unstable features",
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
         )
         .run();
 }
