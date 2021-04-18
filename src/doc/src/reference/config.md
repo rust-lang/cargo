@@ -94,6 +94,7 @@ offline = false             # do not access the network
 [profile.<name>]         # Modify profile settings via config.
 opt-level = 0            # Optimization level.
 debug = true             # Include debug info.
+split-debuginfo = '...'  # Debug info splitting behavior.
 debug-assertions = true  # Enables debug assertions.
 overflow-checks = true   # Enables runtime integer overflow checks.
 lto = false              # Sets link-time optimization.
@@ -602,6 +603,13 @@ See [codegen-units](profiles.md#codegen-units).
 * Environment: `CARGO_PROFILE_<name>_DEBUG`
 
 See [debug](profiles.md#debug).
+
+##### `profile.<name>.split-debuginfo`
+* Type: string
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_SPLIT_DEBUGINFO`
+
+See [split-debuginfo](profiles.md#split-debuginfo).
 
 ##### `profile.<name>.debug-assertions`
 * Type: boolean
