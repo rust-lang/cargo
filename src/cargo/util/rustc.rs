@@ -46,7 +46,13 @@ impl Rustc {
     ) -> CargoResult<Rustc> {
         let _p = profile::start("Rustc::new");
 
-        let mut cache = Cache::load(&path, rustup_rustc, cache_location);
+        let mut cache = Cache::load(
+            wrapper.as_deref(),
+            workspace_wrapper.as_deref(),
+            &path,
+            rustup_rustc,
+            cache_location,
+        );
 
         let mut cmd = ProcessBuilder::new(&path);
         cmd.arg("-vV");
@@ -155,8 +161,17 @@ struct Output {
 }
 
 impl Cache {
-    fn load(rustc: &Path, rustup_rustc: &Path, cache_location: Option<PathBuf>) -> Cache {
-        match (cache_location, rustc_fingerprint(rustc, rustup_rustc)) {
+    fn load(
+        wrapper: Option<&Path>,
+        workspace_wrapper: Option<&Path>,
+        rustc: &Path,
+        rustup_rustc: &Path,
+        cache_location: Option<PathBuf>,
+    ) -> Cache {
+        match (
+            cache_location,
+            rustc_fingerprint(wrapper, workspace_wrapper, rustc, rustup_rustc),
+        ) {
             (Some(cache_location), Ok(rustc_fingerprint)) => {
                 let empty = CacheData {
                     rustc_fingerprint,
@@ -273,13 +288,29 @@ impl Drop for Cache {
     }
 }
 
-fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
+fn rustc_fingerprint(
+    wrapper: Option<&Path>,
+    workspace_wrapper: Option<&Path>,
+    rustc: &Path,
+    rustup_rustc: &Path,
+) -> CargoResult<u64> {
     let mut hasher = StableHasher::new();
 
-    let path = paths::resolve_executable(path)?;
-    path.hash(&mut hasher);
+    let hash_exe = |hasher: &mut _, path| -> CargoResult<()> {
+        let path = paths::resolve_executable(path)?;
+        path.hash(hasher);
 
-    paths::mtime(&path)?.hash(&mut hasher);
+        paths::mtime(&path)?.hash(hasher);
+        Ok(())
+    };
+
+    hash_exe(&mut hasher, rustc)?;
+    if let Some(wrapper) = wrapper {
+        hash_exe(&mut hasher, wrapper)?;
+    }
+    if let Some(workspace_wrapper) = workspace_wrapper {
+        hash_exe(&mut hasher, workspace_wrapper)?;
+    }
 
     // Rustup can change the effective compiler without touching
     // the `rustc` binary, so we try to account for this here.
@@ -292,7 +323,7 @@ fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
     //
     // If we don't see rustup env vars, but it looks like the compiler
     // is managed by rustup, we conservatively bail out.
-    let maybe_rustup = rustup_rustc == path;
+    let maybe_rustup = rustup_rustc == rustc;
     match (
         maybe_rustup,
         env::var("RUSTUP_HOME"),

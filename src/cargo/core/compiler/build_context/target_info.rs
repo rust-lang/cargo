@@ -140,7 +140,7 @@ impl TargetInfo {
             "RUSTFLAGS",
         )?;
         let extra_fingerprint = kind.fingerprint_hash();
-        let mut process = rustc.process();
+        let mut process = rustc.workspace_process();
         process
             .arg("-")
             .arg("--crate-name")
