@@ -56,16 +56,16 @@ fn try_help(config: &Config) -> CargoResult<bool> {
             Some(man) => man,
             None => return Ok(false),
         };
-        write_and_spawn(&man, "man")?;
+        write_and_spawn(&subcommand, &man, "man")?;
     } else {
         let txt = match extract_man(&subcommand, "txt") {
             Some(txt) => txt,
             None => return Ok(false),
         };
         if resolve_executable(Path::new("less")).is_ok() {
-            write_and_spawn(&txt, "less")?;
+            write_and_spawn(&subcommand, &txt, "less")?;
         } else if resolve_executable(Path::new("more")).is_ok() {
-            write_and_spawn(&txt, "more")?;
+            write_and_spawn(&subcommand, &txt, "more")?;
         } else {
             drop(std::io::stdout().write_all(&txt));
         }
@@ -117,13 +117,20 @@ fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
 
 /// Write the contents of a man page to disk and spawn the given command to
 /// display it.
-fn write_and_spawn(contents: &[u8], command: &str) -> CargoResult<()> {
-    let mut tmp = tempfile::Builder::new().prefix("cargo-man").tempfile()?;
+fn write_and_spawn(name: &str, contents: &[u8], command: &str) -> CargoResult<()> {
+    let prefix = format!("cargo-{}.", name);
+    let mut tmp = tempfile::Builder::new().prefix(&prefix).tempfile()?;
     let f = tmp.as_file_mut();
     f.write_all(contents)?;
     f.flush()?;
+    let path = tmp.path();
+    // Use a path relative to the temp directory so that it can work on
+    // cygwin/msys systems which don't handle windows-style paths.
+    let mut relative_name = std::ffi::OsString::from("./");
+    relative_name.push(path.file_name().unwrap());
     let mut cmd = std::process::Command::new(command)
-        .arg(tmp.path())
+        .arg(relative_name)
+        .current_dir(path.parent().unwrap())
         .spawn()?;
     drop(cmd.wait());
     Ok(())
