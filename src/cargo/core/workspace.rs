@@ -645,7 +645,13 @@ impl<'cfg> Workspace<'cfg> {
         };
 
         for path in &members_paths {
-            self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
+            self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)
+                .with_context(|| {
+                    format!(
+                        "failed to load manifest for workspace member `{}`",
+                        path.display()
+                    )
+                })?;
         }
 
         if let Some(default) = default_members_paths {
@@ -719,14 +725,15 @@ impl<'cfg> Workspace<'cfg> {
             self.member_ids.insert(pkg.package_id());
             pkg.dependencies()
                 .iter()
-                .map(|d| d.source_id())
-                .filter(|d| d.is_path())
-                .filter_map(|d| d.url().to_file_path().ok())
-                .map(|p| p.join("Cargo.toml"))
+                .map(|d| (d.source_id(), d.package_name()))
+                .filter(|(s, _)| s.is_path())
+                .filter_map(|(s, n)| s.url().to_file_path().ok().map(|p| (p, n)))
+                .map(|(p, n)| (p.join("Cargo.toml"), n))
                 .collect::<Vec<_>>()
         };
-        for candidate in candidates {
-            self.find_path_deps(&candidate, root_manifest, true)
+        for (path, name) in candidates {
+            self.find_path_deps(&path, root_manifest, true)
+                .with_context(|| format!("failed to load manifest for dependency `{}`", name))
                 .map_err(|err| ManifestError::new(err, manifest_path.clone()))?;
         }
         Ok(())

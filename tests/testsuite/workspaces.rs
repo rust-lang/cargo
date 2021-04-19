@@ -408,7 +408,10 @@ fn invalid_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+[ERROR] failed to load manifest for workspace member `[..]/foo`
+
+Caused by:
+  failed to read `[..]foo/foo/Cargo.toml`
 
 Caused by:
   [..]
@@ -1869,7 +1872,10 @@ fn glob_syntax_invalid_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+[ERROR] failed to load manifest for workspace member `[..]/crates/bar`
+
+Caused by:
+  failed to read `[..]foo/crates/bar/Cargo.toml`
 
 Caused by:
   [..]
@@ -2310,6 +2316,55 @@ Caused by:
 
 Caused by:
   failed to read `[..]foo/x/Cargo.toml`
+
+Caused by:
+  [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn member_dep_missing() {
+    // Make sure errors are not suppressed with -q.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                baz = { path = "baz" }
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -q")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to load manifest for workspace member `[..]/bar`
+
+Caused by:
+  failed to load manifest for dependency `baz`
+
+Caused by:
+  failed to read `[..]foo/bar/baz/Cargo.toml`
 
 Caused by:
   [..]
