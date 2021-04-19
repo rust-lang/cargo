@@ -581,7 +581,7 @@ cli_options!(
     // Please keep this list lexiographically ordered.
     pub advanced_env: bool = (HIDDEN),
     pub avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
-    pub binary_dep_depinfo: bool = ("Track binary dependencies change"),
+    pub binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     #[serde(deserialize_with = "deserialize_build_std")]
     pub build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     pub build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
