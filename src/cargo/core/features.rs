@@ -590,7 +590,7 @@ cli_options!(
     pub credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     pub doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     pub doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
-    pub dual_proc_macros: bool = ("TODO"),
+    pub dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     pub enable_future_incompat_feature: bool = ("TODO"),
     pub extra_link_arg: bool = ("Allow `cargo:rustc-link-arg` in build scripts"),
     pub features: Option<Vec<String>>  = (HIDDEN),
