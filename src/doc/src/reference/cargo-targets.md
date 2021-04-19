@@ -27,7 +27,7 @@ bench = false
 
 ### Binaries
 
-Binary targets are executables programs that can be run after being compiled.
+Binary targets are executable programs that can be run after being compiled.
 The default binary filename is `src/main.rs`, which defaults to the name of
 the package. Additional binaries are stored in the [`src/bin/`
 directory][package layout]. The settings for each binary can be [customized]
