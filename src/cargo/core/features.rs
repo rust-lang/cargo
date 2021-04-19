@@ -591,7 +591,7 @@ cli_options!(
     pub doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     pub doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     pub dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
-    pub enable_future_incompat_feature: bool = ("Enable creation of a future-incompat report for all dependencies"),
+    pub future_incompat_report: bool = ("Enable creation of a future-incompat report for all dependencies"),
     pub extra_link_arg: bool = ("Allow `cargo:rustc-link-arg` in build scripts"),
     pub features: Option<Vec<String>>  = (HIDDEN),
     pub jobserver_per_rustc: bool = (HIDDEN),
@@ -825,7 +825,7 @@ impl CliUnstable {
             "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
-            "future-incompat-report" => self.enable_future_incompat_feature = parse_empty(k, v)?,
+            "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

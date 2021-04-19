@@ -488,7 +488,7 @@ pub trait ArgMatchesExt {
                 // TODO: Tracking issue
                 .fail_if_stable_opt("--future-incompat-report", 9241)?;
 
-            if !config.cli_unstable().enable_future_incompat_feature {
+            if !config.cli_unstable().future_incompat_report {
                 anyhow::bail!(
                     "Usage of `--future-incompat-report` requires `-Z future-incompat-report`"
                 )
