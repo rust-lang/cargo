@@ -601,7 +601,7 @@ cli_options!(
     pub named_profiles: bool = ("Allow defining custom profiles"),
     pub namespaced_features: bool = ("Allow features with `dep:` prefix"),
     pub no_index_update: bool = ("Do not update the registry, avoids a network request for benchmarking"),
-    pub panic_abort_tests: bool = ("Enable nightly support to compile test harness crates with -Cpanic=abort"),
+    pub panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     pub patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
     pub rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     pub separate_nightlies: bool = (HIDDEN),
