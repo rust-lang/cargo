@@ -600,7 +600,7 @@ cli_options!(
     pub multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
     pub named_profiles: bool = ("Allow defining custom profiles"),
     pub namespaced_features: bool = ("Allow features with `dep:` prefix"),
-    pub no_index_update: bool = ("Do not update the registry, avoids a network request for benchmarking"),
+    pub no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     pub panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     pub patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
     pub rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
