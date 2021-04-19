@@ -595,7 +595,7 @@ cli_options!(
     pub extra_link_arg: bool = ("Allow `cargo:rustc-link-arg` in build scripts"),
     pub features: Option<Vec<String>>  = (HIDDEN),
     pub jobserver_per_rustc: bool = (HIDDEN),
-    pub minimal_versions: bool = ("Install minimal dependency versions instead of maximum"),
+    pub minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     pub mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     pub multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
     pub named_profiles: bool = ("Allow defining custom profiles"),
