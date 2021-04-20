@@ -235,7 +235,7 @@ fn main() {
 Mitigation strategies:
 * Do not add new fields to all-public field structs.
 * Mark structs as [`#[non_exhaustive]`][non_exhaustive] when first introducing
-  an struct to prevent users from using struct literal syntax, and instead
+  a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
 <a id="struct-add-public-field-when-no-private"></a>
@@ -270,7 +270,7 @@ fn main() {
 Mitigation strategies:
 * Do not add new new fields to all-public field structs.
 * Mark structs as [`#[non_exhaustive]`][non_exhaustive] when first introducing
-  an struct to prevent users from using struct literal syntax, and instead
+  a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
 <a id="struct-private-fields-with-private"></a>
