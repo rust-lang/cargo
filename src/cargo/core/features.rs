@@ -68,7 +68,6 @@
 //!    get an instance of `CliUnstable` and check if the option has been
 //!    enabled on the `CliUnstable` instance. Nightly gating is already
 //!    handled, so no need to worry about that.
-//! 4. Update the `-Z help` documentation in the `main` function.
 //!
 //! ## Stabilization
 //!
@@ -83,9 +82,9 @@
 //!   2. `-Z unstable-options`: Find the call to `fail_if_stable_opt` and
 //!      remove it. Be sure to update the man pages if necessary.
 //!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`] to call
-//!      `stabilized_warn` or `stabilized_err`. Remove it from the `-Z help`
-//!      docs in the `main` function. Remove the `(unstable)` note in the
-//!      clap help text if necessary.
+//!      `stabilized_warn` or `stabilized_err` and remove the field from
+//!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
+//!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
 //!    `cargo-features` from `Cargo.toml` test files if any.
 //! 3. Remove the docs from unstable.md and update the redirect at the bottom
