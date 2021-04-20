@@ -522,17 +522,21 @@ fn merge_toml_overrides(
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    if unit_for.is_for_host() {
-        if let Some(build_override) = &toml.build_override {
-            merge_profile(profile, build_override);
-        }
-    }
-    if let Some(overrides) = toml.package.as_ref() {
+    if let Some(overrides) = &toml.package {
         if !is_member {
             if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
                 merge_profile(profile, all);
             }
         }
+    }
+
+    if unit_for.is_for_host() {
+        if let Some(build_override) = &toml.build_override {
+            merge_profile(profile, build_override);
+        }
+    }
+
+    if let Some(overrides) = &toml.package {
         if let Some(pkg_id) = pkg_id {
             let mut matches = overrides
                 .iter()
