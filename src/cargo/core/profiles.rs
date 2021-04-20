@@ -357,9 +357,9 @@ impl Profiles {
 /// The precedence of profiles are (first one wins):
 /// - Profiles in `.cargo/config` files (using same order as below).
 /// - [profile.dev.package.name] -- a named package.
+/// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts,
+///   proc macros, and their dependencies.
 /// - [profile.dev.package."*"] -- this cannot apply to workspace members.
-/// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts
-///   and their dependencies.
 /// - [profile.dev]
 /// - Default (hard-coded) values.
 #[derive(Debug, Clone)]
@@ -397,8 +397,17 @@ impl ProfileMaker {
             merge_profile(&mut profile, toml);
         }
 
-        // Next start overriding those settings. First comes build dependencies
-        // which default to opt-level 0...
+        // Then override those settings in order of increasing precedence. First
+        // comes the overrides applying to all non-workspace members like
+        // `[profile.release."*"]`...
+        if let Some(overrides) = self.toml.as_ref().and_then(|t| t.package.as_ref()) {
+            if !is_member {
+                if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
+                    merge_profile(&mut profile, all);
+                }
+            }
+        }
+        // ... next comes build dependencies which default to opt-level 0...
         if is_for_host {
             // For-host units are things like procedural macros, build scripts, and
             // their dependencies. For these units most projects simply want them
@@ -411,11 +420,11 @@ impl ProfileMaker {
             profile.opt_level = InternedString::new("0");
             profile.codegen_units = None;
         }
-        // ... and next comes any other sorts of overrides specified in
+        // ... and finally comes any other sorts of overrides specified in
         // profiles, such as `[profile.release.build-override]` or
         // `[profile.release.package.foo]`
         if let Some(toml) = &self.toml {
-            merge_toml_overrides(pkg_id, is_member, is_for_host, &mut profile, toml);
+            merge_toml_overrides(pkg_id, is_for_host, &mut profile, toml);
         }
         profile
     }
@@ -424,7 +433,6 @@ impl ProfileMaker {
 /// Merge package and build overrides from the given TOML profile into the given `Profile`.
 fn merge_toml_overrides(
     pkg_id: Option<PackageId>,
-    is_member: bool,
     is_for_host: bool,
     profile: &mut Profile,
     toml: &TomlProfile,
@@ -434,12 +442,8 @@ fn merge_toml_overrides(
             merge_profile(profile, build_override);
         }
     }
-    if let Some(overrides) = toml.package.as_ref() {
-        if !is_member {
-            if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
-                merge_profile(profile, all);
-            }
-        }
+
+    if let Some(overrides) = &toml.package {
         if let Some(pkg_id) = pkg_id {
             let mut matches = overrides
                 .iter()

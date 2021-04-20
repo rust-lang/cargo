@@ -207,6 +207,7 @@ fn profile_override_hierarchy() {
     // m3: 4 (as build.rs dependency)
     // m3: 1 (as [profile.dev] as workspace member)
     // dep: 3 (as [profile.dev.package."*"] as non-workspace member)
+    // dep: 4 (as [profile.dev.build-override])
     // m1 build.rs: 4 (as [profile.dev.build-override])
     // m2 build.rs: 2 (as [profile.dev.package.m2])
     // m2: 2 (as [profile.dev.package.m2])
@@ -217,6 +218,7 @@ fn profile_override_hierarchy() {
 [COMPILING] dep [..]
 [RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]
 [RUNNING] `rustc --crate-name dep [..]dep/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=3 [..]
+[RUNNING] `rustc --crate-name dep [..]dep/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]
 [RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
 [RUNNING] `rustc --crate-name build_script_build m1/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=4 [..]
 [COMPILING] m2 [..]
