@@ -44,8 +44,9 @@ struct SourceIdInner {
 /// source.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum SourceKind {
-    /// A git repository.
-    Git(GitReference),
+    // Note that the ordering here is important for how it affects the `Ord`
+    // implementation, notably how this affects the ordering of serialized
+    // packages into lock files.
     /// A local path..
     Path,
     /// A remote registry.
@@ -54,6 +55,8 @@ enum SourceKind {
     LocalRegistry,
     /// A directory-based registry.
     Directory,
+    /// A git repository.
+    Git(GitReference),
 }
 
 /// Information to find a specific commit in a Git repository.
