@@ -1,10 +1,11 @@
-use cargo::core::features;
+use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 
 use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
+use cargo::core::features::HIDDEN;
 
 pub fn main(config: &mut Config) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
@@ -30,25 +31,38 @@ pub fn main(config: &mut Config) -> CliResult {
     };
 
     if args.value_of("unstable-features") == Some("help") {
+        let options = CliUnstable::help();
+        let non_hidden_options: Vec<(String, String)> = options
+            .iter()
+            .filter(|(_, help_message)| *help_message != HIDDEN)
+            .map(|(name, help)| (name.to_string(), help.to_string()))
+            .collect();
+        let longest_option = non_hidden_options
+            .iter()
+            .map(|(option_name, _)| option_name.len())
+            .max()
+            .unwrap_or(0);
+        let help_lines: Vec<String> = non_hidden_options
+            .iter()
+            .map(|(option_name, option_help_message)| {
+                let option_name_kebab_case = option_name.replace("_", "-");
+                let padding = " ".repeat(longest_option - option_name.len()); // safe to substract
+                format!(
+                    "    -Z {}{} -- {}",
+                    option_name_kebab_case, padding, option_help_message
+                )
+            })
+            .collect();
+        let joined = help_lines.join("\n");
         drop_println!(
             config,
             "
 Available unstable (nightly-only) flags:
 
-    -Z allow-features      -- Allow *only* the listed unstable features
-    -Z avoid-dev-deps      -- Avoid installing dev-dependencies if possible
-    -Z extra-link-arg      -- Allow `cargo:rustc-link-arg` in build scripts
-    -Z minimal-versions    -- Install minimal dependency versions instead of maximum
-    -Z no-index-update     -- Do not update the registry, avoids a network request for benchmarking
-    -Z unstable-options    -- Allow the usage of unstable options
-    -Z timings             -- Display concurrency information
-    -Z doctest-xcompile    -- Compile and run doctests for non-host target using runner config
-    -Z terminal-width      -- Provide a terminal width to rustc for error truncation
-    -Z namespaced-features -- Allow features with `dep:` prefix
-    -Z weak-dep-features   -- Allow `dep_name?/feature` feature syntax
-    -Z patch-in-config     -- Allow `[patch]` sections in .cargo/config.toml files
+{}
 
-Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
+Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
+            joined
         );
         if !config.nightly_features_allowed {
             drop_println!(

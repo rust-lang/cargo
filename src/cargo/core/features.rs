@@ -68,7 +68,6 @@
 //!    get an instance of `CliUnstable` and check if the option has been
 //!    enabled on the `CliUnstable` instance. Nightly gating is already
 //!    handled, so no need to worry about that.
-//! 4. Update the `-Z help` documentation in the `main` function.
 //!
 //! ## Stabilization
 //!
@@ -83,9 +82,9 @@
 //!   2. `-Z unstable-options`: Find the call to `fail_if_stable_opt` and
 //!      remove it. Be sure to update the man pages if necessary.
 //!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`] to call
-//!      `stabilized_warn` or `stabilized_err`. Remove it from the `-Z help`
-//!      docs in the `main` function. Remove the `(unstable)` note in the
-//!      clap help text if necessary.
+//!      `stabilized_warn` or `stabilized_err` and remove the field from
+//!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
+//!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
 //!    `cargo-features` from `Cargo.toml` test files if any.
 //! 3. Remove the docs from unstable.md and update the redirect at the bottom
@@ -105,6 +104,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{indented_lines, iter_join};
 use crate::Config;
 
+pub const HIDDEN: &str = "";
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
@@ -538,51 +538,73 @@ impl Features {
     }
 }
 
-/// A parsed representation of all unstable flags that Cargo accepts.
-///
-/// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
-/// gating unstable functionality to Cargo. These flags are only available on
-/// the nightly channel of Cargo.
-#[derive(Default, Debug, Deserialize)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct CliUnstable {
+macro_rules! unstable_cli_options {
+    (
+        $(
+            $(#[$meta:meta])?
+            $element: ident: $ty: ty = ($help: expr )
+        ),*
+    ) => {
+        /// A parsed representation of all unstable flags that Cargo accepts.
+        ///
+        /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
+        /// gating unstable functionality to Cargo. These flags are only available on
+        /// the nightly channel of Cargo.
+        #[derive(Default, Debug, Deserialize)]
+        #[serde(default, rename_all = "kebab-case")]
+        pub struct CliUnstable {
+            $(
+                $(#[$meta])?
+                pub $element: $ty
+            ),*
+        }
+        impl CliUnstable {
+            pub fn help() -> Vec<(&'static str, &'static str)> {
+                let fields = vec![$((stringify!($element), $help)),*];
+                fields
+            }
+        }
+    }
+}
+
+unstable_cli_options!(
     // Permanently unstable features:
-    pub allow_features: Option<BTreeSet<String>>,
-    pub print_im_a_teapot: bool,
+    allow_features: Option<BTreeSet<String>> = ("Allow *only* the listed unstable features"),
+    print_im_a_teapot: bool= (HIDDEN),
 
     // All other unstable features.
     // Please keep this list lexiographically ordered.
-    pub advanced_env: bool,
-    pub avoid_dev_deps: bool,
-    pub binary_dep_depinfo: bool,
+    advanced_env: bool = (HIDDEN),
+    avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
+    binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     #[serde(deserialize_with = "deserialize_build_std")]
-    pub build_std: Option<Vec<String>>,
-    pub build_std_features: Option<Vec<String>>,
-    pub config_include: bool,
-    pub configurable_env: bool,
-    pub credential_process: bool,
-    pub doctest_in_workspace: bool,
-    pub doctest_xcompile: bool,
-    pub dual_proc_macros: bool,
-    pub enable_future_incompat_feature: bool,
-    pub extra_link_arg: bool,
-    pub features: Option<Vec<String>>,
-    pub jobserver_per_rustc: bool,
-    pub minimal_versions: bool,
-    pub mtime_on_use: bool,
-    pub multitarget: bool,
-    pub named_profiles: bool,
-    pub namespaced_features: bool,
-    pub no_index_update: bool,
-    pub panic_abort_tests: bool,
-    pub patch_in_config: bool,
-    pub rustdoc_map: bool,
-    pub separate_nightlies: bool,
-    pub terminal_width: Option<Option<usize>>,
-    pub timings: Option<Vec<String>>,
-    pub unstable_options: bool,
-    pub weak_dep_features: bool,
-}
+    build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
+    build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    config_include: bool = ("Enable the `include` key in config files"),
+    configurable_env: bool = ("Enable the [env] section in the .cargo/config.toml file"),
+    credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
+    doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
+    doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
+    dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
+    future_incompat_report: bool = ("Enable creation of a future-incompat report for all dependencies"),
+    extra_link_arg: bool = ("Allow `cargo:rustc-link-arg` in build scripts"),
+    features: Option<Vec<String>>  = (HIDDEN),
+    jobserver_per_rustc: bool = (HIDDEN),
+    minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
+    mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
+    multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
+    named_profiles: bool = ("Allow defining custom profiles"),
+    namespaced_features: bool = ("Allow features with `dep:` prefix"),
+    no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
+    panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
+    patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
+    rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
+    separate_nightlies: bool = (HIDDEN),
+    terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
+    timings: Option<Vec<String>>  = ("Display concurrency information"),
+    unstable_options: bool = ("Allow the usage of unstable options"),
+    weak_dep_features: bool = ("Allow `dep_name?/feature` feature syntax")
+);
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
     enabled when used on an interactive console.\n\
@@ -798,7 +820,7 @@ impl CliUnstable {
             "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
-            "future-incompat-report" => self.enable_future_incompat_feature = parse_empty(k, v)?,
+            "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

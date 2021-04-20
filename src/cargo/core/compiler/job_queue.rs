@@ -808,7 +808,7 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     fn emit_future_incompat(&mut self, cx: &mut Context<'_, '_>) {
-        if cx.bcx.config.cli_unstable().enable_future_incompat_feature {
+        if cx.bcx.config.cli_unstable().future_incompat_report {
             if self.per_crate_future_incompat_reports.is_empty() {
                 drop(
                     cx.bcx

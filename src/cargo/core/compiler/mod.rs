@@ -936,7 +936,7 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
-    if bcx.config.cli_unstable().enable_future_incompat_feature {
+    if bcx.config.cli_unstable().future_incompat_report {
         cmd.arg("-Z").arg("emit-future-incompat-report");
     }
 
