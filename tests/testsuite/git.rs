@@ -2805,7 +2805,7 @@ fn default_not_master() {
 
     // Then create a commit on the new `main` branch so `master` and `main`
     // differ.
-    git_project.change_file("src/lib.rs", "pub fn bar() {}");
+    git_project.change_file("src/lib.rs", "");
     git::add(&repo);
     git::commit(&repo);
 
@@ -2817,13 +2817,14 @@ fn default_not_master() {
                     [project]
                     name = "foo"
                     version = "0.5.0"
+
                     [dependencies]
                     dep1 = {{ git = '{}' }}
                 "#,
                 git_project.url()
             ),
         )
-        .file("src/lib.rs", "pub fn foo() { dep1::bar() }")
+        .file("src/lib.rs", "pub fn foo() { dep1::foo() }")
         .build();
 
     project
@@ -2831,6 +2832,14 @@ fn default_not_master() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
+warning: fetching `master` branch from `[..]` but the `HEAD` \
+    reference for this repository is not the \
+    `master` branch. This behavior will change \
+    in Cargo in the future and your build may \
+    break, so it's recommended to place \
+    `branch = \"master\"` in Cargo.toml when \
+    depending on this git repository to ensure \
+    that your build will continue to work.
 [COMPILING] dep1 v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
@@ -2968,6 +2977,7 @@ fn two_dep_forms() {
                     [project]
                     name = "foo"
                     version = "0.5.0"
+
                     [dependencies]
                     dep1 = {{ git = '{}', branch = 'master' }}
                     a = {{ path = 'a' }}
@@ -2983,6 +2993,7 @@ fn two_dep_forms() {
                     [project]
                     name = "a"
                     version = "0.5.0"
+
                     [dependencies]
                     dep1 = {{ git = '{}' }}
                 "#,
@@ -2992,16 +3003,15 @@ fn two_dep_forms() {
         .file("a/src/lib.rs", "")
         .build();
 
-    // This'll download the git repository twice, one with HEAD and once with
-    // the master branch. Then it'll compile 4 crates, the 2 git deps, then
-    // the two local deps.
     project
         .cargo("build")
         .with_stderr(
             "\
 [UPDATING] [..]
-[UPDATING] [..]
-[COMPILING] [..]
+warning: two git dependencies found for `[..]` where one uses `branch = \"master\"` \
+and the other doesn't; this will break in a future version of Cargo, so please \
+ensure the dependency forms are consistent
+warning: [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
