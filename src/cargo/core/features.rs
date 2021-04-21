@@ -600,6 +600,7 @@ unstable_cli_options!(
     namespaced_features: bool = ("Allow features with `dep:` prefix"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
+    host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
@@ -787,6 +788,7 @@ impl CliUnstable {
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "configurable-env" => self.configurable_env = parse_empty(k, v)?,
+            "host-config" => self.host_config = parse_empty(k, v)?,
             "patch-in-config" => self.patch_in_config = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some

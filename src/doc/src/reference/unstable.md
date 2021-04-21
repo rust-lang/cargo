@@ -641,6 +641,39 @@ cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 
 CLI paths are relative to the current working directory.
 
+### host-config
+* Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
+* Tracking Issue: [#3349](https://github.com/rust-lang/cargo/issues/3349)
+
+The `host` key in a config file can be used pass flags to host build targets
+such as build scripts that must run on the host system instead of the target
+system when cross compiling. It supports both generic and host arch specific
+tables. Matching host arch tables take precedence over generic host tables.
+
+It requires the `-Zhost-config` command-line option.
+
+```toml
+# .cargo/config
+cargo-features = ["host-config"]
+
+[host]
+linker = "/path/to/host/linker"
+[host.x86_64-unknown-linux-gnu]
+linker = "/path/to/host/arch/linker"
+[target.x86_64-unknown-linux-gnu]
+linker = "/path/to/target/linker"
+```
+
+The generic `host` table above will be entirely ignored when building on a
+`x86_64-unknown-linux-gnu` host as the `host.x86_64-unknown-linux-gnu` table
+takes precedence.
+
+This feature requires a `--target` to be specified.
+
+```console
+cargo +nightly -Zunstable-options -Zhost-config --config somefile.toml build --target x86_64-unknown-linux-gnu
+```
+
 ### unit-graph
 * Tracking Issue: [#8002](https://github.com/rust-lang/cargo/issues/8002)
 

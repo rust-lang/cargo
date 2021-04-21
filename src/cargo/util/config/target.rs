@@ -66,12 +66,21 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
 
 /// Loads a single `[host]` table for the given triple.
 pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
-    let host_triple_key = ConfigKey::from_str(&format!("host.{}", triple));
-    let host_prefix = match config.get_cv(&host_triple_key)? {
-        Some(_) => format!("host.{}", triple),
-        None => "host".to_string(),
-    };
-    load_config_table(config, &host_prefix)
+    if config.cli_unstable().host_config {
+        let host_triple_key = ConfigKey::from_str(&format!("host.{}", triple));
+        let host_prefix = match config.get_cv(&host_triple_key)? {
+            Some(_) => format!("host.{}", triple),
+            None => "host".to_string(),
+        };
+        load_config_table(config, &host_prefix)
+    } else {
+        Ok(TargetConfig {
+            runner: None,
+            rustflags: None,
+            linker: None,
+            links_overrides: BTreeMap::new(),
+        })
+    }
 }
 
 /// Loads a single `[target]` table for the given triple.

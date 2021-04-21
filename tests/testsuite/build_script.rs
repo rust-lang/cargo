@@ -266,17 +266,20 @@ fn custom_build_env_var_rustc_linker_bad_host() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build --verbose --target")
-        .arg(&target)
-        .with_status(101)
-        .with_stderr_contains(
-            "\
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
 "
-        )
-        .run();
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -311,17 +314,20 @@ fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build --verbose --target")
-        .arg(&target)
-        .with_status(101)
-        .with_stderr_contains(
-            "\
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/arch/linker [..]`
 [ERROR] linker `[..]/path/to/host/arch/linker` not found
 "
-        )
-        .run();
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -355,7 +361,12 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build --verbose --target").arg(&target).run();
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -391,17 +402,20 @@ fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build --verbose --target")
-        .arg(&target)
-        .with_status(101)
-        .with_stderr_contains(
-            "\
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
 "
-        )
-        .run();
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
