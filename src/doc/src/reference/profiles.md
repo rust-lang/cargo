@@ -169,7 +169,7 @@ The `rustc` test harness currently requires `unwind` behavior. See the
 [`panic-abort-tests`] unstable flag which enables `abort` behavior.
 
 Additionally, when using the `abort` strategy and building a test, all of the
-dependencies will also be forced to built with the `unwind` strategy.
+dependencies will also be forced to build with the `unwind` strategy.
 
 [`-C panic` flag]: ../../rustc/codegen-options/index.html#panic
 [`panic-abort-tests`]: unstable.md#panic-abort-tests
