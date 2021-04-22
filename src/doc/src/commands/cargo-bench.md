@@ -19,9 +19,12 @@ the two dashes (`--`) are passed to the benchmark binaries and thus to
 _libtest_ (rustc's built in unit-test and micro-benchmarking framework). If
 you are passing arguments to both Cargo and the binary, the ones after `--` go
 to the binary, the ones before go to Cargo. For details about libtest's
-arguments see the output of `cargo bench -- --help`.  As an example, this will
-run only the benchmark named `foo` (and skip other similarly named benchmarks
-like `foobar`):
+arguments see the output of `cargo bench -- --help` and check out the rustc
+book's chapter on how tests work at
+<https://doc.rust-lang.org/rustc/tests/index.html>.
+
+As an example, this will run only the benchmark named `foo` (and skip other
+similarly named benchmarks like `foobar`):
 
     cargo bench -- foo --exact
 

@@ -15,8 +15,11 @@ DESCRIPTION
        framework). If you are passing arguments to both Cargo and the binary,
        the ones after -- go to the binary, the ones before go to Cargo. For
        details about libtest's arguments see the output of cargo bench --
-       --help. As an example, this will run only the benchmark named foo (and
-       skip other similarly named benchmarks like foobar):
+       --help and check out the rustc book's chapter on how tests work at
+       <https://doc.rust-lang.org/rustc/tests/index.html>.
+
+       As an example, this will run only the benchmark named foo (and skip
+       other similarly named benchmarks like foobar):
 
            cargo bench -- foo --exact
 
