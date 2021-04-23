@@ -696,7 +696,6 @@ pub fn with_fetch_options(
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
             let mut last_recv = 0.0; // in Byte
-            let mut last_rate = 0.0; // in Byte/s
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);
@@ -708,16 +707,12 @@ pub fn with_fetch_options(
                 } else {
                     // Receiving objects.
                     let duration = last_update.elapsed();
-                    let (recv, rate) = if duration > Duration::from_secs(1) {
-                        let recv = stats.received_bytes() as f32;
-                        let rate = (recv - last_recv) / duration.as_secs_f32();
+                    let recv = stats.received_bytes() as f32;
+                    let rate = (recv - last_recv) / duration.as_secs_f32();
+                    if duration > Duration::from_secs(3) {
                         last_recv = recv;
-                        last_rate = rate;
                         last_update = Instant::now();
-                        (recv, rate)
-                    } else {
-                        (last_recv, last_rate)
-                    };
+                    }
                     fn format_bytes(bytes: f32) -> (&'static str, f32) {
                         static UNITS: [&str; 5] = ["", "K", "M", "G", "T"];
                         let i = (bytes.log2() / 10.0).min(4.0) as usize;
@@ -725,7 +720,7 @@ pub fn with_fetch_options(
                     }
                     let (rate_unit, rate) = format_bytes(rate);
                     let (unit, recv) = format_bytes(recv);
-                    format!(" | {:.2}{}iB | {:.2}{}iB/s", recv, unit, rate, rate_unit)
+                    format!(", {:.2}{}iB | {:.2}{}iB/s", recv, unit, rate, rate_unit)
                 };
                 progress
                     .tick(stats.indexed_objects(), stats.total_objects(), &msg)
