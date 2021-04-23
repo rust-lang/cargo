@@ -15,6 +15,7 @@ use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 use url::Url;
 
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
@@ -694,12 +695,40 @@ pub fn with_fetch_options(
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
+            let mut last_recv = 0.0; // in Byte
+            let mut last_rate = 0.0; // in Byte/s
+            let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);
-
             rcb.transfer_progress(|stats| {
+                let indexed_deltas = stats.indexed_deltas();
+                let msg = if indexed_deltas > 0 {
+                    // Resolving deltas.
+                    format!(" ({}/{})", indexed_deltas, stats.total_deltas())
+                } else {
+                    // Receiving objects.
+                    let duration = last_update.elapsed();
+                    let (recv, rate) = if duration > Duration::from_secs(1) {
+                        let recv = stats.received_bytes() as f32;
+                        let rate = (recv - last_recv) / duration.as_secs_f32();
+                        last_recv = recv;
+                        last_rate = rate;
+                        last_update = Instant::now();
+                        (recv, rate)
+                    } else {
+                        (last_recv, last_rate)
+                    };
+                    fn format_bytes(bytes: f32) -> (&'static str, f32) {
+                        static UNITS: [&str; 5] = ["", "K", "M", "G", "T"];
+                        let i = (bytes.log2() / 10.0).min(4.0) as usize;
+                        (UNITS[i], bytes / 1024_f32.powi(i as i32))
+                    }
+                    let (rate_unit, rate) = format_bytes(rate);
+                    let (unit, recv) = format_bytes(recv);
+                    format!(" | {:.2}{}iB | {:.2}{}iB/s", recv, unit, rate, rate_unit)
+                };
                 progress
-                    .tick(stats.indexed_objects(), stats.total_objects(), "")
+                    .tick(stats.indexed_objects(), stats.total_objects(), &msg)
                     .is_ok()
             });
 
