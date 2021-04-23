@@ -694,11 +694,21 @@ impl<'cfg> RustcTargetData<'cfg> {
         let host_config = if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            let target_host_config = config.target_cfg_triple(&rustc.host)?;
-            target_config.insert(ct, target_host_config.clone());
+            let target_host_config = if config.target_applies_to_host() {
+                let target_cfg_clone = config.target_cfg_triple(&rustc.host)?;
+                target_config.insert(ct, target_cfg_clone.clone());
+                target_cfg_clone
+            } else {
+                target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
+                config.host_cfg_triple(&rustc.host)?
+            };
             target_host_config
         } else {
-            config.host_cfg_triple(&rustc.host)?
+            if config.target_applies_to_host() {
+                config.target_cfg_triple(&rustc.host)?
+            } else {
+                config.host_cfg_triple(&rustc.host)?
+            }
         };
 
         for kind in requested_kinds {

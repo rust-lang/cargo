@@ -64,6 +64,20 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
     Ok(result)
 }
 
+/// Returns true if the `[target]` table should be applied to host targets.
+pub(super) fn get_target_applies_to_host(config: &Config) -> bool {
+    let target_applies_to_host = config.get::<bool>("target-applies-to-host");
+    if target_applies_to_host.is_ok() {
+        target_applies_to_host.unwrap()
+    } else {
+        if config.cli_unstable().host_config {
+            false
+        } else {
+            true
+        }
+    }
+}
+
 /// Loads a single `[host]` table for the given triple.
 pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
     if config.cli_unstable().host_config {
