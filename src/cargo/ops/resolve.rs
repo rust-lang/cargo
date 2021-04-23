@@ -291,12 +291,13 @@ pub fn resolve_with_previous<'cfg>(
 
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
+    let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
     // without disturbing the graph structure.
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep);
+        register_previous_locks(ws, registry, r, &keep, dev_deps);
     }
     // Everything in the previous lock file we want to keep is prioritized
     // in dependency selection if it comes up, aka we want to have
@@ -320,7 +321,6 @@ pub fn resolve_with_previous<'cfg>(
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
-    let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
     let summaries: Vec<(Summary, ResolveOpts)> = ws
         .members_with_features(specs, cli_features)?
         .into_iter()
@@ -455,6 +455,7 @@ fn register_previous_locks(
     registry: &mut PackageRegistry<'_>,
     resolve: &Resolve,
     keep: &dyn Fn(&PackageId) -> bool,
+    dev_deps: bool,
 ) {
     let path_pkg = |id: SourceId| {
         if !id.is_path() {
@@ -561,6 +562,11 @@ fn register_previous_locks(
             // dependency on that crate to enable the feature. For now,
             // this bug is better than the always-updating registry though.
             if !is_ws_member && (dep.is_optional() || !dep.is_transitive()) {
+                continue;
+            }
+
+            // If dev-dependencies aren't being resolved, skip them.
+            if !dep.is_transitive() && !dev_deps {
                 continue;
             }
 
