@@ -677,7 +677,7 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> Ca
     let mut pb = Progress::new("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.progress(|_, cur, max| {
-        drop(pb.tick(cur, max));
+        drop(pb.tick(cur, max, ""));
     });
     debug!("doing reset");
     repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
@@ -699,7 +699,7 @@ pub fn with_fetch_options(
 
             rcb.transfer_progress(|stats| {
                 progress
-                    .tick(stats.indexed_objects(), stats.total_objects())
+                    .tick(stats.indexed_objects(), stats.total_objects(), "")
                     .is_ok()
             });
 
