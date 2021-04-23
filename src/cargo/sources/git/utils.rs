@@ -695,7 +695,7 @@ pub fn with_fetch_options(
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
-            let mut last_recv = 0.0; // in Byte
+            let mut last_recv = 0; // in Byte
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);
@@ -707,8 +707,8 @@ pub fn with_fetch_options(
                 } else {
                     // Receiving objects.
                     let duration = last_update.elapsed();
-                    let recv = stats.received_bytes() as f32;
-                    let rate = (recv - last_recv) / duration.as_secs_f32();
+                    let recv = stats.received_bytes();
+                    let rate = (recv - last_recv) as f32 / duration.as_secs_f32();
                     if duration > Duration::from_secs(3) {
                         last_recv = recv;
                         last_update = Instant::now();
@@ -718,9 +718,8 @@ pub fn with_fetch_options(
                         let i = (bytes.log2() / 10.0).min(4.0) as usize;
                         (UNITS[i], bytes / 1024_f32.powi(i as i32))
                     }
-                    let (rate_unit, rate) = format_bytes(rate);
-                    let (unit, recv) = format_bytes(recv);
-                    format!(", {:.2}{}iB | {:.2}{}iB/s", recv, unit, rate, rate_unit)
+                    let (unit, rate) = format_bytes(rate);
+                    format!(", {:.2}{}iB/s", rate, unit)
                 };
                 progress
                     .tick(stats.indexed_objects(), stats.total_objects(), &msg)
