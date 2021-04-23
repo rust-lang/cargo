@@ -703,7 +703,11 @@ pub fn with_fetch_options(
                 let indexed_deltas = stats.indexed_deltas();
                 let msg = if indexed_deltas > 0 {
                     // Resolving deltas.
-                    format!(" ({}/{})", indexed_deltas, stats.total_deltas())
+                    format!(
+                        ", ({}/{}) resolving deltas",
+                        indexed_deltas,
+                        stats.total_deltas()
+                    )
                 } else {
                     // Receiving objects.
                     let duration = last_update.elapsed();
