@@ -7,6 +7,10 @@
 
 ### Changed
 
+- 🔥 Cargo now supports git repositories where the default `HEAD` branch is not
+  "master". This also includes a switch to the version 3 `Cargo.lock` format
+  which can handle default branches correctly.
+  [#9133](https://github.com/rust-lang/cargo/pull/9133)
 - 🔥 macOS targets now default to `unpacked` debuginfo.
   [#9298](https://github.com/rust-lang/cargo/pull/9298)
 - ❗ The `authors` field is no longer included in `Cargo.toml` for new
@@ -14,6 +18,10 @@
   [#9282](https://github.com/rust-lang/cargo/pull/9282)
 - `cargo update` may now work with the `--offline` flag.
   [#9279](https://github.com/rust-lang/cargo/pull/9279)
+- `cargo doc` will now erase the `doc` directory when switching between
+  different toolchain versions. There are shared, unversioned files (such as
+  the search index) that can become broken when using different versions.
+  [#8640](https://github.com/rust-lang/cargo/pull/8640)
 
 ### Fixed
 
@@ -35,12 +43,9 @@
   [#9247](https://github.com/rust-lang/cargo/pull/9247)
 
 ### Changed
-- 🔥 Cargo now supports git repositories where the default `HEAD` branch is not
-  "master". This also includes a switch to the version 3 `Cargo.lock` format
-  which can handle default branches correctly.
-  [#9133](https://github.com/rust-lang/cargo/pull/9133)
 - Build scripts are now forbidden from setting `RUSTC_BOOTSTRAP` on stable.
   [#9181](https://github.com/rust-lang/cargo/pull/9181)
+  [#9385](https://github.com/rust-lang/cargo/pull/9385)
 - crates.io now supports SPDX 3.11 licenses.
   [#9209](https://github.com/rust-lang/cargo/pull/9209)
 - An error is now reported if `CARGO_TARGET_DIR` is an empty string.
@@ -53,10 +58,6 @@
 - The `CARGO_TARGET_<TRIPLE>` environment variable will now issue a warning if
   it is using lowercase letters.
   [#9169](https://github.com/rust-lang/cargo/pull/9169)
-- `cargo doc` will now erase the `doc` directory when switching between
-  different toolchain versions. There are shared, unversioned files (such as
-  the search index) that can become broken when using different versions.
-  [#8640](https://github.com/rust-lang/cargo/pull/8640)
 
 ### Fixed
 - Fixed publication of packages with metadata and resolver fields in `Cargo.toml`.
