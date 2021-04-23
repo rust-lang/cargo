@@ -522,13 +522,20 @@ impl PartialOrd for SourceKind {
 // trait implementation is preserving the "broken" behavior. Put a different way:
 //
 // * Rust pre-1.47 sorted git deps first.
-// * Rust 1.47 to Rust 1.51 sorted git deps last, a breaking change that was
-//   never noticed.
-// * Rust 1.52 restored the pre-1.47 behavior (without knowing it did so), and
-//   breakage was witnessed by actual users due to difference with 1.51.
-// * Rust 1.52 (the source as it lives now) changed to match the 1.47-1.51
-//   behavior, which is now considered intentionally breaking from the pre-1.47
-//   behavior.
+// * Rust 1.47 to Rust 1.51 sorted git deps last, a breaking change (#8522) that
+//   was never noticed.
+// * Rust 1.52 restored the pre-1.47 behavior (#9133, without knowing it did
+//   so), and breakage was witnessed by actual users due to difference with
+//   1.51.
+// * Rust 1.52 (the source as it lives now) was fixed to match the 1.47-1.51
+//   behavior (#9383), which is now considered intentionally breaking from the
+//   pre-1.47 behavior.
+//
+// Note that this was all discovered when Rust 1.53 was in nightly and 1.52 was
+// in beta. #9133 was in both beta and nightly at the time of discovery. For
+// 1.52 #9383 reverted #9133, meaning 1.52 is the same as 1.51. On nightly
+// (1.53) #9397 was created to fix the regression introduced by #9133 relative
+// to the current stable (1.51).
 //
 // That's all a long winded way of saying "it's wierd that git deps hash first
 // and are sorted last, but it's the way it is right now". The author of this
