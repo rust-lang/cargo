@@ -63,9 +63,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts.build_config.export_dir = Some(out_dir);
     }
     if compile_opts.build_config.export_dir.is_some() {
-        config
-            .cli_unstable()
-            .fail_if_stable_opt("--out-dir", 6790)?;
+        config.fail_if_stable_opt("--out-dir", 6790)?;
     }
     ops::compile(&ws, &compile_opts)?;
     Ok(())

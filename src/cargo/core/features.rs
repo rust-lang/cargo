@@ -606,6 +606,193 @@ unstable_cli_options!(
     weak_dep_features: bool = ("Allow `dep_name?/feature` feature syntax")
 );
 
+// NOTE: This function is never called if there aren't currently any active preview features.
+#[allow(dead_code)]
+fn preview_expired(expires: u8) -> bool {
+    // We have a couple of directions we could go for how to expire a feature.
+    //
+    // 1. Compare the current date against an end date set for the preview period.
+    // 2. Compare the _build_ date against an end date set for the preview period.
+    // 3. Compare the current version against a version set as the end for the preview period.
+    // _. Probably others.
+    //
+    // These all have different trade-offs. Option 1 means that users may find that their build
+    // stops working without cargo changing from one day to the next. That seems bad. Option 2
+    // seems more like what we want for time-limited preview periods, but it's not clear how we
+    // _get_ this information. Maybe the build script can inject it somehow? Option 3 is a nice
+    // compromise as the information is both stable for a build and easily accessible. However, it
+    // also limits the fidelity of preview periods. On the plus side, it also makes it easier to
+    // make it so that a preview period stops exactly when the feature is stabilized.
+    //
+    // I've gone with option 3 for now, but TODO
+    crate::version().minor < expires
+}
+
+macro_rules! preview_feature_arm {
+    ($self:ident, $warnings:ident, $name:ident, stabilized) => {
+        $warnings.push(format!(
+            "the {} feature has stabilized, and should no longer be enabled through preview",
+            stringify!($name)
+        ))
+    };
+    ($self:ident, $warnings:ident, $name:ident, rejected) => {
+        $warnings.push(format!(
+            "the {} feature was rejected, and is no longer available through preview",
+            stringify!($name)
+        ))
+    };
+    ($self:ident, $warnings:ident, $name:ident, $expires:literal) => {
+        if preview_expired($expires) {
+            // This is a bit of a weird case -- the preview ended, but the feature is still
+            // available on nightly (otherwise the code in set_preview_feature! would fail to
+            // compile). This suggests a process error has occurred, but it isn't unthinkable, so
+            // we handle it as best we can.
+            $warnings.push(format!("the {} feature preview period has ended; please provide any \
+                    feedback you may have collected for the stabilization discussion and switch \
+                    to nightly to continue using this feature", stringify!($name)))
+        } else {
+            $self.$name = true;
+        }
+    };
+}
+
+macro_rules! set_preview_feature {
+    ($unstable:ident, $self:ident, $name:ident, stabilized) => {};
+    ($unstable:ident, $self:ident, $name:ident, rejected) => {};
+    ($unstable:ident, $self:ident, $name:ident, $expires:literal) => {
+        $unstable.$name |= $self.$name;
+    };
+}
+
+macro_rules! preview_type {
+    (stabilized) => {
+        ()
+    };
+    (rejected) => {
+        ()
+    };
+    ($expires:literal) => {
+        bool
+    };
+}
+
+macro_rules! preview_features {
+    ($($name:ident => $expires:tt),* $(,)?) => {
+        #[derive(Debug, Default, Deserialize)]
+        pub struct PreviewFeatures {
+            $($name: preview_type!($expires)),*
+        }
+
+        impl PreviewFeatures {
+            pub fn parse(&mut self, flags: &[String]) -> CargoResult<Vec<String>> {
+                let mut warnings = Vec::new();
+                for flag in flags {
+                    match &*flag.replace('-', "_") {
+                        $(
+                            stringify!($name) => {
+                                preview_feature_arm!(self, warnings, $name, $expires);
+                            },
+                        )*
+                        _ => {
+                            warnings.push(format!("preview flag specified for unknown feature: {}", flag));
+                        },
+                    }
+                }
+                Ok(warnings)
+            }
+
+            // NOTE: The `untable` argument is never used if there are no active preview features.
+            #[allow(unused_variables)]
+            pub fn set_unstable(&self, unstable: &mut CliUnstable) {
+                $(set_preview_feature!(unstable, self, $name, $expires);)*
+            }
+        }
+    };
+}
+
+macro_rules! preview_option_arm {
+    ($option:literal, $warnings:ident, stabilized) => {{
+        $warnings.push(format!(
+            "the {} option has stabilized, and should no longer be enabled through preview",
+            $option,
+        ));
+        true
+    }};
+    ($option:literal, $warnings:ident, rejected) => {{
+        $warnings.push(format!(
+            "the {} option was rejected, and is no longer available through preview",
+            $option,
+        ));
+        false
+    }};
+    ($option:literal, $warnings:ident, $expires:literal) => {{
+        if preview_expired($expires) {
+            // This is a bit of a weird case, just as the analogous case in preview_feature_arm!.
+            $warnings.push(format!(
+                "the {} option preview period has ended; please provide any \
+                    feedback you may have collected for the stabilization discussion and switch \
+                    to nightly to continue using this option",
+                $option
+            ));
+            false
+        } else {
+            true
+        }
+    }};
+}
+
+macro_rules! preview_options {
+    ($($option:literal => $expires:tt),* $(,)?) => {
+        pub fn check_preview_option<S: AsRef<str>>(option: &S, warnings: &mut Vec<String>) -> bool {
+            match option.as_ref() {
+                $(
+                    $option => {
+                        preview_option_arm!($option, warnings, $expires)
+                    }
+                )*
+                _ => false,
+            }
+        }
+    };
+}
+
+// This block declares unstable features that are in "preview" on stable Cargo.
+//
+// Each such feature can be enabled using `--enable-preview=feature_name` on stable/beta.
+//
+// Each feature is listed with an expiry, which is either `stabilized`, `rejected`, or a Rust minor
+// version. A preview feature that has been stabilized should be marked as `stabilized` so that
+// users are informed that the `--enable-preview` flag is no longer necessary. A preview feature
+// that has since been rejected should be marked as `rejected` so that users are informed that the
+// feature has since been removed.
+//
+// If a Rust minor version is specified, then the feature will automatically leave preview once the
+// version number matches or exceeds the indicated release. From that point forward, the feature
+// can again only be enabled with `-Z` on nightly. In general, preview features should not be
+// allowed to expire in that way, as it means users who are testing a feature may have to jump back
+// and forth between stable and nightly.
+preview_features! {
+    // NOTE: These two just make sure that we don't accidentally break the macro.
+    never_existed => stabilized,
+    does_not_exist => rejected,
+
+    patch_in_config => 53,
+}
+
+// This block declares unstable options that are in "preview" on stable Cargo.
+//
+// Each such feature can be enabled using `--enable-preview=--option-name` on stable/beta.
+//
+// Each feature is listed with an expiry, which is either `stabilized`, `rejected`, or a Rust minor
+// version. These function similarly to for preview_features! above.
+preview_options! {
+    // NOTE: These two just make sure that we don't accidentally break the macro.
+    "--stabilized-argument" => stabilized,
+    "--removed-argument" => rejected,
+
+    "--out-dir" => 53,
+}
+
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
     enabled when used on an interactive console.\n\
     See https://doc.rust-lang.org/cargo/reference/config.html#termprogresswhen \
@@ -669,6 +856,7 @@ impl CliUnstable {
                 SEE_CHANNELS
             );
         }
+
         let mut warnings = Vec::new();
         // We read flags twice, first to get allowed-features (if specified),
         // and then to read the remaining unstable flags.
@@ -825,77 +1013,6 @@ impl CliUnstable {
         }
 
         Ok(())
-    }
-
-    /// Generates an error if `-Z unstable-options` was not used for a new,
-    /// unstable command-line flag.
-    pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
-        if !self.unstable_options {
-            let see = format!(
-                "See https://github.com/rust-lang/cargo/issues/{} for more \
-                 information about the `{}` flag.",
-                issue, flag
-            );
-            // NOTE: a `config` isn't available here, check the channel directly
-            let channel = channel();
-            if channel == "nightly" || channel == "dev" {
-                bail!(
-                    "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
-                     {}",
-                    flag,
-                    see
-                );
-            } else {
-                bail!(
-                    "the `{}` flag is unstable, and only available on the nightly channel \
-                     of Cargo, but this is the `{}` channel\n\
-                     {}\n\
-                     {}",
-                    flag,
-                    channel,
-                    SEE_CHANNELS,
-                    see
-                );
-            }
-        }
-        Ok(())
-    }
-
-    /// Generates an error if `-Z unstable-options` was not used for a new,
-    /// unstable subcommand.
-    pub fn fail_if_stable_command(
-        &self,
-        config: &Config,
-        command: &str,
-        issue: u32,
-    ) -> CargoResult<()> {
-        if self.unstable_options {
-            return Ok(());
-        }
-        let see = format!(
-            "See https://github.com/rust-lang/cargo/issues/{} for more \
-            information about the `cargo {}` command.",
-            issue, command
-        );
-        if config.nightly_features_allowed {
-            bail!(
-                "the `cargo {}` command is unstable, pass `-Z unstable-options` to enable it\n\
-                 {}",
-                command,
-                see
-            );
-        } else {
-            bail!(
-                "the `cargo {}` command is unstable, and only available on the \
-                 nightly channel of Cargo, but this is the `{}` channel\n\
-                 {}\n\
-                 {}",
-                command,
-                channel(),
-                SEE_CHANNELS,
-                see
-            );
-        }
     }
 }
 

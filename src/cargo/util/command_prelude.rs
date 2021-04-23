@@ -473,18 +473,13 @@ pub trait ArgMatchesExt {
         build_config.unit_graph = self._is_present("unit-graph");
         build_config.future_incompat_report = self._is_present("future-incompat-report");
         if build_config.build_plan {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--build-plan", 5579)?;
+            config.fail_if_stable_opt("--build-plan", 5579)?;
         };
         if build_config.unit_graph {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--unit-graph", 8002)?;
+            config.fail_if_stable_opt("--unit-graph", 8002)?;
         }
         if build_config.future_incompat_report {
             config
-                .cli_unstable()
                 // TODO: Tracking issue
                 .fail_if_stable_opt("--future-incompat-report", 9241)?;
 
@@ -519,9 +514,7 @@ pub trait ArgMatchesExt {
         };
 
         if !opts.honor_rust_version {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--ignore-rust-version", 8072)?;
+            config.fail_if_stable_opt("--ignore-rust-version", 8072)?;
         }
 
         if let Some(ws) = workspace {

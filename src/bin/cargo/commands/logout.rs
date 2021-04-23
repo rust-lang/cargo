@@ -11,9 +11,7 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if !config.cli_unstable().credential_process {
-        config
-            .cli_unstable()
-            .fail_if_stable_command(config, "logout", 8933)?;
+        config.fail_if_stable_command(config, "logout", 8933)?;
     }
     config.load_credentials()?;
     ops::registry_logout(config, args.value_of("registry").map(String::from))?;

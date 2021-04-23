@@ -52,7 +52,7 @@
 use std::borrow::Cow;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
@@ -68,7 +68,10 @@ use std::time::Instant;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{
+    features::{self, PreviewFeatures},
+    CliUnstable, Shell, SourceId, Workspace,
+};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::toml as cargo_toml;
@@ -200,6 +203,8 @@ pub struct Config {
     /// NOTE: this should be set before `configure()`. If calling this from an integration test,
     /// consider using `ConfigBuilder::enable_nightly_features` instead.
     pub nightly_features_allowed: bool,
+    /// Unstable cargo command-line options that should be allowed since they're in preview.
+    pub preview_options: BTreeSet<String>,
 }
 
 impl Config {
@@ -285,6 +290,7 @@ impl Config {
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
+            preview_options: Default::default(),
         }
     }
 
@@ -878,6 +884,7 @@ impl Config {
         locked: bool,
         offline: bool,
         target_dir: &Option<PathBuf>,
+        enable_preview: &[String],
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
@@ -887,13 +894,34 @@ impl Config {
         {
             self.shell().warn(warning)?;
         }
+
+        let (preview_options, preview_features): (Vec<_>, _) = enable_preview
+            .iter()
+            .cloned()
+            .partition(|f| f.starts_with("--"));
+
+        let mut warnings = Vec::new();
+        if !preview_features.is_empty() {
+            let mut preview = PreviewFeatures::default();
+            warnings.extend(preview.parse(&preview_features)?);
+            preview.set_unstable(&mut self.unstable_flags);
+        }
+        self.preview_options.extend(
+            preview_options
+                .into_iter()
+                .filter(|f| features::check_preview_option(f, &mut warnings)),
+        );
+        for warning in warnings {
+            self.shell().warn(warning)?;
+        }
+
         if !unstable_flags.is_empty() {
             // store a copy of the cli flags separately for `load_unstable_flags_from_config`
             // (we might also need it again for `reload_rooted_at`)
             self.unstable_flags_cli = Some(unstable_flags.to_vec());
         }
         if !cli_config.is_empty() {
-            self.unstable_flags.fail_if_stable_opt("--config", 6699)?;
+            self.fail_if_stable_opt("--config", 6699)?;
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
             self.merge_cli_args()?;
         }
@@ -967,6 +995,29 @@ impl Config {
                 //     control config parsing behavior.
                 self.unstable_flags.parse(unstable_flags_cli, true)?;
             }
+        }
+
+        // Allow enabling preview features no matter the channel.
+        let preview = self
+            .get::<Option<HashMap<String, bool>>>("enable-preview")?
+            .unwrap_or_default();
+        let (preview_options, preview_features): (Vec<_>, _) = preview
+            .into_iter()
+            .filter_map(|(k, v)| v.then(|| k))
+            .partition(|f| f.starts_with("--"));
+        let mut warnings = Vec::new();
+        if !preview_features.is_empty() {
+            let mut preview = PreviewFeatures::default();
+            warnings.extend(preview.parse(&preview_features)?);
+            preview.set_unstable(&mut self.unstable_flags);
+        }
+        self.preview_options.extend(
+            preview_options
+                .into_iter()
+                .filter(|f| features::check_preview_option(f, &mut warnings)),
+        );
+        for warning in warnings {
+            self.shell().warn(warning)?;
         }
 
         Ok(())
@@ -1602,6 +1653,82 @@ impl Config {
     }
 
     pub fn release_package_cache_lock(&self) {}
+
+    /// Generates an error if `-Z unstable-options` was not used for a new,
+    /// unstable command-line flag.
+    pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
+        if !self.unstable_flags.unstable_options {
+            if self.preview_options.contains(flag) {
+                return Ok(());
+            }
+
+            let see = format!(
+                "See https://github.com/rust-lang/cargo/issues/{} for more \
+                 information about the `{}` flag.",
+                issue, flag
+            );
+            // NOTE: a `config` isn't available here, check the channel directly
+            let channel = features::channel();
+            if channel == "nightly" || channel == "dev" {
+                bail!(
+                    "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
+                     {}",
+                    flag,
+                    see
+                );
+            } else {
+                bail!(
+                    "the `{}` flag is unstable, and only available on the nightly channel \
+                     of Cargo, but this is the `{}` channel\n\
+                     {}\n\
+                     {}",
+                    flag,
+                    channel,
+                    features::SEE_CHANNELS,
+                    see
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Generates an error if `-Z unstable-options` was not used for a new,
+    /// unstable subcommand.
+    pub fn fail_if_stable_command(
+        &self,
+        config: &Config,
+        command: &str,
+        issue: u32,
+    ) -> CargoResult<()> {
+        // TODO: find a way to support preview for commands as well.
+        if self.unstable_flags.unstable_options {
+            return Ok(());
+        }
+        let see = format!(
+            "See https://github.com/rust-lang/cargo/issues/{} for more \
+            information about the `cargo {}` command.",
+            issue, command
+        );
+        if config.nightly_features_allowed {
+            bail!(
+                "the `cargo {}` command is unstable, pass `-Z unstable-options` to enable it\n\
+                 {}",
+                command,
+                see
+            );
+        } else {
+            bail!(
+                "the `cargo {}` command is unstable, and only available on the \
+                 nightly channel of Cargo, but this is the `{}` channel\n\
+                 {}\n\
+                 {}",
+                command,
+                features::channel(),
+                features::SEE_CHANNELS,
+                see
+            );
+        }
+    }
 }
 
 /// Internal error for serde errors.

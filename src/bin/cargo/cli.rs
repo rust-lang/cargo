@@ -210,6 +210,10 @@ fn config_configure(
     let frozen = args.is_present("frozen") || global_args.frozen;
     let locked = args.is_present("locked") || global_args.locked;
     let offline = args.is_present("offline") || global_args.offline;
+    let mut preview = global_args.preview;
+    if let Some(values) = args.values_of("enable-preview") {
+        preview.extend(values.map(|s| s.to_string()));
+    }
     let mut unstable_flags = global_args.unstable_flags;
     if let Some(values) = args.values_of("unstable-features") {
         unstable_flags.extend(values.map(|s| s.to_string()));
@@ -226,6 +230,7 @@ fn config_configure(
         locked,
         offline,
         arg_target_dir,
+        &preview,
         &unstable_flags,
         &config_args,
     )?;
@@ -254,6 +259,7 @@ struct GlobalArgs {
     frozen: bool,
     locked: bool,
     offline: bool,
+    preview: Vec<String>,
     unstable_flags: Vec<String>,
     config_args: Vec<String>,
 }
@@ -267,6 +273,7 @@ impl GlobalArgs {
             frozen: args.is_present("frozen"),
             locked: args.is_present("locked"),
             offline: args.is_present("offline"),
+            preview: args.values_of_lossy("enable-preview").unwrap_or_default(),
             unstable_flags: args
                 .values_of_lossy("unstable-features")
                 .unwrap_or_default(),
@@ -350,6 +357,14 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 "Override a configuration value (unstable)",
             )
             .global(true),
+        )
+        .arg(
+            Arg::with_name("enable-preview")
+                .help("Enable unstable (nightly-only) Cargo features or flags that are in preview on the stable toolchain")
+                .long("enable-preview")
+                .value_name("FEATURE_OR_FLAG")
+                .multiple(true)
+                .global(true),
         )
         .arg(
             Arg::with_name("unstable-features")

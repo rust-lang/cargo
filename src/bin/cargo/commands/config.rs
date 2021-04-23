@@ -27,9 +27,7 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    config
-        .cli_unstable()
-        .fail_if_stable_command(config, "config", 9301)?;
+    config.fail_if_stable_command(config, "config", 9301)?;
     match args.subcommand() {
         ("get", Some(args)) => {
             let opts = cargo_config::GetOptions {

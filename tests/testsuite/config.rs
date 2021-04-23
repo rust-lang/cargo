@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 pub struct ConfigBuilder {
     env: HashMap<String, String>,
     unstable: Vec<String>,
+    preview: Vec<String>,
     config_args: Vec<String>,
     cwd: Option<PathBuf>,
     enable_nightly_features: bool,
@@ -28,6 +29,7 @@ impl ConfigBuilder {
         ConfigBuilder {
             env: HashMap::new(),
             unstable: Vec::new(),
+            preview: Vec::new(),
             config_args: Vec::new(),
             cwd: None,
             enable_nightly_features: false,
@@ -37,6 +39,13 @@ impl ConfigBuilder {
     /// Passes a `-Z` flag.
     pub fn unstable_flag(&mut self, s: impl Into<String>) -> &mut Self {
         self.unstable.push(s.into());
+        self
+    }
+
+    /// Passes a `--enable-preview` flag.
+    #[allow(dead_code)]
+    pub fn enable_preview(&mut self, s: impl Into<String>) -> &mut Self {
+        self.preview.push(s.into());
         self
     }
 
@@ -54,7 +63,9 @@ impl ConfigBuilder {
 
     /// Passes a `--config` flag.
     pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
-        if !self.unstable.iter().any(|s| s == "unstable-options") {
+        if !self.unstable.iter().any(|s| s == "unstable-options")
+            && !self.preview.iter().any(|s| s == "--config")
+        {
             // --config is current unstable
             self.unstable_flag("unstable-options");
         }
@@ -91,6 +102,7 @@ impl ConfigBuilder {
             false,
             false,
             &None,
+            &self.preview,
             &self.unstable,
             &self.config_args,
         )?;

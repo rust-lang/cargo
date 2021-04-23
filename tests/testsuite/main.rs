@@ -88,6 +88,7 @@ mod path;
 mod paths;
 mod pkgid;
 mod plugins;
+mod preview;
 mod proc_macro;
 mod profile_config;
 mod profile_custom;
