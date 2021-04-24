@@ -727,22 +727,15 @@ impl<'cfg> RustcTargetData<'cfg> {
             }));
         for kind in all_kinds {
             if let CompileKind::Target(target) = kind {
-                match res.target_config.entry(target) {
-                    std::collections::hash_map::Entry::Occupied(_) => (),
-                    std::collections::hash_map::Entry::Vacant(place) => {
-                        place.insert(res.config.target_cfg_triple(target.short_name())?);
-                    }
+                if !res.target_config.contains_key(&target) {
+                    res.target_config
+                        .insert(target, res.config.target_cfg_triple(target.short_name())?);
                 }
-                match res.target_info.entry(target) {
-                    std::collections::hash_map::Entry::Occupied(_) => (),
-                    std::collections::hash_map::Entry::Vacant(place) => {
-                        place.insert(TargetInfo::new(
-                            res.config,
-                            &res.requested_kinds,
-                            &res.rustc,
-                            kind,
-                        )?);
-                    }
+                if !res.target_info.contains_key(&target) {
+                    res.target_info.insert(
+                        target,
+                        TargetInfo::new(res.config, &res.requested_kinds, &res.rustc, kind)?,
+                    );
                 }
             }
         }

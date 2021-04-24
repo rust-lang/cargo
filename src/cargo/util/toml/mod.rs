@@ -1322,7 +1322,7 @@ impl TomlManifest {
             .default_target
             .as_ref()
             .map(|t| CompileTarget::new(&*t))
-            .transpose()? // TODO: anyhow::Context isn't imported yet so I guess .context() isn't the right way to do it?
+            .transpose()?
             .map(CompileKind::Target);
         let forced_kind = project
             .forced_target
