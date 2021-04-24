@@ -772,6 +772,7 @@ fn build_base_args(
         ref panic,
         incremental,
         strip,
+        trim_path,
         ..
     } = unit.profile;
     let test = unit.mode.is_any_test();
@@ -923,6 +924,15 @@ fn build_base_args(
 
     if strip != Strip::None {
         cmd.arg("-Z").arg(format!("strip={}", strip));
+    }
+
+    if let Some(trim_path) = trim_path {
+        let from = cx.bcx.ws.package_root();
+        let from = from.parent().unwrap_or(from);
+        let mut arg = from.as_os_str().to_os_string();
+        arg.push("=");
+        arg.push(trim_path);
+        cmd.arg("--remap-path-prefix").arg(arg);
     }
 
     if unit.is_std {

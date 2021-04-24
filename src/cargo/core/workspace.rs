@@ -342,6 +342,11 @@ impl<'cfg> Workspace<'cfg> {
             .unwrap_or(&self.current_manifest)
     }
 
+    /// Returns the current path to the package root
+    pub fn package_root(&self) -> &Path {
+        self.current_manifest.parent().unwrap()
+    }
+
     /// Returns the root Package or VirtualManifest.
     pub fn root_maybe(&self) -> &MaybePackage {
         self.packages.get(self.root_manifest())

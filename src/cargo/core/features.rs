@@ -385,6 +385,9 @@ features! {
     // Allow to specify whether binaries should be stripped.
     (unstable, strip, "", "reference/unstable.html#profile-strip-option"),
 
+    // Allow trimming the paths in debuginfo and macros.
+    (unstable, trimpath, "", "reference/unstable.html#profile-trim-path-option"),
+
     // Specifying a minimal 'rust-version' attribute for crates
     (unstable, rust_version, "", "reference/unstable.html#rust-version"),
 

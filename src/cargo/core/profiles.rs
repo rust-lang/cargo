@@ -611,6 +611,11 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => Strip::None,
         Some(StringOrBool::String(ref n)) => Strip::Named(InternedString::new(n)),
     };
+    profile.trim_path = match toml.trim_path {
+        Some(StringOrBool::Bool(true)) => Some(InternedString::new("/")),
+        None | Some(StringOrBool::Bool(false)) => None,
+        Some(StringOrBool::String(ref n)) => Some(InternedString::new(n)),
+    }
 }
 
 /// The root profile (dev/release).
@@ -643,6 +648,7 @@ pub struct Profile {
     pub incremental: bool,
     pub panic: PanicStrategy,
     pub strip: Strip,
+    pub trim_path: Option<InternedString>,
 }
 
 impl Default for Profile {
@@ -661,6 +667,7 @@ impl Default for Profile {
             incremental: false,
             panic: PanicStrategy::Unwind,
             strip: Strip::None,
+            trim_path: None,
         }
     }
 }
@@ -687,6 +694,7 @@ compact_debug! {
                 incremental
                 panic
                 strip
+                trim_path
             )]
         }
     }
@@ -774,6 +782,7 @@ impl Profile {
             self.incremental,
             self.panic,
             self.strip,
+            self.trim_path,
         )
     }
 }

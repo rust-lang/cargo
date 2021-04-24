@@ -443,6 +443,7 @@ pub struct TomlProfile {
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
     pub strip: Option<StringOrBool>,
+    pub trim_path: Option<StringOrBool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -562,6 +563,11 @@ impl TomlProfile {
         if self.strip.is_some() {
             features.require(Feature::strip())?;
         }
+
+        if self.trim_path.is_some() {
+            features.require(Feature::trimpath())?;
+        }
+
         Ok(())
     }
 
@@ -688,6 +694,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.strip {
             self.strip = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.trim_path {
+            self.trim_path = Some(v.clone());
         }
     }
 }
