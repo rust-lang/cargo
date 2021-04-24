@@ -780,6 +780,9 @@ impl RustDocFingerprint {
     /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
     /// any versioning.
     pub fn check_rustdoc_fingerprint(cx: &Context<'_, '_>) -> CargoResult<()> {
+        if cx.bcx.config.cli_unstable().skip_rustdoc_fingerprint {
+            return Ok(());
+        }
         let actual_rustdoc_target_data = RustDocFingerprint {
             rustc_vv: cx.bcx.rustc().verbose_version.clone(),
         };
