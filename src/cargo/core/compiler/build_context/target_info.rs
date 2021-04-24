@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -803,6 +803,12 @@ impl RustDocFingerprint {
             Ok(fingerprint) => {
                 if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
                     return Ok(());
+                } else {
+                    log::debug!(
+                        "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
+                        fingerprint.rustc_vv,
+                        actual_rustdoc_target_data.rustc_vv
+                    );
                 }
             }
             Err(e) => {
@@ -819,8 +825,33 @@ impl RustDocFingerprint {
             .iter()
             .map(|kind| cx.files().layout(*kind).doc())
             .filter(|path| path.exists())
-            .try_for_each(|path| paths::remove_dir_all(path))?;
+            .try_for_each(|path| clean_doc(path))?;
         write_fingerprint()?;
-        Ok(())
+        return Ok(());
+
+        fn clean_doc(path: &Path) -> CargoResult<()> {
+            let entries = path
+                .read_dir()
+                .with_context(|| format!("failed to read directory `{}`", path.display()))?;
+            for entry in entries {
+                let entry = entry?;
+                // Don't remove hidden files. Rustdoc does not create them,
+                // but the user might have.
+                if entry
+                    .file_name()
+                    .to_str()
+                    .map_or(false, |name| name.starts_with('.'))
+                {
+                    continue;
+                }
+                let path = entry.path();
+                if entry.file_type()?.is_dir() {
+                    paths::remove_dir_all(path)?;
+                } else {
+                    paths::remove_file(path)?;
+                }
+            }
+            Ok(())
+        }
     }
 }
