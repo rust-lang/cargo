@@ -219,6 +219,24 @@ whether or not [`rpath`] is enabled.
 [`-C rpath` flag]: ../../rustc/codegen-options/index.html#rpath
 [`rpath`]: https://en.wikipedia.org/wiki/Rpath
 
+#### trim-path
+
+The `trim-path` setting controls the [`--remap-path-prefix` flag] to trim everything
+before the package root from debuginfo and macros.
+
+This option can either be a boolean or a string.
+
+* When this option is false, no paths are remapped.
+* When this option is true, the package root is trimmed from paths.
+* When this option is a string, the package root is trimmed from paths and the
+specifed string is preappended instead.
+
+This option is only available on the [nightly channel].
+
+[nightly channel]: ../../book/appendix-07-nightly-rust.html
+[`--remap-path-prefix` flag]:  ../../rustc/command-line-arguments.html#--remap-path-prefix-remap-source-names-in-output
+
+
 ### Default profiles
 
 #### dev
@@ -240,6 +258,7 @@ panic = 'unwind'
 incremental = true
 codegen-units = 256
 rpath = false
+trim-path = false
 ```
 
 #### release
@@ -262,6 +281,7 @@ panic = 'unwind'
 incremental = false
 codegen-units = 16
 rpath = false
+trim-path = false
 ```
 
 #### test
@@ -283,6 +303,7 @@ panic = 'unwind'    # This setting is always ignored.
 incremental = true
 codegen-units = 256
 rpath = false
+trim-path = false
 ```
 
 #### bench
@@ -304,6 +325,7 @@ panic = 'unwind'    # This setting is always ignored.
 incremental = false
 codegen-units = 16
 rpath = false
+trim-path = false
 ```
 
 #### Build Dependencies
