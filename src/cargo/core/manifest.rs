@@ -518,11 +518,9 @@ impl Manifest {
         if self.default_kind.is_some() || self.forced_kind.is_some() {
             self.unstable_features
                 .require(Feature::per_package_target())
-                .chain_err(|| {
-                    anyhow::format_err!(
-                        "the `package.default-target` and `package.forced-target` \
-                         manifest keys are unstable and may not work properly"
-                    )
+                .with_context(|| {
+                    "the `package.default-target` and `package.forced-target` \
+                     manifest keys are unstable and may not work properly"
                 })?;
         }
 
