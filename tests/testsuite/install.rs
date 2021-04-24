@@ -217,7 +217,7 @@ fn pick_max_version() {
 }
 
 #[cargo_test]
-fn installs_beta_version_by_explicit_name_from_git() {
+fn installs_beta_version_by_crate_name_from_git() {
     let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", &basic_manifest("foo", "0.3.0-beta.1"))
         .file("src/main.rs", "fn main() {}")
@@ -228,6 +228,24 @@ fn installs_beta_version_by_explicit_name_from_git() {
         .arg("foo")
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn installs_beta_version_by_bin_name_from_git() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.3.0-beta.1"))
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bar/Cargo.toml", &basic_manifest("bar", "0.3.0-beta.1"))
+        .file("src/bar/src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .arg("--bin")
+        .arg("bar")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -1245,7 +1263,7 @@ fn uninstall_multiple_and_specifying_bin() {
 }
 
 #[cargo_test]
-fn uninstall_with_empty_pakcage_option() {
+fn uninstall_with_empty_package_option() {
     cargo_process("uninstall -p")
         .with_status(101)
         .with_stderr(

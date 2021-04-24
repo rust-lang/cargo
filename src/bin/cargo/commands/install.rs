@@ -82,10 +82,16 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
     }
 
-    let krates = args
+    let mut krates = args
         .values_of("crate")
         .unwrap_or_default()
         .collect::<Vec<_>>();
+
+    if krates.is_empty() && args.is_present("git") && args.is_present("bin") {
+        if let Some(bin) = args.value_of("bin") {
+            krates.push(bin);
+        }
+    }
 
     let mut from_cwd = false;
 
