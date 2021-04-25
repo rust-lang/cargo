@@ -6,6 +6,7 @@ pub fn cli() -> App {
     subcommand("doc")
         .about("Build a package's documentation")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(Arg::with_name("args").multiple(true).help("Rustdoc flags"))
         .arg(opt(
             "open",
             "Opens the docs in a browser after the operation",
@@ -43,6 +44,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+
+    let target_args = values(args, "args");
+    compile_opts.target_rustdoc_args = if target_args.is_empty() {
+        None
+    } else {
+        Some(target_args)
+    };
 
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
