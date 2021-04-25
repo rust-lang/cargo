@@ -79,7 +79,8 @@ fn simple() {
                     "incremental": false,
                     "panic": "unwind",
                     "strip": "none",
-                    "split_debuginfo": "{...}"
+                    "split_debuginfo": "{...}",
+                    "trim_path": null
                   },
                   "platform": null,
                   "mode": "build",
@@ -123,7 +124,8 @@ fn simple() {
                     "incremental": false,
                     "panic": "unwind",
                     "strip": "none",
-                    "split_debuginfo": "{...}"
+                    "split_debuginfo": "{...}",
+                    "trim_path": null
                   },
                   "platform": null,
                   "mode": "build",
@@ -167,7 +169,8 @@ fn simple() {
                     "incremental": false,
                     "panic": "unwind",
                     "strip": "none",
-                    "split_debuginfo": "{...}"
+                    "split_debuginfo": "{...}",
+                    "trim_path": null
                   },
                   "platform": null,
                   "mode": "build",
@@ -204,7 +207,8 @@ fn simple() {
                     "incremental": false,
                     "panic": "unwind",
                     "strip": "none",
-                    "split_debuginfo": "{...}"
+                    "split_debuginfo": "{...}",
+                    "trim_path": null
                   },
                   "platform": null,
                   "mode": "build",
