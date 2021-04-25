@@ -345,17 +345,15 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
 
-        if self.config.cli_unstable().configurable_env {
-            // Apply any environment variables from the config
-            for (key, value) in self.config.env_config()?.iter() {
-                // never override a value that has already been set by cargo
-                if cmd.get_envs().contains_key(key) {
-                    continue;
-                }
+        // Apply any environment variables from the config
+        for (key, value) in self.config.env_config()?.iter() {
+            // never override a value that has already been set by cargo
+            if cmd.get_envs().contains_key(key) {
+                continue;
+            }
 
-                if value.is_force() || env::var_os(key).is_none() {
-                    cmd.env(key, value.resolve(self.config));
-                }
+            if value.is_force() || env::var_os(key).is_none() {
+                cmd.env(key, value.resolve(self.config));
             }
         }
 

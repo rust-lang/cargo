@@ -79,6 +79,14 @@ pipelining = true             # rustc pipelining
 browser = "chromium"          # browser to use with `cargo doc --open`,
                               # overrides the `BROWSER` environment variable
 
+[env]
+# Set ENV_VAR_NAME=value for any process run by Cargo
+ENV_VAR_NAME = "value"
+# Set even if already present in environment
+ENV_VAR_NAME_2 = { value = "value", force = true }
+# Value is relative to .cargo directory containing `config.toml`, make absolute
+ENV_VAR_NAME_3 = { value = "relative/path", relative = true }
+
 [cargo-new]
 vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
 
@@ -468,6 +476,30 @@ Specifies the source control system to use for initializing a new repository.
 Valid values are `git`, `hg` (for Mercurial), `pijul`, `fossil` or `none` to
 disable this behavior. Defaults to `git`, or `none` if already inside a VCS
 repository. Can be overridden with the `--vcs` CLI option.
+
+### `[env]`
+
+The `[env]` section allows you to set additional environment variables for
+build scripts, rustc invocations, `cargo run` and `cargo build`.
+
+```toml
+[env]
+OPENSSL_DIR = "/opt/openssl"
+```
+
+By default, the variables specified will not override values that already exist
+in the environment. This behavior can be changed by setting the `force` flag.
+
+Setting the `relative` flag evaluates the value as a config-relative path that
+is relative to the parent directory of the `.cargo` directory that contains the
+`config.toml` file. The value of the environment variable will be the full
+absolute path.
+
+```toml
+[env]
+TMPDIR = { value = "/home/tmp", force = true }
+OPENSSL_DIR = { value = "vendor/openssl", relative = true }
+```
 
 #### `[http]`
 

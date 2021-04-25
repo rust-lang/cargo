@@ -1234,33 +1234,6 @@ the `--future-incompat-report` flag. The developer should then update their
 dependencies to a version where the issue is fixed, or work with the
 developers of the dependencies to help resolve the issue.
 
-### configurable-env
-* Original Pull Request: [#9175](https://github.com/rust-lang/cargo/pull/9175)
-* Tracking Issue: [#9539](https://github.com/rust-lang/cargo/issues/9539)
-
-The `-Z configurable-env` flag enables the `[env]` section in the
-`.cargo/config.toml` file. This section allows you to set additional environment
-variables for build scripts, rustc invocations, `cargo run` and `cargo build`.
-
-```toml
-[env]
-OPENSSL_DIR = "/opt/openssl"
-```
-
-By default, the variables specified will not override values that already exist
-in the environment. This behavior can be changed by setting the `force` flag.
-
-Setting the `relative` flag evaluates the value as a config-relative path that
-is relative to the parent directory of the `.cargo` directory that contains the
-`config.toml` file. The value of the environment variable will be the full
-absolute path.
-
-```toml
-[env]
-TMPDIR = { value = "/home/tmp", force = true }
-OPENSSL_DIR = { value = "vendor/openssl", relative = true }
-```
-
 ### patch-in-config
 * Original Pull Request: [#9204](https://github.com/rust-lang/cargo/pull/9204)
 * Tracking Issue: [#9269](https://github.com/rust-lang/cargo/issues/9269)
