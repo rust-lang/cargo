@@ -571,6 +571,27 @@ impl BuildOutput {
                         warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
                     }
                 }
+                "rustc-link-arg-tests" => {
+                    if extra_link_arg {
+                        linker_args.push((Some(LinkType::Test), value));
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    }
+                }
+                "rustc-link-arg-benches" => {
+                    if extra_link_arg {
+                        linker_args.push((Some(LinkType::Bench), value));
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    }
+                }
+                "rustc-link-arg-examples" => {
+                    if extra_link_arg {
+                        linker_args.push((Some(LinkType::Example), value));
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    }
+                }
                 "rustc-link-arg" => {
                     if extra_link_arg {
                         linker_args.push((None, value));

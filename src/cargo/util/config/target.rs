@@ -133,32 +133,48 @@ fn parse_links_overrides(
                         .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
-                    let args = value.list(key)?;
-                    let args = args.iter().map(|v| (Some(LinkType::Cdylib), v.0.clone()));
+                    let args = extra_link_args(Some(LinkType::Cdylib), key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-bins" => {
                     if extra_link_arg {
-                        let args = value.list(key)?;
-                        let args = args.iter().map(|v| (Some(LinkType::Bin), v.0.clone()));
+                        let args = extra_link_args(Some(LinkType::Bin), key, value)?;
                         output.linker_args.extend(args);
                     } else {
-                        config.shell().warn(format!(
-                            "target config `{}.{}` requires -Zextra-link-arg flag",
-                            target_key, key
-                        ))?;
+                        warn_extra_link_arg(config, target_key, key)?;
+                    }
+                }
+                "rustc-link-arg-tests" => {
+                    if extra_link_arg {
+                        let args = extra_link_args(Some(LinkType::Test), key, value)?;
+                        output.linker_args.extend(args);
+                    } else {
+                        warn_extra_link_arg(config, target_key, key)?;
+                    }
+                }
+                "rustc-link-arg-benches" => {
+                    if extra_link_arg {
+                        let args = extra_link_args(Some(LinkType::Bench), key, value)?;
+                        output.linker_args.extend(args);
+                    } else {
+                        warn_extra_link_arg(config, target_key, key)?;
+                    }
+                }
+                "rustc-link-arg-examples" => {
+                    if extra_link_arg {
+                        let args = extra_link_args(Some(LinkType::Example), key, value)?;
+                        output.linker_args.extend(args);
+                    } else {
+                        warn_extra_link_arg(config, target_key, key)?;
                     }
                 }
                 "rustc-link-arg" => {
                     if extra_link_arg {
-                        let args = value.list(key)?;
-                        let args = args.iter().map(|v| (None, v.0.clone()));
-                        output.linker_args.extend(args);
+                        output
+                            .linker_args
+                            .extend(extra_link_args(None, key, value)?);
                     } else {
-                        config.shell().warn(format!(
-                            "target config `{}.{}` requires -Zextra-link-arg flag",
-                            target_key, key
-                        ))?;
+                        warn_extra_link_arg(config, target_key, key)?;
                     }
                 }
                 "rustc-cfg" => {
@@ -183,4 +199,20 @@ fn parse_links_overrides(
         links_overrides.insert(lib_name, output);
     }
     Ok(links_overrides)
+}
+
+fn extra_link_args<'a>(
+    link_type: Option<LinkType>,
+    key: &str,
+    value: &'a CV,
+) -> CargoResult<impl Iterator<Item = (Option<LinkType>, String)> + 'a> {
+    let args = value.list(key)?;
+    Ok(args.iter().map(move |v| (link_type, v.0.clone())))
+}
+
+fn warn_extra_link_arg(config: &Config, target_key: &ConfigKey, key: &str) -> CargoResult<()> {
+    config.shell().warn(format!(
+        "target config `{}.{}` requires -Zextra-link-arg flag",
+        target_key, key
+    ))
 }
