@@ -7,12 +7,13 @@ cargo-doc - Build a package's documentation
 
 ## SYNOPSIS
 
-`cargo doc` [_options_]
+`cargo doc` [_options_] [`--` _args_]
 
 ## DESCRIPTION
 
 Build the documentation for the local package and all dependencies. The output
-is placed in `target/doc` in rustdoc's usual format.
+is placed in `target/doc` in rustdoc's usual format. The specified _args_ will
+all be passed to the final rustdoc invocation.
 
 ## OPTIONS
 
