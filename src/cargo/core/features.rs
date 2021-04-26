@@ -542,8 +542,8 @@ macro_rules! unstable_cli_options {
     (
         $(
             $(#[$meta:meta])?
-            $element: ident: $ty: ty = ($help: expr )
-        ),*
+            $element: ident: $ty: ty = ($help: expr ),
+        )*
     ) => {
         /// A parsed representation of all unstable flags that Cargo accepts.
         ///
@@ -603,7 +603,8 @@ unstable_cli_options!(
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
     timings: Option<Vec<String>>  = ("Display concurrency information"),
     unstable_options: bool = ("Allow the usage of unstable options"),
-    weak_dep_features: bool = ("Allow `dep_name?/feature` feature syntax")
+    weak_dep_features: bool = ("Allow `dep_name?/feature` feature syntax"),
+    skip_rustdoc_fingerprint: bool = (HIDDEN),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -813,6 +814,7 @@ impl CliUnstable {
             "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
             "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
             "credential-process" => self.credential_process = parse_empty(k, v)?,
+            "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
             "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
             "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,
             "cache-messages" => stabilized_warn(k, "1.40", STABILIZED_CACHE_MESSAGES),
