@@ -467,11 +467,17 @@ pub fn create_bcx<'a, 'cfg>(
         })
         .collect();
 
+    // Passing `build_config.requested_kinds` instead of
+    // `explicit_host_kinds` here so that `generate_targets` can do
+    // its own special handling of `CompileKind::Host`. It will
+    // internally replace the host kind by the `explicit_host_kind`
+    // before setting as a unit.
     let mut units = generate_targets(
         ws,
         &to_builds,
         filter,
-        &explicit_host_kinds,
+        &build_config.requested_kinds,
+        explicit_host_kind,
         build_config.mode,
         &resolve,
         &workspace_resolve,
@@ -842,6 +848,7 @@ fn generate_targets(
     packages: &[&Package],
     filter: &CompileFilter,
     requested_kinds: &[CompileKind],
+    explicit_host_kind: CompileKind,
     mode: CompileMode,
     resolve: &Resolve,
     workspace_resolve: &Option<Resolve>,
@@ -915,7 +922,27 @@ fn generate_targets(
             let features_for = FeaturesFor::from_for_host(target.proc_macro());
             let features = resolved_features.activated_features(pkg.package_id(), features_for);
 
-            for kind in requested_kinds {
+            // If `--target` has not been specified, then the unit
+            // graph is built almost like if `--target $HOST` was
+            // specified. See `rebuild_unit_graph_shared` for more on
+            // why this is done. However, if the package has its own
+            // `package.target` key, then this gets used instead of
+            // `$HOST`
+            let explicit_kinds = if let Some(k) = pkg.manifest().forced_kind() {
+                vec![k]
+            } else {
+                requested_kinds
+                    .iter()
+                    .map(|kind| match kind {
+                        CompileKind::Host => {
+                            pkg.manifest().default_kind().unwrap_or(explicit_host_kind)
+                        }
+                        CompileKind::Target(t) => CompileKind::Target(*t),
+                    })
+                    .collect()
+            };
+
+            for kind in explicit_kinds.iter() {
                 let profile = profiles.get_profile(
                     pkg.package_id(),
                     ws.is_member(pkg),

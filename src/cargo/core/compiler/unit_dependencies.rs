@@ -44,7 +44,7 @@ struct State<'a, 'cfg> {
     /// library.
     is_std: bool,
     global_mode: CompileMode,
-    target_data: &'a RustcTargetData,
+    target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
 
@@ -63,7 +63,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
-    target_data: &'a RustcTargetData,
+    target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
 ) -> CargoResult<UnitGraph> {

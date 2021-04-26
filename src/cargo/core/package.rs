@@ -500,7 +500,7 @@ impl<'cfg> PackageSet<'cfg> {
         root_ids: &[PackageId],
         has_dev_units: HasDevUnits,
         requested_kinds: &[CompileKind],
-        target_data: &RustcTargetData,
+        target_data: &RustcTargetData<'cfg>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
         fn collect_used_deps(
@@ -509,7 +509,7 @@ impl<'cfg> PackageSet<'cfg> {
             pkg_id: PackageId,
             has_dev_units: HasDevUnits,
             requested_kinds: &[CompileKind],
-            target_data: &RustcTargetData,
+            target_data: &RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
         ) -> CargoResult<()> {
             if !used.insert(pkg_id) {

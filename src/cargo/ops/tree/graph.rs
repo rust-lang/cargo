@@ -249,7 +249,7 @@ pub fn build<'a>(
     resolved_features: &ResolvedFeatures,
     specs: &[PackageIdSpec],
     cli_features: &CliFeatures,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'_>,
     requested_kinds: &[CompileKind],
     package_map: HashMap<PackageId, &'a Package>,
     opts: &TreeOptions,
@@ -294,7 +294,7 @@ fn add_pkg(
     resolved_features: &ResolvedFeatures,
     package_id: PackageId,
     features_for: FeaturesFor,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'_>,
     requested_kind: CompileKind,
     opts: &TreeOptions,
 ) -> usize {

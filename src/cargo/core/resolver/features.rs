@@ -414,7 +414,7 @@ pub struct FeatureDifferences {
 
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
-    target_data: &'a RustcTargetData,
+    target_data: &'a RustcTargetData<'cfg>,
     /// The platforms to build for, requested by the user.
     requested_targets: &'a [CompileKind],
     resolve: &'a Resolve,
@@ -452,7 +452,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     /// with the result.
     pub fn resolve(
         ws: &Workspace<'cfg>,
-        target_data: &RustcTargetData,
+        target_data: &RustcTargetData<'cfg>,
         resolve: &Resolve,
         package_set: &'a PackageSet<'cfg>,
         cli_features: &CliFeatures,

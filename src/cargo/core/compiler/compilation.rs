@@ -127,10 +127,10 @@ impl<'cfg> Compilation<'cfg> {
             sysroot_target_libdir: bcx
                 .all_kinds
                 .iter()
-                .map(|kind| {
+                .map(|&kind| {
                     (
-                        *kind,
-                        bcx.target_data.info(*kind).sysroot_target_libdir.clone(),
+                        kind,
+                        bcx.target_data.info(kind).sysroot_target_libdir.clone(),
                     )
                 })
                 .collect(),
