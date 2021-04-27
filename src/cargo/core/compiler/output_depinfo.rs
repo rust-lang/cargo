@@ -81,6 +81,9 @@ fn add_deps_for_unit(
     if let Some(metadata) = cx.find_build_script_metadata(unit) {
         if let Some(output) = cx.build_script_outputs.lock().unwrap().get(metadata) {
             for path in &output.rerun_if_changed {
+                // The paths we have saved from the unit are of arbitrary relativeness and may be
+                // relative to the crate root of the dependency.
+                let path = unit.pkg.root().join(path);
                 deps.insert(path.into());
             }
         }
