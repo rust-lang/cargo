@@ -80,6 +80,17 @@ impl fmt::Debug for Metadata {
     }
 }
 
+/// Information about the metadata hashes used for a `Unit`.
+struct MetaInfo {
+    /// The symbol hash to use.
+    meta_hash: Metadata,
+    /// Whether or not the `-C extra-filename` flag is used to generate unique
+    /// output filenames for this `Unit`.
+    ///
+    /// If this is `true`, the `meta_hash` is used for the filename.
+    use_extra_filename: bool,
+}
+
 /// Collection of information about the files emitted by the compiler, and the
 /// output directory structure.
 pub struct CompilationFiles<'a, 'cfg> {
@@ -94,7 +105,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     roots: Vec<Unit>,
     ws: &'a Workspace<'cfg>,
     /// Metadata hash to use for each unit.
-    metas: HashMap<Unit, Option<Metadata>>,
+    metas: HashMap<Unit, MetaInfo>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
@@ -160,11 +171,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Gets the metadata for the given unit.
     ///
     /// See module docs for more details.
-    ///
-    /// Returns `None` if the unit should not use a metadata hash (like
-    /// rustdoc, or some dylibs).
-    pub fn metadata(&self, unit: &Unit) -> Option<Metadata> {
-        self.metas[unit]
+    pub fn metadata(&self, unit: &Unit) -> Metadata {
+        self.metas[unit].meta_hash
+    }
+
+    /// Returns whether or not `-C extra-filename` is used to extend the
+    /// output filenames to make them unique.
+    pub fn use_extra_filename(&self, unit: &Unit) -> bool {
+        self.metas[unit].use_extra_filename
     }
 
     /// Gets the short hash based only on the `PackageId`.
@@ -201,9 +215,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        match self.metas[unit] {
-            Some(ref meta) => format!("{}-{}", name, meta),
-            None => format!("{}-{}", name, self.target_short_hash(unit)),
+        let meta = &self.metas[unit];
+        if meta.use_extra_filename {
+            format!("{}-{}", name, meta.meta_hash)
+        } else {
+            format!("{}-{}", name, self.target_short_hash(unit))
         }
     }
 
@@ -448,8 +464,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         // Convert FileType to OutputFile.
         let mut outputs = Vec::new();
         for file_type in file_types {
-            let meta = self.metadata(unit).map(|m| m.to_string());
-            let path = out_dir.join(file_type.output_filename(&unit.target, meta.as_deref()));
+            let meta = &self.metas[unit];
+            let meta_opt = meta.use_extra_filename.then(|| meta.meta_hash.to_string());
+            let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
             let hardlink = self.uplift_to(unit, &file_type, &path);
             let export_path = if unit.target.is_custom_build() {
                 None
@@ -471,11 +488,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 }
 
-fn metadata_of(
+fn metadata_of<'a>(
     unit: &Unit,
     cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Option<Metadata>>,
-) -> Option<Metadata> {
+    metas: &'a mut HashMap<Unit, MetaInfo>,
+) -> &'a MetaInfo {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
         metas.insert(unit.clone(), meta);
@@ -483,18 +500,15 @@ fn metadata_of(
             metadata_of(&dep.unit, cx, metas);
         }
     }
-    metas[unit]
+    &metas[unit]
 }
 
 fn compute_metadata(
     unit: &Unit,
     cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Option<Metadata>>,
-) -> Option<Metadata> {
+    metas: &mut HashMap<Unit, MetaInfo>,
+) -> MetaInfo {
     let bcx = &cx.bcx;
-    if !should_use_metadata(bcx, unit) {
-        return None;
-    }
     let mut hasher = StableHasher::new();
 
     METADATA_VERSION.hash(&mut hasher);
@@ -514,7 +528,7 @@ fn compute_metadata(
     let mut deps_metadata = cx
         .unit_deps(unit)
         .iter()
-        .map(|dep| metadata_of(&dep.unit, cx, metas))
+        .map(|dep| metadata_of(&dep.unit, cx, metas).meta_hash)
         .collect::<Vec<_>>();
     deps_metadata.sort();
     deps_metadata.hash(&mut hasher);
@@ -561,7 +575,10 @@ fn compute_metadata(
     // with user dependencies.
     unit.is_std.hash(&mut hasher);
 
-    Some(Metadata(hasher.finish()))
+    MetaInfo {
+        meta_hash: Metadata(hasher.finish()),
+        use_extra_filename: should_use_metadata(bcx, unit),
+    }
 }
 
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {

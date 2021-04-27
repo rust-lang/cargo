@@ -229,9 +229,14 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let link_type = (&unit.target).into();
 
-    let dep_info_name = match cx.files().metadata(unit) {
-        Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
-        None => format!("{}.d", unit.target.crate_name()),
+    let dep_info_name = if cx.files().use_extra_filename(unit) {
+        format!(
+            "{}-{}.d",
+            unit.target.crate_name(),
+            cx.files().metadata(unit)
+        )
+    } else {
+        format!("{}.d", unit.target.crate_name())
     };
     let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
@@ -881,15 +886,10 @@ fn build_base_args(
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    match cx.files().metadata(unit) {
-        Some(m) => {
-            cmd.arg("-C").arg(&format!("metadata={}", m));
-            cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
-        }
-        None => {
-            cmd.arg("-C")
-                .arg(&format!("metadata={}", cx.files().target_short_hash(unit)));
-        }
+    let meta = cx.files().metadata(unit);
+    cmd.arg("-C").arg(&format!("metadata={}", meta));
+    if cx.files().use_extra_filename(unit) {
+        cmd.arg("-C").arg(&format!("extra-filename=-{}", meta));
     }
 
     if rpath {

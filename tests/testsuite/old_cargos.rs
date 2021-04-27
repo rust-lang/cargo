@@ -587,3 +587,60 @@ foo v0.1.0 [..]
         )
         .run();
 }
+
+#[cargo_test]
+#[ignore]
+fn avoids_split_debuginfo_collision() {
+    // Checks for a bug where .o files were being incorrectly shared between
+    // different toolchains using incremental and split-debuginfo on macOS.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.dev]
+                split-debuginfo = "unpacked"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    execs()
+        .with_process_builder(tc_process("cargo", "stable"))
+        .arg("build")
+        .env("CARGO_INCREMENTAL", "1")
+        .cwd(p.root())
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("build")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    execs()
+        .with_process_builder(tc_process("cargo", "stable"))
+        .arg("build")
+        .env("CARGO_INCREMENTAL", "1")
+        .cwd(p.root())
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
