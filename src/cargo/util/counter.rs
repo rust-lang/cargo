@@ -11,17 +11,17 @@ pub struct MetricsCounter<const N: usize> {
 
 impl<const N: usize> MetricsCounter<N> {
     /// Creates a new counter with an initial value.
-    pub fn new(init: usize) -> Self {
+    pub fn new(init: usize, init_at: Instant) -> Self {
         debug_assert!(N > 0, "number of slots must be greater than zero");
         Self {
-            slots: [(init, Instant::now()); N],
+            slots: [(init, init_at); N],
             index: 0,
         }
     }
 
     /// Adds record to the counter.
-    pub fn add(&mut self, data: usize) {
-        self.slots[self.index] = (data, Instant::now());
+    pub fn add(&mut self, data: usize, added_at: Instant) {
+        self.slots[self.index] = (data, added_at);
         self.index = (self.index + 1) % N;
     }
 
@@ -42,20 +42,26 @@ impl<const N: usize> MetricsCounter<N> {
 #[cfg(test)]
 mod tests {
     use super::MetricsCounter;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn counter() {
-        let mut counter = MetricsCounter::<3>::new(0);
+        let now = Instant::now();
+        let mut counter = MetricsCounter::<3>::new(0, now);
         assert_eq!(counter.rate(), 0f32);
-        for i in 1..=5 {
-            counter.add(i);
-            assert!(counter.rate() > 0f32);
-        }
+        counter.add(1, now + Duration::from_secs(1));
+        assert_eq!(counter.rate(), 1f32);
+        counter.add(4, now + Duration::from_secs(2));
+        assert_eq!(counter.rate(), 2f32);
+        counter.add(7, now + Duration::from_secs(3));
+        assert_eq!(counter.rate(), 3f32);
+        counter.add(12, now + Duration::from_secs(4));
+        assert_eq!(counter.rate(), 4f32);
     }
 
     #[test]
     #[should_panic(expected = "number of slots must be greater than zero")]
     fn counter_zero_slot() {
-        let _counter = MetricsCounter::<0>::new(0);
+        let _counter = MetricsCounter::<0>::new(0, Instant::now());
     }
 }

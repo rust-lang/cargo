@@ -697,7 +697,9 @@ pub fn with_fetch_options(
         with_authentication(url, git_config, |f| {
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
-            let mut counter = MetricsCounter::<10>::new(0);
+            // We choose `N=10` here to make a `300ms * 10slots ~= 3000ms`
+            // sliding window for tracking the data transfer rate (in bytes/s).
+            let mut counter = MetricsCounter::<10>::new(0, last_update);
             rcb.credentials(f);
             rcb.transfer_progress(|stats| {
                 let indexed_deltas = stats.indexed_deltas();
@@ -710,10 +712,11 @@ pub fn with_fetch_options(
                     )
                 } else {
                     // Receiving objects.
-                    let duration = last_update.elapsed();
-                    if duration > Duration::from_millis(300) {
-                        counter.add(stats.received_bytes());
-                        last_update = Instant::now();
+                    let now = Instant::now();
+                    // Scrape a `received_bytes` to the counter every 300ms.
+                    if now - last_update > Duration::from_millis(300) {
+                        counter.add(stats.received_bytes(), now);
+                        last_update = now;
                     }
                     fn format_bytes(bytes: f32) -> (&'static str, f32) {
                         static UNITS: [&str; 5] = ["", "K", "M", "G", "T"];
