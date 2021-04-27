@@ -1487,7 +1487,7 @@ impl Config {
     }
 
     /// Returns true if the `[target]` table should be applied to host targets.
-    pub fn target_applies_to_host(&self) -> bool {
+    pub fn target_applies_to_host(&self) -> CargoResult<bool> {
         target::get_target_applies_to_host(self)
     }
 

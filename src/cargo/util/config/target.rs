@@ -65,15 +65,25 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
 }
 
 /// Returns true if the `[target]` table should be applied to host targets.
-pub(super) fn get_target_applies_to_host(config: &Config) -> bool {
-    let target_applies_to_host = config.get::<bool>("target-applies-to-host");
-    if target_applies_to_host.is_ok() {
-        target_applies_to_host.unwrap()
+pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
+    if config.cli_unstable().target_applies_to_host {
+        let target_applies_to_host = config.get::<bool>("target-applies-to-host");
+        if target_applies_to_host.is_ok() {
+            Ok(target_applies_to_host.unwrap())
+        } else {
+            if config.cli_unstable().host_config {
+                Ok(false)
+            } else {
+                Ok(true)
+            }
+        }
     } else {
         if config.cli_unstable().host_config {
-            false
+            anyhow::bail!(
+                "the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set"
+            );
         } else {
-            true
+            Ok(true)
         }
     }
 }

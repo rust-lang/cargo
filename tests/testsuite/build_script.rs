@@ -234,7 +234,12 @@ fn custom_build_env_var_rustc_linker_host_target() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build --target").arg(&target).run();
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -266,10 +271,13 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build --target")
-        .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
-        .arg(&target)
-        .run();
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host --target")
+            .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -304,7 +312,7 @@ fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
 
     // build.rs should fail due to bad target linker being set
     if cargo_test_support::is_nightly() {
-        p.cargo("build -Z host-config --verbose --target")
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
@@ -350,7 +358,7 @@ fn custom_build_env_var_rustc_linker_bad_host() {
 
     // build.rs should fail due to bad host linker being set
     if cargo_test_support::is_nightly() {
-        p.cargo("build -Z host-config --verbose --target")
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
@@ -398,7 +406,7 @@ fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
 
     // build.rs should fail due to bad host linker being set
     if cargo_test_support::is_nightly() {
-        p.cargo("build -Z host-config --verbose --target")
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
@@ -445,7 +453,7 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
 
     // build.rs should fail due to bad host linker being set
     if cargo_test_support::is_nightly() {
-        p.cargo("build -Z host-config --verbose --target")
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .run();
@@ -486,7 +494,7 @@ fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
 
     // build.rs should fail due to bad host linker being set
     if cargo_test_support::is_nightly() {
-        p.cargo("build -Z host-config --verbose --target")
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
