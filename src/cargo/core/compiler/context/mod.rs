@@ -391,9 +391,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the metadata hash for a RunCustomBuild unit.
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> Metadata {
         assert!(unit.mode.is_run_custom_build());
-        self.files()
-            .metadata(unit)
-            .expect("build script should always have hash")
+        self.files().metadata(unit)
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {
