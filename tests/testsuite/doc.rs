@@ -887,8 +887,8 @@ fn features() {
 ",
         )
         .run();
-    // assert!(!p.root().join("target/doc/foo/fn.foo.html").is_file());
-    // assert!(!p.root().join("target/doc/bar/fn.bar.html").is_file());
+    assert!(!p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(!p.root().join("target/doc/bar/fn.bar.html").is_file());
     // And switching back will rebuild and bring them back.
     p.cargo("doc --features foo")
         .with_stderr(
