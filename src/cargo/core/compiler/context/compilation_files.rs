@@ -598,7 +598,7 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
 
 /// Returns whether or not this unit should use a metadata hash.
 fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
-    if unit.mode.is_doc_test() {
+    if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;
     }
