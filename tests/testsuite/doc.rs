@@ -863,8 +863,42 @@ fn features() {
             r#"#[cfg(feature = "bar")] pub fn bar() {}"#,
         )
         .build();
-    p.cargo("doc --features foo").run();
+    p.cargo("doc --features foo")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 [..]
+[DOCUMENTING] bar v0.0.1 [..]
+[DOCUMENTING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
     assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
+    // Check that turning the feature off will remove the files.
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 [..]
+[DOCUMENTING] bar v0.0.1 [..]
+[DOCUMENTING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    assert!(!p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(!p.root().join("target/doc/bar/fn.bar.html").is_file());
+    // And switching back will rebuild and bring them back.
+    p.cargo("doc --features foo")
+        .with_stderr(
+            "\
+[DOCUMENTING] bar v0.0.1 [..]
+[DOCUMENTING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
     assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }

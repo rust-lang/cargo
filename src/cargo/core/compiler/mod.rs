@@ -599,7 +599,8 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     // script_metadata is not needed here, it is only for tests.
     let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
-    rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
+    let crate_name = unit.target.crate_name();
+    rustdoc.arg("--crate-name").arg(&crate_name);
     add_path_args(bcx.ws, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
@@ -613,7 +614,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     // it doesn't already exist.
     paths::create_dir_all(&doc_dir)?;
 
-    rustdoc.arg("-o").arg(doc_dir);
+    rustdoc.arg("-o").arg(&doc_dir);
 
     for feat in &unit.features {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
@@ -652,6 +653,13 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                     rustdoc.env(name, value);
                 }
             }
+        }
+        let crate_dir = doc_dir.join(&crate_name);
+        if crate_dir.exists() {
+            // Remove output from a previous build. This ensures that stale
+            // files for removed items are removed.
+            log::debug!("removing pre-existing doc directory {:?}", crate_dir);
+            paths::remove_dir_all(crate_dir)?;
         }
         state.running(&rustdoc);
 
