@@ -3,7 +3,7 @@
 
 use crate::core::GitReference;
 use crate::util::errors::CargoResult;
-use crate::util::{network, Config, IntoUrl, Progress};
+use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
@@ -695,9 +695,9 @@ pub fn with_fetch_options(
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
-            let mut last_recv = 0; // in Byte
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
+            let mut counter = MetricsCounter::<10>::new(0);
             rcb.credentials(f);
             rcb.transfer_progress(|stats| {
                 let indexed_deltas = stats.indexed_deltas();
@@ -711,10 +711,8 @@ pub fn with_fetch_options(
                 } else {
                     // Receiving objects.
                     let duration = last_update.elapsed();
-                    let recv = stats.received_bytes();
-                    let rate = (recv - last_recv) as f32 / duration.as_secs_f32();
-                    if duration > Duration::from_secs(3) {
-                        last_recv = recv;
+                    if duration > Duration::from_millis(300) {
+                        counter.add(stats.received_bytes());
                         last_update = Instant::now();
                     }
                     fn format_bytes(bytes: f32) -> (&'static str, f32) {
@@ -722,7 +720,7 @@ pub fn with_fetch_options(
                         let i = (bytes.log2() / 10.0).min(4.0) as usize;
                         (UNITS[i], bytes / 1024_f32.powi(i as i32))
                     }
-                    let (unit, rate) = format_bytes(rate);
+                    let (unit, rate) = format_bytes(counter.rate());
                     format!(", {:.2}{}iB/s", rate, unit)
                 };
                 progress
