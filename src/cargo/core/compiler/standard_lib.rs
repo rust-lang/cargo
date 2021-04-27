@@ -5,7 +5,7 @@ use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::HasDevUnits;
-use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
+use crate::core::{Dependency, MaybePackage, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
@@ -43,7 +43,7 @@ pub fn resolve_std<'cfg>(
         "rustc-std-workspace-alloc",
         "rustc-std-workspace-std",
     ];
-    let patches = to_patch
+    let mut patches = to_patch
         .iter()
         .map(|&name| {
             let source_path = SourceId::for_path(&src_path.join("library").join(name))?;
@@ -52,6 +52,14 @@ pub fn resolve_std<'cfg>(
         })
         .collect::<CargoResult<Vec<_>>>()?;
     let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
+    // Merge patches defined in the original workspace.
+    let ws_patch = match ws.root_maybe() {
+        MaybePackage::Package(p) => p.manifest().patch(),
+        MaybePackage::Virtual(v) => v.patch(),
+    };
+    if let Some(ws_patches) = ws_patch.get(&crates_io_url) {
+        patches.extend_from_slice(ws_patches);
+    }
     let mut patch = HashMap::new();
     patch.insert(crates_io_url, patches);
     let members = vec![
