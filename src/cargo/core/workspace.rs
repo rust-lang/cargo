@@ -7,6 +7,7 @@ use std::slice;
 
 use anyhow::{bail, Context as _};
 use glob::glob;
+use itertools::*;
 use log::debug;
 use url::Url;
 
@@ -20,6 +21,7 @@ use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
+use crate::util::lev_distance;
 use crate::util::toml::{read_manifest, TomlDependency, TomlProfiles};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
@@ -1075,6 +1077,276 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
+    /// Returns the requested features for the given member.
+    /// This filters out any named features that the member does not have.
+    fn collect_matching_features(
+        member: &Package,
+        cli_features: &CliFeatures,
+        found_features: &mut BTreeSet<FeatureValue>,
+    ) -> CliFeatures {
+        if cli_features.features.is_empty() || cli_features.all_features {
+            return cli_features.clone();
+        }
+
+        // Only include features this member defines.
+        let summary = member.summary();
+
+        // Features defined in the manifest
+        let summary_features = summary.features();
+
+        // Dependency name -> dependency
+        let dependencies: BTreeMap<InternedString, &Dependency> = summary
+            .dependencies()
+            .iter()
+            .map(|dep| (dep.name_in_toml(), dep))
+            .collect();
+
+        // Features that enable optional dependencies
+        let optional_dependency_names: BTreeSet<_> = dependencies
+            .iter()
+            .filter(|(_, dep)| dep.is_optional())
+            .map(|(name, _)| name)
+            .copied()
+            .collect();
+
+        let mut features = BTreeSet::new();
+
+        // Checks if a member contains the given feature.
+        let summary_or_opt_dependency_feature = |feature: &InternedString| -> bool {
+            summary_features.contains_key(feature) || optional_dependency_names.contains(feature)
+        };
+
+        for feature in cli_features.features.iter() {
+            match feature {
+                FeatureValue::Feature(f) => {
+                    if summary_or_opt_dependency_feature(f) {
+                        // feature exists in this member.
+                        features.insert(feature.clone());
+                        found_features.insert(feature.clone());
+                    }
+                }
+                // This should be enforced by CliFeatures.
+                FeatureValue::Dep { .. }
+                | FeatureValue::DepFeature {
+                    dep_prefix: true, ..
+                } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::DepFeature {
+                    dep_name,
+                    dep_feature,
+                    dep_prefix: _,
+                    weak: _,
+                } => {
+                    if dependencies.contains_key(dep_name) {
+                        // pkg/feat for a dependency.
+                        // Will rely on the dependency resolver to validate `dep_feature`.
+                        features.insert(feature.clone());
+                        found_features.insert(feature.clone());
+                    } else if *dep_name == member.name()
+                        && summary_or_opt_dependency_feature(dep_feature)
+                    {
+                        // member/feat where "feat" is a feature in member.
+                        //
+                        // `weak` can be ignored here, because the member
+                        // either is or isn't being built.
+                        features.insert(FeatureValue::Feature(*dep_feature));
+                        found_features.insert(feature.clone());
+                    }
+                }
+            }
+        }
+        CliFeatures {
+            features: Rc::new(features),
+            all_features: false,
+            uses_default_features: cli_features.uses_default_features,
+        }
+    }
+
+    fn report_unknown_features_error(
+        &self,
+        specs: &[PackageIdSpec],
+        cli_features: &CliFeatures,
+        found_features: &BTreeSet<FeatureValue>,
+    ) -> CargoResult<()> {
+        // Keeps track of which features were contained in summary of `member` to suggest similar features in errors
+        let mut summary_features: Vec<InternedString> = Default::default();
+
+        // Keeps track of `member` dependencies (`dep/feature`) and their features names to suggest similar features in error
+        let mut dependencies_features: BTreeMap<InternedString, &[InternedString]> =
+            Default::default();
+
+        // Keeps track of `member` optional dependencies names (which can be enabled with feature) to suggest similar features in error
+        let mut optional_dependency_names: Vec<InternedString> = Default::default();
+
+        // Keeps track of which features were contained in summary of `member` to suggest similar features in errors
+        let mut summary_features_per_member: BTreeMap<&Package, BTreeSet<InternedString>> =
+            Default::default();
+
+        // Keeps track of `member` optional dependencies (which can be enabled with feature) to suggest similar features in error
+        let mut optional_dependency_names_per_member: BTreeMap<&Package, BTreeSet<InternedString>> =
+            Default::default();
+
+        for member in self
+            .members()
+            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+        {
+            // Only include features this member defines.
+            let summary = member.summary();
+
+            // Features defined in the manifest
+            summary_features.extend(summary.features().keys());
+            summary_features_per_member
+                .insert(member, summary.features().keys().copied().collect());
+
+            // Dependency name -> dependency
+            let dependencies: BTreeMap<InternedString, &Dependency> = summary
+                .dependencies()
+                .iter()
+                .map(|dep| (dep.name_in_toml(), dep))
+                .collect();
+
+            dependencies_features.extend(
+                dependencies
+                    .iter()
+                    .map(|(name, dep)| (*name, dep.features())),
+            );
+
+            // Features that enable optional dependencies
+            let optional_dependency_names_raw: BTreeSet<_> = dependencies
+                .iter()
+                .filter(|(_, dep)| dep.is_optional())
+                .map(|(name, _)| name)
+                .copied()
+                .collect();
+
+            optional_dependency_names.extend(optional_dependency_names_raw.iter());
+            optional_dependency_names_per_member.insert(member, optional_dependency_names_raw);
+        }
+
+        let levenshtein_test =
+            |a: InternedString, b: InternedString| lev_distance(a.as_str(), b.as_str()) < 4;
+
+        let suggestions: Vec<_> = cli_features
+            .features
+            .difference(found_features)
+            .map(|feature| match feature {
+                // Simple feature, check if any of the optional dependency features or member features are close enough
+                FeatureValue::Feature(typo) => {
+                    // Finds member features which are similar to the requested feature.
+                    let summary_features = summary_features
+                        .iter()
+                        .filter(move |feature| levenshtein_test(**feature, *typo));
+
+                    // Finds optional dependencies which name is similar to the feature
+                    let optional_dependency_features = optional_dependency_names
+                        .iter()
+                        .filter(move |feature| levenshtein_test(**feature, *typo));
+
+                    summary_features
+                        .chain(optional_dependency_features)
+                        .map(|s| s.to_string())
+                        .collect::<Vec<_>>()
+                }
+                FeatureValue::Dep { .. }
+                | FeatureValue::DepFeature {
+                    dep_prefix: true, ..
+                } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::DepFeature {
+                    dep_name,
+                    dep_feature,
+                    dep_prefix: _,
+                    weak: _,
+                } => {
+                    // Finds set of `pkg/feat` that are very similar to current `pkg/feat`.
+                    let pkg_feat_similar = dependencies_features
+                        .iter()
+                        .filter(|(name, _)| levenshtein_test(**name, *dep_name))
+                        .map(|(name, features)| {
+                            (
+                                name,
+                                features
+                                    .iter()
+                                    .filter(|feature| levenshtein_test(**feature, *dep_feature))
+                                    .collect::<Vec<_>>(),
+                            )
+                        })
+                        .map(|(name, features)| {
+                            features
+                                .into_iter()
+                                .map(move |feature| format!("{}/{}", name, feature))
+                        })
+                        .flatten();
+
+                    // Finds set of `member/optional_dep` features which name is similar to current `pkg/feat`.
+                    let optional_dependency_features = optional_dependency_names_per_member
+                        .iter()
+                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .map(|(package, optional_dependencies)| {
+                            optional_dependencies
+                                .into_iter()
+                                .filter(|optional_dependency| {
+                                    levenshtein_test(**optional_dependency, *dep_name)
+                                })
+                                .map(move |optional_dependency| {
+                                    format!("{}/{}", package.name(), optional_dependency)
+                                })
+                        })
+                        .flatten();
+
+                    // Finds set of `member/feat` features which name is similar to current `pkg/feat`.
+                    let summary_features = summary_features_per_member
+                        .iter()
+                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .map(|(package, summary_features)| {
+                            summary_features
+                                .into_iter()
+                                .filter(|summary_feature| {
+                                    levenshtein_test(**summary_feature, *dep_name)
+                                })
+                                .map(move |summary_feature| {
+                                    format!("{}/{}", package.name(), summary_feature)
+                                })
+                        })
+                        .flatten();
+
+                    pkg_feat_similar
+                        .chain(optional_dependency_features)
+                        .chain(summary_features)
+                        .collect::<Vec<_>>()
+                }
+            })
+            .map(|v| v.into_iter())
+            .flatten()
+            .unique()
+            .filter(|element| {
+                !cli_features
+                    .features
+                    .contains(&FeatureValue::new(InternedString::new(element)))
+            })
+            .sorted()
+            .take(5)
+            .collect();
+
+        let unknown: Vec<_> = cli_features
+            .features
+            .difference(found_features)
+            .map(|feature| feature.to_string())
+            .sorted()
+            .collect();
+
+        if suggestions.is_empty() {
+            bail!(
+                "none of the selected packages contains these features: {}",
+                unknown.join(", ")
+            );
+        } else {
+            bail!(
+                "none of the selected packages contains these features: {}, did you mean: {}?",
+                unknown.join(", "),
+                suggestions.join(", ")
+            );
+        }
+    }
+
     /// New command-line feature selection behavior with resolver = "2" or the
     /// root of a virtual workspace. See `allows_new_cli_feature_behavior`.
     fn members_with_features_new(
@@ -1082,82 +1354,21 @@ impl<'cfg> Workspace<'cfg> {
         specs: &[PackageIdSpec],
         cli_features: &CliFeatures,
     ) -> CargoResult<Vec<(&Package, CliFeatures)>> {
-        // Keep track of which features matched *any* member, to produce an error
+        // Keeps track of which features matched `member` to produce an error
         // if any of them did not match anywhere.
-        let mut found: BTreeSet<FeatureValue> = BTreeSet::new();
-
-        // Returns the requested features for the given member.
-        // This filters out any named features that the member does not have.
-        let mut matching_features = |member: &Package| -> CliFeatures {
-            if cli_features.features.is_empty() || cli_features.all_features {
-                return cli_features.clone();
-            }
-            // Only include features this member defines.
-            let summary = member.summary();
-            let member_features = summary.features();
-            let mut features = BTreeSet::new();
-
-            // Checks if a member contains the given feature.
-            let contains = |feature: InternedString| -> bool {
-                member_features.contains_key(&feature)
-                    || summary
-                        .dependencies()
-                        .iter()
-                        .any(|dep| dep.is_optional() && dep.name_in_toml() == feature)
-            };
-
-            for feature in cli_features.features.iter() {
-                match feature {
-                    FeatureValue::Feature(f) => {
-                        if contains(*f) {
-                            // feature exists in this member.
-                            features.insert(feature.clone());
-                            found.insert(feature.clone());
-                        }
-                    }
-                    // This should be enforced by CliFeatures.
-                    FeatureValue::Dep { .. }
-                    | FeatureValue::DepFeature {
-                        dep_prefix: true, ..
-                    } => panic!("unexpected dep: syntax {}", feature),
-                    FeatureValue::DepFeature {
-                        dep_name,
-                        dep_feature,
-                        dep_prefix: _,
-                        weak: _,
-                    } => {
-                        if summary
-                            .dependencies()
-                            .iter()
-                            .any(|dep| dep.name_in_toml() == *dep_name)
-                        {
-                            // pkg/feat for a dependency.
-                            // Will rely on the dependency resolver to validate `dep_feature`.
-                            features.insert(feature.clone());
-                            found.insert(feature.clone());
-                        } else if *dep_name == member.name() && contains(*dep_feature) {
-                            // member/feat where "feat" is a feature in member.
-                            //
-                            // `weak` can be ignored here, because the member
-                            // either is or isn't being built.
-                            features.insert(FeatureValue::Feature(*dep_feature));
-                            found.insert(feature.clone());
-                        }
-                    }
-                }
-            }
-            CliFeatures {
-                features: Rc::new(features),
-                all_features: false,
-                uses_default_features: cli_features.uses_default_features,
-            }
-        };
+        let mut found_features = Default::default();
 
         let members: Vec<(&Package, CliFeatures)> = self
             .members()
             .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
-            .map(|m| (m, matching_features(m)))
+            .map(|m| {
+                (
+                    m,
+                    Workspace::collect_matching_features(m, cli_features, &mut found_features),
+                )
+            })
             .collect();
+
         if members.is_empty() {
             // `cargo build -p foo`, where `foo` is not a member.
             // Do not allow any command-line flags (defaults only).
@@ -1174,18 +1385,8 @@ impl<'cfg> Workspace<'cfg> {
                 .map(|m| (m, CliFeatures::new_all(false)))
                 .collect());
         }
-        if *cli_features.features != found {
-            let mut missing: Vec<_> = cli_features
-                .features
-                .difference(&found)
-                .map(|fv| fv.to_string())
-                .collect();
-            missing.sort();
-            // TODO: typo suggestions would be good here.
-            bail!(
-                "none of the selected packages contains these features: {}",
-                missing.join(", ")
-            );
+        if *cli_features.features != found_features {
+            self.report_unknown_features_error(specs, cli_features, &found_features)?;
         }
         Ok(members)
     }

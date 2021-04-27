@@ -67,13 +67,15 @@ fn virtual_no_default_features() {
     p.cargo("check --features foo")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] none of the selected packages contains these features: foo")
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: foo, did you mean: f1?",
+        )
         .run();
 
     p.cargo("check --features a/dep1,b/f1,b/f2,f2")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2")
+        .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2, did you mean: b/f1, f1?")
         .run();
 }
 
