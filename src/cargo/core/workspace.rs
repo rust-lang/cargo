@@ -1318,9 +1318,8 @@ impl<'cfg> Workspace<'cfg> {
             .flatten()
             .unique()
             .filter(|element| {
-                !cli_features
-                    .features
-                    .contains(&FeatureValue::new(InternedString::new(element)))
+                let feature = FeatureValue::new(InternedString::new(element));
+                !cli_features.features.contains(&feature) && !found_features.contains(&feature)
             })
             .sorted()
             .take(5)
