@@ -712,6 +712,16 @@ pub fn with_fetch_options(
                     )
                 } else {
                     // Receiving objects.
+                    //
+                    // # Caveat
+                    //
+                    // Progress bar relies on git2 calling `transfer_progress`
+                    // to update its transfer rate, but we cannot guarantee a
+                    // periodic call of that callback. Thus if we don't receive
+                    // any data for, say, 10 seconds, the rate will get stuck
+                    // and never go down to 0B/s.
+                    // In the future, we need to find away to update the rate
+                    // even when the callback is not called.
                     let now = Instant::now();
                     // Scrape a `received_bytes` to the counter every 300ms.
                     if now - last_update > Duration::from_millis(300) {
