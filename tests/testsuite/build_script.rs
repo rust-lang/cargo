@@ -2648,6 +2648,17 @@ fn generate_good_d_files() {
 
     println!("*.d file content*: {}", &dot_d);
 
+    #[cfg(windows)]
+    assert!(
+        lines_match(
+            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\barkbarkbark [..]\\awoo\\build.rs[..]",
+            &dot_d
+        ) || lines_match(
+            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\build.rs [..]\\awoo\\barkbarkbark[..]",
+            &dot_d
+        )
+    );
+    #[cfg(not(windows))]
     assert!(
         lines_match(
             "[..]/target/debug/meow: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
@@ -2676,6 +2687,17 @@ fn generate_good_d_files() {
 
     println!("*.d file content with dep-info-basedir*: {}", &dot_d);
 
+    #[cfg(windows)]
+    assert!(
+        lines_match(
+            "target\\debug\\meow.exe: [..]awoo\\barkbarkbark [..]awoo\\build.rs[..]",
+            &dot_d
+        ) || lines_match(
+            "target\\debug\\meow.exe: [..]awoo\\build.rs [..]awoo\\barkbarkbark[..]",
+            &dot_d
+        )
+    );
+    #[cfg(not(windows))]
     assert!(
         lines_match(
             "target/debug/meow: [..]awoo/barkbarkbark [..]awoo/build.rs[..]",
