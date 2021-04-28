@@ -719,12 +719,12 @@ pub fn with_fetch_options(
                         last_update = now;
                     }
                     fn format_bytes(bytes: f32) -> (&'static str, f32) {
-                        static UNITS: [&str; 5] = ["", "K", "M", "G", "T"];
+                        static UNITS: [&str; 5] = ["", "Ki", "Mi", "Gi", "Ti"];
                         let i = (bytes.log2() / 10.0).min(4.0) as usize;
                         (UNITS[i], bytes / 1024_f32.powi(i as i32))
                     }
                     let (unit, rate) = format_bytes(counter.rate());
-                    format!(", {:.2}{}iB/s", rate, unit)
+                    format!(", {:.2}{}B/s", rate, unit)
                 };
                 progress
                     .tick(stats.indexed_objects(), stats.total_objects(), &msg)
