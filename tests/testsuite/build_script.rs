@@ -1,6 +1,5 @@
 //! Tests for build.rs scripts.
 
-use cargo_test_support::project_in_home;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
 use cargo_test_support::{lines_match, paths::CargoPathExt};
@@ -2608,9 +2607,9 @@ fn generate_good_d_files() {
     // this is here to stop regression on an issue where build.rs rerun-if-changed paths aren't
     // made absolute properly, which in turn interacts poorly with the dep-info-basedir setting,
     // and the dep-info files have other-crate-relative paths spat out in them
-    let dep = project_in_home("awoo")
+    let p = project()
         .file(
-            "Cargo.toml",
+            "awoo/Cargo.toml",
             r#"
                 [project]
                 name = "awoo"
@@ -2618,9 +2617,9 @@ fn generate_good_d_files() {
                 build = "build.rs"
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("awoo/src/lib.rs", "")
         .file(
-            "build.rs",
+            "awoo/build.rs",
             r#"
                 fn main() {
                     println!("cargo:rerun-if-changed=build.rs");
@@ -2628,21 +2627,15 @@ fn generate_good_d_files() {
                 }
             "#,
         )
-        .build();
-
-    let p = project_in_home("meow")
         .file(
             "Cargo.toml",
-            &format!(
-                r#"
+            r#"
                 [project]
                 name = "meow"
                 version = "0.5.0"
                 [dependencies]
-                awoo = {{ path = "{path}" }}
+                awoo = { path = "awoo" }
             "#,
-                path = dep.root().to_str().unwrap(),
-            ),
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -2666,7 +2659,9 @@ fn generate_good_d_files() {
     );
 
     // paths relative to dependency roots should not be allowed
-    assert!(!dot_d.split_whitespace().any(|v| v == "build.rs"));
+    assert!(!dot_d
+        .split_whitespace()
+        .any(|v| v == "barkbarkbark" || v == "build.rs"));
 
     p.change_file(
         ".cargo/config.toml",
@@ -2683,16 +2678,18 @@ fn generate_good_d_files() {
 
     assert!(
         lines_match(
-            "target/debug/meow: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
+            "target/debug/meow: [..]awoo/barkbarkbark [..]awoo/build.rs[..]",
             &dot_d
         ) || lines_match(
-            "target/debug/meow: [..]/awoo/build.rs [..]/awoo/barkbarkbark[..]",
+            "target/debug/meow: [..]awoo/build.rs [..]awoo/barkbarkbark[..]",
             &dot_d
         )
     );
 
     // paths relative to dependency roots should not be allowed
-    assert!(!dot_d.split_whitespace().any(|v| v == "build.rs"));
+    assert!(!dot_d
+        .split_whitespace()
+        .any(|v| v == "barkbarkbark" || v == "build.rs"));
 }
 
 #[cargo_test]
