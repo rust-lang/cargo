@@ -553,7 +553,7 @@ fn fix_deny_warnings_but_not_others() {
         .file(
             "src/lib.rs",
             "
-                #![deny(warnings)]
+                #![deny(unused_mut)]
 
                 pub fn foo() -> u32 {
                     let mut x = 3;
