@@ -85,6 +85,7 @@ to any Rust tools that cargo ends up calling (like `rustc` or
 Cargo _or_ Rust features can be used.
 
 ### extra-link-arg
+* Tracking Issue: [#9426](https://github.com/rust-lang/cargo/issues/9426)
 * Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
 
 The `-Z extra-link-arg` flag makes the following two instructions available
@@ -138,7 +139,7 @@ invocations of nightly cargo. (the config flag is ignored by stable)
 
 ### avoid-dev-deps
 * Original Issue: [#4988](https://github.com/rust-lang/cargo/issues/4988)
-* Stabilization Issue: [#5133](https://github.com/rust-lang/cargo/issues/5133)
+* Tracking Issue: [#5133](https://github.com/rust-lang/cargo/issues/5133)
 
 When running commands such as `cargo install` or `cargo build`, Cargo
 currently requires dev-dependencies to be downloaded, even if they are not
@@ -569,6 +570,8 @@ itself, which has implicit dependencies on the standard library that would
 otherwise be untracked for change-detection.
 
 ### panic-abort-tests
+* Tracking Issue: [#67650](https://github.com/rust-lang/rust/issues/67650)
+* Original Pull Request: [#7460](https://github.com/rust-lang/cargo/pull/7460)
 
 The `-Z panic-abort-tests` flag will enable nightly support to compile test
 harness crates with `-Cpanic=abort`. Without this flag Cargo will compile tests,
@@ -839,6 +842,9 @@ The default value is `"remote"`.
 The value may also take a URL for a custom location.
 
 ### terminal-width
+
+* Tracking Issue: [#84673](https://github.com/rust-lang/rust/issues/84673)
+
 This feature provides a new flag, `-Z terminal-width`, which is used to pass
 a terminal width to `rustc` so that error messages containing long lines
 can be intelligently truncated.
@@ -896,6 +902,9 @@ dependency. However, unlike the normal `serde/std` syntax, it will not enable
 the optional dependency `serde` unless something else has included it.
 
 ### per-package-target
+* Tracking Issue: [#9406](https://github.com/rust-lang/cargo/pull/9406)
+* Original Pull Request: [#9030](https://github.com/rust-lang/cargo/pull/9030)
+* Original Issue: [#7004](https://github.com/rust-lang/cargo/pull/7004)
 
 The `per-package-target` feature adds two keys to the manifest:
 `package.default-target` and `package.forced-target`. The first makes
@@ -1212,6 +1221,23 @@ cargo +nightly -Zunstable-options config get build.rustflags
 If no config value is included, it will display all config values. See the
 `--help` output for more options available.
 
+### `doctest-in-workspace`
+
+* Tracking Issue: [#9427](https://github.com/rust-lang/cargo/issues/9427)
+
+The `-Z doctest-in-workspace` flag changes the behavior of the current working
+directory used when running doctests. Historically, Cargo has run `rustdoc
+--test` relative to the root of the package, with paths relative from that
+root. However, this is inconsistent with how `rustc` and `rustdoc` are
+normally run in a workspace, where they are run relative to the workspace
+root. This inconsistency causes problems in various ways, such as when passing
+RUSTDOCFLAGS with relative paths, or dealing with diagnostic output.
+
+The `-Z doctest-in-workspace` flag causes cargo to switch to running `rustdoc`
+from the root of the workspace. It also passes the `--test-run-directory` to
+`rustdoc` so that when *running* the tests, they are run from the root of the
+package. This preserves backwards compatibility and is consistent with how
+normal unittests are run.
 
 <script>
 (function() {
