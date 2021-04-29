@@ -146,7 +146,7 @@ fn collision_doc() {
         .file("foo2/src/lib.rs", "")
         .build();
 
-    p.cargo("doc")
+    p.cargo("doc -j=1")
         .with_stderr_contains(
             "\
 [WARNING] output filename collision.
@@ -407,7 +407,7 @@ fn collision_doc_sources() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("doc")
+    p.cargo("doc -j=1")
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
@@ -524,7 +524,7 @@ fn collision_with_root() {
         .file("foo-macro/src/lib.rs", "")
         .build();
 
-    p.cargo("doc")
+    p.cargo("doc -j=1")
         .with_stderr_unordered("\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
