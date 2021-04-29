@@ -1,0 +1,15 @@
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  reviewers:
+  - alexcrichton
+  assignees:
+  - alexcrichton
+  ignore:
+  - dependency-name: proptest
+    versions:
+    - ">= 0.9.a, < 0.10"
