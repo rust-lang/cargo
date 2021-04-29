@@ -1,8 +1,8 @@
 //! Tests for build.rs scripts.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
+use cargo_test_support::{lines_match, paths::CargoPathExt};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;
@@ -2600,6 +2600,118 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn generate_good_d_files() {
+    // this is here to stop regression on an issue where build.rs rerun-if-changed paths aren't
+    // made absolute properly, which in turn interacts poorly with the dep-info-basedir setting,
+    // and the dep-info files have other-crate-relative paths spat out in them
+    let p = project()
+        .file(
+            "awoo/Cargo.toml",
+            r#"
+                [project]
+                name = "awoo"
+                version = "0.5.0"
+                build = "build.rs"
+            "#,
+        )
+        .file("awoo/src/lib.rs", "")
+        .file(
+            "awoo/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    println!("cargo:rerun-if-changed=barkbarkbark");
+                }
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "meow"
+                version = "0.5.0"
+                [dependencies]
+                awoo = { path = "awoo" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v").run();
+
+    let dot_d_path = p.bin("meow").with_extension("d");
+    println!("*meow at* {:?}", dot_d_path);
+    let dot_d = fs::read_to_string(&dot_d_path).unwrap();
+
+    println!("*.d file content*: {}", &dot_d);
+
+    #[cfg(windows)]
+    assert!(
+        lines_match(
+            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\barkbarkbark [..]\\awoo\\build.rs[..]",
+            &dot_d
+        ) || lines_match(
+            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\build.rs [..]\\awoo\\barkbarkbark[..]",
+            &dot_d
+        )
+    );
+    #[cfg(not(windows))]
+    assert!(
+        lines_match(
+            "[..]/target/debug/meow: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
+            &dot_d
+        ) || lines_match(
+            "[..]/target/debug/meow: [..]/awoo/build.rs [..]/awoo/barkbarkbark[..]",
+            &dot_d
+        )
+    );
+
+    // paths relative to dependency roots should not be allowed
+    assert!(!dot_d
+        .split_whitespace()
+        .any(|v| v == "barkbarkbark" || v == "build.rs"));
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+        [build]
+        dep-info-basedir="."
+    "#,
+    );
+    p.cargo("build -v").run();
+
+    let dot_d = fs::read_to_string(&dot_d_path).unwrap();
+
+    println!("*.d file content with dep-info-basedir*: {}", &dot_d);
+
+    #[cfg(windows)]
+    assert!(
+        lines_match(
+            "target\\debug\\meow.exe: [..]awoo\\barkbarkbark [..]awoo\\build.rs[..]",
+            &dot_d
+        ) || lines_match(
+            "target\\debug\\meow.exe: [..]awoo\\build.rs [..]awoo\\barkbarkbark[..]",
+            &dot_d
+        )
+    );
+    #[cfg(not(windows))]
+    assert!(
+        lines_match(
+            "target/debug/meow: [..]awoo/barkbarkbark [..]awoo/build.rs[..]",
+            &dot_d
+        ) || lines_match(
+            "target/debug/meow: [..]awoo/build.rs [..]awoo/barkbarkbark[..]",
+            &dot_d
+        )
+    );
+
+    // paths relative to dependency roots should not be allowed
+    assert!(!dot_d
+        .split_whitespace()
+        .any(|v| v == "barkbarkbark" || v == "build.rs"));
 }
 
 #[cargo_test]
