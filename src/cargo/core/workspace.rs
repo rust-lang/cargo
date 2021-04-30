@@ -7,7 +7,7 @@ use std::slice;
 
 use anyhow::{bail, Context as _};
 use glob::glob;
-use itertools::*;
+use itertools::Itertools;
 use log::debug;
 use url::Url;
 
