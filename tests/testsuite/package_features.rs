@@ -272,6 +272,32 @@ fn other_member_from_current() {
         .run();
 }
 
+
+#[cargo_test]
+fn virtual_typo_member_feature_default_resolver() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+
+            [features]
+            deny-warnings = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build()
+        .cargo("check --features a/deny-warning")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: a/deny-warning",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn virtual_member_slash() {
     // member slash feature syntax
