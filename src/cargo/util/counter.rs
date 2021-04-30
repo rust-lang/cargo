@@ -12,7 +12,7 @@ pub struct MetricsCounter<const N: usize> {
 impl<const N: usize> MetricsCounter<N> {
     /// Creates a new counter with an initial value.
     pub fn new(init: usize, init_at: Instant) -> Self {
-        debug_assert!(N > 0, "number of slots must be greater than zero");
+        assert!(N > 0, "number of slots must be greater than zero");
         Self {
             slots: [(init, init_at); N],
             index: 0,
