@@ -77,6 +77,44 @@ fn virtual_no_default_features() {
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2, did you mean: f1?")
         .run();
+
+    p.cargo("check --features a/dep,b/f1,b/f2,f2")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, b/f2, f2, did you mean: a/dep1, f1?")
+        .run();
+
+    p.cargo("check --features a/dep,a/dep1")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, did you mean: b/f1?")
+        .run();
+}
+
+#[cargo_test]
+fn virtual_typo_member_feature() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            resolver = "2"
+
+            [features]
+            deny-warnings = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build()
+        .cargo("check --features a/deny-warning")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: a/deny-warning, did you mean: a/deny-warnings?",
+        )
+        .run();
 }
 
 #[cargo_test]

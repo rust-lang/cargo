@@ -1300,7 +1300,7 @@ impl<'cfg> Workspace<'cfg> {
                             summary_features
                                 .into_iter()
                                 .filter(|summary_feature| {
-                                    levenshtein_test(**summary_feature, *dep_name)
+                                    levenshtein_test(**summary_feature, *dep_feature)
                                 })
                                 .map(move |summary_feature| {
                                     format!("{}/{}", package.name(), summary_feature)
