@@ -272,7 +272,6 @@ fn other_member_from_current() {
         .run();
 }
 
-
 #[cargo_test]
 fn virtual_typo_member_feature_default_resolver() {
     project()
