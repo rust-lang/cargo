@@ -67,15 +67,10 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
 /// Returns true if the `[target]` table should be applied to host targets.
 pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
     if config.cli_unstable().target_applies_to_host {
-        let target_applies_to_host = config.get::<bool>("target-applies-to-host");
-        if target_applies_to_host.is_ok() {
-            Ok(target_applies_to_host.unwrap())
+        if let Ok(target_applies_to_host) = config.get::<bool>("target-applies-to-host") {
+            Ok(target_applies_to_host)
         } else {
-            if config.cli_unstable().host_config {
-                Ok(false)
-            } else {
-                Ok(true)
-            }
+            Ok(!config.cli_unstable().host_config)
         }
     } else {
         if config.cli_unstable().host_config {
@@ -91,9 +86,10 @@ pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
 /// Loads a single `[host]` table for the given triple.
 pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
     if config.cli_unstable().host_config {
-        let host_triple_key = ConfigKey::from_str(&format!("host.{}", triple));
+        let host_triple_prefix = format!("host.{}", triple);
+        let host_triple_key = ConfigKey::from_str(&host_triple_prefix);
         let host_prefix = match config.get_cv(&host_triple_key)? {
-            Some(_) => format!("host.{}", triple),
+            Some(_) => host_triple_prefix,
             None => "host".to_string(),
         };
         load_config_table(config, &host_prefix)
