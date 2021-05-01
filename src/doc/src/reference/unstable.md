@@ -641,6 +641,27 @@ cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 
 CLI paths are relative to the current working directory.
 
+### target-applies-to-host
+* Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
+
+The `target-applies-to-host` key in a config file can be used set the desired
+behavior for passing target config flags to build scripts.
+
+It requires the `-Ztarget-applies-to-host` command-line option.
+
+The current default for `target-applies-to-host` is `true`, which will be
+changed to `false` in the future, if `-Zhost-config` is used the new `false`
+default will be set for `target-applies-to-host`.
+
+```toml
+# config.toml
+target-applies-to-host = false
+```
+
+```console
+cargo +nightly -Ztarget-applies-to-host build --target x86_64-unknown-linux-gnu
+```
+
 ### host-config
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
 * Tracking Issue: [#3349](https://github.com/rust-lang/cargo/issues/3349)
@@ -650,12 +671,11 @@ such as build scripts that must run on the host system instead of the target
 system when cross compiling. It supports both generic and host arch specific
 tables. Matching host arch tables take precedence over generic host tables.
 
-It requires the `-Zhost-config` command-line option.
+It requires the `-Zhost-config` and `-Ztarget-applies-to-host` command-line
+options to be set.
 
 ```toml
-# .cargo/config
-cargo-features = ["host-config"]
-
+# config.toml
 [host]
 linker = "/path/to/host/linker"
 [host.x86_64-unknown-linux-gnu]
@@ -668,10 +688,11 @@ The generic `host` table above will be entirely ignored when building on a
 `x86_64-unknown-linux-gnu` host as the `host.x86_64-unknown-linux-gnu` table
 takes precedence.
 
-This feature requires a `--target` to be specified.
+Setting `-Zhost-config` changes the default for `target-applies-to-host` to
+`false` from `true`.
 
 ```console
-cargo +nightly -Zunstable-options -Zhost-config --config somefile.toml build --target x86_64-unknown-linux-gnu
+cargo +nightly -Ztarget-applies-to-host -Zhost-config build --target x86_64-unknown-linux-gnu
 ```
 
 ### unit-graph
