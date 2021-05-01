@@ -51,6 +51,50 @@ fn add_vendor_config(p: &Project) {
 }
 
 #[cargo_test]
+fn package_exclude() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("bar", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                exclude = [".*", "!.include", "!.dotdir/include"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(".exclude", "")
+        .file(".include", "")
+        .file(".dotdir/exclude", "")
+        .file(".dotdir/include", "")
+        .publish();
+
+    p.cargo("vendor --respect-source-config").run();
+    let csum = dbg!(p.read_file("vendor/bar/.cargo-checksum.json"));
+    assert!(csum.contains(".include"));
+    assert!(!csum.contains(".exclude"));
+    assert!(!csum.contains(".dotdir/exclude"));
+    // Gitignore doesn't re-include a file in an excluded parent directory,
+    // even if negating it explicitly.
+    assert!(!csum.contains(".dotdir/include"));
+}
+
+#[cargo_test]
 fn two_versions() {
     let p = project()
         .file(
