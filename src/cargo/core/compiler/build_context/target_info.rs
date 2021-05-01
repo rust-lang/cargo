@@ -682,34 +682,29 @@ impl<'cfg> RustcTargetData<'cfg> {
     ) -> CargoResult<RustcTargetData<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
-        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
+        let target_applies_to_host = config.target_applies_to_host()?;
+        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
+        let host_config = if target_applies_to_host {
+            config.target_cfg_triple(&rustc.host)?
+        } else {
+            config.host_cfg_triple(&rustc.host)?
+        };
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
         // `--target` flag is not specified. Since the unit_dependency code
         // needs access to the target config data, create a copy so that it
         // can be found. See `rebuild_unit_graph_shared` for why this is done.
-        let target_applies_to_host = config.target_applies_to_host()?;
-        let host_config = if requested_kinds.iter().any(CompileKind::is_host) {
+        if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            let target_host_config = if target_applies_to_host {
-                let target_cfg_clone = config.target_cfg_triple(&rustc.host)?;
-                target_config.insert(ct, target_cfg_clone.clone());
-                target_cfg_clone
+            if target_applies_to_host {
+                target_config.insert(ct, host_config.clone());
             } else {
                 target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
-                config.host_cfg_triple(&rustc.host)?
             };
-            target_host_config
-        } else {
-            if target_applies_to_host {
-                config.target_cfg_triple(&rustc.host)?
-            } else {
-                config.host_cfg_triple(&rustc.host)?
-            }
         };
 
         let mut res = RustcTargetData {
