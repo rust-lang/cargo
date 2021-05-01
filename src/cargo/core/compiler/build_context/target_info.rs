@@ -712,17 +712,6 @@ impl<'cfg> RustcTargetData<'cfg> {
             }
         };
 
-        for kind in requested_kinds {
-            if let CompileKind::Target(target) = *kind {
-                let tcfg = config.target_cfg_triple(target.short_name())?;
-                target_config.insert(target, tcfg);
-                target_info.insert(
-                    target,
-                    TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
-                );
-            }
-        }
-
         let mut res = RustcTargetData {
             rustc,
             config,
