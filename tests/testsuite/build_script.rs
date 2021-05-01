@@ -281,6 +281,48 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
 }
 
 #[cargo_test]
+fn custom_build_invalid_host_config_feature_flag() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to -Zhost-config being set without -Ztarget-applies-to-host
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z host-config --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+error: the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
+",
+            )
+            .run();
+    }
+}
+
+#[cargo_test]
 fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
     let target = rustc_host();
     let p = project()
