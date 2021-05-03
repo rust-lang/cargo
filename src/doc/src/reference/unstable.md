@@ -643,6 +643,7 @@ CLI paths are relative to the current working directory.
 
 ### target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
+* Tracking Issue: [#9453](https://github.com/rust-lang/cargo/issues/9453)
 
 The `target-applies-to-host` key in a config file can be used set the desired
 behavior for passing target config flags to build scripts.
@@ -664,7 +665,7 @@ cargo +nightly -Ztarget-applies-to-host build --target x86_64-unknown-linux-gnu
 
 ### host-config
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
-* Tracking Issue: [#3349](https://github.com/rust-lang/cargo/issues/3349)
+* Tracking Issue: [#9452](https://github.com/rust-lang/cargo/issues/9452)
 
 The `host` key in a config file can be used pass flags to host build targets
 such as build scripts that must run on the host system instead of the target
