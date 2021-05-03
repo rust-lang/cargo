@@ -7,7 +7,6 @@ pub fn builtin() -> Vec<App> {
         check::cli(),
         clean::cli(),
         config::cli(),
-        describe_future_incompatibilities::cli(),
         doc::cli(),
         fetch::cli(),
         fix::cli(),
@@ -25,6 +24,7 @@ pub fn builtin() -> Vec<App> {
         pkgid::cli(),
         publish::cli(),
         read_manifest::cli(),
+        report::cli(),
         run::cli(),
         rustc::cli(),
         rustdoc::cli(),
@@ -47,7 +47,6 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "check" => check::exec,
         "clean" => clean::exec,
         "config" => config::exec,
-        "describe-future-incompatibilities" => describe_future_incompatibilities::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
         "fix" => fix::exec,
@@ -65,6 +64,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "pkgid" => pkgid::exec,
         "publish" => publish::exec,
         "read-manifest" => read_manifest::exec,
+        "report" => report::exec,
         "run" => run::exec,
         "rustc" => rustc::exec,
         "rustdoc" => rustdoc::exec,
@@ -87,7 +87,6 @@ pub mod build;
 pub mod check;
 pub mod clean;
 pub mod config;
-pub mod describe_future_incompatibilities;
 pub mod doc;
 pub mod fetch;
 pub mod fix;
@@ -106,6 +105,7 @@ pub mod package;
 pub mod pkgid;
 pub mod publish;
 pub mod read_manifest;
+pub mod report;
 pub mod run;
 pub mod rustc;
 pub mod rustdoc;

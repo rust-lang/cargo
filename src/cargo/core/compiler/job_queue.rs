@@ -887,11 +887,11 @@ impl<'cfg> DrainState<'cfg> {
             if cx.bcx.build_config.future_incompat_report {
                 drop_eprint!(cx.bcx.config, "{}", full_report);
                 drop(cx.bcx.config.shell().note(
-                    &format!("this report can be shown with `cargo describe-future-incompatibilities -Z future-incompat-report --id {}`", id)
+                    &format!("this report can be shown with `cargo report future-incompatibilities -Z future-incompat-report --id {}`", id)
                 ));
             } else {
                 drop(cx.bcx.config.shell().note(
-                    &format!("to see what the problems were, use the option `--future-incompat-report`, or run `cargo describe-future-incompatibilities --id {}`", id)
+                    &format!("to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id {}`", id)
                 ));
             }
         }
