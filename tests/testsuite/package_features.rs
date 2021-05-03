@@ -215,7 +215,7 @@ fn other_member_from_current() {
             name = "bar"
             version = "0.1.0"
 
-            [features]            
+            [features]
             f1 = []
             f2 = []
             f3 = []
