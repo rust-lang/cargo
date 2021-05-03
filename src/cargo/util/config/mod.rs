@@ -68,7 +68,7 @@ use std::time::Instant;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{features, CliUnstable, GitReference, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::toml as cargo_toml;
@@ -1318,6 +1318,15 @@ impl Config {
         } else {
             bail!("no index found for registry: `{}`", registry);
         }
+    }
+
+    pub fn get_registry_branch(&self, registry: &str) -> GitReference {
+        self.get_string(&format!("registries.{}.branch", registry))
+            .map_or(GitReference::DefaultBranch, |opt| {
+                opt.map_or(GitReference::DefaultBranch, |branch| {
+                    GitReference::Branch(branch.val)
+                })
+            })
     }
 
     /// Returns an error if `registry.index` is set.

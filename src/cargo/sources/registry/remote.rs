@@ -53,8 +53,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            // TODO: we should probably make this configurable
-            index_git_ref: GitReference::DefaultBranch,
+            index_git_ref: config.get_registry_branch(source_id.display_registry_name().as_str()),
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
