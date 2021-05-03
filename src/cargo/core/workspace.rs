@@ -7,6 +7,7 @@ use std::slice;
 
 use anyhow::{bail, Context as _};
 use glob::glob;
+use itertools::Itertools;
 use log::debug;
 use url::Url;
 
@@ -1071,7 +1072,7 @@ impl<'cfg> Workspace<'cfg> {
         if self.allows_new_cli_feature_behavior() {
             self.members_with_features_new(specs, cli_features)
         } else {
-            Ok(self.members_with_features_old(specs, cli_features))
+            self.members_with_features_old(specs, cli_features)
         }
     }
 
@@ -1196,7 +1197,7 @@ impl<'cfg> Workspace<'cfg> {
         &self,
         specs: &[PackageIdSpec],
         cli_features: &CliFeatures,
-    ) -> Vec<(&Package, CliFeatures)> {
+    ) -> CargoResult<Vec<(&Package, CliFeatures)>> {
         // Split off any features with the syntax `member-name/feature-name` into a map
         // so that those features can be applied directly to those workspace-members.
         let mut member_specific_features: HashMap<InternedString, BTreeSet<FeatureValue>> =
@@ -1215,29 +1216,29 @@ impl<'cfg> Workspace<'cfg> {
                 } => panic!("unexpected dep: syntax {}", feature),
                 FeatureValue::DepFeature {
                     dep_name,
-                    dep_feature,
+                    dep_feature: _,
                     dep_prefix: _,
                     weak: _,
                 } => {
-                    // I think weak can be ignored here.
-                    // * With `--features member?/feat -p member`, the ? doesn't
-                    //   really mean anything (either the member is built or it isn't).
-                    // * With `--features nonmember?/feat`, cwd_features will
-                    //   handle processing it correctly.
+                    // Check if `dep_name` is member of the workspace or package.
+                    // Weak can be ignored for this moment.
                     let is_member = self.members().any(|member| member.name() == *dep_name);
                     if is_member && specs.iter().any(|spec| spec.name() == *dep_name) {
                         member_specific_features
                             .entry(*dep_name)
                             .or_default()
-                            .insert(FeatureValue::Feature(*dep_feature));
+                            .insert(feature.clone());
                     } else {
+                        // With `--features nonmember?/feat`, cwd_features will
+                        // handle processing it correctly.
                         cwd_features.insert(feature.clone());
                     }
                 }
             }
         }
 
-        let ms = self.members().filter_map(|member| {
+        let mut result = Vec::new();
+        for member in self.members() {
             let member_id = member.package_id();
             match self.current_opt() {
                 // The features passed on the command-line only apply to
@@ -1248,13 +1249,29 @@ impl<'cfg> Workspace<'cfg> {
                         all_features: cli_features.all_features,
                         uses_default_features: cli_features.uses_default_features,
                     };
-                    Some((member, feats))
+
+                    // If any member specific features were passed to non-virtual package, it's error
+                    if !member_specific_features.is_empty() {
+                        let invalid: Vec<_> = member_specific_features
+                            .values()
+                            .map(|set| set.iter())
+                            .flatten()
+                            .map(|feature| feature.to_string())
+                            .sorted()
+                            .collect();
+
+                        bail!(
+                            "Member specific features with `pkg/feat` syntax are dissalowed outside of workspace with `resolver = \"1\", remove: {}", 
+                            invalid.join(", ")
+                        );
+                    }
+
+                    result.push((member, feats))
                 }
                 _ => {
                     // Ignore members that are not enabled on the command-line.
                     if specs.iter().any(|spec| spec.matches(member_id)) {
-                        // -p for a workspace member that is not the "current"
-                        // one.
+                        // -p for a workspace member that is not the "current" one.
                         //
                         // The odd behavior here is due to backwards
                         // compatibility. `--features` and
@@ -1266,20 +1283,36 @@ impl<'cfg> Workspace<'cfg> {
                             features: Rc::new(
                                 member_specific_features
                                     .remove(member.name().as_str())
-                                    .unwrap_or_default(),
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .map(|feature| match feature {
+                                        // I think weak can be ignored here.
+                                        // With `--features member?/feat -p member`, the ? doesn't
+                                        // really mean anything (either the member is built or it isn't).
+                                        FeatureValue::DepFeature {
+                                            dep_name: _,
+                                            dep_feature,
+                                            dep_prefix: false,
+                                            weak: _,
+                                        } => FeatureValue::new(dep_feature),
+                                        // Member specific features by definition contain only `FeatureValue::DepFeature`
+                                        _ => unreachable!(),
+                                    })
+                                    .collect(),
                             ),
                             uses_default_features: true,
                             all_features: cli_features.all_features,
                         };
-                        Some((member, feats))
+
+                        result.push((member, feats))
                     } else {
                         // This member was not requested on the command-line, skip.
-                        None
                     }
                 }
             }
-        });
-        ms.collect()
+        }
+
+        Ok(result)
     }
 }
 

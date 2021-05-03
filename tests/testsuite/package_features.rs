@@ -215,7 +215,7 @@ fn other_member_from_current() {
             name = "bar"
             version = "0.1.0"
 
-            [features]
+            [features]            
             f1 = []
             f2 = []
             f3 = []
@@ -273,8 +273,8 @@ fn other_member_from_current() {
 }
 
 #[cargo_test]
-fn virtual_typo_member_feature_default_resolver() {
-    project()
+fn feature_default_resolver() {
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -283,17 +283,37 @@ fn virtual_typo_member_feature_default_resolver() {
             version = "0.1.0"
 
             [features]
-            deny-warnings = []
+            test = []
             "#,
         )
-        .file("src/lib.rs", "")
-        .build()
-        .cargo("check --features a/deny-warning")
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    if cfg!(feature = "test") {
+                        println!("feature set");
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check --features testt")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr(
-            "[ERROR] none of the selected packages contains these features: a/deny-warning",
-        )
+        .with_stderr("[ERROR] Package `a[..]` does not have the feature `testt`")
+        .run();
+
+    p.cargo("run --features test")
+        .masquerade_as_nightly_cargo()
+        .with_status(0)
+        .with_stdout("feature set")
+        .run();
+
+    p.cargo("run --features a/test")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] Member specific features with `pkg/feat` syntax are dissalowed outside of workspace with `resolver = \"1\", remove: a/test")
         .run();
 }
 
@@ -482,6 +502,12 @@ fn resolver1_member_features() {
     p.cargo("run -p member1 --features member1/m1-feature")
         .cwd("member2")
         .with_stdout("m1-feature set")
+        .run();
+
+    p.cargo("check -p member1 --features member1/m2-feature")
+        .cwd("member2")
+        .with_status(101)
+        .with_stderr("[ERROR] Package `member1[..]` does not have the feature `m2-feature`")
         .run();
 }
 
