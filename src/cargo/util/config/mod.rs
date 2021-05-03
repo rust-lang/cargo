@@ -1320,6 +1320,11 @@ impl Config {
         }
     }
 
+    /// Gets the Git reference corresponding to the optional `branch` key of a
+    /// given `registry`'s name.
+    ///
+    /// [`GitReference::DefaultBranch`] is used by default when the key is not
+    /// present or if the configuration read yielded an error.
     pub fn get_registry_branch(&self, registry: &str) -> GitReference {
         self.get_string(&format!("registries.{}.branch", registry))
             .map_or(GitReference::DefaultBranch, |opt| {
