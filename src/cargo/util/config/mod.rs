@@ -178,6 +178,7 @@ pub struct Config {
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
     /// Cached configuration parsed by Cargo
     http_config: LazyCell<CargoHttpConfig>,
+    future_incompat_config: LazyCell<CargoFutureIncompatConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
@@ -275,6 +276,7 @@ impl Config {
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
+            future_incompat_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
@@ -1436,6 +1438,11 @@ impl Config {
             .try_borrow_with(|| self.get::<CargoHttpConfig>("http"))
     }
 
+    pub fn future_incompat_config(&self) -> CargoResult<&CargoFutureIncompatConfig> {
+        self.future_incompat_config
+            .try_borrow_with(|| self.get::<CargoFutureIncompatConfig>("future-incompat-report"))
+    }
+
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
         self.net_config
             .try_borrow_with(|| self.get::<CargoNetConfig>("net"))
@@ -2032,6 +2039,37 @@ pub struct CargoHttpConfig {
     pub debug: Option<bool>,
     pub multiplexing: Option<bool>,
     pub ssl_version: Option<SslVersionConfig>,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoFutureIncompatConfig {
+    frequency: Option<CargoFutureIncompatFrequencyConfig>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CargoFutureIncompatFrequencyConfig {
+    Always,
+    Never,
+}
+
+impl CargoFutureIncompatConfig {
+    pub fn should_display_message(&self) -> bool {
+        use CargoFutureIncompatFrequencyConfig::*;
+
+        let frequency = self.frequency.as_ref().unwrap_or(&Always);
+        match frequency {
+            Always => true,
+            Never => false,
+        }
+    }
+}
+
+impl Default for CargoFutureIncompatFrequencyConfig {
+    fn default() -> Self {
+        Self::Always
+    }
 }
 
 /// Configuration for `ssl-version` in `http` section
