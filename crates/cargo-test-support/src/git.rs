@@ -45,9 +45,10 @@ use std::sync::Once;
 use url::Url;
 
 #[must_use]
-pub struct RepoBuilder {
+pub struct RepoBuilder<'br> {
     repo: git2::Repository,
     files: Vec<PathBuf>,
+    branches: Vec<&'br str>,
 }
 
 pub struct Repository(git2::Repository);
@@ -59,18 +60,19 @@ pub fn repo(p: &Path) -> RepoBuilder {
     RepoBuilder::init(p)
 }
 
-impl RepoBuilder {
-    pub fn init(p: &Path) -> RepoBuilder {
+impl<'br> RepoBuilder<'br> {
+    pub fn init(p: &Path) -> Self {
         t!(fs::create_dir_all(p.parent().unwrap()));
         let repo = init(p);
         RepoBuilder {
             repo,
             files: Vec::new(),
+            branches: Vec::new(),
         }
     }
 
     /// Add a file to the repository.
-    pub fn file(self, path: &str, contents: &str) -> RepoBuilder {
+    pub fn file(self, path: &str, contents: &str) -> Self {
         let mut me = self.nocommit_file(path, contents);
         me.files.push(PathBuf::from(path));
         me
@@ -78,14 +80,20 @@ impl RepoBuilder {
 
     /// Add a file that will be left in the working directory, but not added
     /// to the repository.
-    pub fn nocommit_file(self, path: &str, contents: &str) -> RepoBuilder {
+    pub fn nocommit_file(self, path: &str, contents: &str) -> Self {
         let dst = self.repo.workdir().unwrap().join(path);
         t!(fs::create_dir_all(dst.parent().unwrap()));
         t!(fs::write(&dst, contents));
         self
     }
 
-    /// Create the repository and commit the new files.
+    /// Add a branch to the repository pointing at the first commit.
+    pub fn branch(mut self, name: &'br str) -> Self {
+        self.branches.push(name);
+        self
+    }
+
+    /// Create the repository, commit the new files and create the new branches.
     pub fn build(self) -> Repository {
         {
             let mut index = t!(self.repo.index());
@@ -96,10 +104,17 @@ impl RepoBuilder {
             let id = t!(index.write_tree());
             let tree = t!(self.repo.find_tree(id));
             let sig = t!(self.repo.signature());
-            t!(self
-                .repo
-                .commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[]));
+            let head_id =
+                t!(self
+                    .repo
+                    .commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[]));
+            let head_commit = t!(self.repo.find_commit(head_id));
+
+            for branch in self.branches.iter().copied() {
+                t!(self.repo.branch(branch, &head_commit, false));
+            }
         }
+
         let RepoBuilder { repo, .. } = self;
         Repository(repo)
     }

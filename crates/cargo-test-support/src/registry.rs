@@ -46,6 +46,8 @@ pub fn alt_registry_path() -> PathBuf {
 pub fn alt_registry_url() -> Url {
     generate_url("alternative-registry")
 }
+/// The name of the alternative registry's alternative index branch.
+pub const ALT_REG_IDX_ALT_BR: &str = "alternative-branch";
 /// Gets the alternative-registry version of `dl_path`.
 pub fn alt_dl_path() -> PathBuf {
     generate_path("alt_dl")
@@ -78,6 +80,9 @@ pub struct RegistryBuilder {
     replace_crates_io: bool,
     /// If `true`, configures a registry named "alternative".
     alternative: bool,
+    /// If `true` and [`alternative`] is also, configures a registry named
+    /// "alternative" with the "alternative-branch" index branch.
+    alternative_branch: bool,
     /// If set, sets the API url for the "alternative" registry.
     /// This defaults to a directory on the filesystem.
     alt_api_url: Option<String>,
@@ -90,6 +95,7 @@ impl RegistryBuilder {
         RegistryBuilder {
             replace_crates_io: true,
             alternative: false,
+            alternative_branch: false,
             alt_api_url: None,
             add_tokens: true,
         }
@@ -106,6 +112,14 @@ impl RegistryBuilder {
     /// Default is `false`.
     pub fn alternative(&mut self, alt: bool) -> &mut Self {
         self.alternative = alt;
+        self
+    }
+
+    /// Sets whether or not to initialize the "alternative" registry's index
+    /// onto the "alternative-branch" branch if said registry is set.
+    /// Default is `false`.
+    pub fn alternative_branch(&mut self, alt_br: bool) -> &mut Self {
+        self.alternative_branch = alt_br;
         self
     }
 
@@ -152,7 +166,7 @@ impl RegistryBuilder {
         }
         if self.alternative {
             write!(
-                config,
+                &mut config,
                 "
                     [registries.alternative]
                     index = '{}'
@@ -160,6 +174,10 @@ impl RegistryBuilder {
                 alt_registry_url()
             )
             .unwrap();
+
+            if self.alternative_branch {
+                write!(&mut config, "branch = '{}'\n", ALT_REG_IDX_ALT_BR).unwrap()
+            }
         }
         t!(fs::write(&config_path, config));
 
@@ -183,6 +201,7 @@ impl RegistryBuilder {
                 dl_url().into_string(),
                 api_url(),
                 api_path(),
+                false,
             );
         }
 
@@ -194,6 +213,7 @@ impl RegistryBuilder {
                     .as_ref()
                     .map_or_else(alt_api_url, |url| Url::parse(url).expect("valid url")),
                 alt_api_path(),
+                self.alternative_branch,
             );
         }
     }
@@ -321,6 +341,7 @@ pub struct Package {
     features: FeatureMap,
     local: bool,
     alternative: bool,
+    alternative_branch: bool,
     invalid_json: bool,
     proc_macro: bool,
     links: Option<String>,
@@ -372,15 +393,36 @@ pub fn alt_init() {
     RegistryBuilder::new().alternative(true).build();
 }
 
-/// Creates a new on-disk registry.
-pub fn init_registry(registry_path: PathBuf, dl_url: String, api_url: Url, api_path: PathBuf) {
-    // Initialize a new registry.
-    repo(&registry_path)
-        .file(
-            "config.json",
-            &format!(r#"{{"dl":"{}","api":"{}"}}"#, dl_url, api_url),
-        )
+/// Variant of `alt_init` that also initializes the alternative registry index'
+/// alternative branch.
+pub fn alt_br_init() {
+    RegistryBuilder::new()
+        .alternative(true)
+        .alternative_branch(true)
         .build();
+}
+
+/// Creates a new on-disk registry. If `alt_br` is `true`, then an alternative
+/// index branch is created pointing at the first commit.
+pub fn init_registry(
+    registry_path: PathBuf,
+    dl_url: String,
+    api_url: Url,
+    api_path: PathBuf,
+    alt_br: bool,
+) {
+    // Initialize a new registry.
+    let rb = repo(&registry_path).file(
+        "config.json",
+        &format!(r#"{{"dl":"{}","api":"{}"}}"#, dl_url, api_url),
+    );
+
+    if alt_br {
+        rb.branch(ALT_REG_IDX_ALT_BR)
+    } else {
+        rb
+    }
+    .build();
     fs::create_dir_all(api_path.join("api/v1/crates")).unwrap();
 }
 
@@ -398,6 +440,7 @@ impl Package {
             features: BTreeMap::new(),
             local: false,
             alternative: false,
+            alternative_branch: false,
             invalid_json: false,
             proc_macro: false,
             links: None,
@@ -426,6 +469,20 @@ impl Package {
     /// this.
     pub fn alternative(&mut self, alternative: bool) -> &mut Package {
         self.alternative = alternative;
+        self
+    }
+
+    /// Call with `true` to register a publication in an "alternative registry"
+    /// index' alternative branch.
+    ///
+    /// [`alternative()`] must be set to use this non-default branch.
+    /// The name of the alternative branch is called "alternative-branch".
+    ///
+    /// See `src/doc/src/reference/registries.md` for more details on
+    /// alternative registries. See `alt_registry.rs` for the tests that use
+    /// this.
+    pub fn alternative_branch(&mut self, alt_br: bool) -> &mut Package {
+        self.alternative_branch = alt_br;
         self
     }
 
@@ -666,8 +723,18 @@ impl Package {
             // Commit this change.
             let tree = t!(repo.find_tree(id));
             let sig = t!(repo.signature());
-            let parent = t!(repo.refname_to_id("refs/heads/master"));
+            // Record the publication on the alternative branch if configured.
+            let branch_refname: &str = &format!(
+                "refs/heads/{}",
+                if self.alternative && self.alternative_branch {
+                    ALT_REG_IDX_ALT_BR
+                } else {
+                    "master"
+                }
+            );
+            let parent = t!(repo.refname_to_id(branch_refname));
             let parent = t!(repo.find_commit(parent));
+            t!(repo.set_head(branch_refname));
             t!(repo.commit(
                 Some("HEAD"),
                 &sig,

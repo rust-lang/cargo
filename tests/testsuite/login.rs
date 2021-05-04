@@ -165,6 +165,7 @@ fn registry_credentials() {
         registry::generate_alt_dl_url("alt2_dl"),
         registry::generate_url("alt2_api"),
         registry::generate_path("alt2_api"),
+        false,
     );
     setup_new_credentials();
 
