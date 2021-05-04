@@ -395,11 +395,10 @@ impl<'cfg> Timings<'cfg> {
             .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
             .collect();
         let targets = targets.join("<br>");
-        let time_human = if duration > 60.0 {
-            format!(" ({}m {:.1}s)", duration as u32 / 60, duration % 60.0)
-        } else {
-            "".to_string()
-        };
+        let time_human = format_human(duration);
+        let work = self.unit_times.iter().map(|ut| ut.duration).sum();
+        let work_human = format_human(work);
+        let total_work = format!("{:.1}s{}", work, work_human);
         let total_time = format!("{:.1}s{}", duration, time_human);
         let max_concurrency = self.concurrency.iter().map(|c| c.active).max().unwrap();
         let max_rustc_concurrency = self
@@ -446,6 +445,9 @@ impl<'cfg> Timings<'cfg> {
     <td>Build start:</td><td>{}</td>
   </tr>
   <tr>
+    <td>Total work:</td><td>{}</td>
+  </tr>
+  <tr>
     <td>Total time:</td><td>{}</td>
   </tr>
   <tr>
@@ -466,6 +468,7 @@ impl<'cfg> Timings<'cfg> {
             bcx.build_config.jobs,
             num_cpus::get(),
             self.start_str,
+            total_work,
             total_time,
             rustc_info,
             max_rustc_concurrency,
@@ -639,6 +642,15 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
         requested_target
     )
 }
+
+fn format_human(duration: f64) -> String {
+    if duration > 60.0 {
+        format!(" ({}m {:.1}s)", duration as u32 / 60, duration % 60.0)
+    } else {
+        "".to_string()
+    }
+}
+
 
 static HTML_TMPL: &str = r#"
 <html>
