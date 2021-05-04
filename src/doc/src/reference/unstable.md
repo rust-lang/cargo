@@ -1150,9 +1150,18 @@ The 2021 edition will set the default [resolver version] to "2".
 * RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
 * rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
 
-The `-Z future-incompat-report` flag enables the creation of a future-incompat report
-for all dependencies. This makes users aware if any of their crate's dependencies
-might stop compiling with a future version of Rust.
+The `-Z future-incompat-report` flag causes Cargo to check for
+future-incompatible warnings in all dependencies. These are warnings for
+changes that may become hard errors in the future, causing the dependency to
+stop building in a future version of rustc. If any warnings are found, a small
+notice is displayed indicating that the warnings were found, and provides
+instructions on how to display a full report.
+
+A full report can be displayed with the `cargo report future-incompatibilities
+-Z future-incompat-report --id ID` command, or by running the build again with
+the `--future-incompat-report` flag. The developer should then update their
+dependencies to a version where the issue is fixed, or work with the
+developers of the dependencies to help resolve the issue.
 
 ### configurable-env
 * Original Pull Request: [#9175](https://github.com/rust-lang/cargo/pull/9175)
