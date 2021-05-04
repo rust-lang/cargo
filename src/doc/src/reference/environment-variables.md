@@ -100,6 +100,7 @@ supported environment variables are:
 * `CARGO_PROFILE_<name>_OPT_LEVEL` — Set the optimization level, see [`profile.<name>.opt-level`].
 * `CARGO_PROFILE_<name>_PANIC` — The panic strategy to use, see [`profile.<name>.panic`].
 * `CARGO_PROFILE_<name>_RPATH` — The rpath linking option, see [`profile.<name>.rpath`].
+* `CARGO_PROFILE_<name>_SPLIT_DEBUGINFO` — Controls debug file output behavior, see [`profile.<name>.split-debuginfo`].
 * `CARGO_REGISTRIES_<name>_INDEX` — URL of a registry index, see [`registries.<name>.index`].
 * `CARGO_REGISTRIES_<name>_TOKEN` — Authentication token of a registry, see [`registries.<name>.token`].
 * `CARGO_REGISTRY_DEFAULT` — Default registry for the `--registry` flag, see [`registry.default`].
@@ -159,6 +160,7 @@ supported environment variables are:
 [`profile.<name>.opt-level`]: config.md#profilenameopt-level
 [`profile.<name>.panic`]: config.md#profilenamepanic
 [`profile.<name>.rpath`]: config.md#profilenamerpath
+[`profile.<name>.split-debuginfo`]: config.md#profilenamesplit-debuginfo
 [`registries.<name>.index`]: config.md#registriesnameindex
 [`registries.<name>.token`]: config.md#registriesnametoken
 [`registry.default`]: config.md#registrydefault
