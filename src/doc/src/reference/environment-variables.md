@@ -24,11 +24,11 @@ system:
   specified wrapper instead, passing as its commandline arguments the rustc
   invocation, with the first argument being `rustc`. Useful to set up a build
   cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
-* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will 
+* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will
   execute this specified wrapper instead for workspace members only, passing
-  as its commandline arguments the rustc invocation, with the first argument 
-  being `rustc`. It affects the filename hash so that artifacts produced by 
-  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`] 
+  as its commandline arguments the rustc invocation, with the first argument
+  being `rustc`. It affects the filename hash so that artifacts produced by
+  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`]
   to set via config.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
