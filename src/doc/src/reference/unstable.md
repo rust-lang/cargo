@@ -1205,7 +1205,7 @@ lowest precedence.
 Relative `path` dependencies in such a `[patch]` section are resolved
 relative to the configuration file they appear in.
 
-## `cargo config`
+### `cargo config`
 
 * Original Issue: [#2362](https://github.com/rust-lang/cargo/issues/2362)
 * Tracking Issue: [#9301](https://github.com/rust-lang/cargo/issues/9301)
