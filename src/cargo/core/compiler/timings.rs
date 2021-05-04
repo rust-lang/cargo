@@ -651,7 +651,6 @@ fn format_human(duration: f64) -> String {
     }
 }
 
-
 static HTML_TMPL: &str = r#"
 <html>
 <head>
