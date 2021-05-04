@@ -1,6 +1,6 @@
 //! Tests for config settings.
 
-use cargo::core::Shell;
+use cargo::core::{GitReference, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
@@ -1492,4 +1492,42 @@ fn cargo_target_empty_env() {
         .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
         .with_status(101)
         .run()
+}
+
+#[cargo_test]
+fn no_alt_registry_is_default_branch() {
+    write_config("");
+    assert_eq!(
+        new_config().get_registry_branch("alt"),
+        GitReference::DefaultBranch
+    );
+}
+
+#[cargo_test]
+fn alt_registry_alt_br_absent_is_default() {
+    write_config(
+        r#"
+[registries]
+alt = { index = "https://my-intranet:8080/git/index" }
+"#,
+    );
+    assert_eq!(
+        new_config().get_registry_branch("alt"),
+        GitReference::DefaultBranch
+    );
+}
+
+#[cargo_test]
+fn alt_registry_alt_br_present_is_alt_br() {
+    write_config(
+        r#"
+[registries.alt]
+index = "https://my-intranet:8080/git/index"
+branch = "alt-br"
+"#,
+    );
+    assert_eq!(
+        new_config().get_registry_branch("alt"),
+        GitReference::Branch("alt-br".to_string())
+    );
 }
