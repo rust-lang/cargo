@@ -24,11 +24,11 @@ system:
   specified wrapper instead, passing as its commandline arguments the rustc
   invocation, with the first argument being `rustc`. Useful to set up a build
   cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
-* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will 
+* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will
   execute this specified wrapper instead for workspace members only, passing
-  as its commandline arguments the rustc invocation, with the first argument 
-  being `rustc`. It affects the filename hash so that artifacts produced by 
-  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`] 
+  as its commandline arguments the rustc invocation, with the first argument
+  being `rustc`. It affects the filename hash so that artifacts produced by
+  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`]
   to set via config.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
@@ -100,6 +100,7 @@ supported environment variables are:
 * `CARGO_PROFILE_<name>_OPT_LEVEL` — Set the optimization level, see [`profile.<name>.opt-level`].
 * `CARGO_PROFILE_<name>_PANIC` — The panic strategy to use, see [`profile.<name>.panic`].
 * `CARGO_PROFILE_<name>_RPATH` — The rpath linking option, see [`profile.<name>.rpath`].
+* `CARGO_PROFILE_<name>_SPLIT_DEBUGINFO` — Controls debug file output behavior, see [`profile.<name>.split-debuginfo`].
 * `CARGO_REGISTRIES_<name>_INDEX` — URL of a registry index, see [`registries.<name>.index`].
 * `CARGO_REGISTRIES_<name>_TOKEN` — Authentication token of a registry, see [`registries.<name>.token`].
 * `CARGO_REGISTRY_DEFAULT` — Default registry for the `--registry` flag, see [`registry.default`].
@@ -159,6 +160,7 @@ supported environment variables are:
 [`profile.<name>.opt-level`]: config.md#profilenameopt-level
 [`profile.<name>.panic`]: config.md#profilenamepanic
 [`profile.<name>.rpath`]: config.md#profilenamerpath
+[`profile.<name>.split-debuginfo`]: config.md#profilenamesplit-debuginfo
 [`registries.<name>.index`]: config.md#registriesnameindex
 [`registries.<name>.token`]: config.md#registriesnametoken
 [`registry.default`]: config.md#registrydefault
