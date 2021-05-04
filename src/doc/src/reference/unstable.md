@@ -1248,6 +1248,20 @@ from the root of the workspace. It also passes the `--test-run-directory` to
 package. This preserves backwards compatibility and is consistent with how
 normal unittests are run.
 
+### rustc `--print`
+
+* Tracking Issue: [#9357](https://github.com/rust-lang/cargo/issues/9357)
+
+`cargo rustc --print=VAL` forwards the `--print` flag to `rustc` in order to
+extract information from `rustc`. This runs `rustc` with the corresponding
+[`--print`](https://doc.rust-lang.org/rustc/command-line-arguments.html#--print-print-compiler-information)
+flag, and then immediately exits without compiling. Exposing this as a cargo
+flag allows cargo to inject the correct target and RUSTFLAGS based on the
+current configuration.
+
+The primary use case is to run `cargo rustc --print=cfg` to get config values
+for the appropriate target and influenced by any other RUSTFLAGS.
+
 <script>
 (function() {
     var fragments = {
