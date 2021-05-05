@@ -58,6 +58,55 @@ Each new feature described below should explain how to use it.
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [stabilized]: https://doc.crates.io/contrib/process/unstable.html#stabilization
 
+### List of unstable features
+
+* Unstable-specific features
+    * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
+* Build scripts and linking
+    * [extra-link-arg](#extra-link-arg) — Allows build scripts to pass extra link arguments in more cases.
+    * [Metabuild](#metabuild) — Provides declarative build scripts.
+* Resolver and features
+    * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
+    * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
+    * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
+    * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
+    * [Namespaced features](#namespaced-features) — Separates optional dependencies into a separate namespace from regular features, and allows feature names to be the same as some dependency name.
+    * [Weak dependency features](#weak-dependency-features) — Allows setting features for dependencies without enabling optional dependencies.
+* Output behavior
+    * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
+    * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
+* Compile behavior
+    * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
+    * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
+    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
+    * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
+    * [build-std-features](#build-std-features) — Sets features to use with the standard library.
+    * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
+    * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
+* rustdoc
+    * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
+    * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
+* `Cargo.toml` extensions
+    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
+    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
+    * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
+    * [rust-version](#rust-version) — Allows to declare the minimum supported Rust version.
+    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
+* Information and metadata
+    * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
+    * [timings](#timings) — Generates a report on how long individual dependencies took to run.
+    * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
+    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
+* Configuration
+    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
+    * [config-include](#config-include) — Adds the ability for config files to include other files.
+    * [configurable-env](#configurable-env) — Adds support for defining environment variables that will be set when building and running.
+    * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
+    * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
+* Registries
+    * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
+    * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
+
 ### allow-features
 
 This permanently-unstable flag makes it so that only a listed set of
@@ -1150,9 +1199,18 @@ The 2021 edition will set the default [resolver version] to "2".
 * RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
 * rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
 
-The `-Z future-incompat-report` flag enables the creation of a future-incompat report
-for all dependencies. This makes users aware if any of their crate's dependencies
-might stop compiling with a future version of Rust.
+The `-Z future-incompat-report` flag causes Cargo to check for
+future-incompatible warnings in all dependencies. These are warnings for
+changes that may become hard errors in the future, causing the dependency to
+stop building in a future version of rustc. If any warnings are found, a small
+notice is displayed indicating that the warnings were found, and provides
+instructions on how to display a full report.
+
+A full report can be displayed with the `cargo report future-incompatibilities
+-Z future-incompat-report --id ID` command, or by running the build again with
+the `--future-incompat-report` flag. The developer should then update their
+dependencies to a version where the issue is fixed, or work with the
+developers of the dependencies to help resolve the issue.
 
 ### configurable-env
 * Original Pull Request: [#9175](https://github.com/rust-lang/cargo/pull/9175)
@@ -1205,7 +1263,7 @@ lowest precedence.
 Relative `path` dependencies in such a `[patch]` section are resolved
 relative to the configuration file they appear in.
 
-## `cargo config`
+### `cargo config`
 
 * Original Issue: [#2362](https://github.com/rust-lang/cargo/issues/2362)
 * Tracking Issue: [#9301](https://github.com/rust-lang/cargo/issues/9301)
@@ -1238,6 +1296,20 @@ from the root of the workspace. It also passes the `--test-run-directory` to
 `rustdoc` so that when *running* the tests, they are run from the root of the
 package. This preserves backwards compatibility and is consistent with how
 normal unittests are run.
+
+### rustc `--print`
+
+* Tracking Issue: [#9357](https://github.com/rust-lang/cargo/issues/9357)
+
+`cargo rustc --print=VAL` forwards the `--print` flag to `rustc` in order to
+extract information from `rustc`. This runs `rustc` with the corresponding
+[`--print`](https://doc.rust-lang.org/rustc/command-line-arguments.html#--print-print-compiler-information)
+flag, and then immediately exits without compiling. Exposing this as a cargo
+flag allows cargo to inject the correct target and RUSTFLAGS based on the
+current configuration.
+
+The primary use case is to run `cargo rustc --print=cfg` to get config values
+for the appropriate target and influenced by any other RUSTFLAGS.
 
 <script>
 (function() {
