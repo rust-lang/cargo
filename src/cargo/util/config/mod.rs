@@ -1332,15 +1332,10 @@ impl Config {
             None => match self.get_table(&ConfigKey::from_str("registries")) {
                 Err(_) | Ok(None) => return GitReference::DefaultBranch,
                 Ok(Some(regs)) => match regs.val.iter().find(|&(_, val)| {
-                    val.table("")
-                        .unwrap()
-                        .0
-                        .get("index")
-                        .unwrap()
-                        .string("")
-                        .unwrap()
-                        .0
-                        == registry.url().as_str()
+                    match val.table("").unwrap().0.get("index") {
+                        None => return false,
+                        Some(idx) => idx.string("").unwrap().0 == registry.url().as_str(),
+                    }
                 }) {
                     None => return GitReference::DefaultBranch,
                     Some((name, _)) => name.clone(),
