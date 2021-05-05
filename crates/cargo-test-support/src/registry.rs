@@ -726,7 +726,11 @@ impl Package {
             let repo = t!(git2::Repository::open(&registry_path));
             t!(repo.set_head(branch_refname));
             // Reset from HEAD in order to properly switch to the desired branch.
-            t!(repo.reset(&t!(t!(repo.head()).peel(git2::ObjectType::Any)), git2::ResetType::Mixed, None));
+            t!(repo.reset(
+                &t!(t!(repo.head()).peel(git2::ObjectType::Any)),
+                git2::ResetType::Mixed,
+                None
+            ));
             let mut index = t!(repo.index());
             t!(index.add_path(Path::new(&file)));
             t!(index.write());
