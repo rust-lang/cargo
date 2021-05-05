@@ -321,7 +321,8 @@ fn depend_on_alt_registry_alt_branch_depends_on_same_registry_default_branch() {
 [UPDATING] `{reg}` index
 [ERROR] no matching package named `baz` found
 location searched: registry `{reg}`
-required by package `bar v0.0.1 ([ROOT][..])`
+required by package `bar v0.0.1 (registry `{reg}`)`
+    ... which is depended on by `foo v0.0.1 ([CWD])`
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
         ))
