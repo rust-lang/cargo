@@ -714,15 +714,6 @@ impl Package {
 
         // Add the new file to the index.
         if !self.local {
-            let repo = t!(git2::Repository::open(&registry_path));
-            let mut index = t!(repo.index());
-            t!(index.add_path(Path::new(&file)));
-            t!(index.write());
-            let id = t!(index.write_tree());
-
-            // Commit this change.
-            let tree = t!(repo.find_tree(id));
-            let sig = t!(repo.signature());
             // Record the publication on the alternative branch if configured.
             let branch_refname: &str = &format!(
                 "refs/heads/{}",
@@ -732,9 +723,20 @@ impl Package {
                     "master"
                 }
             );
+            let repo = t!(git2::Repository::open(&registry_path));
+            t!(repo.set_head(branch_refname));
+            // Reset hard from HEAD in order to properly switch to the desired branch.
+            t!(repo.reset(&t!(t!(repo.head()).peel(git2::ObjectType::Any)), git2::ResetType::Hard, None));
+            let mut index = t!(repo.index());
+            t!(index.add_path(Path::new(&file)));
+            t!(index.write());
+            let id = t!(index.write_tree());
+
+            // Commit this change.
+            let tree = t!(repo.find_tree(id));
+            let sig = t!(repo.signature());
             let parent = t!(repo.refname_to_id(branch_refname));
             let parent = t!(repo.find_commit(parent));
-            t!(repo.set_head(branch_refname));
             t!(repo.commit(
                 Some("HEAD"),
                 &sig,
