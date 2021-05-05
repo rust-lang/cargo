@@ -142,7 +142,7 @@ fn depend_on_alt_registry_published_default_branch_use_alt_branch() {
 [UPDATING] `{reg}` index
 [ERROR] no matching package named `bar` found
 location searched: registry `{reg}`
-required by package `foo v0.0.1 ([ROOT]/foo)`
+required by package `foo v0.0.1 ([CWD])`
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
         ))
@@ -367,7 +367,7 @@ fn depend_on_alt_registry_default_branch_depends_on_same_registry_alt_branch() {
 [UPDATING] `{reg}` index
 [ERROR] no matching package named `bar` found
 location searched: registry `{reg}`
-required by package `foo v0.0.1 ([ROOT]/foo)`
+required by package `foo v0.0.1 ([CWD])`
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
         ))
