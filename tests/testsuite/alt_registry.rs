@@ -307,7 +307,6 @@ fn depend_on_alt_registry_alt_branch_depends_on_same_registry_default_branch() {
         .build();
 
     Package::new("baz", "0.0.1").alternative(true).publish();
-    // dbg!("next");std::thread::sleep(std::time::Duration::from_secs(2));
     Package::new("bar", "0.0.1")
         .registry_dep("baz", "0.0.1")
         .alternative(true)
