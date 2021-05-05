@@ -1321,6 +1321,35 @@ impl Config {
     }
 
     /// Gets the Git reference corresponding to the optional `branch` key of a
+    /// given `registry`'s source ID.
+    ///
+    /// [`GitReference::DefaultBranch`] is used by default when the key is not
+    /// present or if the configuration read yielded an error.
+    pub fn get_registry_branch_from_id(&self, registry: &SourceId) -> GitReference {
+        // HACK: attempt to retrieve the registry's name by finding where is its index.
+        self.get_registry_branch(&match registry.name() {
+            Some(name) => name.clone(),
+            None => match self.get_table(&ConfigKey::from_str("registries")) {
+                Err(_) | Ok(None) => return GitReference::DefaultBranch,
+                Ok(Some(regs)) => match regs.val.iter().find(|&(_, val)| {
+                    val.table("")
+                        .unwrap()
+                        .0
+                        .get("index")
+                        .unwrap()
+                        .string("")
+                        .unwrap()
+                        .0
+                        == registry.url().as_str()
+                }) {
+                    None => return GitReference::DefaultBranch,
+                    Some((name, _)) => name.clone(),
+                },
+            },
+        })
+    }
+
+    /// Gets the Git reference corresponding to the optional `branch` key of a
     /// given `registry`'s name.
     ///
     /// [`GitReference::DefaultBranch`] is used by default when the key is not

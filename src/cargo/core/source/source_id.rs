@@ -214,6 +214,14 @@ impl SourceId {
         &self.inner.canonical_url
     }
 
+    /// Gets this source's name if it exists.
+    ///
+    /// It can exist for alternative registries, but it is not always set when
+    /// it is not known.
+    pub fn name(&self) -> &Option<String> {
+        &self.inner.name
+    }
+
     pub fn display_index(self) -> String {
         if self.is_default_registry() {
             "crates.io index".to_string()
