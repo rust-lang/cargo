@@ -749,6 +749,11 @@ impl Package {
                 &tree,
                 &[&parent]
             ));
+
+            // Checkout "hard" from HEAD in order to remove artifacts from the previous branch.
+            t!(repo.checkout_head(Some(
+                git2::build::CheckoutBuilder::new().remove_untracked(true)
+            )));
         }
 
         cksum
