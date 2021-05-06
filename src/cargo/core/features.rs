@@ -578,6 +578,7 @@ unstable_cli_options!(
     // All other unstable features.
     // Please keep this list lexiographically ordered.
     advanced_env: bool = (HIDDEN),
+    alternative_branches: bool = ("Enable the `branch` key for alternative registries in `.cargo/config.toml` files"),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     #[serde(deserialize_with = "deserialize_build_std")]
@@ -818,6 +819,7 @@ impl CliUnstable {
             "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
             "credential-process" => self.credential_process = parse_empty(k, v)?,
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
+            "alternative-branches" => self.alternative_branches = parse_empty(k, v)?,
             "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
             "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,
             "cache-messages" => stabilized_warn(k, "1.40", STABILIZED_CACHE_MESSAGES),

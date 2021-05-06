@@ -53,7 +53,15 @@ impl<'cfg> RemoteRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            index_git_ref: config.get_registry_branch_from_id(&source_id),
+            index_git_ref: if config.cli_unstable().alternative_branches {
+                config
+                    .cli_unstable()
+                    .fail_if_stable_opt("alternative-branches", 0)
+                    .unwrap();
+                config.get_registry_branch_from_id(&source_id)
+            } else {
+                GitReference::DefaultBranch
+            },
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
