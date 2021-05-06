@@ -1250,22 +1250,6 @@ impl<'cfg> Workspace<'cfg> {
                         uses_default_features: cli_features.uses_default_features,
                     };
 
-                    // If any member specific features were passed to non-virtual package, it's error
-                    if !member_specific_features.is_empty() {
-                        let invalid: Vec<_> = member_specific_features
-                            .values()
-                            .map(|set| set.iter())
-                            .flatten()
-                            .map(|feature| feature.to_string())
-                            .sorted()
-                            .collect();
-
-                        bail!(
-                            "Member specific features with `pkg/feat` syntax are dissalowed outside of workspace with `resolver = \"1\", remove: {}", 
-                            invalid.join(", ")
-                        );
-                    }
-
                     result.push((member, feats))
                 }
                 _ => {
@@ -1309,6 +1293,42 @@ impl<'cfg> Workspace<'cfg> {
                         // This member was not requested on the command-line, skip.
                     }
                 }
+            }
+        }
+
+        // If any member specific features were not removed while iterating over members
+        if !member_specific_features.is_empty() {
+            let unknown: Vec<_> = member_specific_features
+                .values()
+                .map(|set| set.iter())
+                .flatten()
+                .sorted_by_key(|feature| feature.to_string())
+                .collect();
+
+            if self.is_virtual() {
+                bail!(
+                    "None of the selected packages contains these features: {}",
+                    unknown.iter().join(", "),
+                );
+            } else {
+                bail!(
+                    "None of the selected packages contains these features: {}, did you mean: {}?",
+                    unknown.iter().join(", "),
+                    unknown
+                        .iter()
+                        .map(|feature| match feature {
+                            // Remove package prefix from feature
+                            FeatureValue::DepFeature {
+                                dep_name: _,
+                                dep_feature,
+                                dep_prefix: false,
+                                weak: _,
+                            } => FeatureValue::new(*dep_feature),
+                            // Member specific features by definition contain only `FeatureValue::DepFeature`
+                            _ => unreachable!(),
+                        })
+                        .join(", ")
+                );
             }
         }
 

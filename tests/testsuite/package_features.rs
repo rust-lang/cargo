@@ -313,7 +313,7 @@ fn feature_default_resolver() {
     p.cargo("run --features a/test")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] Member specific features with `pkg/feat` syntax are dissalowed outside of workspace with `resolver = \"1\", remove: a/test")
+        .with_stderr("[ERROR] None of the selected packages contains these features: a/test, did you mean: test?")
         .run();
 }
 
