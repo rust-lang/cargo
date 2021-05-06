@@ -1504,7 +1504,7 @@ fn no_alt_registry_is_default_branch() {
 }
 
 #[cargo_test]
-fn alt_registry_alt_br_absent_is_default() {
+fn alt_registry_alt_br_absent_is_default_branch() {
     write_config(
         r#"
 [registries]
