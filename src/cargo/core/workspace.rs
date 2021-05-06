@@ -1237,64 +1237,67 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        let mut result = Vec::new();
-        for member in self.members() {
-            let member_id = member.package_id();
-            match self.current_opt() {
-                // The features passed on the command-line only apply to
-                // the "current" package (determined by the cwd).
-                Some(current) if member_id == current.package_id() => {
-                    let feats = CliFeatures {
-                        features: Rc::new(cwd_features.clone()),
-                        all_features: cli_features.all_features,
-                        uses_default_features: cli_features.uses_default_features,
-                    };
-
-                    result.push((member, feats))
-                }
-                _ => {
-                    // Ignore members that are not enabled on the command-line.
-                    if specs.iter().any(|spec| spec.matches(member_id)) {
-                        // -p for a workspace member that is not the "current" one.
-                        //
-                        // The odd behavior here is due to backwards
-                        // compatibility. `--features` and
-                        // `--no-default-features` used to only apply to the
-                        // "current" package. As an extension, this allows
-                        // member-name/feature-name to set member-specific
-                        // features, which should be backwards-compatible.
+        let result: Vec<_> = self
+            .members()
+            .filter_map(|member| {
+                let member_id = member.package_id();
+                match self.current_opt() {
+                    // The features passed on the command-line only apply to
+                    // the "current" package (determined by the cwd).
+                    Some(current) if member_id == current.package_id() => {
                         let feats = CliFeatures {
-                            features: Rc::new(
-                                member_specific_features
-                                    .remove(member.name().as_str())
-                                    .unwrap_or_default()
-                                    .into_iter()
-                                    .map(|feature| match feature {
-                                        // I think weak can be ignored here.
-                                        // With `--features member?/feat -p member`, the ? doesn't
-                                        // really mean anything (either the member is built or it isn't).
-                                        FeatureValue::DepFeature {
-                                            dep_name: _,
-                                            dep_feature,
-                                            dep_prefix: false,
-                                            weak: _,
-                                        } => FeatureValue::new(dep_feature),
-                                        // Member specific features by definition contain only `FeatureValue::DepFeature`
-                                        _ => unreachable!(),
-                                    })
-                                    .collect(),
-                            ),
-                            uses_default_features: true,
+                            features: Rc::new(cwd_features.clone()),
                             all_features: cli_features.all_features,
+                            uses_default_features: cli_features.uses_default_features,
                         };
 
-                        result.push((member, feats))
-                    } else {
-                        // This member was not requested on the command-line, skip.
+                        Some((member, feats))
+                    }
+                    _ => {
+                        // Ignore members that are not enabled on the command-line.
+                        if specs.iter().any(|spec| spec.matches(member_id)) {
+                            // -p for a workspace member that is not the "current" one.
+                            //
+                            // The odd behavior here is due to backwards
+                            // compatibility. `--features` and
+                            // `--no-default-features` used to only apply to the
+                            // "current" package. As an extension, this allows
+                            // member-name/feature-name to set member-specific
+                            // features, which should be backwards-compatible.
+                            let feats = CliFeatures {
+                                features: Rc::new(
+                                    member_specific_features
+                                        .remove(member.name().as_str())
+                                        .unwrap_or_default()
+                                        .into_iter()
+                                        .map(|feature| match feature {
+                                            // I think weak can be ignored here.
+                                            // With `--features member?/feat -p member`, the ? doesn't
+                                            // really mean anything (either the member is built or it isn't).
+                                            FeatureValue::DepFeature {
+                                                dep_name: _,
+                                                dep_feature,
+                                                dep_prefix: false,
+                                                weak: _,
+                                            } => FeatureValue::new(dep_feature),
+                                            // Member specific features by definition contain only `FeatureValue::DepFeature`
+                                            _ => unreachable!(),
+                                        })
+                                        .collect(),
+                                ),
+                                uses_default_features: true,
+                                all_features: cli_features.all_features,
+                            };
+
+                            Some((member, feats))
+                        } else {
+                            // This member was not requested on the command-line, skip.
+                            None
+                        }
                     }
                 }
-            }
-        }
+            })
+            .collect();
 
         // If any member specific features were not removed while iterating over members
         if !member_specific_features.is_empty() {
