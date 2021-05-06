@@ -382,7 +382,19 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (index, config.get_registry_branch(registry)?, token, process)
+            (
+                index,
+                if config.cli_unstable().alternative_branches {
+                    config
+                        .cli_unstable()
+                        .fail_if_stable_opt("alternative-branches", 0)?;
+                    config.get_registry_branch(registry)?
+                } else {
+                    GitReference::DefaultBranch
+                },
+                token,
+                process,
+            )
         }
         None => {
             // Use crates.io default.

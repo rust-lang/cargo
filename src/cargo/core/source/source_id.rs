@@ -295,7 +295,14 @@ impl SourceId {
                 self,
                 yanked_whitelist,
                 config,
-                config.get_registry_branch_from_id(&self)?,
+                if config.cli_unstable().alternative_branches {
+                    config
+                        .cli_unstable()
+                        .fail_if_stable_opt("alternative-branches", 0)?;
+                    config.get_registry_branch_from_id(&self)?
+                } else {
+                    GitReference::DefaultBranch
+                },
             ))),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
