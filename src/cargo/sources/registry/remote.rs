@@ -47,21 +47,18 @@ pub struct RemoteRegistry<'cfg> {
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
-    pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
+    pub fn new(
+        source_id: SourceId,
+        config: &'cfg Config,
+        name: &str,
+        branch: GitReference,
+    ) -> RemoteRegistry<'cfg> {
         RemoteRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            index_git_ref: if config.cli_unstable().alternative_branches {
-                config
-                    .cli_unstable()
-                    .fail_if_stable_opt("alternative-branches", 0)
-                    .unwrap();
-                config.get_registry_branch_from_id(&source_id)
-            } else {
-                GitReference::DefaultBranch
-            },
+            index_git_ref: branch,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),

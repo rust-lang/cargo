@@ -174,7 +174,7 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{GitReference, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
@@ -535,9 +535,10 @@ impl<'cfg> RegistrySource<'cfg> {
         source_id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
+        branch: GitReference,
     ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
-        let ops = remote::RemoteRegistry::new(source_id, config, &name);
+        let ops = remote::RemoteRegistry::new(source_id, config, &name, branch);
         RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
 

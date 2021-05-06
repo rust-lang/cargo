@@ -1498,7 +1498,7 @@ fn cargo_target_empty_env() {
 fn no_alt_registry_is_default_branch() {
     write_config("");
     assert_eq!(
-        new_config().get_registry_branch("alt"),
+        new_config().get_registry_branch("alt").unwrap(),
         GitReference::DefaultBranch
     );
 }
@@ -1512,7 +1512,7 @@ alt = { index = "https://my-intranet:8080/git/index" }
 "#,
     );
     assert_eq!(
-        new_config().get_registry_branch("alt"),
+        new_config().get_registry_branch("alt").unwrap(),
         GitReference::DefaultBranch
     );
 }
@@ -1527,7 +1527,7 @@ branch = "alt-br"
 "#,
     );
     assert_eq!(
-        new_config().get_registry_branch("alt"),
+        new_config().get_registry_branch("alt").unwrap(),
         GitReference::Branch("alt-br".to_string())
     );
 }

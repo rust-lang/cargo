@@ -295,6 +295,7 @@ impl SourceId {
                 self,
                 yanked_whitelist,
                 config,
+                config.get_registry_branch_from_id(&self)?,
             ))),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
