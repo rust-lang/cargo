@@ -1239,6 +1239,35 @@ from the root of the workspace. It also passes the `--test-run-directory` to
 package. This preserves backwards compatibility and is consistent with how
 normal unittests are run.
 
+### `alternative-branches`
+* Original Issue: [#7329](https://github.com/rust-lang/cargo/issues/7329)
+* Original Pull Request: [#X](https://github.com/rust-lang/cargo/pull/X)
+* Tracking Issue: [#Y](https://github.com/rust-lang/cargo/issues/Y)
+
+The new `-Z alternative-branches` flag enables the use of `branch` keys for
+alternative registries in cargo configuration files (`.cargo/config.toml`).
+These allow to fetch and use only a specific branch of a remote registry's
+index. Not using the flag or omitting the key results in using the default
+branch, which was the previous behavior.
+
+This configuration option does not change the publication process however:
+the client and the registry have to coordinate in some fashion in order to
+register the new version of the published crate in the appropriate branch of
+its index. This is especially true for crates.io which only uses the default
+branch and may not record a publication on any other branch.
+
+```toml
+# Regular alternative registry: use the default branch.
+[registries.my-main-registry]
+index = "https://my-intranet:8080/git/index"
+
+# Alternative registry with a specified branch key: use the `dev` branch.
+[registries.my-dev-registry]
+index = "https://my-intranet:8080/git/index"
+branch = "dev"
+```
+
+
 <script>
 (function() {
     var fragments = {
