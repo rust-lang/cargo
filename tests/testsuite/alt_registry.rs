@@ -2156,6 +2156,60 @@ fn registries_index_alt_branch_relative_url() {
 }
 
 #[cargo_test]
+fn registries_index_alt_branch_missing_in_relative_url() {
+    // This time, remove the `branch` key from `relative`'s table: fails.
+    registry::alt_br_init();
+    let config = paths::root().join(".cargo/config");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    fs::write(
+        &config,
+        r#"
+            [registries.relative]
+            index = "file:alternative-registry"
+        "#,
+    )
+    .unwrap();
+
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "relative"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .alternative(true)
+        .alternative_branch(true)
+        .publish();
+
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(&format!(
+            "\
+[UPDATING] `{reg}` index
+[ERROR] no matching package named `bar` found
+location searched: registry `{reg}`
+required by package `foo v0.0.1 ([CWD])`
+",
+            reg = registry::alt_registry_path().to_str().unwrap()
+        ))
+        .run();
+}
+
+#[cargo_test]
 fn registries_index_relative_path_not_allowed() {
     registry::alt_init();
     let config = paths::root().join(".cargo/config");
