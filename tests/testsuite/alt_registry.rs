@@ -1513,7 +1513,12 @@ fn no_api_alt_branch() {
     let repo = git2::Repository::open(registry::alt_registry_path()).unwrap();
     repo.set_head(&format!("refs/heads/{}", ALT_REG_IDX_ALT_BR))
         .unwrap();
-    repo.checkout_head(None).unwrap();
+    repo.reset(
+        &repo.head().unwrap().peel(git2::ObjectType::Any).unwrap(),
+        git2::ResetType::Hard,
+        None,
+    )
+    .unwrap();
     let cfg_path = registry::alt_registry_path().join("config.json");
     fs::write(
         cfg_path,
