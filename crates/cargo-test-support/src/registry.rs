@@ -724,13 +724,19 @@ impl Package {
                 }
             );
             let repo = t!(git2::Repository::open(&registry_path));
-            t!(repo.set_head(branch_refname));
-            // Reset from HEAD in order to properly switch to the desired branch.
-            t!(repo.reset(
-                &t!(t!(repo.head()).peel(git2::ObjectType::Any)),
-                git2::ResetType::Mixed,
-                None
-            ));
+
+            // Switch branch only if not on the correct one to save a bit of time.
+            if t!(repo.head()).name().unwrap() != branch_refname {
+                t!(repo.set_head(branch_refname));
+                // Reset from HEAD in order to properly switch to the desired branch.
+                t!(repo.reset(
+                    &t!(t!(repo.head()).peel(git2::ObjectType::Any)),
+                    git2::ResetType::Mixed,
+                    None
+                ));
+            }
+
+            // Write to the index and create a tree.
             let mut index = t!(repo.index());
             t!(index.add_path(Path::new(&file)));
             t!(index.write());
@@ -753,12 +759,14 @@ impl Package {
             // Put the HEAD back in order to reposition the default branch: the
             // current repository acts as a remote for client indices which
             // use `refs/remotes/origin/HEAD` to determine the default branch.
-            t!(repo.set_head("refs/heads/master"));
-            t!(repo.reset(
-                &t!(t!(repo.head()).peel(git2::ObjectType::Any)),
-                git2::ResetType::Hard,
-                None
-            ));
+            if branch_refname != "refs/heads/master" {
+                t!(repo.set_head("refs/heads/master"));
+                t!(repo.reset(
+                    &t!(t!(repo.head()).peel(git2::ObjectType::Any)),
+                    git2::ResetType::Hard,
+                    None
+                ));
+            }
         }
 
         cksum
