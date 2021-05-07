@@ -2110,6 +2110,7 @@ fn registries_index_alt_branch_relative_url() {
         r#"
             [registries.relative]
             index = "file:alternative-registry"
+            branch = "alternative-branch"
         "#,
     )
     .unwrap();
@@ -2217,6 +2218,7 @@ fn registries_index_alt_branch_relative_path_not_allowed() {
         r#"
             [registries.relative]
             index = "alternative-registry"
+            branch = "alternative-branch"
         "#,
     )
     .unwrap();
