@@ -700,11 +700,7 @@ impl<'cfg> RustcTargetData<'cfg> {
         if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            if target_applies_to_host {
-                target_config.insert(ct, host_config.clone());
-            } else {
-                target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
-            };
+            target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
         };
 
         let mut res = RustcTargetData {
