@@ -83,7 +83,8 @@ fn depend_on_alt_registry_published_alt_branch_use_alt_branch() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -100,7 +101,8 @@ fn depend_on_alt_registry_published_alt_branch_use_alt_branch() {
     p.cargo("clean").run();
 
     // Don't download a second time
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
@@ -135,7 +137,8 @@ fn depend_on_alt_registry_published_default_branch_use_alt_branch() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(&format!(
             "\
@@ -267,7 +270,8 @@ fn depend_on_alt_registry_alt_branch_depends_on_same_registry_alt_branch() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -313,7 +317,8 @@ fn depend_on_alt_registry_alt_branch_depends_on_same_registry_default_branch() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(&format!(
             "\
@@ -359,7 +364,8 @@ fn depend_on_alt_registry_default_branch_depends_on_same_registry_alt_branch() {
         .alternative(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(&format!(
             "\
@@ -447,7 +453,8 @@ fn depend_on_alt_registry_alt_branch_depends_on_crates_io() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(&format!(
             "\
 [UPDATING] `{alt_reg}` index
@@ -524,7 +531,8 @@ fn registry_alt_branch_and_path_dep_works() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
@@ -587,7 +595,8 @@ fn registry_alt_branch_incompatible_with_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
             "  dependency (bar) specification is ambiguous. \
@@ -706,12 +715,14 @@ fn cannot_publish_to_crates_io_with_registry_alt_branch_dependency() {
     // Login so that we have the token available
     p.cargo("login --registry fakeio TOKEN").run();
 
-    p.cargo("publish --registry fakeio")
+    p.cargo("publish -Z unstable-options -Z alternative-branches --registry fakeio")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 
-    p.cargo("publish --token sekrit --index")
+    p.cargo("publish -Z unstable-options -Z alternative-branches --token sekrit --index")
+        .masquerade_as_nightly_cargo()
         .arg(fakeio_url.to_string())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
@@ -811,7 +822,9 @@ fn publish_with_registry_alt_branch_dependency() {
     // Login so that we have the token available
     p.cargo("login --registry alternative TOKEN").run();
 
-    p.cargo("publish --registry alternative").run();
+    p.cargo("publish -Z unstable-options -Z alternative-branches --registry alternative")
+        .masquerade_as_nightly_cargo()
+        .run();
 
     validate_alt_upload(
         r#"{
@@ -926,7 +939,8 @@ fn alt_registry_alt_branch_and_crates_io_deps() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr_contains(format!(
             "[UPDATING] `{}` index",
             registry::alt_registry_path().to_str().unwrap()
@@ -970,7 +984,8 @@ fn block_publish_alt_branch_due_to_no_token() {
     fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
 
     // Now perform the actual publish
-    p.cargo("publish --registry alternative")
+    p.cargo("publish -Z unstable-options -Z alternative-branches --registry alternative")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
             "error: no upload token found, \
@@ -1036,7 +1051,9 @@ fn publish_to_alt_registry_alt_branch() {
     p.cargo("login --registry alternative TOKEN").run();
 
     // Now perform the actual publish
-    p.cargo("publish --registry alternative").run();
+    p.cargo("publish -Z unstable-options -Z alternative-branches --registry alternative")
+        .masquerade_as_nightly_cargo()
+        .run();
 
     validate_alt_upload(
         r#"{
@@ -1158,7 +1175,9 @@ fn publish_alt_branch_with_crates_io_dep() {
     // Login so that we have the token available
     p.cargo("login --registry alternative TOKEN").run();
 
-    p.cargo("publish --registry alternative").run();
+    p.cargo("publish -Z unstable-options -Z alternative-branches --registry alternative")
+        .masquerade_as_nightly_cargo()
+        .run();
 
     validate_alt_upload(
         r#"{
@@ -1247,7 +1266,8 @@ fn passwords_in_registries_index_url_alt_branch_forbidden() {
 
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    p.cargo("publish --registry alternative")
+    p.cargo("publish -Z unstable-options -Z alternative-branches --registry alternative")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -1336,7 +1356,8 @@ fn patch_alt_reg_alt_branch() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
@@ -1519,7 +1540,8 @@ fn no_api_alt_branch() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -2111,7 +2133,8 @@ fn registries_index_alt_branch_relative_url() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -2217,7 +2240,8 @@ fn registries_index_alt_branch_relative_path_not_allowed() {
         .alternative_branch(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("build -Z unstable-options -Z alternative-branches")
+        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 error: failed to parse manifest at `{root}/foo/Cargo.toml`
