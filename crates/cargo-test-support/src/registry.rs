@@ -750,10 +750,15 @@ impl Package {
                 &[&parent]
             ));
 
-            // Checkout "hard" from HEAD in order to remove artifacts from the previous branch.
-            t!(repo.checkout_head(Some(
-                git2::build::CheckoutBuilder::new().remove_untracked(true)
-            )));
+            // Put the HEAD back in order to reposition the default branch: the
+            // current repository acts as a remote for client indices which
+            // use `refs/remotes/origin/HEAD` to determine the default branch.
+            t!(repo.set_head("refs/heads/master"));
+            t!(repo.reset(
+                &t!(t!(repo.head()).peel(git2::ObjectType::Any)),
+                git2::ResetType::Hard,
+                None
+            ));
         }
 
         cksum
