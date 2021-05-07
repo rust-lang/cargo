@@ -14,26 +14,42 @@ use std::sync::Mutex;
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 lazy_static! {
-    pub static ref GLOBAL_ROOT: PathBuf = {
-        let mut path = t!(env::current_exe());
-        path.pop(); // chop off exe name
-        path.pop(); // chop off 'debug'
-
-        // If `cargo test` is run manually then our path looks like
-        // `target/debug/foo`, in which case our `path` is already pointing at
-        // `target`. If, however, `cargo test --target $target` is used then the
-        // output is `target/$target/debug/foo`, so our path is pointing at
-        // `target/$target`. Here we conditionally pop the `$target` name.
-        if path.file_name().and_then(|s| s.to_str()) != Some("target") {
-            path.pop();
-        }
-
-        path.push(CARGO_INTEGRATION_TEST_DIR);
-        path.mkdir_p();
-        path
-    };
+    // TODO: Use `SyncOnceCell` when stable
+    static ref GLOBAL_ROOT: Mutex<Option<PathBuf>> = Mutex::new(None);
 
     static ref TEST_ROOTS: Mutex<HashMap<String, PathBuf>> = Default::default();
+}
+
+/// This is used when running cargo is pre-CARGO_TARGET_TMPDIR
+/// TODO: Remove when CARGO_TARGET_TMPDIR grows old enough.
+fn global_root_legacy() -> PathBuf {
+    let mut path = t!(env::current_exe());
+    path.pop(); // chop off exe name
+    path.pop(); // chop off "deps"
+    path.push("tmp");
+    path.mkdir_p();
+    path
+}
+
+fn set_global_root(tmp_dir: Option<&'static str>) {
+    let mut lock = GLOBAL_ROOT.lock().unwrap();
+    if lock.is_none() {
+        let mut root = match tmp_dir {
+            Some(tmp_dir) => PathBuf::from(tmp_dir),
+            None => global_root_legacy(),
+        };
+
+        root.push(CARGO_INTEGRATION_TEST_DIR);
+        *lock = Some(root);
+    }
+}
+
+pub fn global_root() -> PathBuf {
+    let lock = GLOBAL_ROOT.lock().unwrap();
+    match lock.as_ref() {
+        Some(p) => p.clone(),
+        None => unreachable!("GLOBAL_ROOT not set yet"),
+    }
 }
 
 // We need to give each test a unique id. The test name could serve this
@@ -52,14 +68,15 @@ pub struct TestIdGuard {
     _private: (),
 }
 
-pub fn init_root() -> TestIdGuard {
+pub fn init_root(tmp_dir: Option<&'static str>) -> TestIdGuard {
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
-    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+    let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
     TEST_ID.with(|n| *n.borrow_mut() = Some(id));
 
     let guard = TestIdGuard { _private: () };
 
+    set_global_root(tmp_dir);
     let r = root();
     r.rm_rf();
     r.mkdir_p();
@@ -80,7 +97,10 @@ pub fn root() -> PathBuf {
              order to be able to use the crate root.",
         )
     });
-    GLOBAL_ROOT.join(&format!("t{}", id))
+
+    let mut root = global_root();
+    root.push(&format!("t{}", id));
+    root
 }
 
 pub fn home() -> PathBuf {

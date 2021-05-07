@@ -581,6 +581,11 @@ fn prepare_rustc(
         base.env("CARGO_PRIMARY_PACKAGE", "1");
     }
 
+    if unit.target.is_test() || unit.target.is_bench() {
+        let tmp = cx.files().layout(unit.kind).prepare_tmp()?;
+        base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
+    }
+
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);

@@ -125,6 +125,8 @@ pub struct Layout {
     examples: PathBuf,
     /// The directory for rustdoc output: `$root/doc`
     doc: PathBuf,
+    /// The directory for temporary data of integration tests and benches: `$dest/tmp`
+    tmp: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
     _lock: FileLock,
@@ -170,6 +172,7 @@ impl Layout {
             fingerprint: dest.join(".fingerprint"),
             examples: dest.join("examples"),
             doc: root.join("doc"),
+            tmp: dest.join("tmp"),
             root,
             dest,
             _lock: lock,
@@ -218,5 +221,10 @@ impl Layout {
     /// Fetch the build script path.
     pub fn build(&self) -> &Path {
         &self.build
+    }
+    /// Create and return the tmp path.
+    pub fn prepare_tmp(&self) -> CargoResult<&Path> {
+        paths::create_dir_all(&self.tmp)?;
+        Ok(&self.tmp)
     }
 }
