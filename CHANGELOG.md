@@ -1,17 +1,47 @@
 # Changelog
 
+## Cargo 1.54 (2021-07-29)
+[4369396c...HEAD](https://github.com/rust-lang/cargo/compare/4369396c...HEAD)
+
+### Added
+
+- Fetching from a git repository (such as the crates.io index) now displays
+  the network transfer rate.
+  [#9395](https://github.com/rust-lang/cargo/pull/9395)
+
+### Changed
+
+### Fixed
+
+- Fixed `package.exclude` in `Cargo.toml` using inverted exclusions
+  (`!somefile`) when not in a git repository or when vendoring a dependency.
+  [#9186](https://github.com/rust-lang/cargo/pull/9186)
+- Dep-info files now adjust build script `rerun-if-changed` paths to be
+  absolute paths.
+  [#9421](https://github.com/rust-lang/cargo/pull/9421)
+
+### Nightly only
+
+- Added `report` subcommand, and changed `cargo
+  describe-future-incompatibilitie` to `cargo report
+  future-incompatibilities`.
+  [#9438](https://github.com/rust-lang/cargo/pull/9438)
+
+
 ## Cargo 1.53 (2021-06-17)
-[90691f2b...HEAD](https://github.com/rust-lang/cargo/compare/90691f2b...HEAD)
+[90691f2b...rust-1.53.0](https://github.com/rust-lang/cargo/compare/90691f2b...rust-1.53.0)
 
 ### Added
 
 ### Changed
-
 - 🔥 Cargo now supports git repositories where the default `HEAD` branch is not
   "master". This also includes a switch to the version 3 `Cargo.lock` format
   which can handle default branches correctly.
   [#9133](https://github.com/rust-lang/cargo/pull/9133)
-- 🔥 macOS targets now default to `unpacked` debuginfo.
+  [#9397](https://github.com/rust-lang/cargo/pull/9397)
+  [#9384](https://github.com/rust-lang/cargo/pull/9384)
+  [#9392](https://github.com/rust-lang/cargo/pull/9392)
+- 🔥 macOS targets now default to `unpacked` split-debuginfo.
   [#9298](https://github.com/rust-lang/cargo/pull/9298)
 - ❗ The `authors` field is no longer included in `Cargo.toml` for new
   projects.
@@ -22,8 +52,29 @@
   different toolchain versions. There are shared, unversioned files (such as
   the search index) that can become broken when using different versions.
   [#8640](https://github.com/rust-lang/cargo/pull/8640)
+  [#9404](https://github.com/rust-lang/cargo/pull/9404)
+- Improved error messages when path dependency/workspace member is missing.
+  [#9368](https://github.com/rust-lang/cargo/pull/9368)
 
 ### Fixed
+- Fixed `cargo doc` detecting if the documentation needs to be rebuilt when
+  changing some settings such as features.
+  [#9419](https://github.com/rust-lang/cargo/pull/9419)
+- `cargo doc` now deletes the output directory for the package before running
+  rustdoc to clear out any stale files.
+  [#9419](https://github.com/rust-lang/cargo/pull/9419)
+- Fixed the `-C metadata` value to always include all information for all
+  builds. Previously, in some situations, the hash only included the package
+  name and version. This fixes some issues, such as incremental builds with
+  split-debuginfo on macOS corrupting the incremental cache in some cases.
+  [#9418](https://github.com/rust-lang/cargo/pull/9418)
+- Fixed man pages not working on Windows if `man` is in `PATH`.
+  [#9378](https://github.com/rust-lang/cargo/pull/9378)
+- The `rustc` cache is now aware of `RUSTC_WRAPPER` and `RUSTC_WORKSPACE_WRAPPER`.
+  [#9348](https://github.com/rust-lang/cargo/pull/9348)
+- Track the `CARGO` environment variable in the rebuild fingerprint if the
+  code uses `env!("CARGO")`.
+  [#9363](https://github.com/rust-lang/cargo/pull/9363)
 
 ### Nightly only
 - Fixed config includes not working.
@@ -31,8 +82,19 @@
 - Emit note when `--future-incompat-report` had nothing to report.
   [#9263](https://github.com/rust-lang/cargo/pull/9263)
 - Error messages for nightly features flags (like `-Z` and `cargo-features`)
-  should now provide more information.
+  now provides more information.
   [#9290](https://github.com/rust-lang/cargo/pull/9290)
+- Added the ability to set the target for an individual package in `Cargo.toml`.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#per-package-target)
+  [#9030](https://github.com/rust-lang/cargo/pull/9030)
+- Fixed build-std updating the index on every build.
+  [#9393](https://github.com/rust-lang/cargo/pull/9393)
+- `-Z help` now displays all the `-Z` options.
+  [#9369](https://github.com/rust-lang/cargo/pull/9369)
+- Added `-Zallow-features` to specify which nightly features are allowed to be used.
+  [#9283](https://github.com/rust-lang/cargo/pull/9283)
+- Added `cargo config` subcommand.
+  [#9302](https://github.com/rust-lang/cargo/pull/9302)
 
 ## Cargo 1.52 (2021-05-06)
 [34170fcd...rust-1.52.0](https://github.com/rust-lang/cargo/compare/34170fcd...rust-1.52.0)
