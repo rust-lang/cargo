@@ -31,11 +31,22 @@ struct PackageIdInner {
     source_id: SourceId,
 }
 
-// Custom equality that uses full equality of SourceId, rather than its custom equality.
+// Custom equality that uses full equality of SourceId, rather than its custom equality,
+// and Version, which usually ignores `build` metadata.
+//
+// The `build` part of the version is usually ignored (like a "comment").
+// However, there are some cases where it is important. The download path from
+// a registry includes the build metadata, and Cargo uses PackageIds for
+// creating download paths. Including it here prevents the PackageId interner
+// from getting poisoned with PackageIds where that build metadata is missing.
 impl PartialEq for PackageIdInner {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
-            && self.version == other.version
+            && self.version.major == other.version.major
+            && self.version.minor == other.version.minor
+            && self.version.patch == other.version.patch
+            && self.version.pre == other.version.pre
+            && self.version.build == other.version.build
             && self.source_id.full_eq(other.source_id)
     }
 }
@@ -44,7 +55,11 @@ impl PartialEq for PackageIdInner {
 impl Hash for PackageIdInner {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.name.hash(into);
-        self.version.hash(into);
+        self.version.major.hash(into);
+        self.version.minor.hash(into);
+        self.version.patch.hash(into);
+        self.version.pre.hash(into);
+        self.version.build.hash(into);
         self.source_id.full_hash(into);
     }
 }
@@ -97,6 +112,8 @@ impl PartialEq for PackageId {
         if ptr::eq(self.inner, other.inner) {
             return true;
         }
+        // This is here so that PackageId uses SourceId's and Version's idea
+        // of equality. PackageIdInner uses a more exact notion of equality.
         self.inner.name == other.inner.name
             && self.inner.version == other.inner.version
             && self.inner.source_id == other.inner.source_id
@@ -105,6 +122,9 @@ impl PartialEq for PackageId {
 
 impl Hash for PackageId {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
+        // This is here (instead of derived) so that PackageId uses SourceId's
+        // and Version's idea of equality. PackageIdInner uses a more exact
+        // notion of hashing.
         self.inner.name.hash(state);
         self.inner.version.hash(state);
         self.inner.source_id.hash(state);
@@ -166,6 +186,12 @@ impl PackageId {
         }
     }
 
+    /// Returns a value that implements a "stable" hashable value.
+    ///
+    /// Stable hashing removes the path prefix of the workspace from path
+    /// packages. This helps with reproducible builds, since this hash is part
+    /// of the symbol metadata, and we don't want the absolute path where the
+    /// build is performed to affect the binary output.
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
         PackageIdStableHash(self, workspace)
     }
