@@ -460,9 +460,9 @@ pub trait RegistryData {
     /// Despite the name, this doesn't actually download anything. If the
     /// `.crate` is already downloaded, then it returns [`MaybeLock::Ready`].
     /// If it hasn't been downloaded, then it returns [`MaybeLock::Download`]
-    /// which contains the URL to download. The [`crate::core::package::Download`]
+    /// which contains the URL to download. The [`crate::core::package::Downloads`]
     /// system handles the actual download process. After downloading, it
-    /// calls [`finish_download`] to save the downloaded file.
+    /// calls [`Self::finish_download`] to save the downloaded file.
     ///
     /// `checksum` is currently only used by local registries to verify the
     /// file contents (because local registries never actually download
@@ -474,7 +474,7 @@ pub trait RegistryData {
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
-    /// After [`crate::core::package::Download`] has finished a download,
+    /// After [`crate::core::package::Downloads`] has finished a download,
     /// it will call this to save the `.crate` file. This is only relevant
     /// for remote registries. This should validate the checksum and save
     /// the given data to the on-disk cache.
