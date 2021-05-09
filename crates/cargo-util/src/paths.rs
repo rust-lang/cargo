@@ -161,7 +161,7 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
         .with_context(|| format!("failed to write `{}`", path.display()))
 }
 
-/// Equivalent to [`write`], but does not write anything if the file contents
+/// Equivalent to [`write()`], but does not write anything if the file contents
 /// are identical to the given contents.
 pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     (|| -> Result<()> {
@@ -184,7 +184,7 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
     Ok(())
 }
 
-/// Equivalent to [`write`], but appends to the end instead of replacing the
+/// Equivalent to [`write()`], but appends to the end instead of replacing the
 /// contents.
 pub fn append(path: &Path, contents: &[u8]) -> Result<()> {
     (|| -> Result<()> {
