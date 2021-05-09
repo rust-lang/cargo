@@ -189,8 +189,8 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 
-/// A "source" for a [local](local::LocalRegistry) or
-/// [remote](remote::RemoteRegistry) registry.
+/// A "source" for a local (see `local::LocalRegistry`) or remote (see
+/// `remote::RemoteRegistry`) registry.
 ///
 /// This contains common functionality that is shared between the two registry
 /// kinds, with the registry-specific logic implemented as part of the
@@ -415,8 +415,8 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
-/// An abstract interface to handle both a [local](local::LocalRegistry) and
-/// [remote](remote::RemoteRegistry) registry.
+/// An abstract interface to handle both a local (see `local::LocalRegistry`)
+/// and remote (see `remote::RemoteRegistry`) registry.
 ///
 /// This allows [`RegistrySource`] to abstractly handle both registry kinds.
 pub trait RegistryData {
