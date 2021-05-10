@@ -96,7 +96,7 @@ fn join_url<'a>(base: Option<&Url>, dest: CowStr<'a>) -> CowStr<'a> {
                 let joined = base_url.join(&dest).unwrap_or_else(|e| {
                     panic!("failed to join URL `{}` to `{}`: {}", dest, base_url, e)
                 });
-                joined.into_string().into()
+                String::from(joined).into()
             }
         }
         None => dest,
