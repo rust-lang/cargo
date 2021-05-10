@@ -95,21 +95,6 @@ impl FossilRepo {
             .arg(db_fname)
             .exec()?;
 
-        // set `target` as ignoreable and cleanable
-        ProcessBuilder::new("fossil")
-            .cwd(cwd)
-            .arg("settings")
-            .arg("ignore-glob")
-            .arg("target")
-            .exec()?;
-
-        ProcessBuilder::new("fossil")
-            .cwd(cwd)
-            .arg("settings")
-            .arg("clean-glob")
-            .arg("target")
-            .exec()?;
-
         Ok(FossilRepo)
     }
 }
