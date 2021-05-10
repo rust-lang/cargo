@@ -198,7 +198,7 @@ impl RegistryBuilder {
         if self.replace_crates_io {
             init_registry(
                 registry_path(),
-                dl_url().into_string(),
+                dl_url().into(),
                 api_url(),
                 api_path(),
                 false,

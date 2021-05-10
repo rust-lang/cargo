@@ -583,7 +583,7 @@ opt-level = 'foo'
 error in [..]/.cargo/config: could not load config key `profile.dev.opt-level`
 
 Caused by:
-  must be an integer, `z`, or `s`, but found the string: \"foo\"",
+  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"foo\"",
     );
 
     let config = ConfigBuilder::new()
@@ -596,7 +596,7 @@ Caused by:
 error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
 
 Caused by:
-  must be an integer, `z`, or `s`, but found the string: \"asdf\"",
+  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"asdf\"",
     );
 }
 

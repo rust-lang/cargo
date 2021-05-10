@@ -221,6 +221,12 @@ corresponding environment variable is set to the empty string, `""`.
   on the current directory and the default workspace members. This environment
   variable will not be set when building dependencies. This is only set when
   compiling the package (not when running binaries or tests).
+* `CARGO_TARGET_TMPDIR` — Only set when building [integration test] or benchmark code.
+  This is a path to a directory inside the target directory
+  where integration tests or benchmarks are free to put any data needed by
+  the tests/benches. Cargo initially creates this directory but doesn't
+  manage its content in any way, this is the responsibility of the test code.
+  There are separate directories for `debug` and `release` profiles.
 
 [integration test]: cargo-targets.md#integration-tests
 [`env` macro]: ../../std/macro.env.html

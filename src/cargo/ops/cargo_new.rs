@@ -517,6 +517,8 @@ struct IgnoreList {
     ignore: Vec<String>,
     /// mercurial formatted entries
     hg_ignore: Vec<String>,
+    /// Fossil-formatted entries.
+    fossil_ignore: Vec<String>,
 }
 
 impl IgnoreList {
@@ -525,15 +527,17 @@ impl IgnoreList {
         IgnoreList {
             ignore: Vec::new(),
             hg_ignore: Vec::new(),
+            fossil_ignore: Vec::new(),
         }
     }
 
-    /// add a new entry to the ignore list. Requires two arguments with the
-    /// entry in two different formats. One for "git style" entries and one for
-    /// "mercurial like" entries.
-    fn push(&mut self, ignore: &str, hg_ignore: &str) {
+    /// Add a new entry to the ignore list. Requires three arguments with the
+    /// entry in possibly three different formats. One for "git style" entries,
+    /// one for "mercurial style" entries and one for "fossil style" entries.
+    fn push(&mut self, ignore: &str, hg_ignore: &str, fossil_ignore: &str) {
         self.ignore.push(ignore.to_string());
         self.hg_ignore.push(hg_ignore.to_string());
+        self.fossil_ignore.push(fossil_ignore.to_string());
     }
 
     /// Return the correctly formatted content of the ignore file for the given
@@ -541,6 +545,7 @@ impl IgnoreList {
     fn format_new(&self, vcs: VersionControl) -> String {
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
+            VersionControl::Fossil => &self.fossil_ignore,
             _ => &self.ignore,
         };
 
@@ -557,20 +562,30 @@ impl IgnoreList {
 
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
+            VersionControl::Fossil => &self.fossil_ignore,
             _ => &self.ignore,
         };
 
-        let mut out = "\n\n# Added by cargo\n".to_string();
-        if ignore_items
-            .iter()
-            .any(|item| existing_items.contains(item))
-        {
-            out.push_str("#\n# already existing elements were commented out\n");
+        let mut out = String::new();
+
+        // Fossil does not support `#` comments.
+        if vcs != VersionControl::Fossil {
+            out.push_str("\n\n# Added by cargo\n");
+            if ignore_items
+                .iter()
+                .any(|item| existing_items.contains(item))
+            {
+                out.push_str("#\n# already existing elements were commented out\n");
+            }
+            out.push('\n');
         }
-        out.push('\n');
 
         for item in ignore_items {
             if existing_items.contains(item) {
+                if vcs == VersionControl::Fossil {
+                    // Just merge for Fossil.
+                    continue;
+                }
                 out.push('#');
             }
             out.push_str(item);
@@ -584,30 +599,35 @@ impl IgnoreList {
 /// Writes the ignore file to the given directory. If the ignore file for the
 /// given vcs system already exists, its content is read and duplicate ignore
 /// file entries are filtered out.
-fn write_ignore_file(
-    base_path: &Path,
-    list: &IgnoreList,
-    vcs: VersionControl,
-) -> CargoResult<String> {
-    let fp_ignore = match vcs {
-        VersionControl::Git => base_path.join(".gitignore"),
-        VersionControl::Hg => base_path.join(".hgignore"),
-        VersionControl::Pijul => base_path.join(".ignore"),
-        VersionControl::Fossil => return Ok("".to_string()),
-        VersionControl::NoVcs => return Ok("".to_string()),
-    };
+fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -> CargoResult<()> {
+    // Fossil only supports project-level settings in a dedicated subdirectory.
+    if vcs == VersionControl::Fossil {
+        paths::create_dir_all(base_path.join(".fossil-settings"))?;
+    }
 
-    let ignore: String = match paths::open(&fp_ignore) {
-        Err(err) => match err.downcast_ref::<std::io::Error>() {
-            Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
-            _ => return Err(err),
-        },
-        Ok(file) => list.format_existing(BufReader::new(file), vcs),
-    };
+    for fp_ignore in match vcs {
+        VersionControl::Git => vec![base_path.join(".gitignore")],
+        VersionControl::Hg => vec![base_path.join(".hgignore")],
+        VersionControl::Pijul => vec![base_path.join(".ignore")],
+        // Fossil has a cleaning functionality configured in a separate file.
+        VersionControl::Fossil => vec![
+            base_path.join(".fossil-settings/ignore-glob"),
+            base_path.join(".fossil-settings/clean-glob"),
+        ],
+        VersionControl::NoVcs => return Ok(()),
+    } {
+        let ignore: String = match paths::open(&fp_ignore) {
+            Err(err) => match err.downcast_ref::<std::io::Error>() {
+                Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
+                _ => return Err(err),
+            },
+            Ok(file) => list.format_existing(BufReader::new(file), vcs),
+        };
 
-    paths::append(&fp_ignore, ignore.as_bytes())?;
+        paths::append(&fp_ignore, ignore.as_bytes())?;
+    }
 
-    Ok(ignore)
+    Ok(())
 }
 
 /// Initializes the correct VCS system based on the provided config.
@@ -650,12 +670,12 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = config.get::<CargoNewConfig>("cargo-new")?;
 
-    // Using the push method with two arguments ensures that the entries for
-    // both `ignore` and `hgignore` are in sync.
+    // Using the push method with multiple arguments ensures that the entries
+    // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
-    ignore.push("/target", "^target/");
+    ignore.push("/target", "^target/", "target");
     if !opts.bin {
-        ignore.push("Cargo.lock", "glob:Cargo.lock");
+        ignore.push("Cargo.lock", "glob:Cargo.lock", "Cargo.lock,*/Cargo.lock");
     }
 
     let vcs = opts.version_control.unwrap_or_else(|| {

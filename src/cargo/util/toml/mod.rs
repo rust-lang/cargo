@@ -395,7 +395,7 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
                     Ok(TomlOptLevel(value.to_string()))
                 } else {
                     Err(E::custom(format!(
-                        "must be an integer, `z`, or `s`, \
+                        "must be `0`, `1`, `2`, `3`, `s` or `z`, \
                          but found the string: \"{}\"",
                         value
                     )))
@@ -553,7 +553,7 @@ impl TomlProfile {
         if let Some(panic) = &self.panic {
             if panic != "unwind" && panic != "abort" {
                 bail!(
-                    "`panic` setting of `{}` is not a valid setting,\
+                    "`panic` setting of `{}` is not a valid setting, \
                      must be `unwind` or `abort`",
                     panic
                 );
