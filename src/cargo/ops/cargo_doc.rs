@@ -3,7 +3,9 @@ use crate::core::resolver::HasDevUnits;
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
+use serde::Deserialize;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::path::Path;
 use std::process::Command;
 
@@ -14,6 +16,13 @@ pub struct DocOptions {
     pub open_result: bool,
     /// Options to pass through to the compiler
     pub compile_opts: ops::CompileOptions,
+}
+
+#[derive(Deserialize)]
+struct CargoDocConfig {
+    /// Browser to use to open docs. If this is unset, the value of the environment variable
+    /// `BROWSER` will be used.
+    browser: Option<String>,
 }
 
 /// Main method for `cargo doc`.
@@ -83,15 +92,17 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         if path.exists() {
             let mut shell = ws.config().shell();
             shell.status("Opening", path.display())?;
-            open_docs(&path, &mut shell)?;
+            let cfg = ws.config().get::<CargoDocConfig>("cargo-doc")?;
+            open_docs(&path, &mut shell, cfg.browser.map(|v| v.into()))?;
         }
     }
 
     Ok(())
 }
 
-fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
-    match std::env::var_os("BROWSER") {
+fn open_docs(path: &Path, shell: &mut Shell, config_browser: Option<OsString>) -> CargoResult<()> {
+    let browser = config_browser.or_else(|| std::env::var_os("BROWSER"));
+    match browser {
         Some(browser) => {
             if let Err(e) = Command::new(&browser).arg(path).status() {
                 shell.warn(format!(

@@ -1185,6 +1185,20 @@ fn doc_workspace_open_different_library_and_package_names() {
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
         .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+        [cargo-doc]
+        browser = "echo"
+    "#,
+    );
+
+    // check that the cargo config overrides the browser env var
+    p.cargo("doc --open")
+        .env("BROWSER", "true")
+        .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
+        .run();
 }
 
 #[cargo_test]
