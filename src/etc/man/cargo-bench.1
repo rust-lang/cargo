@@ -15,9 +15,12 @@ the two dashes (\fB\-\-\fR) are passed to the benchmark binaries and thus to
 \fIlibtest\fR (rustc's built in unit\-test and micro\-benchmarking framework). If
 you are passing arguments to both Cargo and the binary, the ones after \fB\-\-\fR go
 to the binary, the ones before go to Cargo. For details about libtest's
-arguments see the output of \fBcargo bench \-\- \-\-help\fR\&.  As an example, this will
-run only the benchmark named \fBfoo\fR (and skip other similarly named benchmarks
-like \fBfoobar\fR):
+arguments see the output of \fBcargo bench \-\- \-\-help\fR and check out the rustc
+book's chapter on how tests work at
+<https://doc.rust\-lang.org/rustc/tests/index.html>\&.
+.sp
+As an example, this will run only the benchmark named \fBfoo\fR (and skip other
+similarly named benchmarks like \fBfoobar\fR):
 .sp
 .RS 4
 .nf
