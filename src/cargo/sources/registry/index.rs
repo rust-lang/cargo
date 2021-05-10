@@ -692,8 +692,16 @@ impl Summaries {
 // * `2`: Added the "index format version" field so that if the index format
 //   changes, different versions of cargo won't get confused reading each
 //   other's caches.
+// * `3`: Bumped the version to work around a issue where multiple versions of
+//   a package were published that differ only by semver metadata. For
+//   example, openssl-src 110.0.0 and 110.0.0+1.1.0f. Previously, the cache
+//   would be incorrectly populated with two entries, both 110.0.0. After
+//   this, the metadata will be correctly included. This isn't really a format
+//   change, just a version bump to clear the incorrect cache entries. Note:
+//   the index shouldn't allow these, but unfortunately crates.io doesn't
+//   check it.
 
-const CURRENT_CACHE_VERSION: u8 = 2;
+const CURRENT_CACHE_VERSION: u8 = 3;
 
 impl<'a> SummariesCache<'a> {
     fn parse(data: &'a [u8], last_index_update: &str) -> CargoResult<SummariesCache<'a>> {
