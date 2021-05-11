@@ -24,6 +24,7 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::iter;
 use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
@@ -76,6 +77,9 @@ pub struct CompileOptions {
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
+    /// Whether the `--scrape-examples` flag was specified and build flags for
+    /// examples should be forwarded to `rustdoc`.
+    pub rustdoc_scrape_examples: bool,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
     pub honor_rust_version: bool,
@@ -94,12 +98,13 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            rustdoc_scrape_examples: false,
             honor_rust_version: true,
         })
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Packages {
     Default,
     All,
@@ -334,6 +339,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
+        rustdoc_scrape_examples,
         honor_rust_version,
     } = *options;
     let config = ws.config();
@@ -579,6 +585,40 @@ pub fn create_bcx<'a, 'cfg>(
                     .or_default()
                     .extend(args);
             }
+        }
+
+        if rustdoc_scrape_examples {
+            let mut example_compile_opts = CompileOptions::new(ws.config(), CompileMode::Doctest)?;
+            example_compile_opts.cli_features = options.cli_features.clone();
+            example_compile_opts.build_config.mode = CompileMode::Doctest;
+            example_compile_opts.spec =
+                Packages::Packages(vec![unit.pkg.manifest().name().as_str().to_owned()]);
+            example_compile_opts.filter = CompileFilter::Only {
+                all_targets: false,
+                lib: LibRule::False,
+                bins: FilterRule::none(),
+                examples: FilterRule::All,
+                benches: FilterRule::none(),
+                tests: FilterRule::none(),
+            };
+            let example_compilation = ops::compile(ws, &example_compile_opts)?;
+
+            let args = extra_compiler_args.entry(unit.clone()).or_default();
+            for doc_test in example_compilation.to_doc_test.iter() {
+                let ex_path = doc_test.unit.target.src_path().path().unwrap();
+                let ex_path_rel = ex_path.strip_prefix(doc_test.unit.pkg.root())?;
+                let p = doc_test.rustdoc_process(&example_compilation)?;
+                let arg = iter::once(format!("{}", ex_path_rel.display()))
+                    .chain(
+                        p.get_args()
+                            .iter()
+                            .map(|s| s.clone().into_string().unwrap()),
+                    )
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                args.extend_from_slice(&["--scrape-examples".to_owned(), arg]);
+            }
+            args.push("-Zunstable-options".to_owned());
         }
     }
 

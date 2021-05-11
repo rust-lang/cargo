@@ -101,6 +101,43 @@ pub struct Compilation<'cfg> {
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
 }
 
+impl Doctest {
+    pub fn rustdoc_process(&self, compilation: &Compilation<'_>) -> CargoResult<ProcessBuilder> {
+        let Doctest {
+            args,
+            unstable_opts,
+            unit,
+            linker: _,
+            script_meta,
+        } = self;
+
+        let mut p = compilation.rustdoc_process(unit, *script_meta)?;
+        p.arg("--crate-name").arg(&unit.target.crate_name());
+        p.arg("--test");
+
+        for &rust_dep in &[
+            &compilation.deps_output[&unit.kind],
+            &compilation.deps_output[&CompileKind::Host],
+        ] {
+            let mut arg = OsString::from("dependency=");
+            arg.push(rust_dep);
+            p.arg("-L").arg(arg);
+        }
+
+        for native_dep in compilation.native_dirs.iter() {
+            p.arg("-L").arg(native_dep);
+        }
+
+        p.args(args);
+
+        if *unstable_opts {
+            p.arg("-Zunstable-options");
+        }
+
+        Ok(p)
+    }
+}
+
 impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc().process();

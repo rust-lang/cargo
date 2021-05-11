@@ -19,6 +19,10 @@ pub fn cli() -> App {
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))
+        .arg(opt(
+            "scrape-examples",
+            "Scrape examples from examples/ directory to include as function documentation",
+        ))
         .arg_jobs()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
@@ -47,6 +51,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    compile_opts.rustdoc_scrape_examples = args.is_present("scrape-examples");
 
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),

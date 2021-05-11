@@ -164,13 +164,7 @@ fn run_doc_tests(
     let doctest_in_workspace = config.cli_unstable().doctest_in_workspace;
 
     for doctest_info in &compilation.to_doc_test {
-        let Doctest {
-            args,
-            unstable_opts,
-            unit,
-            linker,
-            script_meta,
-        } = doctest_info;
+        let Doctest { unit, linker, .. } = doctest_info;
 
         if !doctest_xcompile {
             match unit.kind {
@@ -185,9 +179,7 @@ fn run_doc_tests(
         }
 
         config.shell().status("Doc-tests", unit.target.name())?;
-        let mut p = compilation.rustdoc_process(unit, *script_meta)?;
-        p.arg("--crate-name").arg(&unit.target.crate_name());
-        p.arg("--test");
+        let mut p = doctest_info.rustdoc_process(compilation)?;
 
         if doctest_in_workspace {
             add_path_args(ws, unit, &mut p);
@@ -219,31 +211,8 @@ fn run_doc_tests(
             }
         }
 
-        for &rust_dep in &[
-            &compilation.deps_output[&unit.kind],
-            &compilation.deps_output[&CompileKind::Host],
-        ] {
-            let mut arg = OsString::from("dependency=");
-            arg.push(rust_dep);
-            p.arg("-L").arg(arg);
-        }
-
-        for native_dep in compilation.native_dirs.iter() {
-            p.arg("-L").arg(native_dep);
-        }
-
         for arg in test_args {
             p.arg("--test-args").arg(arg);
-        }
-
-        if config.shell().verbosity() == Verbosity::Quiet {
-            p.arg("--test-args").arg("--quiet");
-        }
-
-        p.args(args);
-
-        if *unstable_opts {
-            p.arg("-Zunstable-options");
         }
 
         config
