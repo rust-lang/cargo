@@ -134,13 +134,13 @@ fn parse_links_overrides(
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     let args = value.list(key)?;
-                    let args = args.iter().map(|v| (Some(LinkType::Cdylib), v.0.clone()));
+                    let args = args.iter().map(|v| (LinkType::Cdylib, v.0.clone()));
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-bins" => {
                     if extra_link_arg {
                         let args = value.list(key)?;
-                        let args = args.iter().map(|v| (Some(LinkType::Bin), v.0.clone()));
+                        let args = args.iter().map(|v| (LinkType::Bin, v.0.clone()));
                         output.linker_args.extend(args);
                     } else {
                         config.shell().warn(format!(
@@ -152,7 +152,7 @@ fn parse_links_overrides(
                 "rustc-link-arg" => {
                     if extra_link_arg {
                         let args = value.list(key)?;
-                        let args = args.iter().map(|v| (None, v.0.clone()));
+                        let args = args.iter().map(|v| (LinkType::All, v.0.clone()));
                         output.linker_args.extend(args);
                     } else {
                         config.shell().warn(format!(
