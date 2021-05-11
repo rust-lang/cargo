@@ -817,6 +817,59 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 }
 
 #[cargo_test]
+fn dirty_ignored() {
+    // Cargo warns about an ignored file that will be published.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "foo"
+                documentation = "foo"
+                include = ["src", "build"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(".gitignore", "build")
+    });
+    // Example of adding a file that is confusingly ignored by an overzealous
+    // gitignore rule.
+    p.change_file("src/build/mod.rs", "");
+    p.cargo("package --list")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: 1 files in the working directory contain changes that were not yet committed into git:
+
+src/build/mod.rs
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+",
+        )
+        .run();
+    // Add the ignored file and make sure it is included.
+    let mut index = t!(repo.index());
+    t!(index.add_path(Path::new("src/build/mod.rs")));
+    t!(index.write());
+    git::commit(&repo);
+    p.cargo("package --list")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+src/build/mod.rs
+src/lib.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn generated_manifest() {
     registry::alt_init();
     Package::new("abc", "1.0.0").publish();
