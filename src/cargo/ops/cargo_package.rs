@@ -394,52 +394,31 @@ fn check_repo_state(
         src_files: &[PathBuf],
         repo: &git2::Repository,
     ) -> CargoResult<Option<String>> {
-        let workdir = repo.workdir().unwrap();
+        // This is a collection of any dirty or untracked files. This covers:
+        // - new/modified/deleted/renamed/type change (index or worktree)
+        // - untracked files (which are "new" worktree files)
+        // - ignored (in case the user has an `include` directive that
+        //   conflicts with .gitignore).
+        let mut dirty_files = Vec::new();
+        collect_statuses(repo, &mut dirty_files)?;
+        // Include each submodule so that the error message can provide
+        // specifically *which* files in a submodule are modified.
+        status_submodules(repo, &mut dirty_files)?;
 
-        let mut sub_repos = Vec::new();
-        open_submodules(repo, &mut sub_repos)?;
-        // Sort so that longest paths are first, to check nested submodules first.
-        sub_repos.sort_unstable_by(|a, b| b.0.as_os_str().len().cmp(&a.0.as_os_str().len()));
-        let submodule_dirty = |path: &Path| -> bool {
-            sub_repos
-                .iter()
-                .filter(|(sub_path, _sub_repo)| path.starts_with(sub_path))
-                .any(|(sub_path, sub_repo)| {
-                    let relative = path.strip_prefix(sub_path).unwrap();
-                    sub_repo
-                        .status_file(relative)
-                        .map(|status| status != git2::Status::CURRENT)
-                        .unwrap_or(false)
-                })
-        };
-
-        let dirty = src_files
+        // Find the intersection of dirty in git, and the src_files that would
+        // be packaged. This is a lazy n^2 check, but seems fine with
+        // thousands of files.
+        let dirty_src_files: Vec<String> = src_files
             .iter()
-            .filter(|file| {
-                let relative = file.strip_prefix(workdir).unwrap();
-                if let Ok(status) = repo.status_file(relative) {
-                    if status == git2::Status::CURRENT {
-                        false
-                    } else if relative.file_name().and_then(|s| s.to_str()).unwrap_or("")
-                        == "Cargo.lock"
-                    {
-                        // It is OK to include this file even if it is ignored.
-                        status != git2::Status::IGNORED
-                    } else {
-                        true
-                    }
-                } else {
-                    submodule_dirty(file)
-                }
-            })
+            .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
             .map(|path| {
                 path.strip_prefix(p.root())
                     .unwrap_or(path)
                     .display()
                     .to_string()
             })
-            .collect::<Vec<_>>();
-        if dirty.is_empty() {
+            .collect();
+        if dirty_src_files.is_empty() {
             let rev_obj = repo.revparse_single("HEAD")?;
             Ok(Some(rev_obj.id().to_string()))
         } else {
@@ -447,23 +426,57 @@ fn check_repo_state(
                 "{} files in the working directory contain changes that were \
                  not yet committed into git:\n\n{}\n\n\
                  to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag",
-                dirty.len(),
-                dirty.join("\n")
+                dirty_src_files.len(),
+                dirty_src_files.join("\n")
             )
         }
     }
 
-    /// Helper to recursively open all submodules.
-    fn open_submodules(
+    // Helper to collect dirty statuses for a single repo.
+    fn collect_statuses(
         repo: &git2::Repository,
-        sub_repos: &mut Vec<(PathBuf, git2::Repository)>,
+        dirty_files: &mut Vec<PathBuf>,
+    ) -> CargoResult<()> {
+        let mut status_opts = git2::StatusOptions::new();
+        // Exclude submodules, as they are being handled manually by recursing
+        // into each one so that details about specific files can be
+        // retrieved.
+        status_opts
+            .exclude_submodules(true)
+            .include_ignored(true)
+            .include_untracked(true);
+        let repo_statuses = repo.statuses(Some(&mut status_opts)).with_context(|| {
+            format!(
+                "failed to retrieve git status from repo {}",
+                repo.path().display()
+            )
+        })?;
+        let workdir = repo.workdir().unwrap();
+        let this_dirty = repo_statuses.iter().filter_map(|entry| {
+            let path = entry.path().expect("valid utf-8 path");
+            if path.ends_with("Cargo.lock") && entry.status() == git2::Status::IGNORED {
+                // It is OK to include Cargo.lock even if it is ignored.
+                return None;
+            }
+            // Use an absolute path, so that comparing paths is easier
+            // (particularly with submodules).
+            Some(workdir.join(path))
+        });
+        dirty_files.extend(this_dirty);
+        Ok(())
+    }
+
+    // Helper to collect dirty statuses while recursing into submodules.
+    fn status_submodules(
+        repo: &git2::Repository,
+        dirty_files: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
         for submodule in repo.submodules()? {
             // Ignore submodules that don't open, they are probably not initialized.
             // If its files are required, then the verification step should fail.
             if let Ok(sub_repo) = submodule.open() {
-                open_submodules(&sub_repo, sub_repos)?;
-                sub_repos.push((sub_repo.workdir().unwrap().to_owned(), sub_repo));
+                status_submodules(&sub_repo, dirty_files)?;
+                collect_statuses(&sub_repo, dirty_files)?;
             }
         }
         Ok(())

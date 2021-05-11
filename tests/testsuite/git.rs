@@ -2760,7 +2760,7 @@ to proceed despite [..]
     git::commit(&repo);
     git_project.cargo("package --no-verify").run();
     // Modify within nested submodule.
-    git_project.change_file("src/bar/mod.rs", "//test");
+    git_project.change_file("src/bar/new_file.rs", "//test");
     git_project
         .cargo("package --no-verify")
         .with_status(101)
@@ -2770,7 +2770,7 @@ to proceed despite [..]
 See [..]
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
-src/bar/mod.rs
+src/bar/new_file.rs
 
 to proceed despite [..]
 ",
