@@ -26,6 +26,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use std::sync::Arc;
+use url::Url;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
@@ -588,6 +589,32 @@ pub fn create_bcx<'a, 'cfg>(
         }
 
         if rustdoc_scrape_examples {
+            let args = extra_compiler_args.entry(unit.clone()).or_default();
+
+            let get_repository = || -> Option<String> {
+                let repository = unit.pkg.manifest().metadata().repository.as_ref()?;
+                let repo_url = Url::parse(repository).ok()?;
+                let domain = repo_url.domain()?;
+
+                match domain {
+                    "github.com" => {
+                        // TODO(wcrichto): is there a canonical way to get the current commit?
+                        // Would prefer that over linking to master
+                        let gitref = "master";
+                        Some(format!("{}/tree/{}", String::from(repo_url), gitref))
+                    }
+                    _ => None,
+                }
+            };
+
+            if let Some(repository) = get_repository() {
+                args.push("--repository-url".to_owned());
+                args.push(repository);
+            }
+
+            // While --scrape-examples and --repository-url are unstable
+            args.push("-Zunstable-options".to_owned());
+
             let mut example_compile_opts = CompileOptions::new(ws.config(), CompileMode::Doctest)?;
             example_compile_opts.cli_features = options.cli_features.clone();
             example_compile_opts.build_config.mode = CompileMode::Doctest;
@@ -603,7 +630,6 @@ pub fn create_bcx<'a, 'cfg>(
             };
             let example_compilation = ops::compile(ws, &example_compile_opts)?;
 
-            let args = extra_compiler_args.entry(unit.clone()).or_default();
             for doc_test in example_compilation.to_doc_test.iter() {
                 let ex_path = doc_test.unit.target.src_path().path().unwrap();
                 let ex_path_rel = ex_path.strip_prefix(doc_test.unit.pkg.root())?;
@@ -618,7 +644,6 @@ pub fn create_bcx<'a, 'cfg>(
                     .join(" ");
                 args.extend_from_slice(&["--scrape-examples".to_owned(), arg]);
             }
-            args.push("-Zunstable-options".to_owned());
         }
     }
 
