@@ -189,8 +189,8 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 
-/// A "source" for a [local](local::LocalRegistry) or
-/// [remote](remote::RemoteRegistry) registry.
+/// A "source" for a local (see `local::LocalRegistry`) or remote (see
+/// `remote::RemoteRegistry`) registry.
 ///
 /// This contains common functionality that is shared between the two registry
 /// kinds, with the registry-specific logic implemented as part of the
@@ -415,8 +415,8 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
-/// An abstract interface to handle both a [local](local::LocalRegistry) and
-/// [remote](remote::RemoteRegistry) registry.
+/// An abstract interface to handle both a local (see `local::LocalRegistry`)
+/// and remote (see `remote::RemoteRegistry`) registry.
 ///
 /// This allows [`RegistrySource`] to abstractly handle both registry kinds.
 pub trait RegistryData {
@@ -460,9 +460,9 @@ pub trait RegistryData {
     /// Despite the name, this doesn't actually download anything. If the
     /// `.crate` is already downloaded, then it returns [`MaybeLock::Ready`].
     /// If it hasn't been downloaded, then it returns [`MaybeLock::Download`]
-    /// which contains the URL to download. The [`crate::core::package::Download`]
+    /// which contains the URL to download. The [`crate::core::package::Downloads`]
     /// system handles the actual download process. After downloading, it
-    /// calls [`finish_download`] to save the downloaded file.
+    /// calls [`Self::finish_download`] to save the downloaded file.
     ///
     /// `checksum` is currently only used by local registries to verify the
     /// file contents (because local registries never actually download
@@ -474,7 +474,7 @@ pub trait RegistryData {
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
-    /// After [`crate::core::package::Download`] has finished a download,
+    /// After [`crate::core::package::Downloads`] has finished a download,
     /// it will call this to save the `.crate` file. This is only relevant
     /// for remote registries. This should validate the checksum and save
     /// the given data to the on-disk cache.
