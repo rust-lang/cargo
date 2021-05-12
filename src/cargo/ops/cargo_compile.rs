@@ -567,6 +567,7 @@ pub fn create_bcx<'a, 'cfg>(
         }
         extra_compiler_args.insert(units[0].clone(), args);
     }
+
     for unit in &units {
         if unit.mode.is_doc() || unit.mode.is_doc_test() {
             let mut extra_args = local_rustdoc_args.clone();
@@ -587,62 +588,71 @@ pub fn create_bcx<'a, 'cfg>(
                     .extend(args);
             }
         }
+    }
 
-        if rustdoc_scrape_examples {
-            let args = extra_compiler_args.entry(unit.clone()).or_default();
+    if rustdoc_scrape_examples && units.len() > 0 {
+        let mut args = Vec::new();
 
-            let get_repository = || -> Option<String> {
-                let repository = unit.pkg.manifest().metadata().repository.as_ref()?;
-                let repo_url = Url::parse(repository).ok()?;
-                let domain = repo_url.domain()?;
+        let get_repository = || -> Option<String> {
+            let repository = units[0].pkg.manifest().metadata().repository.as_ref()?;
+            let repo_url = Url::parse(repository).ok()?;
+            let domain = repo_url.domain()?;
 
-                match domain {
-                    "github.com" => {
-                        // TODO(wcrichto): is there a canonical way to get the current commit?
-                        // Would prefer that over linking to master
-                        let gitref = "master";
-                        Some(format!("{}/tree/{}", String::from(repo_url), gitref))
-                    }
-                    _ => None,
+            match domain {
+                "github.com" => {
+                    // TODO(wcrichto): is there a canonical way to get the current commit?
+                    // Would prefer that over linking to master
+                    let gitref = "master";
+                    Some(format!("{}/tree/{}", String::from(repo_url), gitref))
                 }
-            };
-
-            if let Some(repository) = get_repository() {
-                args.push("--repository-url".to_owned());
-                args.push(repository);
+                _ => None,
             }
+        };
 
-            // While --scrape-examples and --repository-url are unstable
-            args.push("-Zunstable-options".to_owned());
+        if let Some(repository) = get_repository() {
+            args.push("--repository-url".to_owned());
+            args.push(repository);
+        }
 
-            let mut example_compile_opts = CompileOptions::new(ws.config(), CompileMode::Doctest)?;
-            example_compile_opts.cli_features = options.cli_features.clone();
-            example_compile_opts.build_config.mode = CompileMode::Doctest;
-            example_compile_opts.spec =
-                Packages::Packages(vec![unit.pkg.manifest().name().as_str().to_owned()]);
-            example_compile_opts.filter = CompileFilter::Only {
-                all_targets: false,
-                lib: LibRule::False,
-                bins: FilterRule::none(),
-                examples: FilterRule::All,
-                benches: FilterRule::none(),
-                tests: FilterRule::none(),
-            };
-            let example_compilation = ops::compile(ws, &example_compile_opts)?;
+        // While --scrape-examples and --repository-url are unstable
+        args.push("-Zunstable-options".to_owned());
 
-            for doc_test in example_compilation.to_doc_test.iter() {
-                let ex_path = doc_test.unit.target.src_path().path().unwrap();
-                let ex_path_rel = ex_path.strip_prefix(doc_test.unit.pkg.root())?;
-                let p = doc_test.rustdoc_process(&example_compilation)?;
-                let arg = iter::once(format!("{}", ex_path_rel.display()))
-                    .chain(
-                        p.get_args()
-                            .iter()
-                            .map(|s| s.clone().into_string().unwrap()),
-                    )
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                args.extend_from_slice(&["--scrape-examples".to_owned(), arg]);
+        let mut example_compile_opts = CompileOptions::new(ws.config(), CompileMode::Doctest)?;
+        example_compile_opts.cli_features = options.cli_features.clone();
+        example_compile_opts.build_config.mode = CompileMode::Doctest;
+        example_compile_opts.spec = Packages::All;
+        example_compile_opts.filter = CompileFilter::Only {
+            all_targets: false,
+            lib: LibRule::False,
+            bins: FilterRule::none(),
+            examples: FilterRule::All,
+            benches: FilterRule::none(),
+            tests: FilterRule::none(),
+        };
+        let example_compilation = ops::compile(ws, &example_compile_opts)?;
+
+        for doc_test in example_compilation.to_doc_test.iter() {
+            let ex_path = doc_test.unit.target.src_path().path().unwrap();
+            let ex_path_rel = ex_path.strip_prefix(ws.root())?;
+            let p = doc_test.rustdoc_process(&example_compilation)?;
+            let arg = iter::once(format!("{}", ex_path_rel.display()))
+                .chain(
+                    p.get_args()
+                        .iter()
+                        .map(|s| s.clone().into_string().unwrap()),
+                )
+                .collect::<Vec<_>>()
+                .join(" ");
+            args.extend_from_slice(&["--scrape-examples".to_owned(), arg]);
+            println!("ex: {}", ex_path_rel.display());
+        }
+
+        for unit in unit_graph.keys() {
+            if unit.mode.is_doc() && ws.is_member(&unit.pkg) {
+                extra_compiler_args
+                    .entry(unit.clone())
+                    .or_default()
+                    .extend(args.clone());
             }
         }
     }
