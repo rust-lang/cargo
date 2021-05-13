@@ -313,7 +313,7 @@ fn feature_default_resolver() {
     p.cargo("run --features a/test")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] None of the selected packages contains these features: a/test, did you mean: test?")
+        .with_stderr("[ERROR] package `a[..]` does not have a dependency named `a`")
         .run();
 }
 

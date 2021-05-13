@@ -7,7 +7,6 @@ use std::slice;
 
 use anyhow::{bail, Context as _};
 use glob::glob;
-use itertools::Itertools;
 use log::debug;
 use url::Url;
 
@@ -1220,9 +1219,11 @@ impl<'cfg> Workspace<'cfg> {
                     dep_prefix: _,
                     weak: _,
                 } => {
-                    // Check if `dep_name` is member of the workspace or package.
+                    // Check if `dep_name` is member of the workspace, but isn't associated with current package.
                     // Weak can be ignored for this moment.
-                    let is_member = self.members().any(|member| member.name() == *dep_name);
+                    let is_member = self.members().any(|member| {
+                        self.current_opt() != Some(member) && member.name() == *dep_name
+                    });
                     if is_member && specs.iter().any(|spec| spec.name() == *dep_name) {
                         member_specific_features
                             .entry(*dep_name)
@@ -1300,40 +1301,8 @@ impl<'cfg> Workspace<'cfg> {
             .collect();
 
         // If any member specific features were not removed while iterating over members
-        if !member_specific_features.is_empty() {
-            let unknown: Vec<_> = member_specific_features
-                .values()
-                .map(|set| set.iter())
-                .flatten()
-                .sorted_by_key(|feature| feature.to_string())
-                .collect();
-
-            if self.is_virtual() {
-                bail!(
-                    "None of the selected packages contains these features: {}",
-                    unknown.iter().join(", "),
-                );
-            } else {
-                bail!(
-                    "None of the selected packages contains these features: {}, did you mean: {}?",
-                    unknown.iter().join(", "),
-                    unknown
-                        .iter()
-                        .map(|feature| match feature {
-                            // Remove package prefix from feature
-                            FeatureValue::DepFeature {
-                                dep_name: _,
-                                dep_feature,
-                                dep_prefix: false,
-                                weak: _,
-                            } => FeatureValue::new(*dep_feature),
-                            // Member specific features by definition contain only `FeatureValue::DepFeature`
-                            _ => unreachable!(),
-                        })
-                        .join(", ")
-                );
-            }
-        }
+        // some features will be ignored.
+        assert!(member_specific_features.is_empty());
 
         Ok(result)
     }
