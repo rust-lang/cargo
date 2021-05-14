@@ -204,7 +204,7 @@ replacement][replace].
 ### Why is Cargo rebuilding my code?
 
 Cargo is responsible for incrementally compiling crates in your project. This
-means that if you type `cargo build` twice the second one shouldn't rebuild you
+means that if you type `cargo build` twice the second one shouldn't rebuild your
 crates.io dependencies, for example. Nevertheless bugs arise and Cargo can
 sometimes rebuild code when you're not expecting it!
 

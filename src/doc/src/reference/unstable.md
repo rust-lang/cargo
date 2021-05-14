@@ -847,7 +847,7 @@ Other possible string values of `strip` are `none`, `symbols`, and `off`. The de
 
 You can also configure this option with the two absolute boolean values
 `true` and `false`. The former enables `strip` at its higher level, `symbols`,
-whilst the later disables `strip` completely.
+while the latter disables `strip` completely.
 
 ### rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
@@ -1153,7 +1153,7 @@ cargo logout -Z credential-process
 * RFC: [#2495](https://github.com/rust-lang/rfcs/blob/master/text/2495-min-rust-version.md)
 * rustc Tracking Issue: [#65262](https://github.com/rust-lang/rust/issues/65262)
 
-The `-Z rust-version` flag enables the reading the `rust-version` field in the
+The `-Z rust-version` flag enables the reading of the `rust-version` field in the
 Cargo manifest `package` section. This can be used by a package to state a minimal
 version of the compiler required to build the package. An error is generated if
 the version of rustc is older than the stated `rust-version`. The
