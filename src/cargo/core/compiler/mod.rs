@@ -62,11 +62,12 @@ use cargo_util::{paths, ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
-#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub enum LinkType {
     All,
     Cdylib,
     Bin,
+    SingleBin(String),
     Test,
     Bench,
     Example,
@@ -78,6 +79,7 @@ impl LinkType {
             LinkType::All => true,
             LinkType::Cdylib => target.is_cdylib(),
             LinkType::Bin => target.is_bin(),
+            LinkType::SingleBin(name) => target.is_bin() && target.name() == name,
             LinkType::Test => target.is_test(),
             LinkType::Bench => target.is_bench(),
             LinkType::Example => target.is_exe_example(),

@@ -571,6 +571,24 @@ impl BuildOutput {
                         warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
                     }
                 }
+                "rustc-link-arg-bin" => {
+                    if extra_link_arg {
+                        let parts = value.splitn(2, "=").collect::<Vec<_>>();
+                        if parts.len() == 2 {
+                            linker_args.push((
+                                LinkType::SingleBin(parts[0].to_string()),
+                                parts[1].to_string(),
+                            ));
+                        } else {
+                            warnings.push(format!(
+                                "cargo:{} has invalid syntax: expected `cargo:{}=BIN=ARG`",
+                                key, key
+                            ));
+                        }
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    }
+                }
                 "rustc-link-arg" => {
                     if extra_link_arg {
                         linker_args.push((LinkType::All, value));
