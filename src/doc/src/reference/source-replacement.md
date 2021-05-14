@@ -107,7 +107,7 @@ the crates that are present).
 
 A "directory source" is similar to a local registry source where it contains a
 number of crates available on the local filesystem, suitable for vendoring
-dependencies. Directory sources are primarily managed the `cargo vendor`
+dependencies. Directory sources are primarily managed by the `cargo vendor`
 subcommand.
 
 Directory sources are distinct from local registries though in that they contain
