@@ -103,8 +103,10 @@ kind given, then it will automatically include the other dependency kinds.</li>
 <li><code>no-normal</code> — Do not include normal dependencies.</li>
 <li><code>no-build</code> — Do not include build dependencies.</li>
 <li><code>no-dev</code> — Do not include development dependencies.</li>
+<li><code>no-proc-macro</code> — Do not include procedural macro dependencies.</li>
 </ul>
-<p>The <code>no-</code> prefixed options cannot be mixed with the other dependency kinds.</p>
+<p>The <code>normal</code>, <code>build</code>, <code>dev</code>, and <code>all</code> dependency kinds cannot be mixed with
+<code>no-normal</code>, <code>no-build</code>, or <code>no-dev</code> dependency kinds.</p>
 <p>The default is <code>normal,build,dev</code>.</dd>
 
 
