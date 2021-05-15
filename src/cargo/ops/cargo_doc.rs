@@ -95,9 +95,8 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             open_docs(
                 &path,
                 &mut shell,
-                cfg.browser.map(|path_args| {
-                    (path_args.path.resolve_program(&ws.config()), path_args.args)
-                }),
+                cfg.browser
+                    .map(|path_args| (path_args.path.resolve_program(ws.config()), path_args.args)),
             )?;
         }
     }

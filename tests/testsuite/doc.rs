@@ -1189,15 +1189,15 @@ fn doc_workspace_open_different_library_and_package_names() {
     p.change_file(
         ".cargo/config.toml",
         r#"
-        [cargo-doc]
-        browser = "echo"
+        [doc]
+        browser = ["echo", "a"]
     "#,
     );
 
     // check that the cargo config overrides the browser env var
     p.cargo("doc --open")
         .env("BROWSER", "true")
-        .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
+        .with_stdout_contains("[..]a [CWD]/target/doc/foolib/index.html")
         .run();
 }
 
