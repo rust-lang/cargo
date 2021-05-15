@@ -205,6 +205,10 @@ subtree of the package given to -p.\n\
         no_proc_macro,
     };
 
+    if opts.graph_features && opts.duplicates {
+        return Err(format_err!("the `-e features` flag does not support `--duplicates`").into());
+    }
+
     tree::build_and_print(&ws, &opts)?;
     Ok(())
 }

@@ -8,7 +8,7 @@ use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
 use crate::{drop_print, drop_println};
-use anyhow::{bail, Context};
+use anyhow::Context;
 use graph::Graph;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -124,9 +124,6 @@ static ASCII_SYMBOLS: Symbols = Symbols {
 
 /// Entry point for the `cargo tree` command.
 pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()> {
-    if opts.graph_features && opts.duplicates {
-        bail!("the `-e features` flag does not support `--duplicates`");
-    }
     let requested_targets = match &opts.target {
         Target::All | Target::Host => Vec::new(),
         Target::Specific(t) => t.clone(),
