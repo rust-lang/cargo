@@ -1573,3 +1573,57 @@ b v0.1.0 ([..]/foo/b)
         )
         .run();
 }
+
+#[cargo_test]
+fn unknown_edge_kind() {
+    let p = project()
+        .file("Cargo.toml", "")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e unknown")
+        .with_stderr(
+            "\
+[ERROR] unknown edge kind `unknown`, valid values are \
+\"normal\", \"build\", \"dev\", \
+\"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
+\"features\", or \"all\"
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn mixed_no_edge_kinds() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e no-build,normal")
+        .with_stderr(
+            "\
+[ERROR] `normal` dependency kind cannot be mixed with \
+\"no-normal\", \"no-build\", or \"no-dev\" dependency kinds
+",
+        )
+        .with_status(101)
+        .run();
+
+    // `no-proc-macro` can be mixed with others
+    p.cargo("tree -e no-proc-macro,normal")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+}
