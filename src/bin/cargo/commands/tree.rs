@@ -43,7 +43,8 @@ pub fn cli() -> App {
                 "edges",
                 "KINDS",
                 "The kinds of dependencies to display \
-                 (features, normal, build, dev, all, no-dev, no-build, no-normal)",
+                 (features, normal, build, dev, all, \
+                 no-normal, no-build, no-dev, no-proc-macro)",
             )
             .short("e"),
         )
@@ -147,7 +148,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     let target = tree::Target::from_cli(targets);
 
-    let edge_kinds = parse_edge_kinds(config, args)?;
+    let (edge_kinds, no_proc_macro) = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
 
     let packages = args.packages_from_flags()?;
@@ -201,25 +202,47 @@ subtree of the package given to -p.\n\
         charset,
         format: args.value_of("format").unwrap().to_string(),
         graph_features,
+        no_proc_macro,
     };
 
     tree::build_and_print(&ws, &opts)?;
     Ok(())
 }
 
-fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashSet<EdgeKind>> {
-    let mut kinds: Vec<&str> = args
-        .values_of("edges")
-        .map_or_else(|| Vec::new(), |es| es.flat_map(|e| e.split(',')).collect());
-    if args.is_present("no-dev-dependencies") {
-        config
-            .shell()
-            .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
-        kinds.push("no-dev");
-    }
-    if kinds.is_empty() {
-        kinds.extend(&["normal", "build", "dev"]);
-    }
+/// Parses `--edges` option.
+///
+/// Returns a tuple of `EdgeKind` map and `no_proc_marco` flag.
+fn parse_edge_kinds(
+    config: &Config,
+    args: &ArgMatches<'_>,
+) -> CargoResult<(HashSet<EdgeKind>, bool)> {
+    let (kinds, no_proc_macro) = {
+        let mut no_proc_macro = false;
+        let mut kinds = args.values_of("edges").map_or_else(
+            || Vec::new(),
+            |es| {
+                es.flat_map(|e| e.split(','))
+                    .filter(|e| {
+                        no_proc_macro = *e == "no-proc-macro";
+                        !no_proc_macro
+                    })
+                    .collect()
+            },
+        );
+
+        if args.is_present("no-dev-dependencies") {
+            config
+                .shell()
+                .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
+            kinds.push("no-dev");
+        }
+
+        if kinds.is_empty() {
+            kinds.extend(&["normal", "build", "dev"]);
+        }
+
+        (kinds, no_proc_macro)
+    };
 
     let mut result = HashSet::new();
     let insert_defaults = |result: &mut HashSet<EdgeKind>| {
@@ -231,7 +254,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
         bail!(
             "unknown edge kind `{}`, valid values are \
                 \"normal\", \"build\", \"dev\", \
-                \"no-normal\", \"no-build\", \"no-dev\", \
+                \"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
                 \"features\", or \"all\"",
             k
         )
@@ -244,13 +267,18 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
                 "no-build" => result.remove(&EdgeKind::Dep(DepKind::Build)),
                 "no-dev" => result.remove(&EdgeKind::Dep(DepKind::Development)),
                 "features" => result.insert(EdgeKind::Feature),
-                "normal" | "build" | "dev" | "all" => {
-                    bail!("`no-` dependency kinds cannot be mixed with other dependency kinds")
+                k @ "normal" | k @ "build" | k @ "dev" | k @ "all" => {
+                    bail!(
+                        "`{}` dependency kind cannot be mixed with \
+                            \"no-normal\", \"no-build\", or \"no-dev\" \
+                            dependency kinds",
+                        k
+                    )
                 }
                 k => return unknown(k),
             };
         }
-        return Ok(result);
+        return Ok((result, no_proc_macro));
     }
     for kind in &kinds {
         match *kind {
@@ -276,5 +304,5 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
     if kinds.len() == 1 && kinds[0] == "features" {
         insert_defaults(&mut result);
     }
-    Ok(result)
+    Ok((result, no_proc_macro))
 }
