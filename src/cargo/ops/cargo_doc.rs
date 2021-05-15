@@ -1,13 +1,12 @@
-use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::HasDevUnits;
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
+use crate::{core::compiler::RustcTargetData, util::config::PathAndArgs};
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::ffi::OsString;
 use std::path::Path;
 use std::process::Command;
+use std::{collections::HashMap, path::PathBuf};
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
@@ -22,7 +21,7 @@ pub struct DocOptions {
 struct CargoDocConfig {
     /// Browser to use to open docs. If this is unset, the value of the environment variable
     /// `BROWSER` will be used.
-    browser: Option<String>,
+    browser: Option<PathAndArgs>,
 }
 
 /// Main method for `cargo doc`.
@@ -92,19 +91,31 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         if path.exists() {
             let mut shell = ws.config().shell();
             shell.status("Opening", path.display())?;
-            let cfg = ws.config().get::<CargoDocConfig>("cargo-doc")?;
-            open_docs(&path, &mut shell, cfg.browser.map(|v| v.into()))?;
+            let cfg = ws.config().get::<CargoDocConfig>("doc")?;
+            open_docs(
+                &path,
+                &mut shell,
+                cfg.browser.map(|path_args| {
+                    (path_args.path.resolve_program(&ws.config()), path_args.args)
+                }),
+            )?;
         }
     }
 
     Ok(())
 }
 
-fn open_docs(path: &Path, shell: &mut Shell, config_browser: Option<OsString>) -> CargoResult<()> {
-    let browser = config_browser.or_else(|| std::env::var_os("BROWSER"));
+fn open_docs(
+    path: &Path,
+    shell: &mut Shell,
+    config_browser: Option<(PathBuf, Vec<String>)>,
+) -> CargoResult<()> {
+    let browser =
+        config_browser.or_else(|| Some((PathBuf::from(std::env::var_os("BROWSER")?), Vec::new())));
+
     match browser {
-        Some(browser) => {
-            if let Err(e) = Command::new(&browser).arg(path).status() {
+        Some((browser, initial_args)) => {
+            if let Err(e) = Command::new(&browser).args(initial_args).arg(path).status() {
                 shell.warn(format!(
                     "Couldn't open docs with {}: {}",
                     browser.to_string_lossy(),
