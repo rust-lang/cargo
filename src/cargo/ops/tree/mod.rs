@@ -43,6 +43,8 @@ pub struct TreeOptions {
     pub format: String,
     /// Includes features in the tree as separate nodes.
     pub graph_features: bool,
+    /// Maximum display depth of the dependency tree.
+    pub max_display_depth: u32,
 }
 
 #[derive(PartialEq)]
@@ -241,6 +243,7 @@ fn print(
             symbols,
             opts.prefix,
             opts.no_dedupe,
+            opts.max_display_depth,
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
@@ -259,6 +262,7 @@ fn print_node<'a>(
     symbols: &Symbols,
     prefix: Prefix,
     no_dedupe: bool,
+    max_display_depth: u32,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -316,6 +320,7 @@ fn print_node<'a>(
             symbols,
             prefix,
             no_dedupe,
+            max_display_depth,
             visited_deps,
             levels_continue,
             print_stack,
@@ -334,6 +339,7 @@ fn print_dependencies<'a>(
     symbols: &Symbols,
     prefix: Prefix,
     no_dedupe: bool,
+    max_display_depth: u32,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -364,19 +370,22 @@ fn print_dependencies<'a>(
 
     let mut it = deps.iter().peekable();
     while let Some(dependency) = it.next() {
-        levels_continue.push(it.peek().is_some());
-        print_node(
-            config,
-            graph,
-            *dependency,
-            format,
-            symbols,
-            prefix,
-            no_dedupe,
-            visited_deps,
-            levels_continue,
-            print_stack,
-        );
-        levels_continue.pop();
+        if levels_continue.len() + 1 <= max_display_depth as usize {
+            levels_continue.push(it.peek().is_some());
+            print_node(
+                config,
+                graph,
+                *dependency,
+                format,
+                symbols,
+                prefix,
+                no_dedupe,
+                max_display_depth,
+                visited_deps,
+                levels_continue,
+                print_stack,
+            );
+            levels_continue.pop();
+        }
     }
 }
