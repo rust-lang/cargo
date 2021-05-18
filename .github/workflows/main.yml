@@ -54,6 +54,10 @@ jobs:
           other: i686-pc-windows-gnu
     steps:
     - uses: actions/checkout@v2
+    - name: Update Rustup (temporary workaround)
+      run: rustup self update
+      shell: bash
+      if: startsWith(matrix.os, 'windows')
     - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
