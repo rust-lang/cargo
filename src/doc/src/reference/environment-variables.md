@@ -316,7 +316,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `TARGET` — the target triple that is being compiled for. Native code should be
              compiled for this triple. See the [Target Triple] description
              for more information.
-* `HOST` — the host triple of the rust compiler.
+* `HOST` — the host triple of the Rust compiler.
 * `NUM_JOBS` — the parallelism specified as the top-level parallelism. This can
                be useful to pass a `-j` parameter to a system like `make`. Note
                that care should be taken when interpreting this environment

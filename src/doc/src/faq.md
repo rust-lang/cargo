@@ -125,7 +125,7 @@ compatibility). If Cargo used all of the dependencies' `Cargo.lock` files,
 then multiple copies of the library could be used, and perhaps even a version
 conflict.
 
-In other words, libraries specify semver requirements for their dependencies but
+In other words, libraries specify SemVer requirements for their dependencies but
 cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
 
