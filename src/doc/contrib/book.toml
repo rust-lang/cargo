@@ -1,3 +1,6 @@
 [book]
 title = "Cargo Contributor Guide"
 authors = ["Eric Huss"]
+
+[output.html]
+git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src"
