@@ -92,6 +92,7 @@ Each new feature described below should explain how to use it.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
     * [rust-version](#rust-version) — Allows to declare the minimum supported Rust version.
     * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
+    * [Build lean packages](#lean-language) — Adds support for building Lean ppackages.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
@@ -1342,3 +1343,19 @@ for the appropriate target and influenced by any other RUSTFLAGS.
     }
 })();
 </script>
+
+### lean-language
+
+The `-Z lean-language` flag adds support for a `language` flag in the
+Cargo manifest `package` section.  This flag can be set to `"rust"` or `"lean"` and
+indicates the source language of the package. If omitted the `"rust"` language
+is used as default.
+
+```toml
+cargo-features = ["lean-language"]
+
+[package]
+name = "mypackage"
+version = "0.0.1"
+language = "lean"
+```

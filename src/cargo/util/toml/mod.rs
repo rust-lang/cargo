@@ -20,7 +20,7 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
-use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
+use crate::core::{Edition, EitherManifest, Feature, Features, Language, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
@@ -787,6 +787,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlProject {
+    language: Option<String>,
     edition: Option<String>,
     rust_version: Option<String>,
     name: InternedString,
@@ -1029,6 +1030,35 @@ impl TomlManifest {
         validate_package_name(package_name, "package name", "")?;
 
         let pkgid = project.to_package_id(source_id)?;
+
+        let language = if let Some(language) = &project.language {
+            if features.require(Feature::lean_language()).is_err() {
+                let mut msg =
+                    "`language` is not supported on this version of Cargo and will be ignored"
+                        .to_string();
+                if config.nightly_features_allowed {
+                    msg.push_str(
+                        "\n\n\
+                        consider adding `cargo-features = [\"lean-language\"]` to the manifest",
+                    );
+                } else {
+                    msg.push_str(
+                        "\n\n\
+                        this Cargo does not support nightly features, but if you\n\
+                        switch to nightly channel you can add\n\
+                        `cargo-features = [\"lean-language\"]` to enable this feature",
+                    );
+                }
+                warnings.push(msg);
+                Language::Rust
+            } else {
+                language
+                    .parse()
+                    .with_context(|| "failed to parse the `language` key")?
+            }
+        } else {
+            Language::Rust
+        };
 
         let edition = if let Some(ref edition) = project.edition {
             features
@@ -1348,6 +1378,7 @@ impl TomlManifest {
             patch,
             workspace_config,
             features,
+            language,
             edition,
             rust_version,
             project.im_a_teapot,

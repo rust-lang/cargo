@@ -14,7 +14,7 @@ use url::Url;
 use crate::core::compiler::{CompileKind, CrateType};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
-use crate::core::{Edition, Feature, Features, WorkspaceConfig};
+use crate::core::{Edition, Feature, Features, Language, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
@@ -47,6 +47,7 @@ pub struct Manifest {
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
     unstable_features: Features,
+    language: Language,
     edition: Edition,
     rust_version: Option<String>,
     im_a_teapot: Option<bool>,
@@ -382,6 +383,7 @@ impl Manifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         unstable_features: Features,
+        language: Language,
         edition: Edition,
         rust_version: Option<String>,
         im_a_teapot: Option<bool>,
@@ -407,6 +409,7 @@ impl Manifest {
             patch,
             workspace,
             unstable_features,
+            language,
             edition,
             rust_version,
             original,

@@ -109,6 +109,30 @@ pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
 
+/// The language a package is in.
+#[derive(Clone, Copy, Debug)]
+pub enum Language {
+    /// Rust language
+    Rust,
+    /// Lean language
+    Lean,
+}
+
+impl FromStr for Language {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Error> {
+        match s {
+            "rust" => Ok(Language::Rust),
+            "lean" => Ok(Language::Lean),
+            s => bail!(
+                "supported language values are `rust` or `lean`, \
+                 but `{}` is unknown",
+                s
+            ),
+        }
+    }
+}
+
 /// The edition of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {
@@ -393,6 +417,9 @@ features! {
 
     // Allow to specify per-package targets (compile kinds)
     (unstable, per_package_target, "", "reference/unstable.html#per-package-target"),
+
+    // Enable lean build support
+    (unstable, lean_language, "", "reference/unstable.html#lean-language"),
 }
 
 const PUBLISH_LOCKFILE_REMOVED: &str = "The publish-lockfile key in Cargo.toml \

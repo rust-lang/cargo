@@ -1,5 +1,5 @@
 pub use self::dependency::Dependency;
-pub use self::features::{CliUnstable, Edition, Feature, Features};
+pub use self::features::{CliUnstable, Edition, Feature, Features, Language};
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{Manifest, Target, TargetKind};
 pub use self::package::{Package, PackageSet};
