@@ -15,7 +15,8 @@ dashes (\fB\-\-\fR) are passed to the test binaries and thus to \fIlibtest\fR (r
 built in unit\-test and micro\-benchmarking framework).  If you're passing
 arguments to both Cargo and the binary, the ones after \fB\-\-\fR go to the binary,
 the ones before go to Cargo.  For details about libtest's arguments see the
-output of \fBcargo test \-\- \-\-help\fR\&.
+output of \fBcargo test \-\- \-\-help\fR and check out the rustc book's chapter on
+how tests work at <https://doc.rust\-lang.org/rustc/tests/index.html>\&.
 .sp
 As an example, this will filter for tests with \fBfoo\fR in their name and run them
 on 3 threads in parallel:

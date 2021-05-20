@@ -125,7 +125,7 @@ compatibility). If Cargo used all of the dependencies' `Cargo.lock` files,
 then multiple copies of the library could be used, and perhaps even a version
 conflict.
 
-In other words, libraries specify semver requirements for their dependencies but
+In other words, libraries specify SemVer requirements for their dependencies but
 cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
 
@@ -165,7 +165,7 @@ are often surprised when Cargo attempts to fetch resources from the network, and
 hence the request for Cargo to work offline comes up frequently.
 
 Cargo, at its heart, will not attempt to access the network unless told to do
-so. That is, if no crates comes from crates.io, a git repository, or some other
+so. That is, if no crates come from crates.io, a git repository, or some other
 network location, Cargo will never attempt to make a network connection. As a
 result, if Cargo attempts to touch the network, then it's because it needs to
 fetch a required resource.
@@ -204,7 +204,7 @@ replacement][replace].
 ### Why is Cargo rebuilding my code?
 
 Cargo is responsible for incrementally compiling crates in your project. This
-means that if you type `cargo build` twice the second one shouldn't rebuild you
+means that if you type `cargo build` twice the second one shouldn't rebuild your
 crates.io dependencies, for example. Nevertheless bugs arise and Cargo can
 sometimes rebuild code when you're not expecting it!
 
@@ -245,7 +245,7 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
   uses timestamps on files to govern whether rebuilding needs to happen, but if
   you're using a nonstandard filesystem it may be affecting the timestamps
   somehow (e.g. truncating them, causing them to drift, etc). In this scenario,
-  feel free to open an issue and we can see if we can accomodate the filesystem
+  feel free to open an issue and we can see if we can accommodate the filesystem
   somehow.
 
 * A concurrent build process is either deleting artifacts or modifying files.

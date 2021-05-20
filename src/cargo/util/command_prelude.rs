@@ -485,7 +485,6 @@ pub trait ArgMatchesExt {
         if build_config.future_incompat_report {
             config
                 .cli_unstable()
-                // TODO: Tracking issue
                 .fail_if_stable_opt("--future-incompat-report", 9241)?;
 
             if !config.cli_unstable().future_incompat_report {

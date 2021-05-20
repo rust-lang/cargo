@@ -96,7 +96,7 @@ impl<'cfg> Progress<'cfg> {
         Self::with_style(name, ProgressStyle::Percentage, cfg)
     }
 
-    pub fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
+    pub fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         let s = match &mut self.state {
             Some(s) => s,
             None => return Ok(()),
@@ -118,7 +118,7 @@ impl<'cfg> Progress<'cfg> {
             return Ok(());
         }
 
-        s.tick(cur, max, "")
+        s.tick(cur, max, msg)
     }
 
     pub fn tick_now(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {

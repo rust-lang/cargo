@@ -3,6 +3,7 @@ use std::time::Duration;
 
 pub use self::canonical_url::CanonicalUrl;
 pub use self::config::{homedir, Config, ConfigValue};
+pub(crate) use self::counter::MetricsCounter;
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
 pub use self::errors::{internal, CargoResult, CliResult, Test};
@@ -29,6 +30,7 @@ pub use self::workspace::{
 mod canonical_url;
 pub mod command_prelude;
 pub mod config;
+mod counter;
 pub mod cpu;
 mod dependency_queue;
 pub mod diagnostic_server;

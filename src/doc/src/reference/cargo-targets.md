@@ -94,11 +94,13 @@ There are two styles of tests within a Cargo project:
   access to its *public* API.
 
 Tests are run with the [`cargo test`] command. By default, Cargo and `rustc`
-use the libtest harness which is responsible for collecting functions
+use the [libtest harness] which is responsible for collecting functions
 annotated with the [`#[test]` attribute][test-attribute] and executing them in
 parallel, reporting the success and failure of each test. See [the `harness`
 field](#the-harness-field) if you want to use a different harness or test
 strategy.
+
+[libtest harness]: ../../rustc/tests/index.html
 
 #### Integration tests
 

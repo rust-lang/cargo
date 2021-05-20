@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.54.0"
+version = "0.55.0"
 edition = "2018"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
@@ -61,7 +61,7 @@ tempfile = "3.0"
 termcolor = "1.1"
 toml = "0.5.7"
 unicode-xid = "0.2.0"
-url = "2.0"
+url = "2.2.2"
 walkdir = "2.2"
 clap = "2.31.2"
 unicode-width = "0.1.5"

@@ -62,7 +62,7 @@
 //!
 //! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
 //!    optional value if you want.
-//! 2. Update the [`CliUnstable::add`] function to parse the flag.
+//! 2. Update the [`CliUnstable::add`][CliUnstable] function to parse the flag.
 //! 3. Wherever the new functionality is implemented, call
 //!    [`Config::cli_unstable`][crate::util::config::Config::cli_unstable] to
 //!    get an instance of `CliUnstable` and check if the option has been
@@ -81,8 +81,8 @@
 //!      macro below.
 //!   2. `-Z unstable-options`: Find the call to `fail_if_stable_opt` and
 //!      remove it. Be sure to update the man pages if necessary.
-//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`] to call
-//!      `stabilized_warn` or `stabilized_err` and remove the field from
+//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`][CliUnstable]
+//!      to call `stabilized_warn` or `stabilized_err` and remove the field from
 //!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
 //!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove

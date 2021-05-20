@@ -3,7 +3,7 @@
 
 use crate::core::GitReference;
 use crate::util::errors::CargoResult;
-use crate::util::{network, Config, IntoUrl, Progress};
+use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
@@ -15,6 +15,7 @@ use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 use url::Url;
 
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
@@ -677,7 +678,7 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> Ca
     let mut pb = Progress::new("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.progress(|_, cur, max| {
-        drop(pb.tick(cur, max));
+        drop(pb.tick(cur, max, ""));
     });
     debug!("doing reset");
     repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
@@ -694,12 +695,49 @@ pub fn with_fetch_options(
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
+            let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
+            // We choose `N=10` here to make a `300ms * 10slots ~= 3000ms`
+            // sliding window for tracking the data transfer rate (in bytes/s).
+            let mut counter = MetricsCounter::<10>::new(0, last_update);
             rcb.credentials(f);
-
             rcb.transfer_progress(|stats| {
+                let indexed_deltas = stats.indexed_deltas();
+                let msg = if indexed_deltas > 0 {
+                    // Resolving deltas.
+                    format!(
+                        ", ({}/{}) resolving deltas",
+                        indexed_deltas,
+                        stats.total_deltas()
+                    )
+                } else {
+                    // Receiving objects.
+                    //
+                    // # Caveat
+                    //
+                    // Progress bar relies on git2 calling `transfer_progress`
+                    // to update its transfer rate, but we cannot guarantee a
+                    // periodic call of that callback. Thus if we don't receive
+                    // any data for, say, 10 seconds, the rate will get stuck
+                    // and never go down to 0B/s.
+                    // In the future, we need to find away to update the rate
+                    // even when the callback is not called.
+                    let now = Instant::now();
+                    // Scrape a `received_bytes` to the counter every 300ms.
+                    if now - last_update > Duration::from_millis(300) {
+                        counter.add(stats.received_bytes(), now);
+                        last_update = now;
+                    }
+                    fn format_bytes(bytes: f32) -> (&'static str, f32) {
+                        static UNITS: [&str; 5] = ["", "Ki", "Mi", "Gi", "Ti"];
+                        let i = (bytes.log2() / 10.0).min(4.0) as usize;
+                        (UNITS[i], bytes / 1024_f32.powi(i as i32))
+                    }
+                    let (unit, rate) = format_bytes(counter.rate());
+                    format!(", {:.2}{}B/s", rate, unit)
+                };
                 progress
-                    .tick(stats.indexed_objects(), stats.total_objects())
+                    .tick(stats.indexed_objects(), stats.total_objects(), &msg)
                     .is_ok()
             });
 

@@ -70,3 +70,35 @@ This is a very high-level overview of the Cargo codebase.
 
 * [`crates`](https://github.com/rust-lang/cargo/tree/master/crates)
   — A collection of independent crates used by Cargo.
+
+## Extra crates
+
+Some functionality is split off into separate crates, usually in the
+[`crates`](https://github.com/rust-lang/cargo/tree/master/crates) directory.
+
+* [`cargo-platform`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-platform)
+  — This library handles parsing `cfg` expressions.
+* [`cargo-test-macro`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-macro)
+  — This is a proc-macro used by the test suite to define tests. More
+  information can be found at [`cargo_test`
+  attribute](../tests/writing.md#cargo_test-attribute).
+* [`cargo-test-support`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-support)
+  — This contains a variety of code to support [writing
+  tests](../tests/writing.md).
+* [`cargo-util`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-util)
+  — This contains general utility code that is shared between cargo and the
+  testsuite.
+* [`crates-io`](https://github.com/rust-lang/cargo/tree/master/crates/crates-io)
+  — This contains code for accessing the crates.io API.
+* [`credential`](https://github.com/rust-lang/cargo/tree/master/crates/credential)
+  — This subdirectory contains several packages for implementing the
+  experimental
+  [credential-process](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process)
+  feature.
+* [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman) —
+  This is a utility for generating cargo's man pages. See [Building the man
+  pages](https://github.com/rust-lang/cargo/tree/master/src/doc#building-the-man-pages)
+  for more information.
+* [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
+  — This is a dedicated package that defines tests for the [dependency
+  resolver](../architecture/packages.md#resolver).

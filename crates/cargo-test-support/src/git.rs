@@ -132,11 +132,12 @@ pub fn init(path: &Path) -> git2::Repository {
 }
 
 fn default_search_path() {
-    use crate::paths::GLOBAL_ROOT;
+    use crate::paths::global_root;
     use git2::{opts::set_search_path, ConfigLevel};
+
     static INIT: Once = Once::new();
     INIT.call_once(|| unsafe {
-        let path = GLOBAL_ROOT.join("blank_git_search_path");
+        let path = global_root().join("blank_git_search_path");
         t!(set_search_path(ConfigLevel::System, &path));
         t!(set_search_path(ConfigLevel::Global, &path));
         t!(set_search_path(ConfigLevel::XDG, &path));
