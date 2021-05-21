@@ -576,7 +576,7 @@ unstable_cli_options!(
     print_im_a_teapot: bool= (HIDDEN),
 
     // All other unstable features.
-    // Please keep this list lexiographically ordered.
+    // Please keep this list lexicographically ordered.
     advanced_env: bool = (HIDDEN),
     alternative_branches: bool = ("Enable the `branch` key for alternative registries in `.cargo/config.toml` files"),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
