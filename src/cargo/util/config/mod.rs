@@ -1347,7 +1347,7 @@ impl Config {
     /// given `registry`'s name.
     ///
     /// [`GitReference::DefaultBranch`] is used by default when the key is not
-    /// present or if the configuration read yielded an error.
+    /// present.
     pub fn get_registry_branch(&self, registry: &str) -> CargoResult<GitReference> {
         Ok(self
             .get_string(&format!("registries.{}.branch", registry))?
