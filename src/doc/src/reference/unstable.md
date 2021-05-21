@@ -1311,12 +1311,12 @@ current configuration.
 The primary use case is to run `cargo rustc --print=cfg` to get config values
 for the appropriate target and influenced by any other RUSTFLAGS.
 
-### `alternative-branches`
+### `registry-branches`
 * Original Issue: [#7329](https://github.com/rust-lang/cargo/issues/7329)
 * Original Pull Request: [#X](https://github.com/rust-lang/cargo/pull/X)
 * Tracking Issue: [#Y](https://github.com/rust-lang/cargo/issues/Y)
 
-The new `-Z alternative-branches` flag enables the use of `branch` keys for
+The new `-Z registry-branches` flag enables the use of `branch` keys for
 alternative registries in cargo configuration files (`.cargo/config.toml`).
 These allow to fetch and use only a specific branch of a remote registry's
 index. Not using the flag or omitting the key results in using the default

@@ -384,10 +384,10 @@ pub fn registry_configuration(
             };
             (
                 index,
-                if config.cli_unstable().alternative_branches {
+                if config.cli_unstable().registry_branches {
                     config
                         .cli_unstable()
-                        .fail_if_stable_opt("alternative-branches", 0)?;
+                        .fail_if_stable_opt("registry-branches", 0)?;
                     config.get_registry_branch(registry)?
                 } else {
                     GitReference::DefaultBranch
