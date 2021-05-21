@@ -67,7 +67,7 @@ incremental = true            # whether or not to enable incremental compilation
 dep-info-basedir = "…"        # path for the base directory for targets in depfiles
 pipelining = true             # rustc pipelining
 
-[cargo-doc]
+[doc]
 browser = "chromium"          # browser to use with `cargo doc --open`,
                               # overrides the `BROWSER` environment variable
 
@@ -400,11 +400,11 @@ directory.
 Controls whether or not build pipelining is used. This allows Cargo to
 schedule overlapping invocations of `rustc` in parallel when possible.
 
-#### `[cargo-doc]`
+#### `[doc]`
 
-The `[cargo-doc]` table defines options for the [`cargo doc`] command.
+The `[doc]` table defines options for the [`cargo doc`] command.
 
-##### `cargo-doc.browser`
+##### `doc.browser`
 
 This option sets the browser to be used by [`cargo doc`], overriding the
 `BROWSER` environment variable when opening documentation with the `--open`
