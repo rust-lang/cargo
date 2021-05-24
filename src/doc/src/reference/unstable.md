@@ -137,11 +137,13 @@ Cargo _or_ Rust features can be used.
 * Tracking Issue: [#9426](https://github.com/rust-lang/cargo/issues/9426)
 * Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
 
-The `-Z extra-link-arg` flag makes the following two instructions available
+The `-Z extra-link-arg` flag makes the following instructions available
 in build scripts:
 
 * [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
   flags to a linker for binaries.
+* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) – Passes custom
+  flags to a linker for the binary `BIN`.
 * [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
   linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
 
@@ -151,6 +153,16 @@ in build scripts:
 The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 binary target. Its usage is highly platform specific. It is useful
+to set a linker script or other linker options.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-link-arg-bin"></a>
+#### `cargo:rustc-link-arg-bin=BIN=FLAG`
+
+The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building
+the binary target with name `BIN`. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
 
 [link-arg]: ../../rustc/codegen-options/index.md#link-arg
