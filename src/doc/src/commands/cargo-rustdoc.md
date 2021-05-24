@@ -38,7 +38,9 @@ or the `build.rustdocflags` [config value](../reference/config.html).
 
 <dt class="option-term" id="option-cargo-rustdoc---open"><a class="option-anchor" href="#option-cargo-rustdoc---open"></a><code>--open</code></dt>
 <dd class="option-desc">Open the docs in a browser after building them. This will use your default
-browser unless you define another one in the <code>BROWSER</code> environment variable.</dd>
+browser unless you define another one in the <code>BROWSER</code> environment variable
+or use the <a href="../reference/config.html#docbrowser"><code>doc.browser</code></a> configuration
+option.</dd>
 
 
 </dl>
