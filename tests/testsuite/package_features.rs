@@ -65,13 +65,11 @@ fn virtual_no_default_features() {
         .run();
 
     p.cargo("check --features foo")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: foo")
         .run();
 
     p.cargo("check --features a/dep1,b/f1,b/f2,f2")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2")
         .run();
@@ -299,19 +297,16 @@ fn feature_default_resolver() {
         .build();
 
     p.cargo("check --features testt")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] Package `a[..]` does not have the feature `testt`")
         .run();
 
     p.cargo("run --features test")
-        .masquerade_as_nightly_cargo()
         .with_status(0)
         .with_stdout("feature set")
         .run();
 
     p.cargo("run --features a/test")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] package `a[..]` does not have a dependency named `a`")
         .run();
