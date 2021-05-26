@@ -373,7 +373,7 @@ impl<'a> RegistryDependency<'a> {
             default
         };
 
-        let mut dep = Dependency::parse_no_deprecated(package.unwrap_or(name), Some(&req), id)?;
+        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
         if package.is_some() {
             dep.set_explicit_name_in_toml(name);
         }

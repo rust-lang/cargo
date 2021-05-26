@@ -180,11 +180,7 @@ fn install_one(
                 } else {
                     None
                 };
-                Some(Dependency::parse_no_deprecated(
-                    krate,
-                    vers.as_deref(),
-                    source_id,
-                )?)
+                Some(Dependency::parse(krate, vers.as_deref(), source_id)?)
             } else {
                 None
             }

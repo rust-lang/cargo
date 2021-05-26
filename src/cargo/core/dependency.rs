@@ -9,7 +9,7 @@ use std::rc::Rc;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Config, OptVersionReq};
+use crate::util::OptVersionReq;
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -97,58 +97,6 @@ pub enum DepKind {
     Build,
 }
 
-fn parse_req_with_deprecated(
-    name: InternedString,
-    req: &str,
-    extra: Option<(PackageId, &Config)>,
-) -> CargoResult<VersionReq> {
-    let err = match VersionReq::parse(req) {
-        Ok(req) => return Ok(req),
-        Err(err) => err,
-    };
-
-    let (inside, config) = match extra {
-        Some(pair) => pair,
-        None => return Err(err.into()),
-    };
-
-    let corrected = match req {
-        ".*" => "*",
-        "0.1.0." => "0.1.0",
-        "0.3.1.3" => "0.3.13",
-        "0.2*" => "0.2.*",
-        "*.0" => "*",
-        _ => {
-            return Err(anyhow::Error::new(err).context(format!(
-                "failed to parse the version requirement `{}` for dependency `{}`",
-                req, name,
-            )));
-        }
-    };
-
-    let msg = format!(
-        "\
-parsed version requirement `{}` is no longer valid
-
-Previous versions of Cargo accepted this malformed requirement,
-but it is being deprecated. This was found when parsing the manifest
-of {} {}, and the correct version requirement is `{}`.
-
-This will soon become a hard error, so it's either recommended to
-update to a fixed version or contact the upstream maintainer about
-this warning.
-",
-        req,
-        inside.name(),
-        inside.version(),
-        corrected,
-    );
-
-    config.shell().warn(&msg)?;
-
-    Ok(VersionReq::parse(corrected).unwrap())
-}
-
 impl ser::Serialize for DepKind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
@@ -169,35 +117,18 @@ impl Dependency {
         name: impl Into<InternedString>,
         version: Option<&str>,
         source_id: SourceId,
-        inside: PackageId,
-        config: &Config,
-    ) -> CargoResult<Dependency> {
-        let name = name.into();
-        let arg = Some((inside, config));
-        let (specified_req, version_req) = match version {
-            Some(v) => (true, parse_req_with_deprecated(name, v, arg)?.into()),
-            None => (false, OptVersionReq::Any),
-        };
-
-        let mut ret = Dependency::new_override(name, source_id);
-        {
-            let ptr = Rc::make_mut(&mut ret.inner);
-            ptr.only_match_name = false;
-            ptr.req = version_req;
-            ptr.specified_req = specified_req;
-        }
-        Ok(ret)
-    }
-
-    /// Attempt to create a `Dependency` from an entry in the manifest.
-    pub fn parse_no_deprecated(
-        name: impl Into<InternedString>,
-        version: Option<&str>,
-        source_id: SourceId,
     ) -> CargoResult<Dependency> {
         let name = name.into();
         let (specified_req, version_req) = match version {
-            Some(v) => (true, parse_req_with_deprecated(name, v, None)?.into()),
+            Some(v) => match VersionReq::parse(v) {
+                Ok(req) => (true, OptVersionReq::Req(req)),
+                Err(err) => {
+                    return Err(anyhow::Error::new(err).context(format!(
+                        "failed to parse the version requirement `{}` for dependency `{}`",
+                        v, name,
+                    )))
+                }
+            },
             None => (false, OptVersionReq::Any),
         };
 
