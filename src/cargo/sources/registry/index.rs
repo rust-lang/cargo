@@ -70,11 +70,11 @@ use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_V_MAX};
 use crate::util::interning::InternedString;
-use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
+use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
 use cargo_util::paths;
 use log::{debug, info};
-use semver::{Version, VersionReq};
+use semver::Version;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
@@ -264,7 +264,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
     /// Returns the hash listed for a specified `PackageId`.
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<&str> {
-        let req = VersionReq::exact(pkg.version());
+        let req = OptVersionReq::exact(pkg.version());
         let summary = self
             .summaries(pkg.name(), &req, load)?
             .next()
@@ -285,7 +285,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn summaries<'a, 'b>(
         &'a mut self,
         name: InternedString,
-        req: &'b VersionReq,
+        req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
     ) -> CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>
     where
@@ -489,7 +489,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     pub fn is_yanked(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<bool> {
-        let req = VersionReq::exact(pkg.version());
+        let req = OptVersionReq::exact(pkg.version());
         let found = self
             .summaries(pkg.name(), &req, load)?
             .any(|summary| summary.yanked);

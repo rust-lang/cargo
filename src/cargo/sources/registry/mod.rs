@@ -168,7 +168,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context as _;
 use flate2::read::GzDecoder;
 use log::debug;
-use semver::{Version, VersionReq};
+use semver::Version;
 use serde::Deserialize;
 use tar::Archive;
 
@@ -179,7 +179,7 @@ use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
-use crate::util::{restricted_names, CargoResult, Config, Filesystem};
+use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
@@ -373,7 +373,7 @@ impl<'a> RegistryDependency<'a> {
             default
         };
 
-        let mut dep = Dependency::parse_no_deprecated(package.unwrap_or(name), Some(&req), id)?;
+        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
         if package.is_some() {
             dep.set_explicit_name_in_toml(name);
         }
@@ -671,7 +671,7 @@ impl<'cfg> RegistrySource<'cfg> {
 
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
-        let req = VersionReq::exact(package.version());
+        let req = OptVersionReq::exact(package.version());
         let summary_with_cksum = self
             .index
             .summaries(package.name(), &req, &mut *self.ops)?

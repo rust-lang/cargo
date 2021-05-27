@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
 use cargo_util::{paths, ProcessBuilder};
-use semver::Version;
 
 use super::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
@@ -316,10 +315,7 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
-            .env(
-                "CARGO_PKG_VERSION_PRE",
-                &pre_version_component(pkg.version()),
-            )
+            .env("CARGO_PKG_VERSION_PRE", pkg.version().pre.as_str())
             .env("CARGO_PKG_VERSION", &pkg.version().to_string())
             .env("CARGO_PKG_NAME", &*pkg.name())
             .env(
@@ -366,23 +362,6 @@ fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd
-}
-
-fn pre_version_component(v: &Version) -> String {
-    if v.pre.is_empty() {
-        return String::new();
-    }
-
-    let mut ret = String::new();
-
-    for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 {
-            ret.push('.')
-        };
-        ret.push_str(&x.to_string());
-    }
-
-    ret
 }
 
 fn target_runner(

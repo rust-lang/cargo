@@ -47,7 +47,7 @@ pub fn resolve_std<'cfg>(
         .iter()
         .map(|&name| {
             let source_path = SourceId::for_path(&src_path.join("library").join(name))?;
-            let dep = Dependency::parse_no_deprecated(name, None, source_path)?;
+            let dep = Dependency::parse(name, None, source_path)?;
             Ok(dep)
         })
         .collect::<CargoResult<Vec<_>>>()?;

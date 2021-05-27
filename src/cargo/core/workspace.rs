@@ -396,7 +396,6 @@ impl<'cfg> Workspace<'cfg> {
                     .map(|(name, dep)| {
                         dep.to_dependency_split(
                             name,
-                            /* pkg_id */ None,
                             source,
                             &mut nested_paths,
                             self.config,

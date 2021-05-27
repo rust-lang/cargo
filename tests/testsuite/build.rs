@@ -269,7 +269,7 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Expected dot for key `package.version`
+  unexpected end of input while parsing minor version number for key `package.version`
 ",
         )
         .run();
@@ -544,7 +544,7 @@ Caused by:
   failed to parse the version requirement `y` for dependency `crossbeam`
 
 Caused by:
-  the given version requirement is invalid
+  unexpected character 'y' while parsing major version number
 ",
         )
         .run();

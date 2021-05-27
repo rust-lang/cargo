@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
-use crate::util::Config;
+use crate::util::{Config, VersionExt};
 use anyhow::Error;
 
 use super::context::Context;
