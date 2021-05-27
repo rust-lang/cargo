@@ -537,6 +537,8 @@ fn tar(
                 header.set_entry_type(EntryType::file());
                 header.set_mode(0o644);
                 header.set_size(contents.len() as u64);
+                // use something nonzero to avoid rust-lang/cargo#9512
+                header.set_mtime(1);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
                     .with_context(|| format!("could not archive source file `{}`", rel_str))?;
