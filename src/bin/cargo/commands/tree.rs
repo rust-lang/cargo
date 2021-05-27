@@ -271,12 +271,12 @@ fn parse_edge_kinds(
                 "no-build" => result.remove(&EdgeKind::Dep(DepKind::Build)),
                 "no-dev" => result.remove(&EdgeKind::Dep(DepKind::Development)),
                 "features" => result.insert(EdgeKind::Feature),
-                k @ "normal" | k @ "build" | k @ "dev" | k @ "all" => {
+                "normal" | "build" | "dev" | "all" => {
                     bail!(
                         "`{}` dependency kind cannot be mixed with \
                             \"no-normal\", \"no-build\", or \"no-dev\" \
                             dependency kinds",
-                        k
+                        kind
                     )
                 }
                 k => return unknown(k),
