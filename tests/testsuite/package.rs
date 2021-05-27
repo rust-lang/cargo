@@ -2000,9 +2000,10 @@ fn reproducible_output() {
     let mut archive = Archive::new(decoder);
     for ent in archive.entries().unwrap() {
         let ent = ent.unwrap();
+        println!("checking {:?}", ent.path());
         let header = ent.header();
         assert_eq!(header.mode().unwrap(), 0o644);
-        assert_eq!(header.mtime().unwrap(), 0);
+        assert!(header.mtime().unwrap() != 0);
         assert_eq!(header.username().unwrap().unwrap(), "");
         assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
