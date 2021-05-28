@@ -56,6 +56,7 @@ pub fn cli() -> App {
             )
             .short("i"),
         )
+        .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         // Deprecated, use --prefix=none instead.
         .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
         // Deprecated, use --prefix=depth instead.
@@ -202,6 +203,7 @@ subtree of the package given to -p.\n\
         charset,
         format: args.value_of("format").unwrap().to_string(),
         graph_features,
+        max_display_depth: args.value_of_u32("depth")?.unwrap_or(u32::MAX),
         no_proc_macro,
     };
 

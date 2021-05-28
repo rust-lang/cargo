@@ -71,6 +71,11 @@ flag can be used to display the package's reverse dependencies only with the
 subtree of the package given to `-p`.
 {{/option}}
 
+{{#option "`--depth` _depth_" }}
+Maximum display depth of the dependency tree. A depth of 1 displays the direct
+dependencies, for example.
+{{/option}}
+
 {{#option "`--no-dedupe`" }}
 Do not de-duplicate repeated dependencies. Usually, when a package has already
 displayed its dependencies, further occurrences will not re-display its

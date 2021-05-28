@@ -1627,3 +1627,96 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 }
+
+#[cargo_test]
+fn depth_limit() {
+    let p = make_simple_proj();
+
+    p.cargo("tree --depth 0")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+[build-dependencies]
+[dev-dependencies]
+",
+        )
+        .run();
+
+    p.cargo("tree --depth 1")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree --depth 2")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+│   └── b v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // specify a package
+    p.cargo("tree -p bdep --depth 1")
+        .with_stdout(
+            "\
+bdep v1.0.0
+└── b v1.0.0
+",
+        )
+        .run();
+
+    // different prefix
+    p.cargo("tree --depth 1 --prefix depth")
+        .with_stdout(
+            "\
+0foo v0.1.0 ([..]/foo)
+1a v1.0.0
+1c v1.0.0
+1bdep v1.0.0
+1devdep v1.0.0
+",
+        )
+        .run();
+
+    // with edge-kinds
+    p.cargo("tree --depth 1 -e no-dev")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+",
+        )
+        .run();
+
+    // invert
+    p.cargo("tree --depth 1 --invert c")
+        .with_stdout(
+            "\
+c v1.0.0
+├── b v1.0.0
+└── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+}

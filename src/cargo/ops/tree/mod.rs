@@ -43,6 +43,8 @@ pub struct TreeOptions {
     pub format: String,
     /// Includes features in the tree as separate nodes.
     pub graph_features: bool,
+    /// Maximum display depth of the dependency tree.
+    pub max_display_depth: u32,
     /// Exculdes proc-macro dependencies.
     pub no_proc_macro: bool,
 }
@@ -240,6 +242,7 @@ fn print(
             symbols,
             opts.prefix,
             opts.no_dedupe,
+            opts.max_display_depth,
             opts.no_proc_macro,
             &mut visited_deps,
             &mut levels_continue,
@@ -259,6 +262,7 @@ fn print_node<'a>(
     symbols: &Symbols,
     prefix: Prefix,
     no_dedupe: bool,
+    max_display_depth: u32,
     no_proc_macro: bool,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
@@ -317,6 +321,7 @@ fn print_node<'a>(
             symbols,
             prefix,
             no_dedupe,
+            max_display_depth,
             no_proc_macro,
             visited_deps,
             levels_continue,
@@ -336,6 +341,7 @@ fn print_dependencies<'a>(
     symbols: &Symbols,
     prefix: Prefix,
     no_dedupe: bool,
+    max_display_depth: u32,
     no_proc_macro: bool,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
@@ -383,20 +389,23 @@ fn print_dependencies<'a>(
         .peekable();
 
     while let Some(dependency) = it.next() {
-        levels_continue.push(it.peek().is_some());
-        print_node(
-            config,
-            graph,
-            *dependency,
-            format,
-            symbols,
-            prefix,
-            no_dedupe,
-            no_proc_macro,
-            visited_deps,
-            levels_continue,
-            print_stack,
-        );
-        levels_continue.pop();
+        if levels_continue.len() + 1 <= max_display_depth as usize {
+            levels_continue.push(it.peek().is_some());
+            print_node(
+                config,
+                graph,
+                *dependency,
+                format,
+                symbols,
+                prefix,
+                no_dedupe,
+                max_display_depth,
+                no_proc_macro,
+                visited_deps,
+                levels_continue,
+                print_stack,
+            );
+            levels_continue.pop();
+        }
     }
 }
