@@ -469,6 +469,24 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
+
+    // no-proc-macro
+    p.cargo("tree --target=all -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── hostdep v1.0.0
+└── targetdep v1.0.0
+[build-dependencies]
+├── build_host_dep v1.0.0
+│   ├── hostdep v1.0.0
+│   └── targetdep v1.0.0
+└── build_target_dep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -476,6 +494,10 @@ fn dep_kinds() {
     Package::new("inner-devdep", "1.0.0").publish();
     Package::new("inner-builddep", "1.0.0").publish();
     Package::new("inner-normal", "1.0.0").publish();
+    Package::new("inner-pm", "1.0.0").proc_macro(true).publish();
+    Package::new("inner-buildpm", "1.0.0")
+        .proc_macro(true)
+        .publish();
     Package::new("normaldep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dev_dep("inner-devdep", "1.0")
@@ -483,8 +505,10 @@ fn dep_kinds() {
         .publish();
     Package::new("devdep", "1.0.0")
         .dep("inner-normal", "1.0")
+        .dep("inner-pm", "1.0")
         .dev_dep("inner-devdep", "1.0")
         .build_dep("inner-builddep", "1.0")
+        .build_dep("inner-buildpm", "1.0")
         .publish();
     Package::new("builddep", "1.0.0")
         .dep("inner-normal", "1.0")
@@ -527,9 +551,11 @@ foo v0.1.0 ([..]/foo)
     └── inner-builddep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
-    └── inner-normal v1.0.0
+    ├── inner-normal v1.0.0
+    └── inner-pm v1.0.0 (proc-macro)
     [build-dependencies]
-    └── inner-builddep v1.0.0
+    ├── inner-builddep v1.0.0
+    └── inner-buildpm v1.0.0 (proc-macro)
 ",
         )
         .run();
@@ -562,6 +588,23 @@ foo v0.1.0 ([..]/foo)
         .run();
 
     p.cargo("tree -e dev,build")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+[build-dependencies]
+└── builddep v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+    [build-dependencies]
+    ├── inner-builddep v1.0.0
+    └── inner-buildpm v1.0.0 (proc-macro)
+",
+        )
+        .run();
+
+    p.cargo("tree -e dev,build,no-proc-macro")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -1256,8 +1299,29 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
+    // Old behavior + no-proc-macro
+    p.cargo("tree -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── somedep v1.0.0
+    └── optdep v1.0.0
+",
+        )
+        .run();
+
     // -p
     p.cargo("tree -p somedep")
+        .with_stdout(
+            "\
+somedep v1.0.0
+└── optdep v1.0.0
+",
+        )
+        .run();
+
+    // -p -e no-proc-macro
+    p.cargo("tree -p somedep -e no-proc-macro")
         .with_stdout(
             "\
 somedep v1.0.0
@@ -1278,6 +1342,16 @@ somedep v1.0.0
         )
         .run();
 
+    // invert + no-proc-macro
+    p.cargo("tree -i somedep -e no-proc-macro")
+        .with_stdout(
+            "\
+somedep v1.0.0
+└── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+
     // New behavior.
     switch_to_resolver_2(&p);
 
@@ -1289,6 +1363,15 @@ foo v0.1.0 ([..]/foo)
 ├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
+└── somedep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
 └── somedep v1.0.0
 ",
         )
@@ -1314,6 +1397,17 @@ somedep v1.0.0
 somedep v1.0.0
 └── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+
+    p.cargo("tree -i somedep -e no-proc-macro")
+        .with_stdout(
+            "\
+somedep v1.0.0
+└── foo v0.1.0 ([..]/foo)
+
+somedep v1.0.0
 ",
         )
         .run();
@@ -1475,6 +1569,60 @@ a v0.1.0 ([..]/foo/a)
             "\
 b v0.1.0 ([..]/foo/b)
 └── somedep v1.0.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unknown_edge_kind() {
+    let p = project()
+        .file("Cargo.toml", "")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e unknown")
+        .with_stderr(
+            "\
+[ERROR] unknown edge kind `unknown`, valid values are \
+\"normal\", \"build\", \"dev\", \
+\"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
+\"features\", or \"all\"
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn mixed_no_edge_kinds() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e no-build,normal")
+        .with_stderr(
+            "\
+[ERROR] `normal` dependency kind cannot be mixed with \
+\"no-normal\", \"no-build\", or \"no-dev\" dependency kinds
+",
+        )
+        .with_status(101)
+        .run();
+
+    // `no-proc-macro` can be mixed with others
+    p.cargo("tree -e no-proc-macro,normal")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
