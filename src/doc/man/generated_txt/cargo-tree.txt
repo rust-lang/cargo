@@ -103,8 +103,10 @@ OPTIONS
 
            o  no-dev — Do not include development dependencies.
 
-           The no- prefixed options cannot be mixed with the other dependency
-           kinds.
+           o  no-proc-macro — Do not include procedural macro dependencies.
+
+           The normal, build, dev, and all dependency kinds cannot be mixed
+           with no-normal, no-build, or no-dev dependency kinds.
 
            The default is normal,build,dev.
 

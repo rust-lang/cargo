@@ -107,8 +107,10 @@ The dependency kinds to display. Takes a comma separated list of values:
 - `no-normal` — Do not include normal dependencies.
 - `no-build` — Do not include build dependencies.
 - `no-dev` — Do not include development dependencies.
+- `no-proc-macro` — Do not include procedural macro dependencies.
 
-The `no-` prefixed options cannot be mixed with the other dependency kinds.
+The `normal`, `build`, `dev`, and `all` dependency kinds cannot be mixed with
+`no-normal`, `no-build`, or `no-dev` dependency kinds.
 
 The default is `normal,build,dev`.
 {{/option}}

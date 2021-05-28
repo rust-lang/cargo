@@ -8,7 +8,7 @@ use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Wor
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
-use crate::util::{Config, Filesystem, Rustc, ToSemver};
+use crate::util::{Config, Filesystem, Rustc, ToSemver, VersionReqExt};
 use crate::{drop_println, ops};
 
 use anyhow::{bail, format_err, Context as _};
@@ -180,11 +180,7 @@ fn install_one(
                 } else {
                     None
                 };
-                Some(Dependency::parse_no_deprecated(
-                    krate,
-                    vers.as_deref(),
-                    source_id,
-                )?)
+                Some(Dependency::parse(krate, vers.as_deref(), source_id)?)
             } else {
                 None
             }

@@ -595,7 +595,7 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     //
     // This assumes that the first segment is the important bit ("nightly",
     // "beta", "dev", etc.). Skip other parts like the `.3` in `-beta.3`.
-    vers.pre[0].hash(hasher);
+    vers.pre.split('.').next().hash(hasher);
     // Keep "host" since some people switch hosts to implicitly change
     // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
     // to consider hashing `unit.kind.short_name()` instead.

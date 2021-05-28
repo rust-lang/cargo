@@ -21,12 +21,12 @@ system:
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
   compiler instead. See [`build.rustc`] to set via config.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
-  specified wrapper instead, passing as its commandline arguments the rustc
+  specified wrapper instead, passing as its command-line arguments the rustc
   invocation, with the first argument being `rustc`. Useful to set up a build
   cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
 * `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will
   execute this specified wrapper instead for workspace members only, passing
-  as its commandline arguments the rustc invocation, with the first argument
+  as its command-line arguments the rustc invocation, with the first argument
   being `rustc`. It affects the filename hash so that artifacts produced by
   the wrapper are cached separately. See [`build.rustc-workspace-wrapper`]
   to set via config.
@@ -52,7 +52,7 @@ system:
   detail.
 * `TERM` — If this is set to `dumb`, it disables the progress bar.
 * `BROWSER` — The web browser to execute to open documentation with [`cargo
-  doc`]'s' `--open` flag.
+  doc`]'s' `--open` flag, see [`doc.browser`] for more details.
 * `RUSTFMT` — Instead of running `rustfmt`,
   [`cargo fmt`](https://github.com/rust-lang/rustfmt) will execute this specified
   `rustfmt` instance instead.
@@ -134,6 +134,7 @@ supported environment variables are:
 [`build.incremental`]: config.md#buildincremental
 [`build.dep-info-basedir`]: config.md#builddep-info-basedir
 [`build.pipelining`]: config.md#buildpipelining
+[`doc.browser`]: config.md#docbrowser
 [`cargo-new.name`]: config.md#cargo-newname
 [`cargo-new.email`]: config.md#cargo-newemail
 [`cargo-new.vcs`]: config.md#cargo-newvcs
@@ -316,7 +317,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `TARGET` — the target triple that is being compiled for. Native code should be
              compiled for this triple. See the [Target Triple] description
              for more information.
-* `HOST` — the host triple of the rust compiler.
+* `HOST` — the host triple of the Rust compiler.
 * `NUM_JOBS` — the parallelism specified as the top-level parallelism. This can
                be useful to pass a `-j` parameter to a system like `make`. Note
                that care should be taken when interpreting this environment

@@ -34,7 +34,9 @@ or the `build.rustdocflags` [config value](../reference/config.html).
 
 {{#option "`--open`" }}
 Open the docs in a browser after building them. This will use your default
-browser unless you define another one in the `BROWSER` environment variable.
+browser unless you define another one in the `BROWSER` environment variable
+or use the [`doc.browser`](../reference/config.html#docbrowser) configuration
+option.
 {{/option}}
 
 {{/options}}

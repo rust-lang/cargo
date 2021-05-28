@@ -15,7 +15,9 @@ OPTIONS
        --open
            Open the docs in a browser after building them. This will use your
            default browser unless you define another one in the BROWSER
-           environment variable.
+           environment variable or use the doc.browser
+           <https://doc.rust-lang.org/cargo/reference/config.html#docbrowser>
+           configuration option.
 
        --no-deps
            Do not build documentation for dependencies.

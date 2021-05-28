@@ -135,7 +135,12 @@ kind given, then it will automatically include the other dependency kinds.
 \h'-04'\(bu\h'+02'\fBno\-dev\fR \[em] Do not include development dependencies.
 .RE
 .sp
-The \fBno\-\fR prefixed options cannot be mixed with the other dependency kinds.
+.RS 4
+\h'-04'\(bu\h'+02'\fBno\-proc\-macro\fR \[em] Do not include procedural macro dependencies.
+.RE
+.sp
+The \fBnormal\fR, \fBbuild\fR, \fBdev\fR, and \fBall\fR dependency kinds cannot be mixed with
+\fBno\-normal\fR, \fBno\-build\fR, or \fBno\-dev\fR dependency kinds.
 .sp
 The default is \fBnormal,build,dev\fR\&.
 .RE

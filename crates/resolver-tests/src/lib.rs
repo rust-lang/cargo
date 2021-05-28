@@ -506,7 +506,7 @@ pub trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), registry_loc()).unwrap()
+        Dependency::parse(self, Some("1.0.0"), registry_loc()).unwrap()
     }
 }
 
@@ -626,7 +626,7 @@ pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
+    Dependency::parse(name, Some(req), registry_loc()).unwrap()
 }
 pub fn dep_req_kind(name: &str, req: &str, kind: DepKind, public: bool) -> Dependency {
     let mut dep = dep_req(name, req);
@@ -639,7 +639,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.into_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
+    Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
 }
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     dep(name).set_kind(kind).clone()

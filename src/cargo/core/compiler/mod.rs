@@ -62,29 +62,27 @@ use cargo_util::{paths, ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
-#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub enum LinkType {
+    All,
     Cdylib,
     Bin,
+    SingleBin(String),
     Test,
     Bench,
     Example,
 }
 
-impl From<&super::Target> for Option<LinkType> {
-    fn from(value: &super::Target) -> Self {
-        if value.is_cdylib() {
-            Some(LinkType::Cdylib)
-        } else if value.is_bin() {
-            Some(LinkType::Bin)
-        } else if value.is_test() {
-            Some(LinkType::Test)
-        } else if value.is_bench() {
-            Some(LinkType::Bench)
-        } else if value.is_exe_example() {
-            Some(LinkType::Example)
-        } else {
-            None
+impl LinkType {
+    pub fn applies_to(&self, target: &Target) -> bool {
+        match self {
+            LinkType::All => true,
+            LinkType::Cdylib => target.is_cdylib(),
+            LinkType::Bin => target.is_bin(),
+            LinkType::SingleBin(name) => target.is_bin() && target.name() == name,
+            LinkType::Test => target.is_test(),
+            LinkType::Bench => target.is_bench(),
+            LinkType::Example => target.is_exe_example(),
         }
     }
 }
@@ -227,7 +225,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
-    let link_type = (&unit.target).into();
 
     let dep_info_name = if cx.files().use_extra_filename(unit) {
         format!(
@@ -280,7 +277,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     &script_outputs,
                     &build_scripts,
                     pass_l_flag,
-                    link_type,
+                    &target,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
@@ -371,7 +368,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         build_script_outputs: &BuildScriptOutputs,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
-        link_type: Option<LinkType>,
+        target: &Target,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -396,11 +393,9 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 }
             }
 
-            if link_type.is_some() {
-                for (lt, arg) in &output.linker_args {
-                    if lt.is_none() || *lt == link_type {
-                        rustc.arg("-C").arg(format!("link-arg={}", arg));
-                    }
+            for (lt, arg) in &output.linker_args {
+                if lt.applies_to(&target) {
+                    rustc.arg("-C").arg(format!("link-arg={}", arg));
                 }
             }
         }

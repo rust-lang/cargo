@@ -396,7 +396,6 @@ impl<'cfg> Workspace<'cfg> {
                     .map(|(name, dep)| {
                         dep.to_dependency_split(
                             name,
-                            /* pkg_id */ None,
                             source,
                             &mut nested_paths,
                             self.config,
@@ -1224,7 +1223,10 @@ impl<'cfg> Workspace<'cfg> {
                     //   really mean anything (either the member is built or it isn't).
                     // * With `--features nonmember?/feat`, cwd_features will
                     //   handle processing it correctly.
-                    let is_member = self.members().any(|member| member.name() == *dep_name);
+                    let is_member = self.members().any(|member| {
+                        // Check if `dep_name` is member of the workspace, but isn't associated with current package.
+                        self.current_opt() != Some(member) && member.name() == *dep_name
+                    });
                     if is_member && specs.iter().any(|spec| spec.name() == *dep_name) {
                         member_specific_features
                             .entry(*dep_name)
@@ -1237,49 +1239,57 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        let ms = self.members().filter_map(|member| {
-            let member_id = member.package_id();
-            match self.current_opt() {
-                // The features passed on the command-line only apply to
-                // the "current" package (determined by the cwd).
-                Some(current) if member_id == current.package_id() => {
-                    let feats = CliFeatures {
-                        features: Rc::new(cwd_features.clone()),
-                        all_features: cli_features.all_features,
-                        uses_default_features: cli_features.uses_default_features,
-                    };
-                    Some((member, feats))
-                }
-                _ => {
-                    // Ignore members that are not enabled on the command-line.
-                    if specs.iter().any(|spec| spec.matches(member_id)) {
-                        // -p for a workspace member that is not the "current"
-                        // one.
-                        //
-                        // The odd behavior here is due to backwards
-                        // compatibility. `--features` and
-                        // `--no-default-features` used to only apply to the
-                        // "current" package. As an extension, this allows
-                        // member-name/feature-name to set member-specific
-                        // features, which should be backwards-compatible.
+        let ms: Vec<_> = self
+            .members()
+            .filter_map(|member| {
+                let member_id = member.package_id();
+                match self.current_opt() {
+                    // The features passed on the command-line only apply to
+                    // the "current" package (determined by the cwd).
+                    Some(current) if member_id == current.package_id() => {
                         let feats = CliFeatures {
-                            features: Rc::new(
-                                member_specific_features
-                                    .remove(member.name().as_str())
-                                    .unwrap_or_default(),
-                            ),
-                            uses_default_features: true,
+                            features: Rc::new(cwd_features.clone()),
                             all_features: cli_features.all_features,
+                            uses_default_features: cli_features.uses_default_features,
                         };
                         Some((member, feats))
-                    } else {
-                        // This member was not requested on the command-line, skip.
-                        None
+                    }
+                    _ => {
+                        // Ignore members that are not enabled on the command-line.
+                        if specs.iter().any(|spec| spec.matches(member_id)) {
+                            // -p for a workspace member that is not the "current"
+                            // one.
+                            //
+                            // The odd behavior here is due to backwards
+                            // compatibility. `--features` and
+                            // `--no-default-features` used to only apply to the
+                            // "current" package. As an extension, this allows
+                            // member-name/feature-name to set member-specific
+                            // features, which should be backwards-compatible.
+                            let feats = CliFeatures {
+                                features: Rc::new(
+                                    member_specific_features
+                                        .remove(member.name().as_str())
+                                        .unwrap_or_default(),
+                                ),
+                                uses_default_features: true,
+                                all_features: cli_features.all_features,
+                            };
+                            Some((member, feats))
+                        } else {
+                            // This member was not requested on the command-line, skip.
+                            None
+                        }
                     }
                 }
-            }
-        });
-        ms.collect()
+            })
+            .collect();
+
+        // If any member specific features were not removed while iterating over members
+        // some features will be ignored.
+        assert!(member_specific_features.is_empty());
+
+        ms
     }
 }
 
