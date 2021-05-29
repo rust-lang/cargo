@@ -62,11 +62,16 @@ pub struct NewOptions {
 pub enum NewProjectKind {
     Bin,
     Lib,
+    Auto,
 }
 
 impl NewProjectKind {
     fn is_bin(self) -> bool {
         self == NewProjectKind::Bin
+    }
+
+    fn is_auto(self) -> bool {
+        self == NewProjectKind::Auto
     }
 }
 
@@ -75,6 +80,7 @@ impl fmt::Display for NewProjectKind {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
+            NewProjectKind::Auto => "auto-select type",
         }
         .fmt(f)
     }
@@ -109,8 +115,8 @@ impl NewOptions {
         let kind = match (bin, lib) {
             (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
-            // default to bin
-            (_, false) => NewProjectKind::Bin,
+            (true, false) => NewProjectKind::Bin,
+            (false, false) => NewProjectKind::Auto,
         };
 
         let opts = NewOptions {
@@ -389,7 +395,26 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
     }
 }
 
-pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
+fn calculate_new_project_kind(
+    requested_kind: NewProjectKind,
+    found_files: &Vec<SourceFileInformation>,
+) -> NewProjectKind {
+    let bin_file = found_files.iter().find(|x| x.bin);
+
+    let kind_from_files = if !found_files.is_empty() && bin_file.is_none() {
+        NewProjectKind::Lib
+    } else {
+        NewProjectKind::Bin
+    };
+
+    if requested_kind.is_auto() {
+        return kind_from_files;
+    }
+
+    requested_kind
+}
+
+pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     let path = &opts.path;
     if path.exists() {
         anyhow::bail!(
@@ -399,20 +424,22 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
+    let kind = match opts.kind {
+        NewProjectKind::Bin => NewProjectKind::Bin,
+        NewProjectKind::Auto => NewProjectKind::Bin,
+        _ => NewProjectKind::Lib,
+    };
+    let is_bin = kind.is_bin();
+
     let name = get_name(path, opts)?;
-    check_name(
-        name,
-        opts.name.is_none(),
-        opts.kind.is_bin(),
-        &mut config.shell(),
-    )?;
+    check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path,
         name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
-        bin: opts.kind.is_bin(),
+        bin: is_bin,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
@@ -424,10 +451,10 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
             path.display()
         )
     })?;
-    Ok(())
+    Ok(kind)
 }
 
-pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
+pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
     if std::env::var_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
         return Err(crate::util::internal("internal error test"));
@@ -445,14 +472,34 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
+    let kind = calculate_new_project_kind(opts.kind, &src_paths_types);
+    let has_bin = kind.is_bin();
+
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
-    } else {
-        // --bin option may be ignored if lib.rs or src/lib.rs present
-        // Maybe when doing `cargo init --bin` inside a library package stub,
-        // user may mean "initialize for library, but also add binary target"
+        src_paths_types.push(plan_new_source_file(has_bin, name.to_string()));
+    } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
+        // we've found the only file and it's not the type user wants. Change the type and warn
+        let file_type = if src_paths_types[0].bin {
+            NewProjectKind::Bin.to_string()
+        } else {
+            NewProjectKind::Lib.to_string()
+        };
+        config.shell().warn(format!(
+            "file '{}' seems to be a {} file",
+            src_paths_types[0].relative_path, file_type
+        ))?;
+        src_paths_types[0].bin = has_bin
+    } else if src_paths_types.len() > 1 && !has_bin {
+        // We have found both lib and bin files and the user would like us to treat both as libs
+        anyhow::bail!(
+            "cannot have a package with \
+             multiple libraries, \
+             found both `{}` and `{}`",
+            src_paths_types[0].relative_path,
+            src_paths_types[1].relative_path
+        )
     }
-    let has_bin = src_paths_types.iter().any(|x| x.bin);
+
     check_name(name, opts.name.is_none(), has_bin, &mut config.shell())?;
 
     let mut version_control = opts.version_control;
@@ -508,7 +555,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
             path.display()
         )
     })?;
-    Ok(())
+    Ok(kind)
 }
 
 /// IgnoreList

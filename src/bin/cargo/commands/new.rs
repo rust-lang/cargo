@@ -15,7 +15,7 @@ pub fn cli() -> App {
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let opts = args.new_options(config)?;
 
-    ops::new(&opts, config)?;
+    let project_kind = ops::new(&opts, config)?;
     let path = args.value_of("path").unwrap();
     let package_name = if let Some(name) = args.value_of("name") {
         name
@@ -24,7 +24,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     config.shell().status(
         "Created",
-        format!("{} `{}` package", opts.kind, package_name),
+        format!("{} `{}` package", project_kind, package_name),
     )?;
     Ok(())
 }
