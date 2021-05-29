@@ -165,4 +165,21 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
 ",
         )
         .run();
+
+    p.change_file(
+        "build.rs",
+        r#"fn main() { println!("cargo:rustc-link-arg-bin=abc"); }"#,
+    );
+
+    p.cargo("check -Zextra-link-arg")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: invalid instruction `cargo:rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
+The instruction should have the form cargo:rustc-link-arg-bin=BIN=ARG
+",
+        )
+        .run();
 }

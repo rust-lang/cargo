@@ -599,29 +599,32 @@ impl BuildOutput {
                 }
                 "rustc-link-arg-bin" => {
                     if extra_link_arg {
-                        let parts = value.splitn(2, "=").collect::<Vec<_>>();
-                        if parts.len() == 2 {
-                            let bin_name = parts[0].to_string();
-                            if !targets
-                                .iter()
-                                .any(|target| target.is_bin() && target.name() == bin_name)
-                            {
-                                bail!(
-                                    "invalid instruction `cargo:{}` from {}\n\
-                                     The package {} does not have a bin target with the name `{}`.",
-                                    key,
-                                    whence,
-                                    pkg_descr,
-                                    bin_name
-                                );
-                            }
-                            linker_args.push((LinkType::SingleBin(bin_name), parts[1].to_string()));
-                        } else {
-                            warnings.push(format!(
-                                "cargo:{} has invalid syntax: expected `cargo:{}=BIN=ARG`",
-                                key, key
-                            ));
+                        let mut parts = value.splitn(2, '=');
+                        let bin_name = parts.next().unwrap().to_string();
+                        let arg = parts.next().ok_or_else(|| {
+                            anyhow::format_err!(
+                                "invalid instruction `cargo:{}={}` from {}\n\
+                                 The instruction should have the form cargo:{}=BIN=ARG",
+                                key,
+                                value,
+                                whence,
+                                key
+                            )
+                        })?;
+                        if !targets
+                            .iter()
+                            .any(|target| target.is_bin() && target.name() == bin_name)
+                        {
+                            bail!(
+                                "invalid instruction `cargo:{}` from {}\n\
+                                 The package {} does not have a bin target with the name `{}`.",
+                                key,
+                                whence,
+                                pkg_descr,
+                                bin_name
+                            );
                         }
+                        linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
                     } else {
                         warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
                     }
