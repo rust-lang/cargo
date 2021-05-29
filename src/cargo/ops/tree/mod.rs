@@ -371,6 +371,11 @@ fn print_dependencies<'a>(
         }
     }
 
+    // Current level exceeds maximum display depth. Skip.
+    if levels_continue.len() + 1 > max_display_depth as usize {
+        return;
+    }
+
     let mut it = deps
         .iter()
         .filter(|dep| {
@@ -389,23 +394,21 @@ fn print_dependencies<'a>(
         .peekable();
 
     while let Some(dependency) = it.next() {
-        if levels_continue.len() + 1 <= max_display_depth as usize {
-            levels_continue.push(it.peek().is_some());
-            print_node(
-                config,
-                graph,
-                *dependency,
-                format,
-                symbols,
-                prefix,
-                no_dedupe,
-                max_display_depth,
-                no_proc_macro,
-                visited_deps,
-                levels_continue,
-                print_stack,
-            );
-            levels_continue.pop();
-        }
+        levels_continue.push(it.peek().is_some());
+        print_node(
+            config,
+            graph,
+            *dependency,
+            format,
+            symbols,
+            prefix,
+            no_dedupe,
+            max_display_depth,
+            no_proc_macro,
+            visited_deps,
+            levels_continue,
+            print_stack,
+        );
+        levels_continue.pop();
     }
 }
