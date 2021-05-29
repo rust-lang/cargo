@@ -6,7 +6,7 @@ use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
 use crate::util::{internal, profile};
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use cargo_platform::Cfg;
 use cargo_util::paths;
 use std::collections::hash_map::{Entry, HashMap};
@@ -543,7 +543,7 @@ impl BuildOutput {
             let (key, value) = match (key, value) {
                 (Some(a), Some(b)) => (a, b.trim_end()),
                 // Line started with `cargo:` but didn't match `key=value`.
-                _ => anyhow::bail!("Wrong output in {}: `{}`", whence, line),
+                _ => bail!("Wrong output in {}: `{}`", whence, line),
             };
 
             // This will rewrite paths if the target directory has been moved.
@@ -552,7 +552,7 @@ impl BuildOutput {
                 script_out_dir.to_str().unwrap(),
             );
 
-            // Keep in sync with TargetConfig::new.
+            // Keep in sync with TargetConfig::parse_links_overrides.
             match key {
                 "rustc-flags" => {
                     let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
@@ -632,7 +632,7 @@ impl BuildOutput {
                         } else {
                             // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
                             // Abort with an error.
-                            anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                            bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
                                 help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,
@@ -683,7 +683,7 @@ impl BuildOutput {
                 if value.is_empty() {
                     value = match flags_iter.next() {
                         Some(v) => v,
-                        None => anyhow::bail! {
+                        None => bail! {
                             "Flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
@@ -699,7 +699,7 @@ impl BuildOutput {
                     _ => unreachable!(),
                 };
             } else {
-                anyhow::bail!(
+                bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
@@ -715,7 +715,7 @@ impl BuildOutput {
         let val = iter.next();
         match (name, val) {
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
-            _ => anyhow::bail!("Variable rustc-env has no value in {}: {}", whence, value),
+            _ => bail!("Variable rustc-env has no value in {}: {}", whence, value),
         }
     }
 }
