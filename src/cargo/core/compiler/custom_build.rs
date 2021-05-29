@@ -2,7 +2,7 @@ use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
-use crate::core::{profiles::ProfileRoot, PackageId};
+use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
 use crate::util::{internal, profile};
@@ -296,6 +296,9 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
+    let targets: Vec<Target> = unit.pkg.targets().iter().cloned().collect();
+    // Need a separate copy for the fresh closure.
+    let targets_fresh = targets.clone();
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -405,6 +408,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             &script_out_dir,
             extra_link_arg,
             nightly_features_allowed,
+            &targets,
         )?;
 
         if json_messages {
@@ -432,6 +436,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 &script_out_dir,
                 extra_link_arg,
                 nightly_features_allowed,
+                &targets_fresh,
             )?,
         };
 
@@ -484,6 +489,7 @@ impl BuildOutput {
         script_out_dir: &Path,
         extra_link_arg: bool,
         nightly_features_allowed: bool,
+        targets: &[Target],
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
@@ -494,6 +500,7 @@ impl BuildOutput {
             script_out_dir,
             extra_link_arg,
             nightly_features_allowed,
+            targets,
         )
     }
 
@@ -509,6 +516,7 @@ impl BuildOutput {
         script_out_dir: &Path,
         extra_link_arg: bool,
         nightly_features_allowed: bool,
+        targets: &[Target],
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -562,10 +570,28 @@ impl BuildOutput {
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
+                    if !targets.iter().any(|target| target.is_cdylib()) {
+                        bail!(
+                            "invalid instruction `cargo:{}` from {}\n\
+                             The package {} does not have a cdylib target.",
+                            key,
+                            whence,
+                            pkg_descr
+                        );
+                    }
                     linker_args.push((LinkType::Cdylib, value))
                 }
                 "rustc-link-arg-bins" => {
                     if extra_link_arg {
+                        if !targets.iter().any(|target| target.is_bin()) {
+                            bail!(
+                                "invalid instruction `cargo:{}` from {}\n\
+                                 The package {} does not have a bin target.",
+                                key,
+                                whence,
+                                pkg_descr
+                            );
+                        }
                         linker_args.push((LinkType::Bin, value));
                     } else {
                         warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
@@ -575,10 +601,21 @@ impl BuildOutput {
                     if extra_link_arg {
                         let parts = value.splitn(2, "=").collect::<Vec<_>>();
                         if parts.len() == 2 {
-                            linker_args.push((
-                                LinkType::SingleBin(parts[0].to_string()),
-                                parts[1].to_string(),
-                            ));
+                            let bin_name = parts[0].to_string();
+                            if !targets
+                                .iter()
+                                .any(|target| target.is_bin() && target.name() == bin_name)
+                            {
+                                bail!(
+                                    "invalid instruction `cargo:{}` from {}\n\
+                                     The package {} does not have a bin target with the name `{}`.",
+                                    key,
+                                    whence,
+                                    pkg_descr,
+                                    bin_name
+                                );
+                            }
+                            linker_args.push((LinkType::SingleBin(bin_name), parts[1].to_string()));
                         } else {
                             warnings.push(format!(
                                 "cargo:{} has invalid syntax: expected `cargo:{}=BIN=ARG`",
@@ -900,6 +937,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &script_out_dir,
             extra_link_arg,
             cx.bcx.config.nightly_features_allowed,
+            unit.pkg.targets(),
         )
         .ok(),
         prev_script_out_dir,
