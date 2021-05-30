@@ -349,6 +349,10 @@ Without `--target`, the flags will be passed to all compiler invocations
 you have args that you do not want to pass to build scripts or proc macros and
 are building for the host, pass `--target` with the host triple.
 
+It is not recommended to pass in flags that Cargo itself usually manages. For
+example, the flags driven by [profiles] are best handled by setting the
+appropriate profile setting.
+
 > **Caution**: Due to the low-level nature of passing flags directly to the
 > compiler, this may cause a conflict with future versions of Cargo which may
 > issue the same or similar flags on its own which may interfere with the
