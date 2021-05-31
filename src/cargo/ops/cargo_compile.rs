@@ -1092,6 +1092,9 @@ fn generate_targets(
     // It is computed by the set of enabled features for the package plus
     // every enabled feature of every enabled dependency.
     let mut features_map = HashMap::new();
+    // This needs to be a set to de-duplicate units. Due to the way the
+    // targets are filtered, it is possible to have duplicate proposals for
+    // the same thing.
     let mut units = HashSet::new();
     for Proposal {
         pkg,
@@ -1136,7 +1139,10 @@ fn generate_targets(
         }
         // else, silently skip target.
     }
-    Ok(units.into_iter().collect())
+    let mut units: Vec<_> = units.into_iter().collect();
+    // Keep the roots in a consistent order, which helps with checking test output.
+    units.sort_unstable();
+    Ok(units)
 }
 
 /// Warns if a target's required-features references a feature that doesn't exist.

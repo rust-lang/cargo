@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use filetime::FileTime;
 use jobserver::Client;
 
@@ -309,6 +309,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         self.primary_packages
             .extend(self.bcx.roots.iter().map(|u| u.pkg.package_id()));
+        self.compilation
+            .root_crate_names
+            .extend(self.bcx.roots.iter().map(|u| u.target.crate_name()));
 
         self.record_units_requiring_metadata();
 
@@ -480,6 +483,22 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         };
 
+        fn doc_collision_error(unit: &Unit, other_unit: &Unit) -> CargoResult<()> {
+            bail!(
+                "document output filename collision\n\
+                 The {} `{}` in package `{}` has the same name as the {} `{}` in package `{}`.\n\
+                 Only one may be documented at once since they output to the same path.\n\
+                 Consider documenting only one, renaming one, \
+                 or marking one with `doc = false` in Cargo.toml.",
+                unit.target.kind().description(),
+                unit.target.name(),
+                unit.pkg,
+                other_unit.target.kind().description(),
+                other_unit.target.name(),
+                other_unit.pkg,
+            );
+        }
+
         let mut keys = self
             .bcx
             .unit_graph
@@ -494,6 +513,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     if unit.mode.is_doc() {
                         // See https://github.com/rust-lang/rust/issues/56169
                         // and https://github.com/rust-lang/rust/issues/61378
+                        if self.is_primary_package(unit) {
+                            // This has been an error since before 1.0, so it
+                            // is not a warning like the other situations.
+                            doc_collision_error(unit, other_unit)?;
+                        }
                         report_collision(unit, other_unit, &output.path, rustdoc_suggestion)?;
                     } else {
                         report_collision(unit, other_unit, &output.path, suggestion)?;
