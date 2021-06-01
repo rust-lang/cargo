@@ -682,10 +682,15 @@ impl<'cfg> RustcTargetData<'cfg> {
     ) -> CargoResult<RustcTargetData<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
-        let host_config = config.target_cfg_triple(&rustc.host)?;
-        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
+        let target_applies_to_host = config.target_applies_to_host()?;
+        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
+        let host_config = if target_applies_to_host {
+            config.target_cfg_triple(&rustc.host)?
+        } else {
+            config.host_cfg_triple(&rustc.host)?
+        };
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
@@ -695,8 +700,8 @@ impl<'cfg> RustcTargetData<'cfg> {
         if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, host_config.clone());
-        }
+            target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
+        };
 
         let mut res = RustcTargetData {
             rustc,

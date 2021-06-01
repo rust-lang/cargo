@@ -1486,6 +1486,16 @@ impl Config {
             .try_borrow_with(|| self.get::<RustdocExternMap>("doc.extern-map"))
     }
 
+    /// Returns true if the `[target]` table should be applied to host targets.
+    pub fn target_applies_to_host(&self) -> CargoResult<bool> {
+        target::get_target_applies_to_host(self)
+    }
+
+    /// Returns the `[host]` table definition for the given target triple.
+    pub fn host_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
+        target::load_host_triple(self, target)
+    }
+
     /// Returns the `[target]` table definition for the given target triple.
     pub fn target_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
         target::load_target_triple(self, target)
