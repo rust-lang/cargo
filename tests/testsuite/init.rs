@@ -607,7 +607,10 @@ fn creates_binary_when_instructed_and_has_lib_file_no_warning() {
     cargo_process("init --bin")
         .cwd(&path)
         .with_stderr(
-            "[WARNING] file 'foo.rs' seems to be a library file\n[CREATED] binary (application) package"
+            "\
+[WARNING] file 'foo.rs' seems to be a library file
+[CREATED] binary (application) package
+",
         )
         .run();
 
@@ -624,7 +627,10 @@ fn creates_library_when_instructed_and_has_bin_file() {
     cargo_process("init --lib")
         .cwd(&path)
         .with_stderr(
-            "[WARNING] file 'foo.rs' seems to be a binary (application) file\n[CREATED] library package"
+            "\
+[WARNING] file 'foo.rs' seems to be a binary (application) file
+[CREATED] library package
+",
         )
         .run();
 
