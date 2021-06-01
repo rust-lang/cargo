@@ -35,15 +35,16 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             .join(&name)
             .join("index.html");
         if path.exists() {
+            let config_browser = {
+                let cfg = ws.config().get::<CargoDocConfig>("doc")?;
+
+                cfg.browser
+                    .map(|path_args| (path_args.path.resolve_program(ws.config()), path_args.args))
+            };
+
             let mut shell = ws.config().shell();
             shell.status("Opening", path.display())?;
-            let cfg = ws.config().get::<CargoDocConfig>("doc")?;
-            open_docs(
-                &path,
-                &mut shell,
-                cfg.browser
-                    .map(|path_args| (path_args.path.resolve_program(ws.config()), path_args.args)),
-            )?;
+            open_docs(&path, &mut shell, config_browser)?;
         }
     }
 
