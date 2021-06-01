@@ -2,11 +2,11 @@ use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
-use crate::core::{profiles::ProfileRoot, PackageId};
+use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
 use crate::util::{internal, profile};
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use cargo_platform::Cfg;
 use cargo_util::paths;
 use std::collections::hash_map::{Entry, HashMap};
@@ -296,6 +296,9 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
+    let targets: Vec<Target> = unit.pkg.targets().iter().cloned().collect();
+    // Need a separate copy for the fresh closure.
+    let targets_fresh = targets.clone();
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -405,6 +408,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             &script_out_dir,
             extra_link_arg,
             nightly_features_allowed,
+            &targets,
         )?;
 
         if json_messages {
@@ -432,6 +436,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 &script_out_dir,
                 extra_link_arg,
                 nightly_features_allowed,
+                &targets_fresh,
             )?,
         };
 
@@ -484,6 +489,7 @@ impl BuildOutput {
         script_out_dir: &Path,
         extra_link_arg: bool,
         nightly_features_allowed: bool,
+        targets: &[Target],
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
@@ -494,6 +500,7 @@ impl BuildOutput {
             script_out_dir,
             extra_link_arg,
             nightly_features_allowed,
+            targets,
         )
     }
 
@@ -509,6 +516,7 @@ impl BuildOutput {
         script_out_dir: &Path,
         extra_link_arg: bool,
         nightly_features_allowed: bool,
+        targets: &[Target],
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -543,7 +551,7 @@ impl BuildOutput {
             let (key, value) = match (key, value) {
                 (Some(a), Some(b)) => (a, b.trim_end()),
                 // Line started with `cargo:` but didn't match `key=value`.
-                _ => anyhow::bail!("Wrong output in {}: `{}`", whence, line),
+                _ => bail!("Wrong output in {}: `{}`", whence, line),
             };
 
             // This will rewrite paths if the target directory has been moved.
@@ -552,7 +560,7 @@ impl BuildOutput {
                 script_out_dir.to_str().unwrap(),
             );
 
-            // Keep in sync with TargetConfig::new.
+            // Keep in sync with TargetConfig::parse_links_overrides.
             match key {
                 "rustc-flags" => {
                     let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
@@ -562,10 +570,28 @@ impl BuildOutput {
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
+                    if !targets.iter().any(|target| target.is_cdylib()) {
+                        bail!(
+                            "invalid instruction `cargo:{}` from {}\n\
+                             The package {} does not have a cdylib target.",
+                            key,
+                            whence,
+                            pkg_descr
+                        );
+                    }
                     linker_args.push((LinkType::Cdylib, value))
                 }
                 "rustc-link-arg-bins" => {
                     if extra_link_arg {
+                        if !targets.iter().any(|target| target.is_bin()) {
+                            bail!(
+                                "invalid instruction `cargo:{}` from {}\n\
+                                 The package {} does not have a bin target.",
+                                key,
+                                whence,
+                                pkg_descr
+                            );
+                        }
                         linker_args.push((LinkType::Bin, value));
                     } else {
                         warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
@@ -573,18 +599,32 @@ impl BuildOutput {
                 }
                 "rustc-link-arg-bin" => {
                     if extra_link_arg {
-                        let parts = value.splitn(2, "=").collect::<Vec<_>>();
-                        if parts.len() == 2 {
-                            linker_args.push((
-                                LinkType::SingleBin(parts[0].to_string()),
-                                parts[1].to_string(),
-                            ));
-                        } else {
-                            warnings.push(format!(
-                                "cargo:{} has invalid syntax: expected `cargo:{}=BIN=ARG`",
-                                key, key
-                            ));
+                        let mut parts = value.splitn(2, '=');
+                        let bin_name = parts.next().unwrap().to_string();
+                        let arg = parts.next().ok_or_else(|| {
+                            anyhow::format_err!(
+                                "invalid instruction `cargo:{}={}` from {}\n\
+                                 The instruction should have the form cargo:{}=BIN=ARG",
+                                key,
+                                value,
+                                whence,
+                                key
+                            )
+                        })?;
+                        if !targets
+                            .iter()
+                            .any(|target| target.is_bin() && target.name() == bin_name)
+                        {
+                            bail!(
+                                "invalid instruction `cargo:{}` from {}\n\
+                                 The package {} does not have a bin target with the name `{}`.",
+                                key,
+                                whence,
+                                pkg_descr,
+                                bin_name
+                            );
                         }
+                        linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
                     } else {
                         warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
                     }
@@ -632,7 +672,7 @@ impl BuildOutput {
                         } else {
                             // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
                             // Abort with an error.
-                            anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                            bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
                                 help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,
@@ -683,7 +723,7 @@ impl BuildOutput {
                 if value.is_empty() {
                     value = match flags_iter.next() {
                         Some(v) => v,
-                        None => anyhow::bail! {
+                        None => bail! {
                             "Flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
@@ -699,7 +739,7 @@ impl BuildOutput {
                     _ => unreachable!(),
                 };
             } else {
-                anyhow::bail!(
+                bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
@@ -715,7 +755,7 @@ impl BuildOutput {
         let val = iter.next();
         match (name, val) {
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
-            _ => anyhow::bail!("Variable rustc-env has no value in {}: {}", whence, value),
+            _ => bail!("Variable rustc-env has no value in {}: {}", whence, value),
         }
     }
 }
@@ -900,6 +940,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &script_out_dir,
             extra_link_arg,
             cx.bcx.config.nightly_features_allowed,
+            unit.pkg.targets(),
         )
         .ok(),
         prev_script_out_dir,
