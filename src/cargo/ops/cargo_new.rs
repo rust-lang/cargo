@@ -51,6 +51,7 @@ impl<'de> de::Deserialize<'de> for VersionControl {
 pub struct NewOptions {
     pub version_control: Option<VersionControl>,
     pub kind: NewProjectKind,
+    pub auto_detect_kind: bool,
     /// Absolute path to the directory for the new package
     pub path: PathBuf,
     pub name: Option<String>,
@@ -62,16 +63,11 @@ pub struct NewOptions {
 pub enum NewProjectKind {
     Bin,
     Lib,
-    Auto,
 }
 
 impl NewProjectKind {
     fn is_bin(self) -> bool {
         self == NewProjectKind::Bin
-    }
-
-    fn is_auto(self) -> bool {
-        self == NewProjectKind::Auto
     }
 }
 
@@ -80,7 +76,6 @@ impl fmt::Display for NewProjectKind {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
-            NewProjectKind::Auto => "auto-select type",
         }
         .fmt(f)
     }
@@ -112,16 +107,18 @@ impl NewOptions {
         edition: Option<String>,
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
+        let auto_detect_kind = !bin && !lib;
+
         let kind = match (bin, lib) {
             (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
-            (true, false) => NewProjectKind::Bin,
-            (false, false) => NewProjectKind::Auto,
+            (_, false) => NewProjectKind::Bin,
         };
 
         let opts = NewOptions {
             version_control,
             kind,
+            auto_detect_kind,
             path,
             name,
             edition,
@@ -397,6 +394,7 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
 
 fn calculate_new_project_kind(
     requested_kind: NewProjectKind,
+    auto_detect_kind: bool,
     found_files: &Vec<SourceFileInformation>,
 ) -> NewProjectKind {
     let bin_file = found_files.iter().find(|x| x.bin);
@@ -407,14 +405,14 @@ fn calculate_new_project_kind(
         NewProjectKind::Bin
     };
 
-    if requested_kind.is_auto() {
+    if auto_detect_kind {
         return kind_from_files;
     }
 
     requested_kind
 }
 
-pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
+pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
     if path.exists() {
         anyhow::bail!(
@@ -424,12 +422,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         )
     }
 
-    let kind = match opts.kind {
-        NewProjectKind::Bin => NewProjectKind::Bin,
-        NewProjectKind::Auto => NewProjectKind::Bin,
-        _ => NewProjectKind::Lib,
-    };
-    let is_bin = kind.is_bin();
+    let is_bin = opts.kind.is_bin();
 
     let name = get_name(path, opts)?;
     check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
@@ -451,7 +444,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
             path.display()
         )
     })?;
-    Ok(kind)
+    Ok(())
 }
 
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
@@ -472,7 +465,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
 
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
-    let kind = calculate_new_project_kind(opts.kind, &src_paths_types);
+    let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
     let has_bin = kind.is_bin();
 
     if src_paths_types.is_empty() {
