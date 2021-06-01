@@ -473,12 +473,52 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
+    /// Returns a mutable iterator over all packages in this workspace
+    pub fn members_mut(&mut self) -> impl Iterator<Item = &mut Package> {
+        let packages = &mut self.packages.packages;
+        let members: HashSet<_> = self
+            .members
+            .iter()
+            .map(|path| path.parent().unwrap().to_owned())
+            .collect();
+
+        packages.iter_mut().filter_map(move |(path, package)| {
+            if members.contains(path) {
+                if let MaybePackage::Package(ref mut p) = package {
+                    return Some(p);
+                }
+            }
+
+            None
+        })
+    }
+
     /// Returns an iterator over default packages in this workspace
     pub fn default_members<'a>(&'a self) -> Members<'a, 'cfg> {
         Members {
             ws: self,
             iter: self.default_members.iter(),
         }
+    }
+
+    /// Returns an iterator over default packages in this workspace
+    pub fn default_members_mut(&mut self) -> impl Iterator<Item = &mut Package> {
+        let packages = &mut self.packages.packages;
+        let members: HashSet<_> = self
+            .default_members
+            .iter()
+            .map(|path| path.parent().unwrap().to_owned())
+            .collect();
+
+        packages.iter_mut().filter_map(move |(path, package)| {
+            if members.contains(path) {
+                if let MaybePackage::Package(ref mut p) = package {
+                    return Some(p);
+                }
+            }
+
+            None
+        })
     }
 
     /// Returns true if the package is a member of the workspace.
