@@ -473,9 +473,9 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
         // we've found the only file and it's not the type user wants. Change the type and warn
         let file_type = if src_paths_types[0].bin {
-            NewProjectKind::Bin.to_string()
+            NewProjectKind::Bin
         } else {
-            NewProjectKind::Lib.to_string()
+            NewProjectKind::Lib
         };
         config.shell().warn(format!(
             "file `{}` seems to be a {} file",
