@@ -24,8 +24,8 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::iter;
 use std::sync::Arc;
+use tempfile::Builder as TempFileBuilder;
 use url::Url;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
@@ -631,21 +631,23 @@ pub fn create_bcx<'a, 'cfg>(
         };
         let example_compilation = ops::compile(ws, &example_compile_opts)?;
 
-        for doc_test in example_compilation.to_doc_test.iter() {
-            let ex_path = doc_test.unit.target.src_path().path().unwrap();
-            let ex_path_rel = ex_path.strip_prefix(ws.root())?;
-            let p = doc_test.rustdoc_process(&example_compilation)?;
-            let arg = iter::once(format!("{}", ex_path_rel.display()))
-                .chain(
-                    p.get_args()
-                        .iter()
-                        .map(|s| s.clone().into_string().unwrap()),
-                )
-                .collect::<Vec<_>>()
-                .join(" ");
-            args.extend_from_slice(&["--scrape-examples".to_owned(), arg]);
-            println!("ex: {}", ex_path_rel.display());
+        let td = TempFileBuilder::new().prefix("cargo-doc").tempdir()?;
+        for (i, doc_test) in example_compilation.to_doc_test.iter().enumerate() {
+            let mut p = doc_test.rustdoc_process(&example_compilation)?;
+            p.arg(doc_test.unit.target.src_path().path().unwrap());
+
+            let path = td.path().join(format!("{}.json", i));
+            p.arg("--scrape-examples").arg(&path);
+            p.arg("-Z").arg("unstable-options");
+            config
+                .shell()
+                .verbose(|shell| shell.status("Running", p.to_string()))?;
+            p.exec()?;
+            args.extend_from_slice(&["--with-examples".to_string(), format!("{}", path.display())]);
         }
+
+        // FIXME(wcrichto): how to delete the tempdir after use outside of this function?
+        td.into_path();
 
         for unit in unit_graph.keys() {
             if unit.mode.is_doc() && ws.is_member(&unit.pkg) {
