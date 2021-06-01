@@ -608,7 +608,7 @@ fn creates_binary_when_instructed_and_has_lib_file_no_warning() {
         .cwd(&path)
         .with_stderr(
             "\
-[WARNING] file 'foo.rs' seems to be a library file
+[WARNING] file `foo.rs` seems to be a library file
 [CREATED] binary (application) package
 ",
         )
@@ -628,7 +628,7 @@ fn creates_library_when_instructed_and_has_bin_file() {
         .cwd(&path)
         .with_stderr(
             "\
-[WARNING] file 'foo.rs' seems to be a binary (application) file
+[WARNING] file `foo.rs` seems to be a binary (application) file
 [CREATED] library package
 ",
         )

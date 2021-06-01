@@ -478,7 +478,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
             NewProjectKind::Lib.to_string()
         };
         config.shell().warn(format!(
-            "file '{}' seems to be a {} file",
+            "file `{}` seems to be a {} file",
             src_paths_types[0].relative_path, file_type
         ))?;
         src_paths_types[0].bin = has_bin
