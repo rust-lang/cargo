@@ -72,7 +72,7 @@ use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_V_MAX};
 use crate::util::interning::InternedString;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
-use cargo_util::paths;
+use cargo_util::{paths, registry::make_dep_path};
 use log::{debug, info};
 use semver::Version;
 use std::collections::{HashMap, HashSet};
@@ -373,12 +373,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             .chars()
             .flat_map(|c| c.to_lowercase())
             .collect::<String>();
-        let raw_path = match fs_name.len() {
-            1 => format!("1/{}", fs_name),
-            2 => format!("2/{}", fs_name),
-            3 => format!("3/{}/{}", &fs_name[..1], fs_name),
-            _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
-        };
+        let raw_path = make_dep_path(&fs_name, false);
 
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries

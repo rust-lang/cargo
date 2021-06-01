@@ -9,6 +9,7 @@ pub mod paths;
 mod process_builder;
 mod process_error;
 mod read2;
+pub mod registry;
 mod sha256;
 
 /// Whether or not this running in a Continuous Integration environment.
