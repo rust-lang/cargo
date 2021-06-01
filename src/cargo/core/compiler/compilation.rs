@@ -51,6 +51,9 @@ pub struct Compilation<'cfg> {
     /// An array of all cdylibs created.
     pub cdylibs: Vec<UnitOutput>,
 
+    /// The crate names of the root units specified on the command-line.
+    pub root_crate_names: Vec<String>,
+
     /// All directories for the output of native build commands.
     ///
     /// This is currently used to drive some entries which are added to the
@@ -136,6 +139,7 @@ impl<'cfg> Compilation<'cfg> {
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
+            root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
             config: bcx.config,

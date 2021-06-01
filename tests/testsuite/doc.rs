@@ -223,9 +223,15 @@ fn doc_multiple_targets_same_name_lib() {
 
     p.cargo("doc --workspace")
         .with_status(101)
-        .with_stderr_contains("[..] library `foo_lib` is specified [..]")
-        .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
-        .with_stderr_contains("[..] `bar v0.1.0[..]` [..]")
+        .with_stderr(
+            "\
+error: document output filename collision
+The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
+the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Only one may be documented at once since they output to the same path.
+Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+",
+        )
         .run();
 }
 
@@ -265,13 +271,17 @@ fn doc_multiple_targets_same_name() {
         .build();
 
     p.cargo("doc --workspace")
-        .with_stderr_contains("[DOCUMENTING] foo v0.1.0 ([CWD]/foo)")
-        .with_stderr_contains("[DOCUMENTING] bar v0.1.0 ([CWD]/bar)")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: document output filename collision
+The bin `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
+the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Only one may be documented at once since they output to the same path.
+Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+",
+        )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    let doc_file = p.root().join("target/doc/foo_lib/index.html");
-    assert!(doc_file.is_file());
 }
 
 #[cargo_test]
@@ -290,29 +300,31 @@ fn doc_multiple_targets_same_name_bin() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
-                [[bin]]
-                name = "foo-cli"
             "#,
         )
-        .file("foo/src/foo-cli.rs", "")
+        .file("foo/src/bin/foo-cli.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
                 [package]
                 name = "bar"
                 version = "0.1.0"
-                [[bin]]
-                name = "foo-cli"
             "#,
         )
-        .file("bar/src/foo-cli.rs", "")
+        .file("bar/src/bin/foo-cli.rs", "")
         .build();
 
     p.cargo("doc --workspace")
         .with_status(101)
-        .with_stderr_contains("[..] binary `foo_cli` is specified [..]")
-        .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
-        .with_stderr_contains("[..] `bar v0.1.0[..]` [..]")
+        .with_stderr(
+            "\
+error: document output filename collision
+The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
+the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Only one may be documented at once since they output to the same path.
+Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+",
+        )
         .run();
 }
 
@@ -1152,7 +1164,7 @@ fn doc_workspace_open_help_message() {
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [..]/foo/index.html")
+        .with_stderr_contains("[..] Opening [..]/bar/index.html")
         .run();
 }
 
@@ -1378,7 +1390,7 @@ fn doc_private_ws() {
         .file("a/src/lib.rs", "fn p() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "fn p2() {}")
-        .file("b/src/main.rs", "fn main() {}")
+        .file("b/src/bin/b-cli.rs", "fn main() {}")
         .build();
     p.cargo("doc --workspace --bins --lib --document-private-items -v")
         .with_stderr_contains(
@@ -1388,7 +1400,7 @@ fn doc_private_ws() {
             "[RUNNING] `rustdoc [..] b/src/lib.rs [..]--document-private-items[..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustdoc [..] b/src/main.rs [..]--document-private-items[..]",
+            "[RUNNING] `rustdoc [..] b/src/bin/b-cli.rs [..]--document-private-items[..]",
         )
         .run();
 }
