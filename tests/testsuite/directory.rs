@@ -472,7 +472,7 @@ expected: [..]
 actual:   [..]
 
 directory sources are not intended to be edited, if modifications are \
-required then it is recommended that [replace] is used with a forked copy of \
+required then it is recommended that `[patch]` is used with a forked copy of \
 the source
 ",
         )

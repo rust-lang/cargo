@@ -65,7 +65,7 @@ never intended to support this feature, so for now this message is just a
 warning. In the future, however, this message will become a hard error.
 
 To change the dependency graph via an override it's recommended to use the
-`[replace]` feature of Cargo instead of the path override feature. This is
+`[patch]` feature of Cargo instead of the path override feature. This is
 documented online at the url below for more information.
 
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
