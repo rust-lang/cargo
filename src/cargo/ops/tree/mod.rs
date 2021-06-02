@@ -412,15 +412,11 @@ fn print_dependencies<'a>(
         })
         .filter(|dep| {
             // Filter out packages to prune.
-            if !pkgs_to_prune.is_empty() {
-                match graph.node(**dep) {
-                    Node::Package { package_id, .. } => {
-                        !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
-                    }
-                    _ => true,
+            match graph.node(**dep) {
+                Node::Package { package_id, .. } => {
+                    !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
                 }
-            } else {
-                true
+                _ => true,
             }
         })
         .peekable();
