@@ -183,7 +183,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                      \n\
                      directory sources are not intended to be edited, if \
                      modifications are required then it is recommended \
-                     that [replace] is used with a forked copy of the \
+                     that `[patch]` is used with a forked copy of the \
                      source\
                      ",
                     file.display(),
