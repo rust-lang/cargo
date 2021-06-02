@@ -299,6 +299,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
 `out_dir` will now contain the value of `OUT_DIR`.
 
 * `CARGO` — Path to the `cargo` binary performing the build.
+* `CARGO_BUILD_TYPE` — The type of build being performed.
+                       `cross` when the build target is overridden.
+                       `native` when a build target is not specified(default).
 * `CARGO_MANIFEST_DIR` — The directory containing the manifest for the package
                          being built (the package containing the build
                          script). Also note that this is the value of the

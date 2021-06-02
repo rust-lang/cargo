@@ -201,6 +201,13 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 ProfileRoot::Debug => "debug",
             },
         )
+        .env(
+            "CARGO_BUILD_TYPE",
+            match &bcx.target_data.is_cross() {
+                true => "cross",
+                false => "native",
+            },
+        )
         .env("HOST", &bcx.host_triple())
         .env("RUSTC", &bcx.rustc().path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
