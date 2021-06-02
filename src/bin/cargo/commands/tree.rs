@@ -157,15 +157,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let (edge_kinds, no_proc_macro) = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
 
-    let pkgs_to_prune = args.values_of("prune").map_or_else(
-        || Vec::new(),
-        |ps| {
-            let mut specs = ps.map(|p| p.to_string()).collect::<Vec<_>>();
-            specs.sort_unstable();
-            specs.dedup();
-            specs
-        },
-    );
+    let pkgs_to_prune = args._values_of("prune");
 
     let packages = args.packages_from_flags()?;
     let mut invert = args
