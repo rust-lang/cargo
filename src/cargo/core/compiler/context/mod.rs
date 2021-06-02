@@ -206,21 +206,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
             // If the unit has a build script, add `OUT_DIR` to the
             // environment variables.
-            if unit.target.is_lib() {
-                for dep in &self.bcx.unit_graph[unit] {
-                    if dep.unit.mode.is_run_custom_build() {
-                        let out_dir = self
-                            .files()
-                            .build_script_out_dir(&dep.unit)
-                            .display()
-                            .to_string();
-                        let script_meta = self.get_run_build_script_metadata(&dep.unit);
-                        self.compilation
-                            .extra_env
-                            .entry(script_meta)
-                            .or_insert_with(Vec::new)
-                            .push(("OUT_DIR".to_string(), out_dir));
-                    }
+            for dep in &self.bcx.unit_graph[unit] {
+                if dep.unit.mode.is_run_custom_build() {
+                    let out_dir = self
+                        .files()
+                        .build_script_out_dir(&dep.unit)
+                        .display()
+                        .to_string();
+                    let script_meta = self.get_run_build_script_metadata(&dep.unit);
+                    self.compilation
+                        .extra_env
+                        .entry(script_meta)
+                        .or_insert_with(Vec::new)
+                        .push(("OUT_DIR".to_string(), out_dir));
                 }
             }
 

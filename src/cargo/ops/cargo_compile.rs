@@ -614,9 +614,10 @@ pub fn create_bcx<'a, 'cfg>(
             args.push(repository);
         }
 
-        // While --scrape-examples and --repository-url are unstable
+        // Needed while --scrape-examples and --repository-url are unstable
         args.push("-Zunstable-options".to_owned());
 
+        // Get examples via the `--examples` filter
         let mut example_compile_opts = CompileOptions::new(ws.config(), CompileMode::Doctest)?;
         example_compile_opts.cli_features = options.cli_features.clone();
         example_compile_opts.build_config.mode = CompileMode::Doctest;
@@ -631,13 +632,19 @@ pub fn create_bcx<'a, 'cfg>(
         };
         let example_compilation = ops::compile(ws, &example_compile_opts)?;
 
+        // FIXME(wcrichto): ideally the call locations would be cached in the target/ directory
+        // so they don't have to be recomputed
         let td = TempFileBuilder::new().prefix("cargo-doc").tempdir()?;
+
         for (i, doc_test) in example_compilation.to_doc_test.iter().enumerate() {
             let mut p = doc_test.rustdoc_process(&example_compilation)?;
-            p.arg(doc_test.unit.target.src_path().path().unwrap());
+            let src = doc_test.unit.target.src_path().path().unwrap();
+            p.arg(src);
 
             let path = td.path().join(format!("{}.json", i));
             p.arg("--scrape-examples").arg(&path);
+            p.arg("--workspace-root")
+                .arg(&ws.root().display().to_string());
             p.arg("-Z").arg("unstable-options");
             config
                 .shell()
