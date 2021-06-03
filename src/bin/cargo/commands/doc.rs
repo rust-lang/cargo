@@ -53,6 +53,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
     compile_opts.rustdoc_scrape_examples = args.is_present("scrape-examples");
 
+    if compile_opts.rustdoc_scrape_examples {
+        // FIXME(wcrichto): add a tracking issue once this gets merged and add issue number below
+        config
+            .cli_unstable()
+            .fail_if_stable_opt("--scrape-examples", 0)?;
+    }
+
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
         compile_opts,
