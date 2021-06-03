@@ -23,13 +23,13 @@
 //!       repeats until the queue is empty.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::ffi::OsString;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-use tempfile::Builder as TempFileBuilder;
-use url::Url;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::Layout;
 use crate::core::compiler::{standard_lib, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
@@ -565,7 +565,10 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_args_name
             );
         }
-        extra_compiler_args.insert(units[0].clone(), args);
+        extra_compiler_args.insert(
+            units[0].clone(),
+            args.into_iter().map(OsString::from).collect::<Vec<_>>(),
+        );
     }
 
     for unit in &units {
@@ -585,42 +588,16 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_compiler_args
                     .entry(unit.clone())
                     .or_default()
-                    .extend(args);
+                    .extend(args.into_iter().map(OsString::from).collect::<Vec<_>>());
             }
         }
     }
 
-    if rustdoc_scrape_examples && units.len() > 0 {
-        let mut args = Vec::new();
-
-        let get_repository = || -> Option<String> {
-            let repository = units[0].pkg.manifest().metadata().repository.as_ref()?;
-            let repo_url = Url::parse(repository).ok()?;
-            let domain = repo_url.domain()?;
-
-            match domain {
-                "github.com" => {
-                    // TODO(wcrichto): is there a canonical way to get the current commit?
-                    // Would prefer that over linking to master
-                    let gitref = "master";
-                    Some(format!("{}/tree/{}", String::from(repo_url), gitref))
-                }
-                _ => None,
-            }
-        };
-
-        if let Some(repository) = get_repository() {
-            args.push("--repository-url".to_owned());
-            args.push(repository);
-        }
-
-        // Needed while --scrape-examples and --repository-url are unstable
-        args.push("-Zunstable-options".to_owned());
-
-        // Get examples via the `--examples` filter
-        let mut example_compile_opts = CompileOptions::new(ws.config(), CompileMode::Doctest)?;
+    if rustdoc_scrape_examples {
+        let compile_mode = CompileMode::Doc { deps: false };
+        let mut example_compile_opts = CompileOptions::new(ws.config(), compile_mode)?;
         example_compile_opts.cli_features = options.cli_features.clone();
-        example_compile_opts.build_config.mode = CompileMode::Doctest;
+        example_compile_opts.build_config.mode = compile_mode;
         example_compile_opts.spec = Packages::All;
         example_compile_opts.filter = CompileFilter::Only {
             all_targets: false,
@@ -630,31 +607,42 @@ pub fn create_bcx<'a, 'cfg>(
             benches: FilterRule::none(),
             tests: FilterRule::none(),
         };
-        let example_compilation = ops::compile(ws, &example_compile_opts)?;
+        example_compile_opts.rustdoc_scrape_examples = false;
 
-        // FIXME(wcrichto): ideally the call locations would be cached in the target/ directory
-        // so they don't have to be recomputed
-        let td = TempFileBuilder::new().prefix("cargo-doc").tempdir()?;
+        let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
+        let interner = UnitInterner::new();
+        let mut bcx = create_bcx(ws, &example_compile_opts, &interner)?;
+        let dest = bcx.profiles.get_dir_name();
+        let paths = {
+            // FIXME(wcrichto): is there a better place to store these files?
+            let layout = Layout::new(ws, None, &dest)?;
+            let output_dir = layout.prepare_tmp()?;
+            bcx.roots
+                .iter()
+                .map(|unit| output_dir.join(format!("{}-calls.json", unit.buildkey())))
+                .collect::<Vec<_>>()
+        };
 
-        for (i, doc_test) in example_compilation.to_doc_test.iter().enumerate() {
-            let mut p = doc_test.rustdoc_process(&example_compilation)?;
-            let src = doc_test.unit.target.src_path().path().unwrap();
-            p.arg(src);
-
-            let path = td.path().join(format!("{}.json", i));
-            p.arg("--scrape-examples").arg(&path);
-            p.arg("--workspace-root")
-                .arg(&ws.root().display().to_string());
-            p.arg("-Z").arg("unstable-options");
-            config
-                .shell()
-                .verbose(|shell| shell.status("Running", p.to_string()))?;
-            p.exec()?;
-            args.extend_from_slice(&["--with-examples".to_string(), format!("{}", path.display())]);
+        for (path, unit) in paths.iter().zip(bcx.roots.iter()) {
+            bcx.extra_compiler_args
+                .entry(unit.clone())
+                .or_insert_with(Vec::new)
+                .extend_from_slice(&[
+                    "-Zunstable-options".into(),
+                    "--scrape-examples".into(),
+                    path.clone().into_os_string(),
+                ]);
         }
 
-        // FIXME(wcrichto): how to delete the tempdir after use outside of this function?
-        td.into_path();
+        let cx = Context::new(&bcx)?;
+        cx.compile(&exec)?;
+
+        let args = paths
+            .into_iter()
+            .map(|path| vec!["--with-examples".into(), path.into_os_string()].into_iter())
+            .flatten()
+            .chain(vec!["-Zunstable-options".into()].into_iter())
+            .collect::<Vec<_>>();
 
         for unit in unit_graph.keys() {
             if unit.mode.is_doc() && ws.is_member(&unit.pkg) {
