@@ -1236,6 +1236,7 @@ rust-version = "1.42"
 ```
 
 ### edition 2021
+* Tracking Issue: [rust-lang/rust#85811](https://github.com/rust-lang/rust/issues/85811)
 
 Support for the 2021 [edition] can be enabled by adding the `edition2021`
 unstable feature to the top of `Cargo.toml`:
@@ -1281,6 +1282,7 @@ developers of the dependencies to help resolve the issue.
 
 ### configurable-env
 * Original Pull Request: [#9175](https://github.com/rust-lang/cargo/pull/9175)
+* Tracking Issue: [#9539](https://github.com/rust-lang/cargo/issues/9539)
 
 The `-Z configurable-env` flag enables the `[env]` section in the
 `.cargo/config.toml` file. This section allows you to set additional environment
