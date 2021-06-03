@@ -588,7 +588,7 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_compiler_args
                     .entry(unit.clone())
                     .or_default()
-                    .extend(args.into_iter().map(OsString::from).collect::<Vec<_>>());
+                    .extend(args.into_iter().map(OsString::from));
             }
         }
     }
