@@ -342,10 +342,57 @@ links = "foo"
 <a id="the-exclude-and-include-fields-optional"></a>
 #### The `exclude` and `include` fields
 
-You can explicitly specify that a set of file patterns should be ignored or
-included for the purposes of packaging. The patterns specified in the
-`exclude` field identify a set of files that are not included, and the
-patterns in `include` specify files that are explicitly included.
+The `exclude` and `include` fields can be used to explicitly specify which
+files are included when packaging a project to be [published][publishing],
+and certain kinds of change tracking (described below).
+The patterns specified in the `exclude` field identify a set of files that are
+not included, and the patterns in `include` specify files that are explicitly
+included.
+You may run [`cargo package --list`][`cargo package`] to verify which files will
+be included in the package.
+
+```toml
+[package]
+# ...
+exclude = ["/ci", "images/", ".*"]
+```
+
+```toml
+[package]
+# ...
+include = ["/src", "COPYRIGHT", "/examples", "!/examples/big_example"]
+```
+
+The default if neither field is specified is to include all files from the
+root of the package, except for the exclusions listed below.
+
+If `include` is not specified, then the following files will be excluded:
+
+* If the package is not in a git repository, all "hidden" files starting with
+  a dot will be skipped.
+* If the package is in a git repository, any files that are ignored by the
+  [gitignore] rules of the repository and global git configuration will be
+  skipped.
+
+Regardless of whether `exclude` or `include` is specified, the following files
+are always excluded:
+
+* Any sub-packages will be skipped (any subdirectory that contains a
+  `Cargo.toml` file).
+* A directory named `target` in the root of the package will be skipped.
+
+The following files are always included:
+
+* The `Cargo.toml` file of the package itself is always included, it does not
+  need to be listed in `include`.
+* A minimized `Cargo.lock` is automatically included if the package contains a
+  binary or example target, see [`cargo package`] for more information.
+* If a [`license-file`](#the-license-and-license-file-fields) is specified, it
+  is always included.
+
+The options are mutually exclusive; setting `include` will override an
+`exclude`. If you need to have exclusions to a set of `include` files, use the
+`!` operator described below.
 
 The patterns should be [gitignore]-style patterns. Briefly:
 
@@ -372,26 +419,6 @@ The patterns should be [gitignore]-style patterns. Briefly:
 - `!` prefix negates a pattern. For example, a pattern of `src/**.rs` and
   `!foo.rs` would match all files with the `.rs` extension inside the `src`
   directory, except for any file named `foo.rs`.
-
-If git is being used for a package, the `exclude` field will be seeded with
-the `gitignore` settings from the repository.
-
-```toml
-[package]
-# ...
-exclude = ["build/**/*.o", "doc/**/*.html"]
-```
-
-```toml
-[package]
-# ...
-include = ["src/**/*", "Cargo.toml"]
-```
-
-The options are mutually exclusive: setting `include` will override an
-`exclude`. Note that `include` must be an exhaustive list of files as otherwise
-necessary source files may not be included. The package's `Cargo.toml` is
-automatically included.
 
 The include/exclude list is also used for change tracking in some situations.
 For targets built with `rustdoc`, it is used to determine the list of files to
@@ -518,6 +545,7 @@ more detail.
 
 [`cargo init`]: ../commands/cargo-init.md
 [`cargo new`]: ../commands/cargo-new.md
+[`cargo package`]: ../commands/cargo-package.md
 [`cargo run`]: ../commands/cargo-run.md
 [crates.io]: https://crates.io/
 [docs.rs]: https://docs.rs/
