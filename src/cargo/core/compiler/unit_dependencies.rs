@@ -419,7 +419,10 @@ fn compute_deps_doc(
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep>> {
-    let deps = state.deps(unit, unit_for, &|dep| dep.kind() == DepKind::Normal);
+    let deps = state.deps(unit, unit_for, &|dep| match dep.kind() {
+        DepKind::Normal | DepKind::Development => true,
+        DepKind::Build => false,
+    });
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
