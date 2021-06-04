@@ -1,4 +1,4 @@
-//! Tests for -Zextra-link-arg.
+//! Tests for additional link arguments.
 
 // NOTE: Many of these tests use `without_status()` when passing bogus flags
 // because MSVC link.exe just gives a warning on unknown flags (how helpful!),
@@ -22,7 +22,7 @@ fn build_script_extra_link_arg_bin() {
         )
         .build();
 
-    p.cargo("build -Zextra-link-arg -v")
+    p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
@@ -62,7 +62,7 @@ fn build_script_extra_link_arg_bin_single() {
         )
         .build();
 
-    p.cargo("build -Zextra-link-arg -v")
+    p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
@@ -89,33 +89,12 @@ fn build_script_extra_link_arg() {
         )
         .build();
 
-    p.cargo("build -Zextra-link-arg -v")
+    p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
         )
-        .run();
-}
-
-#[cargo_test]
-fn build_script_extra_link_arg_warn_without_flag() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", "fn main() {}")
-        .file(
-            "build.rs",
-            r#"
-                fn main() {
-                    println!("cargo:rustc-link-arg=--this-is-a-bogus-flag");
-                }
-            "#,
-        )
-        .build();
-
-    p.cargo("build -v")
-        .with_status(0)
-        .with_stderr_contains("warning: cargo:rustc-link-arg requires -Zextra-link-arg flag")
         .run();
 }
 
@@ -146,7 +125,7 @@ fn link_arg_missing_target() {
         r#"fn main() { println!("cargo:rustc-link-arg-bins=--bogus"); }"#,
     );
 
-    p.cargo("check -Zextra-link-arg")
+    p.cargo("check")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("\
@@ -161,7 +140,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
         r#"fn main() { println!("cargo:rustc-link-arg-bin=abc=--bogus"); }"#,
     );
 
-    p.cargo("check -Zextra-link-arg")
+    p.cargo("check")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
@@ -178,7 +157,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
         r#"fn main() { println!("cargo:rustc-link-arg-bin=abc"); }"#,
     );
 
-    p.cargo("check -Zextra-link-arg")
+    p.cargo("check")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
@@ -281,7 +260,7 @@ fn link_arg_transitive_not_allowed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v -Zextra-link-arg")
+    p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
