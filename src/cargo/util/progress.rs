@@ -393,6 +393,11 @@ fn test_progress_status() {
         format.progress_status(3, 4, "：每個漢字佔據了兩個字元"),
         Some("[=============>     ] 3/4：每個漢字佔據了...".to_string())
     );
+    assert_eq!(
+        // handle breaking at middle of character
+        format.progress_status(3, 4, "：-每個漢字佔據了兩個字元"),
+        Some("[=============>     ] 3/4：-每個漢字佔據了...".to_string())
+    );
 }
 
 #[test]
