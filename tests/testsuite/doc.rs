@@ -1170,6 +1170,40 @@ fn doc_workspace_open_help_message() {
 
 #[cargo_test]
 #[cfg(not(windows))] // `echo` may not be available
+fn doc_extern_map_local() {
+    assert!(is_nightly());
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+        [doc.extern-map]
+        std = "local"
+    "#,
+    );
+
+
+    p.cargo("doc -Zrustdoc-map --open")
+        .env("BROWSER", "echo")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_does_not_contain("warning: unused config key `doc.extern-map` [..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
