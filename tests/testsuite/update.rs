@@ -676,3 +676,33 @@ fn workspace_only() {
     assert!(!lock1.contains("0.0.2"));
     assert!(!lock2.contains("0.0.1"));
 }
+
+#[cargo_test]
+fn same_version_different_metadata() {
+    Package::new("dep", "1.0.0+build1").publish();
+    Package::new("dep", "1.0.0+build2").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [dependencies]
+                dep = "=1.0.0+build2"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("update -p dep --precise 1.0.0+build1")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] dep v1.0.0+build2 -> v1.0.0+build1
+",
+        )
+        .run();
+}
