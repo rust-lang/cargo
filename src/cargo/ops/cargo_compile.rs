@@ -1140,9 +1140,61 @@ fn generate_targets(
         // else, silently skip target.
     }
     let mut units: Vec<_> = units.into_iter().collect();
+    unmatched_target_filters(&units, &filter, &mut ws.config().shell())?;
+
     // Keep the roots in a consistent order, which helps with checking test output.
     units.sort_unstable();
     Ok(units)
+}
+
+/// Checks if the unit list is empty and the user has passed any combination of
+/// --tests, --examples, --benches or --bins, and we didn't match on any targets.
+/// We want to emit a warning to make sure the user knows that this run is a no-op,
+/// and their code remains unchecked despite cargo not returning any errors
+fn unmatched_target_filters(
+    units: &[Unit],
+    filter: &CompileFilter,
+    shell: &mut Shell,
+) -> CargoResult<()> {
+    if let CompileFilter::Only {
+        all_targets,
+        lib: _,
+        ref bins,
+        ref examples,
+        ref tests,
+        ref benches,
+    } = *filter
+    {
+        if units.is_empty() {
+            let mut filters = String::new();
+            let mut miss_count = 0;
+
+            let mut append = |t: &FilterRule, s| {
+                if let FilterRule::All = *t {
+                    miss_count += 1;
+                    filters.push_str(s);
+                }
+            };
+
+            if all_targets {
+                filters.push_str(" `all-targets`");
+            } else {
+                append(bins, " `bins`,");
+                append(tests, " `tests`,");
+                append(examples, " `examples`,");
+                append(benches, " `benches`,");
+                filters.pop();
+            }
+
+            return shell.warn(format!(
+                "Target {}{} specified, but no targets matched. This is a no-op",
+                if miss_count > 1 { "filters" } else { "filter" },
+                filters,
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 /// Warns if a target's required-features references a feature that doesn't exist.
