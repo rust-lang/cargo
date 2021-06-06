@@ -336,7 +336,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 // Checks that the package dependencies are safe to deploy.
 fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     for dep in pkg.dependencies() {
-        if dep.source_id().is_path() && !dep.specified_req() && dep.is_transitive() {
+        if dep.source_id().is_path() && dep.specified_req().is_none() && dep.is_transitive() {
             anyhow::bail!(
                 "all path dependencies must have a version specified \
                  when packaging.\ndependency `{}` does not specify \

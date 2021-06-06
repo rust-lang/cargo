@@ -224,7 +224,17 @@ fn same_version_different_metadata() {
     Package::new("dep", "1.0.0+build1").publish();
     Package::new("dep", "1.0.0+build2").publish();
 
-    for req in &["1.0.0", "1.0.0+irrelevant", "1.0.0+build1", "=1.0.0+build1"] {
+    enum Dep {
+        Build1,
+        Build2,
+    }
+
+    for (req, expected_resolve) in &[
+        ("1.0.0", Dep::Build2),
+        ("1.0.0+irrelevant", Dep::Build2),
+        ("1.0.0+build1", Dep::Build2),
+        ("=1.0.0+build1", Dep::Build1),
+    ] {
         let p = project()
             .file(
                 "Cargo.toml",
@@ -244,10 +254,17 @@ fn same_version_different_metadata() {
             .build();
 
         p.cargo("generate-lockfile").run();
-
         let lock = p.read_lockfile();
 
-        assert!(!lock.contains("1.0.0+build1"));
-        assert!(lock.contains("1.0.0+build2"));
+        match expected_resolve {
+            Dep::Build1 => {
+                assert!(lock.contains("1.0.0+build1"));
+                assert!(!lock.contains("1.0.0+build2"));
+            }
+            Dep::Build2 => {
+                assert!(!lock.contains("1.0.0+build1"));
+                assert!(lock.contains("1.0.0+build2"));
+            }
+        }
     }
 }

@@ -18,6 +18,7 @@ use crate::core::resolver::{
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::OptVersionReq;
 
 use anyhow::Context as _;
 use log::debug;
@@ -164,26 +165,58 @@ impl<'a> RegistryQueryer<'a> {
             }
         }
 
+        // Is this an exact req of the form `=1.0.0` or `=1.0.0+metadata`. We
+        // boost priority of exact matches to such requirements, taking into
+        // account build metadata, which is otherwise not considered relevant in
+        // whether a version matches a requirement.
+        let is_exact_req = match dep.version_req() {
+            OptVersionReq::Any => false,
+            OptVersionReq::Req(req) => {
+                dep.specified_req().is_some()
+                    && req.comparators.len() == 1
+                    && req.comparators[0].op == semver::Op::Exact
+                    && req.comparators[0].patch.is_some()
+            }
+        };
+
+        let prioritize_exact_match = |v: &semver::Version| -> bool {
+            dep.specified_req()
+                .unwrap()
+                .trim()
+                .trim_end_matches(&v.to_string())
+                .trim_end()
+                == "="
+        };
+
         // When we attempt versions for a package we'll want to do so in a
-        // sorted fashion to pick the "best candidates" first. Currently we try
-        // prioritized summaries (those in `try_to_use`) and failing that we
-        // list everything from the maximum version to the lowest version.
+        // sorted fashion to pick the "best candidates" first.
         ret.sort_unstable_by(|a, b| {
+            if is_exact_req {
+                // Prefer a version that precisely matches an `=` requirement.
+                let a_exact_match = prioritize_exact_match(a.version());
+                let b_exact_match = prioritize_exact_match(b.version());
+                let exact_match_cmp = a_exact_match.cmp(&b_exact_match).reverse();
+                if exact_match_cmp != Ordering::Equal {
+                    return exact_match_cmp;
+                }
+            }
+
+            // Prefer prioritized summaries (those in `try_to_use`).
             let a_in_previous = self.try_to_use.contains(&a.package_id());
             let b_in_previous = self.try_to_use.contains(&b.package_id());
             let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
-            match previous_cmp {
-                Ordering::Equal => {
-                    let cmp = a.version().cmp(b.version());
-                    if self.minimal_versions {
-                        // Lower version ordered first.
-                        cmp
-                    } else {
-                        // Higher version ordered first.
-                        cmp.reverse()
-                    }
-                }
-                _ => previous_cmp,
+            if previous_cmp != Ordering::Equal {
+                return previous_cmp;
+            }
+
+            // Sort by semver version.
+            let cmp = a.version().cmp(b.version());
+            if self.minimal_versions {
+                // Lower version ordered first.
+                cmp
+            } else {
+                // Higher version ordered first.
+                cmp.reverse()
             }
         });
 

@@ -139,7 +139,7 @@ fn verify_dependencies(
 ) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() || dep.source_id().is_git() {
-            if !dep.specified_req() {
+            if dep.specified_req().is_none() {
                 if !dep.is_transitive() {
                     // dev-dependencies will be stripped in TomlManifest::prepare_for_publish
                     continue;
@@ -202,7 +202,7 @@ fn transmit(
         .iter()
         .filter(|dep| {
             // Skip dev-dependency without version.
-            dep.is_transitive() || dep.specified_req()
+            dep.is_transitive() || dep.specified_req().is_some()
         })
         .map(|dep| {
             // If the dependency is from a different registry, then include the

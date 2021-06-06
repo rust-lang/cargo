@@ -1718,7 +1718,11 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
         }
 
         if let Some(version) = &self.version {
-            if version.contains('+') {
+            // Build metadata in the req is irrelevant except in the case of an
+            // exact req like `=1.0.0+metadata`.
+            if version.contains('+')
+                && !(version.trim_start().starts_with('=') && !version.contains(','))
+            {
                 cx.warnings.push(format!(
                     "version requirement `{}` for dependency `{}` \
                      includes semver metadata which will be ignored, removing the \

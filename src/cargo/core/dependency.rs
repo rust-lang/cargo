@@ -31,7 +31,7 @@ struct Inner {
     /// `source_id` will be crates.io and this will be None.
     registry_id: Option<SourceId>,
     req: OptVersionReq,
-    specified_req: bool,
+    specified_req: Option<InternedString>,
     kind: DepKind,
     only_match_name: bool,
     explicit_name_in_toml: Option<InternedString>,
@@ -121,7 +121,10 @@ impl Dependency {
         let name = name.into();
         let (specified_req, version_req) = match version {
             Some(v) => match VersionReq::parse(v) {
-                Ok(req) => (true, OptVersionReq::Req(req)),
+                Ok(req) => {
+                    let specified_req = Some(InternedString::new(v));
+                    (specified_req, OptVersionReq::Req(req))
+                }
                 Err(err) => {
                     return Err(anyhow::Error::new(err).context(format!(
                         "failed to parse the version requirement `{}` for dependency `{}`",
@@ -129,7 +132,7 @@ impl Dependency {
                     )))
                 }
             },
-            None => (false, OptVersionReq::Any),
+            None => (None, OptVersionReq::Any),
         };
 
         let mut ret = Dependency::new_override(name, source_id);
@@ -156,7 +159,7 @@ impl Dependency {
                 public: false,
                 features: Vec::new(),
                 default_features: true,
-                specified_req: false,
+                specified_req: None,
                 platform: None,
                 explicit_name_in_toml: None,
             }),
@@ -244,7 +247,10 @@ impl Dependency {
         self
     }
 
-    pub fn specified_req(&self) -> bool {
+    /// The original text of the version requirement.
+    ///
+    /// `self.version_req()` is the same thing in parsed form.
+    pub fn specified_req(&self) -> Option<InternedString> {
         self.inner.specified_req
     }
 
