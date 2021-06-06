@@ -36,3 +36,38 @@ fn minimal_version_cli() {
 
     assert!(!lock.contains("1.1.0"));
 }
+
+#[cargo_test]
+fn same_version_different_metadata() {
+    Package::new("dep", "1.0.0+build1").publish();
+    Package::new("dep", "1.0.0+build2").publish();
+
+    for req in &["1.0.0", "1.0.0+irrelevant", "1.0.0+build2", "=1.0.0+build2"] {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                        [package]
+                        name = "foo"
+                        version = "0.0.0"
+
+                        [dependencies]
+                        dep = "{}"
+                    "#,
+                    req,
+                ),
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        p.cargo("generate-lockfile -Zminimal-versions")
+            .masquerade_as_nightly_cargo()
+            .run();
+
+        let lock = p.read_lockfile();
+
+        assert!(lock.contains("1.0.0+build1"));
+        assert!(!lock.contains("1.0.0+build2"));
+    }
+}
