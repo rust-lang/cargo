@@ -394,7 +394,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
 
             for (lt, arg) in &output.linker_args {
-                if lt.applies_to(&target) {
+                if lt.applies_to(target) {
                     rustc.arg("-C").arg(format!("link-arg={}", arg));
                 }
             }
