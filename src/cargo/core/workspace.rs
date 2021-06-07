@@ -3,7 +3,6 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::slice;
 
 use anyhow::{bail, Context as _};
 use glob::glob;
@@ -134,13 +133,6 @@ pub struct WorkspaceRootConfig {
     default_members: Option<Vec<String>>,
     exclude: Vec<String>,
     custom_metadata: Option<toml::Value>,
-}
-
-/// An iterator over the member packages of a workspace, returned by
-/// `Workspace::members`
-pub struct Members<'a, 'cfg> {
-    ws: &'a Workspace<'cfg>,
-    iter: slice::Iter<'a, PathBuf>,
 }
 
 impl<'cfg> Workspace<'cfg> {
@@ -466,11 +458,14 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     /// Returns an iterator over all packages in this workspace
-    pub fn members<'a>(&'a self) -> Members<'a, 'cfg> {
-        Members {
-            ws: self,
-            iter: self.members.iter(),
-        }
+    pub fn members(&self) -> impl Iterator<Item = &Package> {
+        let packages = &self.packages;
+        self.members
+            .iter()
+            .filter_map(move |path| match packages.get(path) {
+                &MaybePackage::Package(ref p) => Some(p),
+                _ => None,
+            })
     }
 
     /// Returns a mutable iterator over all packages in this workspace
@@ -494,11 +489,14 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     /// Returns an iterator over default packages in this workspace
-    pub fn default_members<'a>(&'a self) -> Members<'a, 'cfg> {
-        Members {
-            ws: self,
-            iter: self.default_members.iter(),
-        }
+    pub fn default_members<'a>(&'a self) -> impl Iterator<Item = &Package> {
+        let packages = &self.packages;
+        self.default_members
+            .iter()
+            .filter_map(move |path| match packages.get(path) {
+                &MaybePackage::Package(ref p) => Some(p),
+                _ => None,
+            })
     }
 
     /// Returns an iterator over default packages in this workspace
@@ -1566,26 +1564,6 @@ impl<'cfg> Packages<'cfg> {
                 }))
             }
         }
-    }
-}
-
-impl<'a, 'cfg> Iterator for Members<'a, 'cfg> {
-    type Item = &'a Package;
-
-    fn next(&mut self) -> Option<&'a Package> {
-        loop {
-            let next = self.iter.next().map(|path| self.ws.packages.get(path));
-            match next {
-                Some(&MaybePackage::Package(ref p)) => return Some(p),
-                Some(&MaybePackage::Virtual(_)) => {}
-                None => return None,
-            }
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let (_, upper) = self.iter.size_hint();
-        (0, upper)
     }
 }
 
