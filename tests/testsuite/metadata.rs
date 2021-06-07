@@ -1998,6 +1998,7 @@ fn deps_with_bin_only() {
                   "id": "foo 0.1.0 ([..])",
                   "license": null,
                   "license_file": null,
+                  "description": null,
                   "source": null,
                   "dependencies": [
                     {
