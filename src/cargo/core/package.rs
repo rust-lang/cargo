@@ -102,6 +102,7 @@ pub struct SerializedPackage {
     links: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<Vec<String>>,
+    default_run: Option<String>,
 }
 
 impl Package {
@@ -267,6 +268,7 @@ impl Package {
             links: self.manifest().links().map(|s| s.to_owned()),
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
+            default_run: self.manifest().default_run().map(|s| s.to_owned()),
         }
     }
 }
