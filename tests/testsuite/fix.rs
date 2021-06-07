@@ -1501,3 +1501,49 @@ fn rustfix_handles_multi_spans() {
     p.cargo("fix --allow-no-vcs").run();
     assert!(p.read_file("src/lib.rs").contains(r#"panic!("hey");"#));
 }
+
+#[cargo_test]
+fn fix_edition_2021() {
+    // Can migrate 2021, even when lints are allowed.
+    if !is_nightly() {
+        // 2021 is unstable
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![allow(ellipsis_inclusive_range_patterns)]
+
+                pub fn f() -> bool {
+                    let x = 123;
+                    match x {
+                        0...100 => true,
+                        _ => false,
+                    }
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[MIGRATING] src/lib.rs from 2018 edition to 2021
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] [..]
+",
+        )
+        .run();
+    assert!(p.read_file("src/lib.rs").contains(r#"0..=100 => true,"#));
+}
