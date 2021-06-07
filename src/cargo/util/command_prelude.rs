@@ -59,7 +59,7 @@ pub trait AppExt: Sized {
 
     fn arg_package(self, package: &'static str) -> Self {
         self._arg(
-            optinal_opt("package", package)
+            optional_opt("package", package)
                 .short("p")
                 .value_name("SPEC"),
         )
@@ -225,7 +225,7 @@ pub trait AppExt: Sized {
     fn arg_future_incompat_report(self) -> Self {
         self._arg(opt(
             "future-incompat-report",
-            "Ouputs a future incompatibility report at the end of the build (unstable)",
+            "Outputs a future incompatibility report at the end of the build (unstable)",
         ))
     }
 }
@@ -240,7 +240,7 @@ pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
 }
 
-pub fn optinal_opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
+pub fn optional_opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     opt(name, help).min_values(0)
 }
 
