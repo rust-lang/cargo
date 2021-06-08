@@ -1533,6 +1533,126 @@ fn package_edition_2018() {
 }
 
 #[cargo_test]
+fn package_default_run() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+                default-run = "a"
+            "#,
+        )
+        .build();
+    p.cargo("metadata")
+        .with_json(
+            r#"
+            {
+                "packages": [
+                    {
+                        "authors": [
+                            "wycats@example.com"
+                        ],
+                        "categories": [],
+                        "default_run": "a",
+                        "dependencies": [],
+                        "description": null,
+                        "edition": "2018",
+                        "features": {},
+                        "id": "foo 0.1.0 (path+file:[..])",
+                        "keywords": [],
+                        "license": null,
+                        "license_file": null,
+                        "links": null,
+                        "manifest_path": "[..]Cargo.toml",
+                        "metadata": null,
+                        "publish": null,
+                        "name": "foo",
+                        "readme": null,
+                        "repository": null,
+                        "homepage": null,
+                        "documentation": null,
+                        "source": null,
+                        "targets": [
+                            {
+                                "crate_types": [
+                                    "lib"
+                                ],
+                                "doc": true,
+                                "doctest": true,
+                                "test": true,
+                                "edition": "2018",
+                                "kind": [
+                                    "lib"
+                                ],
+                                "name": "foo",
+                                "src_path": "[..]src/lib.rs"
+                            },
+                            {
+                                "crate_types": [
+                                    "bin"
+                                ],
+                                "doc": true,
+                                "doctest": false,
+                                "test": true,
+                                "edition": "2018",
+                                "kind": [
+                                    "bin"
+                                ],
+                                "name": "a",
+                                "src_path": "[..]src/bin/a.rs",
+                                "test": true
+                            },
+                            {
+                                "crate_types": [
+                                    "bin"
+                                ],
+                                "doc": true,
+                                "doctest": false,
+                                "test": true,
+                                "edition": "2018",
+                                "kind": [
+                                    "bin"
+                                ],
+                                "name": "b",
+                                "src_path": "[..]src/bin/b.rs",
+                                "test": true
+                            }
+                        ],
+                        "version": "0.1.0"
+                    }
+                ],
+                "resolve": {
+                    "nodes": [
+                        {
+                            "dependencies": [],
+                            "deps": [],
+                            "features": [],
+                            "id": "foo 0.1.0 (path+file:[..])"
+                        }
+                    ],
+                    "root": "foo 0.1.0 (path+file:[..])"
+                },
+                "target_directory": "[..]",
+                "version": 1,
+                "workspace_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
+                "workspace_root": "[..]",
+                "metadata": null
+            }
+            "#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn target_edition_2018() {
     let p = project()
         .file("src/lib.rs", "")
