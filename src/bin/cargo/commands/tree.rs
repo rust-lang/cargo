@@ -56,6 +56,11 @@ pub fn cli() -> App {
             )
             .short("i"),
         )
+        .arg(multi_opt(
+            "prune",
+            "SPEC",
+            "Prune the given package from the display of the dependency tree",
+        ))
         .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         // Deprecated, use --prefix=none instead.
         .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
@@ -152,6 +157,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let (edge_kinds, no_proc_macro) = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
 
+    let pkgs_to_prune = args._values_of("prune");
+
     let packages = args.packages_from_flags()?;
     let mut invert = args
         .values_of("invert")
@@ -197,6 +204,7 @@ subtree of the package given to -p.\n\
         target,
         edge_kinds,
         invert,
+        pkgs_to_prune,
         prefix,
         no_dedupe,
         duplicates: args.is_present("duplicates"),

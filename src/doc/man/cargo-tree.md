@@ -71,6 +71,10 @@ flag can be used to display the package's reverse dependencies only with the
 subtree of the package given to `-p`.
 {{/option}}
 
+{{#option "`--prune` _spec_" }}
+Prune the given package from the display of the dependency tree.
+{{/option}}
+
 {{#option "`--depth` _depth_" }}
 Maximum display depth of the dependency tree. A depth of 1 displays the direct
 dependencies, for example.

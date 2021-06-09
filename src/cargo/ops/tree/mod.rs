@@ -27,6 +27,8 @@ pub struct TreeOptions {
     /// The dependency kinds to display.
     pub edge_kinds: HashSet<EdgeKind>,
     pub invert: Vec<String>,
+    /// The packages to prune from the display of the dependency tree.
+    pub pkgs_to_prune: Vec<String>,
     /// The style of prefix for each line.
     pub prefix: Prefix,
     /// If `true`, duplicates will be repeated.
@@ -199,7 +201,19 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         graph.invert();
     }
 
-    print(ws.config(), opts, root_indexes, &graph)?;
+    // Packages to prune.
+    let pkgs_to_prune = opts
+        .pkgs_to_prune
+        .iter()
+        .map(|p| PackageIdSpec::parse(p))
+        .map(|r| {
+            // Provide a error message if pkgid is not within the resolved
+            // dependencies graph.
+            r.and_then(|spec| spec.query(ws_resolve.targeted_resolve.iter()).and(Ok(spec)))
+        })
+        .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
+
+    print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;
     Ok(())
 }
 
@@ -208,6 +222,7 @@ fn print(
     config: &Config,
     opts: &TreeOptions,
     roots: Vec<usize>,
+    pkgs_to_prune: &[PackageIdSpec],
     graph: &Graph<'_>,
 ) -> CargoResult<()> {
     let format = Pattern::new(&opts.format)
@@ -240,6 +255,7 @@ fn print(
             root_index,
             &format,
             symbols,
+            pkgs_to_prune,
             opts.prefix,
             opts.no_dedupe,
             opts.max_display_depth,
@@ -260,6 +276,7 @@ fn print_node<'a>(
     node_index: usize,
     format: &Pattern,
     symbols: &Symbols,
+    pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
     max_display_depth: u32,
@@ -319,6 +336,7 @@ fn print_node<'a>(
             node_index,
             format,
             symbols,
+            pkgs_to_prune,
             prefix,
             no_dedupe,
             max_display_depth,
@@ -339,6 +357,7 @@ fn print_dependencies<'a>(
     node_index: usize,
     format: &Pattern,
     symbols: &Symbols,
+    pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
     max_display_depth: u32,
@@ -371,6 +390,11 @@ fn print_dependencies<'a>(
         }
     }
 
+    // Current level exceeds maximum display depth. Skip.
+    if levels_continue.len() + 1 > max_display_depth as usize {
+        return;
+    }
+
     let mut it = deps
         .iter()
         .filter(|dep| {
@@ -386,26 +410,34 @@ fn print_dependencies<'a>(
                 true
             }
         })
+        .filter(|dep| {
+            // Filter out packages to prune.
+            match graph.node(**dep) {
+                Node::Package { package_id, .. } => {
+                    !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
+                }
+                _ => true,
+            }
+        })
         .peekable();
 
     while let Some(dependency) = it.next() {
-        if levels_continue.len() + 1 <= max_display_depth as usize {
-            levels_continue.push(it.peek().is_some());
-            print_node(
-                config,
-                graph,
-                *dependency,
-                format,
-                symbols,
-                prefix,
-                no_dedupe,
-                max_display_depth,
-                no_proc_macro,
-                visited_deps,
-                levels_continue,
-                print_stack,
-            );
-            levels_continue.pop();
-        }
+        levels_continue.push(it.peek().is_some());
+        print_node(
+            config,
+            graph,
+            *dependency,
+            format,
+            symbols,
+            pkgs_to_prune,
+            prefix,
+            no_dedupe,
+            max_display_depth,
+            no_proc_macro,
+            visited_deps,
+            levels_continue,
+            print_stack,
+        );
+        levels_continue.pop();
     }
 }

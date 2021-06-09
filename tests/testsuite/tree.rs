@@ -1720,3 +1720,81 @@ c v1.0.0
         )
         .run();
 }
+
+#[cargo_test]
+fn prune() {
+    let p = make_simple_proj();
+
+    p.cargo("tree --prune c")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── a v1.0.0
+    └── b v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // multiple prune
+    p.cargo("tree --prune c --prune bdep")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── a v1.0.0
+    └── b v1.0.0
+[build-dependencies]
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // with edge-kinds
+    p.cargo("tree --prune c -e normal")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── a v1.0.0
+    └── b v1.0.0
+",
+        )
+        .run();
+
+    // pruning self does not works
+    p.cargo("tree --prune foo")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+│   └── b v1.0.0
+│       └── c v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // dep not exist
+    p.cargo("tree --prune no-dep")
+        .with_stderr(
+            "\
+[ERROR] package ID specification `no-dep` did not match any packages
+
+<tab>Did you mean `bdep`?
+",
+        )
+        .with_status(101)
+        .run();
+}
