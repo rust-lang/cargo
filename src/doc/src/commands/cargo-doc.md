@@ -32,7 +32,7 @@ option.</dd>
 
 
 <dt class="option-term" id="option-cargo-doc---document-private-items"><a class="option-anchor" href="#option-cargo-doc---document-private-items"></a><code>--document-private-items</code></dt>
-<dd class="option-desc">Include non-public items in the documentation.</dd>
+<dd class="option-desc">Include non-public items in the documentation. This will be enabled by default if documenting a binary target.</dd>
 
 
 </dl>
