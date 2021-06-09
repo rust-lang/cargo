@@ -433,6 +433,7 @@ fn update_precise_first_run() {
     {
       "authors": [],
       "categories": [],
+      "default_run": null,
       "dependencies": [
         {
           "features": [],
@@ -485,6 +486,7 @@ fn update_precise_first_run() {
     {
       "authors": [],
       "categories": [],
+      "default_run": null,
       "dependencies": [],
       "description": null,
       "documentation": null,

@@ -766,6 +766,7 @@ fn json_exposed() {
                       "publish": null,
                       "authors": [],
                       "categories": [],
+                      "default_run": null,
                       "keywords": [],
                       "readme": null,
                       "repository": null,

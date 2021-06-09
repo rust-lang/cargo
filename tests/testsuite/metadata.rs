@@ -22,6 +22,7 @@ fn cargo_metadata_simple() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "version": "0.5.0",
                 "id": "foo[..]",
@@ -119,6 +120,7 @@ crate-type = ["lib", "staticlib"]
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
@@ -206,6 +208,7 @@ optional_feat = []
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
@@ -309,6 +312,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [
                     {
                         "features": [],
@@ -361,6 +365,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [],
                 "description": null,
                 "edition": "2015",
@@ -400,6 +405,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [
                     {
                         "features": [],
@@ -464,6 +470,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [],
                 "description": null,
                 "edition": "2015",
@@ -605,6 +612,7 @@ name = "ex"
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
@@ -698,6 +706,7 @@ crate-type = ["rlib", "dylib"]
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
@@ -798,6 +807,7 @@ fn workspace_metadata() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "bar",
                 "version": "0.5.0",
                 "id": "bar[..]",
@@ -835,6 +845,7 @@ fn workspace_metadata() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
@@ -927,6 +938,7 @@ fn workspace_metadata_no_deps() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "bar",
                 "readme": null,
                 "repository": null,
@@ -964,6 +976,7 @@ fn workspace_metadata_no_deps() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
@@ -1031,6 +1044,7 @@ const MANIFEST_OUTPUT: &str = r#"
             "wycats@example.com"
         ],
         "categories": [],
+        "default_run": null,
         "name":"foo",
         "version":"0.5.0",
         "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
@@ -1216,6 +1230,7 @@ fn package_metadata() {
             {
                 "authors": ["wycats@example.com"],
                 "categories": ["database"],
+                "default_run": null,
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
@@ -1293,6 +1308,7 @@ fn package_publish() {
             {
                 "authors": ["wycats@example.com"],
                 "categories": ["database"],
+                "default_run": null,
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
@@ -1367,6 +1383,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "wycats@example.com"
                     ],
                     "categories": [],
+                    "default_run": null,
                     "dependencies": [],
                     "description": null,
                     "edition": "2015",
@@ -1453,6 +1470,7 @@ fn package_edition_2018() {
                             "wycats@example.com"
                         ],
                         "categories": [],
+                        "default_run": null,
                         "dependencies": [],
                         "description": null,
                         "edition": "2018",
@@ -1515,6 +1533,126 @@ fn package_edition_2018() {
 }
 
 #[cargo_test]
+fn package_default_run() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+                default-run = "a"
+            "#,
+        )
+        .build();
+    p.cargo("metadata")
+        .with_json(
+            r#"
+            {
+                "packages": [
+                    {
+                        "authors": [
+                            "wycats@example.com"
+                        ],
+                        "categories": [],
+                        "default_run": "a",
+                        "dependencies": [],
+                        "description": null,
+                        "edition": "2018",
+                        "features": {},
+                        "id": "foo 0.1.0 (path+file:[..])",
+                        "keywords": [],
+                        "license": null,
+                        "license_file": null,
+                        "links": null,
+                        "manifest_path": "[..]Cargo.toml",
+                        "metadata": null,
+                        "publish": null,
+                        "name": "foo",
+                        "readme": null,
+                        "repository": null,
+                        "homepage": null,
+                        "documentation": null,
+                        "source": null,
+                        "targets": [
+                            {
+                                "crate_types": [
+                                    "lib"
+                                ],
+                                "doc": true,
+                                "doctest": true,
+                                "test": true,
+                                "edition": "2018",
+                                "kind": [
+                                    "lib"
+                                ],
+                                "name": "foo",
+                                "src_path": "[..]src/lib.rs"
+                            },
+                            {
+                                "crate_types": [
+                                    "bin"
+                                ],
+                                "doc": true,
+                                "doctest": false,
+                                "test": true,
+                                "edition": "2018",
+                                "kind": [
+                                    "bin"
+                                ],
+                                "name": "a",
+                                "src_path": "[..]src/bin/a.rs",
+                                "test": true
+                            },
+                            {
+                                "crate_types": [
+                                    "bin"
+                                ],
+                                "doc": true,
+                                "doctest": false,
+                                "test": true,
+                                "edition": "2018",
+                                "kind": [
+                                    "bin"
+                                ],
+                                "name": "b",
+                                "src_path": "[..]src/bin/b.rs",
+                                "test": true
+                            }
+                        ],
+                        "version": "0.1.0"
+                    }
+                ],
+                "resolve": {
+                    "nodes": [
+                        {
+                            "dependencies": [],
+                            "deps": [],
+                            "features": [],
+                            "id": "foo 0.1.0 (path+file:[..])"
+                        }
+                    ],
+                    "root": "foo 0.1.0 (path+file:[..])"
+                },
+                "target_directory": "[..]",
+                "version": 1,
+                "workspace_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
+                "workspace_root": "[..]",
+                "metadata": null
+            }
+            "#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn target_edition_2018() {
     let p = project()
         .file("src/lib.rs", "")
@@ -1543,6 +1681,7 @@ fn target_edition_2018() {
                             "wycats@example.com"
                         ],
                         "categories": [],
+                        "default_run": null,
                         "dependencies": [],
                         "description": null,
                         "edition": "2015",
@@ -1648,6 +1787,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "default_run": null,
             "dependencies": [],
             "description": null,
             "edition": "2015",
@@ -1687,6 +1827,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "default_run": null,
             "dependencies": [],
             "description": null,
             "edition": "2015",
@@ -1726,6 +1867,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "default_run": null,
             "dependencies": [
                 {
                     "features": [],
@@ -1871,6 +2013,7 @@ fn metadata_links() {
                 {
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "dependencies": [],
                   "description": null,
                   "edition": "2015",
@@ -2014,6 +2157,7 @@ fn deps_with_bin_only() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
@@ -2117,6 +2261,7 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
@@ -2159,6 +2304,7 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
@@ -2201,6 +2347,7 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
@@ -2243,6 +2390,7 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
@@ -2348,6 +2496,7 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,

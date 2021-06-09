@@ -10,6 +10,7 @@ fn manifest_output(readme_value: &str) -> String {
         "wycats@example.com"
     ],
     "categories": [],
+    "default_run": null,
     "name":"foo",
     "readme": {},
     "homepage": null,
