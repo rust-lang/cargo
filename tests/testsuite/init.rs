@@ -598,3 +598,74 @@ mod tests {
 "#
     );
 }
+
+#[cargo_test]
+fn creates_binary_when_instructed_and_has_lib_file_no_warning() {
+    let path = paths::root().join("foo");
+    fs::create_dir(&path).unwrap();
+    fs::write(path.join("foo.rs"), "fn not_main() {}").unwrap();
+    cargo_process("init --bin")
+        .cwd(&path)
+        .with_stderr(
+            "\
+[WARNING] file `foo.rs` seems to be a library file
+[CREATED] binary (application) package
+",
+        )
+        .run();
+
+    let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
+    assert!(cargo_toml.contains("[[bin]]"));
+    assert!(!cargo_toml.contains("[lib]"));
+}
+
+#[cargo_test]
+fn creates_library_when_instructed_and_has_bin_file() {
+    let path = paths::root().join("foo");
+    fs::create_dir(&path).unwrap();
+    fs::write(path.join("foo.rs"), "fn main() {}").unwrap();
+    cargo_process("init --lib")
+        .cwd(&path)
+        .with_stderr(
+            "\
+[WARNING] file `foo.rs` seems to be a binary (application) file
+[CREATED] library package
+",
+        )
+        .run();
+
+    let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
+    assert!(!cargo_toml.contains("[[bin]]"));
+    assert!(cargo_toml.contains("[lib]"));
+}
+
+#[cargo_test]
+fn creates_binary_when_both_binlib_present() {
+    let path = paths::root().join("foo");
+    fs::create_dir(&path).unwrap();
+    fs::write(path.join("foo.rs"), "fn main() {}").unwrap();
+    fs::write(path.join("lib.rs"), "fn notmain() {}").unwrap();
+    cargo_process("init --bin")
+        .cwd(&path)
+        .with_stderr("[CREATED] binary (application) package")
+        .run();
+
+    let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
+    assert!(cargo_toml.contains("[[bin]]"));
+    assert!(cargo_toml.contains("[lib]"));
+}
+
+#[cargo_test]
+fn cant_create_library_when_both_binlib_present() {
+    let path = paths::root().join("foo");
+    fs::create_dir(&path).unwrap();
+    fs::write(path.join("foo.rs"), "fn main() {}").unwrap();
+    fs::write(path.join("lib.rs"), "fn notmain() {}").unwrap();
+    cargo_process("init --lib")
+        .cwd(&path)
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] cannot have a package with multiple libraries, found both `foo.rs` and `lib.rs`"
+            )
+        .run();
+}
