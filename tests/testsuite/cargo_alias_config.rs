@@ -192,3 +192,21 @@ fn global_options_with_alias() {
         )
         .run();
 }
+
+#[cargo_test]
+fn weird_check() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("-- check --invalid_argument -some-other-argument")
+        .with_stderr(
+            "\
+[WARNING] trailing arguments after built-in command `check` are ignored: `--invalid_argument -some-other-argument`
+[CHECKING] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}

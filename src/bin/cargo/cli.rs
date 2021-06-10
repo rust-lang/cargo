@@ -1,6 +1,7 @@
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
+use itertools::Itertools;
 
 use super::commands;
 use super::list_commands;
@@ -169,6 +170,17 @@ fn expand_aliases(
                     cmd,
                 ))?;
             }
+            (Some(_), None) => {
+                // Command is built-in and is not conflicting with alias, but contains ignored values.
+                if let Some(mut values) = args.values_of("") {
+                    config.shell().warn(format!(
+                        "trailing arguments after built-in command `{}` are ignored: `{}`",
+                        cmd,
+                        values.join(" "),
+                    ))?;
+                }
+            }
+            (None, None) => {}
             (_, Some(mut alias)) => {
                 alias.extend(
                     args.values_of("")
@@ -186,7 +198,6 @@ fn expand_aliases(
                 let (expanded_args, _) = expand_aliases(config, new_args)?;
                 return Ok((expanded_args, global_args));
             }
-            (_, None) => {}
         }
     };
 
