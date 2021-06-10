@@ -4075,7 +4075,21 @@ fn rustc_wrapper() {
 
 #[cargo_test]
 fn rustc_wrapper_relative() {
-    let p = project().file("src/lib.rs", "").build();
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
     let wrapper = tools::echo_wrapper();
     let exe_name = wrapper.file_name().unwrap().to_str().unwrap();
     let relative_path = format!("./{}", exe_name);
@@ -4090,6 +4104,17 @@ fn rustc_wrapper_relative() {
         .env("RUSTC_WORKSPACE_WRAPPER", &relative_path)
         .with_stderr_contains(&running)
         .run();
+    p.build_dir().rm_rf();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+                build.rustc-wrapper = "./{}"
+            "#,
+            exe_name
+        ),
+    );
+    p.cargo("build -v").with_stderr_contains(&running).run();
 }
 
 #[cargo_test]
