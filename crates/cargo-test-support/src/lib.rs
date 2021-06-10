@@ -39,6 +39,7 @@ pub mod git;
 pub mod paths;
 pub mod publish;
 pub mod registry;
+pub mod tools;
 
 /*
  *

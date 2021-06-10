@@ -34,8 +34,8 @@ impl ConfigRelativePath {
     /// Values which don't look like a filesystem path (don't contain `/` or
     /// `\`) will be returned as-is, and everything else will fall through to an
     /// absolute path.
-    pub fn resolve_program(self, config: &Config) -> PathBuf {
-        config.string_to_path(self.0.val, &self.0.definition)
+    pub fn resolve_program(&self, config: &Config) -> PathBuf {
+        config.string_to_path(&self.0.val, &self.0.definition)
     }
 }
 
