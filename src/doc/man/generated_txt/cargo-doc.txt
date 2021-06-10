@@ -23,7 +23,8 @@ OPTIONS
            Do not build documentation for dependencies.
 
        --document-private-items
-           Include non-public items in the documentation.
+           Include non-public items in the documentation. This will be enabled
+           by default if documenting a binary target.
 
    Package Selection
        By default, when no package selection options are given, the packages
