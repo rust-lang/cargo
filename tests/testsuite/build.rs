@@ -8,6 +8,7 @@ use cargo::{
 };
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
+use cargo_test_support::tools;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly,
     lines_match_unordered, main_file, paths, process, project, rustc_host, sleep_ms,
@@ -4054,29 +4055,44 @@ fn run_proper_binary_main_rs_as_foo() {
 }
 
 #[cargo_test]
-// NOTE: we don't have `/usr/bin/env` on Windows.
-#[cfg(not(windows))]
 fn rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();
+    let wrapper = tools::echo_wrapper();
+    let running = format!(
+        "[RUNNING] `{} rustc --crate-name foo [..]",
+        wrapper.display()
+    );
     p.cargo("build -v")
-        .env("RUSTC_WRAPPER", "/usr/bin/env")
-        .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
+        .env("RUSTC_WRAPPER", &wrapper)
+        .with_stderr_contains(&running)
+        .run();
+    p.build_dir().rm_rf();
+    p.cargo("build -v")
+        .env("RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .with_stderr_contains(&running)
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))]
 fn rustc_wrapper_relative() {
     let p = project().file("src/lib.rs", "").build();
+    let wrapper = tools::echo_wrapper();
+    let exe_name = wrapper.file_name().unwrap().to_str().unwrap();
+    let relative_path = format!("./{}", exe_name);
+    fs::hard_link(&wrapper, p.root().join(exe_name)).unwrap();
+    let running = format!("[RUNNING] `[ROOT]/foo/./{} rustc[..]", exe_name);
     p.cargo("build -v")
-        .env("RUSTC_WRAPPER", "./sccache")
-        .with_status(101)
-        .with_stderr_contains("[..]/foo/./sccache rustc[..]")
+        .env("RUSTC_WRAPPER", &relative_path)
+        .with_stderr_contains(&running)
+        .run();
+    p.build_dir().rm_rf();
+    p.cargo("build -v")
+        .env("RUSTC_WORKSPACE_WRAPPER", &relative_path)
+        .with_stderr_contains(&running)
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))]
 fn rustc_wrapper_from_path() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
@@ -4084,34 +4100,7 @@ fn rustc_wrapper_from_path() {
         .with_status(101)
         .with_stderr_contains("[..]`wannabe_sccache rustc [..]")
         .run();
-}
-
-#[cargo_test]
-// NOTE: we don't have `/usr/bin/env` on Windows.
-#[cfg(not(windows))]
-fn rustc_workspace_wrapper() {
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
-        .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
-        .run();
-}
-
-#[cargo_test]
-#[cfg(not(windows))]
-fn rustc_workspace_wrapper_relative() {
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", "./sccache")
-        .with_status(101)
-        .with_stderr_contains("[..]/foo/./sccache rustc[..]")
-        .run();
-}
-
-#[cargo_test]
-#[cfg(not(windows))]
-fn rustc_workspace_wrapper_from_path() {
-    let p = project().file("src/lib.rs", "").build();
+    p.build_dir().rm_rf();
     p.cargo("build -v")
         .env("RUSTC_WORKSPACE_WRAPPER", "wannabe_sccache")
         .with_status(101)

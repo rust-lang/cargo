@@ -2,8 +2,9 @@
 
 use cargo::core::Edition;
 use cargo_test_support::git;
-use cargo_test_support::paths;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
@@ -1195,7 +1196,6 @@ fn doesnt_rebuild_dependencies() {
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn does_not_crash_with_rustc_wrapper() {
     let p = project()
         .file(
@@ -1210,33 +1210,16 @@ fn does_not_crash_with_rustc_wrapper() {
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .env("RUSTC_WRAPPER", "/usr/bin/env")
+        .env("RUSTC_WRAPPER", tools::echo_wrapper())
         .run();
-}
-
-#[cargo_test]
-#[cfg(unix)]
-fn does_not_crash_with_rustc_workspace_wrapper() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
+    p.build_dir().rm_rf();
     p.cargo("fix --allow-no-vcs --verbose")
-        .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .run();
 }
 
 #[cargo_test]
 fn uses_workspace_wrapper_and_primary_wrapper_override() {
-    // We don't have /usr/bin/env on Windows.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1250,7 +1233,7 @@ fn uses_workspace_wrapper_and_primary_wrapper_override() {
         .build();
 
     p.cargo("fix --allow-no-vcs --verbose")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc src/lib.rs --crate-name foo [..]")
         .run();
 }

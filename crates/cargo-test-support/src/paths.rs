@@ -1,4 +1,3 @@
-use crate::{basic_manifest, project};
 use filetime::{self, FileTime};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
@@ -295,25 +294,4 @@ pub fn sysroot() -> String {
     assert!(output.status.success());
     let sysroot = String::from_utf8(output.stdout).unwrap();
     sysroot.trim().to_string()
-}
-
-pub fn echo_wrapper() -> std::path::PathBuf {
-    let p = project()
-        .at("rustc-echo-wrapper")
-        .file("Cargo.toml", &basic_manifest("rustc-echo-wrapper", "1.0.0"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                let args = std::env::args().collect::<Vec<_>>();
-                eprintln!("WRAPPER CALLED: {}", args[1..].join(" "));
-                let status = std::process::Command::new(&args[1])
-                    .args(&args[2..]).status().unwrap();
-                std::process::exit(status.code().unwrap_or(1));
-            }
-            "#,
-        )
-        .build();
-    p.cargo("build").run();
-    p.bin("rustc-echo-wrapper")
 }

@@ -1,5 +1,6 @@
 //! Tests for caching compiler diagnostics.
 
+use cargo_test_support::tools;
 use cargo_test_support::{
     basic_manifest, is_coarse_mtime, process, project, registry::Package, sleep_ms,
 };
@@ -459,8 +460,6 @@ fn caching_large_output() {
 
 #[cargo_test]
 fn rustc_workspace_wrapper() {
-    use cargo_test_support::paths;
-
     let p = project()
         .file(
             "src/lib.rs",
@@ -470,7 +469,7 @@ fn rustc_workspace_wrapper() {
         .build();
 
     p.cargo("check -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
         .run();
 
@@ -488,7 +487,7 @@ fn rustc_workspace_wrapper() {
 
     // Again, reading from the cache.
     p.cargo("check -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("[FRESH] foo [..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
         .run();
