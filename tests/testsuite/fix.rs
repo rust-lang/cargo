@@ -1495,3 +1495,23 @@ The following differences were detected with the current configuration:
 ")
         .run();
 }
+
+#[cargo_test]
+fn rustfix_handles_multi_spans() {
+    // Checks that rustfix handles a single diagnostic with multiple
+    // suggestion spans (non_fmt_panic in this case).
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    panic!(format!("hey"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs").run();
+    assert!(p.read_file("src/lib.rs").contains(r#"panic!("hey");"#));
+}
