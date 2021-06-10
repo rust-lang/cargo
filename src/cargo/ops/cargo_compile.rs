@@ -1140,7 +1140,7 @@ fn generate_targets(
         // else, silently skip target.
     }
     let mut units: Vec<_> = units.into_iter().collect();
-    unmatched_target_filters(&units, &filter, &mut ws.config().shell())?;
+    unmatched_target_filters(&units, filter, &mut ws.config().shell())?;
 
     // Keep the roots in a consistent order, which helps with checking test output.
     units.sort_unstable();
