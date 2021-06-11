@@ -16,6 +16,7 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
+use anyhow::{bail, format_err, Result};
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
 use serde_json::{self, Value};
 use url::Url;
@@ -413,19 +414,6 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     buf
 }
 
-trait ErrMsg<T> {
-    fn with_err_msg(self, val: String) -> Result<T, String>;
-}
-
-impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
-    fn with_err_msg(self, val: String) -> Result<T, String> {
-        match self {
-            Ok(val) => Ok(val),
-            Err(err) => Err(format!("{}; original={}", val, err)),
-        }
-    }
-}
-
 // Path to cargo executables
 pub fn cargo_dir() -> PathBuf {
     env::var_os("CARGO_BIN_PATH")
@@ -451,8 +439,6 @@ pub fn cargo_exe() -> PathBuf {
  * ===== Matchers =====
  *
  */
-
-pub type MatchResult = Result<(), String>;
 
 #[must_use]
 #[derive(Clone)]
@@ -703,7 +689,7 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> anyhow::Result<Output> {
+    pub fn exec_with_output(&mut self) -> Result<Output> {
         self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
@@ -778,7 +764,7 @@ impl Execs {
         }
     }
 
-    fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
+    fn match_process(&self, process: &ProcessBuilder) -> Result<()> {
         println!("running {}", process);
         let res = if self.stream_output {
             if is_ci() {
@@ -814,32 +800,32 @@ impl Execs {
                         .and(self.match_stdout(stdout, stderr))
                         .and(self.match_stderr(stdout, stderr));
                 }
-                Err(format!("could not exec process {}: {:?}", process, e))
+                bail!("could not exec process {}: {:?}", process, e)
             }
         }
     }
 
-    fn match_output(&self, actual: &Output) -> MatchResult {
+    fn match_output(&self, actual: &Output) -> Result<()> {
         self.verify_checks_output(actual);
         self.match_status(actual.status.code(), &actual.stdout, &actual.stderr)
             .and(self.match_stdout(&actual.stdout, &actual.stderr))
             .and(self.match_stderr(&actual.stdout, &actual.stderr))
     }
 
-    fn match_status(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> MatchResult {
+    fn match_status(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         match self.expect_exit_code {
             None => Ok(()),
             Some(expected) if code == Some(expected) => Ok(()),
-            Some(_) => Err(format!(
+            Some(_) => bail!(
                 "exited with {:?}\n--- stdout\n{}\n--- stderr\n{}",
                 code,
                 String::from_utf8_lossy(stdout),
                 String::from_utf8_lossy(stderr)
-            )),
+            ),
         }
     }
 
-    fn match_stdout(&self, stdout: &[u8], stderr: &[u8]) -> MatchResult {
+    fn match_stdout(&self, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         self.match_std(
             self.expect_stdout.as_ref(),
             stdout,
@@ -908,12 +894,12 @@ impl Execs {
                 self.match_std(Some(expect), stderr, "stderr", stderr, MatchKind::Partial);
 
             if let (Err(_), Err(_)) = (match_std, match_err) {
-                return Err(format!(
+                bail!(
                     "expected to find:\n\
                      {}\n\n\
                      did not find in either output.",
                     expect
-                ));
+                );
             }
         }
 
@@ -923,18 +909,18 @@ impl Execs {
 
         if let Some(ref objects) = self.expect_json {
             let stdout =
-                str::from_utf8(stdout).map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+                str::from_utf8(stdout).map_err(|_| format_err!("stdout was not utf8 encoded"))?;
             let lines = stdout
                 .lines()
                 .filter(|line| line.starts_with('{'))
                 .collect::<Vec<_>>();
             if lines.len() != objects.len() {
-                return Err(format!(
+                bail!(
                     "expected {} json lines, got {}, stdout:\n{}",
                     objects.len(),
                     lines.len(),
                     stdout
-                ));
+                );
             }
             for (obj, line) in objects.iter().zip(lines) {
                 self.match_json(obj, line)?;
@@ -943,7 +929,7 @@ impl Execs {
 
         if !self.expect_json_contains_unordered.is_empty() {
             let stdout =
-                str::from_utf8(stdout).map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+                str::from_utf8(stdout).map_err(|_| format_err!("stdout was not utf8 encoded"))?;
             let mut lines = stdout
                 .lines()
                 .filter(|line| line.starts_with('{'))
@@ -955,14 +941,14 @@ impl Execs {
                 {
                     Some(index) => lines.remove(index),
                     None => {
-                        return Err(format!(
+                        bail!(
                             "Did not find expected JSON:\n\
                              {}\n\
                              Remaining available output:\n\
                              {}\n",
                             serde_json::to_string_pretty(obj).unwrap(),
                             lines.join("\n")
-                        ));
+                        );
                     }
                 };
             }
@@ -970,7 +956,7 @@ impl Execs {
         Ok(())
     }
 
-    fn match_stderr(&self, stdout: &[u8], stderr: &[u8]) -> MatchResult {
+    fn match_stderr(&self, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         self.match_std(
             self.expect_stderr.as_ref(),
             stderr,
@@ -980,9 +966,9 @@ impl Execs {
         )
     }
 
-    fn normalize_actual(&self, description: &str, actual: &[u8]) -> Result<String, String> {
+    fn normalize_actual(&self, description: &str, actual: &[u8]) -> Result<String> {
         let actual = match str::from_utf8(actual) {
-            Err(..) => return Err(format!("{} was not utf8 encoded", description)),
+            Err(..) => bail!("{} was not utf8 encoded", description),
             Ok(actual) => actual,
         };
         Ok(self.normalize_matcher(actual))
@@ -1002,7 +988,7 @@ impl Execs {
         description: &str,
         extra: &[u8],
         kind: MatchKind,
-    ) -> MatchResult {
+    ) -> Result<()> {
         let out = match expected {
             Some(out) => self.normalize_matcher(out),
             None => return Ok(()),
@@ -1019,14 +1005,14 @@ impl Execs {
                 if diffs.is_empty() {
                     Ok(())
                 } else {
-                    Err(format!(
+                    bail!(
                         "differences:\n\
                          {}\n\n\
                          other output:\n\
                          `{}`",
                         diffs.join("\n"),
                         String::from_utf8_lossy(extra)
-                    ))
+                    )
                 }
             }
             MatchKind::Partial => {
@@ -1043,13 +1029,14 @@ impl Execs {
                 if diffs.is_empty() {
                     Ok(())
                 } else {
-                    Err(format!(
+                    bail!(
                         "expected to find:\n\
                          {}\n\n\
                          did not find in output:\n\
                          {}",
-                        out, actual
-                    ))
+                        out,
+                        actual
+                    )
                 }
             }
             MatchKind::PartialN(number) => {
@@ -1068,13 +1055,15 @@ impl Execs {
                 if matches == number {
                     Ok(())
                 } else {
-                    Err(format!(
+                    bail!(
                         "expected to find {} occurrences:\n\
                          {}\n\n\
                          did not find in output:\n\
                          {}",
-                        number, out, actual
-                    ))
+                        number,
+                        out,
+                        actual
+                    )
                 }
             }
             MatchKind::NotPresent => {
@@ -1089,13 +1078,14 @@ impl Execs {
                     }
                 }
                 if diffs.is_empty() {
-                    Err(format!(
+                    bail!(
                         "expected not to find:\n\
                          {}\n\n\
                          but found in output:\n\
                          {}",
-                        out, actual
-                    ))
+                        out,
+                        actual
+                    )
                 } else {
                     Ok(())
                 }
@@ -1104,12 +1094,7 @@ impl Execs {
         }
     }
 
-    fn match_with_without(
-        &self,
-        actual: &[u8],
-        with: &[String],
-        without: &[String],
-    ) -> MatchResult {
+    fn match_with_without(&self, actual: &[u8], with: &[String], without: &[String]) -> Result<()> {
         let actual = self.normalize_actual("stderr", actual)?;
         let contains = |s, line| {
             let mut s = self.normalize_matcher(s);
@@ -1123,16 +1108,18 @@ impl Execs {
             .filter(|line| !without.iter().any(|without| contains(without, line)))
             .collect();
         match matches.len() {
-            0 => Err(format!(
+            0 => bail!(
                 "Could not find expected line in output.\n\
                  With contents: {:?}\n\
                  Without contents: {:?}\n\
                  Actual stderr:\n\
                  {}\n",
-                with, without, actual
-            )),
+                with,
+                without,
+                actual
+            ),
             1 => Ok(()),
-            _ => Err(format!(
+            _ => bail!(
                 "Found multiple matching lines, but only expected one.\n\
                  With contents: {:?}\n\
                  Without contents: {:?}\n\
@@ -1141,17 +1128,17 @@ impl Execs {
                 with,
                 without,
                 matches.join("\n")
-            )),
+            ),
         }
     }
 
-    fn match_json(&self, expected: &str, line: &str) -> MatchResult {
+    fn match_json(&self, expected: &str, line: &str) -> Result<()> {
         let actual = match line.parse() {
-            Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
+            Err(e) => bail!("invalid json, {}:\n`{}`", e, line),
             Ok(actual) => actual,
         };
         let expected = match expected.parse() {
-            Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
+            Err(e) => bail!("invalid json, {}:\n`{}`", e, line),
             Ok(expected) => expected,
         };
 
@@ -1231,7 +1218,7 @@ pub fn lines_match(expected: &str, mut actual: &str) -> bool {
     actual.is_empty() || expected.ends_with("[..]")
 }
 
-pub fn lines_match_unordered(expected: &str, actual: &str) -> Result<(), String> {
+pub fn lines_match_unordered(expected: &str, actual: &str) -> Result<()> {
     let mut a = actual.lines().collect::<Vec<_>>();
     // match more-constrained lines first, although in theory we'll
     // need some sort of recursive match here. This handles the case
@@ -1252,19 +1239,19 @@ pub fn lines_match_unordered(expected: &str, actual: &str) -> Result<(), String>
         }
     }
     if !failures.is_empty() {
-        return Err(format!(
+        bail!(
             "Did not find expected line(s):\n{}\n\
                          Remaining available output:\n{}\n",
             failures.join("\n"),
             a.join("\n")
-        ));
+        );
     }
     if !a.is_empty() {
-        Err(format!(
+        bail!(
             "Output included extra lines:\n\
                          {}\n",
             a.join("\n")
-        ))
+        )
     } else {
         Ok(())
     }
@@ -1334,19 +1321,15 @@ fn lines_match_works() {
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
 /// (e.g., rustc) rather than Cargo itself).
-pub fn find_json_mismatch(
-    expected: &Value,
-    actual: &Value,
-    cwd: Option<&Path>,
-) -> Result<(), String> {
+pub fn find_json_mismatch(expected: &Value, actual: &Value, cwd: Option<&Path>) -> Result<()> {
     match find_json_mismatch_r(expected, actual, cwd) {
-        Some((expected_part, actual_part)) => Err(format!(
+        Some((expected_part, actual_part)) => bail!(
             "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
             serde_json::to_string_pretty(expected).unwrap(),
             serde_json::to_string_pretty(&actual).unwrap(),
             serde_json::to_string_pretty(expected_part).unwrap(),
             serde_json::to_string_pretty(actual_part).unwrap(),
-        )),
+        ),
         None => Ok(()),
     }
 }
