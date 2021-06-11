@@ -561,7 +561,10 @@ fn fix_deny_warnings_but_not_others() {
                     x
                 }
 
-                fn bar() {}
+                pub fn bar() {
+                    #[allow(unused_mut)]
+                    let mut _y = 4;
+                }
             ",
         )
         .build();
@@ -570,7 +573,7 @@ fn fix_deny_warnings_but_not_others() {
         .env("__CARGO_FIX_YOLO", "1")
         .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
-    assert!(p.read_file("src/lib.rs").contains("fn bar() {}"));
+    assert!(p.read_file("src/lib.rs").contains("let mut _y = 4;"));
 }
 
 #[cargo_test]
