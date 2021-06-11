@@ -427,13 +427,10 @@ fn metabuild_metadata() {
     // The metabuild Target is filtered out of the `metadata` results.
     let p = basic_project();
 
-    let output = p
+    let meta = p
         .cargo("metadata --format-version=1")
         .masquerade_as_nightly_cargo()
-        .exec_with_output()
-        .expect("cargo metadata failed");
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
+        .run_json();
     let mb_info: Vec<&str> = meta["packages"]
         .as_array()
         .unwrap()

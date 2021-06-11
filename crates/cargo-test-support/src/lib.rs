@@ -439,6 +439,19 @@ pub fn cargo_exe() -> PathBuf {
  *
  */
 
+/// This is the raw output from the process.
+///
+/// This is similar to `std::process::Output`, however the `status` is
+/// translated to the raw `code`. This is necessary because `ProcessError`
+/// does not have access to the raw `ExitStatus` because `ProcessError` needs
+/// to be serializable (for the Rustc cache), and `ExitStatus` does not
+/// provide a constructor.
+pub struct RawOutput {
+    pub code: Option<i32>,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+}
+
 #[must_use]
 #[derive(Clone)]
 pub struct Execs {
@@ -728,6 +741,25 @@ impl Execs {
         }
     }
 
+    /// Runs the process, checks the expected output, and returns the first
+    /// JSON object on stdout.
+    #[track_caller]
+    pub fn run_json(&mut self) -> serde_json::Value {
+        self.ran = true;
+        let p = (&self.process_builder).clone().unwrap();
+        match self.match_process(&p) {
+            Err(e) => panic!("\n{}", e),
+            Ok(output) => serde_json::from_slice(&output.stdout).unwrap_or_else(|e| {
+                panic!(
+                    "\nfailed to parse JSON: {}\n\
+                     output was:\n{}\n",
+                    e,
+                    String::from_utf8_lossy(&output.stdout)
+                );
+            }),
+        }
+    }
+
     #[track_caller]
     pub fn run_output(&mut self, output: &Output) {
         self.ran = true;
@@ -763,7 +795,7 @@ impl Execs {
         }
     }
 
-    fn match_process(&self, process: &ProcessBuilder) -> Result<()> {
+    fn match_process(&self, process: &ProcessBuilder) -> Result<RawOutput> {
         println!("running {}", process);
         let res = if self.stream_output {
             if is_ci() {
@@ -785,7 +817,14 @@ impl Execs {
         };
 
         match res {
-            Ok(out) => self.match_output(&out),
+            Ok(out) => {
+                self.match_output(&out)?;
+                return Ok(RawOutput {
+                    stdout: out.stdout,
+                    stderr: out.stderr,
+                    code: out.status.code(),
+                });
+            }
             Err(e) => {
                 if let Some(ProcessError {
                     stdout: Some(stdout),
@@ -794,10 +833,14 @@ impl Execs {
                     ..
                 }) = e.downcast_ref::<ProcessError>()
                 {
-                    return self
-                        .match_status(*code, stdout, stderr)
+                    self.match_status(*code, stdout, stderr)
                         .and(self.match_stdout(stdout, stderr))
-                        .and(self.match_stderr(stdout, stderr));
+                        .and(self.match_stderr(stdout, stderr))?;
+                    return Ok(RawOutput {
+                        stdout: stdout.to_vec(),
+                        stderr: stderr.to_vec(),
+                        code: *code,
+                    });
                 }
                 bail!("could not exec process {}: {:?}", process, e)
             }
