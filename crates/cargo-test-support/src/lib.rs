@@ -8,7 +8,6 @@
 
 use std::env;
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs;
 use std::os;
 use std::path::{Path, PathBuf};
@@ -725,7 +724,7 @@ impl Execs {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
         if let Err(e) = self.match_process(&p) {
-            panic!("\nExpected: {:?}\n    but: {}", self, e)
+            panic!("\n{}", e)
         }
     }
 
@@ -733,7 +732,7 @@ impl Execs {
     pub fn run_output(&mut self, output: &Output) {
         self.ran = true;
         if let Err(e) = self.match_output(output) {
-            panic!("\nExpected: {:?}\n    but: {}", self, e)
+            panic!("\n{}", e)
         }
     }
 
@@ -1006,10 +1005,11 @@ impl Execs {
                     Ok(())
                 } else {
                     bail!(
-                        "differences:\n\
+                        "{} did not match:\n\
                          {}\n\n\
                          other output:\n\
                          `{}`",
+                        description,
                         diffs.join("\n"),
                         String::from_utf8_lossy(extra)
                     )
@@ -1401,12 +1401,6 @@ fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> Z
     ZipAll {
         first: a,
         second: b,
-    }
-}
-
-impl fmt::Debug for Execs {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "execs")
     }
 }
 
