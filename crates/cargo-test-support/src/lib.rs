@@ -737,7 +737,7 @@ impl Execs {
         }
     }
 
-    fn verify_checks_output(&self, output: &Output) {
+    fn verify_checks_output(&self, stdout: &[u8], stderr: &[u8]) {
         if self.expect_exit_code.unwrap_or(0) != 0
             && self.expect_stdout.is_none()
             && self.expect_stdin.is_none()
@@ -758,8 +758,8 @@ impl Execs {
                 "`with_status()` is used, but no output is checked.\n\
                  The test must check the output to ensure the correct error is triggered.\n\
                  --- stdout\n{}\n--- stderr\n{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr),
+                String::from_utf8_lossy(stdout),
+                String::from_utf8_lossy(stderr),
             );
         }
     }
@@ -806,13 +806,13 @@ impl Execs {
     }
 
     fn match_output(&self, actual: &Output) -> Result<()> {
-        self.verify_checks_output(actual);
         self.match_status(actual.status.code(), &actual.stdout, &actual.stderr)
             .and(self.match_stdout(&actual.stdout, &actual.stderr))
             .and(self.match_stderr(&actual.stdout, &actual.stderr))
     }
 
     fn match_status(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
+        self.verify_checks_output(stdout, stderr);
         match self.expect_exit_code {
             None => Ok(()),
             Some(expected) if code == Some(expected) => Ok(()),
