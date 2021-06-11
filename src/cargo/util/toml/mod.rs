@@ -17,7 +17,7 @@ use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::DepKind;
-use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::manifest::{IntermediateManifest, ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -117,15 +117,8 @@ fn do_read_manifest(
 
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) =
-            TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
+            TomlManifest::to_intermediate(&manifest, source_id, package_root, config)?;
         add_unused(manifest.warnings_mut());
-        if manifest.targets().iter().all(|t| t.is_custom_build()) {
-            bail!(
-                "no targets specified in the manifest\n\
-                 either src/lib.rs, src/main.rs, a [lib] section, or \
-                 [[bin]] section must be present"
-            )
-        }
         Ok((EitherManifest::Real(manifest), paths))
     } else {
         let (mut m, paths) =
@@ -1063,6 +1056,42 @@ impl TomlManifest {
         });
     }
 
+    pub fn to_intermediate(
+        me: &Rc<TomlManifest>,
+        source_id: SourceId,
+        package_root: &Path,
+        config: &Config,
+    ) -> CargoResult<(IntermediateManifest, Vec<PathBuf>)> {
+        let project = me.project.as_ref().or_else(|| me.package.as_ref());
+        let project = project.ok_or_else(|| anyhow!("no `package` section found"))?;
+
+        let package_name = project.name.trim();
+        if package_name.is_empty() {
+            bail!("package name cannot be an empty string")
+        }
+
+        validate_package_name(package_name, "package name", "")?;
+
+        let pkgid = project.to_package_id(source_id)?;
+
+        let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
+            (Some(toml_workspace), None) => WorkspaceConfig::Root(
+                WorkspaceRootConfig::from_toml_workspace(package_root, &config, toml_workspace)?,
+            ),
+            (None, root) => WorkspaceConfig::Member {
+                root: root.cloned(),
+            },
+            (Some(..), Some(..)) => bail!(
+                "cannot configure both `package.workspace` and \
+                 `[workspace]`, only one can be specified"
+            ),
+        };
+
+        let manifest = IntermediateManifest::new(workspace_config, pkgid, Rc::clone(me));
+
+        Ok((manifest, vec![]))
+    }
+
     pub fn to_real_manifest(
         me: &Rc<TomlManifest>,
         source_id: SourceId,
@@ -1426,6 +1455,14 @@ impl TomlManifest {
         }
 
         manifest.feature_gate()?;
+
+        if manifest.targets().iter().all(|t| t.is_custom_build()) {
+            bail!(
+                "no targets specified in the manifest\n\
+                 either src/lib.rs, src/main.rs, a [lib] section, or \
+                 [[bin]] section must be present"
+            )
+        }
 
         Ok((manifest, nested_paths))
     }

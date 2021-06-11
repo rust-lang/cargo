@@ -13,7 +13,7 @@ use url::Url;
 
 use crate::core::compiler::{CompileKind, CrateType};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
@@ -21,8 +21,17 @@ use crate::util::toml::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
 
 pub enum EitherManifest {
-    Real(Manifest),
+    Real(IntermediateManifest),
     Virtual(VirtualManifest),
+}
+
+impl EitherManifest {
+    pub(crate) fn workspace_config(&self) -> &WorkspaceConfig {
+        match *self {
+            EitherManifest::Real(ref im) => im.workspace_config(),
+            EitherManifest::Virtual(ref v) => v.workspace_config(),
+        }
+    }
 }
 
 /// Contains all the information about a package, as loaded from a `Cargo.toml`.
@@ -966,5 +975,58 @@ impl Warnings {
 
     pub fn warnings(&self) -> &[DelayedWarning] {
         &self.0
+    }
+}
+
+/// This type is used to deserialize `Cargo.toml` files.
+#[derive(Debug, Clone)]
+pub struct IntermediateManifest {
+    workspace: WorkspaceConfig,
+    pkg_id: PackageId,
+    original: Rc<TomlManifest>,
+    warnings: Warnings,
+}
+
+impl IntermediateManifest {
+    pub fn new(
+        workspace: WorkspaceConfig,
+        pkg_id: PackageId,
+        original: Rc<TomlManifest>,
+    ) -> IntermediateManifest {
+        IntermediateManifest {
+            workspace,
+            pkg_id,
+            original,
+            warnings: Warnings::new(),
+        }
+    }
+
+    pub fn to_package(
+        &self,
+        manifest_path: &Path,
+        config: &Config,
+    ) -> CargoResult<(Package, Vec<PathBuf>)> {
+        let (mut manifest, nested_paths) = TomlManifest::to_real_manifest(
+            &self.original,
+            self.pkg_id.source_id(),
+            manifest_path.parent().unwrap(),
+            config,
+        )
+        .with_context(|| format!("failed to parse manifest at `{}`", manifest_path.display()))
+        .map_err(|err| ManifestError::new(err, manifest_path.into()))?;
+
+        for warning in self.warnings.warnings() {
+            manifest.warnings_mut().add_warning(warning.message.clone());
+        }
+
+        Ok((Package::new(manifest, manifest_path), nested_paths))
+    }
+
+    pub fn warnings_mut(&mut self) -> &mut Warnings {
+        &mut self.warnings
+    }
+
+    pub fn workspace_config(&self) -> &WorkspaceConfig {
+        &self.workspace
     }
 }

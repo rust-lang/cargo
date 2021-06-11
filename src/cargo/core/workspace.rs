@@ -178,6 +178,7 @@ impl<'cfg> Workspace<'cfg> {
         ws.custom_metadata = ws
             .load_workspace_config()?
             .and_then(|cfg| cfg.custom_metadata);
+        ws.load_current_manifest()?;
         ws.find_members()?;
         ws.set_resolve_behavior();
         ws.validate()?;
@@ -614,7 +615,7 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         {
-            let current = self.packages.load(manifest_path)?;
+            let current = self.parse_manifest(manifest_path)?;
             match *current.workspace_config() {
                 WorkspaceConfig::Root(_) => {
                     debug!("find_root - is root {}", manifest_path.display());
@@ -635,7 +636,10 @@ impl<'cfg> Workspace<'cfg> {
             let ances_manifest_path = path.join("Cargo.toml");
             debug!("find_root - trying {}", ances_manifest_path.display());
             if ances_manifest_path.exists() {
-                match *self.packages.load(&ances_manifest_path)?.workspace_config() {
+                match *self
+                    .parse_manifest(&ances_manifest_path)?
+                    .workspace_config()
+                {
                     WorkspaceConfig::Root(ref ances_root_config) => {
                         debug!("find_root - found a root checking exclusion");
                         if !ances_root_config.is_excluded(manifest_path) {
@@ -664,6 +668,13 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         Ok(None)
+    }
+
+    fn parse_manifest(&mut self, manifest_path: &Path) -> CargoResult<EitherManifest> {
+        let key = manifest_path.parent().unwrap();
+        let source_id = SourceId::for_path(key)?;
+        let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, self.config)?;
+        Ok(manifest)
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -1537,6 +1548,10 @@ impl<'cfg> Workspace<'cfg> {
 
         ms
     }
+    fn load_current_manifest(&mut self) -> CargoResult<()> {
+        self.packages.load(&self.current_manifest)?;
+        Ok(())
+    }
 }
 
 impl<'cfg> Packages<'cfg> {
@@ -1566,7 +1581,9 @@ impl<'cfg> Packages<'cfg> {
                     read_manifest(manifest_path, source_id, self.config)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
-                        MaybePackage::Package(Package::new(manifest, manifest_path))
+                        let (pkg, _nested_paths) =
+                            manifest.to_package(manifest_path, self.config)?;
+                        MaybePackage::Package(pkg)
                     }
                     EitherManifest::Virtual(vm) => MaybePackage::Virtual(vm),
                 }))

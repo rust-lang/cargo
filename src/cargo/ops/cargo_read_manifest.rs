@@ -21,7 +21,7 @@ pub fn read_package(
         path.display(),
         source_id
     );
-    let (manifest, nested) = read_manifest(path, source_id, config)?;
+    let (manifest, _nested) = read_manifest(path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => anyhow::bail!(
@@ -31,7 +31,7 @@ pub fn read_package(
         ),
     };
 
-    Ok((Package::new(manifest, path), nested))
+    Ok(manifest.to_package(path, config)?)
 }
 
 pub fn read_packages(
@@ -151,7 +151,7 @@ fn read_nested_packages(
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (manifest, nested) = match read_manifest(&manifest_path, source_id, config) {
+    let (manifest, _nested) = match read_manifest(&manifest_path, source_id, config) {
         Err(err) => {
             // Ignore malformed manifests found on git repositories
             //
@@ -174,7 +174,25 @@ fn read_nested_packages(
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => return Ok(()),
     };
-    let pkg = Package::new(manifest, &manifest_path);
+
+    let (pkg, nested) = match manifest.to_package(&manifest_path, config) {
+        Err(err) => {
+            // Ignore malformed manifests found on git repositories
+            //
+            // git source try to find and read all manifests from the repository
+            // but since it's not possible to exclude folders from this search
+            // it's safer to ignore malformed manifests to avoid
+            //
+            // TODO: Add a way to exclude folders?
+            info!(
+                "skipping malformed package found at `{}`",
+                path.to_string_lossy()
+            );
+            errors.push(err.into());
+            return Ok(());
+        }
+        Ok(tuple) => tuple,
+    };
 
     let pkg_id = pkg.package_id();
     use std::collections::hash_map::Entry;
