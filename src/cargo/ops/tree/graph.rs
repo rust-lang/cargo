@@ -488,7 +488,6 @@ fn add_cli_features(
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix: _,
                 weak,
             } => {
                 let dep_connections = match graph.dep_name_map[&package_index].get(&dep_name) {
@@ -596,12 +595,12 @@ fn add_feature_rec(
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix,
-                // `weak` is ignored, because it will be skipped if the
-                // corresponding dependency is not found in the map, which
-                // means it wasn't activated. Skipping is handled by
-                // `is_dep_activated` when the graph was built.
-                weak: _,
+                // Note: `weak` is mostly handled when the graph is built in
+                // `is_dep_activated` which is responsible for skipping
+                // unactivated weak dependencies. Here it is only used to
+                // determine if the feature of the dependency name is
+                // activated on self.
+                weak,
             } => {
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),
@@ -619,7 +618,7 @@ fn add_feature_rec(
                 };
                 for (dep_index, is_optional) in dep_indexes {
                     let dep_pkg_id = graph.package_id_for_index(dep_index);
-                    if is_optional && !dep_prefix {
+                    if is_optional && !weak {
                         // Activate the optional dep on self.
                         add_feature(
                             graph,

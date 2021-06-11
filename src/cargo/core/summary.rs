@@ -218,12 +218,7 @@ fn build_feature_map(
         .values()
         .flatten()
         .filter_map(|fv| match fv {
-            Dep { dep_name }
-            | DepFeature {
-                dep_name,
-                dep_prefix: true,
-                ..
-            } => Some(*dep_name),
+            Dep { dep_name } => Some(*dep_name),
             _ => None,
         })
         .collect();
@@ -391,9 +386,6 @@ pub enum FeatureValue {
     DepFeature {
         dep_name: InternedString,
         dep_feature: InternedString,
-        /// If this is true, then the feature used the `dep:` prefix, which
-        /// prevents enabling the feature named `dep_name`.
-        dep_prefix: bool,
         /// If `true`, indicates the `?` syntax is used, which means this will
         /// not automatically enable the dependency unless the dependency is
         /// activated through some other means.
@@ -407,11 +399,6 @@ impl FeatureValue {
             Some(pos) => {
                 let (dep, dep_feat) = feature.split_at(pos);
                 let dep_feat = &dep_feat[1..];
-                let (dep, dep_prefix) = if let Some(dep) = dep.strip_prefix("dep:") {
-                    (dep, true)
-                } else {
-                    (dep, false)
-                };
                 let (dep, weak) = if let Some(dep) = dep.strip_suffix('?') {
                     (dep, true)
                 } else {
@@ -420,7 +407,6 @@ impl FeatureValue {
                 FeatureValue::DepFeature {
                     dep_name: InternedString::new(dep),
                     dep_feature: InternedString::new(dep_feat),
-                    dep_prefix,
                     weak,
                 }
             }
@@ -438,14 +424,7 @@ impl FeatureValue {
 
     /// Returns `true` if this feature explicitly used `dep:` syntax.
     pub fn has_dep_prefix(&self) -> bool {
-        matches!(
-            self,
-            FeatureValue::Dep { .. }
-                | FeatureValue::DepFeature {
-                    dep_prefix: true,
-                    ..
-                }
-        )
+        matches!(self, FeatureValue::Dep { .. })
     }
 }
 
@@ -458,12 +437,10 @@ impl fmt::Display for FeatureValue {
             DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix,
                 weak,
             } => {
-                let dep_prefix = if *dep_prefix { "dep:" } else { "" };
                 let weak = if *weak { "?" } else { "" };
-                write!(f, "{}{}{}/{}", dep_prefix, dep_name, weak, dep_feature)
+                write!(f, "{}{}/{}", dep_name, weak, dep_feature)
             }
         }
     }

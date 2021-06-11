@@ -405,12 +405,12 @@ impl Requirements<'_> {
         &mut self,
         package: InternedString,
         feat: InternedString,
-        dep_prefix: bool,
+        weak: bool,
     ) -> Result<(), RequirementError> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if !dep_prefix
+        if !weak
             && self
                 .summary
                 .dependencies()
@@ -456,12 +456,11 @@ impl Requirements<'_> {
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix,
                 // Weak features are always activated in the dependency
                 // resolver. They will be narrowed inside the new feature
                 // resolver.
-                weak: _,
-            } => self.require_dep_feature(*dep_name, *dep_feature, *dep_prefix)?,
+                weak,
+            } => self.require_dep_feature(*dep_name, *dep_feature, *weak)?,
         };
         Ok(())
     }
