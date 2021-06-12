@@ -348,7 +348,12 @@ impl<'cfg> Compilation<'cfg> {
         if self.config.cli_unstable().configurable_env {
             // Apply any environment variables from the config
             for (key, value) in self.config.env_config()?.iter() {
-                if value.is_force() || cmd.get_env(key).is_none() {
+                // never override a value that has already been set by cargo
+                if cmd.get_envs().contains_key(key) {
+                    continue;
+                }
+
+                if value.is_force() || env::var_os(key).is_none() {
                     cmd.env(key, value.resolve(self.config));
                 }
             }
