@@ -4,6 +4,7 @@ use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
+use serde_json::json;
 
 #[cargo_test]
 fn cargo_metadata_simple() {
@@ -1550,106 +1551,8 @@ fn package_default_run() {
             "#,
         )
         .build();
-    p.cargo("metadata")
-        .with_json(
-            r#"
-            {
-                "packages": [
-                    {
-                        "authors": [
-                            "wycats@example.com"
-                        ],
-                        "categories": [],
-                        "default_run": "a",
-                        "dependencies": [],
-                        "description": null,
-                        "edition": "2018",
-                        "features": {},
-                        "id": "foo 0.1.0 (path+file:[..])",
-                        "keywords": [],
-                        "license": null,
-                        "license_file": null,
-                        "links": null,
-                        "manifest_path": "[..]Cargo.toml",
-                        "metadata": null,
-                        "publish": null,
-                        "name": "foo",
-                        "readme": null,
-                        "repository": null,
-                        "homepage": null,
-                        "documentation": null,
-                        "source": null,
-                        "targets": [
-                            {
-                                "crate_types": [
-                                    "lib"
-                                ],
-                                "doc": true,
-                                "doctest": true,
-                                "test": true,
-                                "edition": "2018",
-                                "kind": [
-                                    "lib"
-                                ],
-                                "name": "foo",
-                                "src_path": "[..]src/lib.rs"
-                            },
-                            {
-                                "crate_types": [
-                                    "bin"
-                                ],
-                                "doc": true,
-                                "doctest": false,
-                                "test": true,
-                                "edition": "2018",
-                                "kind": [
-                                    "bin"
-                                ],
-                                "name": "a",
-                                "src_path": "[..]src/bin/a.rs",
-                                "test": true
-                            },
-                            {
-                                "crate_types": [
-                                    "bin"
-                                ],
-                                "doc": true,
-                                "doctest": false,
-                                "test": true,
-                                "edition": "2018",
-                                "kind": [
-                                    "bin"
-                                ],
-                                "name": "b",
-                                "src_path": "[..]src/bin/b.rs",
-                                "test": true
-                            }
-                        ],
-                        "version": "0.1.0"
-                    }
-                ],
-                "resolve": {
-                    "nodes": [
-                        {
-                            "dependencies": [],
-                            "deps": [],
-                            "features": [],
-                            "id": "foo 0.1.0 (path+file:[..])"
-                        }
-                    ],
-                    "root": "foo 0.1.0 (path+file:[..])"
-                },
-                "target_directory": "[..]",
-                "version": 1,
-                "workspace_members": [
-                    "foo 0.1.0 (path+file:[..])"
-                ],
-                "workspace_root": "[..]",
-                "metadata": null
-            }
-            "#,
-        )
-        .run();
+    let json = p.cargo("metadata").run_json();
+    assert_eq!(json["packages"][0]["default_run"], json!("a"));
 }
 
 #[cargo_test]
