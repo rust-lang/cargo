@@ -414,7 +414,9 @@ fn multiple_crates_error() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
-[ERROR] multiple packages with binaries found: bar, foo
+[ERROR] multiple packages with binaries found: bar, foo. \
+When installing a git repository, cargo will always search the entire repo for any Cargo.toml. \
+Please specify which to install.
 ",
         )
         .run();
