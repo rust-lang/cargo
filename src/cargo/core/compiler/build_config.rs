@@ -69,6 +69,9 @@ impl BuildConfig {
             )?;
         }
         let jobs = jobs.or(cfg.jobs).unwrap_or(::num_cpus::get() as u32);
+        if jobs == 0 {
+            anyhow::bail!("jobs may not be 0");
+        }
 
         Ok(BuildConfig {
             requested_kinds,
