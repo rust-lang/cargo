@@ -837,19 +837,17 @@ impl<'cfg> RustcTargetData<'cfg> {
         } else {
             config.host_cfg_triple(&rustc.host)?
         };
+        let is_cross = !requested_kinds.iter().any(CompileKind::is_host);
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
         // `--target` flag is not specified. Since the unit_dependency code
         // needs access to the target config data, create a copy so that it
         // can be found. See `rebuild_unit_graph_shared` for why this is done.
-        let is_cross = if requested_kinds.iter().any(CompileKind::is_host) {
+        if !is_cross {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
             target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
-            false
-        } else {
-            true
         };
 
         let mut res = RustcTargetData {
