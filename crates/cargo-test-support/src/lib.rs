@@ -1470,17 +1470,6 @@ pub fn execs() -> Execs {
     }
 }
 
-pub trait Tap {
-    fn tap<F: FnOnce(&mut Self)>(self, callback: F) -> Self;
-}
-
-impl<T> Tap for T {
-    fn tap<F: FnOnce(&mut Self)>(mut self, callback: F) -> T {
-        callback(&mut self);
-        self
-    }
-}
-
 pub fn basic_manifest(name: &str, version: &str) -> String {
     format!(
         r#"
