@@ -1,8 +1,9 @@
 //! Tests for build.rs scripts.
 
+use cargo_test_support::compare::lines_match;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
-use cargo_test_support::{lines_match, paths::CargoPathExt};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;

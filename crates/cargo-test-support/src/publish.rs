@@ -1,5 +1,5 @@
+use crate::compare::{find_json_mismatch, lines_match};
 use crate::registry::{self, alt_api_path};
-use crate::{find_json_mismatch, lines_match};
 use flate2::read::GzDecoder;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;

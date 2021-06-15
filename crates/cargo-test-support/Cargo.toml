@@ -16,6 +16,7 @@ filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
 git2 = "0.13.16"
 glob = "0.3"
+itertools = "0.10.0"
 lazy_static = "1.0"
 remove_dir_all = "0.5"
 serde_json = "1.0"

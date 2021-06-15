@@ -1,6 +1,6 @@
 //! # Cargo test support.
 //!
-//! See https://rust-lang.github.io/cargo/contrib/ for a guide on writing tests.
+//! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
 #![allow(clippy::all)]
 #![warn(clippy::needless_borrow)]
@@ -16,9 +16,9 @@ use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, Result};
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
-use serde_json::{self, Value};
+use serde_json;
 use url::Url;
 
 use self::paths::CargoPathExt;
@@ -50,8 +50,10 @@ pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
 
 pub use cargo_test_macro::cargo_test;
 
+pub mod compare;
 pub mod cross_compile;
 pub mod git;
+pub mod install;
 pub mod paths;
 pub mod publish;
 pub mod registry;
@@ -449,12 +451,6 @@ pub fn cargo_exe() -> PathBuf {
     cargo_dir().join(format!("cargo{}", env::consts::EXE_SUFFIX))
 }
 
-/*
- *
- * ===== Matchers =====
- *
- */
-
 /// This is the raw output from the process.
 ///
 /// This is similar to `std::process::Output`, however the `status` is
@@ -484,10 +480,9 @@ pub struct Execs {
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
     expect_stderr_unordered: Vec<String>,
-    expect_neither_contains: Vec<String>,
     expect_stderr_with_without: Vec<(Vec<String>, Vec<String>)>,
-    expect_json: Option<Vec<String>>,
-    expect_json_contains_unordered: Vec<String>,
+    expect_json: Option<String>,
+    expect_json_contains_unordered: Option<String>,
     stream_output: bool,
 }
 
@@ -498,14 +493,14 @@ impl Execs {
     }
 
     /// Verifies that stdout is equal to the given lines.
-    /// See `lines_match` for supported patterns.
+    /// See [`compare`] for supported patterns.
     pub fn with_stdout<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout = Some(expected.to_string());
         self
     }
 
     /// Verifies that stderr is equal to the given lines.
-    /// See `lines_match` for supported patterns.
+    /// See [`compare`] for supported patterns.
     pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
         self
@@ -529,7 +524,8 @@ impl Execs {
 
     /// Verifies that stdout contains the given contiguous lines somewhere in
     /// its output.
-    /// See `lines_match` for supported patterns.
+    ///
+    /// See [`compare`] for supported patterns.
     pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_contains.push(expected.to_string());
         self
@@ -537,7 +533,8 @@ impl Execs {
 
     /// Verifies that stderr contains the given contiguous lines somewhere in
     /// its output.
-    /// See `lines_match` for supported patterns.
+    ///
+    /// See [`compare`] for supported patterns.
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
         self
@@ -545,7 +542,8 @@ impl Execs {
 
     /// Verifies that either stdout or stderr contains the given contiguous
     /// lines somewhere in its output.
-    /// See `lines_match` for supported patterns.
+    ///
+    /// See [`compare`] for supported patterns.
     pub fn with_either_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_either_contains.push(expected.to_string());
         self
@@ -553,7 +551,8 @@ impl Execs {
 
     /// Verifies that stdout contains the given contiguous lines somewhere in
     /// its output, and should be repeated `number` times.
-    /// See `lines_match` for supported patterns.
+    ///
+    /// See [`compare`] for supported patterns.
     pub fn with_stdout_contains_n<S: ToString>(&mut self, expected: S, number: usize) -> &mut Self {
         self.expect_stdout_contains_n
             .push((expected.to_string(), number));
@@ -561,15 +560,18 @@ impl Execs {
     }
 
     /// Verifies that stdout does not contain the given contiguous lines.
-    /// See `lines_match` for supported patterns.
-    /// See note on `with_stderr_does_not_contain`.
+    ///
+    /// See [`compare`] for supported patterns.
+    ///
+    /// See note on [`Self::with_stderr_does_not_contain`].
     pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
     }
 
     /// Verifies that stderr does not contain the given contiguous lines.
-    /// See `lines_match` for supported patterns.
+    ///
+    /// See [`compare`] for supported patterns.
     ///
     /// Care should be taken when using this method because there is a
     /// limitless number of possible things that *won't* appear. A typo means
@@ -583,7 +585,9 @@ impl Execs {
 
     /// Verifies that all of the stderr output is equal to the given lines,
     /// ignoring the order of the lines.
-    /// See `lines_match` for supported patterns.
+    ///
+    /// See [`compare`] for supported patterns.
+    ///
     /// This is useful when checking the output of `cargo build -v` since
     /// the order of the output is not always deterministic.
     /// Recommend use `with_stderr_contains` instead unless you really want to
@@ -593,8 +597,10 @@ impl Execs {
     /// with multiple lines that might match, and this is not smart enough to
     /// do anything like longest-match. For example, avoid something like:
     ///
-    ///     [RUNNING] `rustc [..]
-    ///     [RUNNING] `rustc --crate-name foo [..]
+    /// ```text
+    ///  [RUNNING] `rustc [..]
+    ///  [RUNNING] `rustc --crate-name foo [..]
+    /// ```
     ///
     /// This will randomly fail if the other crate name is `bar`, and the
     /// order changes.
@@ -635,28 +641,28 @@ impl Execs {
     }
 
     /// Verifies the JSON output matches the given JSON.
-    /// Typically used when testing cargo commands that emit JSON.
+    ///
+    /// This is typically used when testing cargo commands that emit JSON.
     /// Each separate JSON object should be separated by a blank line.
     /// Example:
-    ///     assert_that(
-    ///         p.cargo("metadata"),
-    ///         execs().with_json(r#"
-    ///             {"example": "abc"}
     ///
-    ///             {"example": "def"}
-    ///         "#)
-    ///      );
-    /// Objects should match in the order given.
-    /// The order of arrays is ignored.
-    /// Strings support patterns described in `lines_match`.
-    /// Use `{...}` to match any object.
+    /// ```rust,ignore
+    /// assert_that(
+    ///     p.cargo("metadata"),
+    ///     execs().with_json(r#"
+    ///         {"example": "abc"}
+    ///
+    ///         {"example": "def"}
+    ///     "#)
+    ///  );
+    /// ```
+    ///
+    /// - Objects should match in the order given.
+    /// - The order of arrays is ignored.
+    /// - Strings support patterns described in [`compare`].
+    /// - Use `"{...}"` to match any object.
     pub fn with_json(&mut self, expected: &str) -> &mut Self {
-        self.expect_json = Some(
-            expected
-                .split("\n\n")
-                .map(|line| line.to_string())
-                .collect(),
-        );
+        self.expect_json = Some(expected.to_string());
         self
     }
 
@@ -670,8 +676,13 @@ impl Execs {
     ///
     /// See `with_json` for more detail.
     pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
-        self.expect_json_contains_unordered
-            .extend(expected.split("\n\n").map(|line| line.to_string()));
+        match &mut self.expect_json_contains_unordered {
+            None => self.expect_json_contains_unordered = Some(expected.to_string()),
+            Some(e) => {
+                e.push_str("\n\n");
+                e.push_str(expected);
+            }
+        }
         self
     }
 
@@ -701,6 +712,10 @@ impl Execs {
             }
         }
         self
+    }
+
+    fn get_cwd(&self) -> Option<&Path> {
+        self.process_builder.as_ref().and_then(|p| p.get_cwd())
     }
 
     pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut Self {
@@ -779,7 +794,7 @@ impl Execs {
     #[track_caller]
     pub fn run_output(&mut self, output: &Output) {
         self.ran = true;
-        if let Err(e) = self.match_output(output) {
+        if let Err(e) = self.match_output(output.status.code(), &output.stdout, &output.stderr) {
             panic_error("process did not return the expected result", e)
         }
     }
@@ -796,10 +811,9 @@ impl Execs {
             && self.expect_stdout_not_contains.is_empty()
             && self.expect_stderr_not_contains.is_empty()
             && self.expect_stderr_unordered.is_empty()
-            && self.expect_neither_contains.is_empty()
             && self.expect_stderr_with_without.is_empty()
             && self.expect_json.is_none()
-            && self.expect_json_contains_unordered.is_empty()
+            && self.expect_json_contains_unordered.is_none()
         {
             panic!(
                 "`with_status()` is used, but no output is checked.\n\
@@ -834,7 +848,7 @@ impl Execs {
 
         match res {
             Ok(out) => {
-                self.match_output(&out)?;
+                self.match_output(out.status.code(), &out.stdout, &out.stderr)?;
                 return Ok(RawOutput {
                     stdout: out.stdout,
                     stderr: out.stderr,
@@ -849,9 +863,7 @@ impl Execs {
                     ..
                 }) = e.downcast_ref::<ProcessError>()
                 {
-                    self.match_status(*code, stdout, stderr)
-                        .and(self.match_stdout(stdout, stderr))
-                        .and(self.match_stderr(stdout, stderr))?;
+                    self.match_output(*code, stdout, stderr)?;
                     return Ok(RawOutput {
                         stdout: stdout.to_vec(),
                         stderr: stderr.to_vec(),
@@ -863,375 +875,77 @@ impl Execs {
         }
     }
 
-    fn match_output(&self, actual: &Output) -> Result<()> {
-        self.match_status(actual.status.code(), &actual.stdout, &actual.stderr)
-            .and(self.match_stdout(&actual.stdout, &actual.stderr))
-            .and(self.match_stderr(&actual.stdout, &actual.stderr))
-    }
-
-    fn match_status(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
+    fn match_output(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         self.verify_checks_output(stdout, stderr);
+        let stdout = str::from_utf8(stdout).expect("stdout is not utf8");
+        let stderr = str::from_utf8(stderr).expect("stderr is not utf8");
+        let cwd = self.get_cwd();
+
         match self.expect_exit_code {
-            None => Ok(()),
-            Some(expected) if code == Some(expected) => Ok(()),
+            None => {}
+            Some(expected) if code == Some(expected) => {}
             Some(expected) => bail!(
                 "process exited with code {} (expected {})\n--- stdout\n{}\n--- stderr\n{}",
                 code.unwrap_or(-1),
                 expected,
-                String::from_utf8_lossy(stdout),
-                String::from_utf8_lossy(stderr)
+                stdout,
+                stderr
             ),
         }
-    }
 
-    fn match_stdout(&self, stdout: &[u8], stderr: &[u8]) -> Result<()> {
-        self.match_std(
-            self.expect_stdout.as_ref(),
-            stdout,
-            "stdout",
-            stderr,
-            MatchKind::Exact,
-        )?;
+        if let Some(expect_stdout) = &self.expect_stdout {
+            compare::match_exact(expect_stdout, stdout, "stdout", stderr, cwd)?;
+        }
+        if let Some(expect_stderr) = &self.expect_stderr {
+            compare::match_exact(expect_stderr, stderr, "stderr", stdout, cwd)?;
+        }
         for expect in self.expect_stdout_contains.iter() {
-            self.match_std(Some(expect), stdout, "stdout", stderr, MatchKind::Partial)?;
+            compare::match_contains(expect, stdout, cwd)?;
         }
         for expect in self.expect_stderr_contains.iter() {
-            self.match_std(Some(expect), stderr, "stderr", stdout, MatchKind::Partial)?;
+            compare::match_contains(expect, stderr, cwd)?;
         }
         for &(ref expect, number) in self.expect_stdout_contains_n.iter() {
-            self.match_std(
-                Some(expect),
-                stdout,
-                "stdout",
-                stderr,
-                MatchKind::PartialN(number),
-            )?;
+            compare::match_contains_n(expect, number, stdout, cwd)?;
         }
         for expect in self.expect_stdout_not_contains.iter() {
-            self.match_std(
-                Some(expect),
-                stdout,
-                "stdout",
-                stderr,
-                MatchKind::NotPresent,
-            )?;
+            compare::match_does_not_contain(expect, stdout, cwd)?;
         }
         for expect in self.expect_stderr_not_contains.iter() {
-            self.match_std(
-                Some(expect),
-                stderr,
-                "stderr",
-                stdout,
-                MatchKind::NotPresent,
-            )?;
+            compare::match_does_not_contain(expect, stderr, cwd)?;
         }
         for expect in self.expect_stderr_unordered.iter() {
-            self.match_std(Some(expect), stderr, "stderr", stdout, MatchKind::Unordered)?;
+            compare::match_unordered(expect, stderr, cwd)?;
         }
-        for expect in self.expect_neither_contains.iter() {
-            self.match_std(
-                Some(expect),
-                stdout,
-                "stdout",
-                stdout,
-                MatchKind::NotPresent,
-            )?;
-
-            self.match_std(
-                Some(expect),
-                stderr,
-                "stderr",
-                stderr,
-                MatchKind::NotPresent,
-            )?;
-        }
-
         for expect in self.expect_either_contains.iter() {
-            let match_std =
-                self.match_std(Some(expect), stdout, "stdout", stdout, MatchKind::Partial);
-            let match_err =
-                self.match_std(Some(expect), stderr, "stderr", stderr, MatchKind::Partial);
-
+            let match_std = compare::match_contains(expect, stdout, cwd);
+            let match_err = compare::match_contains(expect, stderr, cwd);
             if let (Err(_), Err(_)) = (match_std, match_err) {
                 bail!(
                     "expected to find:\n\
                      {}\n\n\
-                     did not find in either output.",
-                    expect
+                     did not find in either output.
+                     --- stdout\n{}\n
+                     --- stderr\n{}\n",
+                    expect,
+                    stdout,
+                    stderr,
                 );
             }
         }
 
         for (with, without) in self.expect_stderr_with_without.iter() {
-            self.match_with_without(stderr, with, without)?;
+            compare::match_with_without(stderr, with, without, cwd)?;
         }
 
-        if let Some(ref objects) = self.expect_json {
-            let stdout =
-                str::from_utf8(stdout).map_err(|_| format_err!("stdout was not utf8 encoded"))?;
-            let lines = stdout
-                .lines()
-                .filter(|line| line.starts_with('{'))
-                .collect::<Vec<_>>();
-            if lines.len() != objects.len() {
-                bail!(
-                    "expected {} json lines, got {}, stdout:\n{}",
-                    objects.len(),
-                    lines.len(),
-                    stdout
-                );
-            }
-            for (obj, line) in objects.iter().zip(lines) {
-                self.match_json(obj, line)?;
-            }
+        if let Some(ref expect_json) = self.expect_json {
+            compare::match_json(expect_json, stdout, cwd)?;
         }
 
-        if !self.expect_json_contains_unordered.is_empty() {
-            let stdout =
-                str::from_utf8(stdout).map_err(|_| format_err!("stdout was not utf8 encoded"))?;
-            let mut lines = stdout
-                .lines()
-                .filter(|line| line.starts_with('{'))
-                .collect::<Vec<_>>();
-            for obj in &self.expect_json_contains_unordered {
-                match lines
-                    .iter()
-                    .position(|line| self.match_json(obj, line).is_ok())
-                {
-                    Some(index) => lines.remove(index),
-                    None => {
-                        bail!(
-                            "Did not find expected JSON:\n\
-                             {}\n\
-                             Remaining available output:\n\
-                             {}\n",
-                            serde_json::to_string_pretty(obj).unwrap(),
-                            lines.join("\n")
-                        );
-                    }
-                };
-            }
+        if let Some(ref expected) = self.expect_json_contains_unordered {
+            compare::match_json_contains_unordered(expected, stdout, cwd)?;
         }
         Ok(())
-    }
-
-    fn match_stderr(&self, stdout: &[u8], stderr: &[u8]) -> Result<()> {
-        self.match_std(
-            self.expect_stderr.as_ref(),
-            stderr,
-            "stderr",
-            stdout,
-            MatchKind::Exact,
-        )
-    }
-
-    fn normalize_actual(&self, description: &str, actual: &[u8]) -> Result<String> {
-        let actual = match str::from_utf8(actual) {
-            Err(..) => bail!("{} was not utf8 encoded", description),
-            Ok(actual) => actual,
-        };
-        Ok(self.normalize_matcher(actual))
-    }
-
-    fn normalize_matcher(&self, matcher: &str) -> String {
-        normalize_matcher(
-            matcher,
-            self.process_builder.as_ref().and_then(|p| p.get_cwd()),
-        )
-    }
-
-    fn match_std(
-        &self,
-        expected: Option<&String>,
-        actual: &[u8],
-        description: &str,
-        extra: &[u8],
-        kind: MatchKind,
-    ) -> Result<()> {
-        let out = match expected {
-            Some(out) => self.normalize_matcher(out),
-            None => return Ok(()),
-        };
-
-        let actual = self.normalize_actual(description, actual)?;
-
-        match kind {
-            MatchKind::Exact => {
-                let a = actual.lines();
-                let e = out.lines();
-
-                let diffs = self.diff_lines(a, e, false);
-                if diffs.is_empty() {
-                    Ok(())
-                } else {
-                    bail!(
-                        "{} did not match:\n\
-                         {}\n\n\
-                         other output:\n\
-                         `{}`",
-                        description,
-                        diffs.join("\n"),
-                        String::from_utf8_lossy(extra)
-                    )
-                }
-            }
-            MatchKind::Partial => {
-                let mut a = actual.lines();
-                let e = out.lines();
-
-                let mut diffs = self.diff_lines(a.clone(), e.clone(), true);
-                while a.next().is_some() {
-                    let a = self.diff_lines(a.clone(), e.clone(), true);
-                    if a.len() < diffs.len() {
-                        diffs = a;
-                    }
-                }
-                if diffs.is_empty() {
-                    Ok(())
-                } else {
-                    bail!(
-                        "expected to find:\n\
-                         {}\n\n\
-                         did not find in output:\n\
-                         {}",
-                        out,
-                        actual
-                    )
-                }
-            }
-            MatchKind::PartialN(number) => {
-                let mut a = actual.lines();
-                let e = out.lines();
-
-                let mut matches = 0;
-
-                while let Some(..) = {
-                    if self.diff_lines(a.clone(), e.clone(), true).is_empty() {
-                        matches += 1;
-                    }
-                    a.next()
-                } {}
-
-                if matches == number {
-                    Ok(())
-                } else {
-                    bail!(
-                        "expected to find {} occurrences:\n\
-                         {}\n\n\
-                         did not find in output:\n\
-                         {}",
-                        number,
-                        out,
-                        actual
-                    )
-                }
-            }
-            MatchKind::NotPresent => {
-                let mut a = actual.lines();
-                let e = out.lines();
-
-                let mut diffs = self.diff_lines(a.clone(), e.clone(), true);
-                while a.next().is_some() {
-                    let a = self.diff_lines(a.clone(), e.clone(), true);
-                    if a.len() < diffs.len() {
-                        diffs = a;
-                    }
-                }
-                if diffs.is_empty() {
-                    bail!(
-                        "expected not to find:\n\
-                         {}\n\n\
-                         but found in output:\n\
-                         {}",
-                        out,
-                        actual
-                    )
-                } else {
-                    Ok(())
-                }
-            }
-            MatchKind::Unordered => lines_match_unordered(&out, &actual),
-        }
-    }
-
-    fn match_with_without(&self, actual: &[u8], with: &[String], without: &[String]) -> Result<()> {
-        let actual = self.normalize_actual("stderr", actual)?;
-        let contains = |s, line| {
-            let mut s = self.normalize_matcher(s);
-            s.insert_str(0, "[..]");
-            s.push_str("[..]");
-            lines_match(&s, line)
-        };
-        let matches: Vec<&str> = actual
-            .lines()
-            .filter(|line| with.iter().all(|with| contains(with, line)))
-            .filter(|line| !without.iter().any(|without| contains(without, line)))
-            .collect();
-        match matches.len() {
-            0 => bail!(
-                "Could not find expected line in output.\n\
-                 With contents: {:?}\n\
-                 Without contents: {:?}\n\
-                 Actual stderr:\n\
-                 {}\n",
-                with,
-                without,
-                actual
-            ),
-            1 => Ok(()),
-            _ => bail!(
-                "Found multiple matching lines, but only expected one.\n\
-                 With contents: {:?}\n\
-                 Without contents: {:?}\n\
-                 Matching lines:\n\
-                 {}\n",
-                with,
-                without,
-                matches.join("\n")
-            ),
-        }
-    }
-
-    fn match_json(&self, expected: &str, line: &str) -> Result<()> {
-        let actual = match line.parse() {
-            Err(e) => bail!("invalid json, {}:\n`{}`", e, line),
-            Ok(actual) => actual,
-        };
-        let expected = match expected.parse() {
-            Err(e) => bail!("invalid json, {}:\n`{}`", e, line),
-            Ok(expected) => expected,
-        };
-
-        let cwd = self.process_builder.as_ref().and_then(|p| p.get_cwd());
-        find_json_mismatch(&expected, &actual, cwd)
-    }
-
-    fn diff_lines<'a>(
-        &self,
-        actual: str::Lines<'a>,
-        expected: str::Lines<'a>,
-        partial: bool,
-    ) -> Vec<String> {
-        let actual = actual.take(if partial {
-            expected.clone().count()
-        } else {
-            usize::MAX
-        });
-        zip_all(actual, expected)
-            .enumerate()
-            .filter_map(|(i, (a, e))| match (a, e) {
-                (Some(a), Some(e)) => {
-                    if lines_match(e, a) {
-                        None
-                    } else {
-                        Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
-                    }
-                }
-                (Some(a), None) => Some(format!("{:3} -\n    + |{}|\n", i, a)),
-                (None, Some(e)) => Some(format!("{:3} - |{}|\n    +\n", i, e)),
-                (None, None) => panic!("Cannot get here"),
-            })
-            .collect()
     }
 }
 
@@ -1240,227 +954,6 @@ impl Drop for Execs {
         if !self.ran && !std::thread::panicking() {
             panic!("forgot to run this command");
         }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum MatchKind {
-    Exact,
-    Partial,
-    PartialN(usize),
-    NotPresent,
-    Unordered,
-}
-
-/// Compares a line with an expected pattern.
-/// - Use `[..]` as a wildcard to match 0 or more characters on the same line
-///   (similar to `.*` in a regex). It is non-greedy.
-/// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
-///   platforms).
-/// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
-///   to match cargo's "status" output and allows you to ignore the alignment.
-///   See `substitute_macros` for a complete list of macros.
-/// - `[ROOT]` the path to the test directory's root
-/// - `[CWD]` is the working directory of the process that was run.
-pub fn lines_match(expected: &str, mut actual: &str) -> bool {
-    let expected = substitute_macros(expected);
-    for (i, part) in expected.split("[..]").enumerate() {
-        match actual.find(part) {
-            Some(j) => {
-                if i == 0 && j != 0 {
-                    return false;
-                }
-                actual = &actual[j + part.len()..];
-            }
-            None => return false,
-        }
-    }
-    actual.is_empty() || expected.ends_with("[..]")
-}
-
-pub fn lines_match_unordered(expected: &str, actual: &str) -> Result<()> {
-    let mut a = actual.lines().collect::<Vec<_>>();
-    // match more-constrained lines first, although in theory we'll
-    // need some sort of recursive match here. This handles the case
-    // that you expect "a\n[..]b" and two lines are printed out,
-    // "ab\n"a", where technically we do match unordered but a naive
-    // search fails to find this. This simple sort at least gets the
-    // test suite to pass for now, but we may need to get more fancy
-    // if tests start failing again.
-    a.sort_by_key(|s| s.len());
-    let mut failures = Vec::new();
-
-    for e_line in expected.lines() {
-        match a.iter().position(|a_line| lines_match(e_line, a_line)) {
-            Some(index) => {
-                a.remove(index);
-            }
-            None => failures.push(e_line),
-        }
-    }
-    if !failures.is_empty() {
-        bail!(
-            "Did not find expected line(s):\n{}\n\
-                         Remaining available output:\n{}\n",
-            failures.join("\n"),
-            a.join("\n")
-        );
-    }
-    if !a.is_empty() {
-        bail!(
-            "Output included extra lines:\n\
-                         {}\n",
-            a.join("\n")
-        )
-    } else {
-        Ok(())
-    }
-}
-
-/// Variant of `lines_match` that applies normalization to the strings.
-pub fn normalized_lines_match(expected: &str, actual: &str, cwd: Option<&Path>) -> bool {
-    let expected = normalize_matcher(expected, cwd);
-    let actual = normalize_matcher(actual, cwd);
-    lines_match(&expected, &actual)
-}
-
-fn normalize_matcher(matcher: &str, cwd: Option<&Path>) -> String {
-    // Let's not deal with / vs \ (windows...)
-    let matcher = matcher.replace("\\\\", "/").replace("\\", "/");
-
-    // Weirdness for paths on Windows extends beyond `/` vs `\` apparently.
-    // Namely paths like `c:\` and `C:\` are equivalent and that can cause
-    // issues. The return value of `env::current_dir()` may return a
-    // lowercase drive name, but we round-trip a lot of values through `Url`
-    // which will auto-uppercase the drive name. To just ignore this
-    // distinction we try to canonicalize as much as possible, taking all
-    // forms of a path and canonicalizing them to one.
-    let replace_path = |s: &str, path: &Path, with: &str| {
-        let path_through_url = Url::from_file_path(path).unwrap().to_file_path().unwrap();
-        let path1 = path.display().to_string().replace("\\", "/");
-        let path2 = path_through_url.display().to_string().replace("\\", "/");
-        s.replace(&path1, with)
-            .replace(&path2, with)
-            .replace(with, &path1)
-    };
-
-    // Do the template replacements on the expected string.
-    let matcher = match cwd {
-        None => matcher,
-        Some(p) => replace_path(&matcher, p, "[CWD]"),
-    };
-
-    // Similar to cwd above, perform similar treatment to the root path
-    // which in theory all of our paths should otherwise get rooted at.
-    let root = paths::root();
-    let matcher = replace_path(&matcher, &root, "[ROOT]");
-
-    // Let's not deal with \r\n vs \n on windows...
-    let matcher = matcher.replace("\r", "");
-
-    // It's easier to read tabs in outputs if they don't show up as literal
-    // hidden characters
-    matcher.replace("\t", "<tab>")
-}
-
-#[test]
-fn lines_match_works() {
-    assert!(lines_match("a b", "a b"));
-    assert!(lines_match("a[..]b", "a b"));
-    assert!(lines_match("a[..]", "a b"));
-    assert!(lines_match("[..]", "a b"));
-    assert!(lines_match("[..]b", "a b"));
-
-    assert!(!lines_match("[..]b", "c"));
-    assert!(!lines_match("b", "c"));
-    assert!(!lines_match("b", "cb"));
-}
-
-/// Compares JSON object for approximate equality.
-/// You can use `[..]` wildcard in strings (useful for OS-dependent things such
-/// as paths). You can use a `"{...}"` string literal as a wildcard for
-/// arbitrary nested JSON (useful for parts of object emitted by other programs
-/// (e.g., rustc) rather than Cargo itself).
-pub fn find_json_mismatch(expected: &Value, actual: &Value, cwd: Option<&Path>) -> Result<()> {
-    match find_json_mismatch_r(expected, actual, cwd) {
-        Some((expected_part, actual_part)) => bail!(
-            "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
-            serde_json::to_string_pretty(expected).unwrap(),
-            serde_json::to_string_pretty(&actual).unwrap(),
-            serde_json::to_string_pretty(expected_part).unwrap(),
-            serde_json::to_string_pretty(actual_part).unwrap(),
-        ),
-        None => Ok(()),
-    }
-}
-
-fn find_json_mismatch_r<'a>(
-    expected: &'a Value,
-    actual: &'a Value,
-    cwd: Option<&Path>,
-) -> Option<(&'a Value, &'a Value)> {
-    use serde_json::Value::*;
-    match (expected, actual) {
-        (&Number(ref l), &Number(ref r)) if l == r => None,
-        (&Bool(l), &Bool(r)) if l == r => None,
-        (&String(ref l), _) if l == "{...}" => None,
-        (&String(ref l), &String(ref r)) => {
-            let normalized = normalize_matcher(r, cwd);
-            if lines_match(l, &normalized) {
-                None
-            } else {
-                Some((expected, actual))
-            }
-        }
-        (&Array(ref l), &Array(ref r)) => {
-            if l.len() != r.len() {
-                return Some((expected, actual));
-            }
-
-            l.iter()
-                .zip(r.iter())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
-                .next()
-        }
-        (&Object(ref l), &Object(ref r)) => {
-            let same_keys = l.len() == r.len() && l.keys().all(|k| r.contains_key(k));
-            if !same_keys {
-                return Some((expected, actual));
-            }
-
-            l.values()
-                .zip(r.values())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
-                .next()
-        }
-        (&Null, &Null) => None,
-        // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.
-        _ => Some((expected, actual)),
-    }
-}
-
-struct ZipAll<I1: Iterator, I2: Iterator> {
-    first: I1,
-    second: I2,
-}
-
-impl<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>> Iterator for ZipAll<I1, I2> {
-    type Item = (Option<T>, Option<T>);
-    fn next(&mut self) -> Option<(Option<T>, Option<T>)> {
-        let first = self.first.next();
-        let second = self.second.next();
-
-        match (first, second) {
-            (None, None) => None,
-            (a, b) => Some((a, b)),
-        }
-    }
-}
-
-fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> ZipAll<I1, I2> {
-    ZipAll {
-        first: a,
-        second: b,
     }
 }
 
@@ -1479,10 +972,9 @@ pub fn execs() -> Execs {
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
         expect_stderr_unordered: Vec::new(),
-        expect_neither_contains: Vec::new(),
         expect_stderr_with_without: Vec::new(),
         expect_json: None,
-        expect_json_contains_unordered: Vec::new(),
+        expect_json_contains_unordered: None,
         stream_output: false,
     }
 }
@@ -1536,56 +1028,6 @@ pub fn basic_lib_manifest(name: &str) -> String {
 pub fn path2url<P: AsRef<Path>>(p: P) -> Url {
     Url::from_file_path(p).ok().unwrap()
 }
-
-fn substitute_macros(input: &str) -> String {
-    let macros = [
-        ("[RUNNING]", "     Running"),
-        ("[COMPILING]", "   Compiling"),
-        ("[CHECKING]", "    Checking"),
-        ("[COMPLETED]", "   Completed"),
-        ("[CREATED]", "     Created"),
-        ("[FINISHED]", "    Finished"),
-        ("[ERROR]", "error:"),
-        ("[WARNING]", "warning:"),
-        ("[NOTE]", "note:"),
-        ("[HELP]", "help:"),
-        ("[DOCUMENTING]", " Documenting"),
-        ("[FRESH]", "       Fresh"),
-        ("[UPDATING]", "    Updating"),
-        ("[ADDING]", "      Adding"),
-        ("[REMOVING]", "    Removing"),
-        ("[DOCTEST]", "   Doc-tests"),
-        ("[PACKAGING]", "   Packaging"),
-        ("[DOWNLOADING]", " Downloading"),
-        ("[DOWNLOADED]", "  Downloaded"),
-        ("[UPLOADING]", "   Uploading"),
-        ("[VERIFYING]", "   Verifying"),
-        ("[ARCHIVING]", "   Archiving"),
-        ("[INSTALLING]", "  Installing"),
-        ("[REPLACING]", "   Replacing"),
-        ("[UNPACKING]", "   Unpacking"),
-        ("[SUMMARY]", "     Summary"),
-        ("[FIXED]", "       Fixed"),
-        ("[FIXING]", "      Fixing"),
-        ("[EXE]", env::consts::EXE_SUFFIX),
-        ("[IGNORED]", "     Ignored"),
-        ("[INSTALLED]", "   Installed"),
-        ("[REPLACED]", "    Replaced"),
-        ("[BUILDING]", "    Building"),
-        ("[LOGIN]", "       Login"),
-        ("[LOGOUT]", "      Logout"),
-        ("[YANK]", "        Yank"),
-        ("[OWNER]", "       Owner"),
-        ("[MIGRATING]", "   Migrating"),
-    ];
-    let mut result = input.to_owned();
-    for &(pat, subst) in &macros {
-        result = result.replace(pat, subst)
-    }
-    result
-}
-
-pub mod install;
 
 struct RustcInfo {
     verbose_version: String,
