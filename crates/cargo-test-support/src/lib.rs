@@ -8,6 +8,7 @@
 
 use std::env;
 use std::ffi::OsStr;
+use std::fmt::Write;
 use std::fs;
 use std::os;
 use std::path::{Path, PathBuf};
@@ -27,9 +28,24 @@ macro_rules! t {
     ($e:expr) => {
         match $e {
             Ok(e) => e,
-            Err(e) => panic!("{} failed with {}", stringify!($e), e),
+            Err(e) => $crate::panic_error(&format!("failed running {}", stringify!($e)), e),
         }
     };
+}
+
+#[track_caller]
+pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
+    let err = err.into();
+    pe(what, err);
+    #[track_caller]
+    fn pe(what: &str, err: anyhow::Error) -> ! {
+        let mut result = format!("{}\nerror: {}", what, err);
+        for cause in err.chain().skip(1) {
+            drop(writeln!(result, "\nCaused by:"));
+            drop(write!(result, "{}", cause));
+        }
+        panic!("\n{}", result);
+    }
 }
 
 pub use cargo_test_macro::cargo_test;
@@ -737,7 +753,7 @@ impl Execs {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
         if let Err(e) = self.match_process(&p) {
-            panic!("\n{}", e)
+            panic_error(&format!("test failed running {}", p), e);
         }
     }
 
@@ -748,7 +764,7 @@ impl Execs {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
         match self.match_process(&p) {
-            Err(e) => panic!("\n{}", e),
+            Err(e) => panic_error(&format!("test failed running {}", p), e),
             Ok(output) => serde_json::from_slice(&output.stdout).unwrap_or_else(|e| {
                 panic!(
                     "\nfailed to parse JSON: {}\n\
@@ -764,7 +780,7 @@ impl Execs {
     pub fn run_output(&mut self, output: &Output) {
         self.ran = true;
         if let Err(e) = self.match_output(output) {
-            panic!("\n{}", e)
+            panic_error("process did not return the expected result", e)
         }
     }
 
@@ -858,9 +874,10 @@ impl Execs {
         match self.expect_exit_code {
             None => Ok(()),
             Some(expected) if code == Some(expected) => Ok(()),
-            Some(_) => bail!(
-                "exited with {:?}\n--- stdout\n{}\n--- stderr\n{}",
-                code,
+            Some(expected) => bail!(
+                "process exited with code {} (expected {})\n--- stdout\n{}\n--- stderr\n{}",
+                code.unwrap_or(-1),
+                expected,
                 String::from_utf8_lossy(stdout),
                 String::from_utf8_lossy(stderr)
             ),
