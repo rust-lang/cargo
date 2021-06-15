@@ -13,6 +13,9 @@ use std::thread;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, t, Project};
+use pathdiff::diff_paths;
+use std::fs::File;
+use regex::Regex;
 
 fn disable_git_cli() -> bool {
     // mingw git on Windows does not support Windows-style file URIs.
@@ -927,6 +930,60 @@ fn dep_with_submodule() {
         .file(
             "src/lib.rs",
             "extern crate dep1; pub fn foo() { dep1::dep() }",
+        )
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[UPDATING] git submodule `file://[..]/dep2`
+[COMPILING] dep1 [..]
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dep_with_relative_submodule()  {
+
+
+    let foo = project();
+    let base = git::new("base/base", |project| {
+        project.file("Cargo.toml", &basic_lib_manifest("base"))
+            .file("src/lib.rs", "pub fn dep() {}")
+    });
+    let deployment = git::new("deployment", |project| project.file("src/lib.rs", "pub fn dep() {}"));
+
+    let base_repo = git2::Repository::open(&base.root()).unwrap();
+    let temp = base.root().join("../../deployment").canonicalize().unwrap();
+    let deployment_url = temp.to_str().unwrap();
+    git::add_submodule(&base_repo, "../../deployment", Path::new("deployment"));
+    git::commit(&base_repo);
+
+    let project = foo
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies.base]
+
+                    git = '{}'
+                "#,
+                base.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "pub fn foo() {  }",
         )
         .build();
 

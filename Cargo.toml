@@ -101,6 +101,8 @@ features = [
 [dev-dependencies]
 cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
+pathdiff = "0.2.0"
+regex = "1"
 
 [build-dependencies]
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
