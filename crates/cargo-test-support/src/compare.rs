@@ -44,19 +44,32 @@ fn normalize_actual(actual: &str, cwd: Option<&Path>) -> String {
     // It's easier to read tabs in outputs if they don't show up as literal
     // hidden characters
     let actual = actual.replace('\t', "<tab>");
-    // Let's not deal with \r\n vs \n on windows...
-    let actual = actual.replace('\r', "");
-    normalize_common(&actual, cwd)
+    if cfg!(windows) {
+        // Let's not deal with \r\n vs \n on windows...
+        let actual = actual.replace('\r', "");
+        normalize_windows(&actual, cwd)
+    } else {
+        actual
+    }
 }
 
 /// Normalizes the expected string so that it can be compared against the actual output.
 fn normalize_expected(expected: &str, cwd: Option<&Path>) -> String {
     let expected = substitute_macros(expected);
-    normalize_common(&expected, cwd)
+    if cfg!(windows) {
+        normalize_windows(&expected, cwd)
+    } else {
+        let expected = match cwd {
+            None => expected,
+            Some(cwd) => expected.replace("[CWD]", &cwd.display().to_string()),
+        };
+        let expected = expected.replace("[ROOT]", &paths::root().display().to_string());
+        expected
+    }
 }
 
-/// Normalizes text for both actual and expected strings.
-fn normalize_common(text: &str, cwd: Option<&Path>) -> String {
+/// Normalizes text for both actual and expected strings on Windows.
+fn normalize_windows(text: &str, cwd: Option<&Path>) -> String {
     // Let's not deal with / vs \ (windows...)
     let text = text.replace('\\', "/");
 
