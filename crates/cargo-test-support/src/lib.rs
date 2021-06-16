@@ -475,7 +475,6 @@ pub struct Execs {
     expect_exit_code: Option<i32>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
-    expect_either_contains: Vec<String>,
     expect_stdout_contains_n: Vec<(String, usize)>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
@@ -537,15 +536,6 @@ impl Execs {
     /// See [`compare`] for supported patterns.
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
-        self
-    }
-
-    /// Verifies that either stdout or stderr contains the given contiguous
-    /// lines somewhere in its output.
-    ///
-    /// See [`compare`] for supported patterns.
-    pub fn with_either_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
-        self.expect_either_contains.push(expected.to_string());
         self
     }
 
@@ -806,7 +796,6 @@ impl Execs {
             && self.expect_stderr.is_none()
             && self.expect_stdout_contains.is_empty()
             && self.expect_stderr_contains.is_empty()
-            && self.expect_either_contains.is_empty()
             && self.expect_stdout_contains_n.is_empty()
             && self.expect_stdout_not_contains.is_empty()
             && self.expect_stderr_not_contains.is_empty()
@@ -917,23 +906,6 @@ impl Execs {
         for expect in self.expect_stderr_unordered.iter() {
             compare::match_unordered(expect, stderr, cwd)?;
         }
-        for expect in self.expect_either_contains.iter() {
-            let match_std = compare::match_contains(expect, stdout, cwd);
-            let match_err = compare::match_contains(expect, stderr, cwd);
-            if let (Err(_), Err(_)) = (match_std, match_err) {
-                bail!(
-                    "expected to find:\n\
-                     {}\n\n\
-                     did not find in either output.
-                     --- stdout\n{}\n
-                     --- stderr\n{}\n",
-                    expect,
-                    stdout,
-                    stderr,
-                );
-            }
-        }
-
         for (with, without) in self.expect_stderr_with_without.iter() {
             compare::match_with_without(stderr, with, without, cwd)?;
         }
@@ -967,7 +939,6 @@ pub fn execs() -> Execs {
         expect_exit_code: Some(0),
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
-        expect_either_contains: Vec::new(),
         expect_stdout_contains_n: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
