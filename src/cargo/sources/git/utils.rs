@@ -16,7 +16,8 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
-use url::Url;
+use url::{Url, ParseError};
+use cargo_util::paths::normalize_path;
 
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
@@ -150,6 +151,7 @@ impl GitDatabase {
         rev: git2::Oid,
         dest: &Path,
         cargo_config: &Config,
+        parent_remote_url: &Url
     ) -> CargoResult<GitCheckout<'_>> {
         let mut checkout = None;
         if let Ok(repo) = git2::Repository::open(dest) {
@@ -177,7 +179,7 @@ impl GitDatabase {
             Some(c) => c,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
-        checkout.update_submodules(cargo_config)?;
+        checkout.update_submodules(cargo_config, parent_remote_url)?;
         Ok(checkout)
     }
 
@@ -343,14 +345,14 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
-    fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config);
+    fn update_submodules(&self, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
+        return update_submodules(&self.repo, cargo_config,parent_remote_url);
 
-        fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
+        fn update_submodules(repo: &git2::Repository, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
-                update_submodule(repo, &mut child, cargo_config).with_context(|| {
+                update_submodule(repo, &mut child, cargo_config, parent_remote_url).with_context(|| {
                     format!(
                         "failed to update submodule `{}`",
                         child.name().unwrap_or("")
@@ -364,12 +366,49 @@ impl<'a> GitCheckout<'a> {
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
+            parent_remote_url: &Url
         ) -> CargoResult<()> {
             child.init(false)?;
-            let url = child.url().ok_or_else(|| {
-                anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
-            })?;
 
+            let child_url = Url::parse(child.url().ok_or_else(|| {
+                anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
+            })?);
+
+
+
+            let url = match child_url{
+                Ok(child_url) => {
+                    if Path::new(child_url.path()).is_relative(){
+                        let s = parent_remote_url.path();
+                        dbg!(&s);
+                        normalize_path(&Path::new(s).join(Path::new(child_url.path()))).to_string_lossy().to_string()
+                    } else {
+                        child_url.to_string()
+                    }
+                }
+                Err(ParseError::RelativeUrlWithoutBase) => {
+                    let path = parent_remote_url.path();
+                    let mut new_parent_remote_url = parent_remote_url.clone();
+                    new_parent_remote_url.set_path(format!("{}/", path).as_str());
+                    dbg!(&new_parent_remote_url);
+                    new_parent_remote_url = new_parent_remote_url.join(child.url().unwrap()).unwrap();
+                    dbg!(&new_parent_remote_url);
+                    new_parent_remote_url.to_string()
+                }
+                Err(err) => panic!()//todo actually an error
+            };
+
+
+            /*if Path::new(child_url.path()).is_relative(){
+                dbg!(parent_remote_url);
+                // dbg!(child_url);
+                let s = parent_remote_url.path();
+                normalize_path(&Path::new(s).join(Path::new(child_url.path()))).to_string_lossy().to_string()
+            }else{
+                child_url.to_string()
+            };*/
+
+            dbg!(&url);
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
             let head = match child.head_id() {
@@ -388,7 +427,7 @@ impl<'a> GitCheckout<'a> {
             let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, cargo_config);
+                        return update_submodules(&repo, cargo_config, parent_remote_url);
                     }
                     repo
                 }
@@ -403,7 +442,7 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            fetch(&mut repo, url, &reference, cargo_config).with_context(|| {
+            fetch(&mut repo, &url, &reference, cargo_config).with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -413,7 +452,7 @@ impl<'a> GitCheckout<'a> {
 
             let obj = repo.find_object(head, None)?;
             reset(&repo, &obj, cargo_config)?;
-            update_submodules(&repo, cargo_config)
+            update_submodules(&repo, cargo_config, parent_remote_url)
         }
     }
 }
