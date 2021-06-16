@@ -31,10 +31,12 @@
 //!   a problem.
 //! - Carriage returns are removed, which can help when running on Windows.
 
+use crate::diff;
 use crate::paths;
 use anyhow::{bail, Context, Result};
 use serde_json::Value;
 use std::env;
+use std::fmt;
 use std::path::Path;
 use std::str;
 use url::Url;
@@ -165,23 +167,21 @@ pub fn match_exact(
 ) -> Result<()> {
     let expected = normalize_expected(expected, cwd);
     let actual = normalize_actual(actual, cwd);
-    let e = expected.lines();
-    let a = actual.lines();
-
-    let diffs = diff_lines(a, e, false);
-    if diffs.is_empty() {
-        Ok(())
-    } else {
-        bail!(
-            "{} did not match:\n\
-             {}\n\n\
-             other output:\n\
-             {}\n",
-            description,
-            diffs.join("\n"),
-            other_output,
-        )
+    let e: Vec<_> = expected.lines().map(WildStr::new).collect();
+    let a: Vec<_> = actual.lines().map(WildStr::new).collect();
+    if e == a {
+        return Ok(());
     }
+    let diff = diff::colored_diff(&e, &a);
+    bail!(
+        "{} did not match:\n\
+         {}\n\n\
+         other output:\n\
+         {}\n",
+        description,
+        diff,
+        other_output,
+    );
 }
 
 /// Convenience wrapper around [`match_exact`] which will panic on error.
@@ -199,7 +199,8 @@ pub fn assert_match_exact(expected: &str, actual: &str) {
 pub fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
     let expected = normalize_expected(expected, cwd);
     let actual = normalize_actual(actual, cwd);
-    let mut a = actual.lines().collect::<Vec<_>>();
+    let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
+    let mut a: Vec<_> = actual.lines().map(|line| WildStr::new(line)).collect();
     // match more-constrained lines first, although in theory we'll
     // need some sort of recursive match here. This handles the case
     // that you expect "a\n[..]b" and two lines are printed out,
@@ -207,31 +208,35 @@ pub fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) -> Resu
     // search fails to find this. This simple sort at least gets the
     // test suite to pass for now, but we may need to get more fancy
     // if tests start failing again.
-    a.sort_by_key(|s| s.len());
-    let mut failures = Vec::new();
+    a.sort_by_key(|s| s.line.len());
+    let mut changes = Vec::new();
+    let mut a_index = 0;
+    let mut failure = false;
 
-    for e_line in expected.lines() {
-        match a.iter().position(|a_line| lines_match(e_line, a_line)) {
+    use crate::diff::Change;
+    for (e_i, e_line) in e.into_iter().enumerate() {
+        match a.iter().position(|a_line| e_line == *a_line) {
             Some(index) => {
-                a.remove(index);
+                let a_line = a.remove(index);
+                changes.push(Change::Keep(e_i, index, a_line));
+                a_index += 1;
             }
-            None => failures.push(e_line),
+            None => {
+                failure = true;
+                changes.push(Change::Remove(e_i, e_line));
+            }
         }
     }
-    if !failures.is_empty() {
-        bail!(
-            "Did not find expected line(s):\n{}\n\
-             Remaining available output:\n{}\n",
-            failures.join("\n"),
-            a.join("\n")
-        );
+    for unmatched in a {
+        failure = true;
+        changes.push(Change::Add(a_index, unmatched));
+        a_index += 1;
     }
-    if !a.is_empty() {
+    if failure {
         bail!(
-            "Output included extra lines:\n\
-             {}\n",
-            a.join("\n")
-        )
+            "Expected lines did not match (ignoring order):\n{}\n",
+            diff::render_colored_changes(&changes)
+        );
     } else {
         Ok(())
     }
@@ -244,28 +249,24 @@ pub fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) -> Resu
 pub fn match_contains(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
     let expected = normalize_expected(expected, cwd);
     let actual = normalize_actual(actual, cwd);
-    let e = expected.lines();
-    let mut a = actual.lines();
-
-    let mut diffs = diff_lines(a.clone(), e.clone(), true);
-    while a.next().is_some() {
-        let a = diff_lines(a.clone(), e.clone(), true);
-        if a.len() < diffs.len() {
-            diffs = a;
+    let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
+    let a: Vec<_> = actual.lines().map(|line| WildStr::new(line)).collect();
+    if e.len() == 0 {
+        bail!("expected length must not be zero");
+    }
+    for window in a.windows(e.len()) {
+        if window == e {
+            return Ok(());
         }
     }
-    if diffs.is_empty() {
-        Ok(())
-    } else {
-        bail!(
-            "expected to find:\n\
-             {}\n\n\
-             did not find in output:\n\
-             {}",
-            expected,
-            actual
-        )
-    }
+    bail!(
+        "expected to find:\n\
+         {}\n\n\
+         did not find in output:\n\
+         {}",
+        expected,
+        actual
+    );
 }
 
 /// Checks that the given string does not contain the given contiguous lines
@@ -299,28 +300,23 @@ pub fn match_contains_n(
 ) -> Result<()> {
     let expected = normalize_expected(expected, cwd);
     let actual = normalize_actual(actual, cwd);
-    let e = expected.lines();
-    let mut a = actual.lines();
-
-    let mut matches = 0;
-
-    while let Some(..) = {
-        if diff_lines(a.clone(), e.clone(), true).is_empty() {
-            matches += 1;
-        }
-        a.next()
-    } {}
-
+    let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
+    let a: Vec<_> = actual.lines().map(|line| WildStr::new(line)).collect();
+    if e.len() == 0 {
+        bail!("expected length must not be zero");
+    }
+    let matches = a.windows(e.len()).filter(|window| *window == e).count();
     if matches == number {
         Ok(())
     } else {
         bail!(
-            "expected to find {} occurrences:\n\
+            "expected to find {} occurrences of:\n\
              {}\n\n\
-             did not find in output:\n\
+             but found {} matches in the output:\n\
              {}",
             number,
             expected,
+            matches,
             actual
         )
     }
@@ -340,16 +336,17 @@ pub fn match_with_without(
     cwd: Option<&Path>,
 ) -> Result<()> {
     let actual = normalize_actual(actual, cwd);
-    let contains = |s, line| {
-        let mut s = normalize_expected(s, cwd);
-        s.insert_str(0, "[..]");
-        s.push_str("[..]");
-        lines_match(&s, line)
-    };
-    let matches: Vec<&str> = actual
+    let norm = |s: &String| format!("[..]{}[..]", normalize_expected(s, cwd));
+    let with: Vec<_> = with.iter().map(norm).collect();
+    let without: Vec<_> = without.iter().map(norm).collect();
+    let with_wild: Vec<_> = with.iter().map(|w| WildStr::new(w)).collect();
+    let without_wild: Vec<_> = without.iter().map(|w| WildStr::new(w)).collect();
+
+    let matches: Vec<_> = actual
         .lines()
-        .filter(|line| with.iter().all(|with| contains(with, line)))
-        .filter(|line| !without.iter().any(|without| contains(without, line)))
+        .map(WildStr::new)
+        .filter(|line| with_wild.iter().all(|with| with == line))
+        .filter(|line| !without_wild.iter().any(|without| without == line))
         .collect();
     match matches.len() {
         0 => bail!(
@@ -371,7 +368,7 @@ pub fn match_with_without(
              {}\n",
             with,
             without,
-            matches.join("\n")
+            itertools::join(matches, "\n")
         ),
     }
 }
@@ -454,73 +451,6 @@ fn collect_json_objects(
     Ok((expected_objs, actual_objs))
 }
 
-fn diff_lines<'a>(actual: str::Lines<'a>, expected: str::Lines<'a>, partial: bool) -> Vec<String> {
-    let actual = actual.take(if partial {
-        expected.clone().count()
-    } else {
-        usize::MAX
-    });
-    zip_all(actual, expected)
-        .enumerate()
-        .filter_map(|(i, (a, e))| match (a, e) {
-            (Some(a), Some(e)) => {
-                if lines_match(e, a) {
-                    None
-                } else {
-                    Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
-                }
-            }
-            (Some(a), None) => Some(format!("{:3} -\n    + |{}|\n", i, a)),
-            (None, Some(e)) => Some(format!("{:3} - |{}|\n    +\n", i, e)),
-            (None, None) => unreachable!(),
-        })
-        .collect()
-}
-
-struct ZipAll<I1: Iterator, I2: Iterator> {
-    first: I1,
-    second: I2,
-}
-
-impl<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>> Iterator for ZipAll<I1, I2> {
-    type Item = (Option<T>, Option<T>);
-    fn next(&mut self) -> Option<(Option<T>, Option<T>)> {
-        let first = self.first.next();
-        let second = self.second.next();
-
-        match (first, second) {
-            (None, None) => None,
-            (a, b) => Some((a, b)),
-        }
-    }
-}
-
-/// Returns an iterator, similar to `zip`, but exhausts both iterators.
-///
-/// Each element is `(Option<T>, Option<T>)` where `None` indicates an
-/// iterator ended early.
-fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> ZipAll<I1, I2> {
-    ZipAll {
-        first: a,
-        second: b,
-    }
-}
-
-fn lines_match(expected: &str, mut actual: &str) -> bool {
-    for (i, part) in expected.split("[..]").enumerate() {
-        match actual.find(part) {
-            Some(j) => {
-                if i == 0 && j != 0 {
-                    return false;
-                }
-                actual = &actual[j + part.len()..];
-            }
-            None => return false,
-        }
-    }
-    actual.is_empty() || expected.ends_with("[..]")
-}
-
 /// Compares JSON object for approximate equality.
 /// You can use `[..]` wildcard in strings (useful for OS-dependent things such
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
@@ -550,12 +480,10 @@ fn find_json_mismatch_r<'a>(
         (&Bool(l), &Bool(r)) if l == r => None,
         (&String(ref l), _) if l == "{...}" => None,
         (&String(ref l), &String(ref r)) => {
-            let l = normalize_expected(l, cwd);
-            let r = normalize_actual(r, cwd);
-            if lines_match(&l, &r) {
-                None
-            } else {
+            if match_exact(l, r, "", "", cwd).is_err() {
                 Some((expected, actual))
+            } else {
+                None
             }
         }
         (&Array(ref l), &Array(ref r)) => {
@@ -585,15 +513,71 @@ fn find_json_mismatch_r<'a>(
     }
 }
 
-#[test]
-fn lines_match_works() {
-    assert!(lines_match("a b", "a b"));
-    assert!(lines_match("a[..]b", "a b"));
-    assert!(lines_match("a[..]", "a b"));
-    assert!(lines_match("[..]", "a b"));
-    assert!(lines_match("[..]b", "a b"));
+/// A single line string that supports `[..]` wildcard matching.
+pub struct WildStr<'a> {
+    has_meta: bool,
+    line: &'a str,
+}
 
-    assert!(!lines_match("[..]b", "c"));
-    assert!(!lines_match("b", "c"));
-    assert!(!lines_match("b", "cb"));
+impl<'a> WildStr<'a> {
+    pub fn new(line: &'a str) -> WildStr<'a> {
+        WildStr {
+            has_meta: line.contains("[..]"),
+            line,
+        }
+    }
+}
+
+impl<'a> PartialEq for WildStr<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.has_meta, other.has_meta) {
+            (false, false) => self.line == other.line,
+            (true, false) => meta_cmp(self.line, other.line),
+            (false, true) => meta_cmp(other.line, self.line),
+            (true, true) => panic!("both lines cannot have [..]"),
+        }
+    }
+}
+
+fn meta_cmp(a: &str, mut b: &str) -> bool {
+    for (i, part) in a.split("[..]").enumerate() {
+        match b.find(part) {
+            Some(j) => {
+                if i == 0 && j != 0 {
+                    return false;
+                }
+                b = &b[j + part.len()..];
+            }
+            None => return false,
+        }
+    }
+    b.is_empty() || a.ends_with("[..]")
+}
+
+impl fmt::Display for WildStr<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.line)
+    }
+}
+
+impl fmt::Debug for WildStr<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.line)
+    }
+}
+
+#[test]
+fn wild_str_cmp() {
+    for (a, b) in &[
+        ("a b", "a b"),
+        ("a[..]b", "a b"),
+        ("a[..]", "a b"),
+        ("[..]", "a b"),
+        ("[..]b", "a b"),
+    ] {
+        assert_eq!(WildStr::new(a), WildStr::new(b));
+    }
+    for (a, b) in &[("[..]b", "c"), ("b", "c"), ("b", "cb")] {
+        assert_ne!(WildStr::new(a), WildStr::new(b));
+    }
 }

@@ -52,6 +52,7 @@ pub use cargo_test_macro::cargo_test;
 
 pub mod compare;
 pub mod cross_compile;
+mod diff;
 pub mod git;
 pub mod install;
 pub mod paths;
