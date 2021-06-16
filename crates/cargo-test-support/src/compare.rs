@@ -512,13 +512,6 @@ pub fn lines_match(expected: &str, mut actual: &str) -> bool {
     actual.is_empty() || expected.ends_with("[..]")
 }
 
-/// Variant of `lines_match` that applies normalization to the strings.
-pub fn normalized_lines_match(expected: &str, actual: &str, cwd: Option<&Path>) -> bool {
-    let expected = normalize_expected(expected, cwd);
-    let actual = normalize_actual(actual, cwd);
-    lines_match(&expected, &actual)
-}
-
 /// Compares JSON object for approximate equality.
 /// You can use `[..]` wildcard in strings (useful for OS-dependent things such
 /// as paths). You can use a `"{...}"` string literal as a wildcard for

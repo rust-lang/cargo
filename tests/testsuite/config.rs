@@ -5,8 +5,8 @@ use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
-use cargo_test_support::compare::normalized_lines_match;
-use cargo_test_support::{paths, project, t};
+use cargo_test_support::compare;
+use cargo_test_support::{panic_error, paths, project, t};
 use serde::Deserialize;
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
@@ -210,11 +210,8 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
 
 #[track_caller]
 pub fn assert_match(expected: &str, actual: &str) {
-    if !normalized_lines_match(expected, actual, None) {
-        panic!(
-            "Did not find expected:\n{}\nActual:\n{}\n",
-            expected, actual
-        );
+    if let Err(e) = compare::match_exact(expected, actual, "output", "", None) {
+        panic_error("", e);
     }
 }
 
@@ -277,15 +274,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(config);
-    let unexpected = "\
-warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
-";
-    if normalized_lines_match(unexpected, &output, None) {
-        panic!(
-            "Found unexpected:\n{}\nActual error:\n{}\n",
-            unexpected, output
-        );
-    }
+    assert_eq!(output, "");
 }
 
 #[cargo_test]
