@@ -58,9 +58,7 @@ fn normalize_expected(expected: &str, cwd: Option<&Path>) -> String {
 /// Normalizes text for both actual and expected strings.
 fn normalize_common(text: &str, cwd: Option<&Path>) -> String {
     // Let's not deal with / vs \ (windows...)
-    // First replace backslash-escaped backslashes with forward slashes
-    // which can occur in, for example, JSON output
-    let text = text.replace("\\\\", "/").replace('\\', "/");
+    let text = text.replace('\\', "/");
 
     // Weirdness for paths on Windows extends beyond `/` vs `\` apparently.
     // Namely paths like `c:\` and `C:\` are equivalent and that can cause
