@@ -2344,6 +2344,206 @@ fn test_duplicate_deps() {
 }
 
 #[cargo_test]
+fn test_duplicate_shared_deps_native() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+
+                [dependencies]
+                bar = { path = 'bar' }
+
+                [build-dependencies]
+                bar = { path = 'bar' }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                extern crate bar;
+                fn main() { bar::do_nothing() }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                extern crate bar;
+                use std::env;
+                fn main() {
+                    bar::do_nothing();
+                    assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("CARGO_BUILD_TYPE").unwrap(), "native");
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                links = "foo"
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "bar/build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    println!("cargo:foo=bar");
+                    assert_eq!(env::var("CARGO_BUILD_TYPE").unwrap(), "native");
+                }
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn do_nothing() {}")
+        .build();
+
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
+fn test_duplicate_shared_deps_host_cross() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+
+                [dependencies]
+                bar = { path = 'bar' }
+
+                [build-dependencies]
+                bar = { path = 'bar' }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                extern crate bar;
+                fn main() { bar::do_nothing() }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                extern crate bar;
+                use std::env;
+                fn main() {
+                    bar::do_nothing();
+                    assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("CARGO_BUILD_TYPE").unwrap(), "cross");
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                links = "foo"
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "bar/build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    println!("cargo:foo=bar");
+                    assert_eq!(env::var("CARGO_BUILD_TYPE").unwrap(), "cross");
+                }
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn do_nothing() {}")
+        .build();
+
+    p.cargo("build -v --target").arg(&target).run();
+}
+
+#[cargo_test]
+fn test_duplicate_shared_deps_alt_cross() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let cross_target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+
+                [dependencies]
+                bar = { path = 'bar' }
+
+                [build-dependencies]
+                bar = { path = 'bar' }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                extern crate bar;
+                fn main() { bar::do_nothing() }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                extern crate bar;
+                use std::env;
+                fn main() {
+                    bar::do_nothing();
+                    assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("CARGO_BUILD_TYPE").unwrap(), "cross");
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                links = "foo"
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "bar/build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    println!("cargo:foo=bar");
+                    assert_eq!(env::var("CARGO_BUILD_TYPE").unwrap(), "cross");
+                }
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn do_nothing() {}")
+        .build();
+
+    p.cargo("build --target").arg(&cross_target).run();
+}
+
+#[cargo_test]
 fn cfg_feedback() {
     let p = project()
         .file(
