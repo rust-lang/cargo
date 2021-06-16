@@ -330,7 +330,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     // that we have to back it all out.
     if !fixes.files.is_empty() {
         let mut cmd = rustc.build_command();
-        args.apply(&mut cmd);
+        args.apply(&mut cmd, config);
         cmd.arg("--error-format=json");
         let output = cmd.output().context("failed to spawn rustc")?;
 
@@ -369,7 +369,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     // - If `--broken-code`, show the error messages.
     // - If the fix succeeded, show any remaining warnings.
     let mut cmd = rustc.build_command();
-    args.apply(&mut cmd);
+    args.apply(&mut cmd, config);
     for arg in args.format_args {
         // Add any json/error format arguments that Cargo wants. This allows
         // things like colored output to work correctly.
@@ -457,7 +457,7 @@ fn rustfix_crate(
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        rustfix_and_fix(&mut fixes, rustc, filename, args)?;
+        rustfix_and_fix(&mut fixes, rustc, filename, args, config)?;
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
@@ -499,6 +499,7 @@ fn rustfix_and_fix(
     rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
+    config: &Config,
 ) -> Result<(), Error> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
@@ -506,7 +507,7 @@ fn rustfix_and_fix(
 
     let mut cmd = rustc.build_command();
     cmd.arg("--error-format=json");
-    args.apply(&mut cmd);
+    args.apply(&mut cmd, config);
     let output = cmd.output().with_context(|| {
         format!(
             "failed to execute `{}`",
@@ -763,7 +764,7 @@ impl FixArgs {
         })
     }
 
-    fn apply(&self, cmd: &mut Command) {
+    fn apply(&self, cmd: &mut Command, config: &Config) {
         cmd.arg(&self.file);
         cmd.args(&self.other).arg("--cap-lints=warn");
         if let Some(edition) = self.enabled_edition {
@@ -775,7 +776,13 @@ impl FixArgs {
 
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
-                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+                if config.nightly_features_allowed {
+                    cmd.arg("--force-warns")
+                        .arg(format!("rust-{}-compatibility", edition))
+                        .arg("-Zunstable-options");
+                } else {
+                    cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+                }
             }
         }
     }

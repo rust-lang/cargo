@@ -208,15 +208,15 @@ impl Edition {
 
     /// Whether or not this edition supports the `rust_*_compatibility` lint.
     ///
-    /// Ideally this would not be necessary, but currently 2021 does not have
-    /// any lints, and thus `rustc` doesn't recognize it. Perhaps `rustc`
-    /// could create an empty group instead?
+    /// Ideally this would not be necessary, but editions may not have any
+    /// lints, and thus `rustc` doesn't recognize it. Perhaps `rustc` could
+    /// create an empty group instead?
     pub(crate) fn supports_compat_lint(&self) -> bool {
         use Edition::*;
         match self {
             Edition2015 => false,
             Edition2018 => true,
-            Edition2021 => false,
+            Edition2021 => true,
         }
     }
 
