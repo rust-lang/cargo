@@ -165,11 +165,19 @@ pub fn match_exact(
             "{} did not match:\n\
              {}\n\n\
              other output:\n\
-             `{}`",
+             {}\n",
             description,
             diffs.join("\n"),
             other_output,
         )
+    }
+}
+
+/// Convenience wrapper around [`match_exact`] which will panic on error.
+#[track_caller]
+pub fn assert_match_exact(expected: &str, actual: &str) {
+    if let Err(e) = match_exact(expected, actual, "", "", None) {
+        crate::panic_error("", e);
     }
 }
 
@@ -487,17 +495,7 @@ fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> Z
     }
 }
 
-/// Compares a line with an expected pattern.
-/// - Use `[..]` as a wildcard to match 0 or more characters on the same line
-///   (similar to `.*` in a regex). It is non-greedy.
-/// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
-///   platforms).
-/// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
-///   to match cargo's "status" output and allows you to ignore the alignment.
-///   See `substitute_macros` for a complete list of macros.
-/// - `[ROOT]` the path to the test directory's root
-/// - `[CWD]` is the working directory of the process that was run.
-pub fn lines_match(expected: &str, mut actual: &str) -> bool {
+fn lines_match(expected: &str, mut actual: &str) -> bool {
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
             Some(j) => {

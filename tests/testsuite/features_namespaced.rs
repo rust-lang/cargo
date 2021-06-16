@@ -1151,7 +1151,8 @@ fn publish_no_implicit() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
@@ -1169,6 +1170,8 @@ optional = true
 [features]
 feat = ["opt-dep1"]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }
@@ -1255,7 +1258,8 @@ fn publish() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
@@ -1271,6 +1275,8 @@ feat1 = []
 feat2 = ["dep:bar"]
 feat3 = ["feat2"]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }

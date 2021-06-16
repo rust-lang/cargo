@@ -1,6 +1,6 @@
 //! Tests for build.rs scripts.
 
-use cargo_test_support::compare::lines_match;
+use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
@@ -3038,25 +3038,9 @@ fn generate_good_d_files() {
 
     println!("*.d file content*: {}", &dot_d);
 
-    #[cfg(windows)]
-    assert!(
-        lines_match(
-            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\barkbarkbark [..]\\awoo\\build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\build.rs [..]\\awoo\\barkbarkbark[..]",
-            &dot_d
-        )
-    );
-    #[cfg(not(windows))]
-    assert!(
-        lines_match(
-            "[..]/target/debug/meow: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "[..]/target/debug/meow: [..]/awoo/build.rs [..]/awoo/barkbarkbark[..]",
-            &dot_d
-        )
+    assert_match_exact(
+        "[..]/target/debug/meow[EXE]: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
+        &dot_d,
     );
 
     // paths relative to dependency roots should not be allowed
@@ -3077,25 +3061,9 @@ fn generate_good_d_files() {
 
     println!("*.d file content with dep-info-basedir*: {}", &dot_d);
 
-    #[cfg(windows)]
-    assert!(
-        lines_match(
-            "target\\debug\\meow.exe: [..]awoo\\barkbarkbark [..]awoo\\build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "target\\debug\\meow.exe: [..]awoo\\build.rs [..]awoo\\barkbarkbark[..]",
-            &dot_d
-        )
-    );
-    #[cfg(not(windows))]
-    assert!(
-        lines_match(
-            "target/debug/meow: [..]awoo/barkbarkbark [..]awoo/build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "target/debug/meow: [..]awoo/build.rs [..]awoo/barkbarkbark[..]",
-            &dot_d
-        )
+    assert_match_exact(
+        "target/debug/meow[EXE]: awoo/barkbarkbark awoo/build.rs[..]",
+        &dot_d,
     );
 
     // paths relative to dependency roots should not be allowed
