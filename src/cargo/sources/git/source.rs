@@ -174,8 +174,7 @@ impl<'cfg> Source for GitSource<'cfg> {
             .join(&self.ident)
             .join(short_id.as_str());
         let parent_remote_url = self.url();
-        dbg!(parent_remote_url);
-        db.copy_to(actual_rev, &checkout_path, self.config,parent_remote_url)?;
+        db.copy_to(actual_rev, &checkout_path, self.config, parent_remote_url)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);

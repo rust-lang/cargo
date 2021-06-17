@@ -13,9 +13,6 @@ use std::thread;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, t, Project};
-use pathdiff::diff_paths;
-use std::fs::File;
-use regex::Regex;
 
 fn disable_git_cli() -> bool {
     // mingw git on Windows does not support Windows-style file URIs.
@@ -938,8 +935,8 @@ fn dep_with_submodule() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
-[UPDATING] git submodule `file://[..]/dep2`
-[COMPILING] dep1 [..]
+[UPDATING] git submodule `file://[..]/deployment`
+[COMPILING] base [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
@@ -947,19 +944,18 @@ fn dep_with_submodule() {
 }
 
 #[cargo_test]
-fn dep_with_relative_submodule()  {
-
-
+fn dep_with_relative_submodule() {
     let foo = project();
     let base = git::new("base/base", |project| {
-        project.file("Cargo.toml", &basic_lib_manifest("base"))
+        project
+            .file("Cargo.toml", &basic_lib_manifest("base"))
             .file("src/lib.rs", "pub fn dep() {}")
     });
-    let deployment = git::new("deployment", |project| project.file("src/lib.rs", "pub fn dep() {}"));
+    let _deployment = git::new("deployment", |project| {
+        project.file("src/lib.rs", "pub fn dep() {}")
+    });
 
     let base_repo = git2::Repository::open(&base.root()).unwrap();
-    let temp = base.root().join("../../deployment").canonicalize().unwrap();
-    let deployment_url = temp.to_str().unwrap();
     git::add_submodule(&base_repo, "../../deployment", Path::new("deployment"));
     git::commit(&base_repo);
 
@@ -981,10 +977,7 @@ fn dep_with_relative_submodule()  {
                 base.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "pub fn foo() {  }",
-        )
+        .file("src/lib.rs", "pub fn foo() {  }")
         .build();
 
     project
