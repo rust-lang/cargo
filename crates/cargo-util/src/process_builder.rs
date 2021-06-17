@@ -256,34 +256,30 @@ impl ProcessBuilder {
                         None => return,
                     }
                 };
-                {
-                    // scope for new_lines
-                    let new_lines = if capture_output {
-                        let dst = if is_out { &mut stdout } else { &mut stderr };
-                        let start = dst.len();
-                        let data = data.drain(..idx);
-                        dst.extend(data);
-                        &dst[start..]
+
+                let new_lines = &data[..idx];
+
+                for line in String::from_utf8_lossy(new_lines).lines() {
+                    if callback_error.is_some() {
+                        break;
+                    }
+                    let callback_result = if is_out {
+                        on_stdout_line(line)
                     } else {
-                        &data[..idx]
+                        on_stderr_line(line)
                     };
-                    for line in String::from_utf8_lossy(new_lines).lines() {
-                        if callback_error.is_some() {
-                            break;
-                        }
-                        let callback_result = if is_out {
-                            on_stdout_line(line)
-                        } else {
-                            on_stderr_line(line)
-                        };
-                        if let Err(e) = callback_result {
-                            callback_error = Some(e);
-                        }
+                    if let Err(e) = callback_result {
+                        callback_error = Some(e);
+                        break;
                     }
                 }
-                if !capture_output {
-                    data.drain(..idx);
+
+                if capture_output {
+                    let dst = if is_out { &mut stdout } else { &mut stderr };
+                    dst.extend(new_lines);
                 }
+
+                data.drain(..idx);
             })?;
             child.wait()
         })()
