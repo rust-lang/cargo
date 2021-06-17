@@ -702,7 +702,8 @@ fn publish() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
@@ -717,6 +718,8 @@ optional = true
 feat1 = []
 feat2 = ["bar?/feat"]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }

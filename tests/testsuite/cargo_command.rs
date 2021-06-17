@@ -313,7 +313,7 @@ fn cargo_subcommand_args() {
             r#"
                 fn main() {
                     let args: Vec<_> = ::std::env::args().collect();
-                    println!("{:?}", args);
+                    println!("{}", args.join(" "));
                 }
             "#,
         )
@@ -329,9 +329,7 @@ fn cargo_subcommand_args() {
 
     cargo_process("foo bar -v --help")
         .env("PATH", &path)
-        .with_stdout(
-            r#"["[CWD]/cargo-foo/target/debug/cargo-foo[EXE]", "foo", "bar", "-v", "--help"]"#,
-        )
+        .with_stdout("[CWD]/cargo-foo/target/debug/cargo-foo[EXE] foo bar -v --help")
         .run();
 }
 

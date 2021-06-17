@@ -737,7 +737,7 @@ fn metabuild_failed_build_json() {
                 "code": "{...}",
                 "level": "error",
                 "message": "cannot find function `metabuild` in [..] `mb`",
-                "rendered": "[..]",
+                "rendered": "{...}",
                 "spans": "{...}"
               },
               "package_id": "foo [..]",

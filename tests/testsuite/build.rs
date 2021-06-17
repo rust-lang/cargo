@@ -6,13 +6,13 @@ use cargo::{
     ops::CompileOptions,
     Config,
 };
+use cargo_test_support::compare;
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly,
-    lines_match_unordered, main_file, paths, process, project, rustc_host, sleep_ms,
-    symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly, main_file,
+    paths, process, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use cargo_util::paths::dylib_path_envvar;
 use std::env;
@@ -5320,7 +5320,7 @@ fn close_output() {
     };
 
     let stderr = spawn(false);
-    lines_match_unordered(
+    compare::match_unordered(
         "\
 [COMPILING] foo [..]
 hello stderr!
@@ -5329,13 +5329,14 @@ hello stderr!
 [ERROR] [..]
 ",
         &stderr,
+        None,
     )
     .unwrap();
 
     // Try again with stderr.
     p.build_dir().rm_rf();
     let stdout = spawn(true);
-    lines_match_unordered("hello stdout!\n", &stdout).unwrap();
+    assert_eq!(stdout, "hello stdout!\n");
 }
 
 #[cargo_test]

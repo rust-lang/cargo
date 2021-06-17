@@ -86,7 +86,7 @@ build.rustflags = [\"--flag-directory\", \"--flag-global\"]
 extra-table.somekey = \"somevalue\"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-target.\"cfg(target_os = /\"linux/\")\".runner = \"runme\"
+target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
 # The following environment variables may affect the loaded values.
 # CARGO_ALIAS_BAR=[..]cat dog[..]
 # CARGO_BUILD_JOBS=100
@@ -263,7 +263,7 @@ build.rustflags = [
 extra-table.somekey = \"somevalue\" # [ROOT]/home/.cargo/config.toml
 profile.dev.opt-level = 3 # [ROOT]/home/.cargo/config.toml
 profile.dev.package.foo.opt-level = 1 # [ROOT]/home/.cargo/config.toml
-target.\"cfg(target_os = /\"linux/\")\".runner = \"runme\" # [ROOT]/home/.cargo/config.toml
+target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\" # [ROOT]/home/.cargo/config.toml
 # The following environment variables may affect the loaded values.
 # CARGO_HOME=[ROOT]/home/.cargo
 ",
@@ -359,7 +359,7 @@ build.rustflags = [\"--flag-global\"]
 extra-table.somekey = \"somevalue\"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-target.\"cfg(target_os = /\"linux/\")\".runner = \"runme\"
+target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
 
 ",
         )
@@ -513,7 +513,7 @@ build.rustflags = [\"--flag-global\"]
 extra-table.somekey = \"somevalue\"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-target.\"cfg(target_os = /\"linux/\")\".runner = \"runme\"
+target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
 
 ",
         )

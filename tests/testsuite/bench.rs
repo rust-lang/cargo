@@ -346,12 +346,12 @@ fn cargo_bench_failing_test() {
 [FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] [..] (target/release/deps/foo-[..][EXE])",
         )
-        .with_either_contains(
+        .with_stdout_contains(
             "[..]thread '[..]' panicked at 'assertion failed: `(left == right)`[..]",
         )
-        .with_either_contains("[..]left: `\"hello\"`[..]")
-        .with_either_contains("[..]right: `\"nope\"`[..]")
-        .with_either_contains("[..]src/main.rs:15[..]")
+        .with_stdout_contains("[..]left: `\"hello\"`[..]")
+        .with_stdout_contains("[..]right: `\"nope\"`[..]")
+        .with_stdout_contains("[..]src/main.rs:15[..]")
         .with_status(101)
         .run();
 }

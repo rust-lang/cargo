@@ -1470,8 +1470,8 @@ fn doc_message_format() {
                     "children": "{...}",
                     "code": "{...}",
                     "level": "error",
-                    "message": "[..]",
-                    "rendered": "[..]",
+                    "message": "{...}",
+                    "rendered": "{...}",
                     "spans": "{...}"
                 },
                 "package_id": "foo [..]",

@@ -58,11 +58,11 @@ p.cargo("run --bin foo")
 This uses the [`Execs`] struct to build up a command to execute, along with
 the expected output.
 
-See [`support::lines_match`] for an explanation of the string pattern matching.
+See [`support::compare`] for an explanation of the string pattern matching.
 Patterns are used to make it easier to match against the expected output.
 
-Browse the `pub` functions in the [`support`] crate for a variety of other
-helpful utilities.
+Browse the `pub` functions and modules in the [`support`] crate for a variety
+of other helpful utilities.
 
 ### Testing Nightly Features
 
@@ -127,6 +127,6 @@ dependency.
 [`ProjectBuilder`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L225-L231
 [`Execs`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L558-L579
 [`support`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs
-[`support::lines_match`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L1322-L1332
+[`support::compare`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/compare.rs
 [`support::registry::Package`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/registry.rs#L73-L149
 [`support::git`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs

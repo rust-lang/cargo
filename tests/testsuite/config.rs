@@ -5,7 +5,8 @@ use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
-use cargo_test_support::{normalized_lines_match, paths, project, t};
+use cargo_test_support::compare;
+use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
 use serde::Deserialize;
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
@@ -151,28 +152,6 @@ fn write_config_toml(config: &str) {
     write_config_at(paths::root().join(".cargo/config.toml"), config);
 }
 
-// Several test fail on windows if the user does not have permission to
-// create symlinks (the `SeCreateSymbolicLinkPrivilege`). Instead of
-// disabling these test on Windows, use this function to test whether we
-// have permission, and return otherwise. This way, we still don't run these
-// tests most of the time, but at least we do if the user has the right
-// permissions.
-// This function is derived from libstd fs tests.
-pub fn got_symlink_permission() -> bool {
-    if cfg!(unix) {
-        return true;
-    }
-    let link = paths::root().join("some_hopefully_unique_link_name");
-    let target = paths::root().join("nonexisting_target");
-
-    match symlink_file(&target, &link) {
-        Ok(_) => true,
-        // ERROR_PRIVILEGE_NOT_HELD = 1314
-        Err(ref err) if err.raw_os_error() == Some(1314) => false,
-        Err(_) => true,
-    }
-}
-
 #[cfg(unix)]
 fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
     os::unix::fs::symlink(target, link)
@@ -209,11 +188,8 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
 
 #[track_caller]
 pub fn assert_match(expected: &str, actual: &str) {
-    if !normalized_lines_match(expected, actual, None) {
-        panic!(
-            "Did not find expected:\n{}\nActual:\n{}\n",
-            expected, actual
-        );
+    if let Err(e) = compare::match_exact(expected, actual, "output", "", None) {
+        panic_error("", e);
     }
 }
 
@@ -257,7 +233,7 @@ f1 = 1
 fn config_ambiguous_filename_symlink_doesnt_warn() {
     // Windows requires special permissions to create symlinks.
     // If we don't have permission, just skip this test.
-    if !got_symlink_permission() {
+    if !symlink_supported() {
         return;
     };
 
@@ -276,15 +252,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(config);
-    let unexpected = "\
-warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
-";
-    if normalized_lines_match(unexpected, &output, None) {
-        panic!(
-            "Found unexpected:\n{}\nActual error:\n{}\n",
-            unexpected, output
-        );
-    }
+    assert_eq!(output, "");
 }
 
 #[cargo_test]
