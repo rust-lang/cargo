@@ -37,7 +37,7 @@ use self::targets::targets;
 /// This could result in a real or virtual manifest being returned.
 ///
 /// A list of nested paths is also returned, one for each path dependency
-/// within the manfiest. For virtual manifests, these paths can only
+/// within the manifest. For virtual manifests, these paths can only
 /// come from patched or replaced dependencies. These paths are not
 /// canonicalized.
 pub fn read_manifest(
