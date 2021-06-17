@@ -243,17 +243,27 @@ impl ProcessBuilder {
             .stdin(Stdio::null());
 
         let mut callback_error = None;
+        let mut stdout_pos = 0;
+        let mut stderr_pos = 0;
         let status = (|| {
             let mut child = cmd.spawn()?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
+                let pos = if is_out {
+                    &mut stdout_pos
+                } else {
+                    &mut stderr_pos
+                };
                 let idx = if eof {
                     data.len()
                 } else {
-                    match data.iter().rposition(|b| *b == b'\n') {
-                        Some(i) => i + 1,
-                        None => return,
+                    match data[*pos..].iter().rposition(|b| *b == b'\n') {
+                        Some(i) => *pos + i + 1,
+                        None => {
+                            *pos = data.len();
+                            return;
+                        }
                     }
                 };
 
@@ -280,6 +290,7 @@ impl ProcessBuilder {
                 }
 
                 data.drain(..idx);
+                *pos = 0;
             })?;
             child.wait()
         })()
