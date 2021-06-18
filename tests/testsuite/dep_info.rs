@@ -1,6 +1,7 @@
 //! Tests for dep-info files. This includes the dep-info file Cargo creates in
 //! the output directory, and the ones stored in the fingerprint.
 
+use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
@@ -573,5 +574,42 @@ fn canonical_path() {
         &p,
         "target/debug/.fingerprint/foo-*/dep-lib-foo",
         &[(0, "src/lib.rs"), (1, "debug/deps/libregdep-*.rmeta")],
+    );
+}
+
+#[cargo_test]
+fn non_local_build_script() {
+    // Non-local build script information is not included.
+    Package::new("bar", "1.0.0")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build").run();
+    let contents = p.read_file("target/debug/foo.d");
+    assert_match_exact(
+        "[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/src/main.rs",
+        &contents,
     );
 }
