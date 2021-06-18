@@ -243,47 +243,54 @@ impl ProcessBuilder {
             .stdin(Stdio::null());
 
         let mut callback_error = None;
+        let mut stdout_pos = 0;
+        let mut stderr_pos = 0;
         let status = (|| {
             let mut child = cmd.spawn()?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
+                let pos = if is_out {
+                    &mut stdout_pos
+                } else {
+                    &mut stderr_pos
+                };
                 let idx = if eof {
                     data.len()
                 } else {
-                    match data.iter().rposition(|b| *b == b'\n') {
-                        Some(i) => i + 1,
-                        None => return,
+                    match data[*pos..].iter().rposition(|b| *b == b'\n') {
+                        Some(i) => *pos + i + 1,
+                        None => {
+                            *pos = data.len();
+                            return;
+                        }
                     }
                 };
-                {
-                    // scope for new_lines
-                    let new_lines = if capture_output {
-                        let dst = if is_out { &mut stdout } else { &mut stderr };
-                        let start = dst.len();
-                        let data = data.drain(..idx);
-                        dst.extend(data);
-                        &dst[start..]
+
+                let new_lines = &data[..idx];
+
+                for line in String::from_utf8_lossy(new_lines).lines() {
+                    if callback_error.is_some() {
+                        break;
+                    }
+                    let callback_result = if is_out {
+                        on_stdout_line(line)
                     } else {
-                        &data[..idx]
+                        on_stderr_line(line)
                     };
-                    for line in String::from_utf8_lossy(new_lines).lines() {
-                        if callback_error.is_some() {
-                            break;
-                        }
-                        let callback_result = if is_out {
-                            on_stdout_line(line)
-                        } else {
-                            on_stderr_line(line)
-                        };
-                        if let Err(e) = callback_result {
-                            callback_error = Some(e);
-                        }
+                    if let Err(e) = callback_result {
+                        callback_error = Some(e);
+                        break;
                     }
                 }
-                if !capture_output {
-                    data.drain(..idx);
+
+                if capture_output {
+                    let dst = if is_out { &mut stdout } else { &mut stderr };
+                    dst.extend(new_lines);
                 }
+
+                data.drain(..idx);
+                *pos = 0;
             })?;
             child.wait()
         })()
