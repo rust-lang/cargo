@@ -50,6 +50,7 @@
 //! improved.
 
 use std::cell::Cell;
+use std::collections::BTreeSet;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io;
 use std::marker;
@@ -74,9 +75,11 @@ use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::compiler::future_incompat::{
     FutureBreakageItem, OnDiskReport, FUTURE_INCOMPAT_FILE,
 };
-use crate::core::{PackageId, Shell, TargetKind};
+use crate::core::resolver::ResolveBehavior;
+use crate::core::{FeatureValue, PackageId, Shell, TargetKind};
 use crate::drop_eprint;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
+use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
 use crate::util::{self, internal, profile};
@@ -607,6 +610,7 @@ impl<'cfg> DrainState<'cfg> {
                     Err(e) => {
                         let msg = "The following warnings were emitted during compilation:";
                         self.emit_warnings(Some(msg), &unit, cx)?;
+                        self.back_compat_notice(cx, &unit)?;
                         return Err(e);
                     }
                 }
@@ -1152,6 +1156,62 @@ impl<'cfg> DrainState<'cfg> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn back_compat_notice(&self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+        if unit.pkg.name() != "diesel"
+            || unit.pkg.version().major != 1
+            || cx.bcx.ws.resolve_behavior() == ResolveBehavior::V1
+            || !unit.pkg.package_id().source_id().is_registry()
+            || !unit.features.is_empty()
+        {
+            return Ok(());
+        }
+        let other_diesel = match cx
+            .bcx
+            .unit_graph
+            .keys()
+            .filter(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
+            .next()
+        {
+            Some(u) => u,
+            // Unlikely due to features.
+            None => return Ok(()),
+        };
+        let mut features_suggestion: BTreeSet<_> = other_diesel.features.iter().collect();
+        let fmap = other_diesel.pkg.summary().features();
+        // Remove any unnecessary features.
+        for feature in &other_diesel.features {
+            if let Some(feats) = fmap.get(feature) {
+                for feat in feats {
+                    if let FeatureValue::Feature(f) = feat {
+                        features_suggestion.remove(&f);
+                    }
+                }
+            }
+        }
+        features_suggestion.remove(&InternedString::new("default"));
+        let features_suggestion = toml::to_string(&features_suggestion).unwrap();
+
+        cx.bcx.config.shell().note(&format!(
+            "\
+This error may be due to an interaction between diesel and Cargo's new
+feature resolver. Some workarounds you may want to consider:
+- Add a build-dependency in Cargo.toml on diesel to force Cargo to add the appropriate
+  features. This may look something like this:
+
+    [build-dependencies]
+    diesel = {{ version = \"{}\", features = {} }}
+
+- Try using the previous resolver by setting `resolver = \"1\"` in `Cargo.toml`
+  (see <https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions>
+  for more information).
+- Check for the 2.0 release of diesel which does not have this problem.
+",
+            unit.pkg.version(),
+            features_suggestion
+        ))?;
         Ok(())
     }
 }

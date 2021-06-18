@@ -53,7 +53,7 @@ use rustfix::{self, CodeFix};
 
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{FeatureOpts, FeatureResolver};
-use crate::core::resolver::{HasDevUnits, ResolveBehavior};
+use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Workspace};
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -292,6 +292,25 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     report(differences.features, "features");
     report(differences.optional_deps, "optional dependency");
     drop_eprint!(config, "\n");
+    report_maybe_diesel(config, &ws_resolve.targeted_resolve)?;
+    Ok(())
+}
+
+fn report_maybe_diesel(config: &Config, resolve: &Resolve) -> CargoResult<()> {
+    if resolve
+        .iter()
+        .any(|pid| pid.name() == "diesel" && pid.version().major == 1)
+        && resolve.iter().any(|pid| pid.name() == "diesel_migrations")
+    {
+        config.shell().note(
+            "\
+This project appears to use both diesel and diesel_migrations. These packages have
+a known issue where the build may fail due to the version 2 resolver preventing
+feature unification between those two packages. See
+<https://github.com/rust-lang/cargo/issues/9450> for some potential workarounds.
+",
+        )?;
+    }
     Ok(())
 }
 
