@@ -249,6 +249,13 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         }
     }
 
+    // Also inform the build script of the rustc compiler context.
+    cmd.env(
+        "CARGO_RUSTC_WRAPPER",
+        bcx.rustc().wrapper.as_deref().unwrap_or(Path::new("")),
+    );
+    cmd.env("CARGO_RUSTFLAGS", bcx.rustflags_args(unit).join(" "));
+
     // Gather the set of native dependencies that this package has along with
     // some other variables to close over.
     //
