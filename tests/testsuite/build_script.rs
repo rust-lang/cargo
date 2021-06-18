@@ -184,32 +184,25 @@ fn custom_build_env_var_rustc_wrapper() {
     let wrapper = tools::echo_wrapper();
     let p = project()
         .file(
-            ".cargo/config",
-            &format!(
-                r#"
-                [build]
-                rustc-wrapper = "{}"
-                "#,
-                wrapper.display()
-            ),
-        )
-        .file(
             "build.rs",
-            &format!(
-                r#"
-                use std::env;
+            r#"
+            use std::env;
 
-                fn main() {{
-                    assert!(env::var("CARGO_RUSTC_WRAPPER").unwrap().ends_with("{}"));
-                }}
-                "#,
-                wrapper.display()
-            ),
+            fn main() {{
+                assert_eq!(
+                    env::var("CARGO_RUSTC_WRAPPER").unwrap(),
+                    env::var("CARGO_RUSTC_WRAPPER_CHECK").unwrap()
+                );
+            }}
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check").run();
+    p.cargo("check")
+        .env("CARGO_BUILD_RUSTC_WRAPPER", &wrapper)
+        .env("CARGO_RUSTC_WRAPPER_CHECK", &wrapper)
+        .run();
 }
 
 #[cargo_test]
