@@ -1,15 +1,86 @@
 # Changelog
 
+## Cargo 1.55 (2021-09-09)
+[aa8b0929...HEAD](https://github.com/rust-lang/cargo/compare/aa8b0929...HEAD)
+
+### Added
+
+- The package definition in `cargo metadata` now includes the `"default_run"`
+  field from the manifest.
+  [#9550](https://github.com/rust-lang/cargo/pull/9550)
+
+### Changed
+
+- If a build command does not match any targets when using the
+  `--all-targets`, `--bins`, `--tests`, `--examples`, or `--benches` flags, a
+  warning is now displayed to inform you that there were no matching targets.
+  [#9549](https://github.com/rust-lang/cargo/pull/9549)
+- The way `cargo init` detects whether or not existing source files represent
+  a binary or library has been changed to respect the command-line flags
+  instead of trying to guess which type it is.
+  [#9522](https://github.com/rust-lang/cargo/pull/9522)
+
+### Fixed
+
+- Fixed dep-info files including non-local build script paths.
+  [#9596](https://github.com/rust-lang/cargo/pull/9596)
+- Relaxed doc collision error to retain old behavior.
+  [#9595](https://github.com/rust-lang/cargo/pull/9595)
+- Handle "jobs = 0" case in cargo config files
+  [#9584](https://github.com/rust-lang/cargo/pull/9584)
+- Implement warning for ignored trailing arguments after `--`
+  [#9561](https://github.com/rust-lang/cargo/pull/9561)
+- Fixed rustc/rustdoc config values to be config-relative.
+  [#9566](https://github.com/rust-lang/cargo/pull/9566)
+- `cargo fix` now supports rustc's suggestions with multiple spans.
+  [#9567](https://github.com/rust-lang/cargo/pull/9567)
+
+### Nightly only
+
+- Enabled support for `cargo fix --edition` for 2021.
+  [#9588](https://github.com/rust-lang/cargo/pull/9588)
+
+
 ## Cargo 1.54 (2021-07-29)
-[4369396c...HEAD](https://github.com/rust-lang/cargo/compare/4369396c...HEAD)
+[4369396c...rust-1.54.0](https://github.com/rust-lang/cargo/compare/4369396c...rust-1.54.0)
 
 ### Added
 
 - Fetching from a git repository (such as the crates.io index) now displays
   the network transfer rate.
   [#9395](https://github.com/rust-lang/cargo/pull/9395)
+- Added `--prune` option for `cargo tree` to limit what is displayed.
+  [#9520](https://github.com/rust-lang/cargo/pull/9520)
+- Added `--depth` option for `cargo tree` to limit what is displayed.
+  [#9499](https://github.com/rust-lang/cargo/pull/9499)
+- Added `cargo tree -e no-proc-macro` to hide procedural macro dependencies.
+  [#9488](https://github.com/rust-lang/cargo/pull/9488)
+- Added `doc.browser` config option to set which browser to open with `cargo doc --open`.
+  [#9473](https://github.com/rust-lang/cargo/pull/9473)
+- Added `CARGO_TARGET_TMPDIR` environment variable set for integration tests &
+  benches. This provides a temporary or "scratch" directory in the `target`
+  directory for tests and benches to use.
+  [#9375](https://github.com/rust-lang/cargo/pull/9375)
 
 ### Changed
+
+- `--features` CLI flags now provide typo suggestions with the new feature resolver.
+  [#9420](https://github.com/rust-lang/cargo/pull/9420)
+- Cargo now uses a new parser for SemVer versions. This should behave mostly
+  the same as before with some minor exceptions where invalid syntax for
+  version requirements is now rejected.
+  [#9508](https://github.com/rust-lang/cargo/pull/9508)
+- Mtime handling of `.crate` published packages has changed slightly to avoid
+  mtime values of 0. This was causing problems with lldb which refused to read
+  those files.
+  [#9517](https://github.com/rust-lang/cargo/pull/9517)
+- Improved performance of git status check in `cargo package`.
+  [#9478](https://github.com/rust-lang/cargo/pull/9478)
+- `cargo new` with fossil now places the ignore settings in the new repository
+  instead of using `fossil settings` to set them globally. This also includes
+  several other cleanups to make it more consistent with other VCS
+  configurations.
+  [#9469](https://github.com/rust-lang/cargo/pull/9469)
 
 ### Fixed
 
@@ -19,6 +90,14 @@
 - Dep-info files now adjust build script `rerun-if-changed` paths to be
   absolute paths.
   [#9421](https://github.com/rust-lang/cargo/pull/9421)
+- Fixed a bug when with resolver = "1" non-virtual package was allowing
+  unknown features.
+  [#9437](https://github.com/rust-lang/cargo/pull/9437)
+- Fixed an issue with the index cache mishandling versions that only
+  differed in build metadata (such as `110.0.0` and `110.0.0+1.1.0f`).
+  [#9476](https://github.com/rust-lang/cargo/pull/9476)
+- Fixed `cargo install` with a semver metadata version.
+  [#9467](https://github.com/rust-lang/cargo/pull/9467)
 
 ### Nightly only
 
@@ -26,6 +105,15 @@
   describe-future-incompatibilitie` to `cargo report
   future-incompatibilities`.
   [#9438](https://github.com/rust-lang/cargo/pull/9438)
+- Added a `[host]` table to the config files to be able to set build flags for
+  host target. Also added `target-applies-to-host` to control how the
+  `[target]` tables behave.
+  [#9322](https://github.com/rust-lang/cargo/pull/9322)
+- Added some validation to build script `rustc-link-arg-*` instructions to
+  return an error if the target doesn't exist.
+  [#9523](https://github.com/rust-lang/cargo/pull/9523)
+- Added `cargo:rustc-link-arg-bin` instruction for build scripts.
+  [#9486](https://github.com/rust-lang/cargo/pull/9486)
 
 
 ## Cargo 1.53 (2021-06-17)
