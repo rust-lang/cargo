@@ -3,6 +3,7 @@
 use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
+use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
@@ -115,7 +116,12 @@ fn custom_build_env_vars() {
                 let rustdoc = env::var("RUSTDOC").unwrap();
                 assert_eq!(rustdoc, "rustdoc");
 
+                assert!(env::var("RUSTC_WRAPPER").is_err());
+
                 assert!(env::var("RUSTC_LINKER").is_err());
+
+                let rustflags = env::var("CARGO_RUSTFLAGS").unwrap();
+                assert_eq!(rustflags, "");
             }}
         "#,
         p.root()
@@ -128,6 +134,82 @@ fn custom_build_env_vars() {
     let p = p.file("bar/build.rs", &file_content).build();
 
     p.cargo("build --features bar_feat").run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustflags() {
+    let rustflags = "--cfg=special";
+    let rustflags_alt = "--cfg=notspecial";
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [build]
+                rustflags = ["{}"]
+                "#,
+                rustflags
+            ),
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                use std::env;
+
+                fn main() {{
+                    // Static assertion that exactly one of the cfg paths is always taken.
+                    let x;
+                    #[cfg(special)]
+                    {{ assert_eq!(env::var("CARGO_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    #[cfg(notspecial)]
+                    {{ assert_eq!(env::var("CARGO_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    let _ = x;
+                }}
+                "#,
+                rustflags, rustflags_alt,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    // RUSTFLAGS overrides build.rustflags, so --cfg=special shouldn't be passed
+    p.cargo("check").env("RUSTFLAGS", rustflags_alt).run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_wrapper() {
+    let wrapper = tools::echo_wrapper();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [build]
+                rustc-wrapper = "{}"
+                "#,
+                wrapper.display()
+            ),
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                use std::env;
+
+                fn main() {{
+                    assert!(env::var("CARGO_RUSTC_WRAPPER").unwrap().ends_with("{}"));
+                }}
+                "#,
+                wrapper.display()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
 }
 
 #[cargo_test]
