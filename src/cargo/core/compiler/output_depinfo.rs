@@ -92,7 +92,7 @@ fn add_deps_for_unit(
     // Recursively traverse all transitive dependencies
     let unit_deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in unit_deps {
-        if unit.is_local() {
+        if dep.unit.is_local() {
             add_deps_for_unit(deps, cx, &dep.unit, visited)?;
         }
     }
