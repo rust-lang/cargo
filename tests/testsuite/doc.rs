@@ -1188,13 +1188,12 @@ fn doc_extern_map_local() {
     p.change_file(
         ".cargo/config.toml",
         r#"
-        [doc.extern-map]
-        std = "local"
+[doc.extern-map]
+std = "local"
     "#,
     );
 
-
-    p.cargo("doc -Zrustdoc-map --open")
+    p.cargo("doc -v --no-deps -Zrustdoc-map --open")
         .env("BROWSER", "echo")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
