@@ -124,8 +124,6 @@ pub trait CargoPathExt {
     fn move_in_time<F>(&self, travel_amount: F)
     where
         F: Fn(i64, u32) -> (i64, u32);
-
-    fn is_symlink(&self) -> bool;
 }
 
 impl CargoPathExt for Path {
@@ -198,12 +196,14 @@ impl CargoPathExt for Path {
             });
         }
     }
+}
 
-    fn is_symlink(&self) -> bool {
-        fs::symlink_metadata(self)
-            .map(|m| m.file_type().is_symlink())
-            .unwrap_or(false)
-    }
+// Replace with std implementation when stabilized, see
+// https://github.com/rust-lang/rust/issues/85748
+pub fn is_symlink(path: &Path) -> bool {
+    fs::symlink_metadata(path)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
 }
 
 fn do_op<F>(path: &Path, desc: &str, mut f: F)
