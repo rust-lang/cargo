@@ -19,8 +19,9 @@ fn bad1() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] expected table for configuration key `target.nonexistent-target`, \
-but found string in [..]config
+[ERROR] invalid configuration for key `target.nonexistent-target`
+expected a table, but found a string for `target.nonexistent-target` \
+in [..]config
 ",
         )
         .run();

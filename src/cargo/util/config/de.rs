@@ -206,10 +206,13 @@ enum KeyKind {
 impl<'config> ConfigMapAccess<'config> {
     fn new_map(de: Deserializer<'config>) -> Result<ConfigMapAccess<'config>, ConfigError> {
         let mut fields = Vec::new();
-        if let Some(mut v) = de.config.get_table(&de.key)? {
-            // `v: Value<HashMap<String, CV>>`
-            for (key, _value) in v.val.drain() {
-                fields.push(KeyKind::CaseSensitive(key));
+        let key_is_table = de.config.is_table(&de.key)?;
+        if key_is_table.is_some() && key_is_table.unwrap() {
+            if let Some(mut v) = de.config.get_table(&de.key)? {
+                // `v: Value<HashMap<String, CV>>`
+                for (key, _value) in v.val.drain() {
+                    fields.push(KeyKind::CaseSensitive(key));
+                }
             }
         }
         if de.config.cli_unstable().advanced_env {

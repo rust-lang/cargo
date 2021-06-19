@@ -759,6 +759,16 @@ impl Config {
         Ok(false)
     }
 
+    fn has_env_key(&self, key: &ConfigKey) -> bool {
+        if self.env.contains_key(key.as_env_key()) {
+            return true;
+        }
+
+        self.check_environment_key_case_mismatch(key);
+
+        false
+    }
+
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
         if let Some(env_key) = self.upper_case_env.get(key.as_env_key()) {
             let _ = self.shell().warn(format!(
@@ -899,6 +909,14 @@ impl Config {
             );
         }
         Ok(())
+    }
+
+    fn is_table(&self, key: &ConfigKey) -> CargoResult<Option<bool>> {
+        match self.get_cv(key)? {
+            Some(CV::Table(_, _def)) => Ok(Some(true)),
+            Some(_) => Ok(Some(false)),
+            None => Ok(None),
+        }
     }
 
     /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
@@ -1719,6 +1737,15 @@ impl Config {
         T::deserialize(d).map_err(|e| e.into())
     }
 
+    pub fn get_env_only<'de, T: serde::de::Deserialize<'de>>(&self, key: &str) -> CargoResult<T> {
+        let d = Deserializer {
+            config: self,
+            key: ConfigKey::from_str(key),
+            env_prefix_ok: false,
+        };
+        T::deserialize(d).map_err(|e| e.into())
+    }
+
     pub fn assert_package_cache_locked<'a>(&self, f: &'a Filesystem) -> &'a Path {
         let ret = f.as_path_unlocked();
         assert!(
@@ -2020,6 +2047,13 @@ impl ConfigValue {
         match self {
             CV::String(s, def) => Ok((s, def)),
             _ => self.expected("string", key),
+        }
+    }
+
+    pub fn is_string(&self) -> CargoResult<bool> {
+        match self {
+            CV::String(_, _def) => Ok(true),
+            _ => Ok(false),
         }
     }
 

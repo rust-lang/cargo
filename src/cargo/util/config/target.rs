@@ -85,13 +85,7 @@ pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
 /// Loads a single `[host]` table for the given triple.
 pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
     if config.cli_unstable().host_config {
-        let host_triple_prefix = format!("host.{}", triple);
-        let host_triple_key = ConfigKey::from_str(&host_triple_prefix);
-        let host_prefix = match config.get_cv(&host_triple_key)? {
-            Some(_) => host_triple_prefix,
-            None => "host".to_string(),
-        };
-        load_config_table(config, &host_prefix)
+        load_config_table(config, "host", triple)
     } else {
         Ok(TargetConfig {
             runner: None,
@@ -104,21 +98,56 @@ pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<Tar
 
 /// Loads a single `[target]` table for the given triple.
 pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(config, &format!("target.{}", triple))
+    load_config_table(config, "target", triple)
+}
+
+fn load_config_val<'de, T: serde::de::Deserialize<'de>>(
+    config: &Config,
+    key: &str,
+    prefix: &str,
+    triple: &str,
+) -> CargoResult<T> {
+    let triple_str = &format!("{}.{}.{}", prefix, triple, key);
+    let triple_key = &ConfigKey::from_str(triple_str);
+    if config.has_env_key(triple_key) {
+        return config.get_env_only(triple_str);
+    }
+
+    let generic_str = &format!("{}.{}", prefix, key);
+    let generic_key = &ConfigKey::from_str(generic_str);
+    if config.has_env_key(generic_key) {
+        return config.get_env_only(generic_str);
+    }
+
+    let generic_table = config.is_table(&ConfigKey::from_str(&format!("{}", prefix)))?;
+    let triple_table = config.is_table(&ConfigKey::from_str(&format!("{}.{}", prefix, triple)))?;
+    if !triple_table.is_some() && generic_table.is_some() && generic_table.unwrap() {
+        return config.get(generic_str);
+    }
+    config.get(triple_str)
 }
 
 /// Loads a single table for the given prefix.
-fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig> {
+fn load_config_table(config: &Config, prefix: &str, triple: &str) -> CargoResult<TargetConfig> {
     // This needs to get each field individually because it cannot fetch the
     // struct all at once due to `links_overrides`. Can't use `serde(flatten)`
     // because it causes serde to use `deserialize_map` which means the config
     // deserializer does not know which keys to deserialize, which means
     // environment variables would not work.
-    let runner: OptValue<PathAndArgs> = config.get(&format!("{}.runner", prefix))?;
-    let rustflags: OptValue<StringList> = config.get(&format!("{}.rustflags", prefix))?;
-    let linker: OptValue<ConfigRelativePath> = config.get(&format!("{}.linker", prefix))?;
+    let runner: OptValue<PathAndArgs> = load_config_val(config, "runner", prefix, triple)?;
+    let rustflags: OptValue<StringList> = load_config_val(config, "rustflags", prefix, triple)?;
+    let linker: OptValue<ConfigRelativePath> = load_config_val(config, "linker", prefix, triple)?;
     // Links do not support environment variables.
-    let target_key = ConfigKey::from_str(prefix);
+    let generic_key = ConfigKey::from_str(&format!("{}", prefix));
+    let triple_key = ConfigKey::from_str(&format!("{}.{}", prefix, triple));
+    let generic_table = config.is_table(&generic_key)?;
+    let triple_table = config.is_table(&triple_key)?;
+    let target_key = if !triple_table.is_some() && generic_table.is_some() && generic_table.unwrap()
+    {
+        generic_key
+    } else {
+        triple_key
+    };
     let links_overrides = match config.get_table(&target_key)? {
         Some(links) => parse_links_overrides(&target_key, links.val, config)?,
         None => BTreeMap::new(),
@@ -150,7 +179,11 @@ fn parse_links_overrides(
             _ => {}
         }
         let mut output = BuildOutput::default();
-        let table = value.table(&format!("{}.{}", target_key, lib_name))?.0;
+        let table_key = &format!("{}.{}", target_key, lib_name);
+        let table = value
+            .table(table_key)
+            .map_err(|e| anyhow::anyhow!("invalid configuration for key `{}`\n{}", table_key, e))?
+            .0;
         // We require deterministic order of evaluation, so we must sort the pairs by key first.
         let mut pairs = Vec::new();
         for (k, value) in table {
@@ -227,8 +260,10 @@ fn parse_links_overrides(
                     anyhow::bail!("`{}` is not supported in build script overrides", key);
                 }
                 _ => {
-                    let val = value.string(key)?.0;
-                    output.metadata.push((key.clone(), val.to_string()));
+                    if value.is_string()? {
+                        let val = value.string(key)?.0;
+                        output.metadata.push((key.clone(), val.to_string()));
+                    }
                 }
             }
         }
