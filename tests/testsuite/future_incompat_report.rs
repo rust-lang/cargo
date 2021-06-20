@@ -195,7 +195,11 @@ fn test_multi_crate() {
         .exec_with_output()
         .unwrap();
     let output = std::str::from_utf8(&output.stdout).unwrap();
-    let mut lines = output.lines();
+    assert!(output.starts_with("The following warnings were discovered"));
+    let mut lines = output
+        .lines()
+        // Skip the beginning of the per-package information.
+        .skip_while(|line| !line.starts_with("The package"));
     for expected in &["first-dep v0.0.1", "second-dep v0.0.2"] {
         assert_eq!(
             &format!(
@@ -272,6 +276,70 @@ fn bad_ids() {
             "\
 error: could not find report with ID 7
 Available IDs are: 1
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn suggestions_for_updates() {
+    if !is_nightly() {
+        return;
+    }
+
+    Package::new("with_updates", "1.0.0")
+        .file("src/lib.rs", FUTURE_EXAMPLE)
+        .publish();
+    Package::new("big_update", "1.0.0")
+        .file("src/lib.rs", FUTURE_EXAMPLE)
+        .publish();
+    Package::new("without_updates", "1.0.0")
+        .file("src/lib.rs", FUTURE_EXAMPLE)
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                with_updates = "1"
+                big_update = "1"
+                without_updates = "1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("with_updates", "1.0.1")
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("with_updates", "1.0.2")
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("big_update", "2.0.0")
+        .file("src/lib.rs", "")
+        .publish();
+
+    p.cargo("check -Zfuture-incompat-report")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[..]cargo report future-incompatibilities --id 1[..]")
+        .run();
+
+    p.cargo("report future-incompatibilities")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains(
+            "\
+The following packages appear to have newer versions available.
+You may want to consider updating them to a newer version to see if the issue has been fixed.
+
+big_update v1.0.0 has the following newer versions available: 2.0.0
+with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2
 ",
         )
         .run();

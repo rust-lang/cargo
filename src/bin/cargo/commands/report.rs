@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 use anyhow::anyhow;
-use cargo::core::compiler::future_incompat::OnDiskReports;
+use cargo::core::compiler::future_incompat::{OnDiskReports, REPORT_PREAMBLE};
 use cargo::drop_println;
 
 pub fn cli() -> App {
@@ -39,6 +39,7 @@ fn report_future_incompatibilies(config: &Config, args: &ArgMatches<'_>) -> CliR
         .value_of_u32("id")?
         .unwrap_or_else(|| reports.last_id());
     let report = reports.get_report(id, config)?;
+    drop_println!(config, "{}", REPORT_PREAMBLE);
     drop_println!(config, "{}", report);
     Ok(())
 }

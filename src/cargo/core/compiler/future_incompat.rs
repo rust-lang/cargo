@@ -1,10 +1,25 @@
 //! Support for future-incompatible warning reporting.
 
-use crate::core::{PackageId, Workspace};
+use crate::core::{Dependency, PackageId, Workspace};
+use crate::sources::SourceConfigMap;
 use crate::util::{iter_join, CargoResult, Config};
 use anyhow::{bail, format_err, Context};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt::Write as _;
 use std::io::{Read, Write};
+
+pub const REPORT_PREAMBLE: &str = "\
+The following warnings were discovered during the build. These warnings are an
+indication that the packages contain code that will become an error in a
+future release of Rust. These warnings typically cover changes to close
+soundness problems, unintended or undocumented behavior, or critical problems
+that cannot be fixed in a backwards-compatible fashion, and are not expected
+to be in wide use.
+
+Each warning should contain a link for more information on what the warning
+means and how to resolve it.
+";
 
 /// The future incompatibility report, emitted by the compiler as a JSON message.
 #[derive(serde::Deserialize)]
@@ -90,7 +105,7 @@ impl OnDiskReports {
         };
         let report = OnDiskReport {
             id: current_reports.next_id,
-            report: render_report(per_package_reports),
+            report: render_report(ws, per_package_reports),
         };
         current_reports.next_id += 1;
         current_reports.reports.push(report);
@@ -178,11 +193,14 @@ impl OnDiskReports {
     }
 }
 
-fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> String {
+fn render_report(
+    ws: &Workspace<'_>,
+    per_package_reports: &[FutureIncompatReportPackage],
+) -> String {
     let mut per_package_reports: Vec<_> = per_package_reports.iter().collect();
     per_package_reports.sort_by_key(|r| r.package_id);
     let mut rendered = String::new();
-    for per_package in per_package_reports {
+    for per_package in &per_package_reports {
         rendered.push_str(&format!(
             "The package `{}` currently triggers the following future \
              incompatibility lints:\n",
@@ -198,5 +216,75 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> String 
         }
         rendered.push('\n');
     }
+    if let Some(s) = render_suggestions(ws, &per_package_reports) {
+        rendered.push_str(&s);
+    }
     rendered
+}
+
+fn render_suggestions(
+    ws: &Workspace<'_>,
+    per_package_reports: &[&FutureIncompatReportPackage],
+) -> Option<String> {
+    // This in general ignores all errors since this is opportunistic.
+    let _lock = ws.config().acquire_package_cache_lock().ok()?;
+    // Create a set of updated registry sources.
+    let map = SourceConfigMap::new(ws.config()).ok()?;
+    let package_ids: BTreeSet<_> = per_package_reports
+        .iter()
+        .map(|r| r.package_id)
+        .filter(|pkg_id| pkg_id.source_id().is_registry())
+        .collect();
+    let source_ids: HashSet<_> = package_ids
+        .iter()
+        .map(|pkg_id| pkg_id.source_id())
+        .collect();
+    let mut sources: HashMap<_, _> = source_ids
+        .into_iter()
+        .filter_map(|sid| {
+            let unlocked = sid.clone().with_precise(None);
+            let mut source = map.load(unlocked, &HashSet::new()).ok()?;
+            // Ignore errors updating.
+            if let Err(e) = source.update() {
+                log::debug!("failed to update source: {:?}", e);
+            }
+            Some((sid, source))
+        })
+        .collect();
+    // Query the sources for new versions.
+    let mut suggestions = String::new();
+    for pkg_id in package_ids {
+        let source = match sources.get_mut(&pkg_id.source_id()) {
+            Some(s) => s,
+            None => continue,
+        };
+        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
+        let summaries = source.query_vec(&dep).ok()?;
+        let versions = itertools::sorted(
+            summaries
+                .iter()
+                .map(|summary| summary.version())
+                .filter(|version| *version > pkg_id.version()),
+        );
+        let versions = versions.map(|version| version.to_string());
+        let versions = iter_join(versions, ", ");
+        if !versions.is_empty() {
+            writeln!(
+                suggestions,
+                "{} has the following newer versions available: {}",
+                pkg_id, versions
+            )
+            .unwrap();
+        }
+    }
+    if suggestions.is_empty() {
+        None
+    } else {
+        Some(format!(
+            "The following packages appear to have newer versions available.\n\
+             You may want to consider updating them to a newer version to see if the \
+             issue has been fixed.\n\n{}",
+            suggestions
+        ))
+    }
 }
