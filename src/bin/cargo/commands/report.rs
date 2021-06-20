@@ -10,6 +10,7 @@ pub fn cli() -> App {
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             subcommand("future-incompatibilities")
+                .alias("future-incompat")
                 .about("Reports any crates which will eventually stop compiling")
                 .arg(
                     opt(

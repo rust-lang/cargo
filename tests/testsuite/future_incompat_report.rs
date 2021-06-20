@@ -190,7 +190,7 @@ fn test_multi_crate() {
 
     // Test without --id, and also the full output of the report.
     let output = p
-        .cargo("report future-incompatibilities -Z future-incompat-report")
+        .cargo("report future-incompat -Z future-incompat-report")
         .masquerade_as_nightly_cargo()
         .exec_with_output()
         .unwrap();
