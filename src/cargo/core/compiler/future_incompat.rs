@@ -21,6 +21,9 @@ Each warning should contain a link for more information on what the warning
 means and how to resolve it.
 ";
 
+/// Current version of the on-disk format.
+const ON_DISK_VERSION: u32 = 0;
+
 /// The future incompatibility report, emitted by the compiler as a JSON message.
 #[derive(serde::Deserialize)]
 pub struct FutureIncompatReport {
@@ -80,7 +83,7 @@ struct OnDiskReport {
 impl Default for OnDiskReports {
     fn default() -> OnDiskReports {
         OnDiskReports {
-            version: 0,
+            version: ON_DISK_VERSION,
             next_id: 1,
             reports: Vec::new(),
         }
@@ -161,7 +164,7 @@ impl OnDiskReports {
             .with_context(|| "failed to read report")?;
         let on_disk_reports: OnDiskReports =
             serde_json::from_str(&file_contents).with_context(|| "failed to load report")?;
-        if on_disk_reports.version != 0 {
+        if on_disk_reports.version != ON_DISK_VERSION {
             bail!("unable to read reports; reports were saved from a future version of Cargo");
         }
         Ok(on_disk_reports)
