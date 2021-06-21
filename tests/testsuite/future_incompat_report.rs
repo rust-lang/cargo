@@ -325,6 +325,15 @@ fn suggestions_for_updates() {
         .file("src/lib.rs", "")
         .publish();
 
+    // This is a hack to force cargo to update the index. Cargo can't do this
+    // automatically because doing a network update on every build would be a
+    // bad idea. Under normal circumstances, we'll hope the user has done
+    // something else along the way to trigger an update (building some other
+    // project or something). This could use some more consideration of how to
+    // handle this better (maybe only trigger an update if it hasn't updated
+    // in a long while?).
+    p.cargo("update -p without_updates").run();
+
     p.cargo("check -Zfuture-incompat-report")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]cargo report future-incompatibilities --id 1[..]")

@@ -245,12 +245,7 @@ fn render_suggestions(
     let mut sources: HashMap<_, _> = source_ids
         .into_iter()
         .filter_map(|sid| {
-            let unlocked = sid.clone().with_precise(None);
-            let mut source = map.load(unlocked, &HashSet::new()).ok()?;
-            // Ignore errors updating.
-            if let Err(e) = source.update() {
-                log::debug!("failed to update source: {:?}", e);
-            }
+            let source = map.load(sid, &HashSet::new()).ok()?;
             Some((sid, source))
         })
         .collect();
