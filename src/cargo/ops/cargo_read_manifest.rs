@@ -88,10 +88,19 @@ pub fn read_packages(
     if all_packages.is_empty() {
         match errors.pop() {
             Some(err) => Err(err),
-            None => Err(anyhow::format_err!(
-                "Could not find Cargo.toml in `{}`",
+            None => {
+                if find_project_manifest_exact(path, "cargo.toml").is_ok() {
+                    Err(anyhow::format_err!(
+                "Could not find Cargo.toml in `{}`, but found cargo.toml please try to rename it to Cargo.toml",
                 path.display()
-            )),
+            ))
+                } else {
+                    Err(anyhow::format_err!(
+                        "Could not find Cargo.toml in `{}`",
+                        path.display()
+                    ))
+                }
+            }
         }
     } else {
         Ok(all_packages.into_iter().map(|(_, v)| v).collect())

@@ -245,6 +245,53 @@ fn missing() {
 }
 
 #[cargo_test]
+fn pkg_missing_cargo_toml() {
+    let p = project()
+        .file(
+            "Cargo1.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install")
+        .arg(p.root())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[ERROR] could not find `[..]` in registry `[..]` with version `*`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(target_os = "macos"))]
+fn git_repository_missing_cargo_toml() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn missing_current_working_directory() {
     cargo_process("install .")
         .with_status(101)
