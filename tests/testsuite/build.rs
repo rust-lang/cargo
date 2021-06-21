@@ -4505,6 +4505,7 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 #[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac() {
+    use cargo_test_support::paths::is_symlink;
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .file("src/bin/b.rs", "fn main() { panic!(); }")
@@ -4517,7 +4518,7 @@ fn uplift_dsym_of_bin_on_mac() {
         .run();
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
-    assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
+    assert!(is_symlink(&p.target_debug_dir().join("b.dSYM")));
     assert!(p.target_debug_dir().join("examples/c.dSYM").is_dir());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
@@ -4526,6 +4527,7 @@ fn uplift_dsym_of_bin_on_mac() {
 #[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
+    use cargo_test_support::paths::is_symlink;
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .build();
@@ -4544,7 +4546,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
             .join("foo-baaaaaadbaaaaaad.dSYM"),
         &dsym,
     );
-    assert!(dsym.is_symlink());
+    assert!(is_symlink(&dsym));
     assert!(!dsym.exists());
 
     p.cargo("build").enable_mac_dsym().run();

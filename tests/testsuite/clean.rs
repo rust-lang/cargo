@@ -1,6 +1,6 @@
 //! Tests for the `cargo clean` command.
 
-use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::paths::is_symlink;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, git, main_file, project, rustc_host};
 use std::env;
@@ -438,7 +438,7 @@ fn assert_all_clean(build_dir: &Path) {
         {
             continue;
         }
-        if path.is_symlink() || path.is_file() {
+        if is_symlink(path) || path.is_file() {
             panic!("{:?} was not cleaned", path);
         }
     }
