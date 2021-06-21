@@ -40,6 +40,6 @@ fn report_future_incompatibilies(config: &Config, args: &ArgMatches<'_>) -> CliR
         .unwrap_or_else(|| reports.last_id());
     let report = reports.get_report(id, config)?;
     drop_println!(config, "{}", REPORT_PREAMBLE);
-    drop_println!(config, "{}", report);
+    drop(config.shell().print_ansi_stdout(report.as_bytes()));
     Ok(())
 }

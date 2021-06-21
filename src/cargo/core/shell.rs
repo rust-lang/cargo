@@ -323,8 +323,8 @@ impl Shell {
         }
     }
 
-    /// Prints a message and translates ANSI escape code into console colors.
-    pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+    /// Prints a message to stderr and translates ANSI escape code into console colors.
+    pub fn print_ansi_stderr(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
             self.err_erase_line();
         }
@@ -336,6 +336,22 @@ impl Shell {
             }
         }
         self.err().write_all(message)?;
+        Ok(())
+    }
+
+    /// Prints a message to stdout and translates ANSI escape code into console colors.
+    pub fn print_ansi_stdout(&mut self, message: &[u8]) -> CargoResult<()> {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+        #[cfg(windows)]
+        {
+            if let ShellOut::Stream { stdout, .. } = &mut self.output {
+                ::fwdansi::write_ansi(stdout, message)?;
+                return Ok(());
+            }
+        }
+        self.out().write_all(message)?;
         Ok(())
     }
 

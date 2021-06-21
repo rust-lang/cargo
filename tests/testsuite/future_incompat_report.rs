@@ -217,7 +217,6 @@ fn test_multi_crate() {
         }
         assert!(count > 0);
     }
-    assert_eq!(lines.next(), Some(""));
     assert_eq!(lines.next(), None);
 }
 

@@ -74,7 +74,6 @@ use crate::core::compiler::future_incompat::{
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{FeatureValue, PackageId, Shell, TargetKind};
-use crate::drop_eprint;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message as _};
@@ -272,7 +271,7 @@ impl<'a> JobState<'a> {
     pub fn stderr(&self, stderr: String) -> CargoResult<()> {
         if let Some(config) = self.output {
             let mut shell = config.shell();
-            shell.print_ansi(stderr.as_bytes())?;
+            shell.print_ansi_stderr(stderr.as_bytes())?;
             shell.err().write_all(b"\n")?;
         } else {
             self.messages.push_bounded(Message::Stderr(stderr));
@@ -561,7 +560,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             Message::Stderr(err) => {
                 let mut shell = cx.bcx.config.shell();
-                shell.print_ansi(err.as_bytes())?;
+                shell.print_ansi_stderr(err.as_bytes())?;
                 shell.err().write_all(b"\n")?;
             }
             Message::FixDiagnostic(msg) => {
@@ -841,7 +840,7 @@ impl<'cfg> DrainState<'cfg> {
 
         if bcx.build_config.future_incompat_report {
             let rendered = on_disk_reports.get_report(report_id, bcx.config).unwrap();
-            drop_eprint!(bcx.config, "{}", rendered);
+            drop(bcx.config.shell().print_ansi_stderr(rendered.as_bytes()));
             drop(bcx.config.shell().note(&format!(
                 "this report can be shown with `cargo report \
                  future-incompatibilities -Z future-incompat-report --id {}`",
