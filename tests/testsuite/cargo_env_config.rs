@@ -131,3 +131,31 @@ fn env_relative() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn env_no_override() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("unchanged"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!( "CARGO_PKG_NAME:{}", env!("CARGO_PKG_NAME") );
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [env]
+                CARGO_PKG_NAME = { value = "from-config", force = true }
+            "#,
+        )
+        .build();
+
+    p.cargo("run -Zconfigurable-env")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("CARGO_PKG_NAME:unchanged")
+        .run();
+}
