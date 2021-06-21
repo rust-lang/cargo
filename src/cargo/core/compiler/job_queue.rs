@@ -1207,7 +1207,6 @@ feature resolver. Some workarounds you may want to consider:
 - Try using the previous resolver by setting `resolver = \"1\"` in `Cargo.toml`
   (see <https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions>
   for more information).
-- Check for the 2.0 release of diesel which does not have this problem.
 ",
             unit.pkg.version(),
             features_suggestion
