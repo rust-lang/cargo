@@ -936,6 +936,7 @@ fn dep_with_submodule() {
             "\
 [UPDATING] git repository [..]
 [UPDATING] git submodule `file://[..]/deployment`
+[COMPILING] deployment [..]
 [COMPILING] base [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
@@ -946,17 +947,36 @@ fn dep_with_submodule() {
 #[cargo_test]
 fn dep_with_relative_submodule() {
     let foo = project();
-    let base = git::new("base/base", |project| {
+    let base = git::new("base", |project| {
         project
-            .file("Cargo.toml", &basic_lib_manifest("base"))
-            .file("src/lib.rs", "pub fn dep() {}")
+            .file(
+                "Cargo.toml",
+                r#"
+            [package]
+            name = "base"
+            version = "0.5.0"
+
+            [dependencies]
+            deployment.path = "deployment"
+        "#,
+            )
+            .file(
+                "src/lib.rs",
+                r#"
+            pub fn dep() {
+                deployment::deployment_func();
+            }
+            "#,
+            )
     });
     let _deployment = git::new("deployment", |project| {
-        project.file("src/lib.rs", "pub fn dep() {}")
+        project
+            .file("src/lib.rs", "pub fn deployment_func() {}")
+            .file("Cargo.toml", &basic_lib_manifest("deployment"))
     });
 
     let base_repo = git2::Repository::open(&base.root()).unwrap();
-    git::add_submodule(&base_repo, "../../deployment", Path::new("deployment"));
+    git::add_submodule(&base_repo, "../deployment", Path::new("deployment"));
     git::commit(&base_repo);
 
     let project = foo
@@ -965,13 +985,10 @@ fn dep_with_relative_submodule() {
             &format!(
                 r#"
                     [project]
-
                     name = "foo"
                     version = "0.5.0"
-                    authors = ["wycats@example.com"]
 
                     [dependencies.base]
-
                     git = '{}'
                 "#,
                 base.url()
