@@ -507,17 +507,35 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             .collect::<Vec<_>>();
         // Sort for consistent error messages.
         keys.sort_unstable();
+        // These are kept separate to retain compatibility with older
+        // versions, which generated an error when there was a duplicate lib
+        // or bin (but the old code did not check bin<->lib collisions). To
+        // retain backwards compatibility, this only generates an error for
+        // duplicate libs or duplicate bins (but not both). Ideally this
+        // shouldn't be here, but since there isn't a complete workaround,
+        // yet, this retains the old behavior.
+        let mut doc_libs = HashMap::new();
+        let mut doc_bins = HashMap::new();
         for unit in keys {
+            if unit.mode.is_doc() && self.is_primary_package(unit) {
+                // These situations have been an error since before 1.0, so it
+                // is not a warning like the other situations.
+                if unit.target.is_lib() {
+                    if let Some(prev) = doc_libs.insert((unit.target.crate_name(), unit.kind), unit)
+                    {
+                        doc_collision_error(unit, prev)?;
+                    }
+                } else if let Some(prev) =
+                    doc_bins.insert((unit.target.crate_name(), unit.kind), unit)
+                {
+                    doc_collision_error(unit, prev)?;
+                }
+            }
             for output in self.outputs(unit)?.iter() {
                 if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
                     if unit.mode.is_doc() {
                         // See https://github.com/rust-lang/rust/issues/56169
                         // and https://github.com/rust-lang/rust/issues/61378
-                        if self.is_primary_package(unit) {
-                            // This has been an error since before 1.0, so it
-                            // is not a warning like the other situations.
-                            doc_collision_error(unit, other_unit)?;
-                        }
                         report_collision(unit, other_unit, &output.path, rustdoc_suggestion)?;
                     } else {
                         report_collision(unit, other_unit, &output.path, suggestion)?;

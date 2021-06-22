@@ -271,14 +271,19 @@ fn doc_multiple_targets_same_name() {
         .build();
 
     p.cargo("doc --workspace")
-        .with_status(101)
-        .with_stderr(
+        .with_stderr_unordered(
             "\
-error: document output filename collision
-The bin `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
-the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+warning: output filename collision.
+The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` \
+has the same output filename as the lib target `foo_lib` in package \
+`bar v0.1.0 ([ROOT]/foo/bar)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo_lib/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+[DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
+[DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
+[FINISHED] [..]
 ",
         )
         .run();
