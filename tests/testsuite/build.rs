@@ -562,6 +562,24 @@ fn cargo_compile_without_manifest() {
 }
 
 #[cargo_test]
+#[cfg(not(target_os = "macos"))]
+fn cargo_compile_with_lowercase_cargo_toml() {
+    let p = project()
+        .no_manifest()
+        .file("cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] could not find `Cargo.toml` in `[..]` or any parent directory, \
+        but found cargo.toml please try to rename it to Cargo.toml",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_invalid_code() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

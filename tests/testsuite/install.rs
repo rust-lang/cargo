@@ -245,53 +245,6 @@ fn missing() {
 }
 
 #[cargo_test]
-#[cfg(not(target_os = "macos"))]
-fn pkg_missing_cargo_toml() {
-    let p = project()
-        .file(
-            "cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    cargo_process("install --path .")
-        .arg(p.root())
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] `[CWD]` does not contain a Cargo.toml but found cargo.toml please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-#[cfg(not(target_os = "macos"))]
-fn git_repository_missing_cargo_toml() {
-    let p = git::repo(&paths::root().join("foo"))
-        .file("cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    cargo_process("install --git")
-        .arg(p.url().to_string())
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] git repository [..]
-[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn missing_current_working_directory() {
     cargo_process("install .")
         .with_status(101)
@@ -444,6 +397,23 @@ fn install_target_dir() {
     #[cfg(windows)]
     path.push("release/foo.exe");
     assert!(path.exists());
+}
+
+#[cargo_test]
+#[cfg(not(target_os = "macos"))]
+fn install_path_with_lowercase_cargo_toml() {
+    let toml = paths::root().join("cargo.toml");
+    fs::write(toml, "").unwrap();
+
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `[CWD]` does not contain a Cargo.toml file, \
+but found cargo.toml please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -805,6 +775,26 @@ fn git_repo() {
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
     assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+#[cfg(not(target_os = "macos"))]
+fn git_repo_with_lowercase_cargo_toml() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
+",
+        )
+        .run();
 }
 
 #[cargo_test]
