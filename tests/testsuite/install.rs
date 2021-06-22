@@ -245,10 +245,11 @@ fn missing() {
 }
 
 #[cargo_test]
+#[cfg(not(target_os = "macos"))]
 fn pkg_missing_cargo_toml() {
     let p = project()
         .file(
-            "Cargo1.toml",
+            "cargo.toml",
             r#"
                 [package]
                 name = "foo"
@@ -259,13 +260,12 @@ fn pkg_missing_cargo_toml() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo_process("install")
+    cargo_process("install --path .")
         .arg(p.root())
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..] index
-[ERROR] could not find `[..]` in registry `[..]` with version `*`
+[ERROR] `[CWD]` does not contain a Cargo.toml but found cargo.toml please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
 ",
         )
         .run();

@@ -212,11 +212,19 @@ fn install_one(
                         src.path().display()
                     );
                 } else {
-                    bail!(
-                        "`{}` does not contain a Cargo.toml file. \
+                    if src.path().join("cargo.toml").exists() {
+                        bail!(
+                            "`{}` does not contain a Cargo.toml file, but found cargo.toml please try to rename it to Cargo.toml. \
                      --path must point to a directory containing a Cargo.toml file.",
-                        src.path().display()
-                    )
+                            src.path().display()
+                        )
+                    } else {
+                        bail!(
+                            "`{}` does not contain a Cargo.toml file. \
+                     --path must point to a directory containing a Cargo.toml file.",
+                            src.path().display()
+                        )
+                    }
                 }
             }
             select_pkg(
