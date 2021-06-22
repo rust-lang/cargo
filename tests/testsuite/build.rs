@@ -562,7 +562,7 @@ fn cargo_compile_without_manifest() {
 }
 
 #[cargo_test]
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
 fn cargo_compile_with_lowercase_cargo_toml() {
     let p = project()
         .no_manifest()
