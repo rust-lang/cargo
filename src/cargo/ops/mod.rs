@@ -51,3 +51,35 @@ mod registry;
 mod resolve;
 pub mod tree;
 mod vendor;
+
+/// Returns true if the dependency is either git or path, false otherwise
+/// Error if a git/path dep is transitive, but has no version (registry source).
+/// This check is performed on dependencies before publishing or packaging
+fn check_dep_has_version(dep: &crate::core::Dependency, publish: bool) -> crate::CargoResult<bool> {
+    let which = if dep.source_id().is_path() {
+        "path"
+    } else if dep.source_id().is_git() {
+        "git"
+    } else {
+        return Ok(false);
+    };
+
+    if !dep.specified_req() && dep.is_transitive() {
+        let dep_version_source = dep.registry_id().map_or_else(
+            || "crates.io".to_string(),
+            |registry_id| registry_id.display_registry_name(),
+        );
+        anyhow::bail!(
+            "all dependencies must have a version specified when {}.\n\
+             dependency `{}` does not specify a version\n\
+             Note: The {} dependency will use the version from {},\n\
+             the `{}` specification will be removed from the dependency declaration.",
+            if publish { "publishing" } else { "packaging" },
+            dep.package_name(),
+            if publish { "published" } else { "packaged" },
+            dep_version_source,
+            which,
+        )
+    }
+    Ok(true)
+}
