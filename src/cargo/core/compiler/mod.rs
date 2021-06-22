@@ -394,7 +394,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
 
             for (lt, arg) in &output.linker_args {
-                if lt.applies_to(target) {
+                // There was an unintentional change where cdylibs were
+                // allowed to be passed via transitive dependencies. This
+                // clause should have been kept in the `if` block above. For
+                // now, continue allowing it for cdylib only.
+                // See https://github.com/rust-lang/cargo/issues/9562
+                if lt.applies_to(target) && (key.0 == current_id || *lt == LinkType::Cdylib) {
                     rustc.arg("-C").arg(format!("link-arg={}", arg));
                 }
             }
