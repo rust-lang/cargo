@@ -468,28 +468,11 @@ fn weak_with_host_decouple() {
 }
 
 #[cargo_test]
-fn deferred_with_namespaced() {
-    // Interaction with -Z namespaced-features using dep: syntax.
-    //
-    // `bar` is deferred with bar?/feat
-    // `bar2` is deferred with dep:bar2?/feat
+fn weak_namespaced() {
+    // Behavior with a dep: dependency.
     Package::new("bar", "1.0.0")
         .feature("feat", &[])
         .file("src/lib.rs", &require(&["feat"], &[]))
-        .publish();
-    Package::new("bar2", "1.0.0")
-        .feature("feat", &[])
-        .file("src/lib.rs", &require(&["feat"], &[]))
-        .publish();
-    Package::new("bar_includer", "1.0.0")
-        .add_dep(Dependency::new("bar", "1.0").optional(true))
-        .add_dep(Dependency::new("bar2", "1.0").optional(true))
-        .feature("feat", &["bar?/feat", "dep:bar2?/feat"])
-        .feature("feat2", &["dep:bar2"])
-        .file("src/lib.rs", &require(&["bar"], &["bar2"]))
-        .publish();
-    Package::new("bar_activator", "1.0.0")
-        .feature_dep("bar_includer", "1.0", &["bar", "feat2"])
         .publish();
     let p = project()
         .file(
@@ -500,27 +483,60 @@ fn deferred_with_namespaced() {
                 version = "0.1.0"
 
                 [dependencies]
-                bar_includer = { version = "1.0", features = ["feat"] }
-                bar_activator = "1.0"
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                f1 = ["bar?/feat"]
+                f2 = ["dep:bar"]
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/lib.rs", &require(&["f1"], &["f2", "bar"]))
         .build();
 
-    p.cargo("check -Z weak-dep-features -Z namespaced-features")
+    p.cargo("check -Z weak-dep-features -Z namespaced-features --features f1")
         .masquerade_as_nightly_cargo()
-        .with_stderr_unordered(
+        .with_stderr(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("tree -Z weak-dep-features -Z namespaced-features -f")
+        .arg("{p} feats:{f}")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("foo v0.1.0 ([ROOT]/foo) feats:")
+        .run();
+
+    p.cargo("tree -Z weak-dep-features -Z namespaced-features --features f1 -f")
+        .arg("{p} feats:{f}")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("foo v0.1.0 ([ROOT]/foo) feats:f1")
+        .run();
+
+    p.cargo("tree -Z weak-dep-features -Z namespaced-features --features f1,f2 -f")
+        .arg("{p} feats:{f}")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo) feats:f1,f2
+└── bar v1.0.0 feats:feat
+",
+        )
+        .run();
+
+    // "bar" remains not-a-feature
+    p.change_file("src/lib.rs", &require(&["f1", "f2"], &["bar"]));
+
+    p.cargo("check -Z weak-dep-features -Z namespaced-features --features f1,f2")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
 [CHECKING] bar v1.0.0
-[CHECKING] bar2 v1.0.0
-[CHECKING] bar_includer v1.0.0
-[CHECKING] bar_activator v1.0.0
 [CHECKING] foo v0.1.0 [..]
 [FINISHED] [..]
 ",
@@ -586,7 +602,6 @@ bar v1.0.0
 ├── bar feature \"default\"
 │   └── foo v0.1.0 ([ROOT]/foo)
 │       ├── foo feature \"bar\" (command-line)
-│       │   └── foo feature \"f1\" (command-line)
 │       ├── foo feature \"default\" (command-line)
 │       └── foo feature \"f1\" (command-line)
 └── bar feature \"feat\"

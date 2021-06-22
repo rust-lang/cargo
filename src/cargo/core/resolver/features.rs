@@ -244,10 +244,7 @@ impl CliFeatures {
             match feature {
                 // Maybe call validate_feature_name here once it is an error?
                 FeatureValue::Feature(_) => {}
-                FeatureValue::Dep { .. }
-                | FeatureValue::DepFeature {
-                    dep_prefix: true, ..
-                } => {
+                FeatureValue::Dep { .. } => {
                     bail!(
                         "feature `{}` is not allowed to use explicit `dep:` syntax",
                         feature
@@ -441,10 +438,8 @@ pub struct FeatureResolver<'a, 'cfg> {
     ///
     /// The key is the `(package, for_host, dep_name)` of the package whose
     /// dependency will trigger the addition of new features. The value is the
-    /// set of `(feature, dep_prefix)` features to activate (`dep_prefix` is a
-    /// bool that indicates if `dep:` prefix was used).
-    deferred_weak_dependencies:
-        HashMap<(PackageId, bool, InternedString), HashSet<(InternedString, bool)>>,
+    /// set of features to activate.
+    deferred_weak_dependencies: HashMap<(PackageId, bool, InternedString), HashSet<InternedString>>,
 }
 
 impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
@@ -591,17 +586,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix,
                 weak,
             } => {
-                self.activate_dep_feature(
-                    pkg_id,
-                    for_host,
-                    *dep_name,
-                    *dep_feature,
-                    *dep_prefix,
-                    *weak,
-                )?;
+                self.activate_dep_feature(pkg_id, for_host, *dep_name, *dep_feature, *weak)?;
             }
         }
         Ok(())
@@ -675,7 +662,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     continue;
                 }
                 if let Some(to_enable) = &to_enable {
-                    for (dep_feature, dep_prefix) in to_enable {
+                    for dep_feature in to_enable {
                         log::trace!(
                             "activate deferred {} {} -> {}/{}",
                             pkg_id.name(),
@@ -683,9 +670,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             dep_name,
                             dep_feature
                         );
-                        if !dep_prefix {
-                            self.activate_rec(pkg_id, for_host, dep_name)?;
-                        }
                         let fv = FeatureValue::new(*dep_feature);
                         self.activate_fv(dep_pkg_id, dep_for_host, &fv)?;
                     }
@@ -704,7 +688,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         for_host: bool,
         dep_name: InternedString,
         dep_feature: InternedString,
-        dep_prefix: bool,
         weak: bool,
     ) -> CargoResult<()> {
         for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
@@ -733,16 +716,16 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         self.deferred_weak_dependencies
                             .entry((pkg_id, for_host, dep_name))
                             .or_default()
-                            .insert((dep_feature, dep_prefix));
+                            .insert(dep_feature);
                         continue;
                     }
 
                     // Activate the dependency on self.
                     let fv = FeatureValue::Dep { dep_name };
                     self.activate_fv(pkg_id, for_host, &fv)?;
-                    if !dep_prefix {
-                        // To retain compatibility with old behavior,
-                        // this also enables a feature of the same
+                    if !weak {
+                        // The old behavior before weak dependencies were
+                        // added is to also enables a feature of the same
                         // name.
                         self.activate_rec(pkg_id, for_host, dep_name)?;
                     }

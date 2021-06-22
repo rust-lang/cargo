@@ -1163,14 +1163,10 @@ impl<'cfg> Workspace<'cfg> {
                     }
                 }
                 // This should be enforced by CliFeatures.
-                FeatureValue::Dep { .. }
-                | FeatureValue::DepFeature {
-                    dep_prefix: true, ..
-                } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {}", feature),
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature,
-                    dep_prefix: _,
                     weak: _,
                 } => {
                     if dependencies.contains_key(dep_name) {
@@ -1283,14 +1279,10 @@ impl<'cfg> Workspace<'cfg> {
                         .map(|s| s.to_string())
                         .collect::<Vec<_>>()
                 }
-                FeatureValue::Dep { .. }
-                | FeatureValue::DepFeature {
-                    dep_prefix: true, ..
-                } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {}", feature),
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature,
-                    dep_prefix: _,
                     weak: _,
                 } => {
                     // Finds set of `pkg/feat` that are very similar to current `pkg/feat`.
@@ -1446,14 +1438,10 @@ impl<'cfg> Workspace<'cfg> {
                     cwd_features.insert(feature.clone());
                 }
                 // This should be enforced by CliFeatures.
-                FeatureValue::Dep { .. }
-                | FeatureValue::DepFeature {
-                    dep_prefix: true, ..
-                } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {}", feature),
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature,
-                    dep_prefix: _,
                     weak: _,
                 } => {
                     // I think weak can be ignored here.

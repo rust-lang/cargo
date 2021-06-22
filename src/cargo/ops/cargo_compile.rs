@@ -1225,10 +1225,7 @@ fn validate_required_features(
                     ))?;
                 }
             }
-            FeatureValue::Dep { .. }
-            | FeatureValue::DepFeature {
-                dep_prefix: true, ..
-            } => {
+            FeatureValue::Dep { .. } => {
                 anyhow::bail!(
                     "invalid feature `{}` in required-features of target `{}`: \
                     `dep:` prefixed feature values are not allowed in required-features",
@@ -1248,7 +1245,6 @@ fn validate_required_features(
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix: false,
                 weak: false,
             } => {
                 match resolve
