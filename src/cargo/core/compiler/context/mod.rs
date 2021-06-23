@@ -195,12 +195,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     self.compilation
                         .binaries
                         .push(self.unit_output(unit, bindst));
-                } else if unit.target.is_cdylib() {
-                    if !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit) {
-                        self.compilation
-                            .cdylibs
-                            .push(self.unit_output(unit, bindst));
-                    }
+                } else if unit.target.is_cdylib()
+                    && !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit)
+                {
+                    self.compilation
+                        .cdylibs
+                        .push(self.unit_output(unit, bindst));
                 }
             }
 

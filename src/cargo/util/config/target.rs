@@ -72,14 +72,12 @@ pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
         } else {
             Ok(!config.cli_unstable().host_config)
         }
+    } else if config.cli_unstable().host_config {
+        anyhow::bail!(
+            "the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set"
+        );
     } else {
-        if config.cli_unstable().host_config {
-            anyhow::bail!(
-                "the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set"
-            );
-        } else {
-            Ok(true)
-        }
+        Ok(true)
     }
 }
 

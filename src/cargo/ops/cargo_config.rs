@@ -51,13 +51,11 @@ pub struct GetOptions<'a> {
 }
 
 pub fn get(config: &Config, opts: &GetOptions<'_>) -> CargoResult<()> {
-    if opts.show_origin {
-        if !matches!(opts.format, ConfigFormat::Toml) {
-            bail!(
-                "the `{}` format does not support --show-origin, try the `toml` format instead",
-                opts.format
-            );
-        }
+    if opts.show_origin && !matches!(opts.format, ConfigFormat::Toml) {
+        bail!(
+            "the `{}` format does not support --show-origin, try the `toml` format instead",
+            opts.format
+        );
     }
     let key = match opts.key {
         Some(key) => ConfigKey::from_str(key),
