@@ -529,7 +529,7 @@ impl<'cfg> Timings<'cfg> {
                     target: ut.target.clone(),
                     start: round(ut.start),
                     duration: round(ut.duration),
-                    rmeta_time: ut.rmeta_time.map(|t| round(t)),
+                    rmeta_time: ut.rmeta_time.map(round),
                     unlocked_units,
                     unlocked_rmeta_units,
                 }

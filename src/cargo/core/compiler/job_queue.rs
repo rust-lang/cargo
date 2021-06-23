@@ -1127,8 +1127,7 @@ impl<'cfg> DrainState<'cfg> {
             .bcx
             .unit_graph
             .keys()
-            .filter(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
-            .next()
+            .find(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
         {
             Some(u) => u,
             // Unlikely due to features.

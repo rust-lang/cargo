@@ -568,7 +568,7 @@ pub fn create_bcx<'a, 'cfg>(
             // the target is a binary. Binary crates get their private items
             // documented by default.
             if rustdoc_document_private_items || unit.target.is_bin() {
-                let mut args = extra_args.take().unwrap_or_else(|| vec![]);
+                let mut args = extra_args.take().unwrap_or_default();
                 args.push("--document-private-items".into());
                 extra_args = Some(args);
             }

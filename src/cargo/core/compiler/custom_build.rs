@@ -299,7 +299,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
-    let targets: Vec<Target> = unit.pkg.targets().iter().cloned().collect();
+    let targets: Vec<Target> = unit.pkg.targets().to_vec();
     // Need a separate copy for the fresh closure.
     let targets_fresh = targets.clone();
 
