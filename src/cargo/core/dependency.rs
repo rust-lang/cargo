@@ -389,11 +389,9 @@ impl Dependency {
     }
 
     pub fn map_source(mut self, to_replace: SourceId, replace_with: SourceId) -> Dependency {
-        if self.source_id() != to_replace {
-            self
-        } else {
+        if self.source_id() == to_replace {
             self.set_source_id(replace_with);
-            self
         }
+        self
     }
 }
