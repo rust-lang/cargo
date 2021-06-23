@@ -287,8 +287,47 @@ fn path_dependency_no_version() {
             "\
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version\n\
+Note: The packaged dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_dependency_no_version() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies.foo]
+                git = "git://path/to/nowhere"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `foo` does not specify a version
+Note: The packaged dependency will use the version from crates.io,
+the `git` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -1895,8 +1934,10 @@ src/main.rs
         .with_status(101)
         .with_stderr(
             "\
-error: all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version
+Note: The packaged dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
 ",
         )
         .run();

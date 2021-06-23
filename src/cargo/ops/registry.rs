@@ -138,34 +138,12 @@ fn verify_dependencies(
     registry_src: SourceId,
 ) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
-        if dep.source_id().is_path() || dep.source_id().is_git() {
-            if !dep.specified_req() {
-                if !dep.is_transitive() {
-                    // dev-dependencies will be stripped in TomlManifest::prepare_for_publish
-                    continue;
-                }
-                let which = if dep.source_id().is_path() {
-                    "path"
-                } else {
-                    "git"
-                };
-                let dep_version_source = dep.registry_id().map_or_else(
-                    || "crates.io".to_string(),
-                    |registry_id| registry_id.display_registry_name(),
-                );
-                bail!(
-                    "all dependencies must have a version specified when publishing.\n\
-                     dependency `{}` does not specify a version\n\
-                     Note: The published dependency will use the version from {},\n\
-                     the `{}` specification will be removed from the dependency declaration.",
-                    dep.package_name(),
-                    dep_version_source,
-                    which,
-                )
-            }
+        if super::check_dep_has_version(dep, true)? {
+            continue;
+        }
         // TomlManifest::prepare_for_publish will rewrite the dependency
         // to be just the `version` field.
-        } else if dep.source_id() != registry_src {
+        if dep.source_id() != registry_src {
             if !dep.source_id().is_registry() {
                 // Consider making SourceId::kind a public type that we can
                 // exhaustively match on. Using match can help ensure that
