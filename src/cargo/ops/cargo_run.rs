@@ -60,7 +60,7 @@ pub fn run(
                 .into_iter()
                 .map(|(_pkg, target)| target.name())
                 .collect();
-            names.sort();
+            names.sort_unstable();
             anyhow::bail!(
                 "`cargo run` could not determine which binary to run. \
                  Use the `--bin` option to specify a binary, \
