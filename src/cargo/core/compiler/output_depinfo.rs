@@ -84,7 +84,7 @@ fn add_deps_for_unit(
                 // The paths we have saved from the unit are of arbitrary relativeness and may be
                 // relative to the crate root of the dependency.
                 let path = unit.pkg.root().join(path);
-                deps.insert(path.into());
+                deps.insert(path);
             }
         }
     }
