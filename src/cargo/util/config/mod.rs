@@ -544,7 +544,7 @@ impl Config {
                 | CV::String(_, def)
                 | CV::List(_, def)
                 | CV::Boolean(_, def) => {
-                    let mut key_so_far = ConfigKey::new();
+                    let mut key_so_far = ConfigKey::default();
                     for part in key.parts().take(i) {
                         key_so_far.push(part);
                     }

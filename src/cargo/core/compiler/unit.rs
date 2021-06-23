@@ -148,24 +148,17 @@ impl fmt::Debug for Unit {
 /// efficient hash/equality implementation for `Unit`. All units are
 /// manufactured through an interner which guarantees that each equivalent value
 /// is only produced once.
+#[derive(Default)]
 pub struct UnitInterner {
     state: RefCell<InternerState>,
 }
 
+#[derive(Default)]
 struct InternerState {
     cache: HashSet<Rc<UnitInner>>,
 }
 
 impl UnitInterner {
-    /// Creates a new blank interner
-    pub fn new() -> UnitInterner {
-        UnitInterner {
-            state: RefCell::new(InternerState {
-                cache: HashSet::new(),
-            }),
-        }
-    }
-
     /// Creates a new `unit` from its components. The returned `Unit`'s fields
     /// will all be equivalent to the provided arguments, although they may not
     /// be the exact same instance.

@@ -8,13 +8,13 @@ pub fn to_hex(num: u64) -> String {
 }
 
 pub fn hash_u64<H: Hash>(hashable: H) -> u64 {
-    let mut hasher = StableHasher::new();
+    let mut hasher = StableHasher::default();
     hashable.hash(&mut hasher);
     hasher.finish()
 }
 
 pub fn hash_u64_file(mut file: &File) -> std::io::Result<u64> {
-    let mut hasher = StableHasher::new();
+    let mut hasher = StableHasher::default();
     let mut buf = [0; 64 * 1024];
     loop {
         let n = file.read(&mut buf)?;

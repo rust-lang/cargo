@@ -23,22 +23,22 @@ pub struct ConfigKey {
     parts: Vec<(String, usize)>,
 }
 
-impl ConfigKey {
-    /// Creates a new blank configuration key which is ready to get built up by
-    /// using `push` and `push_sensitive`.
-    pub fn new() -> ConfigKey {
-        ConfigKey {
+impl Default for ConfigKey {
+    fn default() -> Self {
+        Self {
             env: "CARGO".to_string(),
             parts: Vec::new(),
         }
     }
+}
 
+impl ConfigKey {
     /// Creates a `ConfigKey` from the `key` specified.
     ///
     /// The `key` specified is expected to be a period-separated toml
     /// configuration key.
     pub fn from_str(key: &str) -> ConfigKey {
-        let mut cfg = ConfigKey::new();
+        let mut cfg = ConfigKey::default();
         for part in key.split('.') {
             cfg.push(part);
         }

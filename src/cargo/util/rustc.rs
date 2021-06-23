@@ -294,7 +294,7 @@ fn rustc_fingerprint(
     rustc: &Path,
     rustup_rustc: &Path,
 ) -> CargoResult<u64> {
-    let mut hasher = StableHasher::new();
+    let mut hasher = StableHasher::default();
 
     let hash_exe = |hasher: &mut _, path| -> CargoResult<()> {
         let path = paths::resolve_executable(path)?;
@@ -349,7 +349,7 @@ fn rustc_fingerprint(
 }
 
 fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
-    let mut hasher = StableHasher::new();
+    let mut hasher = StableHasher::default();
     extra_fingerprint.hash(&mut hasher);
     cmd.get_args().hash(&mut hasher);
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();

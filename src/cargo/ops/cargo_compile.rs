@@ -278,7 +278,7 @@ pub fn compile_ws<'a>(
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
-    let interner = UnitInterner::new();
+    let interner = UnitInterner::default();
     let bcx = create_bcx(ws, options, &interner)?;
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.config())?;
@@ -1486,7 +1486,7 @@ fn traverse_and_share(
         // Already computed, no need to recompute.
         return new_unit.clone();
     }
-    let mut dep_hash = StableHasher::new();
+    let mut dep_hash = StableHasher::default();
     let new_deps: Vec<_> = unit_graph[unit]
         .iter()
         .map(|dep| {

@@ -6,13 +6,8 @@
 
 use std::hash::{Hasher, SipHasher};
 
+#[derive(Default)]
 pub struct StableHasher(SipHasher);
-
-impl StableHasher {
-    pub fn new() -> StableHasher {
-        StableHasher(SipHasher::new())
-    }
-}
 
 impl Hasher for StableHasher {
     fn finish(&self) -> u64 {
