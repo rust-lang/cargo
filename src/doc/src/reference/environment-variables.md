@@ -302,6 +302,10 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `CARGO_BUILD_TYPE` — The type of build being performed.
                        `cross` when the build target is overridden.
                        `native` when a build target is not specified(default).
+                       Note: only present for `target` dependency types
+* `CARGO_BUILD_DEPENDENCY_TYPE` — The type of build this is a dependency for.
+                                  `host` when the build target is for the host.
+                                  `target` when a build target is for the target.
 * `CARGO_MANIFEST_DIR` — The directory containing the manifest for the package
                          being built (the package containing the build
                          script). Also note that this is the value of the
