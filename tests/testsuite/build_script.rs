@@ -120,7 +120,7 @@ fn custom_build_env_vars() {
 
                 assert!(env::var("RUSTC_LINKER").is_err());
 
-                let rustflags = env::var("CARGO_RUSTFLAGS").unwrap();
+                let rustflags = env::var("RUSTFLAGS").unwrap();
                 assert_eq!(rustflags, "");
             }}
         "#,
@@ -161,9 +161,9 @@ fn custom_build_env_var_rustflags() {
                     // Static assertion that exactly one of the cfg paths is always taken.
                     let x;
                     #[cfg(special)]
-                    {{ assert_eq!(env::var("CARGO_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    {{ assert_eq!(env::var("RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
                     #[cfg(notspecial)]
-                    {{ assert_eq!(env::var("CARGO_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    {{ assert_eq!(env::var("RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
                     let _ = x;
                 }}
                 "#,
@@ -190,7 +190,7 @@ fn custom_build_env_var_rustc_wrapper() {
 
             fn main() {{
                 assert_eq!(
-                    env::var("CARGO_RUSTC_WRAPPER").unwrap(),
+                    env::var("RUSTC_WRAPPER").unwrap(),
                     env::var("CARGO_RUSTC_WRAPPER_CHECK").unwrap()
                 );
             }}

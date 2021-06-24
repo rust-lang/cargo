@@ -251,9 +251,9 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 
     // Also inform the build script of the rustc compiler context.
     if let Some(wrapper) = bcx.rustc().wrapper.as_ref() {
-        cmd.env("CARGO_RUSTC_WRAPPER", wrapper);
+        cmd.env("RUSTC_WRAPPER", wrapper);
     }
-    cmd.env("CARGO_RUSTFLAGS", bcx.rustflags_args(unit).join(" "));
+    cmd.env("RUSTFLAGS", bcx.rustflags_args(unit).join(" "));
 
     // Gather the set of native dependencies that this package has along with
     // some other variables to close over.
