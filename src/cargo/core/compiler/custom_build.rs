@@ -252,6 +252,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     // Also inform the build script of the rustc compiler context.
     if let Some(wrapper) = bcx.rustc().wrapper.as_ref() {
         cmd.env("RUSTC_WRAPPER", wrapper);
+    } else {
+        cmd.env_remove("RUSTC_WRAPPER");
     }
     cmd.env("RUSTFLAGS", bcx.rustflags_args(unit).join(" "));
     let version = crate::version();
