@@ -344,9 +344,6 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `RUSTFLAGS` — the `RUSTFLAGS` that Cargo invokes `rustc` with.
                 See [`build.rustflags`].
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
-* `CARGO_VERSION` - The version of cargo used to invoke the build
-                    script. Its constituent parts are also available as
-		    `CARGO_VERSION_MAJOR`, `_MINOR`, and `_PATCH`.
 * `RUSTC_VERSION` - The version of rustc used by the cargo that invokes
 		    the build script. Its constituent parts are also
 		    available as `CARGO_VERSION_MAJOR`, `_MINOR`, and

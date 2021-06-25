@@ -82,7 +82,6 @@ fn custom_build_env_vars() {
         )
         .file("bar/src/lib.rs", "pub fn hello() {}");
 
-    let cargo_version = cargo::version();
     let rustc_version = semver::Version::parse(rustc_release()).unwrap();
     let file_content = format!(
         r#"
@@ -126,23 +125,14 @@ fn custom_build_env_vars() {
                 let rustflags = env::var("RUSTFLAGS").unwrap();
                 assert_eq!(rustflags, "");
 
-                let version = env::var("CARGO_VERSION").unwrap();
-                assert_eq!(version, "{1}.{2}.{3}", "bad cargo version");
-                let version = env::var("CARGO_VERSION_MAJOR").unwrap();
-                assert_eq!(version, "{1}");
-                let version = env::var("CARGO_VERSION_MINOR").unwrap();
-                assert_eq!(version, "{2}");
-                let version = env::var("CARGO_VERSION_PATCH").unwrap();
-                assert_eq!(version, "{3}");
-
                 let version = env::var("RUSTC_VERSION").unwrap();
-                assert_eq!(version, "{4}.{5}.{6}", "bad rust version");
+                assert_eq!(version, "{1}.{2}.{3}", "bad rust version");
                 let version = env::var("RUSTC_VERSION_MAJOR").unwrap();
-                assert_eq!(version, "{4}");
+                assert_eq!(version, "{1}");
                 let version = env::var("RUSTC_VERSION_MINOR").unwrap();
-                assert_eq!(version, "{5}");
+                assert_eq!(version, "{2}");
                 let version = env::var("RUSTC_VERSION_PATCH").unwrap();
-                assert_eq!(version, "{6}");
+                assert_eq!(version, "{3}");
             }}
         "#,
         p.root()
@@ -150,9 +140,6 @@ fn custom_build_env_vars() {
             .join("debug")
             .join("build")
             .display(),
-        cargo_version.major,
-        cargo_version.minor,
-        cargo_version.patch,
         rustc_version.major,
         rustc_version.minor,
         rustc_version.patch,

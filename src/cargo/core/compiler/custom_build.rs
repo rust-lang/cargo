@@ -256,14 +256,6 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         cmd.env_remove("RUSTC_WRAPPER");
     }
     cmd.env("RUSTFLAGS", bcx.rustflags_args(unit).join(" "));
-    let version = crate::version();
-    cmd.env(
-        "CARGO_VERSION",
-        format!("{}.{}.{}", version.major, version.minor, version.patch),
-    );
-    cmd.env("CARGO_VERSION_MAJOR", version.major.to_string());
-    cmd.env("CARGO_VERSION_MINOR", version.minor.to_string());
-    cmd.env("CARGO_VERSION_PATCH", version.patch.to_string());
     let version = &bcx.rustc().version;
     cmd.env(
         "RUSTC_VERSION",
