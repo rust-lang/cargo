@@ -334,16 +334,23 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `RUSTC`, `RUSTDOC` — the compiler and documentation generator that Cargo has
                        resolved to use, passed to the build script so it might
                        use it as well.
-* `CARGO_RUSTC_WRAPPER` — the `rustc` wrapper, if any, that Cargo is using.
-                          See [`build.rustc-wrapper`].
+* `RUSTC_WRAPPER` — the `rustc` wrapper, if any, that Cargo is using.
+                    See [`build.rustc-wrapper`].
 * `RUSTC_LINKER` — The path to the linker binary that Cargo has resolved to use
                    for the current target, if specified. The linker can be
                    changed by editing `.cargo/config.toml`; see the documentation
                    about [cargo configuration][cargo-config] for more
                    information.
-* `CARGO_RUSTFLAGS` — the `RUSTFLAGS` that Cargo invokes `rustc` with.
-                      See [`build.rustflags`].
+* `RUSTFLAGS` — the `RUSTFLAGS` that Cargo invokes `rustc` with.
+                See [`build.rustflags`].
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
+* `CARGO_VERSION` - The version of cargo used to invoke the build
+                    script. Its constituent parts are also available as
+		    `CARGO_VERSION_MAJOR`, `_MINOR`, and `_PATCH`.
+* `RUSTC_VERSION` - The version of rustc used by the cargo that invokes
+		    the build script. Its constituent parts are also
+		    available as `CARGO_VERSION_MAJOR`, `_MINOR`, and
+		    `_PATCH`.
 
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
