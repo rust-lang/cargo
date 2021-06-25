@@ -129,6 +129,7 @@ impl NewOptions {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct CargoNewConfig {
     #[deprecated = "cargo-new no longer supports adding the authors field"]
     #[allow(dead_code)]
@@ -140,6 +141,8 @@ struct CargoNewConfig {
 
     #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
+
+    manifest_guide: Option<bool>,
 }
 
 fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
@@ -769,9 +772,7 @@ path = {}
 name = "{}"
 version = "0.1.0"
 edition = {}
-{}
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+{}{}
 [dependencies]
 {}"#,
             name,
@@ -785,6 +786,11 @@ edition = {}
                     toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
                 ),
                 None => "".to_string(),
+            },
+            if cfg.manifest_guide.unwrap_or(true) {
+                "\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n"
+            } else {
+                ""
             },
             cargotoml_path_specifier
         )

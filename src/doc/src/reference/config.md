@@ -72,7 +72,8 @@ browser = "chromium"          # browser to use with `cargo doc --open`,
                               # overrides the `BROWSER` environment variable
 
 [cargo-new]
-vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
+vcs = "none"           # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
+manifest-guide = true  # whether to include a short guide in the new `Cargo.toml` file
 
 [http]
 debug = false               # HTTP debugging
