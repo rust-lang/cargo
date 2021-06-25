@@ -200,11 +200,19 @@ fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<Pat
         .join("rust");
     let lock = src_path.join("Cargo.lock");
     if !lock.exists() {
-        anyhow::bail!(
+        let msg = format!(
             "{:?} does not exist, unable to build with the standard \
              library, try:\n        rustup component add rust-src",
             lock
         );
+        match env::var("RUSTUP_TOOLCHAIN") {
+            Ok(rustup_toolchain) => {
+                anyhow::bail!("{} --toolchain {}", msg, rustup_toolchain);
+            }
+            Err(_) => {
+                anyhow::bail!(msg);
+            }
+        }
     }
     Ok(src_path)
 }
