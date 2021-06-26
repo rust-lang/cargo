@@ -1,6 +1,6 @@
 use crate::core::PackageId;
-use crate::sources::DirectorySource;
-use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
+use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX};
+use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
 use log::trace;
 use serde::de;
@@ -224,7 +224,7 @@ impl SourceId {
 
     pub fn display_registry_name(self) -> String {
         if self.is_default_registry() {
-            "crates.io".to_string()
+            CRATES_IO_DOMAIN.to_string()
         } else if let Some(name) = &self.inner.name {
             name.clone()
         } else {

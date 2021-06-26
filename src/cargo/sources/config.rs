@@ -247,7 +247,7 @@ restore the source replacement configuration to continue the build
             check_not_set("tag", def.tag)?;
             check_not_set("rev", def.rev)?;
         }
-        if name == "crates-io" && srcs.is_empty() {
+        if name == CRATES_IO_REGISTRY && srcs.is_empty() {
             srcs.push(SourceId::crates_io(self.config)?);
         }
 
