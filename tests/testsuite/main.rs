@@ -13,6 +13,7 @@ mod alt_registry;
 mod bad_config;
 mod bad_manifest_path;
 mod bench;
+mod binary_name;
 mod build;
 mod build_plan;
 mod build_script;

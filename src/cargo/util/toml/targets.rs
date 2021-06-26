@@ -266,7 +266,14 @@ fn clean_bins(
         "autobins",
     );
 
+    // This loop performs basic checks on each of the TomlTarget in `bins`.
     for bin in &bins {
+        // For each binary, check if the `filename` parameter is populated. If it is,
+        // check if the corresponding cargo feature has been activated.
+        if bin.filename.is_some() {
+            features.require(Feature::different_binary_name())?;
+        }
+
         validate_target_name(bin, "binary", "bin", warnings)?;
 
         let name = bin.name();
@@ -321,8 +328,14 @@ fn clean_bins(
             Err(e) => anyhow::bail!("{}", e),
         };
 
-        let mut target =
-            Target::bin_target(&bin.name(), path, bin.required_features.clone(), edition);
+        let mut target = Target::bin_target(
+            &bin.name(),
+            bin.filename.clone(),
+            path,
+            bin.required_features.clone(),
+            edition,
+        );
+
         configure(features, bin, &mut target)?;
         result.push(target);
     }

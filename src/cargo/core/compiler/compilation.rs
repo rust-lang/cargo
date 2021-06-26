@@ -365,7 +365,12 @@ impl<'cfg> Compilation<'cfg> {
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     if unit.target.is_bin() {
-        cmd.env("CARGO_BIN_NAME", unit.target.name());
+        let name = unit
+            .target
+            .binary_filename()
+            .unwrap_or(unit.target.name().to_string());
+
+        cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd

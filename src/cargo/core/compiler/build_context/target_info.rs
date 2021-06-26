@@ -103,11 +103,18 @@ impl FileType {
     /// The filename for this FileType that Cargo should use when "uplifting"
     /// it to the destination directory.
     pub fn uplift_filename(&self, target: &Target) -> String {
-        let name = if self.should_replace_hyphens {
-            target.crate_name()
-        } else {
-            target.name().to_string()
+        let name = match target.binary_filename() {
+            Some(name) => name,
+            None => {
+                // For binary crate type, `should_replace_hyphens` will always be false.
+                if self.should_replace_hyphens {
+                    target.crate_name()
+                } else {
+                    target.name().to_string()
+                }
+            }
         };
+
         format!("{}{}{}", self.prefix, name, self.suffix)
     }
 

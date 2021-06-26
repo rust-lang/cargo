@@ -467,6 +467,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             let meta = &self.metas[unit];
             let meta_opt = meta.use_extra_filename.then(|| meta.meta_hash.to_string());
             let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
+
+            // If, the `different_binary_name` feature is enabled, the name of the hardlink will
+            // be the name of the binary provided by the user in `Cargo.toml`.
             let hardlink = self.uplift_to(unit, &file_type, &path);
             let export_path = if unit.target.is_custom_build() {
                 None
