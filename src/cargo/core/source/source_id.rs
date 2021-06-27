@@ -234,7 +234,7 @@ impl SourceId {
 
     pub fn display_registry_name(self) -> String {
         if self.is_default_registry() {
-            CRATES_IO_DOMAIN.to_string()
+            CRATES_IO_REGISTRY.to_string()
         } else if let Some(name) = &self.inner.name {
             name.clone()
         } else if self.precise().is_some() {
