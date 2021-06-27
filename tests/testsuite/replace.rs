@@ -42,7 +42,7 @@ fn override_simple() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 ([CWD])
@@ -195,7 +195,7 @@ fn transitive() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.2.0 (registry [..])
@@ -247,7 +247,7 @@ fn persists_across_rebuilds() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [UPDATING] git repository `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 ([CWD])
@@ -294,8 +294,8 @@ fn replace_registry_with_path() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
-[COMPILING] bar v0.1.0 ([ROOT][..])
+[UPDATING] `dummy-registry` index
+[COMPILING] bar v0.1.0 ([ROOT][..]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -359,7 +359,7 @@ fn use_a_spec_to_select() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
@@ -420,7 +420,7 @@ fn override_adds_some_deps() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry [..])
@@ -440,14 +440,14 @@ fn override_adds_some_deps() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 ",
         )
         .run();
     p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 ",
         )
         .run();

@@ -31,17 +31,16 @@ fn simple() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     p.cargo("clean").run();
@@ -80,19 +79,18 @@ fn deps() {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }
 
@@ -279,10 +277,10 @@ fn bad_cksum() {
 [UPDATING] [..] index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum [..]
-[ERROR] failed to download replaced source registry `https://[..]`
+[ERROR] failed to download replaced source registry `crates-io`
 
 Caused by:
-  failed to verify the checksum of `bad-cksum v0.0.1 (registry `[ROOT][..]`)`
+  failed to verify the checksum of `bad-cksum v0.0.1 (registry `dummy-registry`)`
 ",
         )
         .run();
@@ -322,17 +320,16 @@ required by package `foo v0.0.1 ([..])`
     Package::new("notyet", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }
 
@@ -372,7 +369,7 @@ fn package_with_path_deps() {
 
 Caused by:
   no matching package named `notyet` found
-  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  location searched: registry `crates-io`
   required by package `foo v0.0.1 [..]`
 ",
         )
@@ -387,7 +384,7 @@ Caused by:
 [UPDATING] `[..]` index
 [VERIFYING] foo v0.0.1 ([CWD])
 [DOWNLOADING] crates ...
-[DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -421,7 +418,7 @@ fn lockfile_locks() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -461,8 +458,8 @@ fn lockfile_locks_transitively() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -509,8 +506,8 @@ fn yanks_are_not_used() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -722,7 +719,7 @@ fn update_with_lockfile_if_packages_missing() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -769,7 +766,7 @@ fn update_lockfile() {
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.2 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.2 (registry `dummy-registry`)
 [COMPILING] bar v0.0.2
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -792,7 +789,7 @@ fn update_lockfile() {
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.3 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.3 (registry `dummy-registry`)
 [COMPILING] bar v0.0.3
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -852,7 +849,7 @@ fn dev_dependency_not_used() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -948,7 +945,7 @@ fn updating_a_dep() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
 [COMPILING] a v0.0.1 ([CWD]/a)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -977,7 +974,7 @@ fn updating_a_dep() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
 [COMPILING] a v0.0.1 ([CWD]/a)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -1035,7 +1032,7 @@ fn git_and_registry_dep() {
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] crates ...
-[DOWNLOADED] a v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] a v0.0.1 (registry `dummy-registry`)
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
@@ -1112,7 +1109,7 @@ fn update_publish_then_update() {
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
-[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)
+[DOWNLOADED] a v0.1.1 (registry `dummy-registry`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -1190,7 +1187,7 @@ fn update_transitive_dependency() {
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
-[DOWNLOADED] b v0.1.1 (registry `[ROOT][..]`)
+[DOWNLOADED] b v0.1.1 (registry `dummy-registry`)
 [COMPILING] b v0.1.1
 [COMPILING] a v0.1.0
 [COMPILING] foo v0.5.0 ([..])
@@ -1299,9 +1296,9 @@ fn update_multiple_packages() {
         .run();
 
     p.cargo("build")
-        .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[DOWNLOADED] b v0.1.1 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[DOWNLOADED] c v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `dummy-registry`)")
+        .with_stderr_contains("[DOWNLOADED] b v0.1.1 (registry `dummy-registry`)")
+        .with_stderr_contains("[DOWNLOADED] c v0.1.1 (registry `dummy-registry`)")
         .with_stderr_contains("[COMPILING] a v0.1.1")
         .with_stderr_contains("[COMPILING] b v0.1.1")
         .with_stderr_contains("[COMPILING] c v0.1.1")

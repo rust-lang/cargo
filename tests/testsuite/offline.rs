@@ -164,7 +164,7 @@ fn cargo_compile_offline_not_try_update() {
 
     let msg = "\
 [ERROR] no matching package named `not_cached_dep` found
-location searched: registry `https://github.com/rust-lang/crates.io-index`
+location searched: registry `crates-io`
 required by package `bar v0.1.0 ([..]/bar)`
 As a reminder, you're using offline mode (--offline) which can sometimes cause \
 surprising resolution failures, if this error is too confusing you may wish to \
@@ -532,16 +532,18 @@ fn offline_resolve_optional_fail() {
 
     p.cargo("build --offline")
         .with_status(101)
-        .with_stderr("\
+        .with_stderr(
+            "\
 [ERROR] failed to select a version for the requirement `dep = \"^2.0\"`
 candidate versions found which didn't match: 1.0.0
-location searched: `[..]` index (which is replacing registry `https://github.com/rust-lang/crates.io-index`)
+location searched: `[..]` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([..]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
 As a reminder, you're using offline mode (--offline) which can sometimes cause \
 surprising resolution failures, if this error is too confusing you may wish to \
 retry without the offline flag.
-")
+",
+        )
         .run();
 }
 

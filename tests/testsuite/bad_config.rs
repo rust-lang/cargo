@@ -912,7 +912,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   could not find a configured source with the name `bar` \
@@ -958,7 +958,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, [..]
@@ -1006,7 +1006,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
@@ -1445,7 +1445,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] source `foo` defines source registry `https://github.com/rust-lang/crates.io-index`, \
+[ERROR] source `foo` defines source registry `crates-io`, \
     but that source is already defined by `crates-io`
 note: Sources are not allowed to be defined multiple times.
 ",
