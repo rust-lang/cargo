@@ -216,9 +216,9 @@ impl SourceId {
 
     pub fn display_index(self) -> String {
         if self.is_default_registry() {
-            "crates.io index".to_string()
+            format!("{} index", CRATES_IO_DOMAIN)
         } else {
-            format!("`{}` index", url_display(self.url()))
+            format!("`{}` index", self.display_registry_name())
         }
     }
 
@@ -463,7 +463,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
-            SourceKind::Registry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            SourceKind::Registry => write!(f, "registry `{}`", self.display_registry_name()),
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
