@@ -24,7 +24,7 @@ pub struct SourceId {
     inner: &'static SourceIdInner,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
     /// The source URL.
     url: Url,
@@ -237,6 +237,10 @@ impl SourceId {
             CRATES_IO_DOMAIN.to_string()
         } else if let Some(name) = &self.inner.name {
             name.clone()
+        } else if self.precise().is_some() {
+            // We remove `precise` here to retrieve an permissive version of
+            // `SourceIdInner`, which may contain the registry name.
+            self.with_precise(None).display_registry_name()
         } else {
             url_display(self.url())
         }
@@ -490,6 +494,29 @@ impl Hash for SourceId {
             SourceKind::Git(_) => self.inner.canonical_url.hash(into),
             _ => self.inner.url.as_str().hash(into),
         }
+    }
+}
+
+impl Hash for SourceIdInner {
+    /// The hash of `SourceIdInner` is used to retrieve its interned value. We
+    /// only care about fields that make `SourceIdInner` unique, which are:
+    ///
+    /// - `kind`
+    /// - `precise`
+    /// - `canonical_url`
+    fn hash<S: hash::Hasher>(&self, into: &mut S) {
+        self.kind.hash(into);
+        self.precise.hash(into);
+        self.canonical_url.hash(into);
+    }
+}
+
+impl PartialEq for SourceIdInner {
+    /// This implementation must be synced with [`SourceIdInner::hash`].
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+            && self.precise == other.precise
+            && self.canonical_url == other.canonical_url
     }
 }
 
