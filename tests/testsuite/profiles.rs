@@ -2,7 +2,7 @@
 
 use std::env;
 
-use cargo_test_support::{is_nightly, project};
+use cargo_test_support::{is_nightly, project, rustc_host};
 
 #[cargo_test]
 fn profile_overrides() {
@@ -25,7 +25,7 @@ fn profile_overrides() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
@@ -35,10 +35,12 @@ fn profile_overrides() {
         -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] dev [optimized] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -61,7 +63,7 @@ fn opt_level_override_0() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
@@ -69,10 +71,12 @@ fn opt_level_override_0() {
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -94,7 +98,7 @@ fn debug_override_1() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
@@ -102,10 +106,12 @@ fn debug_override_1() {
         -C debuginfo=1 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -140,10 +146,12 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-            level = rustc_level
+            level = rustc_level,
+            target = rustc_host()
         ))
         .run();
 }
@@ -213,8 +221,10 @@ fn top_level_overrides_deps() {
         -C opt-level=1[..]\
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir [CWD]/target/release/deps \
-        -L dependency=[CWD]/target/release/deps`
+        --out-dir [CWD]/target/{target}/release/deps \
+        --target {target} \
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
@@ -222,14 +232,16 @@ fn top_level_overrides_deps() {
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps \
-        --extern foo=[CWD]/target/release/deps/\
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps \
+        --extern foo=[CWD]/target/{target}/release/deps/\
                      {prefix}foo[..]{suffix} \
-        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
+        --extern foo=[CWD]/target/{target}/release/deps/libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
-            suffix = env::consts::DLL_SUFFIX
+            suffix = env::consts::DLL_SUFFIX,
+            target = rustc_host()
         ))
         .run();
 }

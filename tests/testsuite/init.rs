@@ -1,6 +1,6 @@
 //! Tests for the `cargo init` command.
 
-use cargo_test_support::{command_is_available, paths, Execs};
+use cargo_test_support::{command_is_available, paths, rustc_host, Execs};
 use std::env;
 use std::fs;
 use std::process::Command;
@@ -50,7 +50,11 @@ fn simple_bin() {
 
     cargo_process("build").cwd(&path).run();
     assert!(paths::root()
-        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+        .join(&format!(
+            "foo/target/{}/debug/foo{}",
+            rustc_host(),
+            env::consts::EXE_SUFFIX
+        ))
         .is_file());
 }
 

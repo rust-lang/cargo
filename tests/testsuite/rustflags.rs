@@ -77,7 +77,7 @@ fn env_rustflags_build_script() {
         )
         .build();
 
-    p.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
+    p.cargo("build").env("HOST_RUSTFLAGS", "--cfg foo").run();
 }
 
 #[cargo_test]
@@ -114,7 +114,7 @@ fn env_rustflags_build_script_dep() {
         )
         .build();
 
-    foo.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
+    foo.cargo("build").env("HOST_RUSTFLAGS", "--cfg foo").run();
 }
 
 #[cargo_test]
@@ -145,7 +145,7 @@ fn env_rustflags_plugin() {
         )
         .build();
 
-    p.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
+    p.cargo("build").env("HOST_RUSTFLAGS", "--cfg foo").run();
 }
 
 #[cargo_test]
@@ -184,7 +184,7 @@ fn env_rustflags_plugin_dep() {
         )
         .build();
 
-    foo.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
+    foo.cargo("build").env("HOST_RUSTFLAGS", "--cfg foo").run();
 }
 
 #[cargo_test]
@@ -501,7 +501,7 @@ fn build_rustflags_build_script() {
         .file(
             ".cargo/config",
             r#"
-            [build]
+            [host]
             rustflags = ["--cfg", "foo"]
             "#,
         )
@@ -533,7 +533,7 @@ fn build_rustflags_build_script_dep() {
         .file(
             ".cargo/config",
             r#"
-            [build]
+            [host]
             rustflags = ["--cfg", "foo"]
             "#,
         )
@@ -583,7 +583,7 @@ fn build_rustflags_plugin() {
         .file(
             ".cargo/config",
             r#"
-            [build]
+            [host]
             rustflags = ["--cfg", "foo"]
             "#,
         )
@@ -617,7 +617,7 @@ fn build_rustflags_plugin_dep() {
         .file(
             ".cargo/config",
             r#"
-            [build]
+            [host]
             rustflags = ["--cfg", "foo"]
             "#,
         )
@@ -1370,7 +1370,7 @@ fn remap_path_prefix_ignored() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build").run();
     let rlibs = p
-        .glob("target/debug/deps/*.rlib")
+        .glob(&format!("target/{}/debug/deps/*.rlib", rustc_host()))
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
     assert_eq!(rlibs.len(), 1);
@@ -1378,7 +1378,7 @@ fn remap_path_prefix_ignored() {
 
     let check_metadata_same = || {
         let rlibs2 = p
-            .glob("target/debug/deps/*.rlib")
+            .glob(&format!("target/{}/debug/deps/*.rlib", rustc_host()))
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
         assert_eq!(rlibs, rlibs2);

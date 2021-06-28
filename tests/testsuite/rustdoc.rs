@@ -1,22 +1,24 @@
 //! Tests for the `cargo rustdoc` command.
 
-use cargo_test_support::{basic_manifest, cross_compile, project};
+use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host};
 
 #[cargo_test]
 fn rustdoc_simple() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("rustdoc -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
+        -o [CWD]/target/{target}/doc \
         [..] \
-        -L dependency=[CWD]/target/debug/deps [..]`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -25,17 +27,19 @@ fn rustdoc_args() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
+        -o [CWD]/target/{target}/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps [..]`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -74,20 +78,22 @@ fn rustdoc_foo_with_bar_dependency() {
         .build();
 
     foo.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
+        -o [CWD]/target/{target}/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps \
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps \
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -115,17 +121,19 @@ fn rustdoc_only_bar_dependency() {
         .build();
 
     foo.cargo("rustdoc -v -p bar -- --cfg=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc [..]--crate-name bar [..]bar/src/lib.rs [..]\
-        -o [CWD]/target/doc \
+        -o [CWD]/target/{target}/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps [..]`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -137,17 +145,19 @@ fn rustdoc_same_name_documents_lib() {
         .build();
 
     p.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
+        -o [CWD]/target/{target}/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps [..]`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -220,9 +230,10 @@ fn rustdoc_target() {
     -o [CWD]/target/{target}/doc \
     [..] \
     -L dependency=[CWD]/target/{target}/debug/deps \
-    -L dependency=[CWD]/target/debug/deps[..]`
+    -L dependency=[CWD]/target/host/{host}/debug/deps[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-            target = cross_compile::alternate()
+            target = cross_compile::alternate(),
+            host = rustc_host()
         ))
         .run();
 }

@@ -60,8 +60,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             return Err(CliError::new(err, 101));
         }
     };
+    let rustc = config.load_global_rustc(Some(&ws));
     let mut compile_opts = args.compile_options_for_single_package(
         config,
+        rustc,
         mode,
         Some(&ws),
         ProfileChecking::Unchecked,

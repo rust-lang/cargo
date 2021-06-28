@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
-use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
+use cargo_test_support::{cargo_process, rustc_host};
 
 #[cfg_attr(windows, allow(dead_code))]
 enum FakeKind<'a> {
@@ -329,7 +329,10 @@ fn cargo_subcommand_args() {
 
     cargo_process("foo bar -v --help")
         .env("PATH", &path)
-        .with_stdout("[CWD]/cargo-foo/target/debug/cargo-foo[EXE] foo bar -v --help")
+        .with_stdout(&format!(
+            "[CWD]/cargo-foo/target/{}/debug/cargo-foo[EXE] foo bar -v --help",
+            rustc_host()
+        ))
         .run();
 }
 

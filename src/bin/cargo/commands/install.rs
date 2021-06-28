@@ -127,8 +127,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         None
     };
 
+    let ws = args.workspace(config);
+    let rustc = if ws.is_ok() {
+        config.load_global_rustc(Some(&ws?))
+    } else {
+        config.load_global_rustc(None)
+    };
     let mut compile_opts = args.compile_options(
         config,
+        rustc,
         CompileMode::Build,
         workspace.as_ref(),
         ProfileChecking::Checked,

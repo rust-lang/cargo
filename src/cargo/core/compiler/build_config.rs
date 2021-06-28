@@ -1,6 +1,7 @@
 use crate::core::compiler::CompileKind;
 use crate::util::interning::InternedString;
-use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
+use crate::util::{CargoResult, Rustc, RustfixDiagnosticServer};
+use crate::Config;
 use anyhow::bail;
 use cargo_util::ProcessBuilder;
 use serde::ser;
@@ -52,12 +53,14 @@ impl BuildConfig {
     /// * `target.$target.libfoo.metadata`
     pub fn new(
         config: &Config,
+        rustc: CargoResult<Rustc>,
         jobs: Option<u32>,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
-        let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
+        let requested_kinds =
+            CompileKind::from_requested_targets(config, rustc, requested_targets)?;
         if jobs == Some(0) {
             anyhow::bail!("jobs must be at least 1")
         }

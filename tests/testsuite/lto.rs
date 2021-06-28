@@ -1,6 +1,6 @@
 use cargo::core::compiler::Lto;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project, Project};
+use cargo_test_support::{basic_manifest, project, rustc_host, Project};
 use std::process::Output;
 
 #[cargo_test]
@@ -88,6 +88,7 @@ fn build_dep_not_ltod() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn complicated() {
     Package::new("dep-shared", "0.0.1")
@@ -512,7 +513,7 @@ fn cdylib_and_rlib() {
         )
         .run();
     p.cargo("test --release -v --manifest-path bar/Cargo.toml")
-        .with_stderr_unordered(
+        .with_stderr_unordered(&format!(
             "\
 [COMPILING] registry v0.0.1
 [COMPILING] registry-shared v0.0.1
@@ -523,12 +524,13 @@ fn cdylib_and_rlib() {
 [RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no [..]--test[..]
 [RUNNING] `rustc --crate-name b [..]-C embed-bitcode=no [..]--test[..]
 [FINISHED] [..]
-[RUNNING] [..]target/release/deps/bar-[..]
-[RUNNING] [..]target/release/deps/b-[..]
+[RUNNING] [..]target/{target}/release/deps/bar-[..]
+[RUNNING] [..]target/{target}/release/deps/b-[..]
 [DOCTEST] bar
 [RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --crate-name bar --test [..]-C embed-bitcode=no[..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 

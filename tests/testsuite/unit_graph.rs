@@ -1,7 +1,7 @@
 //! Tests for --unit-graph option.
 
-use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::{project, rustc_host};
 
 #[cargo_test]
 fn gated() {
@@ -81,7 +81,7 @@ fn simple() {
                     "strip": "none",
                     "split_debuginfo": "{...}"
                   },
-                  "platform": null,
+                  "platform": "$TARGET",
                   "mode": "build",
                   "features": [
                     "feata"
@@ -125,7 +125,7 @@ fn simple() {
                     "strip": "none",
                     "split_debuginfo": "{...}"
                   },
-                  "platform": null,
+                  "platform": "$TARGET",
                   "mode": "build",
                   "features": [
                     "featb"
@@ -169,7 +169,7 @@ fn simple() {
                     "strip": "none",
                     "split_debuginfo": "{...}"
                   },
-                  "platform": null,
+                  "platform": "$TARGET",
                   "mode": "build",
                   "features": [
                     "featc"
@@ -206,7 +206,7 @@ fn simple() {
                     "strip": "none",
                     "split_debuginfo": "{...}"
                   },
-                  "platform": null,
+                  "platform": "$TARGET",
                   "mode": "build",
                   "features": [],
                   "dependencies": [
@@ -221,7 +221,9 @@ fn simple() {
               ],
               "roots": [3]
             }
-            "#,
+            "#
+            .replace("$TARGET", rustc_host())
+            .as_str(),
         )
         .run();
 }

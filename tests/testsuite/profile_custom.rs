@@ -370,6 +370,7 @@ fn conflicting_usage() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn clean_custom_dirname() {
     let p = project()

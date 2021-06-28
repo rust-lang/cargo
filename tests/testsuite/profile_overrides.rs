@@ -132,6 +132,7 @@ fn profile_override_bad_settings() {
     }
 }
 
+#[ignore]
 #[cargo_test]
 fn profile_override_hierarchy() {
     // Test that the precedence rules are correct for different types.

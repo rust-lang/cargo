@@ -713,6 +713,7 @@ impl LocalFingerprint {
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         pkg_root: &Path,
         target_root: &Path,
+        host_root: &Path,
         cargo_exe: &Path,
     ) -> CargoResult<Option<StaleItem>> {
         match self {
@@ -760,7 +761,7 @@ impl LocalFingerprint {
             // the `output` path itself, or the last time the build script ran.
             LocalFingerprint::RerunIfChanged { output, paths } => Ok(find_stale_file(
                 mtime_cache,
-                &target_root.join(output),
+                &host_root.join(output),
                 paths.iter().map(|p| pkg_root.join(p)),
             )),
 
@@ -993,6 +994,7 @@ impl Fingerprint {
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         pkg_root: &Path,
         target_root: &Path,
+        host_root: &Path,
         cargo_exe: &Path,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
@@ -1086,7 +1088,7 @@ impl Fingerprint {
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
             if let Some(item) =
-                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe)?
+                local.find_stale_item(mtime_cache, pkg_root, target_root, host_root, cargo_exe)?
             {
                 item.log();
                 return Ok(());
@@ -1240,12 +1242,18 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
 
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
-    let target_root = target_root(cx);
+    let target_root = if unit.kind.is_host() {
+        host_root(cx)
+    } else {
+        target_root(cx)
+    };
+    let host_root = host_root(cx);
     let cargo_exe = cx.bcx.config.cargo_exe()?;
     fingerprint.check_filesystem(
         &mut cx.mtime_cache,
         unit.pkg.root(),
         &target_root,
+        &host_root,
         cargo_exe,
     )?;
 
@@ -1258,6 +1266,7 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
 /// Calculate a fingerprint for a "normal" unit, or anything that's not a build
 /// script. This is an internal helper of `calculate`, don't call directly.
 fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Fingerprint> {
+    assert!(!unit.mode.is_run_custom_build());
     // Recursively calculate the fingerprint for all of our dependencies.
     //
     // Skip fingerprints of binaries because they don't actually induce a
@@ -1274,7 +1283,11 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
 
     // Afterwards calculate our own fingerprint information.
-    let target_root = target_root(cx);
+    let root = if unit.kind.is_host() {
+        host_root(cx)
+    } else {
+        target_root(cx)
+    };
     let local = if unit.mode.is_doc() {
         // rustdoc does not have dep-info files.
         let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg).with_context(|| {
@@ -1286,7 +1299,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         vec![LocalFingerprint::Precalculated(fingerprint)]
     } else {
         let dep_info = dep_info_loc(cx, unit);
-        let dep_info = dep_info.strip_prefix(&target_root).unwrap().to_path_buf();
+        let dep_info = dep_info.strip_prefix(&root).unwrap().to_path_buf();
         vec![LocalFingerprint::CheckDepInfo { dep_info }]
     };
 
@@ -1604,6 +1617,12 @@ pub fn prepare_init(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
 /// specified.
 pub fn dep_info_loc(cx: &mut Context<'_, '_>, unit: &Unit) -> PathBuf {
     cx.files().fingerprint_file_path(unit, "dep-")
+}
+
+/// Returns an absolute path that host directory.
+/// All paths are rewritten to be relative to this.
+fn host_root(cx: &Context<'_, '_>) -> PathBuf {
+    cx.bcx.ws.host_dir().into_path_unlocked()
 }
 
 /// Returns an absolute path that target directory.

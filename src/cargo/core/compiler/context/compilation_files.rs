@@ -247,7 +247,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).fingerprint().join(dir)
+        let kind = if unit.mode.is_run_custom_build() {
+            CompileKind::Host
+        } else {
+            unit.kind
+        };
+        self.layout(kind).fingerprint().join(dir)
     }
 
     /// Returns the path for a file in the fingerprint directory.

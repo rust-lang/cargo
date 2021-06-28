@@ -40,8 +40,10 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
+    let rustc = config.load_global_rustc(Some(&ws));
     let mut compile_opts = args.compile_options_for_single_package(
         config,
+        rustc,
         CompileMode::Doc { deps: false },
         Some(&ws),
         ProfileChecking::Checked,

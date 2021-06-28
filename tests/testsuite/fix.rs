@@ -2,11 +2,11 @@
 
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_match_exact;
-use cargo_test_support::git;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project};
+use cargo_test_support::{git, rustc_host};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -140,7 +140,13 @@ fn broken_fixes_backed_out() {
     p.cargo("fix --allow-no-vcs --lib")
         .cwd("bar")
         .env("__CARGO_FIX_YOLO", "1")
-        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        .env(
+            "RUSTC",
+            p.root()
+                .join("foo/target")
+                .join(rustc_host())
+                .join("debug/foo"),
+        )
         .with_stderr_contains(
             "warning: failed to automatically apply fixes suggested by rustc \
              to crate `bar`\n\
@@ -1349,7 +1355,13 @@ fn fix_to_broken_code() {
     // Attempt to fix code, but our shim will always fail the second compile
     p.cargo("fix --allow-no-vcs --broken-code")
         .cwd("bar")
-        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        .env(
+            "RUSTC",
+            p.root()
+                .join("foo/target")
+                .join(rustc_host())
+                .join("debug/foo"),
+        )
         .with_status(101)
         .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
         .run();

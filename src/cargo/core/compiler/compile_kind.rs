@@ -1,7 +1,8 @@
 use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Config, StableHasher};
+use crate::util::{Rustc, StableHasher};
+use crate::Config;
 use anyhow::{bail, Context as _};
 use serde::Serialize;
 use std::collections::BTreeSet;
@@ -50,6 +51,7 @@ impl CompileKind {
     /// `CompileKind::Host`.
     pub fn from_requested_targets(
         config: &Config,
+        rustc: CargoResult<Rustc>,
         targets: &[String],
     ) -> CargoResult<Vec<CompileKind>> {
         if targets.len() > 1 && !config.cli_unstable().multitarget {
@@ -76,7 +78,13 @@ impl CompileKind {
                 };
                 CompileKind::Target(CompileTarget::new(&value)?)
             }
-            None => CompileKind::Host,
+            None => {
+                if rustc.is_ok() {
+                    CompileKind::Target(CompileTarget::new(&rustc.unwrap().host)?)
+                } else {
+                    CompileKind::Host
+                }
+            }
         };
         Ok(vec![kind])
     }

@@ -30,10 +30,11 @@ pub struct CleanOptions<'a> {
 pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
     let config = ws.config();
+    let rustc = config.load_global_rustc(Some(ws));
 
     // If the doc option is set, we just want to delete the doc directory.
     if opts.doc {
-        target_dir = target_dir.join("doc");
+        target_dir = target_dir.join(rustc?.host).join("doc");
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
@@ -57,7 +58,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
 
     // Clean specific packages.
-    let requested_kinds = CompileKind::from_requested_targets(config, &opts.targets)?;
+    let requested_kinds = CompileKind::from_requested_targets(config, rustc, &opts.targets)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let (pkg_set, resolve) = ops::resolve_ws(ws)?;
     let prof_dir_name = profiles.get_dir_name();
@@ -75,14 +76,10 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         .collect::<CargoResult<_>>()?;
     // A Vec of layouts. This is a little convoluted because there can only be
     // one host_layout.
-    let layouts = if opts.targets.is_empty() {
-        vec![(CompileKind::Host, &host_layout)]
-    } else {
-        target_layouts
-            .iter()
-            .map(|(kind, layout)| (*kind, layout))
-            .collect()
-    };
+    let layouts: Vec<(CompileKind, &Layout)> = target_layouts
+        .iter()
+        .map(|(kind, layout)| (*kind, layout))
+        .collect();
     // Create a Vec that also includes the host for things that need to clean both.
     let layouts_with_host: Vec<(CompileKind, &Layout)> =
         std::iter::once((CompileKind::Host, &host_layout))

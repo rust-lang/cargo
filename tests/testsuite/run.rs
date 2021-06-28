@@ -1,6 +1,6 @@
 //! Tests for the `cargo run` command.
 
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, rustc_host, Project};
 use cargo_util::paths::dylib_path_envvar;
 
 #[cargo_test]
@@ -10,12 +10,13 @@ fn simple() {
         .build();
 
     p.cargo("run")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`",
-        )
+[RUNNING] `target/{}/debug/foo[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("hello")
         .run();
     assert!(p.bin("foo").is_file());
@@ -203,25 +204,27 @@ fn specify_name() {
         .build();
 
     p.cargo("run --bin a -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [RUNNING] `rustc [..] src/bin/a.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/a[EXE]`",
-        )
+[RUNNING] `target/{}/debug/a[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("hello a.rs")
         .run();
 
     p.cargo("run --bin b -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] src/bin/b.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/b[EXE]`",
-        )
+[RUNNING] `target/{}/debug/b[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("hello b.rs")
         .run();
 }
@@ -290,12 +293,13 @@ fn run_example() {
         .build();
 
     p.cargo("run --example a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`",
-        )
+[RUNNING] `target/{}/debug/examples/a[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("example")
         .run();
 }
@@ -344,12 +348,13 @@ fn run_bin_example() {
         .build();
 
     p.cargo("run --example bar")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/bar[EXE]`",
-        )
+[RUNNING] `target/{}/debug/examples/bar[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("example")
         .run();
 }
@@ -424,12 +429,13 @@ error: no example target named `a`
 fn run_example_autodiscover_2015_with_autoexamples_enabled() {
     let p = autodiscover_examples_project("2015", Some(true));
     p.cargo("run --example a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`",
-        )
+[RUNNING] `target/{}/debug/examples/a[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("example")
         .run();
 }
@@ -447,12 +453,13 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
 fn run_example_autodiscover_2018() {
     let p = autodiscover_examples_project("2018", None);
     p.cargo("run --example a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`",
-        )
+[RUNNING] `target/{}/debug/examples/a[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("example")
         .run();
 }
@@ -570,12 +577,13 @@ fn one_bin_multiple_examples() {
         .build();
 
     p.cargo("run")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/main[EXE]`",
-        )
+[RUNNING] `target/{}/debug/main[EXE]`",
+            rustc_host()
+        ))
         .with_stdout("hello main.rs")
         .run();
 }
@@ -627,27 +635,32 @@ fn example_with_release_flag() {
         .build();
 
     p.cargo("run -v --release --example a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=3[..]\
         -C metadata=[..] \
-        --out-dir [CWD]/target/release/deps \
-        -L dependency=[CWD]/target/release/deps`
+        --out-dir [CWD]/target/{target}/release/deps \
+        --target {target} \
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
         --emit=[..]link \
         -C opt-level=3[..]\
         -C metadata=[..] \
-        --out-dir [CWD]/target/release/examples \
-        -L dependency=[CWD]/target/release/deps \
-         --extern bar=[CWD]/target/release/deps/libbar-[..].rlib`
+        --out-dir [CWD]/target/{target}/release/examples \
+        --target {target} \
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps \
+         --extern bar=[CWD]/target/{target}/release/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target/release/examples/a[EXE]`
+[RUNNING] `target/{target}/release/examples/a[EXE]`
 ",
-        )
+            target = rustc_host()
+        ))
         .with_stdout(
             "\
 fast1
@@ -656,27 +669,32 @@ fast2",
         .run();
 
     p.cargo("run -v --example a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs [..]--crate-type lib \
         --emit=[..]link[..]\
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir [CWD]/target/debug/deps \
-        -L dependency=[CWD]/target/debug/deps`
+        --out-dir [CWD]/target/{target}/debug/deps \
+        --target {target} \
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
         --emit=[..]link[..]\
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir [CWD]/target/debug/examples \
-        -L dependency=[CWD]/target/debug/deps \
-         --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib`
+        --out-dir [CWD]/target/{target}/debug/examples \
+        --target {target} \
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps \
+         --extern bar=[CWD]/target/{target}/debug/deps/libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`
+[RUNNING] `target/{target}/debug/examples/a[EXE]`
 ",
-        )
+            target = rustc_host()
+        ))
         .with_stdout(
             "\
 slow1
@@ -735,13 +753,14 @@ fn release_works() {
         .build();
 
     p.cargo("run --release")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target/release/foo[EXE]`
+[RUNNING] `target/{}/release/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
     assert!(p.release_bin("foo").is_file());
 }
@@ -793,7 +812,7 @@ fn run_from_executable_folder() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    let cwd = p.root().join("target").join("debug");
+    let cwd = p.root().join("target").join(rustc_host()).join("debug");
     p.cargo("build").run();
 
     p.cargo("run")

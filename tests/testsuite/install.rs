@@ -3,12 +3,12 @@
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 
-use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, registry_path, registry_url, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
 };
+use cargo_test_support::{cross_compile, rustc_host};
 
 use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
@@ -391,6 +391,7 @@ fn install_target_dir() {
     let mut path = p.root();
     path.push("td_test");
     assert!(path.exists());
+    path.push(rustc_host());
 
     #[cfg(not(windows))]
     path.push("release/foo");
@@ -1326,13 +1327,29 @@ fn custom_target_dir_for_git_source() {
     cargo_process("install --git")
         .arg(p.url().to_string())
         .run();
-    assert!(!paths::root().join("target/release").is_dir());
+    assert!(!paths::root()
+        .join("target")
+        .join(rustc_host())
+        .join("release")
+        .is_dir());
 
     cargo_process("install --force --git")
         .arg(p.url().to_string())
         .env("CARGO_TARGET_DIR", "target")
         .run();
-    assert!(paths::root().join("target/release").is_dir());
+    println!(
+        "{}",
+        paths::root()
+            .join("target")
+            .join(rustc_host())
+            .join("release")
+            .display()
+    );
+    assert!(paths::root()
+        .join("target")
+        .join(rustc_host())
+        .join("release")
+        .is_dir());
 }
 
 #[cargo_test]
@@ -1701,6 +1718,7 @@ fn install_yanked_cargo_package() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn install_cargo_package_in_a_patched_workspace() {
     pkg("foo", "0.1.0");

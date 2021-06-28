@@ -1,7 +1,7 @@
 //! Tests for the `cargo new` command.
 
-use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
+use cargo_test_support::{cargo_process, rustc_host};
 use std::env;
 use std::fs::{self, File};
 
@@ -52,7 +52,11 @@ fn simple_bin() {
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
     assert!(paths::root()
-        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+        .join(&format!(
+            "foo/target/{}/debug/foo{}",
+            rustc_host(),
+            env::consts::EXE_SUFFIX
+        ))
         .is_file());
 }
 

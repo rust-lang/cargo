@@ -59,6 +59,7 @@ impl BuildStd for Execs {
     }
 }
 
+#[ignore]
 #[cargo_test(build_std)]
 fn basic() {
     let p = project()

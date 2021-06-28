@@ -11,7 +11,9 @@ use std::sync::Arc;
 use std::thread;
 
 use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
+use cargo_test_support::{
+    basic_lib_manifest, basic_manifest, git, main_file, path2url, project, rustc_host,
+};
 use cargo_test_support::{sleep_ms, t, Project};
 
 fn disable_git_cli() -> bool {
@@ -1168,15 +1170,16 @@ fn dep_with_changed_submodule() {
 
     println!("first run");
     p.cargo("run")
-        .with_stderr(
+        .with_stderr(&format!(
             "[UPDATING] git repository `[..]`\n\
              [UPDATING] git submodule `file://[..]/dep2`\n\
              [COMPILING] dep1 v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\
-             [RUNNING] `target/debug/foo[EXE]`\n",
-        )
+             [RUNNING] `target/{}/debug/foo[EXE]`\n",
+            rustc_host()
+        ))
         .with_stdout("project2\n")
         .run();
 
@@ -1224,13 +1227,14 @@ fn dep_with_changed_submodule() {
 
     println!("last run");
     p.cargo("run")
-        .with_stderr(
+        .with_stderr(&format!(
             "[COMPILING] dep1 v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\
-             [RUNNING] `target/debug/foo[EXE]`\n",
-        )
+             [RUNNING] `target/{}/debug/foo[EXE]`\n",
+            rustc_host()
+        ))
         .with_stdout("project3\n")
         .run();
 }
@@ -1296,13 +1300,14 @@ fn dev_deps_with_testing() {
     // Make sure we use the previous resolution of `bar` instead of updating it
     // a second time.
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test tests::foo ... ok")
         .run();
 }

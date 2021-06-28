@@ -3,7 +3,7 @@
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{project, publish};
+use cargo_test_support::{project, publish, rustc_host};
 use std::fmt::Write;
 
 // Helper to create lib.rs files that check features.
@@ -449,7 +449,7 @@ fn weak_with_host_decouple() {
 
     p.cargo("run -Z weak-dep-features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
@@ -461,9 +461,10 @@ fn weak_with_host_decouple() {
 [COMPILING] bar_activator v1.0.0
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 

@@ -210,7 +210,7 @@ fn plugin_with_dynamic_native_dependency() {
 
     build.cargo("build").run();
 
-    let root = build.root().join("target").join("debug");
+    let root = build.root().join("target").join(rustc_host()).join("debug");
     foo.cargo("build -v").env("BUILDER_ROOT", root).run();
 }
 

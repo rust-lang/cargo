@@ -2,7 +2,7 @@
 
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{project, publish};
+use cargo_test_support::{project, publish, rustc_host};
 
 #[cargo_test]
 fn gated() {
@@ -475,20 +475,21 @@ fn no_implicit_feature() {
 
     p.cargo("run -Z namespaced-features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [UPDATING] [..]
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout("")
         .run();
 
     p.cargo("run -Z namespaced-features --features regex")
         .masquerade_as_nightly_cargo()
-        .with_stderr_unordered(
+        .with_stderr_unordered(&format!(
             "\
 [DOWNLOADING] crates ...
 [DOWNLOADED] regex v1.0.0 [..]
@@ -497,9 +498,10 @@ fn no_implicit_feature() {
 [COMPILING] lazy_static v1.0.0
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout("regex")
         .run();
 

@@ -256,12 +256,22 @@ impl Project {
         self.root.clone()
     }
 
-    /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
+    /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target/target-triple`
     pub fn build_dir(&self) -> PathBuf {
-        self.root().join("target")
+        self.root().join("target").join(rustc_host())
     }
 
-    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
+    /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target/host/host-triple`
+    pub fn host_dir(&self) -> PathBuf {
+        self.root().join("target/host").join(rustc_host())
+    }
+
+    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/host/host-triple/debug`
+    pub fn host_debug_dir(&self) -> PathBuf {
+        self.host_dir().join("debug")
+    }
+
+    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/target-triple/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.build_dir().join("debug")
     }
@@ -280,8 +290,17 @@ impl Project {
             .join(paths::get_lib_filename(name, kind))
     }
 
+    /// Path to an example built as a library.
+    /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
+    /// ex: `/path/to/cargo/target/cit/t0/foo/target/host/host-triple/debug/examples/libex.rlib`
+    pub fn host_example_lib(&self, name: &str, kind: &str) -> PathBuf {
+        self.host_debug_dir()
+            .join("examples")
+            .join(paths::get_lib_filename(name, kind))
+    }
+
     /// Path to a debug binary.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/foo`
+    /// ex: `/path/to/cargo/target/target-triple/cit/t0/foo/target/target-triple/debug/foo`
     pub fn bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("debug")
@@ -289,7 +308,7 @@ impl Project {
     }
 
     /// Path to a release binary.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/release/foo`
+    /// ex: `/path/to/cargo/target/target-triple/cit/t0/foo/target/target-triple/release/foo`
     pub fn release_bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("release")
@@ -299,11 +318,11 @@ impl Project {
     /// Path to a debug binary for a specific target triple.
     /// ex: `/path/to/cargo/target/cit/t0/foo/target/i686-apple-darwin/debug/foo`
     pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
-        self.build_dir().join(target).join("debug").join(&format!(
-            "{}{}",
-            b,
-            env::consts::EXE_SUFFIX
-        ))
+        self.root()
+            .join("target")
+            .join(target)
+            .join("debug")
+            .join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
     /// Returns an iterator of paths matching the glob pattern, which is

@@ -108,8 +108,10 @@ fn build_resolve_graph(
 ) -> CargoResult<(Vec<SerializedPackage>, MetadataResolve)> {
     // TODO: Without --filter-platform, features are being resolved for `host` only.
     // How should this work?
+    let config = ws.config();
+    let rustc = config.load_global_rustc(Some(ws));
     let requested_kinds =
-        CompileKind::from_requested_targets(ws.config(), &metadata_opts.filter_platforms)?;
+        CompileKind::from_requested_targets(config, rustc, &metadata_opts.filter_platforms)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;

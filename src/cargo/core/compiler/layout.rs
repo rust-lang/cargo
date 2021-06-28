@@ -144,10 +144,16 @@ impl Layout {
         target: Option<CompileTarget>,
         dest: &str,
     ) -> CargoResult<Layout> {
-        let mut root = ws.target_dir();
-        if let Some(target) = target {
-            root.push(target.short_name());
-        }
+        let root = if let Some(target) = target {
+            let mut target_root = ws.target_dir();
+            target_root.push(target.short_name());
+            target_root
+        } else {
+            let rustc = ws.config().load_global_rustc(Some(ws))?;
+            let mut host_root = ws.host_dir();
+            host_root.push(&rustc.host);
+            host_root
+        };
         let dest = root.join(dest);
         // If the root directory doesn't already exist go ahead and create it
         // here. Use this opportunity to exclude it from backups as well if the

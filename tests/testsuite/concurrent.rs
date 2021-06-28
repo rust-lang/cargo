@@ -7,11 +7,11 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::{env, str};
 
-use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, execs, project, slow_cpu_multiplier};
+use cargo_test_support::{cargo_process, rustc_host};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -163,12 +163,16 @@ fn multiple_registry_fetches() {
     let suffix = env::consts::EXE_SUFFIX;
     assert!(p
         .root()
-        .join("a/target/debug")
+        .join("a/target")
+        .join(rustc_host())
+        .join("debug")
         .join(format!("foo{}", suffix))
         .is_file());
     assert!(p
         .root()
-        .join("b/target/debug")
+        .join("b/target")
+        .join(rustc_host())
+        .join("debug")
         .join(format!("bar{}", suffix))
         .is_file());
 }

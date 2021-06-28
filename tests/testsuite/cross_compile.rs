@@ -225,6 +225,7 @@ fn per_crate_target_test(
     }
 }
 
+#[ignore]
 #[cargo_test]
 fn per_crate_default_target_is_default() {
     per_crate_target_test(Some(cross_compile::alternate()), None, None);
@@ -253,6 +254,7 @@ fn per_crate_forced_target_does_not_get_overridden() {
     );
 }
 
+#[ignore]
 #[cargo_test]
 fn workspace_with_multiple_targets() {
     if cross_compile::disabled() {
@@ -402,9 +404,10 @@ fn linker() {
     --target {target} \
     -C linker=my-linker-tool \
     -L dependency=[CWD]/target/{target}/debug/deps \
-    -L dependency=[CWD]/target/debug/deps`
+    -L dependency=[CWD]/target/host/{host}/debug/deps`
 ",
             target = target,
+            host = rustc_host(),
         ))
         .run();
 }
@@ -580,18 +583,22 @@ fn no_cross_doctests() {
         )
         .build();
 
-    let host_output = "\
+    let target = rustc_host();
+    let host_output = &format!(
+        "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo
-";
+",
+        target
+    );
 
     println!("a");
     p.cargo("test").with_stderr(&host_output).run();
+    p.cargo("clean").run();
 
     println!("b");
-    let target = rustc_host();
     p.cargo("test --target")
         .arg(&target)
         .with_stderr(&format!(
@@ -717,12 +724,13 @@ fn cross_with_a_build_script() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
-[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/host/{host}/debug/build/foo-[..]`
+[RUNNING] `[CWD]/target/host/{host}/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             target = target,
+            host = rustc_host(),
         ))
         .run();
 }
@@ -814,9 +822,9 @@ fn build_script_needed_for_host_and_target() {
         .arg(&target)
         .with_stderr_contains(&"[COMPILING] d1 v0.0.0 ([CWD]/d1)")
         .with_stderr_contains(
-            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [CWD]/target/debug/build/d1-[..]`",
+            &format!("[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [CWD]/target/host/{}/debug/build/d1-[..]`", host),
         )
-        .with_stderr_contains("[RUNNING] `[CWD]/target/debug/build/d1-[..]/build-script-build`")
+        .with_stderr_contains(&format!("[RUNNING] `[CWD]/target/host/{}/debug/build/d1-[..]/build-script-build`", host))
         .with_stderr_contains("[RUNNING] `rustc [..] d1/src/lib.rs [..]`")
         .with_stderr_contains("[COMPILING] d2 v0.0.0 ([CWD]/d2)")
         .with_stderr_contains(&format!(
@@ -825,7 +833,7 @@ fn build_script_needed_for_host_and_target() {
         ))
         .with_stderr_contains("[COMPILING] foo v0.0.0 ([CWD])")
         .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..] \
+            "[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/host/{host}/debug/build/foo-[..] \
              -L /path/to/{host}`",
             host = host
         ))
@@ -915,15 +923,18 @@ fn build_script_only_host() {
         .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d1/build.rs",
-            r#"
-                use std::env;
+            &format!(
+                r#"
+                    use std::env;
 
-                fn main() {
-                    assert!(env::var("OUT_DIR").unwrap().replace("\\", "/")
-                                               .contains("target/debug/build/d1-"),
-                            "bad: {:?}", env::var("OUT_DIR"));
-                }
-            "#,
+                    fn main() {{
+                        assert!(env::var("OUT_DIR").unwrap().replace("\\", "/")
+                                                   .contains("host/{}/debug/build/d1-"),
+                                "bad: {{:?}}", env::var("OUT_DIR"));
+                    }}
+                "#,
+                rustc_host()
+            ),
         )
         .build();
 
@@ -1033,11 +1044,12 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] d1/src/lib.rs [..]`
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `[CWD]/target/host/{host}/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            target = target
+            target = target,
+            host = host
         ))
         .run();
 }

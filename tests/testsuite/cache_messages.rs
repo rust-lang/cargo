@@ -1,9 +1,9 @@
 //! Tests for caching compiler diagnostics.
 
-use cargo_test_support::tools;
 use cargo_test_support::{
     basic_manifest, is_coarse_mtime, process, project, registry::Package, sleep_ms,
 };
+use cargo_test_support::{rustc_host, tools};
 use std::path::Path;
 
 fn as_str(bytes: &[u8]) -> &str {
@@ -195,7 +195,10 @@ fn clears_cache_after_fix() {
     // Fill the cache.
     p.cargo("check").with_stderr_contains("[..]asdf[..]").run();
     let cpath = p
-        .glob("target/debug/.fingerprint/foo-*/output-*")
+        .glob(&format!(
+            "target/{}/debug/.fingerprint/foo-*/output-*",
+            rustc_host()
+        ))
         .next()
         .unwrap()
         .unwrap();
@@ -217,7 +220,11 @@ fn clears_cache_after_fix() {
         )
         .run();
     assert_eq!(
-        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        p.glob(&format!(
+            "target/{}/debug/.fingerprint/foo-*/output-*",
+            rustc_host()
+        ))
+        .count(),
         0
     );
 
@@ -254,7 +261,11 @@ fn rustdoc() {
     assert!(rustdoc_stderr.contains("missing"));
     assert!(rustdoc_stderr.contains("\x1b["));
     assert_eq!(
-        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        p.glob(&format!(
+            "target/{}/debug/.fingerprint/foo-*/output-*",
+            rustc_host()
+        ))
+        .count(),
         1
     );
 
@@ -348,7 +359,11 @@ fn doesnt_create_extra_files() {
     p.change_file("src/lib.rs", "fn unused() {}");
     p.cargo("build").run();
     assert_eq!(
-        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        p.glob(&format!(
+            "target/{}/debug/.fingerprint/foo-*/output-*",
+            rustc_host()
+        ))
+        .count(),
         1
     );
 }

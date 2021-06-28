@@ -365,52 +365,56 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     p.cargo("run")
         .cwd("a")
         .with_stdout("ftest off")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a[EXE]`
+[RUNNING] `[..]target/{}/debug/a[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
     p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
         .cwd("a")
         .with_stdout("ftest off")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a[EXE]`
+[RUNNING] `[..]target/{}/debug/a[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
     p.cargo("run")
         .cwd("b")
         .with_stdout("ftest on")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b[EXE]`
+[RUNNING] `[..]target/{}/debug/b[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
     p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
         .cwd("b")
         .with_stdout("ftest on")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b[EXE]`
+[RUNNING] `[..]target/{}/debug/b[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
@@ -419,13 +423,14 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     p.cargo("run")
         .cwd("a")
         .with_stdout("ftest off")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a[EXE]`
+[RUNNING] `[..]target/{}/debug/a[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
@@ -434,13 +439,14 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     p.cargo("run")
         .cwd("b")
         .with_stdout("ftest on")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b[EXE]`
+[RUNNING] `[..]target/{}/debug/b[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -821,13 +827,14 @@ fn rebuild_if_environment_changes() {
 
     p.cargo("run")
         .with_stdout("old desc")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     p.change_file(
@@ -843,13 +850,14 @@ fn rebuild_if_environment_changes() {
 
     p.cargo("run")
         .with_stdout("new desc")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -1339,6 +1347,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn reuse_panic_build_dep_test() {
     let p = project()
@@ -1737,6 +1746,7 @@ fn script_fails_stay_dirty() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn simulated_docker_deps_stay_cached() {
     // Test what happens in docker where the nanoseconds are zeroed out.
@@ -1918,7 +1928,11 @@ fn metadata_change_invalidates() {
     p.cargo("build -v")
         .with_stderr_contains("[FRESH] foo[..]")
         .run();
-    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
+    assert_eq!(
+        p.glob(&format!("target/{}/debug/deps/libfoo-*.rlib", rustc_host()))
+            .count(),
+        1
+    );
 }
 
 #[cargo_test]
@@ -1953,7 +1967,11 @@ fn edition_change_invalidates() {
     p.cargo("build -v")
         .with_stderr_contains("[FRESH] foo[..]")
         .run();
-    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
+    assert_eq!(
+        p.glob(&format!("target/{}/debug/deps/libfoo-*.rlib", rustc_host()))
+            .count(),
+        1
+    );
 }
 
 #[cargo_test]
@@ -2013,6 +2031,7 @@ fn rename_with_path_deps() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn move_target_directory_with_path_deps() {
     let p = project()
@@ -2436,13 +2455,14 @@ fn linking_interrupted() {
 
     // Build again, shouldn't be fresh.
     p.cargo("test --test t1")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
 [FINISHED] [..]
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+[RUNNING] tests/t1.rs (target/{}/debug/deps/t1[..])
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 

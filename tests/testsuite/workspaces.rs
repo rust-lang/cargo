@@ -1,7 +1,7 @@
 //! Tests for workspaces.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, rustc_host, sleep_ms};
 use std::env;
 use std::fs;
 
@@ -2115,7 +2115,9 @@ fn relative_rustc() {
 
     let src = p
         .root()
-        .join("target/debug/foo")
+        .join("target")
+        .join(rustc_host())
+        .join("debug/foo")
         .with_extension(env::consts::EXE_EXTENSION);
 
     Package::new("a", "0.1.0").publish();

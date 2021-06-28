@@ -151,7 +151,8 @@ fn member_manifest_version_error() {
         cargo_home(),
     );
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
-    let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
+    let rustc = config.load_global_rustc(Some(&ws));
+    let compile_options = CompileOptions::new(&config, rustc, CompileMode::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();
 
     let error = ops::compile(&ws, &compile_options).map(|_| ()).unwrap_err();

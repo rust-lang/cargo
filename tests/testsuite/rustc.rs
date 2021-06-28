@@ -1,6 +1,8 @@
 //! Tests for the `cargo rustc` command.
 
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, project, rustc_host,
+};
 
 const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
@@ -14,17 +16,19 @@ fn build_lib_for_foo() {
         .build();
 
     p.cargo("rustc --lib -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -36,7 +40,7 @@ fn lib() {
         .build();
 
     p.cargo("rustc --lib -v -- -C debug-assertions=off")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
@@ -44,10 +48,13 @@ fn lib() {
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        --target {target} \
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -66,18 +73,21 @@ fn build_main_and_allow_unstable_options() {
         --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [RUNNING] `rustc --crate-name {name} src/main.rs [..]--crate-type bin \
         --emit=[..]link[..]-C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern {name}=[CWD]/target/debug/deps/lib{name}-[..].rlib`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps \
+        --extern {name}=[CWD]/target/{target}/debug/deps/lib{name}-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             name = "foo",
-            version = "0.0.1"
+            version = "0.0.1",
+            target = rustc_host()
         ))
         .run();
 }

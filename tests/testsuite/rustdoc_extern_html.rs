@@ -1,7 +1,7 @@
 //! Tests for the -Zrustdoc-map feature.
 
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{is_nightly, paths, project, Project};
+use cargo_test_support::{is_nightly, paths, project, rustc_host, Project};
 
 fn basic_project() -> Project {
     Package::new("bar", "1.0.0")
@@ -55,7 +55,7 @@ fn simple() {
             "[RUNNING] `rustdoc [..]--crate-name foo [..]bar=https://docs.rs/bar/1.0.0/[..]",
         )
         .run();
-    let myfun = p.read_file("target/doc/foo/fn.myfun.html");
+    let myfun = p.read_file(&format!("target/{}/doc/foo/fn.myfun.html", rustc_host()));
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
@@ -92,7 +92,7 @@ fn std_docs() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustdoc [..]--crate-name foo [..]std=file://[..]")
         .run();
-    let myfun = p.read_file("target/doc/foo/fn.myfun.html");
+    let myfun = p.read_file(&format!("target/{}/doc/foo/fn.myfun.html", rustc_host()));
     assert!(myfun.contains(r#"share/doc/rust/html/core/option/enum.Option.html""#));
 
     p.change_file(
@@ -108,7 +108,7 @@ fn std_docs() {
             "[RUNNING] `rustdoc [..]--crate-name foo [..]std=https://example.com/rust/[..]",
         )
         .run();
-    let myfun = p.read_file("target/doc/foo/fn.myfun.html");
+    let myfun = p.read_file(&format!("target/{}/doc/foo/fn.myfun.html", rustc_host()));
     assert!(myfun.contains(r#"href="https://example.com/rust/core/option/enum.Option.html""#));
 }
 
@@ -151,7 +151,7 @@ fn renamed_dep() {
             "[RUNNING] `rustdoc [..]--crate-name foo [..]bar=https://docs.rs/bar/1.0.0/[..]",
         )
         .run();
-    let myfun = p.read_file("target/doc/foo/fn.myfun.html");
+    let myfun = p.read_file(&format!("target/{}/doc/foo/fn.myfun.html", rustc_host()));
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
@@ -204,7 +204,7 @@ fn lib_name() {
             "[RUNNING] `rustdoc [..]--crate-name foo [..]rumpelstiltskin=https://docs.rs/bar/1.0.0/[..]",
         )
         .run();
-    let myfun = p.read_file("target/doc/foo/fn.myfun.html");
+    let myfun = p.read_file(&format!("target/{}/doc/foo/fn.myfun.html", rustc_host()));
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/rumpelstiltskin/struct.Straw.html""#));
 }
 
@@ -274,17 +274,17 @@ fn alt_registry() {
             [..]bar=https://example.com/bar/1.0.0/[..]grimm=https://docs.rs/grimm/1.0.0/[..]",
         )
         .run();
-    let queen = p.read_file("target/doc/foo/fn.queen.html");
+    let queen = p.read_file(&format!("target/{}/doc/foo/fn.queen.html", rustc_host()));
     assert!(queen.contains(r#"href="https://example.com/bar/1.0.0/bar/struct.Queen.html""#));
     // The king example fails to link. Rustdoc seems to want the origin crate
     // name (baz) for re-exports. There are many issues in the issue tracker
     // for rustdoc re-exports, so I'm not sure, but I think this is maybe a
     // rustdoc issue. Alternatively, Cargo could provide mappings for all
     // transitive dependencies to fix this.
-    let king = p.read_file("target/doc/foo/fn.king.html");
+    let king = p.read_file(&format!("target/{}/doc/foo/fn.king.html", rustc_host()));
     assert!(king.contains(r#"-&gt; King"#));
 
-    let gold = p.read_file("target/doc/foo/fn.gold.html");
+    let gold = p.read_file(&format!("target/{}/doc/foo/fn.gold.html", rustc_host()));
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
 }
 
@@ -332,11 +332,11 @@ fn multiple_versions() {
             [..]bar=https://docs.rs/bar/1.0.0/[..]bar=https://docs.rs/bar/2.0.0/[..]",
         )
         .run();
-    let fn1 = p.read_file("target/doc/foo/fn.fn1.html");
+    let fn1 = p.read_file(&format!("target/{}/doc/foo/fn.fn1.html", rustc_host()));
     // This should be 1.0.0, rustdoc seems to use the last entry when there
     // are duplicates.
     assert!(fn1.contains(r#"href="https://docs.rs/bar/2.0.0/bar/struct.Spin.html""#));
-    let fn2 = p.read_file("target/doc/foo/fn.fn2.html");
+    let fn2 = p.read_file(&format!("target/{}/doc/foo/fn.fn2.html", rustc_host()));
     assert!(fn2.contains(r#"href="https://docs.rs/bar/2.0.0/bar/struct.Straw.html""#));
 }
 

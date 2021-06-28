@@ -86,6 +86,7 @@ fn clean_multiple_packages() {
     assert!(!d2_path.is_file());
 }
 
+#[ignore]
 #[cargo_test]
 fn clean_release() {
     let p = project()
@@ -315,7 +316,11 @@ fn clean_remove_rlib_rmeta() {
 
     p.cargo("build").run();
     assert!(p.target_debug_dir().join("libfoo.rlib").exists());
-    let rmeta = p.glob("target/debug/deps/*.rmeta").next().unwrap().unwrap();
+    let rmeta = p
+        .glob(&format!("target/{}/debug/deps/*.rmeta", rustc_host()))
+        .next()
+        .unwrap()
+        .unwrap();
     assert!(rmeta.exists());
     p.cargo("clean -p foo").run();
     assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
@@ -526,7 +531,11 @@ fn clean_spec_reserved() {
 
     p.cargo("build --all-targets").run();
     assert!(p.target_debug_dir().join("build").is_dir());
-    let build_test = p.glob("target/debug/deps/build-*").next().unwrap().unwrap();
+    let build_test = p
+        .glob(format!("target/{}/debug/deps/build-*", rustc_host()))
+        .next()
+        .unwrap()
+        .unwrap();
     assert!(build_test.exists());
     // Tests are never "uplifted".
     assert!(p.glob("target/debug/build-*").next().is_none());

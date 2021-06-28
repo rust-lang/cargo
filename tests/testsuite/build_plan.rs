@@ -1,7 +1,7 @@
 //! Tests for --build-plan feature.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, main_file, project};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, main_file, project, rustc_host};
 
 #[cargo_test]
 fn cargo_build_plan_simple() {
@@ -24,7 +24,7 @@ fn cargo_build_plan_simple() {
                         "cwd": "[..]/cit/[..]/foo",
                         "deps": [],
                         "env": "{...}",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "links": "{...}",
                         "outputs": "{...}",
                         "package_name": "foo",
@@ -35,7 +35,9 @@ fn cargo_build_plan_simple() {
                     }
                 ]
             }
-            "#,
+            "#
+            .replace("$TARGET", rustc_host())
+            .as_str(),
         )
         .run();
     assert!(!p.bin("foo").is_file());
@@ -84,11 +86,11 @@ fn cargo_build_plan_single_dep() {
                         "cwd": "[..]/cit/[..]/foo",
                         "deps": [],
                         "env": "{...}",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "links": "{...}",
                         "outputs": [
-                            "[..]/foo/target/debug/deps/libbar-[..].rlib",
-                            "[..]/foo/target/debug/deps/libbar-[..].rmeta"
+                            "[..]/foo/target/$TARGET/debug/deps/libbar-[..].rlib",
+                            "[..]/foo/target/$TARGET/debug/deps/libbar-[..].rmeta"
                         ],
                         "package_name": "bar",
                         "package_version": "0.0.1",
@@ -101,11 +103,11 @@ fn cargo_build_plan_single_dep() {
                         "cwd": "[..]/cit/[..]/foo",
                         "deps": [0],
                         "env": "{...}",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "links": "{...}",
                         "outputs": [
-                            "[..]/foo/target/debug/deps/libfoo-[..].rlib",
-                            "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
+                            "[..]/foo/target/$TARGET/debug/deps/libfoo-[..].rlib",
+                            "[..]/foo/target/$TARGET/debug/deps/libfoo-[..].rmeta"
                         ],
                         "package_name": "foo",
                         "package_version": "0.5.0",
@@ -115,7 +117,9 @@ fn cargo_build_plan_single_dep() {
                     }
                 ]
             }
-            "#,
+            "#
+            .replace("$TARGET", rustc_host())
+            .as_str(),
         )
         .run();
 }
@@ -166,7 +170,7 @@ fn cargo_build_plan_build_script() {
                         "cwd": "[..]/cit/[..]/foo",
                         "deps": [0],
                         "env": "{...}",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "links": "{...}",
                         "outputs": [],
                         "package_name": "foo",
@@ -180,7 +184,7 @@ fn cargo_build_plan_build_script() {
                         "cwd": "[..]/cit/[..]/foo",
                         "deps": [1],
                         "env": "{...}",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "links": "{...}",
                         "outputs": "{...}",
                         "package_name": "foo",
@@ -191,7 +195,9 @@ fn cargo_build_plan_build_script() {
                     }
                 ]
             }
-            "#,
+            "#
+            .replace("$TARGET", rustc_host())
+            .as_str(),
         )
         .run();
 }

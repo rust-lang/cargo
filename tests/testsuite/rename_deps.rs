@@ -1,9 +1,9 @@
 //! Tests for renaming dependencies.
 
-use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{git, rustc_host};
 
 #[cargo_test]
 fn rename_dependency() {
@@ -263,16 +263,17 @@ fn can_run_doc_tests() {
         .build();
 
     foo.cargo("test -v")
-        .with_stderr_contains(
+        .with_stderr_contains(format!(
             "\
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test [..]src/lib.rs \
         [..] \
-        --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib \
-        --extern baz=[CWD]/target/debug/deps/libbar-[..].rlib \
+        --extern bar=[CWD]/target/{target}/debug/deps/libbar-[..].rlib \
+        --extern baz=[CWD]/target/{target}/debug/deps/libbar-[..].rlib \
         [..]`
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 

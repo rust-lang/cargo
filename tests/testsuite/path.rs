@@ -2,7 +2,7 @@
 
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project, rustc_host};
 use cargo_test_support::{sleep_ms, t};
 use std::fs;
 
@@ -182,13 +182,14 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .run();
 }
@@ -765,13 +766,14 @@ fn dev_deps_no_rebuild_lib() {
         .run();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] [..] v0.5.0 ([CWD][..])
 [COMPILING] [..] v0.5.0 ([CWD][..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .run();
 }
@@ -997,8 +999,18 @@ fn workspace_produces_rlib() {
 
     p.cargo("build").run();
 
-    assert!(p.root().join("target/debug/libtop.rlib").is_file());
-    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug/libtop.rlib")
+        .is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug/libfoo.rlib")
+        .is_file());
 }
 
 #[cargo_test]

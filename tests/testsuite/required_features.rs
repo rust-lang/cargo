@@ -3,9 +3,9 @@
 use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };
-use cargo_test_support::is_nightly;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
+use cargo_test_support::{is_nightly, rustc_host};
 
 #[cargo_test]
 fn build_bin_default_features() {
@@ -290,12 +290,13 @@ fn test_default_features() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 
@@ -305,11 +306,12 @@ fn test_default_features() {
         .run();
 
     p.cargo("test --test=foo")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 
@@ -347,12 +349,13 @@ fn test_arg_features() {
         .build();
 
     p.cargo("test --features a")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 }
@@ -388,23 +391,25 @@ fn test_multiple_required_features() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo_2-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo_2-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 
     p.cargo("test --features c")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo_1-[..][EXE])
-[RUNNING] [..] (target/debug/deps/foo_2-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/foo_1-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo_2-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("test test ... ok", 2)
         .run();
 
@@ -453,12 +458,13 @@ fn bench_default_features() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/release/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
@@ -468,11 +474,12 @@ fn bench_default_features() {
         .run();
 
     p.cargo("bench --bench=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/release/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
@@ -525,12 +532,13 @@ fn bench_arg_features() {
         .build();
 
     p.cargo("bench --features a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/release/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
 }
@@ -591,23 +599,25 @@ fn bench_multiple_required_features() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo_2-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/release/deps/foo_2-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
     p.cargo("bench --features c")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo_1-[..][EXE])
-[RUNNING] [..] (target/release/deps/foo_2-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/release/deps/foo_1-[..][EXE])
+[RUNNING] [..] (target/{target}/release/deps/foo_2-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("test bench ... bench: [..]", 2)
         .run();
 
@@ -857,25 +867,27 @@ fn dep_feature_in_toml() {
 
     // test
     p.cargo("test --test=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 
     // bench
     if is_nightly() {
         p.cargo("bench --bench=foo")
-            .with_stderr(
+            .with_stderr(&format!(
                 "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-            )
+[RUNNING] [..] (target/{}/release/deps/foo-[..][EXE])",
+                rustc_host()
+            ))
             .with_stdout_contains("test bench ... bench: [..]")
             .run();
     }
@@ -921,14 +933,17 @@ fn dep_feature_in_cmd_line() {
         .file("examples/foo.rs", "fn main() {}")
         .file(
             "tests/foo.rs",
-            r#"
-            #[test]
-            fn bin_is_built() {
-                let s = format!("target/debug/foo{}", std::env::consts::EXE_SUFFIX);
-                let p = std::path::Path::new(&s);
-                assert!(p.exists(), "foo does not exist");
-            }
-            "#,
+            &format!(
+                r#"
+                #[test]
+                fn bin_is_built() {{
+                    let s = format!("target/{}/debug/foo{{}}", std::env::consts::EXE_SUFFIX);
+                    let p = std::path::Path::new(&s);
+                    assert!(p.exists(), "foo does not exist");
+                }}
+                "#,
+                rustc_host()
+            ),
         )
         .file(
             "benches/foo.rs",
@@ -998,13 +1013,14 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
     // Delete the target directory so this can check if the main.rs gets built.
     p.build_dir().rm_rf();
     p.cargo("test --test=foo --features bar/a")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test bin_is_built ... ok")
         .run();
 
@@ -1016,13 +1032,14 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
             .run();
 
         p.cargo("bench --bench=foo --features bar/a")
-            .with_stderr(
+            .with_stderr(&format!(
                 "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-            )
+[RUNNING] [..] (target/{}/release/deps/foo-[..][EXE])",
+                rustc_host()
+            ))
             .with_stdout_contains("test bench ... bench: [..]")
             .run();
     }
@@ -1071,12 +1088,13 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .run();
 
@@ -1091,12 +1109,13 @@ error[E0463]: can't find crate for `bar`",
 
     if is_nightly() {
         p.cargo("bench")
-            .with_stderr(
+            .with_stderr(format!(
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-            )
+[RUNNING] [..] (target/{}/release/deps/foo-[..][EXE])",
+                rustc_host()
+            ))
             .with_stdout_contains("running 0 tests")
             .run();
 
