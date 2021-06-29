@@ -122,7 +122,8 @@ fn custom_build_env_vars() {
 
                 assert!(env::var("RUSTC_LINKER").is_err());
 
-                let rustflags = env::var("RUSTFLAGS").unwrap();
+                assert!(env::var("RUSTFLAGS").is_err());
+                let rustflags = env::var("CARGO_ENCODED_RUSTFLAGS").unwrap();
                 assert_eq!(rustflags, "");
 
                 let version = env::var("RUSTC_VERSION").unwrap();
@@ -173,11 +174,12 @@ fn custom_build_env_var_rustflags() {
 
                 fn main() {{
                     // Static assertion that exactly one of the cfg paths is always taken.
+                    assert!(env::var("RUSTFLAGS").is_err());
                     let x;
                     #[cfg(special)]
-                    {{ assert_eq!(env::var("RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    {{ assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
                     #[cfg(notspecial)]
-                    {{ assert_eq!(env::var("RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    {{ assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
                     let _ = x;
                 }}
                 "#,
@@ -191,6 +193,32 @@ fn custom_build_env_var_rustflags() {
 
     // RUSTFLAGS overrides build.rustflags, so --cfg=special shouldn't be passed
     p.cargo("check").env("RUSTFLAGS", rustflags_alt).run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustflags_escape() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            rustflags = ["-Clink-arg=-add_empty_section text foobar", "--cfg=foo"]
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+
+                fn main() {{
+                    assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "-Clink-arg=-add_empty_section text foobar\x1f--cfg=foo");
+                }}
+                "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
 }
 
 #[cargo_test]
