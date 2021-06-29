@@ -679,7 +679,8 @@ fn exclude_from_backups(path: &Path) {
 ///
 /// This is currently a no-op on non-Windows platforms.
 fn exclude_from_content_indexing(path: &Path) {
-    if cfg!(windows) {
+    #[cfg(windows)]
+    {
         use std::iter::once;
         use std::os::windows::prelude::OsStrExt;
         use winapi::um::fileapi::{GetFileAttributesW, SetFileAttributesW};
@@ -692,7 +693,9 @@ fn exclude_from_content_indexing(path: &Path) {
                 GetFileAttributesW(path.as_ptr()) | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED
             );
         }
-    } else {
+    }
+    #[cfg(not(windows))]
+    {
         let _ = path;
     }
 }
