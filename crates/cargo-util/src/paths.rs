@@ -690,7 +690,7 @@ fn exclude_from_content_indexing(path: &Path) {
         unsafe {
             SetFileAttributesW(
                 path.as_ptr(),
-                GetFileAttributesW(path.as_ptr()) | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED
+                GetFileAttributesW(path.as_ptr()) | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
             );
         }
     }
