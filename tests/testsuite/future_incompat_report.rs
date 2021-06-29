@@ -89,6 +89,7 @@ note: 0 dependencies had future-incompatible warnings
 }
 
 #[cargo_test]
+#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn test_single_crate() {
     if !is_nightly() {
         return;
@@ -114,6 +115,7 @@ fn test_single_crate() {
 }
 
 #[cargo_test]
+#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn test_multi_crate() {
     if !is_nightly() {
         return;
@@ -221,6 +223,7 @@ fn test_multi_crate() {
 }
 
 #[cargo_test]
+#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn color() {
     if !is_nightly() {
         return;
@@ -245,6 +248,7 @@ fn color() {
 }
 
 #[cargo_test]
+#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn bad_ids() {
     if !is_nightly() {
         return;
@@ -281,6 +285,7 @@ Available IDs are: 1
 }
 
 #[cargo_test]
+#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn suggestions_for_updates() {
     if !is_nightly() {
         return;
