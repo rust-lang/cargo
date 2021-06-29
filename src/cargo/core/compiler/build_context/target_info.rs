@@ -599,7 +599,10 @@ fn env_args(
     // First try CARG_ENCODED_RUSTFLAGS from the environment.
     // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
     if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", name)) {
-        let args = a.split('\x1f').map(str::to_string);
+        let args = a
+            .split('\x1f')
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
         return Ok(args.collect());
     }
 
