@@ -196,13 +196,16 @@ fn custom_build_env_var_rustflags() {
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustflags_escape() {
+fn custom_build_env_var_encoded_rustflags() {
+    // NOTE: We use "-Clink-arg=-B nope" here rather than, say, "-A missing_docs", since for the
+    // latter it won't matter if the whitespace accidentally gets split, as rustc will do the right
+    // thing either way.
     let p = project()
         .file(
             ".cargo/config",
             r#"
             [build]
-            rustflags = ["-Clink-arg=-add_empty_section text foobar", "--cfg=foo"]
+            rustflags = ["-Clink-arg=-B nope", "--cfg=foo"]
             "#,
         )
         .file(
@@ -211,7 +214,7 @@ fn custom_build_env_var_rustflags_escape() {
                 use std::env;
 
                 fn main() {{
-                    assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "-Clink-arg=-add_empty_section text foobar\x1f--cfg=foo");
+                    assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "-Clink-arg=-B nope\x1f--cfg=foo");
                 }}
                 "#,
         )
