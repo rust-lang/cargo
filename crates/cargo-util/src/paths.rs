@@ -637,6 +637,7 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // point as the old one).
     let tempdir = TempFileBuilder::new().prefix(base).tempdir_in(parent)?;
     exclude_from_backups(tempdir.path());
+    exclude_from_content_indexing(tempdir.path());
     // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
     // here to create the directory directly and fs::create_dir_all() explicitly treats
     // the directory being created concurrently by another thread or process as success,
@@ -668,6 +669,35 @@ fn exclude_from_backups(path: &Path) {
 ",
     );
     // Similarly to exclude_from_time_machine() we ignore errors here as it's an optional feature.
+}
+
+/// Marks the directory as excluded from content indexing.
+///
+/// This is recommended to prevent the content of derived/temporary files from being indexed.
+/// This is very important for Windows users, as the live content indexing significantly slows
+/// cargo's I/O operations.
+///
+/// This is currently a no-op on non-Windows platforms.
+fn exclude_from_content_indexing(path: &Path) {
+    #[cfg(windows)]
+    {
+        use std::iter::once;
+        use std::os::windows::prelude::OsStrExt;
+        use winapi::um::fileapi::{GetFileAttributesW, SetFileAttributesW};
+        use winapi::um::winnt::FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+
+        let path: Vec<u16> = path.as_os_str().encode_wide().chain(once(0)).collect();
+        unsafe {
+            SetFileAttributesW(
+                path.as_ptr(),
+                GetFileAttributesW(path.as_ptr()) | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+            );
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+    }
 }
 
 #[cfg(not(target_os = "macos"))]
