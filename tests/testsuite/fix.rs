@@ -1503,6 +1503,7 @@ fn rustfix_handles_multi_spans() {
 }
 
 #[cargo_test]
+#[ignore] // Broken, see https://github.com/rust-lang/rust/pull/86009
 fn fix_edition_2021() {
     // Can migrate 2021, even when lints are allowed.
     if !is_nightly() {
