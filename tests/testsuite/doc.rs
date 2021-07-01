@@ -1175,6 +1175,41 @@ fn doc_workspace_open_help_message() {
 
 #[cargo_test]
 #[cfg(not(windows))] // `echo` may not be available
+fn doc_extern_map_local() {
+    if !is_nightly() {
+        // -Zextern-html-root-url is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(".cargo/config.toml", "doc.extern-map.std = 'local'")
+        .build();
+
+    p.cargo("doc -v --no-deps -Zrustdoc-map --open")
+        .env("BROWSER", "echo")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.1.0 [..]
+[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 0.1.0`
+[FINISHED] [..]
+     Opening [CWD]/target/doc/foo/index.html
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
