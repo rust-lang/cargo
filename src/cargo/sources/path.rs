@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -261,19 +262,36 @@ impl<'cfg> PathSource<'cfg> {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
-        let untracked = statuses.iter().filter_map(|entry| match entry.status() {
-            // Don't include Cargo.lock if it is untracked. Packaging will
-            // generate a new one as needed.
-            git2::Status::WT_NEW if entry.path() != Some("Cargo.lock") => {
-                Some((join(root, entry.path_bytes()), None))
-            }
-            _ => None,
-        });
+        let mut skip_paths = HashSet::new();
+        let untracked: Vec<_> = statuses
+            .iter()
+            .filter_map(|entry| {
+                match entry.status() {
+                    // Don't include Cargo.lock if it is untracked. Packaging will
+                    // generate a new one as needed.
+                    git2::Status::WT_NEW if entry.path() != Some("Cargo.lock") => {
+                        Some(Ok((join(root, entry.path_bytes()), None)))
+                    }
+                    git2::Status::WT_DELETED => {
+                        let path = match join(root, entry.path_bytes()) {
+                            Ok(p) => p,
+                            Err(e) => return Some(Err(e)),
+                        };
+                        skip_paths.insert(path);
+                        None
+                    }
+                    _ => None,
+                }
+            })
+            .collect::<CargoResult<_>>()?;
 
         let mut subpackages_found = Vec::new();
 
         for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = file_path?;
+            if skip_paths.contains(&file_path) {
+                continue;
+            }
 
             // Filter out files blatantly outside this package. This is helped a
             // bit above via the `pathspec` function call, but we need to filter

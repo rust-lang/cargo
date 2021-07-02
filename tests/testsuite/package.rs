@@ -2071,3 +2071,37 @@ fn package_with_resolver_and_metadata() {
 
     p.cargo("package").run();
 }
+
+#[cargo_test]
+fn deleted_git_working_tree() {
+    // When deleting a file, but not staged, cargo should ignore the file.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file("src/lib.rs", "").file("src/main.rs", "fn main() {}")
+    });
+    p.root().join("src/lib.rs").rm_rf();
+    p.cargo("package --allow-dirty --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package --allow-dirty").run();
+    let mut index = t!(repo.index());
+    t!(index.remove(Path::new("src/lib.rs"), 0));
+    t!(index.write());
+    p.cargo("package --allow-dirty --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package --allow-dirty").run();
+}
