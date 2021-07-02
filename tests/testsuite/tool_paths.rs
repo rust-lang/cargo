@@ -354,6 +354,8 @@ fn custom_linker_env() {
 }
 
 #[cargo_test]
+// Temporarily disabled until https://github.com/rust-lang/rust/pull/85270 is in nightly.
+#[cfg_attr(target_os = "windows", ignore)]
 fn target_in_environment_contains_lower_case() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -363,22 +365,16 @@ fn target_in_environment_contains_lower_case() {
         target.to_lowercase().replace('-', "_")
     );
 
-    let mut execs = p.cargo("build -v --target");
-    execs.arg(target).env(&env_key, "nonexistent-linker");
-    if cfg!(windows) {
-        // Windows env keys are case insensitive, so no warning, but it will
-        // fail due to the missing linker.
-        execs
-            .with_stderr_does_not_contain("warning:[..]")
-            .with_status(101);
-    } else {
-        execs.with_stderr_contains(format!(
-            "warning: Environment variables are expected to use uppercase letters and underscores, \
-            the variable `{}` will be ignored and have no effect",
+    p.cargo("build -v --target")
+        .arg(target)
+        .env(&env_key, "nonexistent-linker")
+        .with_stderr_contains(format!(
+            "warning: Environment variables are expected to use uppercase \
+             letters and underscores, the variable `{}` will be ignored and \
+             have no effect",
             env_key
-        ));
-    }
-    execs.run();
+        ))
+        .run();
 }
 
 #[cargo_test]
