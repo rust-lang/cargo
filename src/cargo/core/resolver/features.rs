@@ -351,10 +351,9 @@ impl ResolvedFeatures {
     /// Compares the result against the original resolver behavior.
     ///
     /// Used by `cargo fix --edition` to display any differences.
-    pub fn compare_legacy(&self, legacy: &ResolvedFeatures) -> FeatureDifferences {
+    pub fn compare_legacy(&self, legacy: &ResolvedFeatures) -> DiffMap {
         let legacy_features = legacy.legacy_features.as_ref().unwrap();
-        let features = self
-            .activated_features
+        self.activated_features
             .iter()
             .filter_map(|((pkg_id, for_host), new_features)| {
                 let old_features = match legacy_features.get(pkg_id) {
@@ -371,30 +370,7 @@ impl ResolvedFeatures {
                     Some(((*pkg_id, *for_host), removed_features))
                 }
             })
-            .collect();
-        let legacy_deps = legacy.legacy_dependencies.as_ref().unwrap();
-        let optional_deps = self
-            .activated_dependencies
-            .iter()
-            .filter_map(|((pkg_id, for_host), new_deps)| {
-                let old_deps = match legacy_deps.get(pkg_id) {
-                    Some(deps) => deps.iter().cloned().collect(),
-                    None => BTreeSet::new(),
-                };
-                // The new resolver should never add dependencies.
-                assert_eq!(new_deps.difference(&old_deps).next(), None);
-                let removed_deps: BTreeSet<_> = old_deps.difference(new_deps).cloned().collect();
-                if removed_deps.is_empty() {
-                    None
-                } else {
-                    Some(((*pkg_id, *for_host), removed_deps))
-                }
-            })
-            .collect();
-        FeatureDifferences {
-            features,
-            optional_deps,
-        }
+            .collect()
     }
 }
 
@@ -402,12 +378,6 @@ impl ResolvedFeatures {
 ///
 /// Key is `(pkg_id, for_host)`. Value is a set of features or dependencies removed.
 pub type DiffMap = BTreeMap<(PackageId, bool), BTreeSet<InternedString>>;
-
-/// Differences between resolvers.
-pub struct FeatureDifferences {
-    pub features: DiffMap,
-    pub optional_deps: DiffMap,
-}
 
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
