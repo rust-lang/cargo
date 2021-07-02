@@ -255,7 +255,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     )?;
 
     let differences = v2_features.compare_legacy(&ws_resolve.resolved_features);
-    if differences.features.is_empty() && differences.optional_deps.is_empty() {
+    if differences.is_empty() {
         // Nothing is different, nothing to report.
         return Ok(());
     }
@@ -265,32 +265,27 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     )?;
     drop_eprintln!(
         config,
-        "This may cause dependencies to resolve with a different set of features."
+        "This may cause some dependencies to be built with fewer features enabled than previously."
     );
     drop_eprintln!(
         config,
         "More information about the resolver changes may be found \
-         at https://doc.rust-lang.org/cargo/reference/features.html#feature-resolver-version-2"
+         at https://doc.rust-lang.org/nightly/edition-guide/rust-2021/default-cargo-resolver.html"
     );
     drop_eprintln!(
         config,
-        "The following differences were detected with the current configuration:\n"
+        "When building the following dependencies, \
+         the given features will no longer be used:\n"
     );
-    let report = |changes: crate::core::resolver::features::DiffMap, what| {
-        for ((pkg_id, for_host), removed) in changes {
-            drop_eprint!(config, "  {}", pkg_id);
-            if for_host {
-                drop_eprint!(config, " (as build dependency)");
-            }
-            if !removed.is_empty() {
-                let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
-                drop_eprint!(config, " removed {} `{}`", what, joined.join(","));
-            }
-            drop_eprint!(config, "\n");
+    for ((pkg_id, for_host), removed) in differences {
+        drop_eprint!(config, "  {}", pkg_id);
+        if for_host {
+            drop_eprint!(config, " (as host dependency)");
         }
-    };
-    report(differences.features, "features");
-    report(differences.optional_deps, "optional dependency");
+        drop_eprint!(config, ": ");
+        let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
+        drop_eprintln!(config, "{}", joined.join(", "));
+    }
     drop_eprint!(config, "\n");
     report_maybe_diesel(config, &ws_resolve.targeted_resolve)?;
     Ok(())
