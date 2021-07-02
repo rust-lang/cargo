@@ -1,6 +1,8 @@
 //! Tests for configuration values that point to programs.
 
-use cargo_test_support::{basic_lib_manifest, no_such_file_err_msg, project, rustc_host};
+use cargo_test_support::{
+    basic_lib_manifest, no_such_file_err_msg, project, rustc_host, rustc_host_env,
+};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -262,13 +264,9 @@ second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
 
 #[cargo_test]
 fn custom_runner_env() {
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
@@ -305,10 +303,7 @@ fn custom_runner_env_overrides_config() {
         )
         .build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "should-run --foo")
@@ -322,13 +317,9 @@ fn custom_runner_env_overrides_config() {
 fn custom_runner_env_true() {
     // Check for a bug where "true" was interpreted as a boolean instead of
     // the executable.
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "true")
@@ -338,13 +329,9 @@ fn custom_runner_env_true() {
 
 #[cargo_test]
 fn custom_linker_env() {
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_LINKER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
 
     p.cargo("build -v")
         .env(&key, "nonexistent-linker")
