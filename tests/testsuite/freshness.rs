@@ -13,7 +13,9 @@ use std::time::SystemTime;
 use super::death;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, is_coarse_mtime, project, rustc_host, sleep_ms};
+use cargo_test_support::{
+    basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env, sleep_ms,
+};
 
 #[cargo_test]
 fn modifying_and_moving() {
@@ -2405,10 +2407,7 @@ fn linking_interrupted() {
 
     // Make a change, start a build, then interrupt it.
     p.change_file("src/lib.rs", "// modified");
-    let linker_env = format!(
-        "CARGO_TARGET_{}_LINKER",
-        rustc_host().to_uppercase().replace('-', "_")
-    );
+    let linker_env = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
     // NOTE: This assumes that the paths to the linker or rustc are not in the
     // fingerprint. But maybe they should be?
     let mut cmd = p
@@ -2637,6 +2636,25 @@ fn cargo_env_changes() {
             "\
 [FRESH] foo [..]
 [FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn changing_linker() {
+    // Changing linker should rebuild.
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("build").run();
+    let linker_env = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
+    p.cargo("build --verbose")
+        .env(&linker_env, "nonexistent-linker")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
+[ERROR] [..]linker[..]
 ",
         )
         .run();

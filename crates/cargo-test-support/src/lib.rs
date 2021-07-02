@@ -1035,6 +1035,11 @@ pub fn rustc_host() -> &'static str {
     &RUSTC_INFO.host
 }
 
+/// The host triple suitable for use in a cargo environment variable (uppercased).
+pub fn rustc_host_env() -> String {
+    rustc_host().to_uppercase().replace('-', "_")
+}
+
 pub fn is_nightly() -> bool {
     let vv = &RUSTC_INFO.verbose_version;
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
