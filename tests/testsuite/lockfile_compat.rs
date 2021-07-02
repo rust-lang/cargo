@@ -511,7 +511,8 @@ fn locked_correct_error() {
             "\
 [UPDATING] `[..]` index
 error: the lock file [CWD]/Cargo.lock needs to be updated but --locked was passed to prevent this
-If you want to try to generate the lock file without accessing the network, use the --offline flag.
+If you want to try to generate the lock file without accessing the network, \
+remove the --locked flag and use --offline instead.
 ",
         )
         .run();

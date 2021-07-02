@@ -685,3 +685,16 @@ retry without the offline flag.
         )
         .run();
 }
+
+#[cargo_test]
+fn offline_and_frozen_and_no_lock() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build --frozen --offline")
+        .with_status(101)
+        .with_stderr("\
+error: the lock file [ROOT]/foo/Cargo.lock needs to be updated but --frozen was passed to prevent this
+If you want to try to generate the lock file without accessing the network, \
+remove the --frozen flag and use --offline instead.
+")
+        .run();
+}
