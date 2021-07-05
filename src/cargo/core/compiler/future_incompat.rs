@@ -51,6 +51,7 @@ pub struct FutureBreakageItem {
 #[derive(Serialize, Deserialize)]
 pub struct Diagnostic {
     pub rendered: String,
+    pub level: String,
 }
 
 /// The filename in the top-level `target` directory where we store

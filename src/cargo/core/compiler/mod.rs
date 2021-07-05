@@ -333,7 +333,20 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 },
             )
             .map_err(verbose_if_simple_exit_code)
-            .with_context(|| format!("could not compile `{}`", name))?;
+            .with_context(|| {
+                // adapted from rustc_errors/src/lib.rs
+                let warnings = match output_options.warnings_seen {
+                    0 => String::new(),
+                    1 => "; 1 warning emitted".to_string(),
+                    count => format!("; {} warnings emitted", count),
+                };
+                let errors = match output_options.errors_seen {
+                    0 => String::new(),
+                    1 => " due to previous error".to_string(),
+                    count => format!(" due to {} previous errors", count),
+                };
+                format!("could not compile `{}`{}{}", name, errors, warnings)
+            })?;
         }
 
         if rustc_dep_info_loc.exists() {
@@ -1161,6 +1174,8 @@ struct OutputOptions {
     /// Other types of messages are processed regardless
     /// of the value of this flag
     show_warnings: bool,
+    warnings_seen: usize,
+    errors_seen: usize,
 }
 
 impl OutputOptions {
@@ -1177,6 +1192,8 @@ impl OutputOptions {
             color,
             cache_cell,
             show_warnings: true,
+            warnings_seen: 0,
+            errors_seen: 0,
         }
     }
 }
@@ -1244,7 +1261,18 @@ fn on_stderr_line_inner(
         }
     };
 
+    let count_diagnostic = |level, options: &mut OutputOptions| {
+        if level == "warning" {
+            options.warnings_seen += 1;
+        } else if level == "error" {
+            options.errors_seen += 1;
+        }
+    };
+
     if let Ok(report) = serde_json::from_str::<FutureIncompatReport>(compiler_message.get()) {
+        for item in &report.future_incompat_report {
+            count_diagnostic(&*item.diagnostic.level, options);
+        }
         state.future_incompat_report(report.future_incompat_report);
         return Ok(true);
     }
@@ -1265,8 +1293,14 @@ fn on_stderr_line_inner(
             #[derive(serde::Deserialize)]
             struct CompilerMessage {
                 rendered: String,
+                message: String,
+                level: String,
             }
             if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                if error.level == "error" && error.message.starts_with("aborting due to") {
+                    // Skip this line; we'll print our own summary at the end.
+                    return Ok(true);
+                }
                 // state.stderr will add a newline
                 if error.rendered.ends_with('\n') {
                     error.rendered.pop();
@@ -1281,6 +1315,7 @@ fn on_stderr_line_inner(
                         .expect("strip should never fail")
                 };
                 if options.show_warnings {
+                    count_diagnostic(&error.level, options);
                     state.stderr(rendered)?;
                 }
                 return Ok(true);
@@ -1368,6 +1403,14 @@ fn on_stderr_line_inner(
         return Ok(true);
     }
 
+    #[derive(serde::Deserialize)]
+    struct CompilerMessage {
+        level: String,
+    }
+    if let Ok(message) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+        count_diagnostic(&message.level, options);
+    }
+
     let msg = machine_message::FromCompiler {
         package_id,
         manifest_path,
@@ -1399,6 +1442,8 @@ fn replay_output_cache(
         color,
         cache_cell: None,
         show_warnings,
+        warnings_seen: 0,
+        errors_seen: 0,
     };
     Work::new(move |state| {
         if !path.exists() {
