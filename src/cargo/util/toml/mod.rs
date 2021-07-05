@@ -1042,7 +1042,7 @@ impl TomlManifest {
         // Parse features first so they will be available when parsing other parts of the TOML.
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(cargo_features, config, &mut warnings)?;
+        let features = Features::new(cargo_features, config, &mut warnings, source_id.is_path())?;
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| anyhow!("no `package` section found"))?;
@@ -1451,7 +1451,7 @@ impl TomlManifest {
         let mut deps = Vec::new();
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(cargo_features, config, &mut warnings)?;
+        let features = Features::new(cargo_features, config, &mut warnings, source_id.is_path())?;
 
         let (replace, patch) = {
             let mut cx = Context {

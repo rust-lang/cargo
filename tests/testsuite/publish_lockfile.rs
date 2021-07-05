@@ -27,7 +27,7 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
 }
 
 #[cargo_test]
-fn deprecated() {
+fn removed() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -54,10 +54,10 @@ fn deprecated() {
 [ERROR] failed to parse manifest at [..]
 
 Caused by:
-  the cargo feature `publish-lockfile` has been removed
+  the cargo feature `publish-lockfile` has been removed in the 1.37 release
+
   Remove the feature from Cargo.toml to remove this error.
-  The publish-lockfile key [..]
-  See [..]
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#publish-lockfile [..]
 ",
         )
         .run();

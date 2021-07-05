@@ -539,7 +539,12 @@ fn strip_requires_cargo_feature() {
 Caused by:
   feature `strip` is required
 
-  consider adding `cargo-features = [\"strip\"]` to the manifest
+  The package requires the Cargo feature called `strip`, but that feature is \
+  not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"strip\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-strip-option \
+  for more information about the status of this feature.
 ",
         )
         .run();

@@ -1380,34 +1380,102 @@ current configuration.
 The primary use case is to run `cargo rustc --print=cfg` to get config values
 for the appropriate target and influenced by any other RUSTFLAGS.
 
-<script>
-(function() {
-    var fragments = {
-        "#edition": "manifest.html#the-edition-field",
-        "#compile-progress": "config.html#termprogresswhen",
-        "#rename-dependency": "specifying-dependencies.html#renaming-dependencies-in-cargotoml",
-        "#alternate-registries": "registries.html",
-        "#offline-mode": "../commands/cargo.html",
-        "#publish-lockfile": "../commands/cargo-package.html",
-        "#default-run": "manifest.html#the-default-run-field",
-        "#cache-messages": "https://github.com/rust-lang/cargo/pull/7450",
-        "#install-upgrade": "../commands/cargo-install.html",
-        "#profile-overrides": "profiles.html#overrides",
-        "#config-profiles": "config.html#profile",
-        "#crate-versions": "https://github.com/rust-lang/cargo/pull/8509",
-        "#features": "features.html#feature-resolver-version-2",
-        "#package-features": "features.html#resolver-version-2-command-line-flags",
-        "#resolver": "resolver.html#resolver-versions",
-    };
-    var target = fragments[window.location.hash];
-    if (target) {
-        if (target.startsWith('https')) {
-          window.location.replace(target);
-        } else {
-          var url = window.location.toString();
-          var base = url.substring(0, url.lastIndexOf('/'));
-          window.location.replace(base + "/" + target);
-        }
-    }
-})();
-</script>
+
+
+## Stabilized and removed features
+
+### Compile progress
+
+The compile-progress feature has been stabilized in the 1.30 release.
+Progress bars are now enabled by default.
+See [`term.progress`](config.md#termprogresswhen) for more information about
+controlling this feature.
+
+### Edition
+
+Specifying the `edition` in `Cargo.toml` has been stabilized in the 1.31 release.
+See [the edition field](manifest.md#the-edition-field) for more information
+about specifying this field.
+
+### rename-dependency
+
+Specifying renamed dependencies in `Cargo.toml` has been stabilized in the 1.31 release.
+See [renaming dependencies](specifying-dependencies.md#renaming-dependencies-in-cargotoml)
+for more information about renaming dependencies.
+
+### Alternate Registries
+
+Support for alternate registries has been stabilized in the 1.34 release.
+See the [Registries chapter](registries.md) for more information about alternate registries.
+
+### Offline Mode
+
+The offline feature has been stabilized in the 1.36 release.
+See the [`--offline` flag](../commands/cargo.md#option-cargo---offline) for
+more information on using the offline mode.
+
+### publish-lockfile
+
+The `publish-lockfile` feature has been removed in the 1.37 release.
+The `Cargo.lock` file is always included when a package is published if the
+package contains a binary target. `cargo install` requires the `--locked` flag
+to use the `Cargo.lock` file.
+See [`cargo package`](../commands/cargo-package.md) and
+[`cargo install`](../commands/cargo-install.md) for more information.
+
+### default-run
+
+The `default-run` feature has been stabilized in the 1.37 release.
+See [the `default-run` field](manifest.md#the-default-run-field) for more
+information about specifying the default target to run.
+
+### cache-messages
+
+Compiler message caching has been stabilized in the 1.40 release.
+Compiler warnings are now cached by default and will be replayed automatically
+when re-running Cargo.
+
+### install-upgrade
+
+The `install-upgrade` feature has been stabilized in the 1.41 release.
+[`cargo install`] will now automatically upgrade packages if they appear to be
+out-of-date. See the [`cargo install`] documentation for more information.
+
+[`cargo install`]: ../commands/cargo-install.md
+
+### Profile Overrides
+
+Profile overrides have been stabilized in the 1.41 release.
+See [Profile Overrides](profiles.md#overrides) for more information on using
+overrides.
+
+### Config Profiles
+
+Specifying profiles in Cargo config files and environment variables has been
+stabilized in the 1.43 release.
+See the [config `[profile]` table](config.md#profile) for more information
+about specifying [profiles](profiles.md) in config files.
+
+### crate-versions
+
+The `-Z crate-versions` flag has been stabilized in the 1.47 release.
+The crate version is now automatically included in the
+[`cargo doc`](../commands/cargo-doc.md) documentation sidebar.
+
+### Features
+
+The `-Z features` flag has been stabilized in the 1.51 release.
+See [feature resolver version 2](features.md#feature-resolver-version-2)
+for more information on using the new feature resolver.
+
+### package-features
+
+The `-Z package-features` flag has been stabilized in the 1.51 release.
+See the [resolver version 2 command-line flags](features.md#resolver-version-2-command-line-flags)
+for more information on using the features CLI options.
+
+### Resolver
+
+The `resolver` feature in `Cargo.toml` has been stabilized in the 1.51 release.
+See the [resolver versions](resolver.md#resolver-versions) for more
+information about specifying resolvers.
