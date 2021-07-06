@@ -255,6 +255,12 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     } else {
         cmd.env_remove("RUSTC_WRAPPER");
     }
+    cmd.env_remove("RUSTC_WORKSPACE_WRAPPER");
+    if cx.bcx.ws.is_member(&unit.pkg) {
+        if let Some(wrapper) = bcx.rustc().workspace_wrapper.as_ref() {
+            cmd.env("RUSTC_WORKSPACE_WRAPPER", wrapper);
+        }
+    }
     cmd.env(
         "CARGO_ENCODED_RUSTFLAGS",
         bcx.rustflags_args(unit).join("\x1f"),

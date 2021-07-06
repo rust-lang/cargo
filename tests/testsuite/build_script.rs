@@ -119,6 +119,7 @@ fn custom_build_env_vars() {
                 assert_eq!(rustdoc, "rustdoc");
 
                 assert!(env::var("RUSTC_WRAPPER").is_err());
+                assert!(env::var("RUSTC_WORKSPACE_WRAPPER").is_err());
 
                 assert!(env::var("RUSTC_LINKER").is_err());
 
@@ -247,6 +248,32 @@ fn custom_build_env_var_rustc_wrapper() {
     p.cargo("check")
         .env("CARGO_BUILD_RUSTC_WRAPPER", &wrapper)
         .env("CARGO_RUSTC_WRAPPER_CHECK", &wrapper)
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_workspace_wrapper() {
+    let wrapper = tools::echo_wrapper();
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {{
+                assert_eq!(
+                    env::var("RUSTC_WORKSPACE_WRAPPER").unwrap(),
+                    env::var("CARGO_RUSTC_WORKSPACE_WRAPPER_CHECK").unwrap()
+                );
+            }}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .env("CARGO_RUSTC_WORKSPACE_WRAPPER_CHECK", &wrapper)
         .run();
 }
 

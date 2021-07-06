@@ -342,6 +342,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
                        use it as well.
 * `RUSTC_WRAPPER` — the `rustc` wrapper, if any, that Cargo is using.
                     See [`build.rustc-wrapper`].
+* `RUSTC_WORKSPACE_WRAPPER` — the `rustc` wrapper, if any, that Cargo is
+			      using for workspace members. See
+			      [`build.rustc-workspace-wrapper`].
 * `RUSTC_LINKER` — The path to the linker binary that Cargo has resolved to use
                    for the current target, if specified. The linker can be
                    changed by editing `.cargo/config.toml`; see the documentation
