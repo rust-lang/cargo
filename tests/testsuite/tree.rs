@@ -1009,6 +1009,21 @@ foo v0.1.0 ([..]/foo)
 #[cargo_test]
 fn format() {
     Package::new("dep", "1.0.0").publish();
+    Package::new("dep_that_is_awesome", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "dep_that_is_awesome"
+                version = "1.0.0"
+
+                [lib]
+                name = "awesome_dep"
+            "#,
+        )
+        .file("src/lib.rs", "pub struct Straw;")
+        .publish();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -1021,6 +1036,7 @@ fn format() {
 
             [dependencies]
             dep = {version="1.0", optional=true}
+            dep_that_is_awesome = {version="1.0"}
 
             [features]
             default = ["foo"]
@@ -1032,7 +1048,9 @@ fn format() {
         .build();
 
     p.cargo("tree --format <<<{p}>>>")
-        .with_stdout("<<<foo v0.1.0 ([..]/foo)>>>")
+        .with_stdout("\
+<<<foo v0.1.0 ([..]/foo)>>>
+└── <<<dep_that_is_awesome v1.0.0>>>")
         .run();
 
     p.cargo("tree --format {}")
@@ -1048,17 +1066,23 @@ Caused by:
         .run();
 
     p.cargo("tree --format {p}-{{hello}}")
-        .with_stdout("foo v0.1.0 ([..]/foo)-{hello}")
+        .with_stdout("\
+foo v0.1.0 ([..]/foo)-{hello}
+└── dep_that_is_awesome v1.0.0-{hello}")
         .run();
 
     p.cargo("tree --format")
         .arg("{p} {l} {r}")
-        .with_stdout("foo v0.1.0 ([..]/foo) MIT https://github.com/rust-lang/cargo")
+        .with_stdout("\
+foo v0.1.0 ([..]/foo) MIT https://github.com/rust-lang/cargo
+└── dep_that_is_awesome v1.0.0  ")
         .run();
 
     p.cargo("tree --format")
         .arg("{p} {f}")
-        .with_stdout("foo v0.1.0 ([..]/foo) bar,default,foo")
+        .with_stdout("\
+foo v0.1.0 ([..]/foo) bar,default,foo
+└── dep_that_is_awesome v1.0.0 ")
         .run();
 
     p.cargo("tree --all-features --format")
@@ -1066,10 +1090,18 @@ Caused by:
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo) [bar,default,dep,foo]
-└── dep v1.0.0 []
+├── dep v1.0.0 []
+└── dep_that_is_awesome v1.0.0 []
 ",
         )
         .run();
+
+    p.cargo("tree --format {n}")
+        .with_stdout("\
+foo
+└── awesome_dep")
+        .run();
+
 }
 
 #[cargo_test]
