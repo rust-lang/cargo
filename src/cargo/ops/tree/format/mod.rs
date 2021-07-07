@@ -102,17 +102,14 @@ impl<'a> fmt::Display for Display<'a> {
                             write!(fmt, "{}", features.join(","))?;
                         }
                         Chunk::Name => {
-                            write!(
-                                fmt,
-                                "{}",
-                                package
-                                    .manifest()
-                                    .targets()
-                                    .iter()
-                                    .find(|target| target.is_lib() || target.is_dylib())
-                                    .map(|lib_target| lib_target.name())
-                                    .unwrap_or(&package.name())
-                            )?;
+                            if let Some(target) = package
+                                .manifest()
+                                .targets()
+                                .iter()
+                                .find(|target| target.is_lib())
+                            {
+                                write!(fmt, "{}", target.name())?;
+                            }
                         }
                     }
                 }
