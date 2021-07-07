@@ -11,6 +11,7 @@ enum Chunk {
     License,
     Repository,
     Features,
+    Name,
 }
 
 pub struct Pattern(Vec<Chunk>);
@@ -26,6 +27,7 @@ impl Pattern {
                 RawChunk::Argument("l") => Chunk::License,
                 RawChunk::Argument("r") => Chunk::Repository,
                 RawChunk::Argument("f") => Chunk::Features,
+                RawChunk::Argument("n") => Chunk::Name,
                 RawChunk::Argument(a) => {
                     bail!("unsupported pattern `{}`", a);
                 }
@@ -96,6 +98,22 @@ impl<'a> fmt::Display for Display<'a> {
                         }
                         Chunk::Features => {
                             write!(fmt, "{}", features.join(","))?;
+                        }
+                        Chunk::Name => {
+                            let pname = package.name().as_str();
+                            write!(
+                                fmt,
+                                "{}",
+                                package
+                                    .manifest()
+                                    .targets()
+                                    .iter()
+                                    .filter(|t| t.is_dylib() || t.is_lib())
+                                    .map(|l| l.name())
+                                    .collect::<Vec<_>>()
+                                    .get(0)
+                                    .unwrap_or(&pname)
+                            )?;
                         }
                     }
                 }
