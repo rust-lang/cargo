@@ -109,7 +109,7 @@ impl<'a> fmt::Display for Display<'a> {
                                     .manifest()
                                     .targets()
                                     .iter()
-                                    .find(|target| target.is_dylib() || target.is_lib())
+                                    .find(|target| target.is_lib() || target.is_dylib())
                                     .map(|lib_target| lib_target.name())
                                     .unwrap_or(&package.name())
                             )?;
