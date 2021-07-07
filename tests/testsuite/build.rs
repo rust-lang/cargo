@@ -588,12 +588,7 @@ fn cargo_compile_with_invalid_code() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[ERROR] could not compile `foo`
-
-To learn more, run the command again with --verbose.\n",
-        )
+        .with_stderr_contains("[ERROR] could not compile `foo` due to previous error\n")
         .run();
     assert!(p.root().join("Cargo.lock").is_file());
 }

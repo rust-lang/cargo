@@ -742,9 +742,7 @@ fn compile_failure() {
     found at `[..]target`
 
 Caused by:
-  could not compile `foo`
-
-To learn more, run the command again with --verbose.
+  could not compile `foo` due to previous error
 ",
         )
         .run();

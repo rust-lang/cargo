@@ -803,8 +803,7 @@ fn short_message_format() {
         .with_stderr_contains(
             "\
 src/lib.rs:1:27: error[E0308]: mismatched types
-error: aborting due to previous error
-error: could not compile `foo`
+error: could not compile `foo` due to previous error
 ",
         )
         .run();

@@ -28,7 +28,7 @@ fn do_not_fix_broken_builds() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
-        .with_stderr_contains("[ERROR] could not compile `foo`")
+        .with_stderr_contains("[ERROR] could not compile `foo` due to previous error")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
@@ -833,8 +833,6 @@ fn prepare_for_unstable() {
 [ERROR] cannot migrate src/lib.rs to edition {next}
 Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
 error: could not compile `foo`
-
-To learn more, run the command again with --verbose.
 ", next=next))
         .run();
 

@@ -89,13 +89,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
 /// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
     debug!("display_error; err={:?}", err);
-    let has_verbose = _display_error(err, shell, true);
-    if has_verbose {
-        drop(writeln!(
-            shell.err(),
-            "\nTo learn more, run the command again with --verbose."
-        ));
-    }
+    _display_error(err, shell, true);
     if err
         .chain()
         .any(|e| e.downcast_ref::<InternalError>().is_some())
