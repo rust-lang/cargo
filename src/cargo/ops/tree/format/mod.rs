@@ -102,7 +102,6 @@ impl<'a> fmt::Display for Display<'a> {
                             write!(fmt, "{}", features.join(","))?;
                         }
                         Chunk::Name => {
-                            let pname = package.name().as_str();
                             write!(
                                 fmt,
                                 "{}",
@@ -110,11 +109,9 @@ impl<'a> fmt::Display for Display<'a> {
                                     .manifest()
                                     .targets()
                                     .iter()
-                                    .filter(|t| t.is_dylib() || t.is_lib())
-                                    .map(|l| l.name())
-                                    .collect::<Vec<_>>()
-                                    .get(0)
-                                    .unwrap_or(&pname)
+                                    .find(|target| target.is_dylib() || target.is_lib())
+                                    .map(|lib_target| lib_target.name())
+                                    .unwrap_or(&package.name())
                             )?;
                         }
                     }
