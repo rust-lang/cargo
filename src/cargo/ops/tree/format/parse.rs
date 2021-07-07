@@ -1,7 +1,6 @@
 //! Parser for the `--format` string for `cargo tree`.
 
-use std::iter;
-use std::str;
+use std::{iter, str};
 
 pub enum RawChunk<'a> {
     /// Raw text to include in the output.

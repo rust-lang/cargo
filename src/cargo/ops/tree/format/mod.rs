@@ -1,7 +1,9 @@
+use std::fmt;
+
+use anyhow::{bail, Error};
+
 use self::parse::{Parser, RawChunk};
 use super::{Graph, Node};
-use anyhow::{bail, Error};
-use std::fmt;
 
 mod parse;
 
