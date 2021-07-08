@@ -29,7 +29,7 @@ impl Pattern {
                 RawChunk::Argument("l") => Chunk::License,
                 RawChunk::Argument("r") => Chunk::Repository,
                 RawChunk::Argument("f") => Chunk::Features,
-                RawChunk::Argument("n") => Chunk::Name,
+                RawChunk::Argument("lib") => Chunk::Name,
                 RawChunk::Argument(a) => {
                     bail!("unsupported pattern `{}`", a);
                 }

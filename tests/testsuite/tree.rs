@@ -1009,6 +1009,7 @@ foo v0.1.0 ([..]/foo)
 #[cargo_test]
 fn format() {
     Package::new("dep", "1.0.0").publish();
+
     Package::new("dep_that_is_awesome", "1.0.0")
         .file(
             "Cargo.toml",
@@ -1036,7 +1037,7 @@ fn format() {
 
             [dependencies]
             dep = {version="1.0", optional=true}
-            dep_that_is_awesome = {version="1.0"}
+            dep_that_is_awesome = {version="1.0", optional=true}
 
             [features]
             default = ["foo"]
@@ -1048,9 +1049,7 @@ fn format() {
         .build();
 
     p.cargo("tree --format <<<{p}>>>")
-        .with_stdout("\
-<<<foo v0.1.0 ([..]/foo)>>>
-└── <<<dep_that_is_awesome v1.0.0>>>")
+        .with_stdout("<<<foo v0.1.0 ([..]/foo)>>>")
         .run();
 
     p.cargo("tree --format {}")
@@ -1066,42 +1065,40 @@ Caused by:
         .run();
 
     p.cargo("tree --format {p}-{{hello}}")
-        .with_stdout("\
-foo v0.1.0 ([..]/foo)-{hello}
-└── dep_that_is_awesome v1.0.0-{hello}")
+        .with_stdout("foo v0.1.0 ([..]/foo)-{hello}")
         .run();
 
     p.cargo("tree --format")
         .arg("{p} {l} {r}")
-        .with_stdout("\
-foo v0.1.0 ([..]/foo) MIT https://github.com/rust-lang/cargo
-└── dep_that_is_awesome v1.0.0  ")
+        .with_stdout("foo v0.1.0 ([..]/foo) MIT https://github.com/rust-lang/cargo")
         .run();
 
     p.cargo("tree --format")
         .arg("{p} {f}")
-        .with_stdout("\
-foo v0.1.0 ([..]/foo) bar,default,foo
-└── dep_that_is_awesome v1.0.0 ")
+        .with_stdout("foo v0.1.0 ([..]/foo) bar,default,foo")
         .run();
 
     p.cargo("tree --all-features --format")
         .arg("{p} [{f}]")
         .with_stdout(
             "\
-foo v0.1.0 ([..]/foo) [bar,default,dep,foo]
+foo v0.1.0 ([..]/foo) [bar,default,dep,dep_that_is_awesome,foo]
 ├── dep v1.0.0 []
 └── dep_that_is_awesome v1.0.0 []
 ",
         )
         .run();
 
-    p.cargo("tree --format {n}")
-        .with_stdout("\
+    p.cargo("tree")
+        .arg("--features=dep_that_is_awesome")
+        .arg("--format={lib}")
+        .with_stdout(
+            "\
 foo
-└── awesome_dep")
+└── awesome_dep
+",
+        )
         .run();
-
 }
 
 #[cargo_test]
