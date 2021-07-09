@@ -292,6 +292,14 @@ impl<'cfg> PackageRegistry<'cfg> {
                     dep.package_name()
                 );
 
+                if dep.features().len() != 0 || !dep.uses_default_features() {
+                    self.source_config.config().shell().warn(format!(
+                        "patch for `{}` uses the features mechanism. \
+                        default-features and features will not take effect because the patch dependency does not support this mechanism",
+                        dep.package_name()
+                    ))?;
+                }
+
                 // Go straight to the source for resolving `dep`. Load it as we
                 // normally would and then ask it directly for the list of summaries
                 // corresponding to this `dep`.

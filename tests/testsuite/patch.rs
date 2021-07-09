@@ -788,6 +788,102 @@ fn add_ignored_patch() {
 }
 
 #[cargo_test]
+fn add_patch_with_features() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.1.0"
+
+            [patch.crates-io]
+            bar = { path = 'bar', features = ["some_feature"] }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[UPDATING] `[ROOT][..]` index
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn add_patch_with_setting_default_features() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.1.0"
+
+            [patch.crates-io]
+            bar = { path = 'bar', default-features = false, features = ["none_default_feature"] }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[UPDATING] `[ROOT][..]` index
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn no_warn_ws_patch() {
     Package::new("c", "0.1.0").publish();
 
