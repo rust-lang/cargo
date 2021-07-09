@@ -71,6 +71,7 @@ mod lto;
 mod member_discovery;
 mod member_errors;
 mod message_format;
+mod messages;
 mod metabuild;
 mod metadata;
 mod minimal_versions;

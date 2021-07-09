@@ -347,6 +347,8 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 };
                 format!("could not compile `{}`{}{}", name, errors, warnings)
             })?;
+            // Exec should never return with success *and* generate an error.
+            debug_assert_eq!(output_options.errors_seen, 0);
         }
 
         if rustc_dep_info_loc.exists() {
@@ -1199,7 +1201,7 @@ impl OutputOptions {
 }
 
 fn on_stdout_line(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     _package_id: PackageId,
     _target: &Target,
@@ -1209,7 +1211,7 @@ fn on_stdout_line(
 }
 
 fn on_stderr_line(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
     manifest_path: &std::path::Path,
@@ -1231,7 +1233,7 @@ fn on_stderr_line(
 
 /// Returns true if the line should be cached.
 fn on_stderr_line_inner(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
     manifest_path: &std::path::Path,
@@ -1296,27 +1298,30 @@ fn on_stderr_line_inner(
                 message: String,
                 level: String,
             }
-            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-                if error.level == "error" && error.message.starts_with("aborting due to") {
+            if let Ok(mut msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                if msg.message.starts_with("aborting due to")
+                    || msg.message.ends_with("warning emitted")
+                    || msg.message.ends_with("warnings emitted")
+                {
                     // Skip this line; we'll print our own summary at the end.
                     return Ok(true);
                 }
                 // state.stderr will add a newline
-                if error.rendered.ends_with('\n') {
-                    error.rendered.pop();
+                if msg.rendered.ends_with('\n') {
+                    msg.rendered.pop();
                 }
                 let rendered = if options.color {
-                    error.rendered
+                    msg.rendered
                 } else {
                     // Strip only fails if the the Writer fails, which is Cursor
                     // on a Vec, which should never fail.
-                    strip_ansi_escapes::strip(&error.rendered)
+                    strip_ansi_escapes::strip(&msg.rendered)
                         .map(|v| String::from_utf8(v).expect("utf8"))
                         .expect("strip should never fail")
                 };
                 if options.show_warnings {
-                    count_diagnostic(&error.level, options);
-                    state.stderr(rendered)?;
+                    count_diagnostic(&msg.level, options);
+                    state.emit_diag(msg.level, rendered)?;
                 }
                 return Ok(true);
             }
