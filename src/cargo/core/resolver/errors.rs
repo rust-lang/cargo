@@ -285,7 +285,7 @@ pub(super) fn activation_error(
                 .collect();
             candidates.sort_by_key(|o| o.0);
             let mut msg = format!(
-                "no matching package named `{}` found\n", dep.package_name());
+                "no matching package found\nsearched package name: `{}`\n", dep.package_name());
             if !candidates.is_empty() {
                 // If dependency package name is equal to the name of the candidate here
                 // it may be a prerelease package which hasn't been specified correctly
@@ -309,8 +309,8 @@ pub(super) fn activation_error(
                         names.push("...");
                     }
                     // Vertically align first suggestion with missing crate name
-                    // so the silly typo you probably made jumps out at you.
-                    msg.push_str("perhaps you meant:                ");
+                    // so a typo jumps out at you.
+                    msg.push_str("perhaps you meant:      ");
                     msg.push_str(&names.iter().enumerate().fold(
                         String::default(),
                         |acc, (i, el)| match i {
