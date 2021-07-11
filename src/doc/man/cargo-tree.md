@@ -145,6 +145,7 @@ strings will be replaced with the corresponding value:
 - `{l}` — The package license.
 - `{r}` — The package repository URL.
 - `{f}` — Comma-separated list of package features that are enabled.
+- `{lib}` — The name of the package's library.
 {{/option}}
 
 {{#option "`--prefix` _prefix_" }}
