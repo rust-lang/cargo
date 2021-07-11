@@ -1440,7 +1440,8 @@ fn use_semver_package_incorrectly() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package named `a` found
+error: no matching package found
+searched package name: `a`
 prerelease package needs to be specified explicitly
 a = { version = \"0.1.1-alpha.0\" }
 location searched: [..]

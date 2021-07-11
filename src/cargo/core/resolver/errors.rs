@@ -284,9 +284,15 @@ pub(super) fn activation_error(
                 .filter(|&(d, _)| d < 4)
                 .collect();
             candidates.sort_by_key(|o| o.0);
-            let mut msg = format!(
-                "no matching package found\nsearched package name: `{}`\n", dep.package_name());
-            if !candidates.is_empty() {
+            let mut msg: String;
+            if candidates.is_empty() {
+                msg = format!("no matching package named `{}` found\n", dep.package_name());
+            } else {
+                msg = format!(
+                    "no matching package found\nsearched package name: `{}`\n",
+                    dep.package_name()
+                );
+
                 // If dependency package name is equal to the name of the candidate here
                 // it may be a prerelease package which hasn't been specified correctly
                 if dep.package_name() == candidates[0].1.name()
