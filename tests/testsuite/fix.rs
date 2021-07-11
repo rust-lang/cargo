@@ -1,6 +1,7 @@
 //! Tests for the `cargo fix` command.
 
 use cargo::core::Edition;
+use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
@@ -1552,4 +1553,50 @@ fn fix_edition_2021() {
         )
         .run();
     assert!(p.read_file("src/lib.rs").contains(r#"0..=100 => true,"#));
+}
+
+#[cargo_test]
+fn fix_shared_cross_workspace() {
+    // Fixing a file that is shared between multiple packages in the same workspace.
+    // Make sure two processes don't try to fix the same file at the same time.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "pub mod shared;")
+        // This will fix both unused and bare trait.
+        .file("foo/src/shared.rs", "pub fn fixme(x: Box<&Fn() -> ()>) {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                #[path="../../foo/src/shared.rs"]
+                pub mod shared;
+            "#,
+        )
+        .build();
+
+    // The output here can be either of these two, depending on who runs first:
+    //     [FIXED] bar/src/../../foo/src/shared.rs (2 fixes)
+    //     [FIXED] foo/src/shared.rs (2 fixes)
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_unordered(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[CHECKING] bar v0.1.0 [..]
+[FIXED] [..]foo/src/shared.rs (2 fixes)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert_match_exact(
+        "pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}",
+        &p.read_file("foo/src/shared.rs"),
+    );
 }
