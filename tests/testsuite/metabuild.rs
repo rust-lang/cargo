@@ -25,14 +25,19 @@ fn metabuild_gated() {
     p.cargo("build")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   feature `metabuild` is required
 
-  consider adding `cargo-features = [\"metabuild\"]` to the manifest
+  The package requires the Cargo feature called `metabuild`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"metabuild\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild \
+  for more information about the status of this feature.
 ",
         )
         .run();

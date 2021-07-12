@@ -470,7 +470,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     If this looks unexpected, it may be a bug in Cargo. Please file a bug report at\n\
                     https://github.com/rust-lang/cargo/issues/ with as much information as you\n\
                     can provide.\n\
-                    {} running on `{}` target `{}`\n\
+                    cargo {} running on `{}` target `{}`\n\
                     First unit: {:?}\n\
                     Second unit: {:?}",
                     describe_collision(unit, other_unit, path),

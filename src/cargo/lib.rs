@@ -52,7 +52,7 @@ pub struct VersionInfo {
 
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "cargo {}.{}.{}", self.major, self.minor, self.patch)?;
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
         if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             if channel != "stable" {
                 write!(f, "-{}", channel)?;
@@ -100,7 +100,7 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
                 "we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/",
             ),
         );
-        drop(shell.note(format!("{}", version())));
+        drop(shell.note(format!("cargo {}", version())));
         // Once backtraces are stabilized, this should print out a backtrace
         // if it is available.
     }

@@ -538,7 +538,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(user_agent) = &http.user_agent {
         handle.useragent(user_agent)?;
     } else {
-        handle.useragent(&version().to_string())?;
+        handle.useragent(&format!("cargo {}", version()))?;
     }
 
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
