@@ -1064,11 +1064,27 @@ fn _process(t: &OsStr) -> ProcessBuilder {
     if env::var_os("RUSTUP_TOOLCHAIN").is_some() {
         // Override the PATH to avoid executing the rustup wrapper thousands
         // of times. This makes the testsuite run substantially faster.
+        lazy_static::lazy_static! {
+            static ref RUSTC_DIR: PathBuf = {
+                match ProcessBuilder::new("rustup")
+                    .args(&["which", "rustc"])
+                    .exec_with_output()
+                {
+                    Ok(output) => {
+                        let s = str::from_utf8(&output.stdout).expect("utf8").trim();
+                        let mut p = PathBuf::from(s);
+                        p.pop();
+                        p
+                    }
+                    Err(e) => {
+                        panic!("RUSTUP_TOOLCHAIN was set, but could not run rustup: {}", e);
+                    }
+                }
+            };
+        }
         let path = env::var_os("PATH").unwrap_or_default();
         let paths = env::split_paths(&path);
-        let mut outer_cargo = PathBuf::from(env::var_os("CARGO").unwrap());
-        outer_cargo.pop();
-        let new_path = env::join_paths(std::iter::once(outer_cargo).chain(paths)).unwrap();
+        let new_path = env::join_paths(std::iter::once(RUSTC_DIR.clone()).chain(paths)).unwrap();
         p.env("PATH", new_path);
     }
 
