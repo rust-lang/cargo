@@ -254,6 +254,8 @@ fn custom_build_env_var_rustc_wrapper() {
 #[cargo_test]
 fn custom_build_env_var_rustc_workspace_wrapper() {
     let wrapper = tools::echo_wrapper();
+
+    // Workspace wrapper should be set for any crate we're operating directly on.
     let p = project()
         .file(
             "build.rs",
@@ -274,6 +276,48 @@ fn custom_build_env_var_rustc_workspace_wrapper() {
     p.cargo("check")
         .env("CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER", &wrapper)
         .env("CARGO_RUSTC_WORKSPACE_WRAPPER_CHECK", &wrapper)
+        .run();
+
+    // But should not be set for a crate from the registry, as then it's not in a workspace.
+    Package::new("bar", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            links = "a"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {{
+                assert!(env::var("RUSTC_WORKSPACE_WRAPPER").is_err());
+            }}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER", &wrapper)
         .run();
 }
 
