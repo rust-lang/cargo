@@ -53,6 +53,55 @@ fn override_simple() {
 }
 
 #[cargo_test]
+fn override_with_features() {
+    Package::new("bar", "0.1.0").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0" = {{ git = '{}', features = ["some_feature"] }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+
+Caused by:
+  patch for `bar` uses the features mechanism. default-features and features \
+will not take effect because the patch dependency does not support this mechanism
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn missing_version() {
     let p = project()
         .file(

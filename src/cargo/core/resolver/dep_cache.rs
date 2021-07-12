@@ -105,6 +105,14 @@ impl<'a> RegistryQueryer<'a> {
                 dep.version_req()
             );
 
+            if dep.features().len() != 0 || !dep.uses_default_features() {
+                anyhow::bail!(
+                    "patch for `{}` uses the features mechanism. \
+                    default-features and features will not take effect because the patch dependency does not support this mechanism",
+                    dep.package_name()
+                );
+            }
+
             let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
                 anyhow::format_err!(
