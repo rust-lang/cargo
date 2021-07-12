@@ -420,10 +420,12 @@ fn rustfix_crate(
     // process at a time. If two invocations concurrently check a crate then
     // it's likely to corrupt it.
     //
-    // We currently do this by assigning the name on our lock to the manifest
-    // directory.
-    let dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is missing?");
-    let _lock = LockServerClient::lock(&lock_addr.parse()?, dir)?;
+    // Historically this used per-source-file locking, then per-package
+    // locking. It now uses a single, global lock as some users do things like
+    // #[path] or include!() of shared files between packages. Serializing
+    // makes it slower, but is the only safe way to prevent concurrent
+    // modification.
+    let _lock = LockServerClient::lock(&lock_addr.parse()?, "global")?;
 
     // Next up, this is a bit suspicious, but we *iteratively* execute rustc and
     // collect suggestions to feed to rustfix. Once we hit our limit of times to
