@@ -108,7 +108,7 @@ impl<'a> fmt::Display for Display<'a> {
                                 .iter()
                                 .find(|target| target.is_lib())
                             {
-                                write!(fmt, "{}", target.name())?;
+                                write!(fmt, "{}", target.crate_name())?;
                             }
                         }
                     }
