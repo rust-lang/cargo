@@ -341,9 +341,12 @@ fn custom_linker_env() {
 }
 
 #[cargo_test]
-// Temporarily disabled until https://github.com/rust-lang/rust/pull/85270 is in nightly.
-#[cfg_attr(target_os = "windows", ignore)]
 fn target_in_environment_contains_lower_case() {
+    if cfg!(windows) && !cargo_test_support::is_nightly() {
+        // Remove this check when 1.55 is stabilized.
+        // https://github.com/rust-lang/rust/pull/85270
+        return;
+    }
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     let target = rustc_host();
