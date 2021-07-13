@@ -246,7 +246,7 @@ fn render_suggestions(
     let mut sources: HashMap<_, _> = source_ids
         .into_iter()
         .filter_map(|sid| {
-            let source = map.load(sid, &HashSet::new()).ok()?;
+            let source = map.load(sid, &HashSet::new(), ws.inheritable_fields()).ok()?;
             Some((sid, source))
         })
         .collect();
