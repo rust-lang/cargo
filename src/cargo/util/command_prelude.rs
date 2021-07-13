@@ -281,8 +281,14 @@ pub fn subcommand(name: &'static str) -> App {
 
 // Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
-    Checked,
-    Unchecked,
+    // `cargo rustc` historically has allowed "test", "bench", and "check". This
+    // variant explicitly allows those.
+    LegacyRustc,
+    // `cargo check` and `cargo fix` historically has allowed "test". This variant
+    // explicitly allows that on stable.
+    LegacyTestOnly,
+    // All other commands, which allow any valid custom named profile.
+    Custom,
 }
 
 pub trait ArgMatchesExt {
@@ -345,13 +351,18 @@ pub trait ArgMatchesExt {
     ) -> CargoResult<InternedString> {
         let specified_profile = self._value_of("profile");
 
-        match profile_checking {
-            ProfileChecking::Unchecked => {}
-            ProfileChecking::Checked => {
-                if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-                    anyhow::bail!("Usage of `--profile` requires `-Z unstable-options`")
-                }
-            }
+        // Check for allowed legacy names.
+        // This is an early exit, since it allows combination with `--release`.
+        match (specified_profile, profile_checking) {
+            // `cargo rustc` has legacy handling of these names
+            (Some(name @ ("test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            // `cargo fix` and `cargo check` has legacy handling of this profile name
+            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            _ => {}
+        }
+
+        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
+            bail!("usage of `--profile` requires `-Z unstable-options`");
         }
 
         let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
@@ -371,26 +382,6 @@ pub trait ArgMatchesExt {
             specified_profile,
         ) {
             (false, false, None) => default,
-            // `check` is separate from all other reservations because
-            // `--profile=check` has been stable for the `cargo rustc` command
-            // for a long time. The Unchecked commands (check, fix, rustc)
-            // have their own validation.
-            //
-            // This is explicitly ordered before the --release conflict check
-            // since `cargo rustc --profile=check --release` means to check in
-            // release mode.
-            //
-            // When stabilizing, only `cargo rustc` should be allowed to use
-            // `check` with the old semantics.
-            (_, _, Some(name @ ("test" | "bench" | "check"))) => match profile_checking {
-                ProfileChecking::Unchecked => name,
-                ProfileChecking::Checked => {
-                    bail!(
-                        "profile `{}` is reserved and not allowed to be explicitly specified",
-                        name
-                    )
-                }
-            },
             (true, _, None | Some("release")) => "release",
             (true, _, Some(name)) => return Err(conflict("release", "release", name)),
             (_, true, None | Some("dev")) => "dev",
@@ -398,8 +389,8 @@ pub trait ArgMatchesExt {
             // `doc` is separate from all the other reservations because
             // [profile.doc] was historically allowed, but is deprecated and
             // has no effect. To avoid potentially breaking projects, it is a
-            // warning, but since `--profile` is new, we can reject it
-            // completely here.
+            // warning in Cargo.toml, but since `--profile` is new, we can
+            // reject it completely here.
             (_, _, Some("doc")) => {
                 bail!("profile `doc` is reserved and not allowed to be explicitly specified")
             }
