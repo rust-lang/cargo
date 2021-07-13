@@ -343,13 +343,7 @@ pub trait ArgMatchesExt {
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
-        let specified_profile = match self._value_of("profile") {
-            None => None,
-            Some(name) => {
-                TomlProfile::validate_name(name, "profile name")?;
-                Some(InternedString::new(name))
-            }
-        };
+        let specified_profile = self._value_of("profile");
 
         match profile_checking {
             ProfileChecking::Unchecked => {}
@@ -360,31 +354,62 @@ pub trait ArgMatchesExt {
             }
         }
 
-        if self._is_present("release") {
-            if !config.cli_unstable().unstable_options {
-                Ok(InternedString::new("release"))
-            } else {
-                match specified_profile {
-                    Some(name) if name != "release" => {
-                        anyhow::bail!("Conflicting usage of --profile and --release")
-                    }
-                    _ => Ok(InternedString::new("release")),
+        let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
+            anyhow::format_err!(
+                "conflicting usage of --profile={} and --{flag}\n\
+                 The `--{flag}` flag is the same as `--profile={equiv}`.\n\
+                 Remove one flag or the other to continue.",
+                specified,
+                flag = flag,
+                equiv = equiv
+            )
+        };
+
+        let name = match (
+            self._is_present("release"),
+            self._is_present("debug"),
+            specified_profile,
+        ) {
+            (false, false, None) => default,
+            // `check` is separate from all other reservations because
+            // `--profile=check` has been stable for the `cargo rustc` command
+            // for a long time. The Unchecked commands (check, fix, rustc)
+            // have their own validation.
+            //
+            // This is explicitly ordered before the --release conflict check
+            // since `cargo rustc --profile=check --release` means to check in
+            // release mode.
+            //
+            // When stabilizing, only `cargo rustc` should be allowed to use
+            // `check` with the old semantics.
+            (_, _, Some(name @ ("test" | "bench" | "check"))) => match profile_checking {
+                ProfileChecking::Unchecked => name,
+                ProfileChecking::Checked => {
+                    bail!(
+                        "profile `{}` is reserved and not allowed to be explicitly specified",
+                        name
+                    )
                 }
+            },
+            (true, _, None | Some("release")) => "release",
+            (true, _, Some(name)) => return Err(conflict("release", "release", name)),
+            (_, true, None | Some("dev")) => "dev",
+            (_, true, Some(name)) => return Err(conflict("debug", "dev", name)),
+            // `doc` is separate from all the other reservations because
+            // [profile.doc] was historically allowed, but is deprecated and
+            // has no effect. To avoid potentially breaking projects, it is a
+            // warning, but since `--profile` is new, we can reject it
+            // completely here.
+            (_, _, Some("doc")) => {
+                bail!("profile `doc` is reserved and not allowed to be explicitly specified")
             }
-        } else if self._is_present("debug") {
-            if !config.cli_unstable().unstable_options {
-                Ok(InternedString::new("dev"))
-            } else {
-                match specified_profile {
-                    Some(name) if name != "dev" => {
-                        anyhow::bail!("Conflicting usage of --profile and --debug")
-                    }
-                    _ => Ok(InternedString::new("dev")),
-                }
+            (_, _, Some(name)) => {
+                TomlProfile::validate_name(name)?;
+                name
             }
-        } else {
-            Ok(specified_profile.unwrap_or_else(|| InternedString::new(default)))
-        }
+        };
+
+        Ok(InternedString::new(name))
     }
 
     fn packages_from_flags(&self) -> CargoResult<Packages> {
