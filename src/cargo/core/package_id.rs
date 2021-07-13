@@ -212,7 +212,7 @@ impl fmt::Display for PackageId {
         write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
         if !self.inner.source_id.is_default_registry() {
-            write!(f, " ({})", self.inner.source_id)?;
+            write!(f, " ({}/Cargo.toml)", self.inner.source_id)?;
         }
 
         Ok(())

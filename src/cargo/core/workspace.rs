@@ -772,7 +772,7 @@ impl<'cfg> Workspace<'cfg> {
         };
         for (path, name) in candidates {
             self.find_path_deps(&path, root_manifest, true)
-                .with_context(|| format!("failed to load manifest for dependency `{}`", name))
+                .with_context(|| format!("failed to load manifest for dependency `{}`\n({})", name, path.to_string_lossy()))
                 .map_err(|err| ManifestError::new(err, manifest_path.clone()))?;
         }
         Ok(())
