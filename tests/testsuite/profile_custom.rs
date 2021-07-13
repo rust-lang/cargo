@@ -100,6 +100,7 @@ Caused by:
 }
 
 #[cargo_test]
+#[ignore] // dir-name is currently disabled
 fn invalid_dir_name() {
     let p = project()
         .file(
@@ -130,6 +131,42 @@ fn invalid_dir_name() {
 
 Caused by:
   Invalid character `.` in dir-name: `.subdir`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dir_name_disabled() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["named-profiles"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.release-lto]
+                inherits = "release"
+                dir-name = "lto"
+                lto = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dir-name=\"lto\" in profile `release-lto` is not currently allowed, \
+  directory names are tied to the profile name for custom profiles
+",
         )
         .run();
 }

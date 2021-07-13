@@ -520,16 +520,16 @@ impl TomlProfile {
             features.require(Feature::named_profiles())?;
         }
 
-        if self.dir_name.is_some() {
-            features.require(Feature::named_profiles())?;
-        }
-
-        // `dir-name` validation
-        match &self.dir_name {
-            None => {}
-            Some(dir_name) => {
-                Self::validate_name(dir_name, "dir-name")?;
-            }
+        if let Some(dir_name) = self.dir_name {
+            // This is disabled for now, as we would like to stabilize named
+            // profiles without this, and then decide in the future if it is
+            // needed. This helps simplify the UI a little.
+            bail!(
+                "dir-name=\"{}\" in profile `{}` is not currently allowed, \
+                 directory names are tied to the profile name for custom profiles",
+                dir_name,
+                name
+            );
         }
 
         // `inherits` validation
