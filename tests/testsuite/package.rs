@@ -261,6 +261,7 @@ in package source
 
 #[cargo_test]
 fn path_dependency_no_version() {
+    Package::new("bar", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -281,19 +282,29 @@ fn path_dependency_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("package")
-        .with_status(101)
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version\n\
-Note: The packaged dependency will use the version from crates.io,
-the `path` specification will be removed from the dependency declaration.
-",
-        )
-        .run();
+    p.cargo("package --no-verify").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+description = "foo"
+license = "MIT"
+[dependencies.bar]
+version = "0.1.0"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE,
+    );
+
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
 }
 
 #[cargo_test]
@@ -1934,10 +1945,14 @@ src/main.rs
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] all dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version
-Note: The packaged dependency will use the version from crates.io,
-the `path` specification will be removed from the dependency declaration.
+[PACKAGING] foo v0.1.0 [..]
+[UPDATING] `[..]` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `bar` found
+  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  required by package `foo v0.1.0 [..]`
 ",
         )
         .run();

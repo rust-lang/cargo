@@ -9,7 +9,9 @@ use anyhow::{bail, format_err, Context as _};
 use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::Freshness;
-use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
+use crate::core::{
+    Dependency, FeatureValue, InheritableFields, Package, PackageId, Source, SourceId,
+};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
@@ -515,7 +517,12 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
         .url()
         .to_file_path()
         .map_err(|()| format_err!("path sources must have a valid path"))?;
-    Ok(PathSource::new(&path, source_id, config))
+    Ok(PathSource::new(
+        &path,
+        source_id,
+        config,
+        InheritableFields::default(),
+    ))
 }
 
 /// Gets a Package based on command-line requirements.

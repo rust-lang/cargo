@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
+use crate::core::{
+    Dependency, Edition, InheritableFields, Package, PackageId, Source, SourceId, Workspace,
+};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
@@ -234,7 +236,7 @@ fn install_one(
                 config,
             )?
         } else if let Some(dep) = dep {
-            let mut source = map.load(source_id, &HashSet::new())?;
+            let mut source = map.load(source_id, &HashSet::new(), &InheritableFields::default())?;
             if let Ok(Some(pkg)) =
                 installed_exact_package(dep.clone(), &mut source, config, opts, root, &dst, force)
             {
@@ -590,7 +592,7 @@ fn make_ws_rustc_target<'cfg>(
     let mut ws = if source_id.is_git() || source_id.is_path() {
         Workspace::new(pkg.manifest_path(), config)?
     } else {
-        Workspace::ephemeral(pkg, config, None, false)?
+        Workspace::ephemeral(pkg, config, None, false, InheritableFields::default())?
     };
     ws.set_ignore_lock(config.lock_update_allowed());
     ws.set_require_optional_deps(false);

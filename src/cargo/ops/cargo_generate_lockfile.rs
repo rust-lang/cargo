@@ -21,7 +21,7 @@ pub struct UpdateOptions<'a> {
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
-    let mut registry = PackageRegistry::new(ws.config())?;
+    let mut registry = PackageRegistry::new(ws.config(), ws.inheritable_fields().clone())?;
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
@@ -58,7 +58,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 // Precise option specified, so calculate a previous_resolve required
                 // by precise package update later.
                 Some(_) => {
-                    let mut registry = PackageRegistry::new(opts.config)?;
+                    let mut registry =
+                        PackageRegistry::new(opts.config, ws.inheritable_fields().clone())?;
                     ops::resolve_with_previous(
                         &mut registry,
                         ws,
@@ -73,7 +74,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     };
-    let mut registry = PackageRegistry::new(opts.config)?;
+    let mut registry = PackageRegistry::new(opts.config, ws.inheritable_fields().clone())?;
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {

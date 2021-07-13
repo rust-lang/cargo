@@ -1,5 +1,5 @@
 use crate::core::shell::Verbosity;
-use crate::core::{GitReference, Workspace};
+use crate::core::{GitReference, InheritableFields, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::util::{CargoResult, Config};
@@ -211,7 +211,7 @@ fn sync(
         )?;
 
         let _ = fs::remove_dir_all(&dst);
-        let pathsource = PathSource::new(src, id.source_id(), config);
+        let pathsource = PathSource::new(src, id.source_id(), config, InheritableFields::default());
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
         cp_sources(src, &paths, &dst, &mut map, &mut tmp_buf)

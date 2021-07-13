@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Dependency, InheritableFields, Package, PackageId, Source, SourceId, Summary};
 use crate::ops;
 use crate::util::{internal, CargoResult, Config};
 use anyhow::Context as _;
@@ -21,6 +21,7 @@ pub struct PathSource<'cfg> {
     packages: Vec<Package>,
     config: &'cfg Config,
     recursive: bool,
+    inherit: InheritableFields,
 }
 
 impl<'cfg> PathSource<'cfg> {
@@ -28,7 +29,12 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
-    pub fn new(path: &Path, source_id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+    pub fn new(
+        path: &Path,
+        source_id: SourceId,
+        config: &'cfg Config,
+        inherit: InheritableFields,
+    ) -> PathSource<'cfg> {
         PathSource {
             source_id,
             path: path.to_path_buf(),
@@ -36,6 +42,7 @@ impl<'cfg> PathSource<'cfg> {
             packages: Vec::new(),
             config,
             recursive: false,
+            inherit,
         }
     }
 
@@ -47,10 +54,15 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
-    pub fn new_recursive(root: &Path, id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+    pub fn new_recursive(
+        root: &Path,
+        id: SourceId,
+        config: &'cfg Config,
+        inherit: InheritableFields,
+    ) -> PathSource<'cfg> {
         PathSource {
             recursive: true,
-            ..PathSource::new(root, id, config)
+            ..PathSource::new(root, id, config, inherit)
         }
     }
 
@@ -80,10 +92,10 @@ impl<'cfg> PathSource<'cfg> {
         if self.updated {
             Ok(self.packages.clone())
         } else if self.recursive {
-            ops::read_packages(&self.path, self.source_id, self.config)
+            ops::read_packages(&self.path, self.source_id, self.config, &self.inherit)
         } else {
             let path = self.path.join("Cargo.toml");
-            let (pkg, _) = ops::read_package(&path, self.source_id, self.config)?;
+            let (pkg, _) = ops::read_package(&path, self.source_id, self.config, &self.inherit)?;
             Ok(vec![pkg])
         }
     }

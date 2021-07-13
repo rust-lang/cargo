@@ -2027,7 +2027,7 @@ fn deps_with_bin_only() {
                     {
                       "name": "bdep",
                       "source": null,
-                      "req": "*",
+                      "req": "^0.5.0",
                       "kind": null,
                       "rename": null,
                       "optional": false,

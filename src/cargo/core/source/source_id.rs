@@ -1,4 +1,4 @@
-use crate::core::PackageId;
+use crate::core::{InheritableFields, PackageId};
 use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
@@ -272,6 +272,7 @@ impl SourceId {
         self,
         config: &'a Config,
         yanked_whitelist: &HashSet<PackageId>,
+        inherit: &InheritableFields,
     ) -> CargoResult<Box<dyn super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
@@ -281,7 +282,12 @@ impl SourceId {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };
-                Ok(Box::new(PathSource::new(&path, self, config)))
+                Ok(Box::new(PathSource::new(
+                    &path,
+                    self,
+                    config,
+                    inherit.clone(),
+                )))
             }
             SourceKind::Registry => Ok(Box::new(RegistrySource::remote(
                 self,

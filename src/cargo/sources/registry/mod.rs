@@ -174,7 +174,7 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{InheritableFields, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
@@ -662,7 +662,12 @@ impl<'cfg> RegistrySource<'cfg> {
         let path = self
             .unpack_package(package, path)
             .with_context(|| format!("failed to unpack package `{}`", package))?;
-        let mut src = PathSource::new(&path, self.source_id, self.config);
+        let mut src = PathSource::new(
+            &path,
+            self.source_id,
+            self.config,
+            InheritableFields::default(),
+        );
         src.update()?;
         let mut pkg = match src.download(package)? {
             MaybePackage::Ready(pkg) => pkg,

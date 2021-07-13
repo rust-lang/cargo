@@ -4,7 +4,7 @@
 //! structure usable by Cargo itself. Currently this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use crate::core::{GitReference, PackageId, Source, SourceId};
+use crate::core::{GitReference, InheritableFields, PackageId, Source, SourceId};
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
@@ -103,12 +103,13 @@ impl<'cfg> SourceConfigMap<'cfg> {
         &self,
         id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
+        inherit: &InheritableFields,
     ) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
 
         let mut name = match self.id2name.get(&id) {
             Some(name) => name,
-            None => return id.load(self.config, yanked_whitelist),
+            None => return id.load(self.config, yanked_whitelist, inherit),
         };
         let mut cfg_loc = "";
         let orig_name = name;
@@ -130,7 +131,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                     name = s;
                     cfg_loc = c;
                 }
-                None if id == cfg.id => return id.load(self.config, yanked_whitelist),
+                None if id == cfg.id => return id.load(self.config, yanked_whitelist, inherit),
                 None => {
                     new_id = cfg.id.with_precise(id.precise().map(|s| s.to_string()));
                     break;
@@ -154,8 +155,9 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 .iter()
                 .map(|p| p.map_source(id, new_id))
                 .collect(),
+            inherit,
         )?;
-        let old_src = id.load(self.config, yanked_whitelist)?;
+        let old_src = id.load(self.config, yanked_whitelist, inherit)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
             bail!(
                 "\

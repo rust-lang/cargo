@@ -511,16 +511,13 @@ fn error_message_for_missing_manifest() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 [..]`
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  failed to load source for dependency `bar`
+  failed to get dependency `bar`
 
 Caused by:
-  Unable to update [CWD]/src/bar
-
-Caused by:
-  failed to read `[..]bar/Cargo.toml`
+  failed to read `[..]/bar/Cargo.toml`
 
 Caused by:
   [..] (os error [..])
@@ -1038,6 +1035,17 @@ fn deep_path_error() {
             "#,
         )
         .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "0.1.0"
+            [dependencies]
+            d = {path="../d"}
+           "#,
+        )
+        .file("c/src/lib.rs", "")
         .build();
 
     p.cargo("check")
@@ -1055,7 +1063,13 @@ Caused by:
   Unable to update [..]/foo/c
 
 Caused by:
-  failed to read `[..]/foo/c/Cargo.toml`
+  failed to parse manifest at `[..]/foo/c/Cargo.toml`
+
+Caused by:
+  failed to get dependency `d`
+
+Caused by:
+  failed to read `[..]/d/Cargo.toml`
 
 Caused by:
   [..]

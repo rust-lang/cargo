@@ -71,7 +71,12 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     let pkg = ws.current()?;
     let config = ws.config();
 
-    let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), config);
+    let mut src = PathSource::new(
+        pkg.root(),
+        pkg.package_id().source_id(),
+        config,
+        ws.inheritable_fields().clone(),
+    );
     src.update()?;
 
     if opts.check_metadata {
@@ -259,6 +264,51 @@ fn build_ar_list(
             ))?;
         }
     }
+
+    if let Some(readme_file) = &pkg.manifest().metadata().readme {
+        let readme_path = Path::new(readme_file);
+        let abs_readme_path = paths::normalize_path(&pkg.root().join(readme_path));
+        if abs_readme_path.exists() {
+            match abs_readme_path.strip_prefix(&pkg.root()) {
+                Ok(rel_readme_path) => {
+                    if !result.iter().any(|ar| ar.rel_path == rel_readme_path) {
+                        result.push(ArchiveFile {
+                            rel_path: rel_readme_path.to_path_buf(),
+                            rel_str: rel_readme_path
+                                .to_str()
+                                .expect("everything was utf8")
+                                .to_string(),
+                            contents: FileContents::OnDisk(abs_readme_path),
+                        });
+                    }
+                }
+                Err(_) => {
+                    // The readme exists somewhere outside of the package.
+                    let readme_name = readme_path.file_name().unwrap();
+                    if result
+                        .iter()
+                        .any(|ar| ar.rel_path.file_name().unwrap() == readme_name)
+                    {
+                        ws.config().shell().warn(&format!(
+                            "readme `{}` appears to be a path outside of the package, \
+                            but there is already a file named `{}` in the root of the package. \
+                            The archived crate will contain the copy in the root of the package. \
+                            Update the readme to point to the path relative \
+                            to the root of the package to remove this warning.",
+                            readme_file,
+                            readme_name.to_str().unwrap()
+                        ))?;
+                    } else {
+                        result.push(ArchiveFile {
+                            rel_path: PathBuf::from(readme_name),
+                            rel_str: readme_name.to_str().unwrap().to_string(),
+                            contents: FileContents::OnDisk(abs_readme_path),
+                        });
+                    }
+                }
+            }
+        }
+    }
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
 
     Ok(result)
@@ -279,12 +329,23 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     );
     let package_root = orig_pkg.root();
     let source_id = orig_pkg.package_id().source_id();
-    let (manifest, _nested_paths) =
-        TomlManifest::to_real_manifest(&toml_manifest, source_id, package_root, config)?;
+    let (manifest, _nested_paths) = TomlManifest::to_real_manifest(
+        &toml_manifest,
+        source_id,
+        package_root,
+        config,
+        ws.inheritable_fields(),
+    )?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
     // Regenerate Cargo.lock using the old one as a guide.
-    let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
+    let tmp_ws = Workspace::ephemeral(
+        new_pkg,
+        ws.config(),
+        None,
+        true,
+        ws.inheritable_fields().clone(),
+    )?;
     let (pkg_set, mut new_resolve) = ops::resolve_ws(&tmp_ws)?;
 
     if let Some(orig_resolve) = orig_resolve {
@@ -669,10 +730,10 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.
     let id = SourceId::for_path(&dst)?;
-    let mut src = PathSource::new(&dst, id, ws.config());
+    let mut src = PathSource::new(&dst, id, ws.config(), ws.inheritable_fields().clone());
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
-    let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
+    let ws = Workspace::ephemeral(new_pkg, config, None, true, ws.inheritable_fields().clone())?;
 
     let rustc_args = if pkg
         .manifest()

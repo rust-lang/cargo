@@ -1,6 +1,6 @@
 use crate::core::source::{MaybePackage, Source, SourceId};
-use crate::core::GitReference;
 use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::core::{GitReference, InheritableFields};
 use crate::sources::git::utils::GitRemote;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
@@ -174,9 +174,13 @@ impl<'cfg> Source for GitSource<'cfg> {
             .join(&self.ident)
             .join(short_id.as_str());
         db.copy_to(actual_rev, &checkout_path, self.config)?;
-
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
+        let path_source = PathSource::new_recursive(
+            &checkout_path,
+            source_id,
+            self.config,
+            InheritableFields::default(),
+        );
 
         self.path_source = Some(path_source);
         self.locked_rev = Some(actual_rev);

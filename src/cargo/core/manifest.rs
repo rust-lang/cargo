@@ -13,7 +13,9 @@ use url::Url;
 
 use crate::core::compiler::{CompileKind, CrateType};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, Package, PackageId, PackageIdSpec, SourceId, Summary};
+use crate::core::{
+    Dependency, InheritableFields, Package, PackageId, PackageIdSpec, SourceId, Summary,
+};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
@@ -982,7 +984,7 @@ impl Warnings {
 #[derive(Debug, Clone)]
 pub struct IntermediateManifest {
     workspace: WorkspaceConfig,
-    pkg_id: PackageId,
+    source_id: SourceId,
     original: Rc<TomlManifest>,
     warnings: Warnings,
 }
@@ -990,12 +992,12 @@ pub struct IntermediateManifest {
 impl IntermediateManifest {
     pub fn new(
         workspace: WorkspaceConfig,
-        pkg_id: PackageId,
+        source_id: SourceId,
         original: Rc<TomlManifest>,
     ) -> IntermediateManifest {
         IntermediateManifest {
             workspace,
-            pkg_id,
+            source_id,
             original,
             warnings: Warnings::new(),
         }
@@ -1005,12 +1007,14 @@ impl IntermediateManifest {
         &self,
         manifest_path: &Path,
         config: &Config,
+        inheritable_fields: &InheritableFields,
     ) -> CargoResult<(Package, Vec<PathBuf>)> {
         let (mut manifest, nested_paths) = TomlManifest::to_real_manifest(
             &self.original,
-            self.pkg_id.source_id(),
+            self.source_id,
             manifest_path.parent().unwrap(),
             config,
+            inheritable_fields,
         )
         .with_context(|| format!("failed to parse manifest at `{}`", manifest_path.display()))
         .map_err(|err| ManifestError::new(err, manifest_path.into()))?;
@@ -1020,6 +1024,10 @@ impl IntermediateManifest {
         }
 
         Ok((Package::new(manifest, manifest_path), nested_paths))
+    }
+
+    pub fn original(&self) -> &Rc<TomlManifest> {
+        &self.original
     }
 
     pub fn warnings_mut(&mut self) -> &mut Warnings {

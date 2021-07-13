@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
+use crate::core::{InheritableFields, PackageSet};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -78,6 +78,7 @@ pub struct PackageRegistry<'cfg> {
     patches: HashMap<CanonicalUrl, Vec<Summary>>,
     patches_locked: bool,
     patches_available: HashMap<CanonicalUrl, Vec<PackageId>>,
+    inheritable_fields: InheritableFields,
 }
 
 /// A map of all "locked packages" which is filled in when parsing a lock file
@@ -123,7 +124,10 @@ pub struct LockedPatchDependency {
 }
 
 impl<'cfg> PackageRegistry<'cfg> {
-    pub fn new(config: &'cfg Config) -> CargoResult<PackageRegistry<'cfg>> {
+    pub fn new(
+        config: &'cfg Config,
+        inherit: InheritableFields,
+    ) -> CargoResult<PackageRegistry<'cfg>> {
         let source_config = SourceConfigMap::new(config)?;
         Ok(PackageRegistry {
             config,
@@ -136,6 +140,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             patches: HashMap::new(),
             patches_locked: false,
             patches_available: HashMap::new(),
+            inheritable_fields: inherit,
         })
     }
 
@@ -424,7 +429,11 @@ impl<'cfg> PackageRegistry<'cfg> {
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
             debug!("loading source {}", source_id);
-            let source = self.source_config.load(source_id, &self.yanked_whitelist)?;
+            let source = self.source_config.load(
+                source_id,
+                &self.yanked_whitelist,
+                &self.inheritable_fields,
+            )?;
             assert_eq!(source.source_id(), source_id);
 
             if kind == Kind::Override {
