@@ -841,16 +841,13 @@ impl CliUnstable {
                 // some point, and migrate to a new -Z flag for any future
                 // things.
                 let feats = parse_features(v);
-                let stab: Vec<_> = feats
-                    .iter()
-                    .filter(|feat| {
-                        matches!(
-                            feat.as_str(),
-                            "build_dep" | "host_dep" | "dev_dep" | "itarget" | "all"
-                        )
-                    })
-                    .collect();
-                if !stab.is_empty() || feats.is_empty() {
+                let stab_is_not_empty = feats.iter().any(|feat| {
+                    matches!(
+                        feat.as_str(),
+                        "build_dep" | "host_dep" | "dev_dep" | "itarget" | "all"
+                    )
+                });
+                if stab_is_not_empty || feats.is_empty() {
                     // Make this stabilized_err once -Zfeature support is removed.
                     stabilized_warn(k, "1.51", STABILIZED_FEATURES);
                 }
