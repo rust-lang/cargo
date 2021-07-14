@@ -43,8 +43,6 @@ those configuration files if it is invoked from the workspace root
 > and is the preferred form. If both files exist, Cargo will use the file
 > without the extension.
 
-
-
 ### Configuration format
 
 Configuration files are written in the [TOML format][toml] (like the
