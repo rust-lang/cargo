@@ -964,9 +964,10 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package named `bar` found
+error: no matching package found
+searched package name: `bar`
+perhaps you meant:      foo
 location searched: [..]
-perhaps you meant: foo
 required by package `foo v0.5.0 ([..])`
 ",
         )

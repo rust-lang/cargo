@@ -155,9 +155,10 @@ fn wrong_case() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-error: no matching package named `Init` found
+error: no matching package found
+searched package name: `Init`
+perhaps you meant:      init
 location searched: registry [..]
-perhaps you meant: init
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -190,9 +191,10 @@ fn mis_hyphenated() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-error: no matching package named `mis_hyphenated` found
+error: no matching package found
+searched package name: `mis_hyphenated`
+perhaps you meant:      mis-hyphenated
 location searched: registry [..]
-perhaps you meant: mis-hyphenated
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -1438,10 +1440,11 @@ fn use_semver_package_incorrectly() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package named `a` found
-location searched: [..]
+error: no matching package found
+searched package name: `a`
 prerelease package needs to be specified explicitly
 a = { version = \"0.1.1-alpha.0\" }
+location searched: [..]
 required by package `b v0.1.0 ([..])`
 ",
         )
