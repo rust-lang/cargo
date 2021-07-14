@@ -1009,6 +1009,23 @@ foo v0.1.0 ([..]/foo)
 #[cargo_test]
 fn format() {
     Package::new("dep", "1.0.0").publish();
+    Package::new("other-dep", "1.0.0").publish();
+
+    Package::new("dep_that_is_awesome", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "dep_that_is_awesome"
+                version = "1.0.0"
+
+                [lib]
+                name = "awesome_dep"
+            "#,
+        )
+        .file("src/lib.rs", "pub struct Straw;")
+        .publish();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -1021,6 +1038,9 @@ fn format() {
 
             [dependencies]
             dep = {version="1.0", optional=true}
+            other-dep = {version="1.0", optional=true}
+            dep_that_is_awesome = {version="1.0", optional=true}
+
 
             [features]
             default = ["foo"]
@@ -1028,7 +1048,7 @@ fn format() {
             bar = []
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("tree --format <<<{p}>>>")
@@ -1065,8 +1085,21 @@ Caused by:
         .arg("{p} [{f}]")
         .with_stdout(
             "\
-foo v0.1.0 ([..]/foo) [bar,default,dep,foo]
-└── dep v1.0.0 []
+foo v0.1.0 ([..]/foo) [bar,default,dep,dep_that_is_awesome,foo,other-dep]
+├── dep v1.0.0 []
+├── dep_that_is_awesome v1.0.0 []
+└── other-dep v1.0.0 []
+",
+        )
+        .run();
+
+    p.cargo("tree")
+        .arg("--features=other-dep,dep_that_is_awesome")
+        .arg("--format={lib}")
+        .with_stdout(
+            "
+├── awesome_dep
+└── other_dep
 ",
         )
         .run();

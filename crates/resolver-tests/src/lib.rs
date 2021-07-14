@@ -184,6 +184,7 @@ pub fn resolve_with_config_raw(
         &[],
         &mut registry,
         &HashSet::new(),
+        &HashMap::new(),
         Some(config),
         true,
     );
