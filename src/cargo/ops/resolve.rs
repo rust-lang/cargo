@@ -27,7 +27,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
 use log::{debug, trace};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
@@ -242,11 +242,23 @@ pub fn resolve_with_previous<'cfg>(
             }
     };
 
-    // This is a set of PackageIds of `[patch]` entries that should not be
-    // locked.
+    // This is a set of PackageIds of `[patch]` entries, and some related locked PackageIds, for
+    // which locking should be avoided (but which will be preferred when searching dependencies,
+    // via prefer_patch_deps below)
     let mut avoid_patch_ids = HashSet::new();
+
+    // This is a set of Dependency's of `[patch]` entries that should be preferred when searching
+    // dependencies.
+    let mut prefer_patch_deps = HashMap::new();
+
     if register_patches {
         for (url, patches) in ws.root_patch()?.iter() {
+            for patch in patches {
+                prefer_patch_deps
+                    .entry(patch.package_name())
+                    .or_insert_with(HashSet::new)
+                    .insert(patch.clone());
+            }
             let previous = match previous {
                 Some(r) => r,
                 None => {
@@ -353,6 +365,7 @@ pub fn resolve_with_previous<'cfg>(
         }
     }
     debug!("avoid_patch_ids={:?}", avoid_patch_ids);
+    debug!("prefer_patch_deps={:?}", prefer_patch_deps);
 
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
@@ -426,6 +439,7 @@ pub fn resolve_with_previous<'cfg>(
         &replace,
         registry,
         &try_to_use,
+        &prefer_patch_deps,
         Some(ws.config()),
         ws.unstable_features()
             .require(Feature::public_dependency())

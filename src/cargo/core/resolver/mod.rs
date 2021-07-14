@@ -58,6 +58,7 @@ use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::profile;
 
 use self::context::Context;
@@ -106,6 +107,10 @@ mod types;
 ///   when sorting candidates to activate, but otherwise this isn't used
 ///   anywhere else.
 ///
+/// * `prefer_patch_deps` - this is a collection of dependencies on `[patch]`es, which
+///   should be preferred much like `try_to_use`, but are in the form of Dependencies
+///   and not PackageIds.
+///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
 ///
@@ -124,6 +129,7 @@ pub fn resolve(
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
     try_to_use: &HashSet<PackageId>,
+    prefer_patch_deps: &HashMap<InternedString, HashSet<Dependency>>,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
@@ -133,7 +139,13 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
+    let mut registry = RegistryQueryer::new(
+        registry,
+        replacements,
+        try_to_use,
+        prefer_patch_deps,
+        minimal_versions,
+    );
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();

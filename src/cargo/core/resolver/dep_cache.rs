@@ -29,6 +29,7 @@ pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
+    prefer_patch_deps: &'a HashMap<InternedString, HashSet<Dependency>>,
     /// If set the list of dependency candidates will be sorted by minimal
     /// versions first. That allows `cargo update -Z minimal-versions` which will
     /// specify minimum dependency versions to be used.
@@ -49,12 +50,14 @@ impl<'a> RegistryQueryer<'a> {
         registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
+        prefer_patch_deps: &'a HashMap<InternedString, HashSet<Dependency>>,
         minimal_versions: bool,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             try_to_use,
+            prefer_patch_deps,
             minimal_versions,
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
@@ -164,14 +167,22 @@ impl<'a> RegistryQueryer<'a> {
             }
         }
 
-        // When we attempt versions for a package we'll want to do so in a
-        // sorted fashion to pick the "best candidates" first. Currently we try
-        // prioritized summaries (those in `try_to_use`) and failing that we
-        // list everything from the maximum version to the lowest version.
+        // When we attempt versions for a package we'll want to do so in a sorted fashion to pick
+        // the "best candidates" first. Currently we try prioritized summaries (those in
+        // `try_to_use` or `prefer_patch_deps`) and failing that we list everything from the
+        // maximum version to the lowest version.
+        let should_prefer = |package_id: &PackageId| {
+            self.try_to_use.contains(package_id)
+                || self
+                    .prefer_patch_deps
+                    .get(&package_id.name())
+                    .map(|deps| deps.iter().any(|d| d.matches_id(*package_id)))
+                    .unwrap_or(false)
+        };
         ret.sort_unstable_by(|a, b| {
-            let a_in_previous = self.try_to_use.contains(&a.package_id());
-            let b_in_previous = self.try_to_use.contains(&b.package_id());
-            let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
+            let prefer_a = should_prefer(&a.package_id());
+            let prefer_b = should_prefer(&b.package_id());
+            let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
             match previous_cmp {
                 Ordering::Equal => {
                     let cmp = a.version().cmp(b.version());
