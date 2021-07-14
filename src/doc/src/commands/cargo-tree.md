@@ -145,6 +145,7 @@ strings will be replaced with the corresponding value:</p>
 <li><code>{l}</code> — The package license.</li>
 <li><code>{r}</code> — The package repository URL.</li>
 <li><code>{f}</code> — Comma-separated list of package features that are enabled.</li>
+<li><code>{lib}</code> — The name, as used in a <code>use</code> statement, of the package's library.</li>
 </ul></dd>
 
 

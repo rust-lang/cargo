@@ -138,6 +138,9 @@ OPTIONS
            o  {f} — Comma-separated list of package features that are
               enabled.
 
+           o  {lib} — The name, as used in a use statement, of the package's
+              library.
+
        --prefix prefix
            Sets how each line is displayed. The prefix value can be one of:
 
