@@ -181,10 +181,35 @@ impl<'a> DiagnosticPrinter<'a> {
                 if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
-                self.config.shell().warn(&format!(
-                    "`{}` is already on the latest edition ({}), unable to migrate further",
+                let warning = format!(
+                    "`{}` is already on the latest edition ({}), \
+                     unable to migrate further",
                     file, edition
-                ))
+                );
+                // Don't give a really verbose warning if it has already been issued.
+                if self.dedupe.insert(Message::EditionAlreadyEnabled {
+                    file: "".to_string(), // Dummy, so that this only long-warns once.
+                    edition: *edition,
+                }) {
+                    self.config.shell().warn(&format!("\
+{}
+
+If you are trying to migrate from the previous edition ({prev_edition}), the
+process requires following these steps:
+
+1. Start with `edition = \"{prev_edition}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{this_edition}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+",
+                        warning, this_edition=edition, prev_edition=edition.previous().unwrap()
+                    ))
+                } else {
+                    self.config.shell().warn(warning)
+                }
             }
         }
     }
