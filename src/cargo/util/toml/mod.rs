@@ -1791,13 +1791,11 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
             ),
             (Some(git), maybe_path, _, _) => {
                 if maybe_path.is_some() {
-                    let msg = format!(
+                    bail!(
                         "dependency ({}) specification is ambiguous. \
-                         Only one of `git` or `path` is allowed. \
-                         This will be considered an error in future versions",
+                         Only one of `git` or `path` is allowed.",
                         name_in_toml
                     );
-                    cx.warnings.push(msg)
                 }
 
                 let n_details = [&self.branch, &self.tag, &self.rev]

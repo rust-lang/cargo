@@ -1112,11 +1112,12 @@ fn both_git_and_path_specified() {
 
     foo.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[WARNING] dependency (bar) specification is ambiguous. \
-Only one of `git` or `path` is allowed. \
-This will be considered an error in future versions
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  dependency (bar) specification is ambiguous. Only one of `git` or `path` is allowed.
 ",
         )
         .run();
