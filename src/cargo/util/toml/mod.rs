@@ -1734,12 +1734,11 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
 
             for &(key, key_name) in &git_only_keys {
                 if key.is_some() {
-                    let msg = format!(
-                        "key `{}` is ignored for dependency ({}). \
-                         This will be considered an error in future versions",
-                        key_name, name_in_toml
+                    bail!(
+                        "key `{}` is ignored for dependency ({}).",
+                        key_name,
+                        name_in_toml
                     );
-                    cx.warnings.push(msg)
                 }
             }
         }
