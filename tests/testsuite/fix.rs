@@ -925,11 +925,10 @@ fn prepare_for_already_on_latest_unstable() {
 
     p.cargo("fix --edition --allow-no-vcs")
         .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
-[CHECKING] foo [..]
 [WARNING] `src/lib.rs` is already on the latest edition ({next_edition}), unable to migrate further
-[FINISHED] [..]
 ",
             next_edition = next_edition
         ))
@@ -961,11 +960,10 @@ fn prepare_for_already_on_latest_stable() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
-[CHECKING] foo [..]
 [WARNING] `src/lib.rs` is already on the latest edition ({latest_stable}), unable to migrate further
-[FINISHED] [..]
 ",
             latest_stable = latest_stable
         ))
