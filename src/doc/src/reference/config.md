@@ -30,6 +30,14 @@ together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the
 home directory is the lowest priority. Arrays will be joined together.
 
+At present, when being invoked from a workspace, Cargo does not read config
+files from crates within the workspace. i.e. if a workspace has two crates in
+it, named `/projects/foo/bar/baz/mylib` and `/projects/foo/bar/baz/mybin`, and
+there are Cargo configs at `/projects/foo/bar/baz/mylib/.cargo/config.toml`
+and `/projects/foo/bar/baz/mybin/.cargo/config.toml`, Cargo does not read
+those configuration files if it is invoked from the workspace root
+(`/projects/foo/bar/baz/`).
+
 > **Note:** Cargo also reads config files without the `.toml` extension, such as
 > `.cargo/config`. Support for the `.toml` extension was added in version 1.39
 > and is the preferred form. If both files exist, Cargo will use the file
