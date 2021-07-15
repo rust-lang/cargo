@@ -27,7 +27,7 @@ crates-io = { path = "crates/crates-io", version = "0.33.0" }
 crossbeam-utils = "0.8"
 curl = { version = "0.4.23", features = ["http2"] }
 curl-sys = "0.4.22"
-env_logger = "0.8.1"
+env_logger = "0.9.0"
 pretty_env_logger = { version = "0.4", optional = true }
 anyhow = "1.0"
 filetime = "0.2.9"
