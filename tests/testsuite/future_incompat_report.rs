@@ -1,12 +1,20 @@
 //! Tests for future-incompat-report messages
+//!
+//! Note that these tests use the -Zfuture-incompat-test for rustc.
+//! This causes rustc to treat *every* lint as future-incompatible.
+//! This is done because future-incompatible lints are inherently
+//! ephemeral, but we don't want to continually update these tests.
+//! So we pick some random lint that will likely always be the same
+//! over time.
 
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, is_nightly, project, Project};
 
-// An arbitrary lint (array_into_iter) that triggers a report.
-const FUTURE_EXAMPLE: &'static str = "fn main() { [true].into_iter(); }";
+// An arbitrary lint (unused_variables) that triggers a lint.
+// We use a special flag to force it to generate a report.
+const FUTURE_EXAMPLE: &'static str = "fn main() { let x = 1; }";
 // Some text that will be displayed when the lint fires.
-const FUTURE_OUTPUT: &'static str = "[..]array_into_iter[..]";
+const FUTURE_OUTPUT: &'static str = "[..]unused_variables[..]";
 
 fn simple_project() -> Project {
     project()
@@ -17,9 +25,15 @@ fn simple_project() -> Project {
 
 #[cargo_test]
 fn no_output_on_stable() {
+    if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
+        return;
+    }
     let p = simple_project();
 
-    p.cargo("build")
+    p.cargo("check")
+        // Even though rustc emits the report, cargo ignores it without -Z.
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(FUTURE_OUTPUT)
         .with_stderr_does_not_contain("[..]cargo report[..]")
         .run();
@@ -58,6 +72,7 @@ fn gate_future_incompat_report() {
 #[cargo_test]
 fn test_zero_future_incompat() {
     if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
         return;
     }
 
@@ -69,6 +84,7 @@ fn test_zero_future_incompat() {
     // No note if --future-incompat-report is not specified.
     p.cargo("build -Z future-incompat-report")
         .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.0 [..]
@@ -79,6 +95,7 @@ fn test_zero_future_incompat() {
 
     p.cargo("build --future-incompat-report -Z unstable-options -Z future-incompat-report")
         .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
 [FINISHED] [..]
@@ -89,9 +106,9 @@ note: 0 dependencies had future-incompatible warnings
 }
 
 #[cargo_test]
-#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn test_single_crate() {
     if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
         return;
     }
 
@@ -100,6 +117,7 @@ fn test_single_crate() {
     for command in &["build", "check", "rustc", "test"] {
         p.cargo(command).arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
+            .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
             .with_stderr_does_not_contain("[..]incompatibility[..]")
@@ -107,6 +125,7 @@ fn test_single_crate() {
 
         p.cargo(command).arg("-Zfuture-incompat-report").arg("-Zunstable-options").arg("--future-incompat-report")
             .masquerade_as_nightly_cargo()
+            .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
             .with_stderr_contains("The package `foo v0.0.0 ([..])` currently triggers the following future incompatibility lints:")
@@ -115,9 +134,9 @@ fn test_single_crate() {
 }
 
 #[cargo_test]
-#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn test_multi_crate() {
     if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
         return;
     }
 
@@ -147,6 +166,7 @@ fn test_multi_crate() {
     for command in &["build", "check", "rustc", "test"] {
         p.cargo(command).arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
+            .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_does_not_contain(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
             // Check that we don't have the 'triggers' message shown at the bottom of this loop
@@ -155,6 +175,7 @@ fn test_multi_crate() {
 
         p.cargo(command).arg("-Zunstable-options").arg("-Zfuture-incompat-report").arg("--future-incompat-report")
             .masquerade_as_nightly_cargo()
+            .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
             .with_stderr_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stderr_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
@@ -164,6 +185,7 @@ fn test_multi_crate() {
     // Test that passing the correct id via '--id' doesn't generate a warning message
     let output = p
         .cargo("build -Z future-incompat-report")
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .masquerade_as_nightly_cargo()
         .exec_with_output()
         .unwrap();
@@ -223,15 +245,16 @@ fn test_multi_crate() {
 }
 
 #[cargo_test]
-#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn color() {
     if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
         return;
     }
 
     let p = simple_project();
 
     p.cargo("check -Zfuture-incompat-report")
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .masquerade_as_nightly_cargo()
         .run();
 
@@ -248,9 +271,9 @@ fn color() {
 }
 
 #[cargo_test]
-#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn bad_ids() {
     if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
         return;
     }
 
@@ -263,6 +286,7 @@ fn bad_ids() {
         .run();
 
     p.cargo("check -Zfuture-incompat-report")
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .masquerade_as_nightly_cargo()
         .run();
 
@@ -285,9 +309,9 @@ Available IDs are: 1
 }
 
 #[cargo_test]
-#[ignore] // Waiting on https://github.com/rust-lang/rust/pull/86478
 fn suggestions_for_updates() {
     if !is_nightly() {
+        // -Zfuture-incompat-test requires nightly (permanently)
         return;
     }
 
@@ -341,6 +365,7 @@ fn suggestions_for_updates() {
 
     p.cargo("check -Zfuture-incompat-report")
         .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains("[..]cargo report future-incompatibilities --id 1[..]")
         .run();
 
