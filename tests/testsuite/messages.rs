@@ -3,6 +3,7 @@
 //! Tests for message caching can be found in `cache_messages`.
 
 use cargo_test_support::{process, project, Project};
+use cargo_util::ProcessError;
 
 /// Captures the actual diagnostics displayed by rustc. This is done to avoid
 /// relying on the exact message formatting in rustc.
@@ -14,20 +15,24 @@ pub fn raw_rustc_output(project: &Project, path: &str, extra: &[&str]) -> String
     } else {
         proc.arg(path);
     }
-    let rustc_output = proc
+    let rustc_output = match proc
         .arg("--crate-type=lib")
         .args(extra)
         .cwd(project.root())
         .exec_with_output()
-        .expect("rustc to run");
-    assert!(rustc_output.stdout.is_empty());
-    assert!(rustc_output.status.success());
+    {
+        Ok(output) => output.stderr,
+        Err(e) => e.downcast::<ProcessError>().unwrap().stderr.unwrap(),
+    };
     // Do a little dance to remove rustc's "warnings emitted" message and the subsequent newline.
-    let stderr = std::str::from_utf8(&rustc_output.stderr).expect("utf8");
+    let stderr = std::str::from_utf8(&rustc_output).expect("utf8");
     let mut lines = stderr.lines();
     let mut result = String::new();
     while let Some(line) = lines.next() {
-        if line.contains("warning emitted") || line.contains("warnings emitted") {
+        if line.contains("warning emitted")
+            || line.contains("warnings emitted")
+            || line.contains("aborting due to")
+        {
             // Eat blank line.
             match lines.next() {
                 None | Some("") => continue,
@@ -110,5 +115,28 @@ warning: `foo` (lib test) generated 2 warnings (1 duplicate)
     // Run again, to check for caching behavior.
     p.cargo("test --no-run -j1")
         .with_stderr(expected_output)
+        .run();
+}
+
+#[cargo_test]
+fn deduplicate_errors() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                this should not compile
+            "#,
+        )
+        .build();
+    let rustc_message = raw_rustc_output(&p, "src/lib.rs", &[]);
+    p.cargo("test -j1")
+        .with_status(101)
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 [..]
+{}error: could not compile `foo` due to previous error
+",
+            rustc_message
+        ))
         .run();
 }
