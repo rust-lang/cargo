@@ -129,7 +129,7 @@ pub fn prepare(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 }
 
 fn emit_build_output(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     output: &BuildOutput,
     out_dir: &Path,
     package_id: PackageId,

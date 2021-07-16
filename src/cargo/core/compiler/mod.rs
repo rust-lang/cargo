@@ -347,6 +347,8 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 };
                 format!("could not compile `{}`{}{}", name, errors, warnings)
             })?;
+            // Exec should never return with success *and* generate an error.
+            debug_assert_eq!(output_options.errors_seen, 0);
         }
 
         if rustc_dep_info_loc.exists() {
@@ -1170,10 +1172,14 @@ struct OutputOptions {
     /// of empty files are not created. If this is None, the output will not
     /// be cached (such as when replaying cached messages).
     cache_cell: Option<(PathBuf, LazyCell<File>)>,
-    /// If `true`, display any recorded warning messages.
-    /// Other types of messages are processed regardless
-    /// of the value of this flag
-    show_warnings: bool,
+    /// If `true`, display any diagnostics.
+    /// Other types of JSON messages are processed regardless
+    /// of the value of this flag.
+    ///
+    /// This is used primarily for cache replay. If you build with `-vv`, the
+    /// cache will be filled with diagnostics from dependencies. When the
+    /// cache is replayed without `-vv`, we don't want to show them.
+    show_diagnostics: bool,
     warnings_seen: usize,
     errors_seen: usize,
 }
@@ -1191,7 +1197,7 @@ impl OutputOptions {
             look_for_metadata_directive,
             color,
             cache_cell,
-            show_warnings: true,
+            show_diagnostics: true,
             warnings_seen: 0,
             errors_seen: 0,
         }
@@ -1199,7 +1205,7 @@ impl OutputOptions {
 }
 
 fn on_stdout_line(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     _package_id: PackageId,
     _target: &Target,
@@ -1209,7 +1215,7 @@ fn on_stdout_line(
 }
 
 fn on_stderr_line(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
     manifest_path: &std::path::Path,
@@ -1231,7 +1237,7 @@ fn on_stderr_line(
 
 /// Returns true if the line should be cached.
 fn on_stderr_line_inner(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
     manifest_path: &std::path::Path,
@@ -1296,27 +1302,30 @@ fn on_stderr_line_inner(
                 message: String,
                 level: String,
             }
-            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-                if error.level == "error" && error.message.starts_with("aborting due to") {
+            if let Ok(mut msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                if msg.message.starts_with("aborting due to")
+                    || msg.message.ends_with("warning emitted")
+                    || msg.message.ends_with("warnings emitted")
+                {
                     // Skip this line; we'll print our own summary at the end.
                     return Ok(true);
                 }
                 // state.stderr will add a newline
-                if error.rendered.ends_with('\n') {
-                    error.rendered.pop();
+                if msg.rendered.ends_with('\n') {
+                    msg.rendered.pop();
                 }
                 let rendered = if options.color {
-                    error.rendered
+                    msg.rendered
                 } else {
                     // Strip only fails if the the Writer fails, which is Cursor
                     // on a Vec, which should never fail.
-                    strip_ansi_escapes::strip(&error.rendered)
+                    strip_ansi_escapes::strip(&msg.rendered)
                         .map(|v| String::from_utf8(v).expect("utf8"))
                         .expect("strip should never fail")
                 };
-                if options.show_warnings {
-                    count_diagnostic(&error.level, options);
-                    state.stderr(rendered)?;
+                if options.show_diagnostics {
+                    count_diagnostic(&msg.level, options);
+                    state.emit_diag(msg.level, rendered)?;
                 }
                 return Ok(true);
             }
@@ -1399,7 +1408,7 @@ fn on_stderr_line_inner(
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
 
-    if !options.show_warnings {
+    if !options.show_diagnostics {
         return Ok(true);
     }
 
@@ -1433,7 +1442,7 @@ fn replay_output_cache(
     path: PathBuf,
     format: MessageFormat,
     color: bool,
-    show_warnings: bool,
+    show_diagnostics: bool,
 ) -> Work {
     let target = target.clone();
     let mut options = OutputOptions {
@@ -1441,7 +1450,7 @@ fn replay_output_cache(
         look_for_metadata_directive: true,
         color,
         cache_cell: None,
-        show_warnings,
+        show_diagnostics,
         warnings_seen: 0,
         errors_seen: 0,
     };

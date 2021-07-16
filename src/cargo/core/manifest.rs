@@ -925,7 +925,7 @@ impl Target {
             TargetKind::ExampleLib(..) | TargetKind::ExampleBin => {
                 format!("example \"{}\"", self.name())
             }
-            TargetKind::CustomBuild => "custom-build".to_string(),
+            TargetKind::CustomBuild => "build script".to_string(),
         }
     }
 }

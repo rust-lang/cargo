@@ -49,8 +49,9 @@
 //! The current scheduling algorithm is relatively primitive and could likely be
 //! improved.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::fmt::Write as _;
 use std::io;
 use std::marker;
 use std::sync::Arc;
@@ -125,6 +126,14 @@ struct DrainState<'cfg> {
 
     queue: DependencyQueue<Unit, Artifact, Job>,
     messages: Arc<Queue<Message>>,
+    /// Diagnostic deduplication support.
+    diag_dedupe: DiagDedupe<'cfg>,
+    /// Count of warnings, used to print a summary after the job succeeds.
+    ///
+    /// First value is the total number of warnings, and the second value is
+    /// the number that were suppressed because they were duplicates of a
+    /// previous warning.
+    warning_count: HashMap<JobId, (usize, usize)>,
     active: HashMap<JobId, Unit>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
@@ -174,7 +183,7 @@ impl std::fmt::Display for JobId {
 ///
 /// The job may execute on either a dedicated thread or the main thread. If the job executes on the
 /// main thread, the `output` field must be set to prevent a deadlock.
-pub struct JobState<'a> {
+pub struct JobState<'a, 'cfg> {
     /// Channel back to the main thread to coordinate messages and such.
     ///
     /// When the `output` field is `Some`, care must be taken to avoid calling `push_bounded` on
@@ -191,7 +200,7 @@ pub struct JobState<'a> {
     /// interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
     /// interleaving is still prevented as the lock would be held for the whole printing of an
     /// output message.
-    output: Option<&'a Config>,
+    output: Option<&'a DiagDedupe<'cfg>>,
 
     /// The job id that this state is associated with, used when sending
     /// messages back to the main thread.
@@ -205,6 +214,36 @@ pub struct JobState<'a> {
     // Historical versions of Cargo made use of the `'a` argument here, so to
     // leave the door open to future refactorings keep it here.
     _marker: marker::PhantomData<&'a ()>,
+}
+
+/// Handler for deduplicating diagnostics.
+struct DiagDedupe<'cfg> {
+    seen: RefCell<HashSet<u64>>,
+    config: &'cfg Config,
+}
+
+impl<'cfg> DiagDedupe<'cfg> {
+    fn new(config: &'cfg Config) -> Self {
+        DiagDedupe {
+            seen: RefCell::new(HashSet::new()),
+            config,
+        }
+    }
+
+    /// Emits a diagnostic message.
+    ///
+    /// Returns `true` if the message was emitted, or `false` if it was
+    /// suppressed for being a duplicate.
+    fn emit_diag(&self, diag: &str) -> CargoResult<bool> {
+        let h = util::hash_u64(diag);
+        if !self.seen.borrow_mut().insert(h) {
+            return Ok(false);
+        }
+        let mut shell = self.config.shell();
+        shell.print_ansi_stderr(diag.as_bytes())?;
+        shell.err().write_all(b"\n")?;
+        Ok(true)
+    }
 }
 
 /// Possible artifacts that can be produced by compilations, used as edge values
@@ -232,6 +271,15 @@ enum Message {
     BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
+    Diagnostic {
+        id: JobId,
+        level: String,
+        diag: String,
+    },
+    WarningCount {
+        id: JobId,
+        emitted: bool,
+    },
     FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
     Finish(JobId, Artifact, CargoResult<()>),
@@ -244,7 +292,7 @@ enum Message {
     ReleaseToken(JobId),
 }
 
-impl<'a> JobState<'a> {
+impl<'a, 'cfg> JobState<'a, 'cfg> {
     pub fn running(&self, cmd: &ProcessBuilder) {
         self.messages.push(Message::Run(self.id, cmd.to_string()));
     }
@@ -260,8 +308,8 @@ impl<'a> JobState<'a> {
     }
 
     pub fn stdout(&self, stdout: String) -> CargoResult<()> {
-        if let Some(config) = self.output {
-            writeln!(config.shell().out(), "{}", stdout)?;
+        if let Some(dedupe) = self.output {
+            writeln!(dedupe.config.shell().out(), "{}", stdout)?;
         } else {
             self.messages.push_bounded(Message::Stdout(stdout));
         }
@@ -269,12 +317,31 @@ impl<'a> JobState<'a> {
     }
 
     pub fn stderr(&self, stderr: String) -> CargoResult<()> {
-        if let Some(config) = self.output {
-            let mut shell = config.shell();
+        if let Some(dedupe) = self.output {
+            let mut shell = dedupe.config.shell();
             shell.print_ansi_stderr(stderr.as_bytes())?;
             shell.err().write_all(b"\n")?;
         } else {
             self.messages.push_bounded(Message::Stderr(stderr));
+        }
+        Ok(())
+    }
+
+    pub fn emit_diag(&self, level: String, diag: String) -> CargoResult<()> {
+        if let Some(dedupe) = self.output {
+            let emitted = dedupe.emit_diag(&diag)?;
+            if level == "warning" {
+                self.messages.push(Message::WarningCount {
+                    id: self.id,
+                    emitted,
+                });
+            }
+        } else {
+            self.messages.push_bounded(Message::Diagnostic {
+                id: self.id,
+                level,
+                diag,
+            });
         }
         Ok(())
     }
@@ -410,6 +477,8 @@ impl<'cfg> JobQueue<'cfg> {
             // typical messages. If you change this, please update the test
             // caching_large_output, too.
             messages: Arc::new(Queue::new(100)),
+            diag_dedupe: DiagDedupe::new(cx.bcx.config),
+            warning_count: HashMap::new(),
             active: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -563,6 +632,15 @@ impl<'cfg> DrainState<'cfg> {
                 shell.print_ansi_stderr(err.as_bytes())?;
                 shell.err().write_all(b"\n")?;
             }
+            Message::Diagnostic { id, level, diag } => {
+                let emitted = self.diag_dedupe.emit_diag(&diag)?;
+                if level == "warning" {
+                    self.bump_warning_count(id, emitted);
+                }
+            }
+            Message::WarningCount { id, emitted } => {
+                self.bump_warning_count(id, emitted);
+            }
             Message::FixDiagnostic(msg) => {
                 self.print.print(&msg)?;
             }
@@ -586,6 +664,7 @@ impl<'cfg> DrainState<'cfg> {
                             self.tokens.extend(rustc_tokens);
                         }
                         self.to_send_clients.remove(&id);
+                        self.report_warning_count(cx.bcx.config, id);
                         self.active.remove(&id).unwrap()
                     }
                     // ... otherwise if it hasn't finished we leave it
@@ -936,7 +1015,7 @@ impl<'cfg> DrainState<'cfg> {
         let fresh = job.freshness();
         let rmeta_required = cx.rmeta_required(unit);
 
-        let doit = move |state: JobState<'_>| {
+        let doit = move |state: JobState<'_, '_>| {
             let mut sender = FinishOnDrop {
                 messages: &state.messages,
                 id,
@@ -992,7 +1071,7 @@ impl<'cfg> DrainState<'cfg> {
                 doit(JobState {
                     id,
                     messages,
-                    output: Some(cx.bcx.config),
+                    output: Some(&self.diag_dedupe),
                     rmeta_required: Cell::new(rmeta_required),
                     _marker: marker::PhantomData,
                 });
@@ -1042,6 +1121,44 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         Ok(())
+    }
+
+    fn bump_warning_count(&mut self, id: JobId, emitted: bool) {
+        let cnts = self.warning_count.entry(id).or_default();
+        cnts.0 += 1;
+        if !emitted {
+            cnts.1 += 1;
+        }
+    }
+
+    /// Displays a final report of the warnings emitted by a particular job.
+    fn report_warning_count(&mut self, config: &Config, id: JobId) {
+        let count = match self.warning_count.remove(&id) {
+            Some(count) => count,
+            None => return,
+        };
+        let unit = &self.active[&id];
+        let mut message = format!("`{}` ({}", unit.pkg.name(), unit.target.description_named());
+        if unit.mode.is_rustc_test() && !(unit.target.is_test() || unit.target.is_bench()) {
+            message.push_str(" test");
+        } else if unit.mode.is_doc_test() {
+            message.push_str(" doctest");
+        } else if unit.mode.is_doc() {
+            message.push_str(" doc");
+        }
+        message.push_str(") generated ");
+        match count.0 {
+            1 => message.push_str("1 warning"),
+            n => drop(write!(message, "{} warnings", n)),
+        };
+        match count.1 {
+            0 => {}
+            1 => message.push_str(" (1 duplicate)"),
+            n => drop(write!(message, " ({} duplicates)", n)),
+        }
+        // Errors are ignored here because it is tricky to handle them
+        // correctly, and they aren't important.
+        drop(config.shell().warn(message));
     }
 
     fn finish(
