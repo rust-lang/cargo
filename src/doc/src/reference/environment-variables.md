@@ -355,10 +355,6 @@ let out_dir = env::var("OUT_DIR").unwrap();
 			      (ASCII Unit Separator). See
 			      [`build.rustflags`].
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
-* `RUSTC_VERSION` - The version of rustc used by the cargo that invokes
-		    the build script. Its constituent parts are also
-		    available as `RUSTC_VERSION_MAJOR`, `_MINOR`, and
-		    `_PATCH`.
 
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows

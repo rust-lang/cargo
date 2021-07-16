@@ -1041,14 +1041,6 @@ pub fn is_nightly() -> bool {
         && (vv.contains("-nightly") || vv.contains("-dev"))
 }
 
-pub fn rustc_release() -> &'static str {
-    RUSTC_INFO
-        .verbose_version
-        .lines()
-        .find_map(|line| line.strip_prefix("release: "))
-        .expect("verbose version has release: field")
-}
-
 pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
     _process(t.as_ref())
 }

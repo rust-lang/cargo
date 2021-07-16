@@ -5,9 +5,7 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
-use cargo_test_support::{
-    rustc_host, rustc_release, sleep_ms, slow_cpu_multiplier, symlink_supported,
-};
+use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;
 use std::fs;
@@ -82,7 +80,6 @@ fn custom_build_env_vars() {
         )
         .file("bar/src/lib.rs", "pub fn hello() {}");
 
-    let rustc_version = semver::Version::parse(rustc_release()).unwrap();
     let file_content = format!(
         r#"
             use std::env;
@@ -126,15 +123,6 @@ fn custom_build_env_vars() {
                 assert!(env::var("RUSTFLAGS").is_err());
                 let rustflags = env::var("CARGO_ENCODED_RUSTFLAGS").unwrap();
                 assert_eq!(rustflags, "");
-
-                let version = env::var("RUSTC_VERSION").unwrap();
-                assert_eq!(version, "{1}.{2}.{3}", "bad rust version");
-                let version = env::var("RUSTC_VERSION_MAJOR").unwrap();
-                assert_eq!(version, "{1}");
-                let version = env::var("RUSTC_VERSION_MINOR").unwrap();
-                assert_eq!(version, "{2}");
-                let version = env::var("RUSTC_VERSION_PATCH").unwrap();
-                assert_eq!(version, "{3}");
             }}
         "#,
         p.root()
@@ -142,9 +130,6 @@ fn custom_build_env_vars() {
             .join("debug")
             .join("build")
             .display(),
-        rustc_version.major,
-        rustc_version.minor,
-        rustc_version.patch,
     );
 
     let p = p.file("bar/build.rs", &file_content).build();
