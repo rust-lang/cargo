@@ -63,28 +63,36 @@ thread_local! {
     static TEST_ID: RefCell<Option<usize>> = RefCell::new(None);
 }
 
-pub struct TestIdGuard {
-    _private: (),
+pub struct TestGuard {
+    root: Option<PathBuf>,
 }
 
-pub fn init_root(tmp_dir: Option<&'static str>) -> TestIdGuard {
+pub fn init_root(tmp_dir: Option<&'static str>) -> TestGuard {
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
     let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
     TEST_ID.with(|n| *n.borrow_mut() = Some(id));
 
-    let guard = TestIdGuard { _private: () };
+    let mut guard = TestGuard { root: None };
 
     set_global_root(tmp_dir);
     let r = root();
     r.rm_rf();
     r.mkdir_p();
+    guard.root = Some(r);
 
     guard
 }
 
-impl Drop for TestIdGuard {
+impl Drop for TestGuard {
     fn drop(&mut self) {
+        if let Some(r) = self.root.take() {
+            // Clean up the root directory only after successful tests,
+            // using `panicking` as a proxy for failure.
+            if !std::thread::panicking() {
+                r.rm_rf();
+            }
+        }
         TEST_ID.with(|n| *n.borrow_mut() = None);
     }
 }
