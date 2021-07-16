@@ -260,6 +260,7 @@ subcommand and arguments. The following aliases are built-in to Cargo:
 [alias]
 b = "build"
 c = "check"
+d = "doc"
 t = "test"
 r = "run"
 ```

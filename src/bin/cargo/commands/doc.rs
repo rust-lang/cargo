@@ -4,6 +4,8 @@ use cargo::ops::{self, DocOptions};
 
 pub fn cli() -> App {
     subcommand("doc")
+        // subcommand aliases are handled in aliased_command()
+        // .alias("d")
         .about("Build a package's documentation")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(opt(

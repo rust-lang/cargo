@@ -48,9 +48,10 @@ fn main() {
 
 /// Table for defining the aliases which come builtin in `Cargo`.
 /// The contents are structured as: `(alias, aliased_command, description)`.
-const BUILTIN_ALIASES: [(&str, &str, &str); 4] = [
+const BUILTIN_ALIASES: [(&str, &str, &str); 5] = [
     ("b", "build", "alias: build"),
     ("c", "check", "alias: check"),
+    ("d", "doc", "alias: doc"),
     ("r", "run", "alias: run"),
     ("t", "test", "alias: test"),
 ];
