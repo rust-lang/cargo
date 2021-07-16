@@ -2,7 +2,7 @@
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, rustc_host};
 
 #[cargo_test]
 fn invalid1() {
@@ -1852,7 +1852,7 @@ fn registry_summary_order_doesnt_matter() {
         .build();
 
     p.cargo("run")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
@@ -1862,9 +1862,10 @@ fn registry_summary_order_doesnt_matter() {
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout("it works")
         .run();
 }

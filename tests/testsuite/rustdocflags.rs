@@ -1,6 +1,6 @@
 //! Tests for setting custom rustdoc flags.
 
-use cargo_test_support::project;
+use cargo_test_support::{project, rustc_host};
 
 #[cargo_test]
 fn parses_env() {
@@ -118,6 +118,6 @@ fn whitespace() {
         )
         .run();
 
-    let contents = p.read_file("target/doc/foo/index.html");
+    let contents = p.read_file(&format!("target/{}/doc/foo/index.html", rustc_host()));
     assert!(contents.contains(SPACED_VERSION));
 }

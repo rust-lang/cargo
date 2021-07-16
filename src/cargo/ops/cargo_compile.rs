@@ -37,13 +37,12 @@ use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, SourceId, TargetKind, Workspace};
-use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
-use crate::util::config::Config;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::{closest_msg, profile, CargoResult, StableHasher};
+use crate::util::{closest_msg, profile, CargoResult, Rustc, StableHasher};
+use crate::{drop_println, Config};
 
 use anyhow::Context as _;
 
@@ -82,9 +81,13 @@ pub struct CompileOptions {
 }
 
 impl<'a> CompileOptions {
-    pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
+    pub fn new(
+        config: &Config,
+        rustc: CargoResult<Rustc>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions> {
         Ok(CompileOptions {
-            build_config: BuildConfig::new(config, None, &[], mode)?,
+            build_config: BuildConfig::new(config, rustc, None, &[], mode)?,
             cli_features: CliFeatures::new_all(false),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {

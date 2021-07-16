@@ -38,12 +38,13 @@ fn cargo_test_simple() {
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test_hello ... ok")
         .run();
 }
@@ -87,7 +88,7 @@ fn cargo_test_release() {
         .build();
 
     p.cargo("test -v --release")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] [..] -C opt-level=3 [..]
@@ -96,11 +97,12 @@ fn cargo_test_release() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target/release/deps/foo-[..][EXE]`
-[RUNNING] `[..]target/release/deps/test-[..][EXE]`
+[RUNNING] `[..]target/{target}/release/deps/foo-[..][EXE]`
+[RUNNING] `[..]target/{target}/release/deps/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test [..]lib.rs[..]`",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("test test ... ok", 2)
         .with_stdout_contains("running 0 tests")
         .run();
@@ -230,14 +232,15 @@ fn cargo_test_verbose() {
         .build();
 
     p.cargo("test -v hello")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/debug/deps/foo-[..] hello`
+[RUNNING] `[CWD]/target/{}/debug/deps/foo-[..] hello`
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("test test_hello ... ok")
         .run();
 }
@@ -305,13 +308,14 @@ fn cargo_test_failing_test_in_bin() {
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 [ERROR] test failed, to rerun pass '--bin foo'",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains(
             "
 running 1 test
@@ -353,14 +357,15 @@ fn cargo_test_failing_test_in_test() {
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/footest-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/footest-[..][EXE])
 [ERROR] test failed, to rerun pass '--test footest'",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .with_stdout_contains(
             "\
@@ -392,13 +397,14 @@ fn cargo_test_failing_test_in_lib() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 [ERROR] test failed, to rerun pass '--lib'",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains(
             "\
 test test_hello ... FAILED
@@ -466,14 +472,15 @@ fn test_with_lib_dep() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/baz-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/baz-[..][EXE])
 [DOCTEST] foo",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains("test lib_test ... ok")
         .with_stdout_contains("test bin_test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -569,14 +576,15 @@ fn external_test_explicit() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/test-[..][EXE])
 [DOCTEST] foo",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains("test internal_test ... ok")
         .with_stdout_contains("test external_test ... ok")
         .with_stdout_contains("running 0 tests")
@@ -629,14 +637,15 @@ fn external_test_implicit() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/external-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/external-[..][EXE])
 [DOCTEST] foo",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains("test internal_test ... ok")
         .with_stdout_contains("test external_test ... ok")
         .with_stdout_contains("running 0 tests")
@@ -670,24 +679,26 @@ fn pass_through_command_line() {
         .build();
 
     p.cargo("test bar")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("running 1 test")
         .with_stdout_contains("test bar ... ok")
         .run();
 
     p.cargo("test foo")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("running 1 test")
         .with_stdout_contains("test foo ... ok")
         .run();
@@ -746,14 +757,15 @@ fn lib_bin_same_name() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("test [..] ... ok", 2)
         .with_stdout_contains("running 0 tests")
         .run();
@@ -787,14 +799,15 @@ fn lib_with_standard_name() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/syntax-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/test-[..][EXE])
 [DOCTEST] syntax",
-        )
+            target = rustc_host()
+        ))
         .with_stdout_contains("test foo_test ... ok")
         .with_stdout_contains("test test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -833,12 +846,13 @@ fn lib_with_standard_name2() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/syntax-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 }
@@ -874,12 +888,13 @@ fn lib_without_name() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/syntax-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test ... ok")
         .run();
 }
@@ -1112,14 +1127,17 @@ fn bin_there_for_integration() {
         )
         .file(
             "tests/foo.rs",
-            r#"
-                use std::process::Command;
-                #[test]
-                fn test_test() {
-                    let status = Command::new("target/debug/foo").status().unwrap();
-                    assert_eq!(status.code(), Some(101));
-                }
-            "#,
+            &format!(
+                r#"
+                    use std::process::Command;
+                    #[test]
+                    fn test_test() {{
+                        let status = Command::new("target/{}/debug/foo").status().unwrap();
+                        assert_eq!(status.code(), Some(101));
+                    }}
+                "#,
+                rustc_host()
+            ),
         )
         .build();
 
@@ -1185,25 +1203,27 @@ fn test_dylib() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/test-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("test foo ... ok", 2)
         .run();
 
     p.root().move_into_the_past();
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/test-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("test foo ... ok", 2)
         .run();
 }
@@ -1226,24 +1246,26 @@ fn test_twice_with_build_cmd() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("test foo ... ok")
         .with_stdout_contains("running 0 tests")
         .run();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("test foo ... ok")
         .with_stdout_contains("running 0 tests")
         .run();
@@ -1254,13 +1276,14 @@ fn test_then_build() {
     let p = project().file("src/lib.rs", "#[test] fn foo() {}").build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("test foo ... ok")
         .with_stdout_contains("running 0 tests")
         .run();
@@ -1309,12 +1332,13 @@ fn test_run_specific_bin_target() {
         .build();
 
     prj.cargo("test --bin bin2")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/bin2-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/bin2-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test2 ... ok")
         .run();
 }
@@ -1350,12 +1374,13 @@ fn test_run_implicit_bin_target() {
         .build();
 
     prj.cargo("test --bins")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/mybin-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test_in_bin ... ok")
         .run();
 }
@@ -1370,12 +1395,13 @@ fn test_run_specific_test_target() {
         .build();
 
     prj.cargo("test --test b")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/b-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/b-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("test test_b ... ok")
         .run();
 }
@@ -1410,13 +1436,14 @@ fn test_run_implicit_test_target() {
         .build();
 
     prj.cargo("test --tests")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])
-[RUNNING] [..] (target/debug/deps/mytest-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/mybin-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/mytest-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains("test test_in_test ... ok")
         .run();
 }
@@ -1451,13 +1478,14 @@ fn test_run_implicit_bench_target() {
         .build();
 
     prj.cargo("test --benches")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])
-[RUNNING] [..] (target/debug/deps/mybench-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/mybin-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/mybench-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains("test test_in_bench ... ok")
         .run();
 }
@@ -1509,30 +1537,51 @@ fn test_run_implicit_example_target() {
         .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs [..]--crate-type bin[..]")
         .with_stderr_contains("[RUNNING] `rustc [..]myexm2.rs [..]--test[..]")
         .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm2-[..]",
+            rustc_host()
+        ))
         .run();
 
     // Only tests myexm2.
     prj.cargo("test --tests")
         .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm2-[..]",
+            rustc_host()
+        ))
         .run();
 
     // Tests all examples.
     prj.cargo("test --examples")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm1-[..]")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm1-[..]",
+            rustc_host()
+        ))
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm2-[..]",
+            rustc_host()
+        ))
         .run();
 
     // Test an example, even without `test` set.
     prj.cargo("test --example myexm1")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm1-[..]")
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm1-[..]",
+            rustc_host()
+        ))
         .run();
 
     // Tests all examples.
     prj.cargo("test --all-targets")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm1-[..]")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm1-[..]",
+            rustc_host()
+        ))
+        .with_stderr_contains(format!(
+            "[RUNNING] [..]target/{}/debug/examples/myexm2-[..]",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -1556,14 +1605,15 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 ",
         )
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/debug/deps/foo-[..] foo`
+[RUNNING] `[CWD]/target/{}/debug/deps/foo-[..] foo`
 ",
-        )
+            rustc_host()
+        ))
         .with_stderr_does_not_contain("[RUNNING][..]rustc[..]ex1[..]")
         .run();
 }
@@ -1594,13 +1644,14 @@ fn test_no_harness() {
         .build();
 
     p.cargo("test -- --nocapture")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/bar-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/bar-[..][EXE])
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -1666,36 +1717,39 @@ fn selective_testing() {
 
     println!("d1");
     p.cargo("test -p d1")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/d1-[..][EXE])
-[RUNNING] [..] (target/debug/deps/d1-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/d1-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/d1-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
 
     println!("d2");
     p.cargo("test -p d2")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] d2 v0.0.1 ([CWD]/d2)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/d2-[..][EXE])
-[RUNNING] [..] (target/debug/deps/d2-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/d2-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/d2-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
 
     println!("whole");
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .run();
 }
@@ -1871,13 +1925,14 @@ fn selective_testing_with_docs() {
     let p = p.build();
 
     p.cargo("test -p d1")
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/d1[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/d1[..][EXE])
 [DOCTEST] d1",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
 }
@@ -2034,13 +2089,14 @@ fn doctest_feature() {
         .build();
 
     p.cargo("test --features bar")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo[..][EXE])
 [DOCTEST] foo",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .with_stdout_contains("test [..] ... ok")
         .run();
@@ -2111,12 +2167,13 @@ fn filter_no_doc_tests() {
         .build();
 
     p.cargo("test --test=foo")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo[..][EXE])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .run();
 }
@@ -2236,14 +2293,15 @@ fn cyclic_dev_dep_doc_test() {
         )
         .build();
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/foo[..][EXE])
 [DOCTEST] foo",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
         .with_stdout_contains("test [..] ... ok")
         .run();
@@ -2333,19 +2391,21 @@ fn no_fail_fast() {
         .build();
     p.cargo("test --no-fail-fast")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr_contains(format!(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test_add_one-[..][EXE])",
-        )
+[RUNNING] [..] (target/{target}/debug/deps/foo-[..][EXE])
+[RUNNING] [..] (target/{target}/debug/deps/test_add_one-[..][EXE])",
+            target = rustc_host()
+        ))
         .with_stdout_contains("running 0 tests")
-        .with_stderr_contains(
+        .with_stderr_contains(format!(
             "\
-[RUNNING] [..] (target/debug/deps/test_sub_one-[..][EXE])
+[RUNNING] [..] (target/{}/debug/deps/test_sub_one-[..][EXE])
 [DOCTEST] foo",
-        )
+            rustc_host()
+        ))
         .with_stdout_contains("test result: FAILED. [..]")
         .with_stdout_contains("test sub_one_test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -2405,8 +2465,14 @@ fn test_multiple_packages() {
     let p = p.build();
 
     p.cargo("test -p d1 -p d2")
-        .with_stderr_contains("[RUNNING] [..] (target/debug/deps/d1-[..][EXE])")
-        .with_stderr_contains("[RUNNING] [..] (target/debug/deps/d2-[..][EXE])")
+        .with_stderr_contains(format!(
+            "[RUNNING] [..] (target/{}/debug/deps/d1-[..][EXE])",
+            rustc_host()
+        ))
+        .with_stderr_contains(format!(
+            "[RUNNING] [..] (target/{}/debug/deps/d2-[..][EXE])",
+            rustc_host()
+        ))
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
 }
@@ -3568,7 +3634,7 @@ fn json_artifact_includes_executable_for_library_tests() {
         .with_json(
             r#"
                 {
-                    "executable": "[..]/foo/target/debug/deps/foo-[..][EXE]",
+                    "executable": "[..]/foo/target/$TARGET/debug/deps/foo-[..][EXE]",
                     "features": [],
                     "filenames": "{...}",
                     "fresh": false,
@@ -3589,7 +3655,9 @@ fn json_artifact_includes_executable_for_library_tests() {
                 }
 
                 {"reason": "build-finished", "success": true}
-            "#,
+            "#
+            .replace("$TARGET", rustc_host())
+            .as_str(),
         )
         .run();
 }
@@ -3607,7 +3675,7 @@ fn json_artifact_includes_executable_for_integration_tests() {
         .with_json(
             r#"
                 {
-                    "executable": "[..]/foo/target/debug/deps/integration_test-[..][EXE]",
+                    "executable": "[..]/foo/target/$TARGET/debug/deps/integration_test-[..][EXE]",
                     "features": [],
                     "filenames": "{...}",
                     "fresh": false,
@@ -3628,7 +3696,9 @@ fn json_artifact_includes_executable_for_integration_tests() {
                 }
 
                 {"reason": "build-finished", "success": true}
-            "#,
+            "#
+            .replace("$TARGET", rustc_host())
+            .as_str(),
         )
         .run();
 }
@@ -3689,12 +3759,13 @@ fn doctest_skip_staticlib() {
         .run();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
 [FINISHED] test [..]
-[RUNNING] [..] (target/debug/deps/foo-[..])",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..])",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -3717,14 +3788,15 @@ pub fn foo() -> u8 { 1 }
         .build();
 
     p.cargo("test")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..])
+[RUNNING] [..] (target/{}/debug/deps/foo-[..])
 [DOCTEST] foo
 ",
-        )
+            rustc_host()
+        ))
         .with_stdout(
             "
 running 1 test
@@ -3742,11 +3814,12 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
         .run();
 
     p.cargo("test --lib")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..])\n",
-        )
+[RUNNING] [..] (target/{}/debug/deps/foo-[..])\n",
+            rustc_host()
+        ))
         .with_stdout(
             "
 running 1 test

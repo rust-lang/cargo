@@ -4,7 +4,7 @@
 //! prevent all collisions.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, cross_compile, project};
+use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host};
 use std::env;
 
 #[cargo_test]
@@ -51,11 +51,11 @@ fn collision_dylib() {
         .with_stderr_contains(&format!("\
 [WARNING] output filename collision.
 The lib target `a` in package `b v1.0.0 ([..]/foo/b)` has the same output filename as the lib target `a` in package `a v1.0.0 ([..]/foo/a)`.
-Colliding filename is: [..]/foo/target/debug/deps/{}a{}
+Colliding filename is: [..]/foo/target/{}/debug/deps/{}a{}
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
 This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX))
+", rustc_host(), env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX))
         .run();
 }
 
@@ -79,14 +79,14 @@ fn collision_example() {
     // `j=1` is required because on Windows you'll get an error due to
     // two processes writing to the file at the same time.
     p.cargo("build --examples -j=1")
-        .with_stderr_contains("\
+        .with_stderr_contains(&format!("\
 [WARNING] output filename collision.
 The example target `ex1` in package `b v1.0.0 ([..]/foo/b)` has the same output filename as the example target `ex1` in package `a v1.0.0 ([..]/foo/a)`.
-Colliding filename is: [..]/foo/target/debug/examples/ex1[EXE]
+Colliding filename is: [..]/foo/target/{}/debug/examples/ex1[EXE]
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
 This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-")
+", rustc_host()))
         .run();
 }
 
@@ -147,17 +147,18 @@ fn collision_doc() {
         .build();
 
     p.cargo("doc -j=1")
-        .with_stderr_contains(
+        .with_stderr_contains(&format!(
             "\
 [WARNING] output filename collision.
 The lib target `foo` in package `foo2 v0.1.0 ([..]/foo/foo2)` has the same output \
 filename as the lib target `foo` in package `foo v0.1.0 ([..]/foo)`.
-Colliding filename is: [..]/foo/target/doc/foo/index.html
+Colliding filename is: [..]/foo/target/{}/doc/foo/index.html
 The targets should have unique names.
 This is a known bug where multiple crates with the same name use
 the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -310,7 +311,7 @@ fn collision_doc_host_target_feature_split() {
         .join("doc/common_dep/fn.bdep_func.html")
         .exists());
     assert!(p.build_dir().join("doc/common/fn.f.html").exists());
-    assert!(p.build_dir().join("doc/pm/macro.pm.html").exists());
+    assert!(p.host_dir().join("doc/pm/macro.pm.html").exists());
     assert!(p.build_dir().join("doc/foo/fn.f.html").exists());
 }
 
@@ -408,7 +409,7 @@ fn collision_doc_sources() {
         .build();
 
     p.cargo("doc -j=1")
-        .with_stderr_unordered(
+        .with_stderr_unordered(&format!(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
@@ -416,7 +417,7 @@ fn collision_doc_sources() {
 [WARNING] output filename collision.
 The lib target `bar` in package `bar v1.0.0` has the same output filename as \
 the lib target `bar` in package `bar v1.0.0 ([..]/foo/bar)`.
-Colliding filename is: [..]/foo/target/doc/bar/index.html
+Colliding filename is: [..]/foo/target/{}/doc/bar/index.html
 The targets should have unique names.
 This is a known bug where multiple crates with the same name use
 the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
@@ -427,7 +428,8 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -525,13 +527,13 @@ fn collision_with_root() {
         .build();
 
     p.cargo("doc -j=1")
-        .with_stderr_unordered("\
+        .with_stderr_unordered(&format!("\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo-macro v1.0.0 [..]
 warning: output filename collision.
 The lib target `foo-macro` in package `foo-macro v1.0.0` has the same output filename as the lib target `foo-macro` in package `foo-macro v1.0.0 [..]`.
-Colliding filename is: [CWD]/target/doc/foo_macro/index.html
+Colliding filename is: [CWD]/target/host/{}/doc/foo_macro/index.html
 The targets should have unique names.
 This is a known bug where multiple crates with the same name use
 the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
@@ -541,6 +543,6 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] foo-macro v1.0.0 [..]
 [DOCUMENTING] abc v1.0.0 [..]
 [FINISHED] [..]
-")
+", rustc_host()))
         .run();
 }

@@ -1,6 +1,6 @@
 //! Tests for `[alias]` config command aliases.
 
-use cargo_test_support::{basic_bin_manifest, project};
+use cargo_test_support::{basic_bin_manifest, project, rustc_host};
 
 #[cargo_test]
 fn alias_incorrect_config_type() {
@@ -153,13 +153,14 @@ fn alias_override_builtin_alias() {
         .build();
 
     p.cargo("b")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `target/{}/debug/foo[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 

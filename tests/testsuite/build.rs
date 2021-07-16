@@ -56,16 +56,18 @@ fn cargo_compile_incremental() {
 
     p.cargo("build -v")
         .env("CARGO_INCREMENTAL", "1")
-        .with_stderr_contains(
-            "[RUNNING] `rustc [..] -C incremental=[..]/target/debug/incremental[..]`\n",
-        )
+        .with_stderr_contains(&format!(
+            "[RUNNING] `rustc [..] -C incremental=[..]/target/{}/debug/incremental[..]`\n",
+            rustc_host()
+        ))
         .run();
 
     p.cargo("test -v")
         .env("CARGO_INCREMENTAL", "1")
-        .with_stderr_contains(
-            "[RUNNING] `rustc [..] -C incremental=[..]/target/debug/incremental[..]`\n",
-        )
+        .with_stderr_contains(&format!(
+            "[RUNNING] `rustc [..] -C incremental=[..]/target/{}/debug/incremental[..]`\n",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -435,7 +437,8 @@ fn cargo_compile_api_exposes_artifact_paths() {
     let shell = Shell::from_write(Box::new(Vec::new()));
     let config = Config::new(shell, env::current_dir().unwrap(), paths::home());
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
-    let compile_options = CompileOptions::new(ws.config(), CompileMode::Build).unwrap();
+    let rustc = config.load_global_rustc(Some(&ws));
+    let compile_options = CompileOptions::new(&config, rustc, CompileMode::Build).unwrap();
 
     let result = cargo::ops::compile(&ws, &compile_options).unwrap();
 
@@ -1236,6 +1239,8 @@ fn cargo_default_env_metadata_env_var() {
 
     // No metadata on libbar since it's a dylib path dependency
     p.cargo("build -v")
+        .env("RUST_LOG", "trace")
+        .env("RUST_BACKTRACE", "full")
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
@@ -1244,18 +1249,21 @@ fn cargo_default_env_metadata_env_var() {
         -C prefer-dynamic[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{triple}/debug/deps \
+        -L dependency=[CWD]/target/host/{triple}/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern bar=[CWD]/target/debug/deps/{prefix}bar{suffix}`
+        -L dependency=[CWD]/target/{triple}/debug/deps \
+        -L dependency=[CWD]/target/host/{triple}/debug/deps \
+        --extern bar=[CWD]/target/{triple}/debug/deps/{prefix}bar{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
+            triple = rustc_host(),
         ))
         .run();
 
@@ -1263,6 +1271,8 @@ fn cargo_default_env_metadata_env_var() {
 
     // If you set the env-var, then we expect metadata on libbar
     p.cargo("build -v")
+        .env("RUST_LOG", "trace")
+        .env("RUST_BACKTRACE", "full")
         .env("__CARGO_DEFAULT_LIB_METADATA", "stable")
         .with_stderr(&format!(
             "\
@@ -1272,19 +1282,22 @@ fn cargo_default_env_metadata_env_var() {
         -C prefer-dynamic[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{triple}/debug/deps \
+        -L dependency=[CWD]/target/host/{triple}/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern bar=[CWD]/target/debug/deps/{prefix}bar-[..]{suffix}`
+        -L dependency=[CWD]/target/{triple}/debug/deps \
+        -L dependency=[CWD]/target/host/{triple}/debug/deps \
+        --extern bar=[CWD]/target/{triple}/debug/deps/{prefix}bar-[..]{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
+            triple = rustc_host(),
         ))
         .run();
 }
@@ -1597,9 +1610,20 @@ please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
         )
         .run();
 
-    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug/libfoo.rlib")
+        .is_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
-    assert!(p.root().join("target/debug").join(&fname).is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&fname)
+        .is_file());
 }
 
 #[cargo_test]
@@ -1624,9 +1648,20 @@ fn many_crate_types_correct() {
         .build();
     p.cargo("build").run();
 
-    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug/libfoo.rlib")
+        .is_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
-    assert!(p.root().join("target/debug").join(&fname).is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&fname)
+        .is_file());
 }
 
 #[cargo_test]
@@ -1743,17 +1778,19 @@ fn lto_build() {
 fn verbose_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -1761,7 +1798,7 @@ fn verbose_build() {
 fn verbose_release_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v --release")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
@@ -1769,10 +1806,12 @@ fn verbose_release_build() {
         -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps`
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 
@@ -1820,20 +1859,23 @@ fn verbose_release_build_deps() {
         -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps`
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]\
         -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps \
-        --extern foo=[CWD]/target/release/deps/{prefix}foo{suffix} \
-        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
+        -L dependency=[CWD]/target/{target}/release/deps \
+        -L dependency=[CWD]/target/host/{target}/release/deps \
+        --extern foo=[CWD]/target/{target}/release/deps/{prefix}foo{suffix} \
+        --extern foo=[CWD]/target/{target}/release/deps/libfoo.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
-            suffix = env::consts::DLL_SUFFIX
+            suffix = env::consts::DLL_SUFFIX,
+            target = rustc_host()
         ))
         .run();
 }
@@ -2689,7 +2731,7 @@ fn example_as_proc_macro() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert!(p.example_lib("ex", "proc-macro").is_file());
+    assert!(p.host_example_lib("ex", "proc-macro").is_file());
 }
 
 #[cargo_test]
@@ -2829,9 +2871,20 @@ fn predictable_filenames() {
         .build();
 
     p.cargo("build -v").run();
-    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug/libfoo.rlib")
+        .is_file());
     let dylib_name = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
-    assert!(p.root().join("target/debug").join(dylib_name).is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(dylib_name)
+        .is_file());
 }
 
 #[cargo_test]
@@ -2987,17 +3040,47 @@ fn custom_target_dir_env() {
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
     p.cargo("build").env("CARGO_TARGET_DIR", "foo/target").run();
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(!p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 
     p.cargo("build").run();
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 
     p.cargo("build")
         .env("CARGO_BUILD_TARGET_DIR", "foo2/target")
         .run();
-    assert!(p.root().join("foo2/target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("foo2/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 
     p.change_file(
         ".cargo/config",
@@ -3007,9 +3090,27 @@ fn custom_target_dir_env() {
         "#,
     );
     p.cargo("build").env("CARGO_TARGET_DIR", "bar/target").run();
-    assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("bar/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 }
 
 #[cargo_test]
@@ -3019,12 +3120,36 @@ fn custom_target_dir_line_parameter() {
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
     p.cargo("build --target-dir foo/target").run();
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(!p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 
     p.cargo("build").run();
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 
     p.change_file(
         ".cargo/config",
@@ -3034,21 +3159,59 @@ fn custom_target_dir_line_parameter() {
         "#,
     );
     p.cargo("build --target-dir bar/target").run();
-    assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("bar/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 
     p.cargo("build --target-dir foobar/target")
         .env("CARGO_TARGET_DIR", "bar/target")
         .run();
     assert!(p
         .root()
-        .join("foobar/target/debug")
+        .join("foobar/target")
+        .join(rustc_host())
+        .join("debug")
         .join(&exe_name)
         .is_file());
-    assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
-    assert!(p.root().join("target/debug").join(&exe_name).is_file());
+    assert!(p
+        .root()
+        .join("bar/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("foo/target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug")
+        .join(&exe_name)
+        .is_file());
 }
 
 #[cargo_test]
@@ -3294,7 +3457,7 @@ fn compiler_json_error_format() {
                 "linked_paths":[],
                 "env":[],
                 "cfgs":["xyz"],
-                "out_dir": "[..]target/debug/build/foo-[..]/out"
+                "out_dir": "[..]target/$TARGET/debug/build/foo-[..]/out"
             }
 
             {
@@ -3335,7 +3498,7 @@ fn compiler_json_error_format() {
                     "overflow_checks": true,
                     "test": false
                 },
-                "executable": "[..]/foo/target/debug/foo[EXE]",
+                "executable": "[..]/foo/target/$TARGET/debug/foo[EXE]",
                 "features": [],
                 "filenames": "{...}",
                 "fresh": $FRESH
@@ -3344,6 +3507,7 @@ fn compiler_json_error_format() {
             {"reason": "build-finished", "success": true}
         "#
         .replace("$FRESH", fresh)
+        .replace("$TARGET", rustc_host())
     };
 
     // Use `jobs=1` to ensure that the order of messages is consistent.
@@ -4180,7 +4344,13 @@ fn cdylib_not_lifted() {
 
     for file in files {
         println!("checking: {}", file);
-        assert!(p.root().join("target/debug/deps").join(&file).is_file());
+        assert!(p
+            .root()
+            .join("target")
+            .join(rustc_host())
+            .join("debug/deps")
+            .join(&file)
+            .is_file());
     }
 }
 
@@ -4218,7 +4388,13 @@ fn cdylib_final_outputs() {
 
     for file in files {
         println!("checking: {}", file);
-        assert!(p.root().join("target/debug").join(&file).is_file());
+        assert!(p
+            .root()
+            .join("target")
+            .join(rustc_host())
+            .join("debug")
+            .join(&file)
+            .is_file());
     }
 }
 
@@ -5173,16 +5349,18 @@ fn build_lib_only() {
         .build();
 
     p.cargo("build --lib -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/{target}/debug/deps \
+        -L dependency=[CWD]/target/host/{target}/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
+            target = rustc_host()
+        ))
         .run();
 }
 

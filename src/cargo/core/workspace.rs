@@ -49,8 +49,12 @@ pub struct Workspace<'cfg> {
     // `current_manifest` was found on the filesystem with `[workspace]`.
     root_manifest: Option<PathBuf>,
 
+    // Shared host directory for all the packages of this workspace.
+    // `None` if the default path of `root/host/host-triple` should be used.
+    host_dir: Option<Filesystem>,
+
     // Shared target directory for all the packages of this workspace.
-    // `None` if the default path of `root/target` should be used.
+    // `None` if the default path of `root/target/target-triple` should be used.
     target_dir: Option<Filesystem>,
 
     // List of members in this workspace with a listing of all their manifest
@@ -173,6 +177,7 @@ impl<'cfg> Workspace<'cfg> {
                 packages: HashMap::new(),
             },
             root_manifest: None,
+            host_dir: None,
             target_dir: None,
             members: Vec::new(),
             member_ids: HashSet::new(),
@@ -339,6 +344,12 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns the root Package or VirtualManifest.
     pub fn root_maybe(&self) -> &MaybePackage {
         self.packages.get(self.root_manifest())
+    }
+
+    pub fn host_dir(&self) -> Filesystem {
+        self.host_dir
+            .clone()
+            .unwrap_or_else(|| Filesystem::new(self.root().join("target").join("host")))
     }
 
     pub fn target_dir(&self) -> Filesystem {

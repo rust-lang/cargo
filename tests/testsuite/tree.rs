@@ -51,7 +51,8 @@ foo v0.1.0 ([..]/foo)
 └── c v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
+        └── c v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
@@ -761,9 +762,11 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 common v1.0.0
-├── bdep v1.0.0
-│   [build-dependencies]
-│   └── foo v0.1.0 ([..]/foo)
+└── bdep v1.0.0
+    [build-dependencies]
+    └── foo v0.1.0 ([..]/foo)
+
+common v1.0.0
 └── foo v0.1.0 ([..]/foo)
 ",
         )
@@ -783,7 +786,8 @@ b v1.0.0
 c v1.0.0
 c v1.0.0
 bdep v1.0.0
-b v1.0.0 (*)
+b v1.0.0
+c v1.0.0
 devdep v1.0.0
 b v1.0.0 (*)
 ",
@@ -804,7 +808,8 @@ fn prefix_depth() {
 3c v1.0.0
 1c v1.0.0
 1bdep v1.0.0
-2b v1.0.0 (*)
+2b v1.0.0
+3c v1.0.0
 1devdep v1.0.0
 2b v1.0.0 (*)
 ",
@@ -997,7 +1002,8 @@ foo v0.1.0 ([..]/foo)
 `-- c v1.0.0
 [build-dependencies]
 `-- bdep v1.0.0
-    `-- b v1.0.0 (*)
+    `-- b v1.0.0
+        `-- c v1.0.0
 [dev-dependencies]
 `-- devdep v1.0.0
     `-- b v1.0.0 (*)
@@ -1212,7 +1218,8 @@ foo v0.1.0 ([..]/foo)
 └── bar v1.0.0
     └── optdep v1.0.0
 [build-dependencies]
-└── bar v1.0.0 (*)
+└── bar v1.0.0
+    └── optdep v1.0.0
 ",
         )
         .run();
@@ -1221,6 +1228,9 @@ foo v0.1.0 ([..]/foo)
     p.cargo("tree -p bar")
         .with_stdout(
             "\
+bar v1.0.0
+└── optdep v1.0.0
+
 bar v1.0.0
 └── optdep v1.0.0
 ",
@@ -1233,8 +1243,11 @@ bar v1.0.0
             "\
 optdep v1.0.0
 └── bar v1.0.0
-    └── foo v0.1.0 ([..]/foo)
     [build-dependencies]
+    └── foo v0.1.0 ([..]/foo)
+
+optdep v1.0.0
+└── bar v1.0.0
     └── foo v0.1.0 ([..]/foo)
 ",
         )
@@ -1327,7 +1340,8 @@ foo v0.1.0 ([..]/foo)
 ├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
-└── somedep v1.0.0 (*)
+└── somedep v1.0.0
+    └── optdep v1.0.0
 ",
         )
         .run();
@@ -1349,6 +1363,9 @@ foo v0.1.0 ([..]/foo)
             "\
 somedep v1.0.0
 └── optdep v1.0.0
+
+somedep v1.0.0
+└── optdep v1.0.0
 ",
         )
         .run();
@@ -1357,6 +1374,9 @@ somedep v1.0.0
     p.cargo("tree -p somedep -e no-proc-macro")
         .with_stdout(
             "\
+somedep v1.0.0
+└── optdep v1.0.0
+
 somedep v1.0.0
 └── optdep v1.0.0
 ",
@@ -1368,9 +1388,11 @@ somedep v1.0.0
         .with_stdout(
             "\
 somedep v1.0.0
-├── foo v0.1.0 ([..]/foo)
 └── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
+
+somedep v1.0.0
+└── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
@@ -1379,6 +1401,8 @@ somedep v1.0.0
     p.cargo("tree -i somedep -e no-proc-macro")
         .with_stdout(
             "\
+somedep v1.0.0
+
 somedep v1.0.0
 └── foo v0.1.0 ([..]/foo)
 ",
@@ -1698,7 +1722,7 @@ foo v0.1.0 ([..]/foo)
 └── c v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
@@ -1747,6 +1771,9 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 c v1.0.0
+└── b v1.0.0
+
+c v1.0.0
 ├── b v1.0.0
 └── foo v0.1.0 ([..]/foo)
 ",
@@ -1766,7 +1793,7 @@ foo v0.1.0 ([..]/foo)
     └── b v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
@@ -1811,7 +1838,8 @@ foo v0.1.0 ([..]/foo)
 └── c v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
+        └── c v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)

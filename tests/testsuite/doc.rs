@@ -34,8 +34,18 @@ fn simple() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -107,22 +117,60 @@ fn doc_deps() {
         )
         .run();
 
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
-    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/index.html")
+        .is_file());
 
     // Verify that it only emits rmeta for the dependency.
-    assert_eq!(p.glob("target/debug/**/*.rlib").count(), 0);
-    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
+    assert_eq!(
+        p.glob(format!("target/{}/debug/**/*.rlib", rustc_host()))
+            .count(),
+        0
+    );
+    assert_eq!(
+        p.glob(format!("target/{}/debug/deps/libbar-*.rmeta", rustc_host()))
+            .count(),
+        1
+    );
 
     p.cargo("doc")
         .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint")
         .with_stdout("")
         .run();
 
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
-    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -155,9 +203,24 @@ fn doc_no_deps() {
         )
         .run();
 
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
-    assert!(!p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -182,9 +245,24 @@ fn doc_only_bin() {
 
     p.cargo("doc -v").run();
 
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/bar/index.html").is_file());
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -271,13 +349,13 @@ fn doc_multiple_targets_same_name() {
         .build();
 
     p.cargo("doc --workspace")
-        .with_stderr_unordered(
+        .with_stderr_unordered(&format!(
             "\
 warning: output filename collision.
 The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` \
 has the same output filename as the lib target `foo_lib` in package \
 `bar v0.1.0 ([ROOT]/foo/bar)`.
-Colliding filename is: [ROOT]/foo/target/doc/foo_lib/index.html
+Colliding filename is: [ROOT]/foo/target/{}/doc/foo_lib/index.html
 The targets should have unique names.
 This is a known bug where multiple crates with the same name use
 the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
@@ -285,7 +363,8 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [FINISHED] [..]
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -401,7 +480,7 @@ fn doc_lib_bin_same_name_documents_lib() {
 ",
         )
         .run();
-    let doc_html = p.read_file("target/doc/foo/index.html");
+    let doc_html = p.read_file(&format!("target/{}/doc/foo/index.html", rustc_host()));
     assert!(doc_html.contains("Library"));
     assert!(!doc_html.contains("Binary"));
 }
@@ -436,7 +515,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 ",
         )
         .run();
-    let doc_html = p.read_file("target/doc/foo/index.html");
+    let doc_html = p.read_file(&format!("target/{}/doc/foo/index.html", rustc_host()));
     assert!(doc_html.contains("Library"));
     assert!(!doc_html.contains("Binary"));
 }
@@ -472,7 +551,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
 ",
         )
         .run();
-    let doc_html = p.read_file("target/doc/foo/index.html");
+    let doc_html = p.read_file(&format!("target/{}/doc/foo/index.html", rustc_host()));
     assert!(!doc_html.contains("Library"));
     assert!(doc_html.contains("Binary"));
 }
@@ -508,7 +587,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
 ",
         )
         .run();
-    let doc_html = p.read_file("target/doc/foo/index.html");
+    let doc_html = p.read_file(&format!("target/{}/doc/foo/index.html", rustc_host()));
     assert!(!doc_html.contains("Library"));
     assert!(doc_html.contains("Binary"));
 }
@@ -831,9 +910,24 @@ fn doc_multiple_deps() {
 
     p.cargo("doc -p bar -p baz -v").run();
 
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/bar/index.html").is_file());
-    assert!(p.root().join("target/doc/baz/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/baz/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -890,9 +984,24 @@ fn features() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
-    assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/fn.bar.html")
+        .is_file());
     // Check that turning the feature off will remove the files.
     p.cargo("doc")
         .with_stderr(
@@ -904,8 +1013,18 @@ fn features() {
 ",
         )
         .run();
-    assert!(!p.root().join("target/doc/foo/fn.foo.html").is_file());
-    assert!(!p.root().join("target/doc/bar/fn.bar.html").is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo.html")
+        .is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/fn.bar.html")
+        .is_file());
     // And switching back will rebuild and bring them back.
     p.cargo("doc --features foo")
         .with_stderr(
@@ -916,8 +1035,18 @@ fn features() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
-    assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/fn.bar.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -933,12 +1062,22 @@ fn rerun_when_dir_removed() {
         .build();
 
     p.cargo("doc").run();
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
 
-    fs::remove_dir_all(p.root().join("target/doc/foo")).unwrap();
+    fs::remove_dir_all(p.root().join("target").join(rustc_host()).join("doc/foo")).unwrap();
 
     p.cargo("doc").run();
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -963,7 +1102,12 @@ fn document_only_lib() {
         )
         .build();
     p.cargo("doc --lib").run();
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -1235,8 +1379,14 @@ fn doc_workspace_open_different_library_and_package_names() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
-        .with_stdout_contains("[CWD]/target/doc/foolib/index.html")
+        .with_stderr_contains(&format!(
+            "[..] [CWD]/target/{}/doc/foolib/index.html",
+            rustc_host()
+        ))
+        .with_stdout_contains(&format!(
+            "[CWD]/target/{}/doc/foolib/index.html",
+            rustc_host()
+        ))
         .run();
 
     p.change_file(
@@ -1250,7 +1400,10 @@ fn doc_workspace_open_different_library_and_package_names() {
     // check that the cargo config overrides the browser env var
     p.cargo("doc --open")
         .env("BROWSER", "true")
-        .with_stdout_contains("a [CWD]/target/doc/foolib/index.html")
+        .with_stdout_contains(&format!(
+            "a [CWD]/target/{}/doc/foolib/index.html",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -1282,7 +1435,10 @@ fn doc_workspace_open_binary() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [CWD]/target/doc/foobin/index.html")
+        .with_stderr_contains(&format!(
+            "[..] Opening [CWD]/target/{}/doc/foobin/index.html",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -1317,7 +1473,10 @@ fn doc_workspace_open_binary_and_library() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [CWD]/target/doc/foolib/index.html")
+        .with_stderr_contains(&format!(
+            "[..] Opening [CWD]/target/{}/doc/foolib/index.html",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -1409,10 +1568,17 @@ fn doc_private_items() {
         .build();
     foo.cargo("doc --document-private-items").run();
 
-    assert!(foo.root().join("target/doc").is_dir());
     assert!(foo
         .root()
-        .join("target/doc/foo/private/index.html")
+        .join("target")
+        .join(rustc_host())
+        .join("doc")
+        .is_dir());
+    assert!(foo
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/private/index.html")
         .is_file());
 }
 
@@ -1607,20 +1773,54 @@ fn bin_private_items() {
         )
         .run();
 
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
-    assert!(p.root().join("target/doc/foo/fn.foo_pub.html").is_file());
-    assert!(p.root().join("target/doc/foo/fn.foo_priv.html").is_file());
     assert!(p
         .root()
-        .join("target/doc/foo/struct.FooStruct.html")
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
         .is_file());
-    assert!(p.root().join("target/doc/foo/enum.FooEnum.html").is_file());
     assert!(p
         .root()
-        .join("target/doc/foo/trait.FooTrait.html")
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo_pub.html")
         .is_file());
-    assert!(p.root().join("target/doc/foo/type.FooType.html").is_file());
-    assert!(p.root().join("target/doc/foo/foo_mod/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo_priv.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/struct.FooStruct.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/enum.FooEnum.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/trait.FooTrait.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/type.FooType.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/foo_mod/index.html")
+        .is_file());
 }
 
 #[cargo_test]
@@ -1667,13 +1867,43 @@ fn bin_private_items_deps() {
         )
         .run();
 
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
-    assert!(p.root().join("target/doc/foo/fn.foo_pub.html").is_file());
-    assert!(p.root().join("target/doc/foo/fn.foo_priv.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo_pub.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/fn.foo_priv.html")
+        .is_file());
 
-    assert!(p.root().join("target/doc/bar/index.html").is_file());
-    assert!(p.root().join("target/doc/bar/fn.bar_pub.html").is_file());
-    assert!(!p.root().join("target/doc/bar/fn.bar_priv.html").exists());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/fn.bar_pub.html")
+        .is_file());
+    assert!(!p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/bar/fn.bar_priv.html")
+        .exists());
 }
 
 #[cargo_test]
@@ -1701,7 +1931,11 @@ fn crate_versions() {
         )
         .run();
 
-    let output_path = p.root().join("target/doc/foo/index.html");
+    let output_path = p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("doc/foo/index.html");
     let output_documentation = fs::read_to_string(&output_path).unwrap();
 
     assert!(output_documentation.contains("Version 1.2.4"));
@@ -1723,7 +1957,11 @@ fn crate_versions_flag_is_overridden() {
         .build();
 
     let output_documentation = || {
-        let output_path = p.root().join("target/doc/foo/index.html");
+        let output_path = p
+            .root()
+            .join("target")
+            .join(rustc_host())
+            .join("doc/foo/index.html");
         fs::read_to_string(&output_path).unwrap()
     };
     let asserts = |html: String| {
@@ -1850,9 +2088,11 @@ LLVM version: 9.0
 
     dummy_project.cargo("doc").run();
 
-    let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
-            .expect("JSON Serde fail");
+    let fingerprint: RustDocFingerprint = serde_json::from_str(&dummy_project.read_file(&format!(
+        "target/host/{}/.rustdoc_fingerprint.json",
+        rustc_host()
+    )))
+    .expect("JSON Serde fail");
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
@@ -1871,12 +2111,13 @@ LLVM version: 9.0
     // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
     // it gets removed as we expect on the next doc compilation.
     dummy_project.change_file(
-        "target/.rustdoc_fingerprint.json",
+        &format!("target/host/{}/.rustdoc_fingerprint.json", rustc_host()),
         &old_rustc_verbose_version,
     );
 
+    dummy_project.host_dir().join("doc").mkdir_p();
     fs::write(
-        dummy_project.build_dir().join("doc/bogus_file"),
+        dummy_project.host_dir().join("doc/bogus_file"),
         String::from("This is a bogus file and should be removed!"),
     )
     .expect("Error writing test bogus file");
@@ -1887,11 +2128,13 @@ LLVM version: 9.0
     // It should also remove the bogus file we created above.
     dummy_project.cargo("doc").run();
 
-    assert!(!dummy_project.build_dir().join("doc/bogus_file").exists());
+    assert!(!dummy_project.host_dir().join("doc/bogus_file").exists());
 
-    let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
-            .expect("JSON Serde fail");
+    let fingerprint: RustDocFingerprint = serde_json::from_str(&dummy_project.read_file(&format!(
+        "target/host/{}/.rustdoc_fingerprint.json",
+        rustc_host()
+    )))
+    .expect("JSON Serde fail");
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
@@ -1933,9 +2176,11 @@ LLVM version: 9.0
 
     dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
-    let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
-            .expect("JSON Serde fail");
+    let fingerprint: RustDocFingerprint = serde_json::from_str(&dummy_project.read_file(&format!(
+        "target/host/{}/.rustdoc_fingerprint.json",
+        rustc_host()
+    )))
+    .expect("JSON Serde fail");
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
@@ -1954,15 +2199,13 @@ LLVM version: 9.0
     // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
     // it gets removed as we expect on the next doc compilation.
     dummy_project.change_file(
-        "target/.rustdoc_fingerprint.json",
+        &format!("target/host/{}/.rustdoc_fingerprint.json", rustc_host()),
         &old_rustc_verbose_version,
     );
 
+    dummy_project.host_dir().join("doc").mkdir_p();
     fs::write(
-        dummy_project
-            .build_dir()
-            .join(rustc_host())
-            .join("doc/bogus_file"),
+        dummy_project.host_dir().join("doc/bogus_file"),
         String::from("This is a bogus file and should be removed!"),
     )
     .expect("Error writing test bogus file");
@@ -1973,15 +2216,13 @@ LLVM version: 9.0
     // It should also remove the bogus file we created above.
     dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
-    assert!(!dummy_project
-        .build_dir()
-        .join(rustc_host())
-        .join("doc/bogus_file")
-        .exists());
+    assert!(!dummy_project.host_dir().join("doc/bogus_file").exists());
 
-    let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
-            .expect("JSON Serde fail");
+    let fingerprint: RustDocFingerprint = serde_json::from_str(&dummy_project.read_file(&format!(
+        "target/host/{}/.rustdoc_fingerprint.json",
+        rustc_host()
+    )))
+    .expect("JSON Serde fail");
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
@@ -2014,7 +2255,7 @@ fn doc_fingerprint_unusual_behavior() {
     assert!(real_doc.join("foo/index.html").exists());
     // Pretend that the last build was generated by an older version.
     p.change_file(
-        "target/.rustdoc_fingerprint.json",
+        &format!("target/host/{}/.rustdoc_fingerprint.json", rustc_host()),
         "{\"rustc_vv\": \"I am old\"}",
     );
     // Change file to trigger a new build.
@@ -2031,7 +2272,7 @@ fn doc_fingerprint_unusual_behavior() {
     assert!(real_doc.join("foo/index.html").exists());
     // And also check the -Z flag behavior.
     p.change_file(
-        "target/.rustdoc_fingerprint.json",
+        &format!("target/host/{}/.rustdoc_fingerprint.json", rustc_host()),
         "{\"rustc_vv\": \"I am old\"}",
     );
     // Change file to trigger a new build.

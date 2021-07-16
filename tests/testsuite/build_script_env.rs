@@ -58,6 +58,7 @@ fn rerun_if_env_changes() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn rerun_if_env_or_file_changes() {
     let p = project()

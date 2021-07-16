@@ -688,10 +688,17 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     };
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
+    let rustc = config.load_global_rustc(Some(&ws));
     ops::compile_with_exec(
         &ws,
         &ops::CompileOptions {
-            build_config: BuildConfig::new(config, opts.jobs, &opts.targets, CompileMode::Build)?,
+            build_config: BuildConfig::new(
+                config,
+                rustc,
+                opts.jobs,
+                &opts.targets,
+                CompileMode::Build,
+            )?,
             cli_features: opts.cli_features.clone(),
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {

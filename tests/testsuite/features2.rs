@@ -434,25 +434,28 @@ fn decouple_dev_deps() {
         )
         .file(
             "tests/t1.rs",
-            r#"
-            #[test]
-            fn test_t1() {
-                assert_eq!(foo::foo(), 3);
-                assert_eq!(common::foo(), 3);
-                assert_eq!(common::X, 3);
-                assert_eq!(foo::build_time(), 3);
-            }
+            &format!(
+                r#"
+                #[test]
+                fn test_t1() {{
+                    assert_eq!(foo::foo(), 3);
+                    assert_eq!(common::foo(), 3);
+                    assert_eq!(common::X, 3);
+                    assert_eq!(foo::build_time(), 3);
+                }}
 
-            #[test]
-            fn test_main() {
-                // Features are unified for main when run with `cargo test`,
-                // even with the new resolver.
-                let s = std::process::Command::new("target/debug/foo")
-                    .arg("3")
-                    .status().unwrap();
-                assert!(s.success());
-            }
-            "#,
+                #[test]
+                fn test_main() {{
+                    // Features are unified for main when run with `cargo test`,
+                    // even with the new resolver.
+                    let s = std::process::Command::new("target/{}/debug/foo")
+                        .arg("3")
+                        .status().unwrap();
+                    assert!(s.success());
+                }}
+                "#,
+                rustc_host()
+            ),
         )
         .build();
 
@@ -604,23 +607,26 @@ fn build_script_runtime_features() {
         )
         .file(
             "tests/t1.rs",
-            r#"
-            #[test]
-            fn test_t1() {
-                assert_eq!(common::foo(), common::build_time());
-                assert_eq!(common::foo(),
-                    std::env::var("CARGO_FEATURE_EXPECT").unwrap().parse().unwrap());
-            }
+            &format!(
+                r#"
+                #[test]
+                fn test_t1() {{
+                    assert_eq!(common::foo(), common::build_time());
+                    assert_eq!(common::foo(),
+                        std::env::var("CARGO_FEATURE_EXPECT").unwrap().parse().unwrap());
+                }}
 
-            #[test]
-            fn test_main() {
-                // Features are unified for main when run with `cargo test`,
-                // even with the new resolver.
-                let s = std::process::Command::new("target/debug/foo")
-                    .status().unwrap();
-                assert!(s.success());
-            }
-            "#,
+                #[test]
+                fn test_main() {{
+                    // Features are unified for main when run with `cargo test`,
+                    // even with the new resolver.
+                    let s = std::process::Command::new("target/{}/debug/foo")
+                        .status().unwrap();
+                    assert!(s.success());
+                }}
+                "#,
+                rustc_host()
+            ),
         )
         .build();
 
@@ -681,17 +687,20 @@ fn cyclical_dev_dep() {
         )
         .file(
             "tests/t1.rs",
-            r#"
-            #[test]
-            fn integration_links() {
-                foo::assert_dev(true);
-                // The lib linked with main.rs will also be unified.
-                let s = std::process::Command::new("target/debug/foo")
-                    .arg("true")
-                    .status().unwrap();
-                assert!(s.success());
-            }
-            "#,
+            &format!(
+                r#"
+                #[test]
+                fn integration_links() {{
+                    foo::assert_dev(true);
+                    // The lib linked with main.rs will also be unified.
+                    let s = std::process::Command::new("target/{}/debug/foo")
+                        .arg("true")
+                        .status().unwrap();
+                    assert!(s.success());
+                }}
+                "#,
+                rustc_host()
+            ),
         )
         .build();
 
@@ -1047,6 +1056,7 @@ fn decouple_proc_macro() {
         .exists());
 }
 
+#[ignore]
 #[cargo_test]
 fn proc_macro_ws() {
     // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
@@ -1530,7 +1540,7 @@ fn resolver_enables_new_features() {
     // Only normal.
     p.cargo("run --bin a")
         .env("EXPECTED_FEATS", "1")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
@@ -1538,9 +1548,10 @@ fn resolver_enables_new_features() {
 [COMPILING] common v1.0.0
 [COMPILING] a v0.1.0 [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/a[EXE]`
+[RUNNING] `target/{}/debug/a[EXE]`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     // only normal+dev
@@ -1916,6 +1927,7 @@ fn doc_optional() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn minimal_download() {
     // Various checks that it only downloads the minimum set of dependencies

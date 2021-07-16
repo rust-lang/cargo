@@ -8,7 +8,7 @@ use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
-    print_available_packages, print_available_tests,
+    print_available_packages, print_available_tests, Rustc,
 };
 use crate::util::{toml::TomlProfile, validate_package_name};
 use crate::CargoResult;
@@ -399,6 +399,7 @@ pub trait ArgMatchesExt {
     fn compile_options(
         &self,
         config: &Config,
+        rustc: CargoResult<Rustc>,
         mode: CompileMode,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
@@ -466,7 +467,8 @@ pub trait ArgMatchesExt {
             }
         }
 
-        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.targets(), mode)?;
+        let mut build_config =
+            BuildConfig::new(config, rustc, self.jobs()?, &self.targets(), mode)?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
@@ -549,11 +551,13 @@ pub trait ArgMatchesExt {
     fn compile_options_for_single_package(
         &self,
         config: &Config,
+        rustc: CargoResult<Rustc>,
         mode: CompileMode,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
-        let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
+        let mut compile_opts =
+            self.compile_options(config, rustc, mode, workspace, profile_checking)?;
         let spec = self._values_of("package");
         if spec.iter().any(is_glob_pattern) {
             anyhow::bail!("Glob patterns on package selection are not supported.")

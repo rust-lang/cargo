@@ -233,6 +233,7 @@ fn metabuild_lib_name() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn metabuild_fresh() {
     if is_coarse_mtime() {
@@ -468,8 +469,8 @@ fn metabuild_build_plan() {
                         "kind": null,
                         "deps": [],
                         "outputs": [
-                            "[..]/target/debug/deps/libmb-[..].rlib",
-                            "[..]/target/debug/deps/libmb-[..].rmeta"
+                            "[..]/target/host/$TARGET/debug/deps/libmb-[..].rlib",
+                            "[..]/target/host/$TARGET/debug/deps/libmb-[..].rmeta"
                         ],
                         "links": {},
                         "program": "rustc",
@@ -485,8 +486,8 @@ fn metabuild_build_plan() {
                         "kind": null,
                         "deps": [],
                         "outputs": [
-                            "[..]/target/debug/deps/libmb_other-[..].rlib",
-                            "[..]/target/debug/deps/libmb_other-[..].rmeta"
+                            "[..]/target/host/$TARGET/debug/deps/libmb_other-[..].rlib",
+                            "[..]/target/host/$TARGET/debug/deps/libmb_other-[..].rmeta"
                         ],
                         "links": {},
                         "program": "rustc",
@@ -513,11 +514,11 @@ fn metabuild_build_plan() {
                         "package_version": "0.0.1",
                         "target_kind": ["custom-build"],
                         "compile_mode": "run-custom-build",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "deps": [2],
                         "outputs": [],
                         "links": {},
-                        "program": "[..]/foo/target/debug/build/foo-[..]/metabuild-foo",
+                        "program": "[..]/foo/target/host/$TARGET/debug/build/foo-[..]/metabuild-foo",
                         "args": [],
                         "env": "{...}",
                         "cwd": "[..]"
@@ -527,11 +528,11 @@ fn metabuild_build_plan() {
                         "package_version": "0.0.1",
                         "target_kind": ["lib"],
                         "compile_mode": "build",
-                        "kind": null,
+                        "kind": "$TARGET",
                         "deps": [3],
                         "outputs": [
-                            "[..]/foo/target/debug/deps/libfoo-[..].rlib",
-                            "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
+                            "[..]/foo/target/$TARGET/debug/deps/libfoo-[..].rlib",
+                            "[..]/foo/target/$TARGET/debug/deps/libfoo-[..].rmeta"
                         ],
                         "links": "{...}",
                         "program": "rustc",
@@ -546,7 +547,7 @@ fn metabuild_build_plan() {
                     "[..]/foo/mb-other/Cargo.toml"
                 ]
             }
-            "#,
+            "#.replace("$TARGET", rustc_host()).as_str(),
         )
         .run();
 

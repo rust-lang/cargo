@@ -165,6 +165,8 @@ pub struct Config {
     cache_rustc_info: bool,
     /// Creation time of this config, used to output the total build time
     creation_time: Instant,
+    /// Host Directory via resolved Cli parameter
+    host_dir: Option<Filesystem>,
     /// Target Directory via resolved Cli parameter
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
@@ -269,6 +271,7 @@ impl Config {
             crates_io_source_id: LazyCell::new(),
             cache_rustc_info,
             creation_time: Instant::now(),
+            host_dir: None,
             target_dir: None,
             env,
             upper_case_env,
@@ -475,6 +478,41 @@ impl Config {
     /// The current working directory.
     pub fn cwd(&self) -> &Path {
         &self.cwd
+    }
+
+    /// The `host` output directory to use.
+    ///
+    /// Returns `None` if the user has not chosen an explicit directory.
+    ///
+    /// Callers should prefer `Workspace::host_dir` instead.
+    pub fn host_dir(&self) -> CargoResult<Option<Filesystem>> {
+        if let Some(dir) = &self.host_dir {
+            Ok(Some(dir.clone()))
+        } else if let Some(dir) = self.env.get("CARGO_HOST_DIR") {
+            // Check if the CARGO_TARGET_DIR environment variable is set to an empty string.
+            if dir.is_empty() {
+                bail!(
+                    "the host directory is set to an empty string in the \
+                     `CARGO_HOST_DIR` environment variable"
+                )
+            }
+
+            Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(val) = &self.build_config()?.host_dir {
+            let path = val.resolve_path(self);
+
+            // Check if the host directory is set to an empty string in the config.toml file.
+            if val.raw_value().is_empty() {
+                bail!(
+                    "the host directory is set to an empty string in {}",
+                    val.value().definition
+                )
+            }
+
+            Ok(Some(Filesystem::new(path)))
+        } else {
+            Ok(None)
+        }
     }
 
     /// The `target` output directory to use.
@@ -2073,6 +2111,7 @@ pub struct CargoNetConfig {
 pub struct CargoBuildConfig {
     pub pipelining: Option<bool>,
     pub dep_info_basedir: Option<ConfigRelativePath>,
+    pub host_dir: Option<ConfigRelativePath>,
     pub target_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<ConfigRelativePath>,

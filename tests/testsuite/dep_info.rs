@@ -177,18 +177,22 @@ fn build_dep_info_dylib() {
     assert!(p.example_lib("ex", "dylib").with_extension("d").is_file());
 }
 
+#[ignore]
 #[cargo_test]
 fn dep_path_inside_target_has_correct_path() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("a"))
-        .file("target/debug/blah", "")
+        .file(&format!("target/{}/debug/blah", rustc_host()), "")
         .file(
             "src/main.rs",
-            r#"
-                fn main() {
-                    let x = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/target/debug/blah"));
-                }
-            "#,
+            &format!(
+                r#"
+                    fn main() {{
+                        let x = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/target/{}/debug/blah"));
+                    }}
+                "#,
+                rustc_host()
+            ),
         )
         .build();
 
@@ -201,7 +205,10 @@ fn dep_path_inside_target_has_correct_path() {
     let depinfo = p.read_file(depinfo_path.to_str().unwrap());
 
     let bin_path = p.bin("a");
-    let target_debug_blah = Path::new("target").join("debug").join("blah");
+    let target_debug_blah = Path::new("target")
+        .join(rustc_host())
+        .join("debug")
+        .join("blah");
     if !depinfo.lines().any(|line| {
         line.starts_with(&format!("{}:", bin_path.display()))
             && line.contains(target_debug_blah.to_str().unwrap())
@@ -218,7 +225,11 @@ fn no_rewrite_if_no_change() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("build").run();
-    let dep_info = p.root().join("target/debug/libfoo.d");
+    let dep_info = p
+        .root()
+        .join("target")
+        .join(rustc_host())
+        .join("debug/libfoo.d");
     let metadata1 = dep_info.metadata().unwrap();
     p.cargo("build").run();
     let metadata2 = dep_info.metadata().unwrap();
@@ -229,6 +240,7 @@ fn no_rewrite_if_no_change() {
     );
 }
 
+#[ignore]
 #[cargo_test]
 fn relative_depinfo_paths_ws() {
     if !is_nightly() {
@@ -331,7 +343,7 @@ fn relative_depinfo_paths_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/pm-*/dep-lib-pm",
+        &format!("target/{}/debug/.fingerprint/pm-*/dep-lib-pm", rustc_host()),
         &[(0, "src/lib.rs"), (1, "debug/deps/libpmdep-*.rlib")],
     );
 
@@ -355,7 +367,10 @@ fn relative_depinfo_paths_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
+        &format!(
+            "target/{}/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
+            rustc_host()
+        ),
         &[(0, "build.rs"), (1, "debug/deps/libbdep-*.rlib")],
     );
 
@@ -367,6 +382,7 @@ fn relative_depinfo_paths_ws() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn relative_depinfo_paths_no_ws() {
     if !is_nightly() {
@@ -459,13 +475,16 @@ fn relative_depinfo_paths_no_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/pm-*/dep-lib-pm",
+        &format!("target/{}/debug/.fingerprint/pm-*/dep-lib-pm", rustc_host()),
         &[(0, "src/lib.rs"), (1, "debug/deps/libpmdep-*.rlib")],
     );
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-bin-foo",
+        &format!(
+            "target/{}/debug/.fingerprint/foo-*/dep-bin-foo",
+            rustc_host()
+        ),
         &[
             (0, "src/main.rs"),
             (
@@ -483,7 +502,10 @@ fn relative_depinfo_paths_no_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
+        &format!(
+            "target/{}/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
+            rustc_host()
+        ),
         &[(0, "build.rs"), (1, "debug/deps/libbdep-*.rlib")],
     );
 
@@ -520,7 +542,10 @@ fn reg_dep_source_not_tracked() {
 
     assert_deps(
         &p,
-        "target/debug/.fingerprint/regdep-*/dep-lib-regdep",
+        &format!(
+            "target/{}/debug/.fingerprint/regdep-*/dep-lib-regdep",
+            rustc_host()
+        ),
         |info_path, entries| {
             for (kind, path) in entries {
                 if *kind == 1 {
@@ -534,6 +559,7 @@ fn reg_dep_source_not_tracked() {
     );
 }
 
+#[ignore]
 #[cargo_test]
 fn canonical_path() {
     if !is_nightly() {
@@ -564,7 +590,7 @@ fn canonical_path() {
 
     let real = p.root().join("real_target");
     real.mkdir_p();
-    p.symlink(real, "target");
+    p.symlink(real, &format!("target/{}", rustc_host()));
 
     p.cargo("build -Z binary-dep-depinfo")
         .masquerade_as_nightly_cargo()
@@ -572,7 +598,10 @@ fn canonical_path() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-lib-foo",
+        &format!(
+            "target/{}/debug/.fingerprint/foo-*/dep-lib-foo",
+            rustc_host()
+        ),
         &[(0, "src/lib.rs"), (1, "debug/deps/libregdep-*.rmeta")],
     );
 }
@@ -607,9 +636,19 @@ fn non_local_build_script() {
         .build();
 
     p.cargo("build").run();
-    let contents = p.read_file("target/debug/foo.d");
+    let contents = p.read_file(
+        p.root()
+            .join("target")
+            .join(rustc_host())
+            .join("debug/foo.d")
+            .to_str()
+            .unwrap(),
+    );
     assert_match_exact(
-        "[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/src/main.rs",
+        &format!(
+            "[ROOT]/foo/target/{}/debug/foo[EXE]: [ROOT]/foo/src/main.rs",
+            rustc_host()
+        ),
         &contents,
     );
 }

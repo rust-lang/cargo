@@ -2094,6 +2094,7 @@ fn deps_with_bin_only() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn filter_platform() {
     // Testing the --filter-platform flag.
@@ -2810,6 +2811,7 @@ fn filter_platform() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn dep_kinds() {
     Package::new("bar", "0.1.0").publish();

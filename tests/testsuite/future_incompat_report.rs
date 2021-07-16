@@ -105,6 +105,7 @@ note: 0 dependencies had future-incompatible warnings
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn test_single_crate() {
     if !is_nightly() {
@@ -133,6 +134,7 @@ fn test_single_crate() {
     }
 }
 
+#[ignore]
 #[cargo_test]
 fn test_multi_crate() {
     if !is_nightly() {
@@ -244,6 +246,7 @@ fn test_multi_crate() {
     assert_eq!(lines.next(), None);
 }
 
+#[ignore]
 #[cargo_test]
 fn color() {
     if !is_nightly() {
@@ -270,6 +273,7 @@ fn color() {
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn bad_ids() {
     if !is_nightly() {
@@ -308,6 +312,7 @@ Available IDs are: 1
         .run();
 }
 
+#[ignore]
 #[cargo_test]
 fn suggestions_for_updates() {
     if !is_nightly() {

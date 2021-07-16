@@ -139,38 +139,41 @@ fn custom_runner() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+[RUNNING] `nonexistent-runner -r target/{}/debug/foo[EXE] --param`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     p.cargo("test --test test --verbose -- --param")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
+[RUNNING] `nonexistent-runner -r [..]/target/{}/debug/deps/test-[..][EXE] --param`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 
     p.cargo("bench --bench bench --verbose -- --param")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
+[RUNNING] `nonexistent-runner -r [..]/target/{}/release/deps/bench-[..][EXE] --param --bench`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -190,13 +193,14 @@ fn custom_runner_cfg() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+[RUNNING] `nonexistent-runner -r target/{}/debug/foo[EXE] --param`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -224,13 +228,14 @@ fn custom_runner_cfg_precedence() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+[RUNNING] `nonexistent-runner -r target/{}/debug/foo[EXE] --param`
 ",
-        )
+            rustc_host()
+        ))
         .run();
 }
 
@@ -275,13 +280,14 @@ fn custom_runner_env() {
             "\
 [COMPILING] foo [..]
 [FINISHED] dev [..]
-[RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`
-[ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
+[RUNNING] `nonexistent-runner --foo target/{target}/debug/foo[EXE]`
+[ERROR] could not execute process `nonexistent-runner --foo target/{target}/debug/foo[EXE]` (never executed)
 
 Caused by:
-  {}
+  {msg}
 ",
-            no_such_file_err_msg()
+            target = rustc_host(),
+            msg = no_such_file_err_msg()
         ))
         .run();
 }
@@ -308,7 +314,10 @@ fn custom_runner_env_overrides_config() {
     p.cargo("run")
         .env(&key, "should-run --foo")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] `should-run --foo target/debug/foo[EXE]`")
+        .with_stderr_contains(&format!(
+            "[RUNNING] `should-run --foo target/{}/debug/foo[EXE]`",
+            rustc_host()
+        ))
         .run();
 }
 
@@ -323,7 +332,10 @@ fn custom_runner_env_true() {
 
     p.cargo("run")
         .env(&key, "true")
-        .with_stderr_contains("[RUNNING] `true target/debug/foo[EXE]`")
+        .with_stderr_contains(&format!(
+            "[RUNNING] `true target/{}/debug/foo[EXE]`",
+            rustc_host()
+        ))
         .run();
 }
 

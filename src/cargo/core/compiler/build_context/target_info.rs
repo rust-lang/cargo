@@ -588,22 +588,29 @@ fn env_args(
     // This means that, e.g., even if the specified --target is the
     // same as the host, build scripts in plugins won't get
     // RUSTFLAGS.
-    if requested_kinds != [CompileKind::Host] && kind.is_host() {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
-    }
-
-    // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
-        let args = a
-            .split(' ')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
-        return Ok(args.collect());
-    }
+    let prefix = if requested_kinds != [CompileKind::Host] && kind.is_host() {
+        // Next try HOST_RUSTFLAGS from the environment
+        if let Ok(a) = env::var(format!("HOST_{}", name)) {
+            let args = a
+                .split(' ')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
+            return Ok(args.collect());
+        }
+        "host"
+    } else {
+        // First try RUSTFLAGS from the environment
+        if let Ok(a) = env::var(name) {
+            let args = a
+                .split(' ')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
+            return Ok(args.collect());
+        }
+        "target"
+    };
 
     let mut rustflags = Vec::new();
 
@@ -616,9 +623,14 @@ fn env_args(
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    let key = format!("target.{}.{}", target, name);
+    let key = format!("{}.{}.{}", prefix, target, name);
     if let Some(args) = config.get::<Option<StringList>>(&key)? {
         rustflags.extend(args.as_slice().iter().cloned());
+    } else {
+        let generic_key = format!("{}.{}", prefix, name);
+        if let Some(args) = config.get::<Option<StringList>>(&generic_key)? {
+            rustflags.extend(args.as_slice().iter().cloned());
+        }
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
@@ -641,14 +653,16 @@ fn env_args(
     }
 
     // Then the `build.rustflags` value.
-    let build = config.build_config()?;
-    let list = if name == "rustflags" {
-        &build.rustflags
-    } else {
-        &build.rustdocflags
-    };
-    if let Some(list) = list {
-        return Ok(list.as_slice().to_vec());
+    if requested_kinds == [CompileKind::Host] || !kind.is_host() {
+        let build = config.build_config()?;
+        let list = if name == "rustflags" {
+            &build.rustflags
+        } else {
+            &build.rustdocflags
+        };
+        if let Some(list) = list {
+            return Ok(list.as_slice().to_vec());
+        }
     }
 
     Ok(Vec::new())

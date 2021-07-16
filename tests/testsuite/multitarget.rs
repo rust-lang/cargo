@@ -96,8 +96,18 @@ fn simple_doc() {
         .masquerade_as_nightly_cargo()
         .run();
 
-    assert!(p.build_dir().join(&t1).join("doc/foo/index.html").is_file());
-    assert!(p.build_dir().join(&t2).join("doc/foo/index.html").is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(&t1)
+        .join("doc/foo/index.html")
+        .is_file());
+    assert!(p
+        .root()
+        .join("target")
+        .join(&t2)
+        .join("doc/foo/index.html")
+        .is_file());
 }
 
 #[cargo_test]
