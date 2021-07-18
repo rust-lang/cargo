@@ -10,7 +10,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts};
+use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
@@ -183,8 +183,7 @@ pub fn resolve_with_config_raw(
         &[(summary, opts)],
         &[],
         &mut registry,
-        &HashSet::new(),
-        &HashMap::new(),
+        &VersionPreferences::default(),
         Some(config),
         true,
     );
