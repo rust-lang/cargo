@@ -15,7 +15,9 @@ use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
     CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
 };
-use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion};
+use crate::core::resolver::{
+    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionPreferences,
+};
 use crate::core::summary::Summary;
 use crate::core::Feature;
 use crate::core::{
@@ -27,7 +29,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
 use log::{debug, trace};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
@@ -242,22 +244,19 @@ pub fn resolve_with_previous<'cfg>(
             }
     };
 
+    // While registering patches, we will record preferences for particular versions
+    // of various packages.
+    let mut version_prefs = VersionPreferences::default();
+
     // This is a set of PackageIds of `[patch]` entries, and some related locked PackageIds, for
     // which locking should be avoided (but which will be preferred when searching dependencies,
     // via prefer_patch_deps below)
     let mut avoid_patch_ids = HashSet::new();
 
-    // This is a set of Dependency's of `[patch]` entries that should be preferred when searching
-    // dependencies.
-    let mut prefer_patch_deps = HashMap::new();
-
     if register_patches {
         for (url, patches) in ws.root_patch()?.iter() {
             for patch in patches {
-                prefer_patch_deps
-                    .entry(patch.package_name())
-                    .or_insert_with(HashSet::new)
-                    .insert(patch.clone());
+                version_prefs.prefer_dependency(patch.clone());
             }
             let previous = match previous {
                 Some(r) => r,
@@ -365,7 +364,6 @@ pub fn resolve_with_previous<'cfg>(
         }
     }
     debug!("avoid_patch_ids={:?}", avoid_patch_ids);
-    debug!("prefer_patch_deps={:?}", prefer_patch_deps);
 
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
@@ -377,19 +375,16 @@ pub fn resolve_with_previous<'cfg>(
         trace!("previous: {:?}", r);
         register_previous_locks(ws, registry, r, &keep, dev_deps);
     }
-    // Everything in the previous lock file we want to keep is prioritized
-    // in dependency selection if it comes up, aka we want to have
-    // conservative updates.
-    let try_to_use = previous
-        .map(|r| {
-            r.iter()
-                .filter(keep)
-                .inspect(|id| {
-                    debug!("attempting to prefer {}", id);
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+
+    // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
+    for r in previous {
+        for id in r.iter() {
+            if keep(&id) {
+                debug!("attempting to prefer {}", id);
+                version_prefs.prefer_package_id(id);
+            }
+        }
+    }
 
     if register_patches {
         registry.lock_patches();
@@ -438,8 +433,7 @@ pub fn resolve_with_previous<'cfg>(
         &summaries,
         &replace,
         registry,
-        &try_to_use,
-        &prefer_patch_deps,
+        &version_prefs,
         Some(ws.config()),
         ws.unstable_features()
             .require(Feature::public_dependency())

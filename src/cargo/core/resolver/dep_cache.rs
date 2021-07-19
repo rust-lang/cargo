@@ -13,7 +13,8 @@ use crate::core::resolver::context::Context;
 use crate::core::resolver::errors::describe_path;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
+    VersionPreferences,
 };
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
@@ -21,15 +22,13 @@ use crate::util::interning::InternedString;
 
 use anyhow::Context as _;
 use log::debug;
-use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
-    try_to_use: &'a HashSet<PackageId>,
-    prefer_patch_deps: &'a HashMap<InternedString, HashSet<Dependency>>,
+    version_prefs: &'a VersionPreferences,
     /// If set the list of dependency candidates will be sorted by minimal
     /// versions first. That allows `cargo update -Z minimal-versions` which will
     /// specify minimum dependency versions to be used.
@@ -49,15 +48,13 @@ impl<'a> RegistryQueryer<'a> {
     pub fn new(
         registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
-        try_to_use: &'a HashSet<PackageId>,
-        prefer_patch_deps: &'a HashMap<InternedString, HashSet<Dependency>>,
+        version_prefs: &'a VersionPreferences,
         minimal_versions: bool,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
-            try_to_use,
-            prefer_patch_deps,
+            version_prefs,
             minimal_versions,
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
@@ -168,35 +165,15 @@ impl<'a> RegistryQueryer<'a> {
         }
 
         // When we attempt versions for a package we'll want to do so in a sorted fashion to pick
-        // the "best candidates" first. Currently we try prioritized summaries (those in
-        // `try_to_use` or `prefer_patch_deps`) and failing that we list everything from the
-        // maximum version to the lowest version.
-        let should_prefer = |package_id: &PackageId| {
-            self.try_to_use.contains(package_id)
-                || self
-                    .prefer_patch_deps
-                    .get(&package_id.name())
-                    .map(|deps| deps.iter().any(|d| d.matches_id(*package_id)))
-                    .unwrap_or(false)
-        };
-        ret.sort_unstable_by(|a, b| {
-            let prefer_a = should_prefer(&a.package_id());
-            let prefer_b = should_prefer(&b.package_id());
-            let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
-            match previous_cmp {
-                Ordering::Equal => {
-                    let cmp = a.version().cmp(b.version());
-                    if self.minimal_versions {
-                        // Lower version ordered first.
-                        cmp
-                    } else {
-                        // Higher version ordered first.
-                        cmp.reverse()
-                    }
-                }
-                _ => previous_cmp,
-            }
-        });
+        // the "best candidates" first. VersionPreferences implements this notion.
+        self.version_prefs.sort_summaries(
+            &mut ret,
+            if self.minimal_versions {
+                VersionOrdering::MinimumVersionsFirst
+            } else {
+                VersionOrdering::MaximumVersionsFirst
+            },
+        );
 
         let out = Rc::new(ret);
 

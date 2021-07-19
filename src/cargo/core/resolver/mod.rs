@@ -58,7 +58,6 @@ use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
-use crate::util::interning::InternedString;
 use crate::util::profile;
 
 use self::context::Context;
@@ -73,6 +72,7 @@ pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
+pub use self::version_prefs::{VersionOrdering, VersionPreferences};
 
 mod conflict_cache;
 mod context;
@@ -82,6 +82,7 @@ mod errors;
 pub mod features;
 mod resolve;
 mod types;
+mod version_prefs;
 
 /// Builds the list of all packages required to build the first argument.
 ///
@@ -102,14 +103,8 @@ mod types;
 ///   for the same query every time). Typically this is an instance of a
 ///   `PackageRegistry`.
 ///
-/// * `try_to_use` - this is a list of package IDs which were previously found
-///   in the lock file. We heuristically prefer the ids listed in `try_to_use`
-///   when sorting candidates to activate, but otherwise this isn't used
-///   anywhere else.
-///
-/// * `prefer_patch_deps` - this is a collection of dependencies on `[patch]`es, which
-///   should be preferred much like `try_to_use`, but are in the form of Dependencies
-///   and not PackageIds.
+/// * `version_prefs` - this represents a preference for some versions over others,
+///   based on the lock file or other reasons such as `[patch]`es.
 ///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
@@ -128,8 +123,7 @@ pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
-    try_to_use: &HashSet<PackageId>,
-    prefer_patch_deps: &HashMap<InternedString, HashSet<Dependency>>,
+    version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
@@ -139,13 +133,8 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry = RegistryQueryer::new(
-        registry,
-        replacements,
-        try_to_use,
-        prefer_patch_deps,
-        minimal_versions,
-    );
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, version_prefs, minimal_versions);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
