@@ -233,7 +233,15 @@ fn run_doc_tests(
         }
 
         for arg in test_args {
-            p.arg("--test-args").arg(arg);
+            // We special-case "--nocapture" because rustdoc needs to handle it directly.
+            if *arg == "--nocapture" {
+                // FIXME(GuillaumeGomez): remove the `unstable-options` once rustdoc stabilizes the
+                // `--nocapture` option.
+                p.arg("-Z").arg("unstable-options");
+                p.arg(arg);
+            } else {
+                p.arg("--test-args").arg(arg);
+            }
         }
 
         p.args(args);
