@@ -43,7 +43,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         deps: !args.is_present("no-deps"),
     };
     let mut compile_opts =
-        args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
+        args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
 
     let doc_opts = DocOptions {

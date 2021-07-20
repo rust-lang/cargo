@@ -669,39 +669,6 @@ warning: unused manifest key: target.foo.bar
         .file(
             "Cargo.toml",
             r#"
-               cargo-features = ["named-profiles"]
-
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               authors = []
-
-               [profile.debug]
-               debug = 1
-               inherits = "dev"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -Z named-profiles")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-warning: use `[profile.dev]` to configure debug builds
-[..]
-[..]",
-        )
-        .run();
-
-    p.cargo("build -Z named-profiles")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
                 [project]
 
                 name = "foo"

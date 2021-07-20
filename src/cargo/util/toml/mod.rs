@@ -489,10 +489,6 @@ impl TomlProfile {
         features: &Features,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
-        if name == "debug" {
-            warnings.push("use `[profile.dev]` to configure debug builds".to_string());
-        }
-
         if let Some(ref profile) = self.build_override {
             features.require(Feature::profile_overrides())?;
             profile.validate_override("build-override")?;
@@ -513,31 +509,32 @@ impl TomlProfile {
         }
 
         // Profile name validation
-        Self::validate_name(name, "profile name")?;
+        Self::validate_name(name)?;
 
         // Feature gate on uses of keys related to named profiles
         if self.inherits.is_some() {
             features.require(Feature::named_profiles())?;
         }
 
-        if self.dir_name.is_some() {
-            features.require(Feature::named_profiles())?;
-        }
-
-        // `dir-name` validation
-        match &self.dir_name {
-            None => {}
-            Some(dir_name) => {
-                Self::validate_name(dir_name, "dir-name")?;
-            }
+        if let Some(dir_name) = self.dir_name {
+            // This is disabled for now, as we would like to stabilize named
+            // profiles without this, and then decide in the future if it is
+            // needed. This helps simplify the UI a little.
+            bail!(
+                "dir-name=\"{}\" in profile `{}` is not currently allowed, \
+                 directory names are tied to the profile name for custom profiles",
+                dir_name,
+                name
+            );
         }
 
         // `inherits` validation
-        match &self.inherits {
-            None => {}
-            Some(inherits) => {
-                Self::validate_name(inherits, "inherits")?;
-            }
+        if matches!(self.inherits.map(|s| s.as_str()), Some("debug")) {
+            bail!(
+                "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
+                name,
+                name
+            );
         }
 
         match name {
@@ -569,29 +566,77 @@ impl TomlProfile {
     }
 
     /// Validate dir-names and profile names according to RFC 2678.
-    pub fn validate_name(name: &str, what: &str) -> CargoResult<()> {
+    pub fn validate_name(name: &str) -> CargoResult<()> {
         if let Some(ch) = name
             .chars()
             .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
         {
-            bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
+            bail!(
+                "invalid character `{}` in profile name `{}`\n\
+                Allowed characters are letters, numbers, underscore, and hyphen.",
+                ch,
+                name
+            );
         }
 
-        match name {
-            "package" | "build" => {
-                bail!("Invalid {}: `{}`", what, name);
-            }
-            "debug" if what == "profile" => {
-                if what == "profile name" {
-                    // Allowed, but will emit warnings
-                } else {
-                    bail!("Invalid {}: `{}`", what, name);
-                }
-            }
-            "doc" if what == "dir-name" => {
-                bail!("Invalid {}: `{}`", what, name);
-            }
-            _ => {}
+        const SEE_DOCS: &str = "See https://doc.rust-lang.org/cargo/reference/profiles.html \
+            for more on configuring profiles.";
+
+        let lower_name = name.to_lowercase();
+        if lower_name == "debug" {
+            bail!(
+                "profile name `{}` is reserved\n\
+                 To configure the default development profile, use the name `dev` \
+                 as in [profile.dev]\n\
+                {}",
+                name,
+                SEE_DOCS
+            );
+        }
+        if lower_name == "build-override" {
+            bail!(
+                "profile name `{}` is reserved\n\
+                 To configure build dependency settings, use [profile.dev.build-override] \
+                 and [profile.release.build-override]\n\
+                 {}",
+                name,
+                SEE_DOCS
+            );
+        }
+
+        // These are some arbitrary reservations. We have no plans to use
+        // these, but it seems safer to reserve a few just in case we want to
+        // add more built-in profiles in the future. We can also uses special
+        // syntax like cargo:foo if needed. But it is unlikely these will ever
+        // be used.
+        if matches!(
+            lower_name.as_str(),
+            "build"
+                | "check"
+                | "clean"
+                | "config"
+                | "fetch"
+                | "fix"
+                | "install"
+                | "metadata"
+                | "package"
+                | "publish"
+                | "report"
+                | "root"
+                | "run"
+                | "rust"
+                | "rustc"
+                | "rustdoc"
+                | "uninstall"
+        ) || lower_name.starts_with("cargo")
+        {
+            bail!(
+                "profile name `{}` is reserved\n\
+                 Please choose a different name.\n\
+                 {}",
+                name,
+                SEE_DOCS
+            );
         }
 
         Ok(())

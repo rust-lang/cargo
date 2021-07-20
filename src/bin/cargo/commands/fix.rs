@@ -67,23 +67,14 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    let test = match args.value_of("profile") {
-        Some("test") => true,
-        None => false,
-        Some(profile) => {
-            let err = anyhow::format_err!(
-                "unknown profile: `{}`, only `test` is \
-                 currently supported",
-                profile
-            );
-            return Err(CliError::new(err, 101));
-        }
-    };
+    // This is a legacy behavior that causes `cargo fix` to pass `--test`.
+    let test = matches!(args.value_of("profile"), Some("test"));
     let mode = CompileMode::Check { test };
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
-    let mut opts = args.compile_options(config, mode, Some(&ws), ProfileChecking::Unchecked)?;
+    let mut opts =
+        args.compile_options(config, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {

@@ -133,7 +133,6 @@ impl Profiles {
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
         let mut dir_names = HashMap::new();
         dir_names.insert(InternedString::new("dev"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("check"), InternedString::new("debug"));
         dir_names.insert(InternedString::new("test"), InternedString::new("debug"));
         dir_names.insert(InternedString::new("bench"), InternedString::new("release"));
         dir_names
@@ -169,13 +168,6 @@ impl Profiles {
             ),
             (
                 "test",
-                TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
-                    ..TomlProfile::default()
-                },
-            ),
-            (
-                "check",
                 TomlProfile {
                     inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()

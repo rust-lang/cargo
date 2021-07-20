@@ -281,8 +281,14 @@ pub fn subcommand(name: &'static str) -> App {
 
 // Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
-    Checked,
-    Unchecked,
+    // `cargo rustc` historically has allowed "test", "bench", and "check". This
+    // variant explicitly allows those.
+    LegacyRustc,
+    // `cargo check` and `cargo fix` historically has allowed "test". This variant
+    // explicitly allows that on stable.
+    LegacyTestOnly,
+    // All other commands, which allow any valid custom named profile.
+    Custom,
 }
 
 pub trait ArgMatchesExt {
@@ -343,48 +349,58 @@ pub trait ArgMatchesExt {
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
-        let specified_profile = match self._value_of("profile") {
-            None => None,
-            Some(name) => {
-                TomlProfile::validate_name(name, "profile name")?;
-                Some(InternedString::new(name))
+        let specified_profile = self._value_of("profile");
+
+        // Check for allowed legacy names.
+        // This is an early exit, since it allows combination with `--release`.
+        match (specified_profile, profile_checking) {
+            // `cargo rustc` has legacy handling of these names
+            (Some(name @ ("test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            // `cargo fix` and `cargo check` has legacy handling of this profile name
+            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            _ => {}
+        }
+
+        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
+            bail!("usage of `--profile` requires `-Z unstable-options`");
+        }
+
+        let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
+            anyhow::format_err!(
+                "conflicting usage of --profile={} and --{flag}\n\
+                 The `--{flag}` flag is the same as `--profile={equiv}`.\n\
+                 Remove one flag or the other to continue.",
+                specified,
+                flag = flag,
+                equiv = equiv
+            )
+        };
+
+        let name = match (
+            self._is_present("release"),
+            self._is_present("debug"),
+            specified_profile,
+        ) {
+            (false, false, None) => default,
+            (true, _, None | Some("release")) => "release",
+            (true, _, Some(name)) => return Err(conflict("release", "release", name)),
+            (_, true, None | Some("dev")) => "dev",
+            (_, true, Some(name)) => return Err(conflict("debug", "dev", name)),
+            // `doc` is separate from all the other reservations because
+            // [profile.doc] was historically allowed, but is deprecated and
+            // has no effect. To avoid potentially breaking projects, it is a
+            // warning in Cargo.toml, but since `--profile` is new, we can
+            // reject it completely here.
+            (_, _, Some("doc")) => {
+                bail!("profile `doc` is reserved and not allowed to be explicitly specified")
+            }
+            (_, _, Some(name)) => {
+                TomlProfile::validate_name(name)?;
+                name
             }
         };
 
-        match profile_checking {
-            ProfileChecking::Unchecked => {}
-            ProfileChecking::Checked => {
-                if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-                    anyhow::bail!("Usage of `--profile` requires `-Z unstable-options`")
-                }
-            }
-        }
-
-        if self._is_present("release") {
-            if !config.cli_unstable().unstable_options {
-                Ok(InternedString::new("release"))
-            } else {
-                match specified_profile {
-                    Some(name) if name != "release" => {
-                        anyhow::bail!("Conflicting usage of --profile and --release")
-                    }
-                    _ => Ok(InternedString::new("release")),
-                }
-            }
-        } else if self._is_present("debug") {
-            if !config.cli_unstable().unstable_options {
-                Ok(InternedString::new("dev"))
-            } else {
-                match specified_profile {
-                    Some(name) if name != "dev" => {
-                        anyhow::bail!("Conflicting usage of --profile and --debug")
-                    }
-                    _ => Ok(InternedString::new("dev")),
-                }
-            }
-        } else {
-            Ok(specified_profile.unwrap_or_else(|| InternedString::new(default)))
-        }
+        Ok(InternedString::new(name))
     }
 
     fn packages_from_flags(&self) -> CargoResult<Packages> {

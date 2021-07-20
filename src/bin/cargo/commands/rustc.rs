@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
-
 use cargo::ops;
+use cargo::util::interning::InternedString;
 
 const PRINT_ARG_NAME: &str = "print";
 
@@ -46,26 +46,24 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
+    // This is a legacy behavior that changes the behavior based on the profile.
+    // If we want to support this more formally, I think adding a --mode flag
+    // would be warranted.
     let mode = match args.value_of("profile") {
-        Some("dev") | None => CompileMode::Build,
         Some("test") => CompileMode::Test,
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check { test: false },
-        Some(mode) => {
-            let err = anyhow::format_err!(
-                "unknown profile: `{}`, use dev,
-                                   test, or bench",
-                mode
-            );
-            return Err(CliError::new(err, 101));
-        }
+        _ => CompileMode::Build,
     };
     let mut compile_opts = args.compile_options_for_single_package(
         config,
         mode,
         Some(&ws),
-        ProfileChecking::Unchecked,
+        ProfileChecking::LegacyRustc,
     )?;
+    if compile_opts.build_config.requested_profile == "check" {
+        compile_opts.build_config.requested_profile = InternedString::new("dev");
+    }
     let target_args = values(args, "args");
     compile_opts.target_rustc_args = if target_args.is_empty() {
         None
