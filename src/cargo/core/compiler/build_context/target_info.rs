@@ -548,6 +548,7 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 ///
 /// The locations are:
 ///
+///  - the `CARGO_ENCODED_RUSTFLAGS` environment variable
 ///  - the `RUSTFLAGS` environment variable
 ///
 /// then if this was not found
@@ -595,7 +596,16 @@ fn env_args(
         return Ok(Vec::new());
     }
 
-    // First try RUSTFLAGS from the environment
+    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
+    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
+    if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", name)) {
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        return Ok(a.split('\x1f').map(str::to_string).collect());
+    }
+
+    // Then try RUSTFLAGS from the environment
     if let Ok(a) = env::var(name) {
         let args = a
             .split(' ')
