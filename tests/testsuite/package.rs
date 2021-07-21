@@ -2105,3 +2105,59 @@ src/main.rs
         .run();
     p.cargo("package --allow-dirty").run();
 }
+
+#[cargo_test]
+fn in_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package --workspace")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
+}

@@ -18,6 +18,7 @@ pub fn cli() -> App {
         ))
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
+        .arg_package("Package to publish")
         .arg_manifest_path()
         .arg_features()
         .arg_jobs()
@@ -41,6 +42,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             index,
             verify: !args.is_present("no-verify"),
             allow_dirty: args.is_present("allow-dirty"),
+            to_publish: args.packages_from_flags()?,
             targets: args.targets(),
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),

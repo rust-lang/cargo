@@ -50,6 +50,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
+    pub to_publish: ops::Packages,
     pub targets: Vec<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
@@ -57,9 +58,12 @@ pub struct PublishOpts<'cfg> {
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
-    let pkg = ws.current()?;
-    let mut publish_registry = opts.registry.clone();
+    let specs = opts.to_publish.to_package_id_specs(ws)?;
+    let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
 
+    let (pkg, cli_features) = pkgs.pop().unwrap();
+
+    let mut publish_registry = opts.registry.clone();
     if let Some(ref allowed_registries) = *pkg.publish() {
         if publish_registry.is_none() && allowed_registries.len() == 1 {
             // If there is only one allowed registry, push to that one directly,
@@ -101,22 +105,23 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
-    let tarball = ops::package(
-        ws,
+    let tarball = ops::package_one(
+        &ws,
+        pkg,
         &ops::PackageOpts {
             config: opts.config,
             verify: opts.verify,
             list: false,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
+            to_package: ops::Packages::Default,
             targets: opts.targets.clone(),
             jobs: opts.jobs,
-            cli_features: opts.cli_features.clone(),
+            cli_features: cli_features.clone(),
         },
     )?
     .unwrap();
 
-    // Upload said tarball to the specified destination
     opts.config
         .shell()
         .status("Uploading", pkg.package_id().to_string())?;
