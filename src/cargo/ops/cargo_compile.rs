@@ -1486,7 +1486,7 @@ fn traverse_and_share(
         // Already computed, no need to recompute.
         return new_unit.clone();
     }
-    let mut dep_hash = StableHasher::default();
+    let mut dep_hash = StableHasher::new();
     let new_deps: Vec<_> = unit_graph[unit]
         .iter()
         .map(|dep| {
