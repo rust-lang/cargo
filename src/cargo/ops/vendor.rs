@@ -2,6 +2,7 @@ use crate::core::shell::Verbosity;
 use crate::core::{GitReference, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::{CargoResult, Config};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
@@ -248,7 +249,7 @@ fn sync(
     // replace original sources with vendor
     for source_id in sources {
         let name = if source_id.is_default_registry() {
-            "crates-io".to_string()
+            CRATES_IO_REGISTRY.to_string()
         } else {
             source_id.url().to_string()
         };

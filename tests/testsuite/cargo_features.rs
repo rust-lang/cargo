@@ -105,7 +105,7 @@ fn feature_required_dependency() {
 [UPDATING] [..]
 [DOWNLOADING] [..]
 [DOWNLOADED] bar v1.0.0 [..]
-error: failed to download replaced source registry `https://github.com/rust-lang/crates.io-index`
+error: failed to download replaced source registry `crates-io`
 
 Caused by:
   failed to parse manifest at `[..]/bar-1.0.0/Cargo.toml`
@@ -136,7 +136,7 @@ Caused by:
   unable to get packages from source
 
 Caused by:
-  failed to download replaced source registry `https://github.com/rust-lang/crates.io-index`
+  failed to download replaced source registry `crates-io`
 
 Caused by:
   failed to parse manifest at `[..]/bar-1.0.0/Cargo.toml`

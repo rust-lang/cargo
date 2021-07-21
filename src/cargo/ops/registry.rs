@@ -20,7 +20,7 @@ use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
-use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
+use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -730,7 +730,7 @@ pub fn registry_login(
         "Login",
         format!(
             "token for `{}` saved",
-            reg.as_ref().map_or("crates.io", String::as_str)
+            reg.as_ref().map_or(CRATES_IO_DOMAIN, String::as_str)
         ),
     )?;
     Ok(())
@@ -738,7 +738,7 @@ pub fn registry_login(
 
 pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> {
     let (registry, reg_cfg, _) = registry(config, None, None, reg.clone(), false, false)?;
-    let reg_name = reg.as_deref().unwrap_or("crates.io");
+    let reg_name = reg.as_deref().unwrap_or(CRATES_IO_DOMAIN);
     if reg_cfg.credential_process.is_none() && reg_cfg.token.is_none() {
         config.shell().status(
             "Logout",

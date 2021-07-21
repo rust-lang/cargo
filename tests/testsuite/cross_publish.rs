@@ -9,7 +9,6 @@ fn simple_cross_package() {
     if cross_compile::disabled() {
         return;
     }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -42,10 +41,11 @@ fn simple_cross_package() {
     p.cargo("package --target")
         .arg(&target)
         .with_stderr(
-            "   Packaging foo v0.0.0 ([CWD])
-   Verifying foo v0.0.0 ([CWD])
-   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
-    Finished dev [unoptimized + debuginfo] target(s) in [..]
+            "\
+[PACKAGING] foo v0.0.0 ([CWD])
+[VERIFYING] foo v0.0.0 ([CWD])
+[COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -100,15 +100,15 @@ fn publish_with_target() {
     p.cargo("publish --token sekrit")
         .arg("--target")
         .arg(&target)
-        .with_stderr(&format!(
-            "    Updating `{registry}` index
-   Packaging foo v0.0.0 ([CWD])
-   Verifying foo v0.0.0 ([CWD])
-   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
-    Finished dev [unoptimized + debuginfo] target(s) in [..]
-   Uploading foo v0.0.0 ([CWD])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[PACKAGING] foo v0.0.0 ([CWD])
+[VERIFYING] foo v0.0.0 ([CWD])
+[COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[UPLOADING] foo v0.0.0 ([CWD])
 ",
-            registry = registry::registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }

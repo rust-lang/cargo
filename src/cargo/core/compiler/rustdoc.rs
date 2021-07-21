@@ -11,6 +11,8 @@ use std::fmt;
 use std::hash;
 use url::Url;
 
+const DOCS_RS_URL: &'static str = "https://docs.rs/";
+
 /// Mode used for `std`.
 #[derive(Debug, Hash)]
 pub enum RustdocExternMode {
@@ -63,7 +65,7 @@ pub struct RustdocExternMap {
 impl Default for RustdocExternMap {
     fn default() -> Self {
         let mut registries = HashMap::new();
-        registries.insert("crates-io".into(), "https://docs.rs/".into());
+        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
         Self {
             registries,
             std: None,
@@ -76,8 +78,8 @@ fn default_crates_io_to_docs_rs<'de, D: serde::Deserializer<'de>>(
 ) -> Result<HashMap<String, String>, D::Error> {
     use serde::Deserialize;
     let mut registries = HashMap::deserialize(de)?;
-    if !registries.contains_key("crates-io") {
-        registries.insert("crates-io".into(), "https://docs.rs/".into());
+    if !registries.contains_key(CRATES_IO_REGISTRY) {
+        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
     }
     Ok(registries)
 }

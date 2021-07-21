@@ -90,16 +90,15 @@ fn simple() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = registry::registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     validate_upload_foo();
@@ -141,9 +140,9 @@ fn old_token_location() {
     fs::write(&credentials, r#"token = "api-token""#).unwrap();
 
     p.cargo("publish --no-verify")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [WARNING] using `registry.token` config value with source replacement is deprecated
 This may become a hard error in the future[..]
 Use the --token command-line flag to remove this warning.
@@ -152,8 +151,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     validate_upload_foo();
