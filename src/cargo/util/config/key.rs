@@ -33,12 +33,15 @@ impl Default for ConfigKey {
 }
 
 impl ConfigKey {
+    pub fn new() -> Self {
+        Self::default()
+    }
     /// Creates a `ConfigKey` from the `key` specified.
     ///
     /// The `key` specified is expected to be a period-separated toml
     /// configuration key.
     pub fn from_str(key: &str) -> ConfigKey {
-        let mut cfg = ConfigKey::default();
+        let mut cfg = ConfigKey::new();
         for part in key.split('.') {
             cfg.push(part);
         }

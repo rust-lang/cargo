@@ -219,7 +219,7 @@ fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
 fn print_toml_unmerged(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey) -> CargoResult<()> {
     let print_table = |cv: &CV| {
         drop_println!(config, "# {}", cv.definition());
-        print_toml(config, opts, &ConfigKey::default(), cv);
+        print_toml(config, opts, &ConfigKey::new(), cv);
         drop_println!(config, "");
     };
     // This removes entries from the given CV so that all that remains is the
@@ -235,7 +235,7 @@ fn print_toml_unmerged(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey) 
                     }
                 }
                 _ => {
-                    let mut key_so_far = ConfigKey::default();
+                    let mut key_so_far = ConfigKey::new();
                     for part in key.parts().take(i) {
                         key_so_far.push(part);
                     }
