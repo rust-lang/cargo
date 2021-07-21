@@ -509,7 +509,7 @@ fn compute_metadata(
     metas: &mut HashMap<Unit, MetaInfo>,
 ) -> MetaInfo {
     let bcx = &cx.bcx;
-    let mut hasher = StableHasher::default();
+    let mut hasher = StableHasher::new();
 
     METADATA_VERSION.hash(&mut hasher);
 

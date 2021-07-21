@@ -278,7 +278,7 @@ pub fn compile_ws<'a>(
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
-    let interner = UnitInterner::default();
+    let interner = UnitInterner::new();
     let bcx = create_bcx(ws, options, &interner)?;
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.config())?;

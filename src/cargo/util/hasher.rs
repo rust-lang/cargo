@@ -9,6 +9,12 @@ use std::hash::{Hasher, SipHasher};
 #[derive(Default)]
 pub struct StableHasher(SipHasher);
 
+impl StableHasher {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl Hasher for StableHasher {
     fn finish(&self) -> u64 {
         self.0.finish()

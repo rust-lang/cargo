@@ -159,6 +159,10 @@ struct InternerState {
 }
 
 impl UnitInterner {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Creates a new `unit` from its components. The returned `Unit`'s fields
     /// will all be equivalent to the provided arguments, although they may not
     /// be the exact same instance.
