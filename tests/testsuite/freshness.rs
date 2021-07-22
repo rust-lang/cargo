@@ -493,8 +493,8 @@ fn changing_bin_features_caches_targets() {
     /* Targets should be cached from the first build */
 
     let mut e = p.cargo("build");
-    // MSVC/apple does not include hash in binary filename, so it gets recompiled.
-    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
+    // MSVC does not include hash in binary filename, so it gets recompiled.
+    if cfg!(target_env = "msvc") {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -503,7 +503,7 @@ fn changing_bin_features_caches_targets() {
     p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     let mut e = p.cargo("build --features foo");
-    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
+    if cfg!(target_env = "msvc") {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
