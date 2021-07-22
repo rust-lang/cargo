@@ -793,7 +793,7 @@ impl FixArgs {
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
                 if config.nightly_features_allowed {
-                    cmd.arg("--force-warns")
+                    cmd.arg("--force-warn")
                         .arg(format!("rust-{}-compatibility", edition))
                         .arg("-Zunstable-options");
                 } else {
