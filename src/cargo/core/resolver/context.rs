@@ -27,7 +27,7 @@ pub struct Context {
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
     /// for each package the list of names it can see,
-    /// then for each name the exact version that name represents and weather the name is public.
+    /// then for each name the exact version that name represents and whether the name is public.
     pub public_dependency: Option<PublicDependency>,
 
     /// a way to look up for a package in activations what packages required it
