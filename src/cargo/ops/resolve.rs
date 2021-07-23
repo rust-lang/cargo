@@ -113,6 +113,16 @@ pub fn resolve_ws_with_opts<'cfg>(
                     .shell()
                     .warn(format!("package replacement is not used: {}", replace_spec))?
             }
+
+            if dep.features().len() != 0 || !dep.uses_default_features() {
+                ws.config()
+                .shell()
+                .warn(format!(
+                    "replacement for `{}` uses the features mechanism. \
+                    default-features and features will not take effect because the replacement dependency does not support this mechanism",
+                    dep.package_name()
+                ))?
+            }
         }
 
         Some(resolve)

@@ -87,15 +87,64 @@ fn override_with_features() {
         .build();
 
     p.cargo("build")
-        .with_status(101)
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+[UPDATING] git repository `[..]`
+[WARNING] replacement for `bar` uses the features mechanism. default-features and features \
+will not take effect because the replacement dependency does not support this mechanism
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
 
-Caused by:
-  patch for `bar` uses the features mechanism. default-features and features \
-will not take effect because the patch dependency does not support this mechanism
+#[cargo_test]
+fn override_with_setting_default_features() {
+    Package::new("bar", "0.1.0").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0" = {{ git = '{}', default-features = false, features = ["none_default_feature"] }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[UPDATING] git repository `[..]`
+[WARNING] replacement for `bar` uses the features mechanism. default-features and features \
+will not take effect because the replacement dependency does not support this mechanism
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
