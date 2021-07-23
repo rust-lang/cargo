@@ -93,7 +93,7 @@ proptest! {
             prop_assert_eq!(
                 res.is_ok(),
                 mres.is_ok(),
-                "minimal-versions and regular resolver disagree about weather `{} = \"={}\"` can resolve",
+                "minimal-versions and regular resolver disagree about whether `{} = \"={}\"` can resolve",
                 this.name(),
                 this.version()
             )
