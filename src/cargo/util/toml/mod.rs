@@ -77,7 +77,7 @@ fn do_read_manifest(
         if let Some(feats) = package.get("cargo-features") {
             bail!(
                 "cargo-features = {} was found in the wrong location: it \
-                 should be set at the top of Cargo.toml before any sections",
+                 should be set at the top of Cargo.toml before any tables",
                 toml::to_string(feats).unwrap()
             );
         }
