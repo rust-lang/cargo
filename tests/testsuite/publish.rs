@@ -1773,29 +1773,29 @@ fn in_workspace() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit -p foo")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] [..]
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD]/foo)
 [UPLOADING] foo v0.0.1 ([CWD]/foo)
-"
-        ))
+",
+        )
         .run();
 
     validate_upload_foo();
 
     p.cargo("publish --no-verify --token sekrit -p bar")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] [..]
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] bar v0.0.1 ([CWD]/bar)
 [UPLOADING] bar v0.0.1 ([CWD]/bar)
-"
-        ))
+",
+        )
         .run();
 
     validate_upload_bar();
