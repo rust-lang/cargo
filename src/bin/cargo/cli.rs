@@ -137,8 +137,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
 
 pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
-    let mut version_string = version.to_string();
-    version_string.push('\n');
+    let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
         version_string.push_str(&format!(
             "release: {}.{}.{}\n",
