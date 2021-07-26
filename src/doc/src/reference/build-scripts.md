@@ -94,6 +94,12 @@ one detailed below.
   re-run the script.
 * [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) — Tells Cargo when
   to re-run the script.
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
+  linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
+* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) – Passes custom
+  flags to a linker for the binary `BIN`.
+* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
+  flags to a linker for binaries.
 * [`cargo:rustc-link-lib=[KIND=]NAME`](#rustc-link-lib) — Adds a library to
   link.
 * [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Adds to the
@@ -109,6 +115,38 @@ one detailed below.
   terminal.
 * [`cargo:KEY=VALUE`](#the-links-manifest-key) — Metadata, used by `links`
   scripts.
+
+
+<a id="rustc-link-arg"></a>
+#### `cargo:rustc-link-arg=FLAG`
+
+The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
+option][link-arg] to the compiler, but only when building supported targets
+(benchmarks, binaries, `cdylib` crates, examples, and tests). Its usage is
+highly platform specific. It is useful to set the shared library version or
+linker script.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-link-arg-bin"></a>
+#### `cargo:rustc-link-arg-bin=BIN=FLAG`
+
+The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building
+the binary target with name `BIN`. Its usage is highly platform specific. It is useful
+to set a linker script or other linker options.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-link-arg-bins"></a>
+#### `cargo:rustc-link-arg-bins=FLAG`
+
+The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+binary target. Its usage is highly platform specific. It is useful
+to set a linker script or other linker options.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 <a id="rustc-link-lib"></a>
 #### `cargo:rustc-link-lib=[KIND=]NAME`

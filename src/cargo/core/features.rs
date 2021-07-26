@@ -633,7 +633,6 @@ unstable_cli_options!(
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     future_incompat_report: bool = ("Enable creation of a future-incompat report for all dependencies"),
-    extra_link_arg: bool = ("Allow `cargo:rustc-link-arg` in build scripts"),
     features: Option<Vec<String>>  = (HIDDEN),
     jobserver_per_rustc: bool = (HIDDEN),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
@@ -688,6 +687,9 @@ const STABILIZED_FEATURES: &str = "The new feature resolver is now available \
     by specifying `resolver = \"2\"` in Cargo.toml.\n\
     See https://doc.rust-lang.org/nightly/cargo/reference/features.html#feature-resolver-version-2 \
     for more information.";
+
+const STABILIZED_EXTRA_LINK_ARG: &str = "Additional linker arguments are now \
+    supported without passing this flag.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -859,7 +861,6 @@ impl CliUnstable {
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
             "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
             "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
-            "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
             "credential-process" => self.credential_process = parse_empty(k, v)?,
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
             "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
@@ -869,6 +870,7 @@ impl CliUnstable {
             "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
+            "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }

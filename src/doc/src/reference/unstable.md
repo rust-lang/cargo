@@ -63,7 +63,6 @@ Each new feature described below should explain how to use it.
 * Unstable-specific features
     * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
 * Build scripts and linking
-    * [extra-link-arg](#extra-link-arg) — Allows build scripts to pass extra link arguments in more cases.
     * [Metabuild](#metabuild) — Provides declarative build scripts.
 * Resolver and features
     * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
@@ -132,51 +131,6 @@ The list of features passed to cargo's `-Zallow-features` is also passed
 to any Rust tools that cargo ends up calling (like `rustc` or
 `rustdoc`). Thus, if you run `cargo -Zallow-features=`, no unstable
 Cargo _or_ Rust features can be used.
-
-### extra-link-arg
-* Tracking Issue: [#9426](https://github.com/rust-lang/cargo/issues/9426)
-* Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
-
-The `-Z extra-link-arg` flag makes the following instructions available
-in build scripts:
-
-* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
-  flags to a linker for binaries.
-* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) – Passes custom
-  flags to a linker for the binary `BIN`.
-* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
-  linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
-
-<a id="rustc-link-arg-bins"></a>
-#### `cargo:rustc-link-arg-bins=FLAG`
-
-The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building a
-binary target. Its usage is highly platform specific. It is useful
-to set a linker script or other linker options.
-
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
-
-<a id="rustc-link-arg-bin"></a>
-#### `cargo:rustc-link-arg-bin=BIN=FLAG`
-
-The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building
-the binary target with name `BIN`. Its usage is highly platform specific. It is useful
-to set a linker script or other linker options.
-
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
-
-<a id="rustc-link-arg"></a>
-#### `cargo:rustc-link-arg=FLAG`
-
-The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
-option][link-arg] to the compiler, but only when building supported targets
-(benchmarks, binaries, `cdylib` crates, examples, and tests). Its usage is
-highly platform specific. It is useful to set the shared library version or
-linker script.
-
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
@@ -1479,3 +1433,10 @@ for more information on using the features CLI options.
 The `resolver` feature in `Cargo.toml` has been stabilized in the 1.51 release.
 See the [resolver versions](resolver.md#resolver-versions) for more
 information about specifying resolvers.
+
+### extra-link-arg
+
+The `extra-link-arg` feature to specify additional linker arguments in build
+scripts has been stabilized in the 1.56 release. See the [build script
+documentation](build-scripts.md#outputs-of-the-build-script) for more
+information on specifying extra linker arguments.
