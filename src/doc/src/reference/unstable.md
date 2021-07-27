@@ -1420,3 +1420,9 @@ The `configurable-env` feature to specify environment variables in Cargo
 configuration has been stabilized in the 1.56 release. See the [config
 documentation](config.html#env) for more information about configuring
 environment variables.
+
+### rust-version
+
+The `rust-version` field in `Cargo.toml` has been stabilized in the 1.56 release.
+See the [rust-version field](manifest.html#the-rust-version-field) for more
+information on using the `rust-version` field and the `--ignore-rust-version` option.

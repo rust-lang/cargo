@@ -50,6 +50,8 @@ Run the specified example.
 
 {{> options-release }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

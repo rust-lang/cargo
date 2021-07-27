@@ -202,6 +202,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
+       --ignore-rust-version
+           Benchmark the target even if the selected Rust compiler is older
+           than the required Rust version as configured in the project's
+           rust-version field.
+
    Output Options
        --target-dir directory
            Directory for all generated artifacts and intermediate files. May

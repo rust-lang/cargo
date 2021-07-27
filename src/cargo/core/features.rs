@@ -166,8 +166,7 @@ impl Edition {
         match self {
             Edition2015 => None,
             Edition2018 => Some(semver::Version::new(1, 31, 0)),
-            // FIXME: This will likely be 1.56, update when that seems more likely.
-            Edition2021 => Some(semver::Version::new(1, 62, 0)),
+            Edition2021 => Some(semver::Version::new(1, 56, 0)),
         }
     }
 

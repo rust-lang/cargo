@@ -64,6 +64,8 @@ flag and will always document the given target.
 
 {{> options-release }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options
