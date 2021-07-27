@@ -7,11 +7,11 @@ fn simple() {
     let p = project().build();
 
     p.cargo("version")
-        .with_stdout(&format!("{}\n", cargo::version()))
+        .with_stdout(&format!("cargo {}\n", cargo::version()))
         .run();
 
     p.cargo("--version")
-        .with_stdout(&format!("{}\n", cargo::version()))
+        .with_stdout(&format!("cargo {}\n", cargo::version()))
         .run();
 }
 
