@@ -395,7 +395,7 @@ features! {
     (unstable, strip, "", "reference/unstable.html#profile-strip-option"),
 
     // Specifying a minimal 'rust-version' attribute for crates
-    (unstable, rust_version, "", "reference/unstable.html#rust-version"),
+    (stable, rust_version, "1.56", "reference/manifest.html#the-rust-version-field"),
 
     // Support for 2021 edition.
     (unstable, edition2021, "", "reference/unstable.html#edition-2021"),

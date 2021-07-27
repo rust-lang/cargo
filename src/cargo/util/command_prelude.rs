@@ -218,7 +218,7 @@ pub trait AppExt: Sized {
     fn arg_ignore_rust_version(self) -> Self {
         self._arg(opt(
             "ignore-rust-version",
-            "Ignore `rust-version` specification in packages (unstable)",
+            "Ignore `rust-version` specification in packages",
         ))
     }
 
@@ -532,12 +532,6 @@ pub trait ArgMatchesExt {
             rustdoc_document_private_items: false,
             honor_rust_version: !self._is_present("ignore-rust-version"),
         };
-
-        if !opts.honor_rust_version {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--ignore-rust-version", 8072)?;
-        }
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;

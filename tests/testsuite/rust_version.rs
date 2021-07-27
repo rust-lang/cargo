@@ -3,57 +3,11 @@
 use cargo_test_support::{project, registry::Package};
 
 #[cargo_test]
-fn rust_version_gated() {
-    project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                rust-version = "1.9999"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build()
-        .cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_stderr_contains(
-            "warning: `rust-version` is not supported on this version of Cargo and will be ignored\
-            \n\nconsider adding `cargo-features = [\"rust-version\"]` to the manifest",
-        )
-        .run();
-
-    project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                rust-version = "1.9999"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build()
-        .cargo("build")
-        .with_stderr_contains(
-            "warning: `rust-version` is not supported on this version of Cargo and will be ignored\
-            \n\nthis Cargo does not support nightly features, but if you\n\
-            switch to nightly channel you can add\n\
-            `cargo-features = [\"rust-version\"]` to enable this feature",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn rust_version_satisfied() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rust-version"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -66,10 +20,8 @@ fn rust_version_satisfied() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").masquerade_as_nightly_cargo().run();
-    p.cargo("build --ignore-rust-version -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build").run();
+    p.cargo("build --ignore-rust-version").run();
 }
 
 #[cargo_test]
@@ -78,8 +30,6 @@ fn rust_version_bad_caret() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rust-version"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -92,7 +42,6 @@ fn rust_version_bad_caret() {
         .file("src/main.rs", "fn main() {}")
         .build()
         .cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "error: failed to parse manifest at `[..]`\n\n\
@@ -107,8 +56,6 @@ fn rust_version_bad_pre_release() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rust-version"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -121,7 +68,6 @@ fn rust_version_bad_pre_release() {
         .file("src/main.rs", "fn main() {}")
         .build()
         .cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "error: failed to parse manifest at `[..]`\n\n\
@@ -136,8 +82,6 @@ fn rust_version_bad_nonsense() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rust-version"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -150,7 +94,6 @@ fn rust_version_bad_nonsense() {
         .file("src/main.rs", "fn main() {}")
         .build()
         .cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "error: failed to parse manifest at `[..]`\n\n\
@@ -165,8 +108,6 @@ fn rust_version_too_high() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rust-version"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -180,22 +121,18 @@ fn rust_version_too_high() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "error: package `foo v0.0.1 ([..])` cannot be built because it requires \
              rustc 1.9876.0 or newer, while the currently active rustc version is [..]",
         )
         .run();
-    p.cargo("build --ignore-rust-version -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build --ignore-rust-version").run();
 }
 
 #[cargo_test]
 fn rust_version_dependency_fails() {
     Package::new("bar", "0.0.1")
-        .cargo_feature("rust-version")
         .rust_version("1.2345.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
@@ -216,7 +153,6 @@ fn rust_version_dependency_fails() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index\n \
@@ -226,9 +162,7 @@ fn rust_version_dependency_fails() {
              rustc 1.2345.0 or newer, while the currently active rustc version is [..]",
         )
         .run();
-    p.cargo("build --ignore-rust-version -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build --ignore-rust-version").run();
 }
 
 #[cargo_test]
@@ -237,8 +171,6 @@ fn rust_version_older_than_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rust-version"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -252,7 +184,6 @@ fn rust_version_older_than_edition() {
         .file("src/main.rs", "fn main() {}")
         .build()
         .cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("  rust-version 1.1 is older than first version (1.31.0) required by the specified edition (2018)",
         )

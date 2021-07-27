@@ -89,7 +89,6 @@ Each new feature described below should explain how to use it.
     * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
-    * [rust-version](#rust-version) — Allows to declare the minimum supported Rust version.
     * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
@@ -1169,25 +1168,6 @@ cargo logout -Z credential-process
 [`credentials` file]: config.md#credentials
 [crates.io]: https://crates.io/
 [config file]: config.md
-
-### rust-version
-* RFC: [#2495](https://github.com/rust-lang/rfcs/blob/master/text/2495-min-rust-version.md)
-* rustc Tracking Issue: [#65262](https://github.com/rust-lang/rust/issues/65262)
-
-The `-Z rust-version` flag enables the reading of the `rust-version` field in the
-Cargo manifest `package` section. This can be used by a package to state a minimal
-version of the compiler required to build the package. An error is generated if
-the version of rustc is older than the stated `rust-version`. The
-`--ignore-rust-version` flag can be used to override the check.
-
-```toml
-cargo-features = ["rust-version"]
-
-[package]
-name = "mypackage"
-version = "0.0.1"
-rust-version = "1.42"
-```
 
 ### edition 2021
 * Tracking Issue: [rust-lang/rust#85811](https://github.com/rust-lang/rust/issues/85811)

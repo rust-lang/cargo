@@ -1122,46 +1122,25 @@ impl TomlManifest {
         }
 
         let rust_version = if let Some(rust_version) = &project.rust_version {
-            if features.require(Feature::rust_version()).is_err() {
-                let mut msg =
-                    "`rust-version` is not supported on this version of Cargo and will be ignored"
-                        .to_string();
-                if config.nightly_features_allowed {
-                    msg.push_str(
-                        "\n\n\
-                        consider adding `cargo-features = [\"rust-version\"]` to the manifest",
-                    );
-                } else {
-                    msg.push_str(
-                        "\n\n\
-                        this Cargo does not support nightly features, but if you\n\
-                        switch to nightly channel you can add\n\
-                        `cargo-features = [\"rust-version\"]` to enable this feature",
-                    );
+            let req = match semver::VersionReq::parse(rust_version) {
+                // Exclude semver operators like `^` and pre-release identifiers
+                Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
+                _ => bail!("`rust-version` must be a value like \"1.32\""),
+            };
+            if let Some(first_version) = edition.first_version() {
+                let unsupported =
+                    semver::Version::new(first_version.major, first_version.minor - 1, 9999);
+                if req.matches(&unsupported) {
+                    bail!(
+                        "rust-version {} is older than first version ({}) required by \
+                            the specified edition ({})",
+                        rust_version,
+                        first_version,
+                        edition,
+                    )
                 }
-                warnings.push(msg);
-                None
-            } else {
-                let req = match semver::VersionReq::parse(rust_version) {
-                    // Exclude semver operators like `^` and pre-release identifiers
-                    Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
-                    _ => bail!("`rust-version` must be a value like \"1.32\""),
-                };
-                if let Some(first_version) = edition.first_version() {
-                    let unsupported =
-                        semver::Version::new(first_version.major, first_version.minor - 1, 9999);
-                    if req.matches(&unsupported) {
-                        bail!(
-                            "rust-version {} is older than first version ({}) required by \
-                                the specified edition ({})",
-                            rust_version,
-                            first_version,
-                            edition,
-                        )
-                    }
-                }
-                Some(rust_version.clone())
             }
+            Some(rust_version.clone())
         } else {
             None
         };
