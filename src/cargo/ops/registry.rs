@@ -106,7 +106,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
     let tarball = ops::package_one(
-        &ws,
+        ws,
         pkg,
         &ops::PackageOpts {
             config: opts.config,
@@ -117,7 +117,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             to_package: ops::Packages::Default,
             targets: opts.targets.clone(),
             jobs: opts.jobs,
-            cli_features: cli_features.clone(),
+            cli_features: cli_features,
         },
     )?
     .unwrap();
