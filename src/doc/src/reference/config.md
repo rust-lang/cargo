@@ -203,6 +203,20 @@ runner = "foo"  # Searches `PATH` for `foo`.
 directory = "vendor"
 ```
 
+### Executable paths with arguments
+
+Some Cargo commands invoke external programs, which can be configured as a path
+and some number of arguments.
+
+The value may be an array of strings like `['/path/to/program', 'somearg']` or
+a space-separated string like `'/path/to/program somearg'`. If the path to the
+executable contains a space, the list form must be used.
+
+If Cargo is passing other arguments to the program such as a path to open or
+run, they will be passed after the last specified argument in the value of an
+option of this format. If the specified program does not have path separators,
+Cargo will search `PATH` for its executable.
+
 ### Credentials
 
 Configuration values with sensitive information are stored in the
@@ -424,6 +438,10 @@ schedule overlapping invocations of `rustc` in parallel when possible.
 The `[doc]` table defines options for the [`cargo doc`] command.
 
 ##### `doc.browser`
+
+* Type: string or array of strings ([program path and args])
+* Default: `BROWSER` environment variable, or, if that is missing,
+  opening the link in a system specific way
 
 This option sets the browser to be used by [`cargo doc`], overriding the
 `BROWSER` environment variable when opening documentation with the `--open`
@@ -856,7 +874,7 @@ Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
 `<triple>` is being compiled for. By default, the linker is not overridden.
 
 ##### `target.<triple>.runner`
-* Type: string or array of strings (program path and args)
+* Type: string or array of strings ([program path and args])
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUNNER`
 
@@ -864,12 +882,6 @@ If a runner is provided, executables for the target `<triple>` will be
 executed by invoking the specified runner with the actual executable passed as
 an argument. This applies to [`cargo run`], [`cargo test`] and [`cargo bench`]
 commands. By default, compiled executables are executed directly.
-
-The value may be an array of strings like `['/path/to/program', 'somearg']` or
-a space-separated string like `'/path/to/program somearg'`. The arguments will
-be passed to the runner with the executable to run as the last argument. If
-the runner program does not have path separators, it will search `PATH` for
-the runner executable.
 
 ##### `target.<cfg>.runner`
 
@@ -977,6 +989,7 @@ Sets the width for progress bar.
 [toml]: https://toml.io/
 [incremental compilation]: profiles.md#incremental
 [profile]: profiles.md
+[program path with args]: #executable-paths-with-arguments
 [libcurl format]: https://ec.haxx.se/usingcurl-proxies.html
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions
