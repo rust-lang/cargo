@@ -1,6 +1,6 @@
 [package]
 name = "cargo-util"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["The Cargo Project Developers"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
