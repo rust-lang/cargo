@@ -1947,7 +1947,7 @@ fn minimal_download() {
     //    ✓    |     ✓    |         | `cargo tree --target=all -e normal -Z features=all`†
     //    ✓    |     ✓    |    ✓    | A normal build.
     //
-    // † — However, `cargo tree` downloads everything.
+    // † — However, `cargo tree` downloads everything.
     Package::new("normal", "1.0.0").publish();
     Package::new("normal_pm", "1.0.0").publish();
     Package::new("normal_opt", "1.0.0").publish();

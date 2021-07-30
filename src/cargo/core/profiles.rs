@@ -851,7 +851,7 @@ pub struct UnitFor {
     /// uses the `get_profile_run_custom_build` method to get the correct
     /// profile information for the unit. `host` needs to be true so that all
     /// of the dependencies of that `RunCustomBuild` unit have this flag be
-    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// sticky (and forced to `true` for all further dependencies) — which is
     /// the whole point of `UnitFor`.
     host: bool,
     /// A target for a build dependency or proc-macro (or any of its

@@ -26,11 +26,11 @@ If you file in the wrong tracker, someone will either transfer it to the
 correct one or ask you to move it. Some other repositories that may be
 relevant are:
 
-* [`rust-lang/rust`] — Home for the [`rustc`] compiler and [`rustdoc`].
-* [`rust-lang/rustup`] — Home for the [`rustup`] toolchain installer.
-* [`rust-lang/rustfmt`] — Home for the `rustfmt` tool, which also includes `cargo fmt`.
-* [`rust-lang/rust-clippy`] — Home for the `clippy` tool, which also includes `cargo clippy`.
-* [`rust-lang/crates.io`] — Home for the [crates.io] website.
+* [`rust-lang/rust`] — Home for the [`rustc`] compiler and [`rustdoc`].
+* [`rust-lang/rustup`] — Home for the [`rustup`] toolchain installer.
+* [`rust-lang/rustfmt`] — Home for the `rustfmt` tool, which also includes `cargo fmt`.
+* [`rust-lang/rust-clippy`] — Home for the `clippy` tool, which also includes `cargo clippy`.
+* [`rust-lang/crates.io`] — Home for the [crates.io] website.
 
 Issues with [`cargo fix`] can be tricky to know where they should be filed,
 since the fixes are driven by `rustc`, processed by [`rustfix`], and the

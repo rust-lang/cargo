@@ -406,11 +406,11 @@ opt-level = 3
 The precedence for which value is used is done in the following order (first
 match wins):
 
-1. `[profile.dev.package.name]` — A named package.
-2. `[profile.dev.package."*"]` — For any non-workspace member.
-3. `[profile.dev.build-override]` — Only for build scripts, proc macros, and
+1. `[profile.dev.package.name]` — A named package.
+2. `[profile.dev.package."*"]` — For any non-workspace member.
+3. `[profile.dev.build-override]` — Only for build scripts, proc macros, and
    their dependencies.
-4. `[profile.dev]` — Settings in `Cargo.toml`.
+4. `[profile.dev]` — Settings in `Cargo.toml`.
 5. Default values built-in to Cargo.
 
 Overrides cannot specify the `panic`, `lto`, or `rpath` settings.

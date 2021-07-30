@@ -58,13 +58,13 @@ OPTIONS
        -t type
            Specifies the output type. The following output types are supported:
 
-           o  man — A troff-style man page. Outputs with a numbered
-              extension (like .1) matching the man page section.
+           o  man — A troff-style man page. Outputs with a numbered extension
+              (like .1) matching the man page section.
 
-           o  md — A markdown file, after all handlebars processing has been
+           o  md — A markdown file, after all handlebars processing has been
               finished. Outputs with the .md extension.
 
-           o  txt — A text file, rendered for situations where a man page
+           o  txt — A text file, rendered for situations where a man page
               viewer isn't available. Outputs with the .txt extension.
 
        -o outdir

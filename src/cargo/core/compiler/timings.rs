@@ -643,7 +643,7 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
 static HTML_TMPL: &str = r#"
 <html>
 <head>
-  <title>Cargo Build Timings — {ROOTS}</title>
+  <title>Cargo Build Timings — {ROOTS}</title>
   <meta charset="utf-8">
 <style type="text/css">
 html {
