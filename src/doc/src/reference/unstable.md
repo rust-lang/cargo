@@ -96,10 +96,10 @@ Each new feature described below should explain how to use it.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
     * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
+    * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
     * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
     * [config-include](#config-include) — Adds the ability for config files to include other files.
-    * [configurable-env](#configurable-env) — Adds support for defining environment variables that will be set when building and running.
     * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
     * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
 * Registries
