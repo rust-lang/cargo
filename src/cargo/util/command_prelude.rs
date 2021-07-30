@@ -27,6 +27,8 @@ pub type App = clap::App<'static, 'static>;
 pub trait AppExt: Sized {
     fn _arg(self, arg: Arg<'static, 'static>) -> Self;
 
+    /// Do not use this method, it is only for backwards compatibility.
+    /// Use `arg_package_spec_no_all` instead.
     fn arg_package_spec(
         self,
         package: &'static str,
