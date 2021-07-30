@@ -1413,3 +1413,10 @@ The `extra-link-arg` feature to specify additional linker arguments in build
 scripts has been stabilized in the 1.56 release. See the [build script
 documentation](build-scripts.md#outputs-of-the-build-script) for more
 information on specifying extra linker arguments.
+
+### configurable-env
+
+The `configurable-env` feature to specify environment variables in Cargo
+configuration has been stabilized in the 1.56 release. See the [config
+documentation](config.html#env) for more information about configuring
+environment variables.
