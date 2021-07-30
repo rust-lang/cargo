@@ -61,50 +61,50 @@ Each new feature described below should explain how to use it.
 ### List of unstable features
 
 * Unstable-specific features
-    * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
+    * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
 * Build scripts and linking
-    * [Metabuild](#metabuild) — Provides declarative build scripts.
+    * [Metabuild](#metabuild) — Provides declarative build scripts.
 * Resolver and features
-    * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
-    * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
-    * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
-    * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
-    * [Namespaced features](#namespaced-features) — Separates optional dependencies into a separate namespace from regular features, and allows feature names to be the same as some dependency name.
-    * [Weak dependency features](#weak-dependency-features) — Allows setting features for dependencies without enabling optional dependencies.
+    * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
+    * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
+    * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
+    * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
+    * [Namespaced features](#namespaced-features) — Separates optional dependencies into a separate namespace from regular features, and allows feature names to be the same as some dependency name.
+    * [Weak dependency features](#weak-dependency-features) — Allows setting features for dependencies without enabling optional dependencies.
 * Output behavior
-    * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
-    * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
+    * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
+    * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
 * Compile behavior
-    * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
-    * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
-    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
-    * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
-    * [build-std-features](#build-std-features) — Sets features to use with the standard library.
-    * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
-    * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
+    * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
+    * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
+    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
+    * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
+    * [build-std-features](#build-std-features) — Sets features to use with the standard library.
+    * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
+    * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
 * rustdoc
-    * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
-    * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
+    * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
+    * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
-    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
-    * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
-    * [rust-version](#rust-version) — Allows to declare the minimum supported Rust version.
-    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
+    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
+    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
+    * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
+    * [rust-version](#rust-version) — Allows to declare the minimum supported Rust version.
+    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
 * Information and metadata
-    * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
-    * [timings](#timings) — Generates a report on how long individual dependencies took to run.
-    * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
-    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
+    * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
+    * [timings](#timings) — Generates a report on how long individual dependencies took to run.
+    * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
+    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
     * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
-    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
-    * [config-include](#config-include) — Adds the ability for config files to include other files.
-    * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
-    * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
+    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
+    * [config-include](#config-include) — Adds the ability for config files to include other files.
+    * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
+    * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
 * Registries
-    * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
-    * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
+    * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
+    * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
 
 ### allow-features
 
@@ -525,10 +525,10 @@ cargo +nightly build -Z timings
 The `-Ztimings` flag can optionally take a comma-separated list of the
 following values:
 
-- `html` — Saves a file called `cargo-timing.html` to the current directory
+- `html` — Saves a file called `cargo-timing.html` to the current directory
   with a report of the compilation. Files are also saved with a timestamp in
   the filename if you want to look at older runs.
-- `info` — Displays a message to stdout after each compilation finishes with
+- `info` — Displays a message to stdout after each compilation finishes with
   how long it took.
 - `json` — Emits some JSON information about timing information.
 
@@ -553,11 +553,11 @@ The "custom build" units are `build.rs` scripts, which when run are
 highlighted in orange.
 
 The second graph shows Cargo's concurrency over time. The three lines are:
-- "Waiting" (red) — This is the number of units waiting for a CPU slot to
+- "Waiting" (red) — This is the number of units waiting for a CPU slot to
   open.
-- "Inactive" (blue) — This is the number of units that are waiting for their
+- "Inactive" (blue) — This is the number of units that are waiting for their
   dependencies to finish.
-- "Active" (green) — This is the number of units currently running.
+- "Active" (green) — This is the number of units currently running.
 
 Note: This does not show the concurrency in the compiler itself. `rustc`
 coordinates with Cargo via the "job server" to stay within the concurrency
@@ -804,12 +804,12 @@ The following is a description of the JSON structure:
       "platform": null,
       /* The "mode" for this unit. Valid values:
 
-         * "test" — Build using `rustc` as a test.
-         * "build" — Build using `rustc`.
+         * "test" — Build using `rustc` as a test.
+         * "build" — Build using `rustc`.
          * "check" — Build using `rustc` in "check" mode.
-         * "doc" — Build using `rustdoc`.
-         * "doctest" — Test using `rustdoc`.
-         * "run-custom-build" — Represents the execution of a build script.
+         * "doc" — Build using `rustdoc`.
+         * "doctest" — Test using `rustdoc`.
+         * "run-custom-build" — Represents the execution of a build script.
       */
       "mode": "build",
       /* Array of features enabled on this unit as strings. */
@@ -1033,9 +1033,9 @@ array of strings.
 Command-line arguments allow special placeholders which will be replaced with
 the corresponding value:
 
-* `{name}` — The name of the registry.
-* `{api_url}` — The base URL of the registry API endpoints.
-* `{action}` — The authentication action (described below).
+* `{name}` — The name of the registry.
+* `{api_url}` — The base URL of the registry API endpoints.
+* `{action}` — The authentication action (described below).
 
 Process names with the prefix `cargo:` are loaded from the `libexec` directory
 next to cargo. Several experimental credential wrappers are included with
