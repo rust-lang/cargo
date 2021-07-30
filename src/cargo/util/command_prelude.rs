@@ -35,10 +35,8 @@ pub trait AppExt: Sized {
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
-        self.arg_package_spec_simple(package)
+        self.arg_package_spec_no_all(package, all, exclude)
             ._arg(opt("all", "Alias for --workspace (deprecated)"))
-            ._arg(opt("workspace", all))
-            ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
     /// Variant of arg_package_spec that does not include the `--all` flag
