@@ -63,6 +63,8 @@ which defaults to `crates-io`.
 
 {{/options}}
 
+{{> section-options-package }}
+
 ### Compilation Options
 
 {{#options}}

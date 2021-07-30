@@ -67,6 +67,13 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html#registrydefault>
            config key which defaults to crates-io.
 
+   Package Selection
+       By default, the package in the current working directory is selected.
+       The -p flag can be used to choose a different package in a workspace.
+
+       -p spec, --package spec
+           The package to publish. See cargo-pkgid(1) for the SPEC format.
+
    Compilation Options
        --target triple
            Publish for the given architecture. The default is the host
