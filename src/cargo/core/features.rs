@@ -627,7 +627,6 @@ unstable_cli_options!(
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     config_include: bool = ("Enable the `include` key in config files"),
-    configurable_env: bool = ("Enable the [env] section in the .cargo/config.toml file"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
@@ -690,6 +689,8 @@ const STABILIZED_FEATURES: &str = "The new feature resolver is now available \
 
 const STABILIZED_EXTRA_LINK_ARG: &str = "Additional linker arguments are now \
     supported without passing this flag.";
+
+const STABILIZED_CONFIGURABLE_ENV: &str = "The [env] section is now always enabled.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -833,7 +834,6 @@ impl CliUnstable {
             "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
-            "configurable-env" => self.configurable_env = parse_empty(k, v)?,
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "patch-in-config" => self.patch_in_config = parse_empty(k, v)?,
@@ -871,6 +871,7 @@ impl CliUnstable {
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
             "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
+            "configurable-env" => stabilized_warn(k, "1.56", STABILIZED_CONFIGURABLE_ENV),
             "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
