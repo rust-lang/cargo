@@ -82,6 +82,16 @@ Otherwise it will use the default registry, which is defined by the
 \fI\f(BIregistry.default\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#registrydefault> config key
 which defaults to \fBcrates\-io\fR\&.
 .RE
+.SS "Package Selection"
+By default, the package in the current working directory is selected. The \fB\-p\fR
+flag can be used to choose a different package in a workspace.
+.sp
+\fB\-p\fR \fIspec\fR, 
+\fB\-\-package\fR \fIspec\fR
+.RS 4
+The package to publish. See \fBcargo\-pkgid\fR(1) for the SPEC
+format.
+.RE
 .SS "Compilation Options"
 .sp
 \fB\-\-target\fR \fItriple\fR

@@ -28,7 +28,7 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_features()
-        .arg_package_spec(
+        .arg_package_spec_no_all(
             "Package(s) to assemble",
             "Assemble all packages in the workspace",
             "Don't assemble specified packages",
