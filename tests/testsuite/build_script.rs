@@ -563,11 +563,7 @@ fn custom_build_env_var_rustc_linker_host_target() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build --target")
-        .arg(&target)
-        .arg("-Ztarget-applies-to-host")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
-        .run();
+    p.cargo("build --target").arg(&target).run();
 }
 
 #[cargo_test]
@@ -602,8 +598,6 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
     p.cargo("build --target")
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .arg(&target)
-        .arg("-Ztarget-applies-to-host")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .run();
 }
 
@@ -625,16 +619,11 @@ fn custom_build_invalid_host_config_feature_flag() {
         .file("src/lib.rs", "")
         .build();
 
-    // build.rs should fail due to -Zhost-config being set without -Ztarget-applies-to-host
+    // build.rs should not fail due to -Zhost-config being set
     p.cargo("build --target")
         .arg(&target)
         .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["host-config"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
-
-"#]])
         .run();
 }
 
@@ -661,9 +650,8 @@ fn custom_build_linker_host_target_with_bad_host_config() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build --verbose --target")
         .arg(&target)
-        .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -697,9 +685,8 @@ fn custom_build_linker_bad_host() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build --verbose --target")
         .arg(&target)
-        .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -735,9 +722,8 @@ fn custom_build_linker_bad_host_with_arch() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build --verbose --target")
         .arg(&target)
-        .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -782,9 +768,8 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
     // assertion should succeed since it's still passed the target linker
     p.cargo("build --verbose --target")
         .arg(&target)
-        .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .masquerade_as_nightly_cargo(&["host-config"])
         .run();
 }
 
@@ -814,9 +799,8 @@ fn custom_build_linker_bad_cross_arch_host() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build --verbose --target")
         .arg(&target)
-        .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
-        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
