@@ -1049,7 +1049,10 @@ impl TomlManifest {
             Ok(Some(deps))
         }
 
-        fn map_dependency(config: &Config, dep: &Spanned<TomlDependency>) -> CargoResult<Spanned<TomlDependency>> {
+        fn map_dependency(
+            config: &Config,
+            dep: &Spanned<TomlDependency>,
+        ) -> CargoResult<Spanned<TomlDependency>> {
             let mut cloned = dep.clone();
             let dep = dep.get_ref();
             match dep {
@@ -1067,16 +1070,19 @@ impl TomlManifest {
                         let src = SourceId::alt_registry(config, &registry)?;
                         d.registry_index = Some(src.url().to_string());
                     }
-                    std::mem::swap(cloned.get_mut(),&mut TomlDependency::Detailed(d));
+                    std::mem::swap(cloned.get_mut(), &mut TomlDependency::Detailed(d));
                     Ok(cloned)
                 }
                 TomlDependency::Simple(s) => {
-                    std::mem::swap(cloned.get_mut(),&mut TomlDependency::Detailed(DetailedTomlDependency {
-                        version: Some(s.clone()),
-                        ..Default::default()
-                    }));
+                    std::mem::swap(
+                        cloned.get_mut(),
+                        &mut TomlDependency::Detailed(DetailedTomlDependency {
+                            version: Some(s.clone()),
+                            ..Default::default()
+                        }),
+                    );
                     Ok(cloned)
-                },
+                }
             }
         }
     }
