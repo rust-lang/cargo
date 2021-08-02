@@ -400,6 +400,7 @@ impl<'cfg> Workspace<'cfg> {
                             Path::new("unused-relative-path"),
                             self.unstable_features(),
                             /* kind */ None,
+                            None
                         )
                     })
                     .collect::<CargoResult<Vec<_>>>()?,

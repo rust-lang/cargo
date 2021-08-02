@@ -93,7 +93,9 @@ pub(super) fn activation_error(
         msg.push_str(&describe_path(
             &cx.parents.path_to_bottom(&parent.package_id()),
         ));
-
+        if dep.span().is_some() {
+            msg.push_str(&format!("{:?}", dep.span()));
+        }
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
         msg.push_str("` are: ");

@@ -3,6 +3,7 @@ use log::trace;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -44,6 +45,25 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
+
+    span: Option<Span>
+}
+
+#[derive(Clone,Debug, Hash, Eq, PartialEq)]
+pub struct Span {
+    start: usize,
+    // NonZeroUsize so that Option<Span> is free.
+    end: NonZeroUsize,
+}
+
+impl Span {
+    //pub const EMPTY: Span = Span{ start: 0, end: 0 };
+}
+
+impl <T> From<&toml::Spanned<T>> for Span {
+    fn from(spanned_src: &toml::Spanned<T>) -> Self {
+        Span { start: spanned_src.start(), end: NonZeroUsize::new(spanned_src.end()).unwrap() }
+    }
 }
 
 #[derive(Serialize)]
@@ -117,6 +137,7 @@ impl Dependency {
         name: impl Into<InternedString>,
         version: Option<&str>,
         source_id: SourceId,
+        span: Option<Span>,
     ) -> CargoResult<Dependency> {
         let name = name.into();
         let (specified_req, version_req) = match version {
@@ -132,7 +153,7 @@ impl Dependency {
             None => (false, OptVersionReq::Any),
         };
 
-        let mut ret = Dependency::new_override(name, source_id);
+        let mut ret = Dependency::new_override(name, source_id, span);
         {
             let ptr = Rc::make_mut(&mut ret.inner);
             ptr.only_match_name = false;
@@ -142,7 +163,7 @@ impl Dependency {
         Ok(ret)
     }
 
-    pub fn new_override(name: InternedString, source_id: SourceId) -> Dependency {
+    pub fn new_override(name: InternedString, source_id: SourceId, span: Option<Span>) -> Dependency {
         assert!(!name.is_empty());
         Dependency {
             inner: Rc::new(Inner {
@@ -159,6 +180,7 @@ impl Dependency {
                 specified_req: false,
                 platform: None,
                 explicit_name_in_toml: None,
+                span
             }),
         }
     }
@@ -215,6 +237,10 @@ impl Dependency {
 
     pub fn source_id(&self) -> SourceId {
         self.inner.source_id
+    }
+
+    pub fn span(&self) -> Option<Span> {
+        self.inner.span.clone()
     }
 
     pub fn registry_id(&self) -> Option<SourceId> {

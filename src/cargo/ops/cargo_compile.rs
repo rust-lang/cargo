@@ -398,7 +398,7 @@ pub fn create_bcx<'a, 'cfg>(
             anyhow::bail!("-Zbuild-std requires --target");
         }
         let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates, None)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {

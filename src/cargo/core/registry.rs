@@ -443,7 +443,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     fn query_overrides(&mut self, dep: &Dependency) -> CargoResult<Option<Summary>> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
-            let dep = Dependency::new_override(dep.package_name(), s);
+            let dep = Dependency::new_override(dep.package_name(), s, None);
             let mut results = src.query_vec(&dep)?;
             if !results.is_empty() {
                 return Ok(Some(results.remove(0)));
@@ -841,7 +841,7 @@ fn summary_for_patch(
         return Ok((summary, Some(locked.package_id)));
     }
     // Try checking if there are *any* packages that match this by name.
-    let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
+    let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id(), None);
     let name_summaries = source.query_vec(&name_only_dep).unwrap_or_else(|e| {
         log::warn!(
             "failed to do name-only summary query for {:?}: {:?}",

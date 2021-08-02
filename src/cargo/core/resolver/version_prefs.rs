@@ -73,6 +73,7 @@ impl VersionPreferences {
 mod test {
     use super::*;
     use crate::core::SourceId;
+    use crate::core::dependency::Span;
     use crate::util::Config;
     use std::collections::BTreeMap;
 
@@ -82,10 +83,10 @@ mod test {
         PackageId::new(name, version, src_id).unwrap()
     }
 
-    fn dep(name: &str, version: &str) -> Dependency {
+    fn dep(name: &str, version: &str, span: Option<Span>) -> Dependency {
         let src_id =
             SourceId::from_url("registry+https://github.com/rust-lang/crates.io-index").unwrap();
-        Dependency::parse(name, Some(version), src_id).unwrap()
+        Dependency::parse(name, Some(version), src_id, span).unwrap()
     }
 
     fn summ(name: &str, version: &str) -> Summary {
@@ -131,7 +132,7 @@ mod test {
     #[test]
     fn test_prefer_dependency() {
         let mut vp = VersionPreferences::default();
-        vp.prefer_dependency(dep("foo", "=1.2.3"));
+        vp.prefer_dependency(dep("foo", "=1.2.3", None));
 
         let mut summaries = vec![
             summ("foo", "1.2.4"),
@@ -157,7 +158,7 @@ mod test {
     fn test_prefer_both() {
         let mut vp = VersionPreferences::default();
         vp.prefer_package_id(pkgid("foo", "1.2.3"));
-        vp.prefer_dependency(dep("foo", "=1.1.0"));
+        vp.prefer_dependency(dep("foo", "=1.1.0", None));
 
         let mut summaries = vec![
             summ("foo", "1.2.4"),

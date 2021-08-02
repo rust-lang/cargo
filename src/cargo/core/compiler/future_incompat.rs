@@ -257,7 +257,7 @@ fn render_suggestions(
             Some(s) => s,
             None => continue,
         };
-        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
+        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id(), None).ok()?;
         let summaries = source.query_vec(&dep).ok()?;
         let versions = itertools::sorted(
             summaries

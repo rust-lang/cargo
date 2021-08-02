@@ -823,7 +823,7 @@ impl IndexSummary {
         let pkgid = PackageId::new(name, &vers, source_id)?;
         let deps = deps
             .into_iter()
-            .map(|dep| dep.into_dep(source_id))
+            .map(|dep| dep.into_dep(source_id, None))
             .collect::<CargoResult<Vec<_>>>()?;
         if let Some(features2) = features2 {
             for (name, values) in features2 {

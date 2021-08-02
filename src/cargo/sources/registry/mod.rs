@@ -174,7 +174,7 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, Source, SourceId, Summary, dependency::Span};
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
@@ -354,7 +354,7 @@ struct RegistryDependency<'a> {
 
 impl<'a> RegistryDependency<'a> {
     /// Converts an encoded dependency in the registry to a cargo dependency
-    pub fn into_dep(self, default: SourceId) -> CargoResult<Dependency> {
+    pub fn into_dep(self, default: SourceId, span: Option<Span>) -> CargoResult<Dependency> {
         let RegistryDependency {
             name,
             req,
@@ -374,7 +374,7 @@ impl<'a> RegistryDependency<'a> {
             default
         };
 
-        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
+        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id, span)?;
         if package.is_some() {
             dep.set_explicit_name_in_toml(name);
         }

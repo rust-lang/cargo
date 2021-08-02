@@ -22,7 +22,7 @@ use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
-use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
+use crate::core::{GitReference, dependency::Span, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
@@ -1266,7 +1266,7 @@ impl TomlManifest {
                     None => return Ok(()),
                 };
                 for (n, v) in dependencies.iter() {
-                    let dep = v.get_ref().to_dependency(n, cx, kind)?;
+                    let dep = v.get_ref().to_dependency(n, cx, kind, Some(Span::from(v)))?;
                     validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                     cx.deps.push(dep);
                 }
@@ -1592,7 +1592,7 @@ impl TomlManifest {
                 );
             }
 
-            let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
+            let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None, None)?;
             {
                 let version = spec.version().ok_or_else(|| {
                     anyhow!(
@@ -1624,7 +1624,7 @@ impl TomlManifest {
             patch.insert(
                 url,
                 deps.iter()
-                    .map(|(name, dep)| dep.get_ref().to_dependency(name, cx, None))
+                    .map(|(name, dep)| dep.get_ref().to_dependency(name, cx, None, None))
                     .collect::<CargoResult<Vec<_>>>()?,
             );
         }
@@ -1717,6 +1717,7 @@ impl<P: ResolveToPath> TomlDependency<P> {
         root: &Path,
         features: &Features,
         kind: Option<DepKind>,
+        span: Option<Span>
     ) -> CargoResult<Dependency> {
         self.to_dependency(
             name,
@@ -1731,6 +1732,7 @@ impl<P: ResolveToPath> TomlDependency<P> {
                 features,
             },
             kind,
+            span,
         )
     }
 
@@ -1739,14 +1741,15 @@ impl<P: ResolveToPath> TomlDependency<P> {
         name: &str,
         cx: &mut Context<'_, '_>,
         kind: Option<DepKind>,
+        span: Option<Span>,
     ) -> CargoResult<Dependency> {
         match *self {
             TomlDependency::Simple(ref version) => DetailedTomlDependency::<P> {
                 version: Some(version.clone()),
                 ..Default::default()
             }
-            .to_dependency(name, cx, kind),
-            TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
+            .to_dependency(name, cx, kind, span),
+            TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind, span),
         }
     }
 
@@ -1764,6 +1767,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
         name_in_toml: &str,
         cx: &mut Context<'_, '_>,
         kind: Option<DepKind>,
+        span: Option<Span>
     ) -> CargoResult<Dependency> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
             bail!(
@@ -1923,7 +1927,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
         };
 
         let version = self.version.as_deref();
-        let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
+        let mut dep = Dependency::parse(pkg_name, version, new_source_id, span)?;
         dep.set_features(self.features.iter().flatten())
             .set_default_features(
                 self.default_features
