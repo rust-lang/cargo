@@ -46,10 +46,10 @@ struct Inner {
     // `None` means *all platforms*.
     platform: Option<Platform>,
 
-    span: Option<Span>
+    span: Option<Span>,
 }
 
-#[derive(Clone,Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Span {
     start: usize,
     // NonZeroUsize so that Option<Span> is free.
@@ -60,9 +60,12 @@ impl Span {
     //pub const EMPTY: Span = Span{ start: 0, end: 0 };
 }
 
-impl <T> From<&toml::Spanned<T>> for Span {
+impl<T> From<&toml::Spanned<T>> for Span {
     fn from(spanned_src: &toml::Spanned<T>) -> Self {
-        Span { start: spanned_src.start(), end: NonZeroUsize::new(spanned_src.end()).unwrap() }
+        Span {
+            start: spanned_src.start(),
+            end: NonZeroUsize::new(spanned_src.end()).unwrap(),
+        }
     }
 }
 
@@ -163,7 +166,11 @@ impl Dependency {
         Ok(ret)
     }
 
-    pub fn new_override(name: InternedString, source_id: SourceId, span: Option<Span>) -> Dependency {
+    pub fn new_override(
+        name: InternedString,
+        source_id: SourceId,
+        span: Option<Span>,
+    ) -> Dependency {
         assert!(!name.is_empty());
         Dependency {
             inner: Rc::new(Inner {
@@ -180,7 +187,7 @@ impl Dependency {
                 specified_req: false,
                 platform: None,
                 explicit_name_in_toml: None,
-                span
+                span,
             }),
         }
     }

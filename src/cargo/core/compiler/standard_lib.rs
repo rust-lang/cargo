@@ -5,7 +5,9 @@ use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::HasDevUnits;
-use crate::core::{Dependency, dependency::Span, PackageId, PackageSet, Resolve, SourceId, Workspace};
+use crate::core::{
+    dependency::Span, Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace,
+};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};

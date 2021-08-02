@@ -20,9 +20,11 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
+use crate::core::{
+    dependency::Span, GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig,
+};
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
-use crate::core::{GitReference, dependency::Span, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
@@ -1266,7 +1268,9 @@ impl TomlManifest {
                     None => return Ok(()),
                 };
                 for (n, v) in dependencies.iter() {
-                    let dep = v.get_ref().to_dependency(n, cx, kind, Some(Span::from(v)))?;
+                    let dep = v
+                        .get_ref()
+                        .to_dependency(n, cx, kind, Some(Span::from(v)))?;
                     validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                     cx.deps.push(dep);
                 }
@@ -1717,7 +1721,7 @@ impl<P: ResolveToPath> TomlDependency<P> {
         root: &Path,
         features: &Features,
         kind: Option<DepKind>,
-        span: Option<Span>
+        span: Option<Span>,
     ) -> CargoResult<Dependency> {
         self.to_dependency(
             name,
@@ -1767,7 +1771,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
         name_in_toml: &str,
         cx: &mut Context<'_, '_>,
         kind: Option<DepKind>,
-        span: Option<Span>
+        span: Option<Span>,
     ) -> CargoResult<Dependency> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
             bail!(

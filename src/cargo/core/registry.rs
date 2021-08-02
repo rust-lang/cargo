@@ -841,7 +841,8 @@ fn summary_for_patch(
         return Ok((summary, Some(locked.package_id)));
     }
     // Try checking if there are *any* packages that match this by name.
-    let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id(), None);
+    let name_only_dep =
+        Dependency::new_override(orig_patch.package_name(), orig_patch.source_id(), None);
     let name_summaries = source.query_vec(&name_only_dep).unwrap_or_else(|e| {
         log::warn!(
             "failed to do name-only summary query for {:?}: {:?}",

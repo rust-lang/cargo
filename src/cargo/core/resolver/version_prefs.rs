@@ -72,8 +72,8 @@ impl VersionPreferences {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::core::SourceId;
     use crate::core::dependency::Span;
+    use crate::core::SourceId;
     use crate::util::Config;
     use std::collections::BTreeMap;
 
