@@ -35,6 +35,8 @@ they have `required-features` that are missing.
 
 {{> options-release }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

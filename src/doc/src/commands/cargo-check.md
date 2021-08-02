@@ -202,6 +202,12 @@ used.</dd>
 
 
 
+<dt class="option-term" id="option-cargo-check---ignore-rust-version"><a class="option-anchor" href="#option-cargo-check---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Check the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+
+
+
 </dl>
 
 ### Output Options

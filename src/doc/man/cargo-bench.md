@@ -83,6 +83,8 @@ target.
 
 {{> options-target-triple }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

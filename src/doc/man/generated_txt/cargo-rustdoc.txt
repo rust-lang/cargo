@@ -146,6 +146,11 @@ OPTIONS
            Document optimized artifacts with the release profile. See the
            PROFILES section for details on how this affects profile selection.
 
+       --ignore-rust-version
+           Document the target even if the selected Rust compiler is older than
+           the required Rust version as configured in the project's
+           rust-version field.
+
    Output Options
        --target-dir directory
            Directory for all generated artifacts and intermediate files. May

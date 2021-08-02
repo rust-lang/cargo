@@ -5,6 +5,8 @@
 
 ### Added
 
+- Added support for the [`rust-version`](https://doc.rust-lang.org/nightly/cargo/reference/manifest.html#the-rust-version-field)
+  field in a crate's metadata and the `--ignore-rust-version` command line option.
 - Build scripts can now pass additional linker arguments for binaries or all
   linkable targets. [docs](https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#outputs-of-the-build-script)
   [#9557](https://github.com/rust-lang/cargo/pull/9557)

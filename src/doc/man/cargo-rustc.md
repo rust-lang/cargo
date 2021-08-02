@@ -47,6 +47,8 @@ binary and library targets of the selected package.
 
 {{> options-release }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

@@ -9,6 +9,7 @@ in the [TOML] format. Every manifest file consists of the following sections:
   * [`version`](#the-version-field) — The version of the package.
   * [`authors`](#the-authors-field) — The authors of the package.
   * [`edition`](#the-edition-field) — The Rust edition.
+  * [`rust-version`](#the-rust-version-field) — The minimal supported Rust version.
   * [`description`](#the-description-field) — A description of the package.
   * [`documentation`](#the-documentation-field) — URL of the package documentation.
   * [`readme`](#the-readme-field) — Path to the package's README file.
@@ -143,6 +144,33 @@ If the `edition` field is not present in `Cargo.toml`, then the 2015 edition is
 assumed for backwards compatibility. Note that all manifests
 created with [`cargo new`] will not use this historical fallback because they
 will have `edition` explicitly specified to a newer value.
+
+#### The `rust-version` field
+
+The `rust-version` field is an optional key that tells cargo what version of the
+Rust language and compiler your package can be compiled with. If the currently
+selected version of the Rust compiler is older than the stated version, cargo
+will exit with an error, telling the user what version is required.
+
+The first version of Cargo that supports this field was released with Rust 1.56.0.
+In older releases, the field will be ignored, and Cargo will display a warning.
+
+```toml
+[package]
+# ...
+rust-version = "1.56"
+```
+
+The Rust version must be a bare version number with two or three components; it
+cannot include semver operators or pre-release identifiers. Compiler pre-release
+identifiers such as -nightly will be ignored while checking the Rust version.
+The `rust-version` must be equal to or newer than the version that first
+introduced the configured `edition`.
+
+The `rust-version` may be ignored using the `--ignore-rust-version` option.
+
+Setting the `rust-version` key in `[package]` will affect all targets/crates in
+the package, including test suites, benchmarks, binaries, examples, etc.
 
 #### The `description` field
 

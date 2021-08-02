@@ -190,6 +190,12 @@ selection.</dd>
 
 
 
+<dt class="option-term" id="option-cargo-rustdoc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-rustdoc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Document the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+
+
+
 </dl>
 
 ### Output Options

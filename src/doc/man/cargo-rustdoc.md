@@ -62,6 +62,8 @@ if its name is the same as the lib target. Binaries are skipped if they have
 
 {{> options-release }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

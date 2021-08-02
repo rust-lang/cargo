@@ -42,6 +42,8 @@ they have `required-features` that are missing.
 
 {{> options-profile }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

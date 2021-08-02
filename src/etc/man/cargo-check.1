@@ -189,6 +189,12 @@ This is useful to have it check unit tests which are usually
 excluded via the \fBcfg\fR attribute. This does not change the actual profile
 used.
 .RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Check the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's \fBrust\-version\fR field.
+.RE
 .SS "Output Options"
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR
