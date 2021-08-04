@@ -49,7 +49,7 @@ The following are some examples of specs for several different git dependencies:
 | Spec                                                      | Name             | Version  |
 |:----------------------------------------------------------|:----------------:|:--------:|
 | `https://github.com/rust-lang/cargo#0.52.0`               | `cargo`          | `0.52.0` |
-| `https://github.com/rust-lang/cargo#cargo-platform:0.1.1` | <nobr>`cargo-platform`</nobr> | `0.1.1`  |
+| `https://github.com/rust-lang/cargo#cargo-platform:0.1.2` | <nobr>`cargo-platform`</nobr> | `0.1.2`  |
 | `ssh://git@github.com/rust-lang/regex.git#regex:1.4.3`    | `regex`          | `1.4.3`  |
 
 Local packages on the filesystem can use `file://` URLs to reference them:
