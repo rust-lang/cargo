@@ -564,8 +564,14 @@ impl TomlProfile {
             features.require(Feature::strip())?;
         }
 
-        if self.codegen_backend.is_some() {
+        if let Some(codegen_backend) = &self.codegen_backend {
             features.require(Feature::codegen_backend())?;
+            if codegen_backend.contains('.') {
+                bail!(
+                    "`profile.{}.codegen-backend` is an external backend, but only builtin codegen \
+                    backends are allowed."
+                );
+            }
         }
 
         Ok(())
