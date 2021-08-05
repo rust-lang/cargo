@@ -566,10 +566,11 @@ impl TomlProfile {
 
         if let Some(codegen_backend) = &self.codegen_backend {
             features.require(Feature::codegen_backend())?;
-            if codegen_backend.contains('.') {
+            if codegen_backend.contains(|c| !c.is_ascii_alphanumeric() && c != '_') {
                 bail!(
-                    "`profile.{}.codegen-backend` is an external backend, but only builtin codegen \
-                    backends are allowed."
+                    "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
+                    name,
+                    codegen_backend,
                 );
             }
         }
