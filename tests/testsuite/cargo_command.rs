@@ -10,7 +10,7 @@ use std::str;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, cargo_exe, project};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, cargo_exe, project, project_in_home};
 
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
@@ -32,13 +32,32 @@ fn list_commands_with_descriptions() {
 }
 
 #[cargo_test]
-fn list_aliases_with_descriptions() {
+fn list_builtin_aliases_with_descriptions() {
     let p = project().build();
     p.cargo("--list")
         .with_stdout_contains("    b                    alias: build")
         .with_stdout_contains("    c                    alias: check")
         .with_stdout_contains("    r                    alias: run")
         .with_stdout_contains("    t                    alias: test")
+        .run();
+}
+
+#[cargo_test]
+fn list_custom_aliases_with_descriptions() {
+    let p = project_in_home("proj")
+        .file(
+            &paths::home().join(".cargo").join("config"),
+            r#"
+            [alias]
+            myaliasstr = "foo --bar"
+            myaliasvec = ["foo", "--bar"]
+        "#,
+        )
+        .build();
+
+    p.cargo("--list")
+        .with_stdout_contains("    myaliasstr           foo --bar")
+        .with_stdout_contains("    myaliasvec           foo --bar")
         .run();
 }
 
