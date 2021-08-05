@@ -80,7 +80,7 @@ fn simple() {
                     "overflow_checks": true,
                     "panic": "unwind",
                     "rpath": false,
-                    "split_debuginfo": null,
+                    "split_debuginfo": "{...}",
                     "strip": "none"
                   },
                   "target": {
@@ -125,7 +125,7 @@ fn simple() {
                     "overflow_checks": true,
                     "panic": "unwind",
                     "rpath": false,
-                    "split_debuginfo": null,
+                    "split_debuginfo": "{...}",
                     "strip": "none"
                   },
                   "target": {
@@ -163,7 +163,7 @@ fn simple() {
                     "overflow_checks": true,
                     "panic": "unwind",
                     "rpath": false,
-                    "split_debuginfo": null,
+                    "split_debuginfo": "{...}",
                     "strip": "none"
                   },
                   "target": {
@@ -206,7 +206,7 @@ fn simple() {
                     "overflow_checks": true,
                     "panic": "unwind",
                     "rpath": false,
-                    "split_debuginfo": null,
+                    "split_debuginfo": "{...}",
                     "strip": "none"
                   },
                   "target": {
