@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
@@ -123,7 +124,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
     // Global args need to be extracted before expanding aliases because the
     // clap code for extracting a subcommand discards global options
     // (appearing before the subcommand).
-    let (expanded_args, global_args) = expand_aliases(config, args)?;
+    let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
     let (cmd, subcommand_args) = match expanded_args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {
@@ -159,6 +160,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
 fn expand_aliases(
     config: &mut Config,
     args: ArgMatches<'static>,
+    mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches<'static>, GlobalArgs), CliError> {
     if let (cmd, Some(args)) = args.subcommand() {
         match (
@@ -197,7 +199,21 @@ fn expand_aliases(
                 let new_args = cli()
                     .setting(AppSettings::NoBinaryName)
                     .get_matches_from_safe(alias)?;
-                let (expanded_args, _) = expand_aliases(config, new_args)?;
+
+                let (new_cmd, _) = new_args.subcommand();
+                already_expanded.push(cmd.to_string());
+                if already_expanded.contains(&new_cmd.to_string()) {
+                    // Crash if the aliases are corecursive / unresolvable
+                    return Err(anyhow!(
+                        "alias {} has unresolvable recursive definition: {} -> {}",
+                        already_expanded[0],
+                        already_expanded.join(" -> "),
+                        new_cmd,
+                    )
+                    .into());
+                }
+
+                let (expanded_args, _) = expand_aliases(config, new_args, already_expanded)?;
                 return Ok((expanded_args, global_args));
             }
         }
