@@ -402,6 +402,9 @@ features! {
 
     // Allow to specify per-package targets (compile kinds)
     (unstable, per_package_target, "", "reference/unstable.html#per-package-target"),
+
+    // Allow to specify which codegen backend should be used.
+    (unstable, codegen_backend, "", "reference/unstable.html#codegen-backend"),
 }
 
 pub struct Feature {
