@@ -201,6 +201,12 @@ fn expand_aliases(
                     .get_matches_from_safe(alias)?;
 
                 let (new_cmd, _) = new_args.subcommand();
+                if new_cmd == cmd {
+                    // Don't reexpand if the alias is a default-flags alias
+                    // eg. fmt = "fmt --verbose"
+                    return Ok((new_args, global_args));
+                }
+
                 already_expanded.push(cmd.to_string());
                 if already_expanded.contains(&new_cmd.to_string()) {
                     // Crash if the aliases are corecursive / unresolvable
