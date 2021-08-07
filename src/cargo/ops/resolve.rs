@@ -171,20 +171,24 @@ pub fn resolve_ws_with_opts<'cfg>(
         feature_opts,
     )?;
 
-    // Check if there are any dependency packages that do not have any libs.
-    if let Some(r) = resolve.as_ref() {
-        for id in member_ids.iter() {
-            for (package_id, _) in r.deps(*id) {
-                if let Ok(dep_pkg) = pkg_set.get_one(package_id) {
-                    if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
-                        ws.config().shell().warn(format!(
-                            "No library were found in package `{}`",
-                            dep_pkg.name()
-                        ))?
-                    }
-                }
-            }
-        }
+    let no_lib_warnings: Vec<String> = pkg_set
+        .no_lib_pkgs(
+            &resolved_with_overrides,
+            &member_ids,
+            has_dev_units,
+            requested_targets,
+            target_data,
+            force_all_targets,
+        )?
+        .iter()
+        .map(|pkg| format!("No lib found in package `{}`.", pkg.name()))
+        .collect();
+    if !no_lib_warnings.is_empty() {
+        ws.config().shell().warn(format!(
+            "{} The dependent package should have a lib, \
+            otherwise it is an invalid dependency.",
+            no_lib_warnings.join("\n")
+        ))?;
     }
 
     Ok(WorkspaceResolve {

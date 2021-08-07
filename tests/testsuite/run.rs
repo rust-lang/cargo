@@ -756,7 +756,69 @@ fn run_with_bin_dep() {
     p.cargo("run")
         .with_stderr(
             "\
-[WARNING] No library were found in package `bar`
+[WARNING] No lib found in package `bar`. \
+The dependent package should have a lib, \
+otherwise it is an invalid dependency.
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn run_with_bin_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar1]
+                path = "bar1"
+                [dependencies.bar2]
+                path = "bar2"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "bar1/Cargo.toml",
+            r#"
+                [package]
+                name = "bar1"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar1"
+            "#,
+        )
+        .file("bar1/src/main.rs", r#"fn main() { println!("bar"); }"#)
+        .file(
+            "bar2/Cargo.toml",
+            r#"
+                [package]
+                name = "bar2"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar2"
+            "#,
+        )
+        .file("bar2/src/main.rs", r#"fn main() { println!("bar"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] No lib found in package `bar1`.
+No lib found in package `bar2`. \
+The dependent package should have a lib, \
+otherwise it is an invalid dependency.
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
