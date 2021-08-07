@@ -718,17 +718,7 @@ pub fn values_os(args: &ArgMatches<'_>, name: &str) -> Vec<OsString> {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum CommandInfo {
-    BuiltIn { name: String, about: Option<String> },
-    External { name: String, path: PathBuf },
-    Alias { name: String, target: StringOrVec },
-}
-
-impl CommandInfo {
-    pub fn name(&self) -> &str {
-        match self {
-            CommandInfo::BuiltIn { name, .. } => name,
-            CommandInfo::External { name, .. } => name,
-            CommandInfo::Alias { name, .. } => name,
-        }
-    }
+    BuiltIn { about: Option<String> },
+    External { path: PathBuf },
+    Alias { target: StringOrVec },
 }

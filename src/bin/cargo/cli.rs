@@ -98,21 +98,21 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
 
     if args.is_present("list") {
         drop_println!(config, "Installed Commands:");
-        for command in list_commands(config) {
+        for (name, command) in list_commands(config) {
             match command {
-                CommandInfo::BuiltIn { name, about } => {
+                CommandInfo::BuiltIn { about } => {
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
                     drop_println!(config, "    {:<20} {}", name, summary);
                 }
-                CommandInfo::External { name, path } => {
+                CommandInfo::External { path } => {
                     if is_verbose {
                         drop_println!(config, "    {:<20} {}", name, path.display());
                     } else {
                         drop_println!(config, "    {}", name);
                     }
                 }
-                CommandInfo::Alias { name, target } => {
+                CommandInfo::Alias { target } => {
                     drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
                 }
             }
