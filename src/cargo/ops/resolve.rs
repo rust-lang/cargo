@@ -171,6 +171,22 @@ pub fn resolve_ws_with_opts<'cfg>(
         feature_opts,
     )?;
 
+    // Check if there are any dependency packages that do not have any libs.
+    if let Some(r) = resolve.as_ref() {
+        for id in member_ids.iter() {
+            for (package_id, _) in r.deps(*id) {
+                if let Ok(dep_pkg) = pkg_set.get_one(package_id) {
+                    if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
+                        ws.config().shell().warn(format!(
+                            "No library were found in package `{}`",
+                            dep_pkg.name()
+                        ))?
+                    }
+                }
+            }
+        }
+    }
+
     Ok(WorkspaceResolve {
         pkg_set,
         workspace_resolve: resolve,
