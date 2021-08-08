@@ -333,17 +333,17 @@ pub struct TomlManifest {
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
-    dependencies: Option<BTreeMap<String, Spanned<TomlDependency>>>,
-    dev_dependencies: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    dependencies: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
+    dev_dependencies: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, Spanned<TomlDependency>>>,
-    build_dependencies: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    dev_dependencies2: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
+    build_dependencies: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    build_dependencies2: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     features: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     target: Option<BTreeMap<String, TomlPlatform>>,
     replace: Option<BTreeMap<String, Spanned<TomlDependency>>>,
-    patch: Option<BTreeMap<String, BTreeMap<String, Spanned<TomlDependency>>>>,
+    patch: Option<BTreeMap<String, BTreeMap<Spanned<String>, Spanned<TomlDependency>>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
@@ -1036,9 +1036,9 @@ impl TomlManifest {
 
         fn map_deps(
             config: &Config,
-            deps: Option<&BTreeMap<String, Spanned<TomlDependency>>>,
+            deps: Option<&BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
             filter: impl Fn(&TomlDependency) -> bool,
-        ) -> CargoResult<Option<BTreeMap<String, Spanned<TomlDependency>>>> {
+        ) -> CargoResult<Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>> {
             let deps = match deps {
                 Some(deps) => deps,
                 None => return Ok(None),
@@ -1260,7 +1260,7 @@ impl TomlManifest {
 
             fn process_dependencies(
                 cx: &mut Context<'_, '_>,
-                new_deps: Option<&BTreeMap<String, Spanned<TomlDependency>>>,
+                new_deps: Option<&BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
                 kind: Option<DepKind>,
             ) -> CargoResult<()> {
                 let dependencies = match new_deps {
@@ -1270,7 +1270,7 @@ impl TomlManifest {
                 for (n, v) in dependencies.iter() {
                     let dep = v
                         .get_ref()
-                        .to_dependency(n, cx, kind, Some(Span::from(v)))?;
+                        .to_dependency((*n).get_ref(), cx, kind, Some(Span::from(v)))?;
                     validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                     cx.deps.push(dep);
                 }
@@ -1628,7 +1628,7 @@ impl TomlManifest {
             patch.insert(
                 url,
                 deps.iter()
-                    .map(|(name, dep)| dep.get_ref().to_dependency(name, cx, None, None))
+                    .map(|(name, dep)| dep.get_ref().to_dependency(name.get_ref(), cx, None, None))
                     .collect::<CargoResult<Vec<_>>>()?,
             );
         }
@@ -2022,15 +2022,15 @@ impl ser::Serialize for PathValue {
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug)]
 struct TomlPlatform {
-    dependencies: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    dependencies: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     #[serde(rename = "build-dependencies")]
-    build_dependencies: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    build_dependencies: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    build_dependencies2: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     #[serde(rename = "dev-dependencies")]
-    dev_dependencies: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    dev_dependencies: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, Spanned<TomlDependency>>>,
+    dev_dependencies2: Option<BTreeMap<Spanned<String>, Spanned<TomlDependency>>>,
 }
 
 impl TomlTarget {
