@@ -179,7 +179,7 @@ pub fn resolve_ws_with_opts<'cfg>(
             requested_targets,
             target_data,
             force_all_targets,
-        )?
+        )
         .iter()
         .map(|pkg| format!("No lib found in package `{}`.", pkg.name()))
         .collect();

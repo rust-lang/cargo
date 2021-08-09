@@ -524,11 +524,11 @@ impl<'cfg> PackageSet<'cfg> {
                 target_data,
                 force_all_targets,
             );
-            for (dep_id, _deps) in filtered_deps {
+            for &pkg_id in filtered_deps.iter() {
                 collect_used_deps(
                     used,
                     resolve,
-                    dep_id,
+                    pkg_id,
                     has_dev_units,
                     requested_kinds,
                     target_data,
@@ -567,19 +567,20 @@ impl<'cfg> PackageSet<'cfg> {
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> CargoResult<Vec<&Package>> {
+    ) -> Vec<&Package> {
         let mut ret = vec![];
 
-        root_ids.iter().for_each(|pkg_id| {
+        root_ids.iter().for_each(|root_id| {
             PackageSet::filter_deps(
-                *pkg_id,
+                *root_id,
                 resolve,
                 has_dev_units,
                 requested_kinds,
                 target_data,
                 force_all_targets,
             )
-            .for_each(|(package_id, _)| {
+            .iter()
+            .for_each(|&package_id| {
                 if let Ok(dep_pkg) = self.get_one(package_id) {
                     if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
                         ret.push(dep_pkg);
@@ -588,34 +589,38 @@ impl<'cfg> PackageSet<'cfg> {
             });
         });
 
-        Ok(ret)
+        ret
     }
 
-    fn filter_deps<'a>(
+    fn filter_deps(
         pkg_id: PackageId,
-        resolve: &'a Resolve,
+        resolve: &Resolve,
         has_dev_units: HasDevUnits,
-        requested_kinds: &'a [CompileKind],
-        target_data: &'a RustcTargetData<'_>,
+        requested_kinds: &[CompileKind],
+        target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> impl Iterator<Item = (PackageId, &'a HashSet<Dependency>)> {
-        resolve.deps(pkg_id).filter(move |&(_id, deps)| {
-            deps.iter().any(|dep| {
-                if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
-                    return false;
-                }
-                if force_all_targets == ForceAllTargets::No {
-                    let activated = requested_kinds
-                        .iter()
-                        .chain(Some(&CompileKind::Host))
-                        .any(|kind| target_data.dep_platform_activated(dep, *kind));
-                    if !activated {
+    ) -> Vec<PackageId> {
+        resolve
+            .deps(pkg_id)
+            .filter(|&(_id, deps)| {
+                deps.iter().any(|dep| {
+                    if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
                         return false;
                     }
-                }
-                true
+                    if force_all_targets == ForceAllTargets::No {
+                        let activated = requested_kinds
+                            .iter()
+                            .chain(Some(&CompileKind::Host))
+                            .any(|kind| target_data.dep_platform_activated(dep, *kind));
+                        if !activated {
+                            return false;
+                        }
+                    }
+                    true
+                })
             })
-        })
+            .map(|(pkg_id, _)| pkg_id)
+            .collect()
     }
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
