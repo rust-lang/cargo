@@ -112,6 +112,9 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
                         drop_println!(config, "    {}", name);
                     }
                 }
+                CommandInfo::Alias { name, target } => {
+                    drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
+                }
             }
         }
         return Ok(());

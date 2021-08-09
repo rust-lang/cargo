@@ -6,11 +6,12 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
+use crate::util::toml::{StringOrVec, TomlProfile};
+use crate::util::validate_package_name;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
-use crate::util::{toml::TomlProfile, validate_package_name};
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
@@ -715,10 +716,11 @@ pub fn values_os(args: &ArgMatches<'_>, name: &str) -> Vec<OsString> {
     args._values_of_os(name)
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum CommandInfo {
     BuiltIn { name: String, about: Option<String> },
     External { name: String, path: PathBuf },
+    Alias { name: String, target: StringOrVec },
 }
 
 impl CommandInfo {
@@ -726,6 +728,7 @@ impl CommandInfo {
         match self {
             CommandInfo::BuiltIn { name, .. } => name,
             CommandInfo::External { name, .. } => name,
+            CommandInfo::Alias { name, .. } => name,
         }
     }
 }

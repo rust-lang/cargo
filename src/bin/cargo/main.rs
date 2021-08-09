@@ -4,6 +4,7 @@
 #![warn(clippy::redundant_clone)]
 
 use cargo::core::shell::Shell;
+use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
 use cargo_util::{ProcessBuilder, ProcessError};
@@ -127,15 +128,17 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
         });
     }
 
-    commands
-}
-
-/// List all runnable aliases
-fn list_aliases(config: &Config) -> Vec<String> {
-    match config.get::<BTreeMap<String, String>>("alias") {
-        Ok(aliases) => aliases.keys().map(|a| a.to_string()).collect(),
-        Err(_) => Vec::new(),
+    // Add the user-defined aliases
+    if let Ok(aliases) = config.get::<BTreeMap<String, StringOrVec>>("alias") {
+        for (name, target) in aliases.iter() {
+            commands.insert(CommandInfo::Alias {
+                name: name.to_string(),
+                target: target.clone(),
+            });
+        }
     }
+
+    commands
 }
 
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
@@ -147,13 +150,11 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let command = match path {
         Some(command) => command,
         None => {
-            let commands: Vec<String> = list_commands(config)
+            let suggestions: Vec<_> = list_commands(config)
                 .iter()
                 .map(|c| c.name().to_string())
                 .collect();
-            let aliases = list_aliases(config);
-            let suggestions = commands.iter().chain(aliases.iter());
-            let did_you_mean = closest_msg(cmd, suggestions, |c| c);
+            let did_you_mean = closest_msg(cmd, suggestions.iter(), |c| c);
             let err = anyhow::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
             return Err(CliError::new(err, 101));
         }

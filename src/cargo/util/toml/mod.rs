@@ -760,7 +760,9 @@ impl TomlProfile {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+/// A StringOrVec can be parsed from either a TOML string or array,
+/// but is always stored as a vector.
+#[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StringOrVec(Vec<String>);
 
 impl<'de> de::Deserialize<'de> for StringOrVec {
@@ -794,6 +796,12 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
         }
 
         deserializer.deserialize_any(Visitor)
+    }
+}
+
+impl StringOrVec {
+    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, String> {
+        self.0.iter()
     }
 }
 
