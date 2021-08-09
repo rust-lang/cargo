@@ -289,6 +289,12 @@ r = "run"
 
 Aliases are not allowed to redefine existing built-in commands.
 
+Aliases are allowed to redefine non-built-in commands with default flags
+```toml
+[alias]
+fmt = "fmt --verbose"
+```
+
 #### `[build]`
 
 The `[build]` table controls build-time operations and compiler settings.
