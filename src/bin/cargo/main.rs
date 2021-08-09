@@ -8,7 +8,7 @@ use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
 use cargo_util::{ProcessBuilder, ProcessError};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -84,10 +84,10 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
 }
 
 /// List all runnable commands
-fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
+fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
-    let mut commands = BTreeSet::new();
+    let mut commands = BTreeMap::new();
     for dir in search_directories(config) {
         let entries = match fs::read_dir(dir) {
             Ok(entries) => entries,
@@ -104,37 +104,43 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
-                commands.insert(CommandInfo::External {
-                    name: filename[prefix.len()..end].to_string(),
-                    path: path.clone(),
-                });
+                commands.insert(
+                    filename[prefix.len()..end].to_string(),
+                    CommandInfo::External { path: path.clone() },
+                );
             }
         }
     }
 
     for cmd in commands::builtin() {
-        commands.insert(CommandInfo::BuiltIn {
-            name: cmd.get_name().to_string(),
-            about: cmd.p.meta.about.map(|s| s.to_string()),
-        });
+        commands.insert(
+            cmd.get_name().to_string(),
+            CommandInfo::BuiltIn {
+                about: cmd.p.meta.about.map(|s| s.to_string()),
+            },
+        );
     }
 
     // Add the builtin_aliases and them descriptions to the
-    // `commands` `BTreeSet`.
+    // `commands` `BTreeMap`.
     for command in &BUILTIN_ALIASES {
-        commands.insert(CommandInfo::BuiltIn {
-            name: command.0.to_string(),
-            about: Some(command.2.to_string()),
-        });
+        commands.insert(
+            command.0.to_string(),
+            CommandInfo::BuiltIn {
+                about: Some(command.2.to_string()),
+            },
+        );
     }
 
     // Add the user-defined aliases
     if let Ok(aliases) = config.get::<BTreeMap<String, StringOrVec>>("alias") {
         for (name, target) in aliases.iter() {
-            commands.insert(CommandInfo::Alias {
-                name: name.to_string(),
-                target: target.clone(),
-            });
+            commands.insert(
+                name.to_string(),
+                CommandInfo::Alias {
+                    target: target.clone(),
+                },
+            );
         }
     }
 
@@ -150,11 +156,8 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let command = match path {
         Some(command) => command,
         None => {
-            let suggestions: Vec<_> = list_commands(config)
-                .iter()
-                .map(|c| c.name().to_string())
-                .collect();
-            let did_you_mean = closest_msg(cmd, suggestions.iter(), |c| c);
+            let suggestions = list_commands(config);
+            let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
             let err = anyhow::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
             return Err(CliError::new(err, 101));
         }

@@ -62,6 +62,24 @@ fn list_custom_aliases_with_descriptions() {
 }
 
 #[cargo_test]
+fn list_dedupe() {
+    let p = project()
+        .executable(Path::new("path-test-1").join("cargo-dupe"), "")
+        .executable(Path::new("path-test-2").join("cargo-dupe"), "")
+        .build();
+
+    let mut path = path();
+    path.push(p.root().join("path-test-1"));
+    path.push(p.root().join("path-test-2"));
+    let path = env::join_paths(path.iter()).unwrap();
+
+    p.cargo("--list")
+        .env("PATH", &path)
+        .with_stdout_contains_n("    dupe", 1)
+        .run();
+}
+
+#[cargo_test]
 fn list_command_looks_at_path() {
     let proj = project()
         .executable(Path::new("path-test").join("cargo-1"), "")
