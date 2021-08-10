@@ -567,12 +567,12 @@ impl<'cfg> PackageSet<'cfg> {
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> Vec<&Package> {
-        let mut ret = vec![];
+    ) -> BTreeMap<PackageId, Vec<&Package>> {
+        let mut ret = BTreeMap::new();
 
-        root_ids.iter().for_each(|root_id| {
-            PackageSet::filter_deps(
-                *root_id,
+        root_ids.iter().for_each(|&root_id| {
+            let pkgs: Vec<&Package> = PackageSet::filter_deps(
+                root_id,
                 resolve,
                 has_dev_units,
                 requested_kinds,
@@ -580,13 +580,22 @@ impl<'cfg> PackageSet<'cfg> {
                 force_all_targets,
             )
             .iter()
-            .for_each(|&package_id| {
+            .filter_map(|&package_id| {
                 if let Ok(dep_pkg) = self.get_one(package_id) {
                     if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
-                        ret.push(dep_pkg);
+                        Some(dep_pkg)
+                    } else {
+                        None
                     }
+                } else {
+                    None
                 }
-            });
+            })
+            .collect();
+
+            if !pkgs.is_empty() {
+                ret.insert(root_id, pkgs);
+            }
         });
 
         ret

@@ -756,9 +756,7 @@ fn run_with_bin_dep() {
     p.cargo("run")
         .with_stderr(
             "\
-[WARNING] No lib found in package `bar`. \
-The dependent package should have a lib, \
-otherwise it is an invalid dependency.
+[WARNING] foo v0.0.1 ([CWD]) has invalid dependency `bar`. `bar` has no lib package.
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
@@ -796,7 +794,7 @@ fn run_with_bin_deps() {
                 name = "bar1"
             "#,
         )
-        .file("bar1/src/main.rs", r#"fn main() { println!("bar"); }"#)
+        .file("bar1/src/main.rs", r#"fn main() { println!("bar1"); }"#)
         .file(
             "bar2/Cargo.toml",
             r#"
@@ -809,19 +807,107 @@ fn run_with_bin_deps() {
                 name = "bar2"
             "#,
         )
-        .file("bar2/src/main.rs", r#"fn main() { println!("bar"); }"#)
+        .file("bar2/src/main.rs", r#"fn main() { println!("bar2"); }"#)
         .build();
 
     p.cargo("run")
         .with_stderr(
             "\
-[WARNING] No lib found in package `bar1`.
-No lib found in package `bar2`. \
-The dependent package should have a lib, \
-otherwise it is an invalid dependency.
+[WARNING] foo v0.0.1 ([CWD]) has invalid dependency `bar1`. `bar1` has no lib package.
+[WARNING] foo v0.0.1 ([CWD]) has invalid dependency `bar2`. `bar2` has no lib package.
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn run_with_bin_dep_in_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo1", "foo2"]
+            "#,
+        )
+        .file(
+            "foo1/Cargo.toml",
+            r#"
+                [package]
+                name = "foo1"
+                version = "0.0.1"
+
+                [dependencies.bar1]
+                path = "bar1"
+            "#,
+        )
+        .file("foo1/src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "foo1/bar1/Cargo.toml",
+            r#"
+                [package]
+                name = "bar1"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar1"
+            "#,
+        )
+        .file(
+            "foo1/bar1/src/main.rs",
+            r#"fn main() { println!("bar1"); }"#,
+        )
+        .file(
+            "foo2/Cargo.toml",
+            r#"
+                [package]
+                name = "foo2"
+                version = "0.0.1"
+
+                [dependencies.bar2]
+                path = "bar2"
+            "#,
+        )
+        .file("foo2/src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "foo2/bar2/Cargo.toml",
+            r#"
+                [package]
+                name = "bar2"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar2"
+            "#,
+        )
+        .file(
+            "foo2/bar2/src/main.rs",
+            r#"fn main() { println!("bar2"); }"#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `cargo run` could not determine which binary to run[..]
+available binaries: bar1, bar2, foo1, foo2",
+        )
+        .run();
+
+    p.cargo("run --bin foo1")
+        .with_stderr(
+            "\
+[WARNING] foo1 v0.0.1 ([CWD]/foo1) has invalid dependency `bar1`. `bar1` has no lib package.
+[WARNING] foo2 v0.0.1 ([CWD]/foo2) has invalid dependency `bar2`. `bar2` has no lib package.
+[COMPILING] foo1 v0.0.1 ([CWD]/foo1)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo1[EXE]`",
         )
         .with_stdout("hello")
         .run();

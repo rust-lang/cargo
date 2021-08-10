@@ -181,14 +181,20 @@ pub fn resolve_ws_with_opts<'cfg>(
             force_all_targets,
         )
         .iter()
-        .map(|pkg| format!("No lib found in package `{}`.", pkg.name()))
+        .flat_map(|(pkg_id, dep_pkgs)| {
+            dep_pkgs.iter().map(move |dep_pkg| {
+                format!(
+                    "{} has invalid dependency `{}`. `{}` has no lib package.",
+                    pkg_id,
+                    dep_pkg.name(),
+                    dep_pkg.name(),
+                )
+            })
+        })
         .collect();
-    if !no_lib_warnings.is_empty() {
-        ws.config().shell().warn(format!(
-            "{} The dependent package should have a lib, \
-            otherwise it is an invalid dependency.",
-            no_lib_warnings.join("\n")
-        ))?;
+
+    for warn in no_lib_warnings {
+        ws.config().shell().warn(warn)?;
     }
 
     Ok(WorkspaceResolve {
