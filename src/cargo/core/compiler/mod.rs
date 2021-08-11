@@ -985,7 +985,10 @@ fn build_base_args(
             let exe_path = cx
                 .files()
                 .bin_link_for_target(bin_target, unit.kind, cx.bcx)?;
-            let key = format!("CARGO_BIN_EXE_{}", bin_target.name());
+            let name = bin_target
+                .binary_filename()
+                .unwrap_or(bin_target.name().to_string());
+            let key = format!("CARGO_BIN_EXE_{}", name);
             cmd.env(&key, exe_path);
         }
     }

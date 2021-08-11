@@ -74,6 +74,7 @@ Each new feature described below should explain how to use it.
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
+    * [Different binary name](#different-binary-name) — Assign a name to the built binary that is seperate from the crate name.
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
     * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
@@ -1288,6 +1289,32 @@ The primary use case is to run `cargo rustc --print=cfg` to get config values
 for the appropriate target and influenced by any other RUSTFLAGS.
 
 
+### Different binary name
+
+* Tracking Issue: [#9778](https://github.com/rust-lang/cargo/issues/9778)
+* PR: [#9627](https://github.com/rust-lang/cargo/pull/9627)
+
+The `different-binary-name` feature allows setting the filename of the binary without having to obey the 
+restrictions placed on crate names. For example, the crate name must use only `alphanumeric` characters
+or `-` or `_`, and cannot be empty.
+
+The `filename` parameter should **not** include the binary extension, `cargo` will figure out the appropriate
+extension and use that for the binary on its own.
+
+The `filename` parameter is only available in the `[[bin]]` section of the manifest.
+
+```toml
+cargo-features = ["different-binary-name"]
+
+[project]
+name =  "foo"
+version = "0.0.1"
+
+[[bin]]
+name = "foo"
+filename = "007bar"
+path = "src/main.rs"
+```
 
 ## Stabilized and removed features
 

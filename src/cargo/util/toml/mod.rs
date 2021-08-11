@@ -1968,6 +1968,8 @@ struct TomlTarget {
     crate_type2: Option<Vec<String>>,
 
     path: Option<PathValue>,
+    // Note that `filename` is used for the cargo-feature `different_binary_name`
+    filename: Option<String>,
     test: Option<bool>,
     doctest: Option<bool>,
     bench: Option<bool>,
