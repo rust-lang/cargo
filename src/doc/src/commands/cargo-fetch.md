@@ -13,8 +13,9 @@ cargo-fetch - Fetch dependencies of a package from the network
 
 If a `Cargo.lock` file is available, this command will ensure that all of the
 git dependencies and/or registry dependencies are downloaded and locally
-available. Subsequent Cargo commands never touch the network after a `cargo
-fetch` unless the lock file changes.
+available. Subsequent Cargo commands run with `--locked`, `--frozen`, or
+`--offline` will not touch the network after a `cargo fetch` unless the lock
+file changes.
 
 If the lock file is not available, then this command will generate the lock
 file before fetching the dependencies.
