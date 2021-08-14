@@ -442,11 +442,13 @@ pub struct TomlProfile {
     pub panic: Option<String>,
     pub overflow_checks: Option<bool>,
     pub incremental: Option<bool>,
-    pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
-    pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
     pub strip: Option<StringOrBool>,
+    // These two fields must be last because they are sub-tables, and TOML
+    // requires all non-tables to be listed first.
+    pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
+    pub build_override: Option<Box<TomlProfile>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
