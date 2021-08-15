@@ -414,7 +414,10 @@ fn rustfix_crate(
     args: &FixArgs,
     config: &Config,
 ) -> Result<FixedCrate, Error> {
-    args.check_edition_and_send_status(config)?;
+    if !args.can_run_rustfix(config)? {
+        // This fix should not be run. Skipping...
+        return Ok(FixedCrate::default());
+    }
 
     // First up, we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
@@ -804,15 +807,16 @@ impl FixArgs {
     }
 
     /// Validates the edition, and sends a message indicating what is being
-    /// done.
-    fn check_edition_and_send_status(&self, config: &Config) -> CargoResult<()> {
+    /// done. Returns a flag indicating whether this fix should be run.
+    fn can_run_rustfix(&self, config: &Config) -> CargoResult<bool> {
         let to_edition = match self.prepare_for_edition {
             Some(s) => s,
             None => {
                 return Message::Fixing {
                     file: self.file.display().to_string(),
                 }
-                .post();
+                .post()
+                .and(Ok(true));
             }
         };
         // Unfortunately determining which cargo targets are being built
@@ -826,18 +830,31 @@ impl FixArgs {
         // multiple jobs run in parallel (the error appears multiple
         // times). Hopefully this doesn't happen often in practice.
         if !to_edition.is_stable() && !config.nightly_features_allowed {
-            bail!(
-                "cannot migrate {} to edition {to_edition}\n\
-                 Edition {to_edition} is unstable and not allowed in this release, \
-                 consider trying the nightly release channel.",
-                self.file.display(),
+            let message = format!(
+                "`{file}` is on the latest edition, but trying to \
+                 migrate to edition {to_edition}.\n\
+                 Edition {to_edition} is unstable and not allowed in \
+                 this release, consider trying the nightly release channel.",
+                file = self.file.display(),
                 to_edition = to_edition
             );
+            return Message::EditionAlreadyEnabled {
+                message,
+                edition: to_edition.previous().unwrap(),
+            }
+            .post()
+            .and(Ok(false)); // Do not run rustfix for this the edition.
         }
         let from_edition = self.enabled_edition.unwrap_or(Edition::Edition2015);
         if from_edition == to_edition {
+            let message = format!(
+                "`{}` is already on the latest edition ({}), \
+                 unable to migrate further",
+                self.file.display(),
+                to_edition
+            );
             Message::EditionAlreadyEnabled {
-                file: self.file.display().to_string(),
+                message,
                 edition: to_edition,
             }
             .post()
@@ -849,5 +866,6 @@ impl FixArgs {
             }
             .post()
         }
+        .and(Ok(true))
     }
 }
