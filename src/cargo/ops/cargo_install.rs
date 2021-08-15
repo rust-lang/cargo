@@ -49,7 +49,7 @@ pub fn install(
     let map = SourceConfigMap::new(config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
-        install_one(
+        let pkg = determine_package(
             config,
             &root,
             &map,
@@ -59,9 +59,13 @@ pub fn install(
             vers,
             opts,
             force,
-            no_track,
             true,
         )?;
+        if let Some(pkg) = pkg {
+            install_one(
+                config, &root, source_id, from_cwd, vers, opts, force, no_track, pkg,
+            )?;
+        }
         (true, false)
     } else {
         let mut succeeded = vec![];
@@ -72,7 +76,7 @@ pub fn install(
         for krate in krates {
             let root = root.clone();
             let map = map.clone();
-            match install_one(
+            let pkg = match determine_package(
                 config,
                 &root,
                 &map,
@@ -82,18 +86,34 @@ pub fn install(
                 vers,
                 opts,
                 force,
-                no_track,
                 !did_update,
             ) {
-                Ok(still_needs_update) => {
+                Ok(Some(pkg)) => {
+                    did_update = true;
+                    pkg
+                }
+                Ok(None) => {
+                    // Already installed
                     succeeded.push(krate);
-                    did_update |= !still_needs_update;
+                    continue;
                 }
                 Err(e) => {
                     crate::display_error(&e, &mut config.shell());
                     failed.push(krate);
                     // We assume an update was performed if we got an error.
                     did_update = true;
+                    continue;
+                }
+            };
+            match install_one(
+                config, &root, source_id, from_cwd, vers, opts, force, no_track, pkg,
+            ) {
+                Ok(()) => {
+                    succeeded.push(krate);
+                }
+                Err(e) => {
+                    crate::display_error(&e, &mut config.shell());
+                    failed.push(krate);
                 }
             }
         }
@@ -138,12 +158,8 @@ pub fn install(
     Ok(())
 }
 
-// Returns whether a subsequent call should attempt to update again.
-// The `needs_update_if_source_is_index` parameter indicates whether or not the source index should
-// be updated. This is used ensure it is only updated once when installing multiple crates.
-// The return value here is used so that the caller knows what to pass to the
-// `needs_update_if_source_is_index` parameter when `install_one` is called again.
-fn install_one(
+// Returns pkg to install. None if pkg is already installed
+fn determine_package(
     config: &Config,
     root: &Filesystem,
     map: &SourceConfigMap<'_>,
@@ -153,9 +169,8 @@ fn install_one(
     vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
-    no_track: bool,
     needs_update_if_source_is_index: bool,
-) -> CargoResult<bool> {
+) -> CargoResult<Option<Package>> {
     if let Some(name) = krate {
         if name == "." {
             bail!(
@@ -167,7 +182,6 @@ fn install_one(
     }
 
     let dst = root.join("bin").into_path_unlocked();
-
     let pkg = {
         let dep = {
             if let Some(krate) = krate {
@@ -241,7 +255,7 @@ fn install_one(
                     pkg
                 );
                 config.shell().status("Ignored", &msg)?;
-                return Ok(true);
+                return Ok(None);
             }
             select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
         } else {
@@ -252,6 +266,21 @@ fn install_one(
             )
         }
     };
+    Ok(Some(pkg))
+}
+
+fn install_one(
+    config: &Config,
+    root: &Filesystem,
+    source_id: SourceId,
+    from_cwd: bool,
+    vers: Option<&str>,
+    opts: &ops::CompileOptions,
+    force: bool,
+    no_track: bool,
+    pkg: Package,
+) -> CargoResult<()> {
+    let dst = root.join("bin").into_path_unlocked();
 
     let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
     // If we're installing in --locked mode and there's no `Cargo.lock` published
@@ -345,7 +374,7 @@ fn install_one(
             pkg
         );
         config.shell().status("Ignored", &msg)?;
-        return Ok(false);
+        return Ok(());
     }
 
     config.shell().status("Installing", &pkg)?;
@@ -500,7 +529,7 @@ fn install_one(
             "Installed",
             format!("package `{}` {}", pkg, executables(successful_bins.iter())),
         )?;
-        Ok(false)
+        Ok(())
     } else {
         if !to_install.is_empty() {
             config.shell().status(
@@ -525,7 +554,7 @@ fn install_one(
                 ),
             )?;
         }
-        Ok(false)
+        Ok(())
     }
 }
 
