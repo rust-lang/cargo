@@ -227,7 +227,7 @@ fn plugin_and_proc_macro() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
                 #![feature(proc_macro, proc_macro_lib)]
 
                 extern crate rustc_driver;
@@ -236,8 +236,8 @@ fn plugin_and_proc_macro() {
                 extern crate proc_macro;
                 use proc_macro::TokenStream;
 
-                #[plugin_registrar]
-                pub fn plugin_registrar(reg: &mut Registry) {}
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(reg: &mut Registry) {}
 
                 #[proc_macro_derive(Questionable)]
                 pub fn questionable(input: TokenStream) -> TokenStream {

@@ -67,15 +67,15 @@ fn plugin_to_the_max() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
 
                 extern crate baz;
                 extern crate rustc_driver;
 
                 use rustc_driver::plugin::Registry;
 
-                #[plugin_registrar]
-                pub fn foo(_reg: &mut Registry) {
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(_reg: &mut Registry) {
                     println!("{}", baz::baz());
                 }
             "#,
@@ -191,7 +191,7 @@ fn plugin_with_dynamic_native_dependency() {
         .file(
             "bar/src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
 
                 extern crate rustc_driver;
                 use rustc_driver::plugin::Registry;
@@ -200,8 +200,8 @@ fn plugin_with_dynamic_native_dependency() {
                 #[cfg_attr(target_env = "msvc", link(name = "builder.dll"))]
                 extern { fn foo(); }
 
-                #[plugin_registrar]
-                pub fn bar(_reg: &mut Registry) {
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(_reg: &mut Registry) {
                     unsafe { foo() }
                 }
             "#,
