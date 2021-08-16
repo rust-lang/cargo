@@ -189,6 +189,7 @@ const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
+const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
@@ -236,7 +237,8 @@ pub struct RegistryConfig {
     /// respectively.  The substring `{prefix}` will be replaced with the
     /// crate's prefix directory name, and the substring `{lowerprefix}` will
     /// be replaced with the crate's prefix directory name converted to
-    /// lowercase.
+    /// lowercase. The substring `{sha256-checksum}` will be replaced with the
+    /// crate's sha256 checksum.
     ///
     /// For backwards compatibility, if the string does not contain any
     /// markers (`{crate}`, `{version}`, `{prefix}`, or ``{lowerprefix}`), it
