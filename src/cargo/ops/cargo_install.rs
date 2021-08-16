@@ -59,12 +59,11 @@ pub fn install(
             vers,
             opts,
             force,
+            no_track,
             true,
         )?;
         if let Some(pkg) = pkg {
-            install_one(
-                config, &root, source_id, from_cwd, vers, opts, force, no_track, pkg,
-            )?;
+            install_one(config, &root, source_id, vers, opts, force, no_track, pkg)?;
         }
         (true, false)
     } else {
@@ -86,6 +85,7 @@ pub fn install(
                 vers,
                 opts,
                 force,
+                no_track,
                 !did_update,
             ) {
                 Ok(Some(pkg)) => {
@@ -105,9 +105,7 @@ pub fn install(
                     continue;
                 }
             };
-            match install_one(
-                config, &root, source_id, from_cwd, vers, opts, force, no_track, pkg,
-            ) {
+            match install_one(config, &root, source_id, vers, opts, force, no_track, pkg) {
                 Ok(()) => {
                     succeeded.push(krate);
                 }
@@ -169,6 +167,7 @@ fn determine_package(
     vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
+    no_track: bool,
     needs_update_if_source_is_index: bool,
 ) -> CargoResult<Option<Package>> {
     if let Some(name) = krate {
@@ -266,23 +265,8 @@ fn determine_package(
             )
         }
     };
-    Ok(Some(pkg))
-}
 
-fn install_one(
-    config: &Config,
-    root: &Filesystem,
-    source_id: SourceId,
-    from_cwd: bool,
-    vers: Option<&str>,
-    opts: &ops::CompileOptions,
-    force: bool,
-    no_track: bool,
-    pkg: Package,
-) -> CargoResult<()> {
-    let dst = root.join("bin").into_path_unlocked();
-
-    let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+    let (ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
     // If we're installing in --locked mode and there's no `Cargo.lock` published
     // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
     if config.locked() && !ws.root().join("Cargo.lock").exists() {
@@ -298,22 +282,6 @@ fn install_one(
     } else {
         ws.current()?.clone()
     };
-
-    let mut td_opt = None;
-    let mut needs_cleanup = false;
-    if !source_id.is_path() {
-        let target_dir = if let Some(dir) = config.target_dir()? {
-            dir
-        } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
-            let p = td.path().to_owned();
-            td_opt = Some(td);
-            Filesystem::new(p)
-        } else {
-            needs_cleanup = true;
-            Filesystem::new(config.cwd().join("target-install"))
-        };
-        ws.set_target_dir(target_dir);
-    }
 
     if from_cwd {
         if pkg.manifest().edition() == Edition::Edition2015 {
@@ -345,39 +313,76 @@ fn install_one(
         );
     }
 
-    // Helper for --no-track flag to make sure it doesn't overwrite anything.
-    let no_track_duplicates = || -> CargoResult<BTreeMap<String, Option<PackageId>>> {
-        let duplicates: BTreeMap<String, Option<PackageId>> = exe_names(&pkg, &opts.filter)
-            .into_iter()
-            .filter(|name| dst.join(name).exists())
-            .map(|name| (name, None))
-            .collect();
-        if !force && !duplicates.is_empty() {
-            let mut msg: Vec<String> = duplicates
-                .iter()
-                .map(|(name, _)| format!("binary `{}` already exists in destination", name))
-                .collect();
-            msg.push("Add --force to overwrite".to_string());
-            bail!("{}", msg.join("\n"));
-        }
-        Ok(duplicates)
-    };
-
     // WARNING: no_track does not perform locking, so there is no protection
     // of concurrent installs.
     if no_track {
         // Check for conflicts.
-        no_track_duplicates()?;
+        no_track_duplicates(&pkg, opts, &dst, force)?;
     } else if is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force)? {
         let msg = format!(
             "package `{}` is already installed, use --force to override",
             pkg
         );
         config.shell().status("Ignored", &msg)?;
-        return Ok(());
+        return Ok(None);
     }
 
+    Ok(Some(pkg))
+}
+
+fn no_track_duplicates(
+    pkg: &Package,
+    opts: &ops::CompileOptions,
+    dst: &Path,
+    force: bool,
+) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
+    // Helper for --no-track flag to make sure it doesn't overwrite anything.
+    let duplicates: BTreeMap<String, Option<PackageId>> = exe_names(&pkg, &opts.filter)
+        .into_iter()
+        .filter(|name| dst.join(name).exists())
+        .map(|name| (name, None))
+        .collect();
+    if !force && !duplicates.is_empty() {
+        let mut msg: Vec<String> = duplicates
+            .iter()
+            .map(|(name, _)| format!("binary `{}` already exists in destination", name))
+            .collect();
+        msg.push("Add --force to overwrite".to_string());
+        bail!("{}", msg.join("\n"));
+    }
+    Ok(duplicates)
+}
+
+fn install_one<'cfg>(
+    config: &Config,
+    root: &Filesystem,
+    source_id: SourceId,
+    vers: Option<&str>,
+    opts: &ops::CompileOptions,
+    force: bool,
+    no_track: bool,
+    pkg: Package,
+) -> CargoResult<()> {
     config.shell().status("Installing", &pkg)?;
+
+    let dst = root.join("bin").into_path_unlocked();
+    let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+
+    let mut td_opt = None;
+    let mut needs_cleanup = false;
+    if !source_id.is_path() {
+        let target_dir = if let Some(dir) = config.target_dir()? {
+            dir
+        } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
+            let p = td.path().to_owned();
+            td_opt = Some(td);
+            Filesystem::new(p)
+        } else {
+            needs_cleanup = true;
+            Filesystem::new(config.cwd().join("target-install"))
+        };
+        ws.set_target_dir(target_dir);
+    }
 
     check_yanked_install(&ws)?;
 
@@ -414,7 +419,7 @@ fn install_one(
     binaries.sort_unstable();
 
     let (tracker, duplicates) = if no_track {
-        (None, no_track_duplicates()?)
+        (None, no_track_duplicates(&pkg, opts, &dst, force)?)
     } else {
         let tracker = InstallTracker::load(config, root)?;
         let (_freshness, duplicates) =
