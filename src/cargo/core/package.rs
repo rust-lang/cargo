@@ -524,7 +524,7 @@ impl<'cfg> PackageSet<'cfg> {
                 target_data,
                 force_all_targets,
             );
-            for &pkg_id in filtered_deps.iter() {
+            for pkg_id in filtered_deps {
                 collect_used_deps(
                     used,
                     resolve,
@@ -568,50 +568,45 @@ impl<'cfg> PackageSet<'cfg> {
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
     ) -> BTreeMap<PackageId, Vec<&Package>> {
-        let mut ret = BTreeMap::new();
-
-        root_ids.iter().for_each(|&root_id| {
-            let pkgs: Vec<&Package> = PackageSet::filter_deps(
-                root_id,
-                resolve,
-                has_dev_units,
-                requested_kinds,
-                target_data,
-                force_all_targets,
-            )
+        root_ids
             .iter()
-            .filter_map(|&package_id| {
-                if let Ok(dep_pkg) = self.get_one(package_id) {
-                    if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
-                        Some(dep_pkg)
+            .map(|&root_id| {
+                let pkgs = PackageSet::filter_deps(
+                    root_id,
+                    resolve,
+                    has_dev_units,
+                    requested_kinds,
+                    target_data,
+                    force_all_targets,
+                )
+                .filter_map(|package_id| {
+                    if let Ok(dep_pkg) = self.get_one(package_id) {
+                        if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
+                            Some(dep_pkg)
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
-                } else {
-                    None
-                }
+                })
+                .collect();
+                (root_id, pkgs)
             })
-            .collect();
-
-            if !pkgs.is_empty() {
-                ret.insert(root_id, pkgs);
-            }
-        });
-
-        ret
+            .collect()
     }
 
-    fn filter_deps(
+    fn filter_deps<'a>(
         pkg_id: PackageId,
-        resolve: &Resolve,
+        resolve: &'a Resolve,
         has_dev_units: HasDevUnits,
-        requested_kinds: &[CompileKind],
-        target_data: &RustcTargetData<'_>,
+        requested_kinds: &'a [CompileKind],
+        target_data: &'a RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> Vec<PackageId> {
+    ) -> impl Iterator<Item = PackageId> + 'a {
         resolve
             .deps(pkg_id)
-            .filter(|&(_id, deps)| {
+            .filter(move |&(_id, deps)| {
                 deps.iter().any(|dep| {
                     if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
                         return false;
@@ -629,7 +624,7 @@ impl<'cfg> PackageSet<'cfg> {
                 })
             })
             .map(|(pkg_id, _)| pkg_id)
-            .collect()
+            .into_iter()
     }
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {

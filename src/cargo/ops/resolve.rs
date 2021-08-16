@@ -171,30 +171,22 @@ pub fn resolve_ws_with_opts<'cfg>(
         feature_opts,
     )?;
 
-    let no_lib_warnings: Vec<String> = pkg_set
-        .no_lib_pkgs(
-            &resolved_with_overrides,
-            &member_ids,
-            has_dev_units,
-            requested_targets,
-            target_data,
-            force_all_targets,
-        )
-        .iter()
-        .flat_map(|(pkg_id, dep_pkgs)| {
-            dep_pkgs.iter().map(move |dep_pkg| {
-                format!(
-                    "{} has invalid dependency `{}`. `{}` has no lib package.",
-                    pkg_id,
-                    dep_pkg.name(),
-                    dep_pkg.name(),
-                )
-            })
-        })
-        .collect();
-
-    for warn in no_lib_warnings {
-        ws.config().shell().warn(warn)?;
+    let no_lib_pkgs = pkg_set.no_lib_pkgs(
+        &resolved_with_overrides,
+        &member_ids,
+        has_dev_units,
+        requested_targets,
+        target_data,
+        force_all_targets,
+    );
+    for (pkg_id, dep_pkgs) in no_lib_pkgs {
+        for dep_pkg in dep_pkgs {
+            ws.config().shell().warn(&format!(
+                "{} ignoring invalid dependency `{}` which is missing a lib target",
+                pkg_id,
+                dep_pkg.name(),
+            ))?;
+        }
     }
 
     Ok(WorkspaceResolve {

@@ -756,7 +756,7 @@ fn run_with_bin_dep() {
     p.cargo("run")
         .with_stderr(
             "\
-[WARNING] foo v0.0.1 ([CWD]) has invalid dependency `bar`. `bar` has no lib package.
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar` which is missing a lib target
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
@@ -813,8 +813,8 @@ fn run_with_bin_deps() {
     p.cargo("run")
         .with_stderr(
             "\
-[WARNING] foo v0.0.1 ([CWD]) has invalid dependency `bar1`. `bar1` has no lib package.
-[WARNING] foo v0.0.1 ([CWD]) has invalid dependency `bar2`. `bar2` has no lib package.
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar1` which is missing a lib target
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
@@ -903,8 +903,8 @@ available binaries: bar1, bar2, foo1, foo2",
     p.cargo("run --bin foo1")
         .with_stderr(
             "\
-[WARNING] foo1 v0.0.1 ([CWD]/foo1) has invalid dependency `bar1`. `bar1` has no lib package.
-[WARNING] foo2 v0.0.1 ([CWD]/foo2) has invalid dependency `bar2`. `bar2` has no lib package.
+[WARNING] foo1 v0.0.1 ([CWD]/foo1) ignoring invalid dependency `bar1` which is missing a lib target
+[WARNING] foo2 v0.0.1 ([CWD]/foo2) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo1 v0.0.1 ([CWD]/foo1)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo1[EXE]`",
