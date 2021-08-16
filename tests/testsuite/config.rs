@@ -1,6 +1,6 @@
 //! Tests for config settings.
 
-use cargo::core::Shell;
+use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
@@ -1460,4 +1460,39 @@ fn cargo_target_empty_env() {
         .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
         .with_status(101)
         .run()
+}
+
+#[cargo_test]
+fn all_profile_options() {
+    // Check that all profile options can be serialized/deserialized.
+    let base_settings = toml::TomlProfile {
+        opt_level: Some(toml::TomlOptLevel("0".to_string())),
+        lto: Some(toml::StringOrBool::String("thin".to_string())),
+        codegen_backend: Some(InternedString::new("example")),
+        codegen_units: Some(123),
+        debug: Some(toml::U32OrBool::U32(1)),
+        split_debuginfo: Some("packed".to_string()),
+        debug_assertions: Some(true),
+        rpath: Some(true),
+        panic: Some("abort".to_string()),
+        overflow_checks: Some(true),
+        incremental: Some(true),
+        dir_name: Some(InternedString::new("dir_name")),
+        inherits: Some(InternedString::new("debug")),
+        strip: Some(toml::StringOrBool::String("symbols".to_string())),
+        package: None,
+        build_override: None,
+    };
+    let mut overrides = BTreeMap::new();
+    let key = toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
+    overrides.insert(key, base_settings.clone());
+    let profile = toml::TomlProfile {
+        build_override: Some(Box::new(base_settings.clone())),
+        package: Some(overrides),
+        ..base_settings.clone()
+    };
+    let profile_toml = ::toml::to_string(&profile).unwrap();
+    let roundtrip: toml::TomlProfile = ::toml::from_str(&profile_toml).unwrap();
+    let roundtrip_toml = ::toml::to_string(&roundtrip).unwrap();
+    compare::assert_match_exact(&profile_toml, &roundtrip_toml);
 }
