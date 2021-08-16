@@ -7,10 +7,11 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
-use cargo_test_support::cargo_process;
-use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, cargo_exe, project, project_in_home};
+use cargo_test_support::tools::echo_subcommand;
+use cargo_test_support::{
+    basic_bin_manifest, cargo_exe, cargo_process, paths, project, project_in_home,
+};
 
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
@@ -283,31 +284,17 @@ fn cargo_subcommand_env() {
 
 #[cargo_test]
 fn cargo_subcommand_args() {
-    let p = project()
-        .at("cargo-foo")
-        .file("Cargo.toml", &basic_manifest("cargo-foo", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-                fn main() {
-                    let args: Vec<_> = ::std::env::args().collect();
-                    println!("{}", args.join(" "));
-                }
-            "#,
-        )
-        .build();
-
-    p.cargo("build").run();
-    let cargo_foo_bin = p.bin("cargo-foo");
+    let p = echo_subcommand();
+    let cargo_foo_bin = p.bin("cargo-echo");
     assert!(cargo_foo_bin.is_file());
 
     let mut path = path();
     path.push(p.target_debug_dir());
     let path = env::join_paths(path.iter()).unwrap();
 
-    cargo_process("foo bar -v --help")
+    cargo_process("echo bar -v --help")
         .env("PATH", &path)
-        .with_stdout("[CWD]/cargo-foo/target/debug/cargo-foo[EXE] foo bar -v --help")
+        .with_stdout("echo bar -v --help")
         .run();
 }
 

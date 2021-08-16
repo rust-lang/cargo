@@ -1,5 +1,8 @@
 //! Tests for `[alias]` config command aliases.
 
+use std::env;
+
+use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]
@@ -50,7 +53,7 @@ fn alias_config() {
 }
 
 #[cargo_test]
-fn recursive_alias() {
+fn dependent_alias() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
@@ -69,6 +72,84 @@ fn recursive_alias() {
             "\
 [COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn default_args_alias() {
+    let echo = echo_subcommand();
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                echo = "echo --flag1 --flag2"
+                test-1 = "echo"
+                build = "build --verbose"
+            "#,
+        )
+        .build();
+
+    let mut paths: Vec<_> = env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect();
+    paths.push(echo.target_debug_dir());
+    let path = env::join_paths(paths).unwrap();
+
+    p.cargo("echo")
+        .env("PATH", &path)
+        .with_status(101)
+        .with_stderr("error: alias echo has unresolvable recursive definition: echo -> echo")
+        .run();
+
+    p.cargo("test-1")
+        .env("PATH", &path)
+        .with_status(101)
+        .with_stderr(
+            "error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo",
+        )
+        .run();
+
+    // Builtins are not expanded by rule
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] user-defined alias `build` is ignored, because it is shadowed by a built-in command
+[COMPILING] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn corecursive_alias() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                test-1 = "test-2 --flag1"
+                test-2 = "test-3 --flag2"
+                test-3 = "test-1 --flag3"
+            "#,
+        )
+        .build();
+
+    p.cargo("test-1")
+        .with_status(101)
+        .with_stderr(
+            "error: alias test-1 has unresolvable recursive definition: test-1 -> test-2 -> test-3 -> test-1",
+        )
+        .run();
+
+    p.cargo("test-2")
+        .with_status(101)
+        .with_stderr(
+            "error: alias test-2 has unresolvable recursive definition: test-2 -> test-3 -> test-1 -> test-2",
         )
         .run();
 }
