@@ -950,6 +950,10 @@ fn prepare_for_already_on_latest_unstable() {
 #[cargo_test]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
+    if !is_nightly() {
+        // Remove once 1.56 is stabilized.
+        return;
+    }
     if Edition::LATEST_UNSTABLE.is_some() {
         eprintln!("This test cannot run while the latest edition is unstable, skipping.");
         return;
@@ -1434,10 +1438,6 @@ fn fix_color_message() {
 #[cargo_test]
 fn edition_v2_resolver_report() {
     // Show a report if the V2 resolver shows differences.
-    if !is_nightly() {
-        // 2021 is unstable
-        return;
-    }
     Package::new("common", "1.0.0")
         .feature("f1", &[])
         .feature("dev-feat", &[])
@@ -1477,7 +1477,6 @@ fn edition_v2_resolver_report() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered("\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
@@ -1530,7 +1529,7 @@ fn rustfix_handles_multi_spans() {
 fn fix_edition_2021() {
     // Can migrate 2021, even when lints are allowed.
     if !is_nightly() {
-        // 2021 is unstable
+        // Remove once 1.56 is stabilized.
         return;
     }
     let p = project()
