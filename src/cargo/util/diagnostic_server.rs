@@ -48,6 +48,7 @@ pub enum Message {
         files: Vec<String>,
         krate: Option<String>,
         errors: Vec<String>,
+        abnormal_exit: Option<String>,
     },
     ReplaceFailed {
         file: String,
@@ -135,6 +136,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 files,
                 krate,
                 errors,
+                abnormal_exit,
             } => {
                 if let Some(ref krate) = *krate {
                     self.config.shell().warn(&format!(
@@ -170,6 +172,13 @@ impl<'a> DiagnosticPrinter<'a> {
                             writeln!(self.config.shell().err())?;
                         }
                     }
+                }
+                if let Some(exit) = abnormal_exit {
+                    writeln!(
+                        self.config.shell().err(),
+                        "rustc exited abnormally: {}",
+                        exit
+                    )?;
                 }
                 writeln!(
                     self.config.shell().err(),
