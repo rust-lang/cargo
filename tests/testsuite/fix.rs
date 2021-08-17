@@ -3,7 +3,7 @@
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git;
-use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project};
@@ -1596,4 +1596,83 @@ fn fix_shared_cross_workspace() {
         "pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}",
         &p.read_file("foo/src/shared.rs"),
     );
+}
+
+#[cargo_test]
+fn abnormal_exit() {
+    // rustc fails unexpectedly after applying fixes, should show some error information.
+    //
+    // This works with a proc-macro that runs three times:
+    // - First run (collect diagnostics pass): writes a file, exits normally.
+    // - Second run (verify diagnostics work): it detects the presence of the
+    //   file, removes the file, and aborts the process.
+    // - Third run (collecting messages to display): file not found, exits normally.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                pm = {path="pm"}
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn f() {
+                    let mut x = 1;
+                    pm::crashme!();
+                }
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+                #[proc_macro]
+                pub fn crashme(_input: TokenStream) -> TokenStream {
+                    // Use a file to succeed on the first pass, and fail on the second.
+                    let p = std::env::var_os("ONCE_PATH").unwrap();
+                    let check_path = std::path::Path::new(&p);
+                    if check_path.exists() {
+                        eprintln!("I'm not a diagnostic.");
+                        std::fs::remove_file(check_path).unwrap();
+                        std::process::abort();
+                    } else {
+                        std::fs::write(check_path, "").unwrap();
+                        "".parse().unwrap()
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --lib --allow-no-vcs")
+        .env(
+            "ONCE_PATH",
+            paths::root().join("proc-macro-run-once").to_str().unwrap(),
+        )
+        .with_stderr_contains(
+            "[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`",
+        )
+        .with_stderr_contains("I'm not a diagnostic.")
+        // "signal: 6, SIGABRT: process abort signal" on some platforms
+        .with_stderr_contains("rustc exited abnormally: [..]")
+        .with_stderr_contains("Original diagnostics will follow.")
+        .run();
 }

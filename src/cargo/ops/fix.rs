@@ -46,7 +46,7 @@ use std::process::{self, Command, ExitStatus};
 use std::str;
 
 use anyhow::{bail, Context, Error};
-use cargo_util::{paths, ProcessBuilder};
+use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuilder};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
@@ -374,7 +374,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
                     paths::write(path, &file.original_code)?;
                 }
             }
-            log_failed_fix(&output.stderr)?;
+            log_failed_fix(&output.stderr, output.status)?;
         }
     }
 
@@ -662,7 +662,7 @@ fn exit_with(status: ExitStatus) -> ! {
     process::exit(status.code().unwrap_or(3));
 }
 
-fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
+fn log_failed_fix(stderr: &[u8], status: ExitStatus) -> Result<(), Error> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let diagnostics = stderr
@@ -677,6 +677,13 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
             files.insert(span.file_name);
         }
     }
+    // Include any abnormal messages (like an ICE or whatever).
+    errors.extend(
+        stderr
+            .lines()
+            .filter(|x| !x.starts_with('{'))
+            .map(|x| x.to_string()),
+    );
     let mut krate = None;
     let mut prev_dash_dash_krate_name = false;
     for arg in env::args() {
@@ -692,10 +699,16 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
     }
 
     let files = files.into_iter().collect();
+    let abnormal_exit = if status.code().map_or(false, is_simple_exit_code) {
+        None
+    } else {
+        Some(exit_status_to_string(status))
+    };
     Message::FixFailed {
         files,
         krate,
         errors,
+        abnormal_exit,
     }
     .post()?;
 
