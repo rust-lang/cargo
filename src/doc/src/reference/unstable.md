@@ -504,7 +504,7 @@ the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
 
 ### build-std-features
-* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+* Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>
 
 This flag is a sibling to the `-Zbuild-std` feature flag. This will configure
 the features enabled for the standard library itself when building the standard
