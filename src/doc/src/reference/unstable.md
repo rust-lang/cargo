@@ -90,7 +90,6 @@ Each new feature described below should explain how to use it.
     * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
-    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
@@ -1169,34 +1168,6 @@ cargo logout -Z credential-process
 [crates.io]: https://crates.io/
 [config file]: config.md
 
-### edition 2021
-* Tracking Issue: [rust-lang/rust#85811](https://github.com/rust-lang/rust/issues/85811)
-
-Support for the 2021 [edition] can be enabled by adding the `edition2021`
-unstable feature to the top of `Cargo.toml`:
-
-```toml
-cargo-features = ["edition2021"]
-
-[package]
-name = "my-package"
-version = "0.1.0"
-edition = "2021"
-```
-
-If you want to transition an existing project from a previous edition, then
-`cargo fix --edition` can be used on the nightly channel. After running `cargo
-fix`, you can switch the edition to 2021 as illustrated above.
-
-This feature is very unstable, and is only intended for early testing and
-experimentation. Future nightly releases may introduce changes for the 2021
-edition that may break your build.
-
-The 2021 edition will set the default [resolver version] to "2".
-
-[edition]: ../../edition-guide/index.html
-[resolver version]: resolver.md#resolver-versions
-
 ### future incompat report
 * RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
 * rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
@@ -1444,3 +1415,9 @@ The `-Z patch-in-config` flag, and the corresponding support for
 `[patch]` section in Cargo configuration files has been stabilized in
 the 1.56 release. See the [patch field](config.html#patch) for more
 information.
+
+### edition 2021
+
+The 2021 edition has been stabilized in the 1.56 release.
+See the [`edition` field](manifest.md#the-edition-field) for more information on setting the edition.
+See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](../../edition-guide/index.html) for more information on migrating existing projects.
