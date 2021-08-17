@@ -139,6 +139,7 @@ pub enum Edition {
 // - Set LATEST_STABLE to the new version.
 // - Update `is_stable` to `true`.
 // - Set the editionNNNN feature to stable in the features macro below.
+// - Update any tests that are affected.
 // - Update the man page for the --edition flag.
 // - Update unstable.md to move the edition section to the bottom.
 // - Update the documentation:
