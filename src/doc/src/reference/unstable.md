@@ -423,7 +423,7 @@ private_dep = "2.0.0" # Will be 'private' by default
 ```
 
 ### build-std
-* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+* Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>
 
 The `build-std` feature enables Cargo to compile the standard library itself as
 part of a crate graph compilation. This feature has also historically been known
@@ -493,9 +493,9 @@ feature for Cargo has an extremely long history and is very large in scope, and
 this is just the beginning. If you'd like to report bugs please either report
 them to:
 
-* Cargo - https://github.com/rust-lang/cargo/issues/new - for implementation bugs
+* Cargo - <https://github.com/rust-lang/cargo/issues/new> - for implementation bugs
 * The tracking repository -
-  https://github.com/rust-lang/wg-cargo-std-aware/issues/new - for larger design
+  <https://github.com/rust-lang/wg-cargo-std-aware/issues/new> - for larger design
   questions.
 
 Also if you'd like to see a feature that's not yet implemented and/or if
