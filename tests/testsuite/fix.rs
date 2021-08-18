@@ -1428,6 +1428,7 @@ fn edition_v2_resolver_report() {
     }
     Package::new("common", "1.0.0")
         .feature("f1", &[])
+        .feature("dev-feat", &[])
         .add_dep(Dependency::new("opt_dep", "1.0").optional(true))
         .publish();
     Package::new("opt_dep", "1.0.0").publish();
@@ -1455,6 +1456,9 @@ fn edition_v2_resolver_report() {
 
                 [build-dependencies]
                 common = { version = "1.0", features = ["opt_dep"] }
+
+                [dev-dependencies]
+                common = { version="1.0", features=["dev-feat"] }
             "#,
         )
         .file("src/lib.rs", "")
@@ -1473,8 +1477,12 @@ This may cause some dependencies to be built with fewer features enabled than pr
 More information about the resolver changes may be found at https://doc.rust-lang.org/nightly/edition-guide/rust-2021/default-cargo-resolver.html
 When building the following dependencies, the given features will no longer be used:
 
-  common v1.0.0: f1, opt_dep
-  common v1.0.0 (as host dependency): f1
+  common v1.0.0 removed features: dev-feat, f1, opt_dep
+  common v1.0.0 (as host dependency) removed features: dev-feat, f1
+
+The following differences only apply when building with dev-dependencies:
+
+  common v1.0.0 removed features: f1, opt_dep
 
 [CHECKING] opt_dep v1.0.0
 [CHECKING] common v1.0.0

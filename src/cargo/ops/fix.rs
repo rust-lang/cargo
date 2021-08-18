@@ -52,9 +52,10 @@ use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::features::{FeatureOpts, FeatureResolver};
+use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Workspace};
+use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
@@ -229,36 +230,40 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
     let target_data = RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
-    // HasDevUnits::No because that may uncover more differences.
-    // This is not the same as what `cargo fix` is doing, since it is doing
-    // `--all-targets` which includes dev dependencies.
-    let ws_resolve = ops::resolve_ws_with_opts(
-        ws,
-        &target_data,
-        &opts.compile_opts.build_config.requested_kinds,
-        &opts.compile_opts.cli_features,
-        &specs,
-        HasDevUnits::No,
-        crate::core::resolver::features::ForceAllTargets::No,
-    )?;
+    let resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
+        let ws_resolve = ops::resolve_ws_with_opts(
+            ws,
+            &target_data,
+            &opts.compile_opts.build_config.requested_kinds,
+            &opts.compile_opts.cli_features,
+            &specs,
+            has_dev_units,
+            crate::core::resolver::features::ForceAllTargets::No,
+        )?;
 
-    let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, HasDevUnits::No);
-    let v2_features = FeatureResolver::resolve(
-        ws,
-        &target_data,
-        &ws_resolve.targeted_resolve,
-        &ws_resolve.pkg_set,
-        &opts.compile_opts.cli_features,
-        &specs,
-        &opts.compile_opts.build_config.requested_kinds,
-        feature_opts,
-    )?;
+        let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);
+        let v2_features = FeatureResolver::resolve(
+            ws,
+            &target_data,
+            &ws_resolve.targeted_resolve,
+            &ws_resolve.pkg_set,
+            &opts.compile_opts.cli_features,
+            &specs,
+            &opts.compile_opts.build_config.requested_kinds,
+            feature_opts,
+        )?;
 
-    let differences = v2_features.compare_legacy(&ws_resolve.resolved_features);
-    if differences.is_empty() {
+        let diffs = v2_features.compare_legacy(&ws_resolve.resolved_features);
+        Ok((ws_resolve, diffs))
+    };
+    let (_, without_dev_diffs) = resolve_differences(HasDevUnits::No)?;
+    let (ws_resolve, mut with_dev_diffs) = resolve_differences(HasDevUnits::Yes)?;
+    if without_dev_diffs.is_empty() && with_dev_diffs.is_empty() {
         // Nothing is different, nothing to report.
         return Ok(());
     }
+    // Only display unique changes with dev-dependencies.
+    with_dev_diffs.retain(|k, vals| without_dev_diffs.get(k) != Some(vals));
     let config = ws.config();
     config.shell().note(
         "Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.",
@@ -277,16 +282,28 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         "When building the following dependencies, \
          the given features will no longer be used:\n"
     );
-    for ((pkg_id, for_host), removed) in differences {
-        drop_eprint!(config, "  {}", pkg_id);
-        if for_host {
-            drop_eprint!(config, " (as host dependency)");
+    let show_diffs = |differences: DiffMap| {
+        for ((pkg_id, for_host), removed) in differences {
+            drop_eprint!(config, "  {}", pkg_id);
+            if for_host {
+                drop_eprint!(config, " (as host dependency)");
+            }
+            drop_eprint!(config, " removed features: ");
+            let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
+            drop_eprintln!(config, "{}", joined.join(", "));
         }
-        drop_eprint!(config, ": ");
-        let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
-        drop_eprintln!(config, "{}", joined.join(", "));
+        drop_eprint!(config, "\n");
+    };
+    if !without_dev_diffs.is_empty() {
+        show_diffs(without_dev_diffs);
     }
-    drop_eprint!(config, "\n");
+    if !with_dev_diffs.is_empty() {
+        drop_eprintln!(
+            config,
+            "The following differences only apply when building with dev-dependencies:\n"
+        );
+        show_diffs(with_dev_diffs);
+    }
     report_maybe_diesel(config, &ws_resolve.targeted_resolve)?;
     Ok(())
 }
