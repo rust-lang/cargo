@@ -95,19 +95,19 @@ fn multiple_pkgs() {
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
+[ERROR] could not find `baz` in registry `[..]` with version `*`
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 [ERROR] some crates failed to install
@@ -155,19 +155,19 @@ fn multiple_pkgs_path_set() {
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
+[ERROR] could not find `baz` in registry `[..]` with version `*`
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [ERROR] some crates failed to install
 ",
