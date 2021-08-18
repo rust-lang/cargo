@@ -163,11 +163,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
         }
     };
 
-    let cargo_exe = config.cargo_exe()?;
-    let err = match ProcessBuilder::new(&command)
-        .env(cargo::CARGO_ENV, cargo_exe)
-        .args(args)
-        .exec_replace()
+    let err = match cargo::ops::execute_external_subcommand(&config, &command, args)
     {
         Ok(()) => return Ok(()),
         Err(e) => e,

@@ -85,3 +85,26 @@ fn check_dep_has_version(dep: &crate::core::Dependency, publish: bool) -> crate:
     }
     Ok(true)
 }
+
+// Temporary - should this be in a subcommand.rs file?
+use crate::Config;
+use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::core::Workspace;
+use cargo_util::ProcessBuilder;
+use std::ffi::OsStr;
+
+pub fn execute_external_subcommand<T: AsRef<OsStr>>(config: &Config, command: T, args: &[&str])
+    -> crate::CargoResult<()>
+{
+    let cargo_exe = config.cargo_exe()?;
+    let manifest_path = find_root_manifest_for_wd(config.cwd())?;
+    let ws = Workspace::new(&manifest_path, config)?;
+
+    let cargo_target_dir = ws.target_dir().into_path_unlocked();
+
+    ProcessBuilder::new(&command)
+        .env(crate::CARGO_ENV, cargo_exe)
+        .env("CARGO_TARGET_DIR", &cargo_target_dir)
+        .args(args)
+        .exec_replace()
+}
