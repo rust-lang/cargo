@@ -12,10 +12,7 @@ pub fn cli() -> App {
             "open",
             "Opens the docs in a browser after the operation",
         ))
-	.arg(opt(
-            "examples",
-            "Document all examples",
-        ))
+        .arg(opt("examples", "Document all examples"))
         .arg_package_spec(
             "Package to document",
             "Document all packages in the workspace",
