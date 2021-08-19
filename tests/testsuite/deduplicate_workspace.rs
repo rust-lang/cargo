@@ -144,7 +144,7 @@ fn inherit_workspace_fields() {
         .build();
 
     p.cargo("publish --token sekrit").cwd("bar").run();
-    publish::validate_upload(
+    publish::validate_upload_with_contents(
         r#"
         {
           "authors": ["Rustaceans"],
@@ -178,6 +178,32 @@ fn inherit_workspace_fields() {
             "LICENSE",
             ".cargo_vcs_info.json",
         ],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+[package]
+edition = "2018"
+name = "bar"
+version = "1.2.3"
+authors = ["Rustaceans"]
+publish = true
+description = "This is a crate"
+homepage = "https://www.rust-lang.org"
+documentation = "https://www.rust-lang.org/learn"
+readme = "../README.md"
+keywords = ["cli"]
+categories = ["development-tools"]
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/example/example"
+[badges.gitlab]
+branch = "master"
+repository = "https://gitlab.com/rust-lang/rust"
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
     );
 }
 
@@ -235,7 +261,7 @@ fn inherit_own_workspace_fields() {
         .build();
 
     p.cargo("publish --token sekrit").run();
-    publish::validate_upload(
+    publish::validate_upload_with_contents(
         r#"
         {
           "authors": ["Rustaceans"],
@@ -269,6 +295,32 @@ fn inherit_own_workspace_fields() {
             "LICENSE",
             ".cargo_vcs_info.json",
         ],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+[package]
+edition = "2018"
+name = "foo"
+version = "1.2.3"
+authors = ["Rustaceans"]
+publish = true
+description = "This is a crate"
+homepage = "https://www.rust-lang.org"
+documentation = "https://www.rust-lang.org/learn"
+readme = "README.md"
+keywords = ["cli"]
+categories = ["development-tools"]
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/example/example"
+[badges.gitlab]
+branch = "master"
+repository = "https://gitlab.com/rust-lang/rust"
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
     );
 }
 
@@ -333,6 +385,81 @@ fn inherit_dependencies() {
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
+    p.cargo("publish --token sekrit").cwd("bar").run();
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "dep",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.1"
+            },
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "dev",
+              "name": "dep-dev",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.5.2"
+            },
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "build",
+              "name": "dep-build",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.8"
+            }
+          ],
+          "description": null,
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": null,
+          "license_file": null,
+          "links": null,
+          "name": "bar",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.2.0"
+          }
+        "#,
+        "bar-0.2.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "Cargo.lock", "src/main.rs"],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+[package]
+name = "bar"
+version = "0.2.0"
+authors = []
+[dependencies.dep]
+version = "0.1"
+[dev-dependencies.dep-dev]
+version = "0.5.2"
+[build-dependencies.dep-build]
+version = "0.8"
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
+    );
 }
 
 #[cargo_test]
