@@ -12,7 +12,7 @@ pub fn cli() -> App {
             "open",
             "Opens the docs in a browser after the operation",
         ))
-		.arg(opt(
+	.arg(opt(
             "examples",
             "Document all examples",
         ))
