@@ -131,11 +131,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         CompileMode::Build,
         workspace.as_ref(),
-        ProfileChecking::Checked,
+        ProfileChecking::Custom,
     )?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(config, "release", ProfileChecking::Checked)?;
+        args.get_profile_name(config, "release", ProfileChecking::Custom)?;
 
     if args.is_present("list") {
         ops::install_list(root, config)?;

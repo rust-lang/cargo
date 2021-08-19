@@ -1,13 +1,57 @@
 # Changelog
 
+## Cargo 1.56 (2021-10-21)
+[cebef295...HEAD](https://github.com/rust-lang/cargo/compare/cebef295...HEAD)
+
+### Added
+
+- Added support for the [`rust-version`](https://doc.rust-lang.org/nightly/cargo/reference/manifest.html#the-rust-version-field)
+  field in a crate's metadata and the `--ignore-rust-version` command line option.
+- Build scripts can now pass additional linker arguments for binaries or all
+  linkable targets. [docs](https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#outputs-of-the-build-script)
+  [#9557](https://github.com/rust-lang/cargo/pull/9557)
+- Added support for the `-p` flag for `cargo publish` to publish a specific
+  package in a workspace. `cargo package` also now supports `-p` and
+  `--workspace`.
+  [#9559](https://github.com/rust-lang/cargo/pull/9559)
+
+### Changed
+
+- Doc tests now support the `-q` flag to show terse test output.
+  [#9730](https://github.com/rust-lang/cargo/pull/9730)
+- `features` used in a `[replace]` table now issues a warning, as they are ignored.
+  [#9681](https://github.com/rust-lang/cargo/pull/9681)
+- Changed so that only `wasm32-unknown-emscripten` executables are built
+  without a hash in the filename. Previously it was all `wasm32` targets.
+  Additionally, all `apple` binaries are now built with a hash in the
+  filename. This allows multiple copies to be cached at once, and matches the
+  behavior on other platforms (except `msvc`).
+  [#9653](https://github.com/rust-lang/cargo/pull/9653)
+
+### Fixed
+
+### Nightly only
+
+
 ## Cargo 1.55 (2021-09-09)
-[aa8b0929...HEAD](https://github.com/rust-lang/cargo/compare/aa8b0929...HEAD)
+[aa8b0929...rust-1.55.0](https://github.com/rust-lang/cargo/compare/aa8b0929...rust-1.55.0)
 
 ### Added
 
 - The package definition in `cargo metadata` now includes the `"default_run"`
   field from the manifest.
   [#9550](https://github.com/rust-lang/cargo/pull/9550)
+- Build scripts now have access to the following environment variables:
+  `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, `CARGO_ENCODED_RUSTFLAGS`.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts)
+  [#9601](https://github.com/rust-lang/cargo/pull/9601)
+- Added `cargo d` as an alias for `cargo doc`.
+  [#9680](https://github.com/rust-lang/cargo/pull/9680)
+- Added `{lib}` to the `cargo tree --format` option to display the library
+  name of a package.
+  [#9663](https://github.com/rust-lang/cargo/pull/9663)
+- Added `members_mut` method to the `Workspace` API.
+  [#9547](https://github.com/rust-lang/cargo/pull/9547)
 
 ### Changed
 
@@ -19,13 +63,48 @@
   a binary or library has been changed to respect the command-line flags
   instead of trying to guess which type it is.
   [#9522](https://github.com/rust-lang/cargo/pull/9522)
+- Registry names are now displayed instead of registry URLs when possible.
+  [#9632](https://github.com/rust-lang/cargo/pull/9632)
+- Duplicate compiler diagnostics are no longer shown. This can often happen
+  with `cargo test` which builds multiple copies of the same code in parallel.
+  This also updates the warning summary to provide more context.
+  [#9675](https://github.com/rust-lang/cargo/pull/9675)
+- The output for warnings or errors is now improved to be leaner, cleaner, and
+  show more context.
+  [#9655](https://github.com/rust-lang/cargo/pull/9655)
+- Network send errors are now treated as "spurious" which means they will be retried.
+  [#9695](https://github.com/rust-lang/cargo/pull/9695)
+- Git keys (`branch`, `tag`, `rev`) on a non-git dependency are now an error.
+  Additionally, specifying both `git` and `path` is now an error.
+  [#9689](https://github.com/rust-lang/cargo/pull/9689)
+- Specifying a dependency without any keys is now an error.
+  [#9686](https://github.com/rust-lang/cargo/pull/9686)
+- The resolver now prefers to use `[patch]` table entries of dependencies when
+  possible.
+  [#9639](https://github.com/rust-lang/cargo/pull/9639)
+- Package name typo errors in dependencies are now displayed aligned with the
+  original to help make it easier to see the difference.
+  [#9665](https://github.com/rust-lang/cargo/pull/9665)
+- Windows platforms may now warn on environment variables that have the wrong case.
+  [#9654](https://github.com/rust-lang/cargo/pull/9654)
+- `features` used in a `[patch]` table now issues a warning, as they are ignored.
+  [#9666](https://github.com/rust-lang/cargo/pull/9666)
+- The `target` directory is now excluded from content indexing on Windows.
+  [#9635](https://github.com/rust-lang/cargo/pull/9635)
+- When `Cargo.toml` is not found, the error message now detects if it was
+  misnamed with a lowercase `c` to suggest the correct form.
+  [#9607](https://github.com/rust-lang/cargo/pull/9607)
+- Building `diesel` with the new resolver displays a compatibility notice.
+  [#9602](https://github.com/rust-lang/cargo/pull/9602)
+- Updated the `opener` dependency, which handles opening a web browser, which
+  includes several changes, such as new behavior when run on WSL, and using
+  the system `xdg-open` on Linux.
+  [#9583](https://github.com/rust-lang/cargo/pull/9583)
 
 ### Fixed
 
 - Fixed dep-info files including non-local build script paths.
   [#9596](https://github.com/rust-lang/cargo/pull/9596)
-- Relaxed doc collision error to retain old behavior.
-  [#9595](https://github.com/rust-lang/cargo/pull/9595)
 - Handle "jobs = 0" case in cargo config files
   [#9584](https://github.com/rust-lang/cargo/pull/9584)
 - Implement warning for ignored trailing arguments after `--`
@@ -34,12 +113,37 @@
   [#9566](https://github.com/rust-lang/cargo/pull/9566)
 - `cargo fix` now supports rustc's suggestions with multiple spans.
   [#9567](https://github.com/rust-lang/cargo/pull/9567)
+- `cargo fix` now fixes each target serially instead of in parallel to avoid
+  problems with fixing the same file concurrently.
+  [#9677](https://github.com/rust-lang/cargo/pull/9677)
+- Changes to the target `linker` config value now trigger a rebuild.
+  [#9647](https://github.com/rust-lang/cargo/pull/9647)
+- Git unstaged deleted files are now ignored when using the `--allow-dirty`
+  flag with `cargo publish` or `cargo package`.
+  [#9645](https://github.com/rust-lang/cargo/pull/9645)
 
 ### Nightly only
 
 - Enabled support for `cargo fix --edition` for 2021.
   [#9588](https://github.com/rust-lang/cargo/pull/9588)
-
+- Several changes to named profiles.
+  [#9685](https://github.com/rust-lang/cargo/pull/9685)
+- Extended instructions on what to do when running `cargo fix --edition` on
+  the 2021 edition.
+  [#9694](https://github.com/rust-lang/cargo/pull/9694)
+- Multiple updates to error messages using nightly features to help better
+  explain the situation.
+  [#9657](https://github.com/rust-lang/cargo/pull/9657)
+- Adjusted the edition 2021 resolver diff report.
+  [#9649](https://github.com/rust-lang/cargo/pull/9649)
+- Fixed error using `cargo doc --open` with `doc.extern-map`.
+  [#9531](https://github.com/rust-lang/cargo/pull/9531)
+- Unified weak and namespaced features.
+  [#9574](https://github.com/rust-lang/cargo/pull/9574)
+- Various updates to future-incompatible reporting.
+  [#9606](https://github.com/rust-lang/cargo/pull/9606)
+- `[env]` environment variables are not allowed to set vars set by Cargo.
+  [#9579](https://github.com/rust-lang/cargo/pull/9579)
 
 ## Cargo 1.54 (2021-07-29)
 [4369396c...rust-1.54.0](https://github.com/rust-lang/cargo/compare/4369396c...rust-1.54.0)
@@ -81,6 +185,9 @@
   several other cleanups to make it more consistent with other VCS
   configurations.
   [#9469](https://github.com/rust-lang/cargo/pull/9469)
+- `rustc-cdylib-link-arg` applying transitively displays a warning that this
+  was not intended, and may be an error in the future.
+  [#9563](https://github.com/rust-lang/cargo/pull/9563)
 
 ### Fixed
 

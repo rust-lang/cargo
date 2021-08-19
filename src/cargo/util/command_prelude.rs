@@ -6,11 +6,12 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
+use crate::util::toml::{StringOrVec, TomlProfile};
+use crate::util::validate_package_name;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
-use crate::util::{toml::TomlProfile, validate_package_name};
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
@@ -27,16 +28,16 @@ pub type App = clap::App<'static, 'static>;
 pub trait AppExt: Sized {
     fn _arg(self, arg: Arg<'static, 'static>) -> Self;
 
+    /// Do not use this method, it is only for backwards compatibility.
+    /// Use `arg_package_spec_no_all` instead.
     fn arg_package_spec(
         self,
         package: &'static str,
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
-        self.arg_package_spec_simple(package)
+        self.arg_package_spec_no_all(package, all, exclude)
             ._arg(opt("all", "Alias for --workspace (deprecated)"))
-            ._arg(opt("workspace", all))
-            ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
     /// Variant of arg_package_spec that does not include the `--all` flag
@@ -218,7 +219,7 @@ pub trait AppExt: Sized {
     fn arg_ignore_rust_version(self) -> Self {
         self._arg(opt(
             "ignore-rust-version",
-            "Ignore `rust-version` specification in packages (unstable)",
+            "Ignore `rust-version` specification in packages",
         ))
     }
 
@@ -281,8 +282,14 @@ pub fn subcommand(name: &'static str) -> App {
 
 // Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
-    Checked,
-    Unchecked,
+    // `cargo rustc` historically has allowed "test", "bench", and "check". This
+    // variant explicitly allows those.
+    LegacyRustc,
+    // `cargo check` and `cargo fix` historically has allowed "test". This variant
+    // explicitly allows that on stable.
+    LegacyTestOnly,
+    // All other commands, which allow any valid custom named profile.
+    Custom,
 }
 
 pub trait ArgMatchesExt {
@@ -343,48 +350,58 @@ pub trait ArgMatchesExt {
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
-        let specified_profile = match self._value_of("profile") {
-            None => None,
-            Some(name) => {
-                TomlProfile::validate_name(name, "profile name")?;
-                Some(InternedString::new(name))
+        let specified_profile = self._value_of("profile");
+
+        // Check for allowed legacy names.
+        // This is an early exit, since it allows combination with `--release`.
+        match (specified_profile, profile_checking) {
+            // `cargo rustc` has legacy handling of these names
+            (Some(name @ ("test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            // `cargo fix` and `cargo check` has legacy handling of this profile name
+            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            _ => {}
+        }
+
+        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
+            bail!("usage of `--profile` requires `-Z unstable-options`");
+        }
+
+        let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
+            anyhow::format_err!(
+                "conflicting usage of --profile={} and --{flag}\n\
+                 The `--{flag}` flag is the same as `--profile={equiv}`.\n\
+                 Remove one flag or the other to continue.",
+                specified,
+                flag = flag,
+                equiv = equiv
+            )
+        };
+
+        let name = match (
+            self._is_present("release"),
+            self._is_present("debug"),
+            specified_profile,
+        ) {
+            (false, false, None) => default,
+            (true, _, None | Some("release")) => "release",
+            (true, _, Some(name)) => return Err(conflict("release", "release", name)),
+            (_, true, None | Some("dev")) => "dev",
+            (_, true, Some(name)) => return Err(conflict("debug", "dev", name)),
+            // `doc` is separate from all the other reservations because
+            // [profile.doc] was historically allowed, but is deprecated and
+            // has no effect. To avoid potentially breaking projects, it is a
+            // warning in Cargo.toml, but since `--profile` is new, we can
+            // reject it completely here.
+            (_, _, Some("doc")) => {
+                bail!("profile `doc` is reserved and not allowed to be explicitly specified")
+            }
+            (_, _, Some(name)) => {
+                TomlProfile::validate_name(name)?;
+                name
             }
         };
 
-        match profile_checking {
-            ProfileChecking::Unchecked => {}
-            ProfileChecking::Checked => {
-                if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-                    anyhow::bail!("Usage of `--profile` requires `-Z unstable-options`")
-                }
-            }
-        }
-
-        if self._is_present("release") {
-            if !config.cli_unstable().unstable_options {
-                Ok(InternedString::new("release"))
-            } else {
-                match specified_profile {
-                    Some(name) if name != "release" => {
-                        anyhow::bail!("Conflicting usage of --profile and --release")
-                    }
-                    _ => Ok(InternedString::new("release")),
-                }
-            }
-        } else if self._is_present("debug") {
-            if !config.cli_unstable().unstable_options {
-                Ok(InternedString::new("dev"))
-            } else {
-                match specified_profile {
-                    Some(name) if name != "dev" => {
-                        anyhow::bail!("Conflicting usage of --profile and --debug")
-                    }
-                    _ => Ok(InternedString::new("dev")),
-                }
-            }
-        } else {
-            Ok(specified_profile.unwrap_or_else(|| InternedString::new(default)))
-        }
+        Ok(InternedString::new(name))
     }
 
     fn packages_from_flags(&self) -> CargoResult<Packages> {
@@ -516,12 +533,6 @@ pub trait ArgMatchesExt {
             rustdoc_document_private_items: false,
             honor_rust_version: !self._is_present("ignore-rust-version"),
         };
-
-        if !opts.honor_rust_version {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--ignore-rust-version", 8072)?;
-        }
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;
@@ -705,17 +716,9 @@ pub fn values_os(args: &ArgMatches<'_>, name: &str) -> Vec<OsString> {
     args._values_of_os(name)
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum CommandInfo {
-    BuiltIn { name: String, about: Option<String> },
-    External { name: String, path: PathBuf },
-}
-
-impl CommandInfo {
-    pub fn name(&self) -> &str {
-        match self {
-            CommandInfo::BuiltIn { name, .. } => name,
-            CommandInfo::External { name, .. } => name,
-        }
-    }
+    BuiltIn { about: Option<String> },
+    External { path: PathBuf },
+    Alias { target: StringOrVec },
 }

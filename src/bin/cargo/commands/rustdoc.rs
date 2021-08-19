@@ -44,7 +44,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         CompileMode::Doc { deps: false },
         Some(&ws),
-        ProfileChecking::Checked,
+        ProfileChecking::Custom,
     )?;
     let target_args = values(args, "args");
     compile_opts.target_rustdoc_args = if target_args.is_empty() {

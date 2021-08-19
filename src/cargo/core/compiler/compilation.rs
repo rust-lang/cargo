@@ -345,17 +345,15 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
 
-        if self.config.cli_unstable().configurable_env {
-            // Apply any environment variables from the config
-            for (key, value) in self.config.env_config()?.iter() {
-                // never override a value that has already been set by cargo
-                if cmd.get_envs().contains_key(key) {
-                    continue;
-                }
+        // Apply any environment variables from the config
+        for (key, value) in self.config.env_config()?.iter() {
+            // never override a value that has already been set by cargo
+            if cmd.get_envs().contains_key(key) {
+                continue;
+            }
 
-                if value.is_force() || env::var_os(key).is_none() {
-                    cmd.env(key, value.resolve(self.config));
-                }
+            if value.is_force() || env::var_os(key).is_none() {
+                cmd.env(key, value.resolve(self.config));
             }
         }
 
@@ -367,7 +365,12 @@ impl<'cfg> Compilation<'cfg> {
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     if unit.target.is_bin() {
-        cmd.env("CARGO_BIN_NAME", unit.target.name());
+        let name = unit
+            .target
+            .binary_filename()
+            .unwrap_or(unit.target.name().to_string());
+
+        cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd

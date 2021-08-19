@@ -1,5 +1,6 @@
 # cargo-package(1)
 {{*set actionverb="Package"}}
+{{*set noall=true}}
 
 ## NAME
 
@@ -66,6 +67,8 @@ Allow working directories with uncommitted VCS changes to be packaged.
 {{/option}}
 
 {{/options}}
+
+{{> section-package-selection }}
 
 ### Compilation Options
 

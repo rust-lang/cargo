@@ -37,7 +37,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         CompileMode::Build,
         Some(&ws),
-        ProfileChecking::Checked,
+        ProfileChecking::Custom,
     )?;
 
     // Disallow `spec` to be an glob pattern

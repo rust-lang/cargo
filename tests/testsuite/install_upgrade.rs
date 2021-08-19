@@ -803,8 +803,9 @@ fn already_installed_updates_yank_status_on_upgrade() {
     cargo_process("install foo --version=1.0.1")
         .with_status(101)
         .with_stderr_contains(
-            "error: cannot install package `foo`, it has been yanked from registry \
-            `https://github.com/rust-lang/crates.io-index`",
+            "\
+[ERROR] cannot install package `foo`, it has been yanked from registry `crates-io`
+",
         )
         .run();
 

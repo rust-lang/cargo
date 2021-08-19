@@ -217,6 +217,73 @@ fn cargo_test_quiet_no_harness() {
 }
 
 #[cargo_test]
+fn cargo_doc_test_quiet() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                /// ```
+                /// let result = foo::add(2, 3);
+                /// assert_eq!(result, 5);
+                /// ```
+                pub fn add(a: i32, b: i32) -> i32 {
+                    a + b
+                }
+
+                /// ```
+                /// let result = foo::div(10, 2);
+                /// assert_eq!(result, 5);
+                /// ```
+                ///
+                /// # Panics
+                ///
+                /// The function panics if the second argument is zero.
+                ///
+                /// ```rust,should_panic
+                /// // panics on division by zero
+                /// foo::div(10, 0);
+                /// ```
+                pub fn div(a: i32, b: i32) -> i32 {
+                    if b == 0 {
+                        panic!("Divide-by-zero error");
+                    }
+
+                    a / b
+                }
+
+                #[test] fn test_hello() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("test -q")
+        .with_stdout(
+            "
+running 1 test
+.
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+
+
+running 3 tests
+...
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+
+",
+        )
+        .with_stderr("")
+        .run();
+}
+
+#[cargo_test]
 fn cargo_test_verbose() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

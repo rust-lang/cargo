@@ -61,51 +61,50 @@ Each new feature described below should explain how to use it.
 ### List of unstable features
 
 * Unstable-specific features
-    * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
+    * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
 * Build scripts and linking
-    * [extra-link-arg](#extra-link-arg) — Allows build scripts to pass extra link arguments in more cases.
-    * [Metabuild](#metabuild) — Provides declarative build scripts.
+    * [Metabuild](#metabuild) — Provides declarative build scripts.
 * Resolver and features
-    * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
-    * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
-    * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
-    * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
-    * [Namespaced features](#namespaced-features) — Separates optional dependencies into a separate namespace from regular features, and allows feature names to be the same as some dependency name.
-    * [Weak dependency features](#weak-dependency-features) — Allows setting features for dependencies without enabling optional dependencies.
+    * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
+    * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
+    * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
+    * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
+    * [Namespaced features](#namespaced-features) — Separates optional dependencies into a separate namespace from regular features, and allows feature names to be the same as some dependency name.
+    * [Weak dependency features](#weak-dependency-features) — Allows setting features for dependencies without enabling optional dependencies.
 * Output behavior
-    * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
-    * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
+    * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
+    * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
+    * [Different binary name](#different-binary-name) — Assign a name to the built binary that is seperate from the crate name.
 * Compile behavior
-    * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
-    * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
-    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
-    * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
-    * [build-std-features](#build-std-features) — Sets features to use with the standard library.
-    * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
-    * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
+    * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
+    * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
+    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
+    * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
+    * [build-std-features](#build-std-features) — Sets features to use with the standard library.
+    * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
+    * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
 * rustdoc
-    * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
-    * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
+    * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
+    * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
-    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
-    * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
-    * [rust-version](#rust-version) — Allows to declare the minimum supported Rust version.
-    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
+    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
+    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
+    * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
+    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
 * Information and metadata
-    * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
-    * [timings](#timings) — Generates a report on how long individual dependencies took to run.
-    * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
-    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
+    * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
+    * [timings](#timings) — Generates a report on how long individual dependencies took to run.
+    * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
+    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
+    * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
-    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
-    * [config-include](#config-include) — Adds the ability for config files to include other files.
-    * [configurable-env](#configurable-env) — Adds support for defining environment variables that will be set when building and running.
-    * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
-    * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
+    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
+    * [config-include](#config-include) — Adds the ability for config files to include other files.
+    * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
+    * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
 * Registries
-    * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
-    * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
+    * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
+    * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
 
 ### allow-features
 
@@ -132,51 +131,6 @@ The list of features passed to cargo's `-Zallow-features` is also passed
 to any Rust tools that cargo ends up calling (like `rustc` or
 `rustdoc`). Thus, if you run `cargo -Zallow-features=`, no unstable
 Cargo _or_ Rust features can be used.
-
-### extra-link-arg
-* Tracking Issue: [#9426](https://github.com/rust-lang/cargo/issues/9426)
-* Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
-
-The `-Z extra-link-arg` flag makes the following instructions available
-in build scripts:
-
-* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
-  flags to a linker for binaries.
-* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) – Passes custom
-  flags to a linker for the binary `BIN`.
-* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
-  linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
-
-<a id="rustc-link-arg-bins"></a>
-#### `cargo:rustc-link-arg-bins=FLAG`
-
-The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building a
-binary target. Its usage is highly platform specific. It is useful
-to set a linker script or other linker options.
-
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
-
-<a id="rustc-link-arg-bin"></a>
-#### `cargo:rustc-link-arg-bin=BIN=FLAG`
-
-The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building
-the binary target with name `BIN`. Its usage is highly platform specific. It is useful
-to set a linker script or other linker options.
-
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
-
-<a id="rustc-link-arg"></a>
-#### `cargo:rustc-link-arg=FLAG`
-
-The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
-option][link-arg] to the compiler, but only when building supported targets
-(benchmarks, binaries, `cdylib` crates, examples, and tests). Its usage is
-highly platform specific. It is useful to set the shared library version or
-linker script.
-
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
@@ -469,7 +423,7 @@ private_dep = "2.0.0" # Will be 'private' by default
 ```
 
 ### build-std
-* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+* Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>
 
 The `build-std` feature enables Cargo to compile the standard library itself as
 part of a crate graph compilation. This feature has also historically been known
@@ -539,9 +493,9 @@ feature for Cargo has an extremely long history and is very large in scope, and
 this is just the beginning. If you'd like to report bugs please either report
 them to:
 
-* Cargo - https://github.com/rust-lang/cargo/issues/new - for implementation bugs
+* Cargo - <https://github.com/rust-lang/cargo/issues/new> - for implementation bugs
 * The tracking repository -
-  https://github.com/rust-lang/wg-cargo-std-aware/issues/new - for larger design
+  <https://github.com/rust-lang/wg-cargo-std-aware/issues/new> - for larger design
   questions.
 
 Also if you'd like to see a feature that's not yet implemented and/or if
@@ -550,7 +504,7 @@ the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
 
 ### build-std-features
-* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+* Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>
 
 This flag is a sibling to the `-Zbuild-std` feature flag. This will configure
 the features enabled for the standard library itself when building the standard
@@ -571,10 +525,10 @@ cargo +nightly build -Z timings
 The `-Ztimings` flag can optionally take a comma-separated list of the
 following values:
 
-- `html` — Saves a file called `cargo-timing.html` to the current directory
+- `html` — Saves a file called `cargo-timing.html` to the current directory
   with a report of the compilation. Files are also saved with a timestamp in
   the filename if you want to look at older runs.
-- `info` — Displays a message to stdout after each compilation finishes with
+- `info` — Displays a message to stdout after each compilation finishes with
   how long it took.
 - `json` — Emits some JSON information about timing information.
 
@@ -599,11 +553,11 @@ The "custom build" units are `build.rs` scripts, which when run are
 highlighted in orange.
 
 The second graph shows Cargo's concurrency over time. The three lines are:
-- "Waiting" (red) — This is the number of units waiting for a CPU slot to
+- "Waiting" (red) — This is the number of units waiting for a CPU slot to
   open.
-- "Inactive" (blue) — This is the number of units that are waiting for their
+- "Inactive" (blue) — This is the number of units that are waiting for their
   dependencies to finish.
-- "Active" (green) — This is the number of units currently running.
+- "Active" (green) — This is the number of units currently running.
 
 Note: This does not show the concurrency in the compiler itself. `rustc`
 coordinates with Cargo via the "job server" to stay within the concurrency
@@ -850,12 +804,12 @@ The following is a description of the JSON structure:
       "platform": null,
       /* The "mode" for this unit. Valid values:
 
-         * "test" — Build using `rustc` as a test.
-         * "build" — Build using `rustc`.
+         * "test" — Build using `rustc` as a test.
+         * "build" — Build using `rustc`.
          * "check" — Build using `rustc` in "check" mode.
-         * "doc" — Build using `rustdoc`.
-         * "doctest" — Test using `rustdoc`.
-         * "run-custom-build" — Represents the execution of a build script.
+         * "doc" — Build using `rustdoc`.
+         * "doctest" — Test using `rustdoc`.
+         * "run-custom-build" — Represents the execution of a build script.
       */
       "mode": "build",
       /* Array of features enabled on this unit as strings. */
@@ -1079,9 +1033,9 @@ array of strings.
 Command-line arguments allow special placeholders which will be replaced with
 the corresponding value:
 
-* `{name}` — The name of the registry.
-* `{api_url}` — The base URL of the registry API endpoints.
-* `{action}` — The authentication action (described below).
+* `{name}` — The name of the registry.
+* `{api_url}` — The base URL of the registry API endpoints.
+* `{action}` — The authentication action (described below).
 
 Process names with the prefix `cargo:` are loaded from the `libexec` directory
 next to cargo. Several experimental credential wrappers are included with
@@ -1216,25 +1170,6 @@ cargo logout -Z credential-process
 [crates.io]: https://crates.io/
 [config file]: config.md
 
-### rust-version
-* RFC: [#2495](https://github.com/rust-lang/rfcs/blob/master/text/2495-min-rust-version.md)
-* rustc Tracking Issue: [#65262](https://github.com/rust-lang/rust/issues/65262)
-
-The `-Z rust-version` flag enables the reading of the `rust-version` field in the
-Cargo manifest `package` section. This can be used by a package to state a minimal
-version of the compiler required to build the package. An error is generated if
-the version of rustc is older than the stated `rust-version`. The
-`--ignore-rust-version` flag can be used to override the check.
-
-```toml
-cargo-features = ["rust-version"]
-
-[package]
-name = "mypackage"
-version = "0.0.1"
-rust-version = "1.42"
-```
-
 ### edition 2021
 * Tracking Issue: [rust-lang/rust#85811](https://github.com/rust-lang/rust/issues/85811)
 
@@ -1279,33 +1214,6 @@ A full report can be displayed with the `cargo report future-incompatibilities
 the `--future-incompat-report` flag. The developer should then update their
 dependencies to a version where the issue is fixed, or work with the
 developers of the dependencies to help resolve the issue.
-
-### configurable-env
-* Original Pull Request: [#9175](https://github.com/rust-lang/cargo/pull/9175)
-* Tracking Issue: [#9539](https://github.com/rust-lang/cargo/issues/9539)
-
-The `-Z configurable-env` flag enables the `[env]` section in the
-`.cargo/config.toml` file. This section allows you to set additional environment
-variables for build scripts, rustc invocations, `cargo run` and `cargo build`.
-
-```toml
-[env]
-OPENSSL_DIR = "/opt/openssl"
-```
-
-By default, the variables specified will not override values that already exist
-in the environment. This behavior can be changed by setting the `force` flag.
-
-Setting the `relative` flag evaluates the value as a config-relative path that
-is relative to the parent directory of the `.cargo` directory that contains the
-`config.toml` file. The value of the environment variable will be the full
-absolute path.
-
-```toml
-[env]
-TMPDIR = { value = "/home/tmp", force = true }
-OPENSSL_DIR = { value = "vendor/openssl", relative = true }
-```
 
 ### patch-in-config
 * Original Pull Request: [#9204](https://github.com/rust-lang/cargo/pull/9204)
@@ -1381,6 +1289,32 @@ The primary use case is to run `cargo rustc --print=cfg` to get config values
 for the appropriate target and influenced by any other RUSTFLAGS.
 
 
+### Different binary name
+
+* Tracking Issue: [#9778](https://github.com/rust-lang/cargo/issues/9778)
+* PR: [#9627](https://github.com/rust-lang/cargo/pull/9627)
+
+The `different-binary-name` feature allows setting the filename of the binary without having to obey the 
+restrictions placed on crate names. For example, the crate name must use only `alphanumeric` characters
+or `-` or `_`, and cannot be empty.
+
+The `filename` parameter should **not** include the binary extension, `cargo` will figure out the appropriate
+extension and use that for the binary on its own.
+
+The `filename` parameter is only available in the `[[bin]]` section of the manifest.
+
+```toml
+cargo-features = ["different-binary-name"]
+
+[project]
+name =  "foo"
+version = "0.0.1"
+
+[[bin]]
+name = "foo"
+filename = "007bar"
+path = "src/main.rs"
+```
 
 ## Stabilized and removed features
 
@@ -1479,3 +1413,41 @@ for more information on using the features CLI options.
 The `resolver` feature in `Cargo.toml` has been stabilized in the 1.51 release.
 See the [resolver versions](resolver.md#resolver-versions) for more
 information about specifying resolvers.
+
+### extra-link-arg
+
+The `extra-link-arg` feature to specify additional linker arguments in build
+scripts has been stabilized in the 1.56 release. See the [build script
+documentation](build-scripts.md#outputs-of-the-build-script) for more
+information on specifying extra linker arguments.
+
+### configurable-env
+
+The `configurable-env` feature to specify environment variables in Cargo
+configuration has been stabilized in the 1.56 release. See the [config
+documentation](config.html#env) for more information about configuring
+environment variables.
+
+### rust-version
+
+The `rust-version` field in `Cargo.toml` has been stabilized in the 1.56 release.
+See the [rust-version field](manifest.html#the-rust-version-field) for more
+information on using the `rust-version` field and the `--ignore-rust-version` option.
+
+### codegen-backend
+
+The `codegen-backend` feature makes it possible to select the codegen backend used by rustc using a
+profile.
+
+Example:
+
+```toml
+[package]
+name = "foo"
+
+[dependencies]
+serde = "1.0.117"
+
+[profile.dev.package.foo]
+codegen-backend = "cranelift"
+```

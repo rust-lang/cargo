@@ -70,20 +70,36 @@ pub mod tools;
 struct FileBuilder {
     path: PathBuf,
     body: String,
+    executable: bool,
 }
 
 impl FileBuilder {
-    pub fn new(path: PathBuf, body: &str) -> FileBuilder {
+    pub fn new(path: PathBuf, body: &str, executable: bool) -> FileBuilder {
         FileBuilder {
             path,
             body: body.to_string(),
+            executable: executable,
         }
     }
 
-    fn mk(&self) {
+    fn mk(&mut self) {
+        if self.executable {
+            self.path.set_extension(env::consts::EXE_EXTENSION);
+        }
+
         self.dirname().mkdir_p();
         fs::write(&self.path, &self.body)
             .unwrap_or_else(|e| panic!("could not create file {}: {}", self.path.display(), e));
+
+        #[cfg(unix)]
+        if self.executable {
+            use std::os::unix::fs::PermissionsExt;
+
+            let mut perms = fs::metadata(&self.path).unwrap().permissions();
+            let mode = perms.mode();
+            perms.set_mode(mode | 0o111);
+            fs::set_permissions(&self.path, perms).unwrap();
+        }
     }
 
     fn dirname(&self) -> &Path {
@@ -122,11 +138,16 @@ impl SymlinkBuilder {
     }
 
     #[cfg(windows)]
-    fn mk(&self) {
+    fn mk(&mut self) {
         self.dirname().mkdir_p();
         if self.src_is_dir {
             t!(os::windows::fs::symlink_dir(&self.dst, &self.src));
         } else {
+            if let Some(ext) = self.dst.extension() {
+                if ext == env::consts::EXE_EXTENSION {
+                    self.src.set_extension(ext);
+                }
+            }
             t!(os::windows::fs::symlink_file(&self.dst, &self.src));
         }
     }
@@ -177,13 +198,22 @@ impl ProjectBuilder {
 
     /// Adds a file to the project.
     pub fn file<B: AsRef<Path>>(mut self, path: B, body: &str) -> Self {
-        self._file(path.as_ref(), body);
+        self._file(path.as_ref(), body, false);
         self
     }
 
-    fn _file(&mut self, path: &Path, body: &str) {
-        self.files
-            .push(FileBuilder::new(self.root.root().join(path), body));
+    /// Adds an executable file to the project.
+    pub fn executable<B: AsRef<Path>>(mut self, path: B, body: &str) -> Self {
+        self._file(path.as_ref(), body, true);
+        self
+    }
+
+    fn _file(&mut self, path: &Path, body: &str, executable: bool) {
+        self.files.push(FileBuilder::new(
+            self.root.root().join(path),
+            body,
+            executable,
+        ));
     }
 
     /// Adds a symlink to a file to the project.
@@ -219,13 +249,17 @@ impl ProjectBuilder {
 
         let manifest_path = self.root.root().join("Cargo.toml");
         if !self.no_manifest && self.files.iter().all(|fb| fb.path != manifest_path) {
-            self._file(Path::new("Cargo.toml"), &basic_manifest("foo", "0.0.1"))
+            self._file(
+                Path::new("Cargo.toml"),
+                &basic_manifest("foo", "0.0.1"),
+                false,
+            )
         }
 
         let past = time::SystemTime::now() - Duration::new(1, 0);
         let ftime = filetime::FileTime::from_system_time(past);
 
-        for file in self.files.iter() {
+        for file in self.files.iter_mut() {
             file.mk();
             if is_coarse_mtime() {
                 // Place the entire project 1 second in the past to ensure
@@ -237,7 +271,7 @@ impl ProjectBuilder {
             }
         }
 
-        for symlink in self.symlinks.iter() {
+        for symlink in self.symlinks.iter_mut() {
             symlink.mk();
         }
 
@@ -316,7 +350,7 @@ impl Project {
 
     /// Changes the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
-        FileBuilder::new(self.root().join(path), body).mk()
+        FileBuilder::new(self.root().join(path), body, false).mk()
     }
 
     /// Creates a `ProcessBuilder` to run a program in the project

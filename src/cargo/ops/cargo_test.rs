@@ -236,6 +236,10 @@ fn run_doc_tests(
             p.arg("--test-args").arg(arg);
         }
 
+        if config.shell().verbosity() == Verbosity::Quiet {
+            p.arg("--test-args").arg("--quiet");
+        }
+
         p.args(args);
 
         if *unstable_opts {

@@ -35,6 +35,7 @@ pub fn cli() -> App {
             "Exclude packages from the benchmark",
         )
         .arg_jobs()
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
@@ -55,11 +56,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         CompileMode::Bench,
         Some(&ws),
-        ProfileChecking::Checked,
+        ProfileChecking::Custom,
     )?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(config, "bench", ProfileChecking::Checked)?;
+        args.get_profile_name(config, "bench", ProfileChecking::Custom)?;
 
     let ops = TestOptions {
         no_run: args.is_present("no-run"),

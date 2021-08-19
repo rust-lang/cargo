@@ -1,6 +1,24 @@
 //! Tests for named profiles.
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_lib_manifest, project};
+
+#[cargo_test]
+fn gated() {
+    let p = project().file("src/lib.rs", "").build();
+    // `rustc`, `fix`, and `check` have had `--profile` before custom named profiles.
+    // Without unstable, these shouldn't be allowed to access non-legacy names.
+    for command in [
+        "rustc", "fix", "check", "bench", "clean", "install", "test", "build", "doc", "run",
+        "rustdoc",
+    ] {
+        p.cargo(command)
+            .arg("--profile=release")
+            .with_status(101)
+            .with_stderr("error: usage of `--profile` requires `-Z unstable-options`")
+            .run();
+    }
+}
 
 #[cargo_test]
 fn inherits_on_release() {
@@ -94,12 +112,15 @@ fn invalid_profile_name() {
 [ERROR] failed to parse manifest at [..]
 
 Caused by:
-  Invalid character `.` in profile name: `.release-lto`",
+  invalid character `.` in profile name `.release-lto`
+  Allowed characters are letters, numbers, underscore, and hyphen.
+",
         )
         .run();
 }
 
 #[cargo_test]
+#[ignore] // dir-name is currently disabled
 fn invalid_dir_name() {
     let p = project()
         .file(
@@ -135,6 +156,42 @@ Caused by:
 }
 
 #[cargo_test]
+fn dir_name_disabled() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["named-profiles"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.release-lto]
+                inherits = "release"
+                dir-name = "lto"
+                lto = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dir-name=\"lto\" in profile `release-lto` is not currently allowed, \
+  directory names are tied to the profile name for custom profiles
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn invalid_inherits() {
     let p = project()
         .file(
@@ -159,11 +216,8 @@ fn invalid_inherits() {
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
-            "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  Invalid character `.` in inherits: `.release`",
+            "error: profile `release-lto` inherits from `.release`, \
+             but that profile is not defined",
         )
         .run();
 }
@@ -360,13 +414,25 @@ fn conflicting_usage() {
     p.cargo("build -Z unstable-options --profile=dev --release")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_unordered("error: Conflicting usage of --profile and --release")
+        .with_stderr(
+            "\
+error: conflicting usage of --profile=dev and --release
+The `--release` flag is the same as `--profile=release`.
+Remove one flag or the other to continue.
+",
+        )
         .run();
 
     p.cargo("install -Z unstable-options --profile=release --debug")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_unordered("error: Conflicting usage of --profile and --debug")
+        .with_stderr(
+            "\
+error: conflicting usage of --profile=release and --debug
+The `--debug` flag is the same as `--profile=dev`.
+Remove one flag or the other to continue.
+",
+        )
         .run();
 }
 
@@ -495,4 +561,144 @@ fn unknown_profile() {
         .with_stderr("[ERROR] profile `alpha` is not defined")
         .with_status(101)
         .run();
+}
+
+#[cargo_test]
+fn reserved_profile_names() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.doc]
+                opt-level = 1
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --profile=doc -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: profile `doc` is reserved and not allowed to be explicitly specified")
+        .run();
+    // Not an exhaustive list, just a sample.
+    for name in ["build", "cargo", "check", "rustc", "CaRgO_startswith"] {
+        p.cargo(&format!("build --profile={} -Zunstable-options", name))
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr(&format!(
+                "\
+error: profile name `{}` is reserved
+Please choose a different name.
+See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+",
+                name
+            ))
+            .run();
+    }
+    for name in ["build", "check", "cargo", "rustc", "CaRgO_startswith"] {
+        p.change_file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["named-profiles"]
+
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [profile.{}]
+                    opt-level = 1
+                "#,
+                name
+            ),
+        );
+
+        p.cargo("build")
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr(&format!(
+                "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  profile name `{}` is reserved
+  Please choose a different name.
+  See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+",
+                name
+            ))
+            .run();
+    }
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+               cargo-features = ["named-profiles"]
+
+               [package]
+               name = "foo"
+               version = "0.1.0"
+               authors = []
+
+               [profile.debug]
+               debug = 1
+               inherits = "dev"
+            "#,
+    );
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  profile name `debug` is reserved
+  To configure the default development profile, use the name `dev` as in [profile.dev]
+  See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn legacy_commands_support_custom() {
+    // These commands have had `--profile` before custom named profiles.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+               cargo-features = ["named-profiles"]
+
+               [package]
+               name = "foo"
+               version = "0.1.0"
+
+               [profile.super-dev]
+               codegen-units = 3
+               inherits = "dev"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    for command in ["rustc", "fix", "check"] {
+        let mut pb = p.cargo(command);
+        if command == "fix" {
+            pb.arg("--allow-no-vcs");
+        }
+        pb.arg("--profile=super-dev")
+            .arg("-Zunstable-options")
+            .arg("-v")
+            .masquerade_as_nightly_cargo()
+            .with_stderr_contains("[RUNNING] [..]codegen-units=3[..]")
+            .run();
+        p.build_dir().rm_rf();
+    }
 }

@@ -602,15 +602,13 @@ impl Summaries {
         // present and considered fresh this is where the debug assertions
         // actually happens to verify that our cache is indeed fresh and
         // computes exactly the same value as before.
-        if cfg!(debug_assertions) && cache_contents.is_some() {
-            if cache_bytes != cache_contents {
-                panic!(
-                    "original cache contents:\n{:?}\n\
-                     does not equal new cache contents:\n{:?}\n",
-                    cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
-                    cache_bytes.as_ref().map(|s| String::from_utf8_lossy(s)),
-                );
-            }
+        if cfg!(debug_assertions) && cache_contents.is_some() && cache_bytes != cache_contents {
+            panic!(
+                "original cache contents:\n{:?}\n\
+                 does not equal new cache contents:\n{:?}\n",
+                cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
+                cache_bytes.as_ref().map(|s| String::from_utf8_lossy(s)),
+            );
         }
 
         // Once we have our `cache_bytes` which represents the `Summaries` we're

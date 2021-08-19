@@ -1,6 +1,6 @@
 //! Common executables that can be reused by various tests.
 
-use crate::{basic_manifest, paths, project};
+use crate::{basic_manifest, paths, project, Project};
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -37,4 +37,23 @@ pub fn echo_wrapper() -> PathBuf {
     let path = p.bin("rustc-echo-wrapper");
     *lock = Some(path.clone());
     path
+}
+
+/// Returns a project which builds a cargo-echo simple subcommand
+pub fn echo_subcommand() -> Project {
+    let p = project()
+        .at("cargo-echo")
+        .file("Cargo.toml", &basic_manifest("cargo-echo", "0.0.1"))
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let args: Vec<_> = ::std::env::args().skip(1).collect();
+                    println!("{}", args.join(" "));
+                }
+            "#,
+        )
+        .build();
+    p.cargo("build").run();
+    p
 }

@@ -3,7 +3,7 @@
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git;
-use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project};
@@ -925,11 +925,10 @@ fn prepare_for_already_on_latest_unstable() {
 
     p.cargo("fix --edition --allow-no-vcs")
         .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
-[CHECKING] foo [..]
 [WARNING] `src/lib.rs` is already on the latest edition ({next_edition}), unable to migrate further
-[FINISHED] [..]
 ",
             next_edition = next_edition
         ))
@@ -961,11 +960,10 @@ fn prepare_for_already_on_latest_stable() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
-[CHECKING] foo [..]
 [WARNING] `src/lib.rs` is already on the latest edition ({latest_stable}), unable to migrate further
-[FINISHED] [..]
 ",
             latest_stable = latest_stable
         ))
@@ -1430,6 +1428,7 @@ fn edition_v2_resolver_report() {
     }
     Package::new("common", "1.0.0")
         .feature("f1", &[])
+        .feature("dev-feat", &[])
         .add_dep(Dependency::new("opt_dep", "1.0").optional(true))
         .publish();
     Package::new("opt_dep", "1.0.0").publish();
@@ -1457,6 +1456,9 @@ fn edition_v2_resolver_report() {
 
                 [build-dependencies]
                 common = { version = "1.0", features = ["opt_dep"] }
+
+                [dev-dependencies]
+                common = { version="1.0", features=["dev-feat"] }
             "#,
         )
         .file("src/lib.rs", "")
@@ -1475,8 +1477,12 @@ This may cause some dependencies to be built with fewer features enabled than pr
 More information about the resolver changes may be found at https://doc.rust-lang.org/nightly/edition-guide/rust-2021/default-cargo-resolver.html
 When building the following dependencies, the given features will no longer be used:
 
-  common v1.0.0: f1, opt_dep
-  common v1.0.0 (as host dependency): f1
+  common v1.0.0 removed features: dev-feat, f1, opt_dep
+  common v1.0.0 (as host dependency) removed features: dev-feat, f1
+
+The following differences only apply when building with dev-dependencies:
+
+  common v1.0.0 removed features: f1, opt_dep
 
 [CHECKING] opt_dep v1.0.0
 [CHECKING] common v1.0.0
@@ -1598,4 +1604,83 @@ fn fix_shared_cross_workspace() {
         "pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}",
         &p.read_file("foo/src/shared.rs"),
     );
+}
+
+#[cargo_test]
+fn abnormal_exit() {
+    // rustc fails unexpectedly after applying fixes, should show some error information.
+    //
+    // This works with a proc-macro that runs three times:
+    // - First run (collect diagnostics pass): writes a file, exits normally.
+    // - Second run (verify diagnostics work): it detects the presence of the
+    //   file, removes the file, and aborts the process.
+    // - Third run (collecting messages to display): file not found, exits normally.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                pm = {path="pm"}
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn f() {
+                    let mut x = 1;
+                    pm::crashme!();
+                }
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+                #[proc_macro]
+                pub fn crashme(_input: TokenStream) -> TokenStream {
+                    // Use a file to succeed on the first pass, and fail on the second.
+                    let p = std::env::var_os("ONCE_PATH").unwrap();
+                    let check_path = std::path::Path::new(&p);
+                    if check_path.exists() {
+                        eprintln!("I'm not a diagnostic.");
+                        std::fs::remove_file(check_path).unwrap();
+                        std::process::abort();
+                    } else {
+                        std::fs::write(check_path, "").unwrap();
+                        "".parse().unwrap()
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --lib --allow-no-vcs")
+        .env(
+            "ONCE_PATH",
+            paths::root().join("proc-macro-run-once").to_str().unwrap(),
+        )
+        .with_stderr_contains(
+            "[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`",
+        )
+        .with_stderr_contains("I'm not a diagnostic.")
+        // "signal: 6, SIGABRT: process abort signal" on some platforms
+        .with_stderr_contains("rustc exited abnormally: [..]")
+        .with_stderr_contains("Original diagnostics will follow.")
+        .run();
 }

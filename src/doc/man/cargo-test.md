@@ -102,6 +102,8 @@ target options.
 
 {{> options-release }}
 
+{{> options-ignore-rust-version }}
+
 {{/options}}
 
 ### Output Options

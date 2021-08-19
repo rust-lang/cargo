@@ -25,8 +25,7 @@ fn env_basic() {
         )
         .build();
 
-    p.cargo("run -Zconfigurable-env")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run")
         .with_stdout_contains("compile-time:Hello")
         .with_stdout_contains("run-time:Hello")
         .run();
@@ -52,8 +51,7 @@ fn env_invalid() {
         )
         .build();
 
-    p.cargo("build -Zconfigurable-env")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr_contains("[..]could not load config key `env.ENV_TEST_BOOL`")
         .run();
@@ -85,8 +83,7 @@ fn env_force() {
         )
         .build();
 
-    p.cargo("run -Zconfigurable-env")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run")
         .env("ENV_TEST_FORCED", "from-env")
         .env("ENV_TEST_UNFORCED", "from-env")
         .env("ENV_TEST_UNFORCED_DEFAULT", "from-env")
@@ -127,9 +124,7 @@ fn env_relative() {
         )
         .build();
 
-    p.cargo("run -Zconfigurable-env")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("run").run();
 }
 
 #[cargo_test]

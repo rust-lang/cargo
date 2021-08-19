@@ -250,6 +250,12 @@ Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Benchmark the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's \fBrust\-version\fR field.
+.RE
 .SS "Output Options"
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR

@@ -129,7 +129,7 @@ pub fn prepare(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 }
 
 fn emit_build_output(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     output: &BuildOutput,
     out_dir: &Path,
     package_id: PackageId,
@@ -252,6 +252,24 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         }
     }
 
+    // Also inform the build script of the rustc compiler context.
+    if let Some(wrapper) = bcx.rustc().wrapper.as_ref() {
+        cmd.env("RUSTC_WRAPPER", wrapper);
+    } else {
+        cmd.env_remove("RUSTC_WRAPPER");
+    }
+    cmd.env_remove("RUSTC_WORKSPACE_WRAPPER");
+    if cx.bcx.ws.is_member(&unit.pkg) {
+        if let Some(wrapper) = bcx.rustc().workspace_wrapper.as_ref() {
+            cmd.env("RUSTC_WORKSPACE_WRAPPER", wrapper);
+        }
+    }
+    cmd.env(
+        "CARGO_ENCODED_RUSTFLAGS",
+        bcx.rustflags_args(unit).join("\x1f"),
+    );
+    cmd.env_remove("RUSTFLAGS");
+
     // Gather the set of native dependencies that this package has along with
     // some other variables to close over.
     //
@@ -297,7 +315,6 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
 
-    let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
     // Need a separate copy for the fresh closure.
@@ -409,7 +426,6 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             &pkg_descr,
             &script_out_dir,
             &script_out_dir,
-            extra_link_arg,
             nightly_features_allowed,
             &targets,
         )?;
@@ -437,7 +453,6 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
-                extra_link_arg,
                 nightly_features_allowed,
                 &targets_fresh,
             )?,
@@ -490,7 +505,6 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
-        extra_link_arg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
     ) -> CargoResult<BuildOutput> {
@@ -501,7 +515,6 @@ impl BuildOutput {
             pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
-            extra_link_arg,
             nightly_features_allowed,
             targets,
         )
@@ -517,7 +530,6 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
-        extra_link_arg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
     ) -> CargoResult<BuildOutput> {
@@ -588,59 +600,47 @@ impl BuildOutput {
                     linker_args.push((LinkType::Cdylib, value))
                 }
                 "rustc-link-arg-bins" => {
-                    if extra_link_arg {
-                        if !targets.iter().any(|target| target.is_bin()) {
-                            bail!(
-                                "invalid instruction `cargo:{}` from {}\n\
-                                 The package {} does not have a bin target.",
-                                key,
-                                whence,
-                                pkg_descr
-                            );
-                        }
-                        linker_args.push((LinkType::Bin, value));
-                    } else {
-                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    if !targets.iter().any(|target| target.is_bin()) {
+                        bail!(
+                            "invalid instruction `cargo:{}` from {}\n\
+                                The package {} does not have a bin target.",
+                            key,
+                            whence,
+                            pkg_descr
+                        );
                     }
+                    linker_args.push((LinkType::Bin, value));
                 }
                 "rustc-link-arg-bin" => {
-                    if extra_link_arg {
-                        let mut parts = value.splitn(2, '=');
-                        let bin_name = parts.next().unwrap().to_string();
-                        let arg = parts.next().ok_or_else(|| {
-                            anyhow::format_err!(
-                                "invalid instruction `cargo:{}={}` from {}\n\
-                                 The instruction should have the form cargo:{}=BIN=ARG",
-                                key,
-                                value,
-                                whence,
-                                key
-                            )
-                        })?;
-                        if !targets
-                            .iter()
-                            .any(|target| target.is_bin() && target.name() == bin_name)
-                        {
-                            bail!(
-                                "invalid instruction `cargo:{}` from {}\n\
-                                 The package {} does not have a bin target with the name `{}`.",
-                                key,
-                                whence,
-                                pkg_descr,
-                                bin_name
-                            );
-                        }
-                        linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
-                    } else {
-                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    let mut parts = value.splitn(2, '=');
+                    let bin_name = parts.next().unwrap().to_string();
+                    let arg = parts.next().ok_or_else(|| {
+                        anyhow::format_err!(
+                            "invalid instruction `cargo:{}={}` from {}\n\
+                                The instruction should have the form cargo:{}=BIN=ARG",
+                            key,
+                            value,
+                            whence,
+                            key
+                        )
+                    })?;
+                    if !targets
+                        .iter()
+                        .any(|target| target.is_bin() && target.name() == bin_name)
+                    {
+                        bail!(
+                            "invalid instruction `cargo:{}` from {}\n\
+                                The package {} does not have a bin target with the name `{}`.",
+                            key,
+                            whence,
+                            pkg_descr,
+                            bin_name
+                        );
                     }
+                    linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
                 }
                 "rustc-link-arg" => {
-                    if extra_link_arg {
-                        linker_args.push((LinkType::All, value));
-                    } else {
-                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
-                    }
+                    linker_args.push((LinkType::All, value));
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => {
@@ -935,8 +935,6 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
         .and_then(|bytes| paths::bytes2path(&bytes))
         .unwrap_or_else(|_| script_out_dir.clone());
 
-    let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
-
     (
         BuildOutput::parse_file(
             &output_file,
@@ -944,7 +942,6 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
-            extra_link_arg,
             cx.bcx.config.nightly_features_allowed,
             unit.pkg.targets(),
         )

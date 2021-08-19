@@ -76,6 +76,22 @@ which defaults to <code>crates-io</code>.</dd>
 
 </dl>
 
+### Package Selection
+
+By default, the package in the current working directory is selected. The `-p`
+flag can be used to choose a different package in a workspace.
+
+<dl>
+
+<dt class="option-term" id="option-cargo-publish--p"><a class="option-anchor" href="#option-cargo-publish--p"></a><code>-p</code> <em>spec</em></dt>
+<dt class="option-term" id="option-cargo-publish---package"><a class="option-anchor" href="#option-cargo-publish---package"></a><code>--package</code> <em>spec</em></dt>
+<dd class="option-desc">The package to publish. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC
+format.</dd>
+
+
+</dl>
+
+
 ### Compilation Options
 
 <dl>

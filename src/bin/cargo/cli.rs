@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
@@ -98,19 +99,22 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
 
     if args.is_present("list") {
         drop_println!(config, "Installed Commands:");
-        for command in list_commands(config) {
+        for (name, command) in list_commands(config) {
             match command {
-                CommandInfo::BuiltIn { name, about } => {
+                CommandInfo::BuiltIn { about } => {
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
                     drop_println!(config, "    {:<20} {}", name, summary);
                 }
-                CommandInfo::External { name, path } => {
+                CommandInfo::External { path } => {
                     if is_verbose {
                         drop_println!(config, "    {:<20} {}", name, path.display());
                     } else {
                         drop_println!(config, "    {}", name);
                     }
+                }
+                CommandInfo::Alias { target } => {
+                    drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
                 }
             }
         }
@@ -120,7 +124,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
     // Global args need to be extracted before expanding aliases because the
     // clap code for extracting a subcommand discards global options
     // (appearing before the subcommand).
-    let (expanded_args, global_args) = expand_aliases(config, args)?;
+    let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
     let (cmd, subcommand_args) = match expanded_args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {
@@ -137,8 +141,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
 
 pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
-    let mut version_string = version.to_string();
-    version_string.push('\n');
+    let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
         version_string.push_str(&format!(
             "release: {}.{}.{}\n",
@@ -157,6 +160,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
 fn expand_aliases(
     config: &mut Config,
     args: ArgMatches<'static>,
+    mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches<'static>, GlobalArgs), CliError> {
     if let (cmd, Some(args)) = args.subcommand() {
         match (
@@ -195,7 +199,21 @@ fn expand_aliases(
                 let new_args = cli()
                     .setting(AppSettings::NoBinaryName)
                     .get_matches_from_safe(alias)?;
-                let (expanded_args, _) = expand_aliases(config, new_args)?;
+
+                let (new_cmd, _) = new_args.subcommand();
+                already_expanded.push(cmd.to_string());
+                if already_expanded.contains(&new_cmd.to_string()) {
+                    // Crash if the aliases are corecursive / unresolvable
+                    return Err(anyhow!(
+                        "alias {} has unresolvable recursive definition: {} -> {}",
+                        already_expanded[0],
+                        already_expanded.join(" -> "),
+                        new_cmd,
+                    )
+                    .into());
+                }
+
+                let (expanded_args, _) = expand_aliases(config, new_args, already_expanded)?;
                 return Ok((expanded_args, global_args));
             }
         }
@@ -319,7 +337,7 @@ Some common cargo commands are (see all commands with --list):
     build, b    Compile the current package
     check, c    Analyze the current package and report errors, but don't build object files
     clean       Remove the target directory
-    doc         Build this package's and its dependencies' documentation
+    doc, d      Build this package's and its dependencies' documentation
     new         Create a new cargo package
     init        Create a new cargo package in an existing directory
     run, r      Run a binary or example of the local package

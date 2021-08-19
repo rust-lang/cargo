@@ -3,51 +3,52 @@
 The `Cargo.toml` file for each package is called its *manifest*. It is written
 in the [TOML] format. Every manifest file consists of the following sections:
 
-* [`cargo-features`](unstable.md) — Unstable, nightly-only features.
-* [`[package]`](#the-package-section) — Defines a package.
-  * [`name`](#the-name-field) — The name of the package.
-  * [`version`](#the-version-field) — The version of the package.
-  * [`authors`](#the-authors-field) — The authors of the package.
-  * [`edition`](#the-edition-field) — The Rust edition.
-  * [`description`](#the-description-field) — A description of the package.
-  * [`documentation`](#the-documentation-field) — URL of the package documentation.
-  * [`readme`](#the-readme-field) — Path to the package's README file.
-  * [`homepage`](#the-homepage-field) — URL of the package homepage.
-  * [`repository`](#the-repository-field) — URL of the package source repository.
-  * [`license`](#the-license-and-license-file-fields) — The package license.
-  * [`license-file`](#the-license-and-license-file-fields) — Path to the text of the license.
+* [`cargo-features`](unstable.md) — Unstable, nightly-only features.
+* [`[package]`](#the-package-section) — Defines a package.
+  * [`name`](#the-name-field) — The name of the package.
+  * [`version`](#the-version-field) — The version of the package.
+  * [`authors`](#the-authors-field) — The authors of the package.
+  * [`edition`](#the-edition-field) — The Rust edition.
+  * [`rust-version`](#the-rust-version-field) — The minimal supported Rust version.
+  * [`description`](#the-description-field) — A description of the package.
+  * [`documentation`](#the-documentation-field) — URL of the package documentation.
+  * [`readme`](#the-readme-field) — Path to the package's README file.
+  * [`homepage`](#the-homepage-field) — URL of the package homepage.
+  * [`repository`](#the-repository-field) — URL of the package source repository.
+  * [`license`](#the-license-and-license-file-fields) — The package license.
+  * [`license-file`](#the-license-and-license-file-fields) — Path to the text of the license.
   * [`keywords`](#the-keywords-field) — Keywords for the package.
   * [`categories`](#the-categories-field) — Categories of the package.
   * [`workspace`](#the-workspace-field) — Path to the workspace for the package.
   * [`build`](#the-build-field) — Path to the package build script.
   * [`links`](#the-links-field) — Name of the native library the package links with.
-  * [`exclude`](#the-exclude-and-include-fields) — Files to exclude when publishing.
-  * [`include`](#the-exclude-and-include-fields) — Files to include when publishing.
-  * [`publish`](#the-publish-field) — Can be used to prevent publishing the package.
-  * [`metadata`](#the-metadata-table) — Extra settings for external tools.
-  * [`default-run`](#the-default-run-field) — The default binary to run by [`cargo run`].
-  * [`autobins`](cargo-targets.md#target-auto-discovery) — Disables binary auto discovery.
-  * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
-  * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
-  * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
-  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
+  * [`exclude`](#the-exclude-and-include-fields) — Files to exclude when publishing.
+  * [`include`](#the-exclude-and-include-fields) — Files to include when publishing.
+  * [`publish`](#the-publish-field) — Can be used to prevent publishing the package.
+  * [`metadata`](#the-metadata-table) — Extra settings for external tools.
+  * [`default-run`](#the-default-run-field) — The default binary to run by [`cargo run`].
+  * [`autobins`](cargo-targets.md#target-auto-discovery) — Disables binary auto discovery.
+  * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
+  * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
+  * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
+  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
 * Target tables: (see [configuration](cargo-targets.md#configuring-a-target) for settings)
-  * [`[lib]`](cargo-targets.md#library) — Library target settings.
-  * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.
-  * [`[[example]]`](cargo-targets.md#examples) — Example target settings.
-  * [`[[test]]`](cargo-targets.md#tests) — Test target settings.
-  * [`[[bench]]`](cargo-targets.md#benchmarks) — Benchmark target settings.
+  * [`[lib]`](cargo-targets.md#library) — Library target settings.
+  * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.
+  * [`[[example]]`](cargo-targets.md#examples) — Example target settings.
+  * [`[[test]]`](cargo-targets.md#tests) — Test target settings.
+  * [`[[bench]]`](cargo-targets.md#benchmarks) — Benchmark target settings.
 * Dependency tables:
-  * [`[dependencies]`](specifying-dependencies.md) — Package library dependencies.
-  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
-  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
-  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
-* [`[badges]`](#the-badges-section) — Badges to display on a registry.
-* [`[features]`](features.md) — Conditional compilation features.
-* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
-* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
-* [`[profile]`](profiles.md) — Compiler settings and optimizations.
-* [`[workspace]`](workspaces.md) — The workspace definition.
+  * [`[dependencies]`](specifying-dependencies.md) — Package library dependencies.
+  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
+  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
+  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
+* [`[badges]`](#the-badges-section) — Badges to display on a registry.
+* [`[features]`](features.md) — Conditional compilation features.
+* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
+* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
+* [`[profile]`](profiles.md) — Compiler settings and optimizations.
+* [`[workspace]`](workspaces.md) — The workspace definition.
 
 <a id="package-metadata"></a>
 ### The `[package]` section
@@ -108,7 +109,7 @@ breaking change.
 #### The `authors` field
 
 The optional `authors` field lists people or organizations that are considered
-the "authors" of the package. The exact meaning is open to interpretation — it
+the "authors" of the package. The exact meaning is open to interpretation — it
 may list the original or primary authors, current maintainers, or owners of the
 package. An optional email address may be included within angled brackets at
 the end of each author entry.
@@ -143,6 +144,33 @@ If the `edition` field is not present in `Cargo.toml`, then the 2015 edition is
 assumed for backwards compatibility. Note that all manifests
 created with [`cargo new`] will not use this historical fallback because they
 will have `edition` explicitly specified to a newer value.
+
+#### The `rust-version` field
+
+The `rust-version` field is an optional key that tells cargo what version of the
+Rust language and compiler your package can be compiled with. If the currently
+selected version of the Rust compiler is older than the stated version, cargo
+will exit with an error, telling the user what version is required.
+
+The first version of Cargo that supports this field was released with Rust 1.56.0.
+In older releases, the field will be ignored, and Cargo will display a warning.
+
+```toml
+[package]
+# ...
+rust-version = "1.56"
+```
+
+The Rust version must be a bare version number with two or three components; it
+cannot include semver operators or pre-release identifiers. Compiler pre-release
+identifiers such as -nightly will be ignored while checking the Rust version.
+The `rust-version` must be equal to or newer than the version that first
+introduced the configured `edition`.
+
+The `rust-version` may be ignored using the `--ignore-rust-version` option.
+
+Setting the `rust-version` key in `[package]` will affect all targets/crates in
+the package, including test suites, benchmarks, binaries, examples, etc.
 
 #### The `description` field
 

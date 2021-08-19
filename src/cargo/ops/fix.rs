@@ -46,15 +46,16 @@ use std::process::{self, Command, ExitStatus};
 use std::str;
 
 use anyhow::{bail, Context, Error};
-use cargo_util::{paths, ProcessBuilder};
+use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuilder};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::features::{FeatureOpts, FeatureResolver};
+use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Workspace};
+use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
@@ -229,36 +230,40 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
     let target_data = RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
-    // HasDevUnits::No because that may uncover more differences.
-    // This is not the same as what `cargo fix` is doing, since it is doing
-    // `--all-targets` which includes dev dependencies.
-    let ws_resolve = ops::resolve_ws_with_opts(
-        ws,
-        &target_data,
-        &opts.compile_opts.build_config.requested_kinds,
-        &opts.compile_opts.cli_features,
-        &specs,
-        HasDevUnits::No,
-        crate::core::resolver::features::ForceAllTargets::No,
-    )?;
+    let resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
+        let ws_resolve = ops::resolve_ws_with_opts(
+            ws,
+            &target_data,
+            &opts.compile_opts.build_config.requested_kinds,
+            &opts.compile_opts.cli_features,
+            &specs,
+            has_dev_units,
+            crate::core::resolver::features::ForceAllTargets::No,
+        )?;
 
-    let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, HasDevUnits::No);
-    let v2_features = FeatureResolver::resolve(
-        ws,
-        &target_data,
-        &ws_resolve.targeted_resolve,
-        &ws_resolve.pkg_set,
-        &opts.compile_opts.cli_features,
-        &specs,
-        &opts.compile_opts.build_config.requested_kinds,
-        feature_opts,
-    )?;
+        let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);
+        let v2_features = FeatureResolver::resolve(
+            ws,
+            &target_data,
+            &ws_resolve.targeted_resolve,
+            &ws_resolve.pkg_set,
+            &opts.compile_opts.cli_features,
+            &specs,
+            &opts.compile_opts.build_config.requested_kinds,
+            feature_opts,
+        )?;
 
-    let differences = v2_features.compare_legacy(&ws_resolve.resolved_features);
-    if differences.is_empty() {
+        let diffs = v2_features.compare_legacy(&ws_resolve.resolved_features);
+        Ok((ws_resolve, diffs))
+    };
+    let (_, without_dev_diffs) = resolve_differences(HasDevUnits::No)?;
+    let (ws_resolve, mut with_dev_diffs) = resolve_differences(HasDevUnits::Yes)?;
+    if without_dev_diffs.is_empty() && with_dev_diffs.is_empty() {
         // Nothing is different, nothing to report.
         return Ok(());
     }
+    // Only display unique changes with dev-dependencies.
+    with_dev_diffs.retain(|k, vals| without_dev_diffs.get(k) != Some(vals));
     let config = ws.config();
     config.shell().note(
         "Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.",
@@ -277,16 +282,28 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         "When building the following dependencies, \
          the given features will no longer be used:\n"
     );
-    for ((pkg_id, for_host), removed) in differences {
-        drop_eprint!(config, "  {}", pkg_id);
-        if for_host {
-            drop_eprint!(config, " (as host dependency)");
+    let show_diffs = |differences: DiffMap| {
+        for ((pkg_id, for_host), removed) in differences {
+            drop_eprint!(config, "  {}", pkg_id);
+            if for_host {
+                drop_eprint!(config, " (as host dependency)");
+            }
+            drop_eprint!(config, " removed features: ");
+            let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
+            drop_eprintln!(config, "{}", joined.join(", "));
         }
-        drop_eprint!(config, ": ");
-        let joined: Vec<_> = removed.iter().map(|s| s.as_str()).collect();
-        drop_eprintln!(config, "{}", joined.join(", "));
+        drop_eprint!(config, "\n");
+    };
+    if !without_dev_diffs.is_empty() {
+        show_diffs(without_dev_diffs);
     }
-    drop_eprint!(config, "\n");
+    if !with_dev_diffs.is_empty() {
+        drop_eprintln!(
+            config,
+            "The following differences only apply when building with dev-dependencies:\n"
+        );
+        show_diffs(with_dev_diffs);
+    }
     report_maybe_diesel(config, &ws_resolve.targeted_resolve)?;
     Ok(())
 }
@@ -374,7 +391,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
                     paths::write(path, &file.original_code)?;
                 }
             }
-            log_failed_fix(&output.stderr)?;
+            log_failed_fix(&output.stderr, output.status)?;
         }
     }
 
@@ -662,7 +679,7 @@ fn exit_with(status: ExitStatus) -> ! {
     process::exit(status.code().unwrap_or(3));
 }
 
-fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
+fn log_failed_fix(stderr: &[u8], status: ExitStatus) -> Result<(), Error> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let diagnostics = stderr
@@ -677,6 +694,13 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
             files.insert(span.file_name);
         }
     }
+    // Include any abnormal messages (like an ICE or whatever).
+    errors.extend(
+        stderr
+            .lines()
+            .filter(|x| !x.starts_with('{'))
+            .map(|x| x.to_string()),
+    );
     let mut krate = None;
     let mut prev_dash_dash_krate_name = false;
     for arg in env::args() {
@@ -692,10 +716,16 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
     }
 
     let files = files.into_iter().collect();
+    let abnormal_exit = if status.code().map_or(false, is_simple_exit_code) {
+        None
+    } else {
+        Some(exit_status_to_string(status))
+    };
     Message::FixFailed {
         files,
         krate,
         errors,
+        abnormal_exit,
     }
     .post()?;
 
@@ -793,7 +823,7 @@ impl FixArgs {
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
                 if config.nightly_features_allowed {
-                    cmd.arg("--force-warns")
+                    cmd.arg("--force-warn")
                         .arg(format!("rust-{}-compatibility", edition))
                         .arg("-Zunstable-options");
                 } else {

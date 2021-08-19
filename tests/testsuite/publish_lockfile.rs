@@ -333,7 +333,7 @@ fn warn_package_with_yanked() {
 [PACKAGING] foo v0.0.1 ([..])
 [UPDATING] `[..]` index
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
-    `crates.io`, consider updating to a version that is not yanked
+    `crates-io`, consider updating to a version that is not yanked
 ",
         )
         .run();
@@ -372,7 +372,7 @@ dependencies = [
 [DOWNLOADED] foo v0.1.0 (registry `[..]`)
 [INSTALLING] foo v0.1.0
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
-    `crates.io`, consider running without --locked
+    `crates-io`, consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `[..]`)
 [COMPILING] bar v0.1.0

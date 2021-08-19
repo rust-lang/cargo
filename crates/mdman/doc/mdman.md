@@ -57,11 +57,11 @@ man page:
 
 {{#option "`-t` _type_"}}
 Specifies the output type. The following output types are supported:
-- `man` — A troff-style man page. Outputs with a numbered extension (like
+- `man` — A troff-style man page. Outputs with a numbered extension (like
   `.1`) matching the man page section.
-- `md` — A markdown file, after all handlebars processing has been finished.
+- `md` — A markdown file, after all handlebars processing has been finished.
   Outputs with the `.md` extension.
-- `txt` — A text file, rendered for situations where a man page viewer isn't
+- `txt` — A text file, rendered for situations where a man page viewer isn't
   available. Outputs with the `.txt` extension.
 {{/option}}
 

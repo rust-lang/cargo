@@ -194,7 +194,7 @@ Caused by:
   no matching package found
   searched package name: `baz`
   perhaps you meant:      bar or foo
-  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  location searched: registry `crates-io`
   required by package `bar v0.1.0`
 ",
         )

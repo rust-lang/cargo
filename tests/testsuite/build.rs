@@ -4777,7 +4777,7 @@ fn avoid_dev_deps() {
             "\
 [UPDATING] [..]
 [ERROR] no matching package named `baz` found
-location searched: registry `https://github.com/rust-lang/crates.io-index`
+location searched: registry `crates-io`
 required by package `bar v0.1.0 ([..]/foo)`
 ",
         )

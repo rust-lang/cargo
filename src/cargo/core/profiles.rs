@@ -133,7 +133,6 @@ impl Profiles {
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
         let mut dir_names = HashMap::new();
         dir_names.insert(InternedString::new("dev"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("check"), InternedString::new("debug"));
         dir_names.insert(InternedString::new("test"), InternedString::new("debug"));
         dir_names.insert(InternedString::new("bench"), InternedString::new("release"));
         dir_names
@@ -169,13 +168,6 @@ impl Profiles {
             ),
             (
                 "test",
-                TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
-                    ..TomlProfile::default()
-                },
-            ),
-            (
-                "check",
                 TomlProfile {
                     inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()
@@ -573,6 +565,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
     }
+    if toml.codegen_backend.is_some() {
+        profile.codegen_backend = toml.codegen_backend;
+    }
     if toml.codegen_units.is_some() {
         profile.codegen_units = toml.codegen_units;
     }
@@ -634,6 +629,8 @@ pub struct Profile {
     pub root: ProfileRoot,
     pub lto: Lto,
     // `None` means use rustc default.
+    pub codegen_backend: Option<InternedString>,
+    // `None` means use rustc default.
     pub codegen_units: Option<u32>,
     pub debuginfo: Option<u32>,
     pub split_debuginfo: Option<InternedString>,
@@ -652,6 +649,7 @@ impl Default for Profile {
             opt_level: InternedString::new("0"),
             root: ProfileRoot::Debug,
             lto: Lto::Bool(false),
+            codegen_backend: None,
             codegen_units: None,
             debuginfo: None,
             debug_assertions: false,
@@ -678,6 +676,7 @@ compact_debug! {
                 opt_level
                 lto
                 root
+                codegen_backend
                 codegen_units
                 debuginfo
                 split_debuginfo
@@ -765,6 +764,7 @@ impl Profile {
         (
             self.opt_level,
             self.lto,
+            self.codegen_backend,
             self.codegen_units,
             self.debuginfo,
             self.split_debuginfo,
@@ -859,7 +859,7 @@ pub struct UnitFor {
     /// uses the `get_profile_run_custom_build` method to get the correct
     /// profile information for the unit. `host` needs to be true so that all
     /// of the dependencies of that `RunCustomBuild` unit have this flag be
-    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// sticky (and forced to `true` for all further dependencies) — which is
     /// the whole point of `UnitFor`.
     host: bool,
     /// A target for a build dependency or proc-macro (or any of its

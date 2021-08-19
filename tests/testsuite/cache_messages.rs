@@ -1,10 +1,8 @@
 //! Tests for caching compiler diagnostics.
 
+use super::messages::raw_rustc_output;
 use cargo_test_support::tools;
-use cargo_test_support::{
-    basic_manifest, is_coarse_mtime, process, project, registry::Package, sleep_ms,
-};
-use std::path::Path;
+use cargo_test_support::{basic_manifest, is_coarse_mtime, project, registry::Package, sleep_ms};
 
 fn as_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).expect("valid utf-8")
@@ -23,33 +21,23 @@ fn simple() {
         )
         .build();
 
-    let agnostic_path = Path::new("src").join("lib.rs");
-    let agnostic_path_s = agnostic_path.to_str().unwrap();
-
     // Capture what rustc actually emits. This is done to avoid relying on the
     // exact message formatting in rustc.
-    let rustc_output = process("rustc")
-        .cwd(p.root())
-        .args(&["--crate-type=lib", agnostic_path_s])
-        .exec_with_output()
-        .expect("rustc to run");
-
-    assert!(rustc_output.stdout.is_empty());
-    assert!(rustc_output.status.success());
+    let rustc_output = raw_rustc_output(&p, "src/lib.rs", &[]);
 
     // -q so the output is the same as rustc (no "Compiling" or "Finished").
     let cargo_output1 = p
         .cargo("check -q --color=never")
         .exec_with_output()
         .expect("cargo to run");
-    assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output1.stderr));
+    assert_eq!(rustc_output, as_str(&cargo_output1.stderr));
     assert!(cargo_output1.stdout.is_empty());
     // Check that the cached version is exactly the same.
     let cargo_output2 = p
         .cargo("check -q")
         .exec_with_output()
         .expect("cargo to run");
-    assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output2.stderr));
+    assert_eq!(rustc_output, as_str(&cargo_output2.stderr));
     assert!(cargo_output2.stdout.is_empty());
 }
 
@@ -66,30 +54,20 @@ fn simple_short() {
         )
         .build();
 
-    let agnostic_path = Path::new("src").join("lib.rs");
-    let agnostic_path_s = agnostic_path.to_str().unwrap();
-
-    let rustc_output = process("rustc")
-        .cwd(p.root())
-        .args(&["--crate-type=lib", agnostic_path_s, "--error-format=short"])
-        .exec_with_output()
-        .expect("rustc to run");
-
-    assert!(rustc_output.stdout.is_empty());
-    assert!(rustc_output.status.success());
+    let rustc_output = raw_rustc_output(&p, "src/lib.rs", &["--error-format=short"]);
 
     let cargo_output1 = p
         .cargo("check -q --color=never --message-format=short")
         .exec_with_output()
         .expect("cargo to run");
-    assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output1.stderr));
+    assert_eq!(rustc_output, as_str(&cargo_output1.stderr));
     // assert!(cargo_output1.stdout.is_empty());
     let cargo_output2 = p
         .cargo("check -q --message-format=short")
         .exec_with_output()
         .expect("cargo to run");
     println!("{}", String::from_utf8_lossy(&cargo_output2.stdout));
-    assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output2.stderr));
+    assert_eq!(rustc_output, as_str(&cargo_output2.stderr));
     assert!(cargo_output2.stdout.is_empty());
 }
 
@@ -112,25 +90,12 @@ fn color() {
         assert_eq!(normalize(a), normalize(b));
     };
 
-    let agnostic_path = Path::new("src").join("lib.rs");
-    let agnostic_path_s = agnostic_path.to_str().unwrap();
     // Capture the original color output.
-    let rustc_output = process("rustc")
-        .cwd(p.root())
-        .args(&["--crate-type=lib", agnostic_path_s, "--color=always"])
-        .exec_with_output()
-        .expect("rustc to run");
-    assert!(rustc_output.status.success());
-    let rustc_color = as_str(&rustc_output.stderr);
+    let rustc_color = raw_rustc_output(&p, "src/lib.rs", &["--color=always"]);
     assert!(rustc_color.contains("\x1b["));
 
     // Capture the original non-color output.
-    let rustc_output = process("rustc")
-        .cwd(p.root())
-        .args(&["--crate-type=lib", agnostic_path_s])
-        .exec_with_output()
-        .expect("rustc to run");
-    let rustc_nocolor = as_str(&rustc_output.stderr);
+    let rustc_nocolor = raw_rustc_output(&p, "src/lib.rs", &[]);
     assert!(!rustc_nocolor.contains("\x1b["));
 
     // First pass, non-cached, with color, should be the same.
@@ -138,21 +103,21 @@ fn color() {
         .cargo("check -q --color=always")
         .exec_with_output()
         .expect("cargo to run");
-    compare(rustc_color, as_str(&cargo_output1.stderr));
+    compare(&rustc_color, as_str(&cargo_output1.stderr));
 
     // Replay cached, with color.
     let cargo_output2 = p
         .cargo("check -q --color=always")
         .exec_with_output()
         .expect("cargo to run");
-    compare(rustc_color, as_str(&cargo_output2.stderr));
+    compare(&rustc_color, as_str(&cargo_output2.stderr));
 
     // Replay cached, no color.
     let cargo_output_nocolor = p
         .cargo("check -q --color=never")
         .exec_with_output()
         .expect("cargo to run");
-    compare(rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
+    compare(&rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
 }
 
 #[cargo_test]
@@ -441,7 +406,8 @@ fn caching_large_output() {
         .with_stderr(&format!(
             "\
 [CHECKING] foo [..]
-{}[FINISHED] dev [..]
+{}warning: `foo` (lib) generated 250 warnings
+[FINISHED] dev [..]
 ",
             expected
         ))
@@ -451,7 +417,8 @@ fn caching_large_output() {
         .env("RUSTC", rustc.bin("rustc_alt"))
         .with_stderr(&format!(
             "\
-{}[FINISHED] dev [..]
+{}warning: `foo` (lib) generated 250 warnings
+[FINISHED] dev [..]
 ",
             expected
         ))

@@ -467,6 +467,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             let meta = &self.metas[unit];
             let meta_opt = meta.use_extra_filename.then(|| meta.meta_hash.to_string());
             let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
+
+            // If, the `different_binary_name` feature is enabled, the name of the hardlink will
+            // be the name of the binary provided by the user in `Cargo.toml`.
             let hardlink = self.uplift_to(unit, &file_type, &path);
             let export_path = if unit.target.is_custom_build() {
                 None
@@ -626,19 +629,13 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     // No metadata in these cases:
     //
     // - dylibs:
-    //   - macOS encodes the dylib name in the executable, so it can't be renamed.
-    //   - TODO: Are there other good reasons? If not, maybe this should be macos specific?
+    //   - if any dylib names are encoded in executables, so they can't be renamed.
+    //   - TODO: Maybe use `-install-name` on macOS or `-soname` on other UNIX systems
+    //     to specify the dylib name to be used by the linker instead of the filename.
     // - Windows MSVC executables: The path to the PDB is embedded in the
     //   executable, and we don't want the PDB path to include the hash in it.
-    // - wasm32 executables: When using emscripten, the path to the .wasm file
-    //   is embedded in the .js file, so we don't want the hash in there.
-    //   TODO: Is this necessary for wasm32-unknown-unknown?
-    // - apple executables: The executable name is used in the dSYM directory
-    //   (such as `target/debug/foo.dSYM/Contents/Resources/DWARF/foo-64db4e4bf99c12dd`).
-    //   Unfortunately this causes problems with our current backtrace
-    //   implementation which looks for a file matching the exe name exactly.
-    //   See https://github.com/rust-lang/rust/issues/72550#issuecomment-638501691
-    //   for more details.
+    // - wasm32-unknown-emscripten executables: When using emscripten, the path to the
+    //   .wasm file is embedded in the .js file, so we don't want the hash in there.
     //
     // This is only done for local packages, as we don't expect to export
     // dependencies.
@@ -647,14 +644,14 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     // force metadata in the hash. This is only used for building libstd. For
     // example, if libstd is placed in a common location, we don't want a file
     // named /usr/lib/libstd.so which could conflict with other rustc
-    // installs. TODO: Is this still a realistic concern?
+    // installs. In addition it prevents accidentally loading a libstd of a
+    // different compiler at runtime.
     // See https://github.com/rust-lang/cargo/issues/3005
     let short_name = bcx.target_data.short_name(&unit.kind);
     if (unit.target.is_dylib()
         || unit.target.is_cdylib()
-        || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
-        || (unit.target.is_executable() && short_name.contains("msvc"))
-        || (unit.target.is_executable() && short_name.contains("-apple-")))
+        || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
+        || (unit.target.is_executable() && short_name.contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
         && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
     {

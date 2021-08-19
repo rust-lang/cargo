@@ -1,63 +1,17 @@
 //! Tests for custom cargo commands and other global command features.
 
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
-use cargo_test_support::cargo_process;
-use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
-
-#[cfg_attr(windows, allow(dead_code))]
-enum FakeKind<'a> {
-    Executable,
-    Symlink { target: &'a Path },
-}
-
-/// Adds an empty file with executable flags (and platform-dependent suffix).
-//
-// TODO: move this to `Project` if other cases using this emerge.
-fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind<'_>) -> Project {
-    let path = proj
-        .root()
-        .join(dir)
-        .join(&format!("{}{}", name, env::consts::EXE_SUFFIX));
-    path.parent().unwrap().mkdir_p();
-    match *kind {
-        FakeKind::Executable => {
-            File::create(&path).unwrap();
-            make_executable(&path);
-        }
-        FakeKind::Symlink { target } => {
-            make_symlink(&path, target);
-        }
-    }
-    return proj;
-
-    #[cfg(unix)]
-    fn make_executable(p: &Path) {
-        use std::os::unix::prelude::*;
-
-        let mut perms = fs::metadata(p).unwrap().permissions();
-        let mode = perms.mode();
-        perms.set_mode(mode | 0o111);
-        fs::set_permissions(p, perms).unwrap();
-    }
-    #[cfg(windows)]
-    fn make_executable(_: &Path) {}
-    #[cfg(unix)]
-    fn make_symlink(p: &Path, t: &Path) {
-        ::std::os::unix::fs::symlink(t, p).expect("Failed to create symlink");
-    }
-    #[cfg(windows)]
-    fn make_symlink(_: &Path, _: &Path) {
-        panic!("Not supported")
-    }
-}
+use cargo_test_support::tools::echo_subcommand;
+use cargo_test_support::{
+    basic_bin_manifest, cargo_exe, cargo_process, paths, project, project_in_home,
+};
 
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
@@ -79,7 +33,7 @@ fn list_commands_with_descriptions() {
 }
 
 #[cargo_test]
-fn list_aliases_with_descriptions() {
+fn list_builtin_aliases_with_descriptions() {
     let p = project().build();
     p.cargo("--list")
         .with_stdout_contains("    b                    alias: build")
@@ -90,14 +44,47 @@ fn list_aliases_with_descriptions() {
 }
 
 #[cargo_test]
+fn list_custom_aliases_with_descriptions() {
+    let p = project_in_home("proj")
+        .file(
+            &paths::home().join(".cargo").join("config"),
+            r#"
+            [alias]
+            myaliasstr = "foo --bar"
+            myaliasvec = ["foo", "--bar"]
+        "#,
+        )
+        .build();
+
+    p.cargo("--list")
+        .with_stdout_contains("    myaliasstr           foo --bar")
+        .with_stdout_contains("    myaliasvec           foo --bar")
+        .run();
+}
+
+#[cargo_test]
+fn list_dedupe() {
+    let p = project()
+        .executable(Path::new("path-test-1").join("cargo-dupe"), "")
+        .executable(Path::new("path-test-2").join("cargo-dupe"), "")
+        .build();
+
+    let mut path = path();
+    path.push(p.root().join("path-test-1"));
+    path.push(p.root().join("path-test-2"));
+    let path = env::join_paths(path.iter()).unwrap();
+
+    p.cargo("--list")
+        .env("PATH", &path)
+        .with_stdout_contains_n("    dupe", 1)
+        .run();
+}
+
+#[cargo_test]
 fn list_command_looks_at_path() {
-    let proj = project().build();
-    let proj = fake_file(
-        proj,
-        Path::new("path-test"),
-        "cargo-1",
-        &FakeKind::Executable,
-    );
+    let proj = project()
+        .executable(Path::new("path-test").join("cargo-1"), "")
+        .build();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
@@ -114,19 +101,11 @@ fn list_command_looks_at_path() {
     );
 }
 
-// Windows and symlinks don't currently mix well.
-#[cfg(unix)]
 #[cargo_test]
 fn list_command_resolves_symlinks() {
-    let proj = project().build();
-    let proj = fake_file(
-        proj,
-        Path::new("path-test"),
-        "cargo-2",
-        &FakeKind::Symlink {
-            target: &cargo_exe(),
-        },
-    );
+    let proj = project()
+        .symlink(cargo_exe(), Path::new("path-test").join("cargo-2"))
+        .build();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
@@ -305,31 +284,17 @@ fn cargo_subcommand_env() {
 
 #[cargo_test]
 fn cargo_subcommand_args() {
-    let p = project()
-        .at("cargo-foo")
-        .file("Cargo.toml", &basic_manifest("cargo-foo", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-                fn main() {
-                    let args: Vec<_> = ::std::env::args().collect();
-                    println!("{}", args.join(" "));
-                }
-            "#,
-        )
-        .build();
-
-    p.cargo("build").run();
-    let cargo_foo_bin = p.bin("cargo-foo");
+    let p = echo_subcommand();
+    let cargo_foo_bin = p.bin("cargo-echo");
     assert!(cargo_foo_bin.is_file());
 
     let mut path = path();
     path.push(p.target_debug_dir());
     let path = env::join_paths(path.iter()).unwrap();
 
-    cargo_process("foo bar -v --help")
+    cargo_process("echo bar -v --help")
         .env("PATH", &path)
-        .with_stdout("[CWD]/cargo-foo/target/debug/cargo-foo[EXE] foo bar -v --help")
+        .with_stdout("echo bar -v --help")
         .run();
 }
 

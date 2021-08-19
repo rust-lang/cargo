@@ -184,6 +184,7 @@ use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionR
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
+pub const CRATES_IO_DOMAIN: &str = "crates.io";
 const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
