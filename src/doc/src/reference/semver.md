@@ -943,7 +943,7 @@ pub fn foo<T, U>() {}
 use updated_crate::foo;
 
 fn main() {
-    foo::<u8>(); // Error: this function takes 2 type arguments but only 1 type argument was supplied
+    foo::<u8>(); // Error: this function takes 2 generic arguments but 1 generic argument was supplied
 }
 ```
 

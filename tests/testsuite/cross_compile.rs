@@ -463,15 +463,15 @@ fn plugin_with_extra_dylib_dep() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
 
                 extern crate baz;
                 extern crate rustc_driver;
 
                 use rustc_driver::plugin::Registry;
 
-                #[plugin_registrar]
-                pub fn foo(reg: &mut Registry) {
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(reg: &mut Registry) {
                     println!("{}", baz::baz());
                 }
             "#,
