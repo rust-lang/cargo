@@ -1378,7 +1378,10 @@ fn crate_env_vars() {
                     let tmpdir: PathBuf = tmp.unwrap().into();
 
                     let exe: PathBuf = env::current_exe().unwrap().into();
-                    let mut expected: PathBuf = exe.parent().unwrap().parent().unwrap().into();
+                    let mut expected: PathBuf = exe.parent().unwrap()
+                        .parent().unwrap()
+                        .parent().unwrap()
+                        .into();
                     expected.push("tmp");
                     assert_eq!(tmpdir, expected);
 
