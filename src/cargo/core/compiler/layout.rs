@@ -172,7 +172,7 @@ impl Layout {
             fingerprint: dest.join(".fingerprint"),
             examples: dest.join("examples"),
             doc: root.join("doc"),
-            tmp: dest.join("tmp"),
+            tmp: root.join("tmp"),
             root,
             dest,
             _lock: lock,

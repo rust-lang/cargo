@@ -627,6 +627,7 @@ impl TomlProfile {
                 | "rust"
                 | "rustc"
                 | "rustdoc"
+                | "tmp"
                 | "uninstall"
         ) || lower_name.starts_with("cargo")
         {
