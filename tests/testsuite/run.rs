@@ -1,5 +1,6 @@
 //! Tests for the `cargo run` command.
 
+use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 use cargo_util::paths::dylib_path_envvar;
 
@@ -1157,7 +1158,7 @@ fn run_multiple_packages() {
         .file("foo/d2/Cargo.toml", &basic_bin_manifest("d2"))
         .file("foo/d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .file("d3/Cargo.toml", &basic_bin_manifest("d3"))
-        .file("d3/src/main.rs", "fn main() { println!(\"d2\"); }")
+        .file("d3/src/main.rs", "fn main() { println!(\"d3\"); }")
         .build();
 
     let cargo = || {
@@ -1182,12 +1183,7 @@ fn run_multiple_packages() {
                     .with_status(1)
                     .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times").run();
 
-    cargo()
-        .arg("-p")
-        .arg("d3")
-        .with_status(101)
-        .with_stderr_contains("[ERROR] package(s) `d3` not found in workspace [..]")
-        .run();
+    cargo().arg("-p").arg("d3").with_stdout("d3").run();
 
     cargo()
         .arg("-p")
@@ -1197,6 +1193,111 @@ fn run_multiple_packages() {
             "[ERROR] `cargo run` does not support glob pattern `d*` on package selection",
         )
         .run();
+}
+
+#[cargo_test]
+fn run_dependency_package() {
+    Package::new("bdep", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bdep"
+            version = "0.1.0"
+            authors = ["wycats@example.com"]
+
+            [[bin]]
+            name = "bdep"
+        "#,
+        )
+        .file("src/main.rs", "fn main() { println!(\"bdep 0.1.0\"); }")
+        .publish();
+    Package::new("bdep", "0.1.1")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bdep"
+            version = "0.1.1"
+            authors = ["wycats@example.com"]
+
+            [[bin]]
+            name = "bdep"
+        "#,
+        )
+        .file("src/main.rs", "fn main() { println!(\"bdep 0.1.1\"); }")
+        .publish();
+    Package::new("libdep", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "libdep"
+            version = "0.1.0"
+            authors = ["wycats@example.com"]
+
+            [lib]
+        "#,
+        )
+        .file("src/lib.rs", "pub fn f() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [build-dependencies]
+                bdep = "0.1"
+                libdep = "0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { println!(\"foo\"); }")
+        .build();
+
+    let testcases = [
+        ("bdep", "bdep 0.1.1"),
+        ("bdep:0.1.1", "bdep 0.1.1"),
+        (
+            "https://github.com/rust-lang/crates.io-index#bdep",
+            "bdep 0.1.1",
+        ),
+    ];
+    for (pkgid, expected_output) in testcases {
+        p.cargo("run")
+            .arg("-p")
+            .arg(pkgid)
+            .with_stdout(expected_output)
+            .run();
+    }
+
+    p.cargo("run")
+        .arg("-p")
+        .arg("libdep")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] a bin target must be available for `cargo run`")
+        .run();
+
+    let invalid_pkgids = [
+        "bdep:0.1.0",
+        "https://github.com/rust-lang/crates.io-index#bdep:0.1.0",
+        "bdep:0.2.0",
+        "https://github.com/rust-lang/crates.io-index#bdep:0.2.0",
+    ];
+    for pkgid in invalid_pkgids {
+        p.cargo("run")
+                .arg("-p")
+                .arg(pkgid)
+                .with_status(101)
+                .with_stderr_contains(
+                    "[ERROR] `cargo run` cannot find pkgid either in the workspace or among the workspace dependencies",
+                )
+                .run();
+    }
 }
 
 #[cargo_test]
