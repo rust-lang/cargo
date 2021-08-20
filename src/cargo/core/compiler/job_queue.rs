@@ -885,7 +885,21 @@ impl<'cfg> DrainState<'cfg> {
         if !bcx.config.cli_unstable().future_incompat_report {
             return;
         }
+        let should_display_message = match bcx.config.future_incompat_config() {
+            Ok(config) => config.should_display_message(),
+            Err(e) => {
+                crate::display_warning_with_error(
+                    "failed to read future-incompat config from disk",
+                    &e,
+                    &mut bcx.config.shell(),
+                );
+                true
+            }
+        };
+
         if self.per_package_future_incompat_reports.is_empty() {
+            // Explicitly passing a command-line flag overrides
+            // `should_display_message` from the config file
             if bcx.build_config.future_incompat_report {
                 drop(
                     bcx.config
@@ -907,11 +921,13 @@ impl<'cfg> DrainState<'cfg> {
             .map(|pid| pid.to_string())
             .collect();
 
-        drop(bcx.config.shell().warn(&format!(
-            "the following packages contain code that will be rejected by a future \
-             version of Rust: {}",
-            package_vers.join(", ")
-        )));
+        if should_display_message || bcx.build_config.future_incompat_report {
+            drop(bcx.config.shell().warn(&format!(
+                "the following packages contain code that will be rejected by a future \
+                 version of Rust: {}",
+                package_vers.join(", ")
+            )));
+        }
 
         let on_disk_reports =
             OnDiskReports::save_report(bcx.ws, &self.per_package_future_incompat_reports);
@@ -925,7 +941,7 @@ impl<'cfg> DrainState<'cfg> {
                  future-incompatibilities -Z future-incompat-report --id {}`",
                 report_id
             )));
-        } else {
+        } else if should_display_message {
             drop(bcx.config.shell().note(&format!(
                 "to see what the problems were, use the option \
                  `--future-incompat-report`, or run `cargo report \
