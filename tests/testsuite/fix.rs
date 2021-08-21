@@ -1691,41 +1691,41 @@ fn fix_with_run_cargo_in_proc_macros() {
         .file(
             "Cargo.toml",
             r#"
-                    [package]
-                    name = "foo"
-                    version = "0.1.0"
-                    edition = "2018"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
 
-                    [lib]
-                    proc-macro = true
-                "#,
+                [lib]
+                proc-macro = true
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-                    use proc_macro::*;
+                use proc_macro::*;
     
-                    #[proc_macro]
-                    pub fn foo(_input: TokenStream) -> TokenStream {
-                        let output = std::process::Command::new("cargo")
-                            .args(&["metadata", "--format-version=1"])
-                            .output()
-                            .unwrap();
-                        eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
-                        println!("{}", std::str::from_utf8(&output.stdout).unwrap());
-                        "".parse().unwrap()
-                    }                    
-                "#,
+                #[proc_macro]
+                pub fn foo(_input: TokenStream) -> TokenStream {
+                    let output = std::process::Command::new("cargo")
+                        .args(&["metadata", "--format-version=1"])
+                        .output()
+                        .unwrap();
+                    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
+                    println!("{}", std::str::from_utf8(&output.stdout).unwrap());
+                    "".parse().unwrap()
+                }                    
+            "#,
         )
         .file(
             "src/bin/main.rs",
             r#"
-            use foo::foo;
+                use foo::foo;
 
-            fn main() {
-                foo!("bar")
-            }
-        "#,
+                fn main() {
+                    foo!("bar")
+                }
+            "#,
         )
         .build();
     p.cargo("fix --allow-no-vcs")
