@@ -89,17 +89,22 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
 
     /// Resolves one of the paths from the given dependent package down to
     /// a leaf.
-    pub fn path_to_bottom<'a>(&'a self, mut pkg: &'a N) -> Vec<&'a N> {
-        let mut result = vec![pkg];
+    ///
+    /// Each element contains a node along with an edge except the first one.
+    /// The representation would look like:
+    ///
+    /// (Node0,) -> (Node1, Edge01) -> (Node2, Edge12)...
+    pub fn path_to_bottom<'a>(&'a self, mut pkg: &'a N) -> Vec<(&'a N, Option<&'a E>)> {
+        let mut result = vec![(pkg, None)];
         while let Some(p) = self.nodes.get(pkg).and_then(|p| {
             p.iter()
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
-                .find(|(node, _)| !result.contains(node))
-                .map(|(p, _)| p)
+                .find(|&(node, _)| result.iter().all(|p| p.0 != node))
+                .map(|(node, edge)| (node, Some(edge)))
         }) {
             result.push(p);
-            pkg = p;
+            pkg = p.0;
         }
         result
     }
