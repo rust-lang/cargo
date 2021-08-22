@@ -252,18 +252,19 @@ impl<'de, P: Deserialize<'de>> de::Deserialize<'de> for TomlDependency<P> {
 }
 
 pub trait ResolveToPath {
-    fn resolve(&self, config: &Config) -> PathBuf;
+    fn resolve(&self, config: &Config) -> CargoResult<PathBuf>;
 }
 
 impl ResolveToPath for String {
-    fn resolve(&self, _: &Config) -> PathBuf {
-        self.into()
+    fn resolve(&self, _: &Config) -> CargoResult<PathBuf> {
+        let expanded_path = crate::util::env_vars::expand_env_vars(self)?;
+        Ok(expanded_path.to_string().into())
     }
 }
 
 impl ResolveToPath for ConfigRelativePath {
-    fn resolve(&self, c: &Config) -> PathBuf {
-        self.resolve_path(c)
+    fn resolve(&self, c: &Config) -> CargoResult<PathBuf> {
+        Ok(self.resolve_path(c))
     }
 }
 
@@ -1887,7 +1888,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
                 SourceId::for_git(&loc, reference)?
             }
             (None, Some(path), _, _) => {
-                let path = path.resolve(cx.config);
+                let path = path.resolve(cx.config)?;
                 cx.nested_paths.push(path.clone());
                 // If the source ID for the package we're parsing is a path
                 // source, then we normalize the path here to get rid of

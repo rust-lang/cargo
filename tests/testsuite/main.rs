@@ -123,6 +123,7 @@ mod tree;
 mod tree_graph_features;
 mod unit_graph;
 mod update;
+mod var_refs;
 mod vendor;
 mod verify_project;
 mod version;

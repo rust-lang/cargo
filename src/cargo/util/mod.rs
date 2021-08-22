@@ -36,6 +36,7 @@ pub mod cpu;
 mod dependency_queue;
 pub mod diagnostic_server;
 pub mod errors;
+pub mod env_vars;
 mod flock;
 pub mod graph;
 mod hasher;
