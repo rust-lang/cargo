@@ -1064,7 +1064,7 @@ fn links_duplicates_deep_dependency() {
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
     ... required by package `a v0.5.0 ([..])`
-    ... which is depended on by `foo v0.5.0 ([..])`
+    ... which satisfies path dependency `a` of package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:

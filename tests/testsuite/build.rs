@@ -1096,14 +1096,14 @@ fn incompatible_dependencies() {
             "\
 error: failed to select a version for `bad`.
     ... required by package `qux v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `qux = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v1.0.0`
-    ... which is depended on by `baz v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `bad = \"=1.0.0\"` of package `baz v0.1.0`
+    ... which satisfies dependency `baz = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         )
@@ -1147,12 +1147,12 @@ versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v2.0.1`
-    ... which is depended on by `baz v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `bad = \">=2.0.1\"` of package `baz v0.1.0`
+    ... which satisfies dependency `baz = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
   previously selected package `bad v1.0.0`
-    ... which is depended on by `bar v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `bad = \"=1.0.0\"` of package `bar v0.1.0`
+    ... which satisfies dependency `bar = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         )
@@ -1662,7 +1662,7 @@ fn self_dependency() {
             "\
 [ERROR] cyclic package dependency: package `test v0.0.0 ([CWD])` depends on itself. Cycle:
 package `test v0.0.0 ([CWD])`
-    ... which is depended on by `test v0.0.0 ([..])`",
+    ... which satisfies path dependency `test` of package `test v0.0.0 ([..])`",
         )
         .run();
 }
@@ -2808,8 +2808,8 @@ fn cyclic_deps_rejected() {
         .with_stderr(
 "[ERROR] cyclic package dependency: package `a v0.0.1 ([CWD]/a)` depends on itself. Cycle:
 package `a v0.0.1 ([CWD]/a)`
-    ... which is depended on by `foo v0.0.1 ([CWD])`
-    ... which is depended on by `a v0.0.1 ([..])`",
+    ... which satisfies path dependency `a` of package `foo v0.0.1 ([CWD])`
+    ... which satisfies path dependency `foo` of package `a v0.0.1 ([..])`",
         ).run();
 }
 
