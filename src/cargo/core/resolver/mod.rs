@@ -609,7 +609,7 @@ fn activate(
     cx.age += 1;
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        // add a edge from candidate to parent in the parents graph
+        // add an edge from candidate to parent in the parents graph
         cx.parents
             .link(candidate_pid, parent_pid)
             // and associate dep with that edge
@@ -700,7 +700,7 @@ struct BacktrackFrame {
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Summary>,
-    // This is a inlined peekable generator
+    // This is an inlined peekable generator
     has_another: Option<Summary>,
 }
 

@@ -205,7 +205,7 @@ impl Ord for DepsFrame {
     }
 }
 
-/// Note that a `OrdSet` is used for the remaining dependencies that need
+/// Note that an `OrdSet` is used for the remaining dependencies that need
 /// activation. This set is sorted by how many candidates each dependency has.
 ///
 /// This helps us get through super constrained portions of the dependency
