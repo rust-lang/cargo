@@ -20,7 +20,17 @@ pub fn run(
 
     // We compute the `bins` here *just for diagnosis*. The actual set of
     // packages to be run is determined by the `ops::compile` call below.
-    let packages = options.spec.get_packages(ws)?;
+    let (package_set, resolver) = ops::resolve_ws(ws)?;
+    let packages = if let ops::Packages::Packages(ref pkg_names) = options.spec {
+        let pkgids: Vec<_> = pkg_names
+            .iter()
+            .flat_map(|name| resolver.query(name))
+            .collect();
+        package_set.get_many(pkgids)?
+    } else {
+        options.spec.get_packages(ws)?
+    };
+
     let bins: Vec<_> = packages
         .into_iter()
         .flat_map(|pkg| {

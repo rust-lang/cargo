@@ -1,7 +1,8 @@
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
-use cargo::core::Verbosity;
-use cargo::ops::{self, CompileFilter, Packages};
+use cargo::core::{Verbosity, Workspace};
+use cargo::ops::{self, CompileFilter, CompileOptions, Packages};
+use cargo::util::CargoResult;
 use cargo_util::ProcessError;
 
 pub fn cli() -> App {
@@ -52,12 +53,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     }
 
     if !args.is_present("example") && !args.is_present("bin") {
-        let default_runs: Vec<_> = compile_opts
-            .spec
-            .get_packages(&ws)?
-            .iter()
-            .filter_map(|pkg| pkg.manifest().default_run())
-            .collect();
+        let default_runs = get_default_runs(&ws, &compile_opts)?;
         if default_runs.len() == 1 {
             compile_opts.filter = CompileFilter::from_raw_arguments(
                 false,
@@ -105,4 +101,42 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             CliError::new(err, exit_code)
         }
     })
+}
+
+fn get_default_runs(ws: &Workspace<'_>, compile_opts: &CompileOptions) -> CargoResult<Vec<String>> {
+    const ERROR: &'static str =
+        "`cargo run` cannot find pkgid either in the workspace or among the workspace dependencies";
+
+    let workspace_packages = compile_opts.spec.get_packages(ws);
+
+    let default_runs = if let Ok(packages) = workspace_packages {
+        // Package is workspace member
+        packages
+            .iter()
+            .filter_map(|pkg| pkg.manifest().default_run())
+            .map(str::to_owned)
+            .collect()
+    } else if let Packages::Packages(ref pkg_names) = compile_opts.spec {
+        // Search dependencies
+        let (package_set, resolver) = ops::resolve_ws(ws)?;
+        let deps: Vec<_> = pkg_names
+            .iter()
+            .flat_map(|name| resolver.query(name))
+            .collect();
+
+        if deps.is_empty() {
+            anyhow::bail!(ERROR);
+        }
+
+        package_set
+            .get_many(deps)?
+            .iter()
+            .filter_map(|pkg| pkg.manifest().default_run())
+            .map(str::to_owned)
+            .collect()
+    } else {
+        anyhow::bail!(ERROR);
+    };
+
+    Ok(default_runs)
 }
