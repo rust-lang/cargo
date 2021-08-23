@@ -809,6 +809,7 @@ fn prepare_for_unstable() {
         }
     };
     let latest_stable = Edition::LATEST_STABLE;
+    let prev = latest_stable.previous().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
@@ -828,13 +829,24 @@ fn prepare_for_unstable() {
     // -j1 to make the error more deterministic (otherwise there can be
     // multiple errors since they run in parallel).
     p.cargo("fix --edition --allow-no-vcs -j1")
-        .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr(&format_args!("\
 [CHECKING] foo [..]
-[ERROR] cannot migrate src/lib.rs to edition {next}
+[WARNING] `src/lib.rs` is on the latest edition, but trying to migrate to edition {next}.
 Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
-error: could not compile `foo`
-", next=next))
+
+If you are trying to migrate from the previous edition ({prev}), the
+process requires following these steps:
+
+1. Start with `edition = \"{prev}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{latest_stable}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+
+[FINISHED] [..]
+", next=next, latest_stable=latest_stable, prev=prev))
         .run();
 
     if !is_nightly() {
