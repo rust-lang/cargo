@@ -1696,3 +1696,52 @@ fn abnormal_exit() {
         .with_stderr_contains("Original diagnostics will follow.")
         .run();
 }
+
+#[cargo_test]
+fn fix_with_run_cargo_in_proc_macros() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use proc_macro::*;
+    
+                #[proc_macro]
+                pub fn foo(_input: TokenStream) -> TokenStream {
+                    let output = std::process::Command::new("cargo")
+                        .args(&["metadata", "--format-version=1"])
+                        .output()
+                        .unwrap();
+                    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
+                    println!("{}", std::str::from_utf8(&output.stdout).unwrap());
+                    "".parse().unwrap()
+                }                    
+            "#,
+        )
+        .file(
+            "src/bin/main.rs",
+            r#"
+                use foo::foo;
+
+                fn main() {
+                    foo!("bar")
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fix --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
+        .run();
+}

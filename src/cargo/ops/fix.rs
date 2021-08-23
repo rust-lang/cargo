@@ -346,7 +346,8 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
-    let rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
+    let mut rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
+    rustc.env_remove(FIX_ENV);
 
     trace!("start rustfixing {:?}", args.file);
     let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
