@@ -135,6 +135,7 @@ The keys are:
   - `{prefix}`: A directory prefix computed from the crate name. For example,
     a crate named `cargo` has a prefix of `ca/rg`. See below for details.
   - `{lowerprefix}`: Lowercase variant of `{prefix}`.
+  - `{sha256-checksum}`: The crate's sha256 checksum.
 
   If none of the markers are present, then the value
   `/{crate}/{version}/download` is appended to the end.
