@@ -662,3 +662,31 @@ fn no_roots() {
         .with_stderr_contains("[FINISHED] [..]")
         .run();
 }
+
+#[cargo_test]
+fn proc_macro_only() {
+    // Checks for a bug where it would panic if building a proc-macro only
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[FINISHED] [..]")
+        .run();
+}
