@@ -78,7 +78,7 @@ mod conflict_cache;
 mod context;
 mod dep_cache;
 mod encode;
-mod errors;
+pub(crate) mod errors;
 pub mod features;
 mod resolve;
 mod types;

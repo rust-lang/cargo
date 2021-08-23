@@ -366,7 +366,7 @@ pub(super) fn describe_path_in_context(cx: &Context, id: &PackageId) -> String {
 /// -> (pkg1, dep from pkg1 satisfied by pkg0)
 /// -> (pkg2, dep from pkg2 satisfied by pkg1)
 /// -> ...
-pub(super) fn describe_path<'a>(
+pub(crate) fn describe_path<'a>(
     mut path: impl Iterator<Item = (&'a PackageId, Option<&'a Dependency>)>,
 ) -> String {
     use std::fmt::Write;
