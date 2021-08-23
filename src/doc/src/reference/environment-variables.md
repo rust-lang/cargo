@@ -233,7 +233,6 @@ corresponding environment variable is set to the empty string, `""`.
   where integration tests or benchmarks are free to put any data needed by
   the tests/benches. Cargo initially creates this directory but doesn't
   manage its content in any way, this is the responsibility of the test code.
-  There are separate directories for `debug` and `release` profiles.
 
 [integration test]: cargo-targets.md#integration-tests
 [`env` macro]: ../../std/macro.env.html
