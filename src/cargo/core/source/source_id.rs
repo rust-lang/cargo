@@ -164,7 +164,7 @@ impl SourceId {
     }
 
     /// Creates a SourceId from a remote registry URL when the registry name
-    /// cannot be determined, e.g. an user passes `--index` directly from CLI.
+    /// cannot be determined, e.g. a user passes `--index` directly from CLI.
     ///
     /// Use [`SourceId::for_alt_registry`] if a name can provided, which
     /// generates better messages for cargo.

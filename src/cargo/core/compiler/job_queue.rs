@@ -36,7 +36,7 @@
 //!
 //! "NeedsToken" indicates that a rustc is interested in acquiring a token, but
 //! never that it would be impossible to make progress without one (i.e., it
-//! would be incorrect for rustc to not terminate due to a unfulfilled
+//! would be incorrect for rustc to not terminate due to an unfulfilled
 //! NeedsToken request); we do not usually fulfill all NeedsToken requests for a
 //! given rustc.
 //!

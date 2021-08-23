@@ -54,7 +54,7 @@ pub struct GitDatabase {
 
 /// `GitCheckout` is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a `anyhow::Error` if no revision for that reference was found.
+/// and return an `anyhow::Error` if no revision for that reference was found.
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
