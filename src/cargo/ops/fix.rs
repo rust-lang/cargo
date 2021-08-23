@@ -363,6 +363,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         let mut cmd = rustc.build_command();
         args.apply(&mut cmd, config);
         cmd.arg("--error-format=json");
+        debug!("calling rustc for final verification: {:?}", cmd);
         let output = cmd.output().context("failed to spawn rustc")?;
 
         if output.status.success() {
@@ -388,6 +389,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         if !output.status.success() {
             if env::var_os(BROKEN_CODE_ENV).is_none() {
                 for (path, file) in fixes.files.iter() {
+                    debug!("reverting {:?} due to errors", path);
                     paths::write(path, &file.original_code)?;
                 }
             }
@@ -406,6 +408,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         // things like colored output to work correctly.
         cmd.arg(arg);
     }
+    debug!("calling rustc to display remaining diagnostics: {:?}", cmd);
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
@@ -541,6 +544,10 @@ fn rustfix_and_fix(
     let mut cmd = rustc.build_command();
     cmd.arg("--error-format=json");
     args.apply(&mut cmd, config);
+    debug!(
+        "calling rustc to collect suggestions and validate previous fixes: {:?}",
+        cmd
+    );
     let output = cmd.output().with_context(|| {
         format!(
             "failed to execute `{}`",
@@ -605,6 +612,7 @@ fn rustfix_and_fix(
             continue;
         }
 
+        trace!("adding suggestion for {:?}: {:?}", file_name, suggestion);
         file_map
             .entry(file_name)
             .or_insert_with(Vec::new)
