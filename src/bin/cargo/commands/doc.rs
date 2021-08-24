@@ -25,7 +25,7 @@ pub fn cli() -> App {
             "Document only this package's library",
             "Document only the specified binary",
             "Document all binaries",
-            "Document only the specified binary",
+            "Document only the specified example",
             "Document all examples",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
