@@ -593,7 +593,7 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
         )
         .build();
 
-        p.cargo("doc --examples")
+    p.cargo("doc --examples")
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 ([CWD])
@@ -614,7 +614,6 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
     assert!(example_doc_html_1.contains("Example1"));
     assert!(example_doc_html_2.contains("Example2"));
 }
-
 
 #[cargo_test]
 fn doc_dash_p() {

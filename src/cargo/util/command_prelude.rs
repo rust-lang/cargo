@@ -95,7 +95,14 @@ pub trait AppExt: Sized {
             ._arg(opt("all-targets", all))
     }
 
-    fn arg_targets_lib_bin_example(self, lib: &'static str, bin: &'static str, bins: &'static str, example: &'static str, examples: &'static str) -> Self {
+    fn arg_targets_lib_bin_example(
+        self,
+        lib: &'static str,
+        bin: &'static str,
+        bins: &'static str,
+        example: &'static str,
+        examples: &'static str,
+    ) -> Self {
         self._arg(opt("lib", lib))
             ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
