@@ -51,7 +51,7 @@ the manifest settings. Using target selection options will ignore the `doc`
 flag and will always document the given target.
 
 {{#options}}
-{{> options-targets-lib-bin }}
+{{> options-targets-lib-bin-example }}
 {{/options}}
 
 {{> section-features }}

@@ -10,3 +10,13 @@ and supports common Unix glob patterns.
 {{#option "`--bins`" }}
 {{actionverb}} all binary targets.
 {{/option}}
+
+{{#option "`--example` _name_..." }}
+{{actionverb}} the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
+{{/option}}
+
+{{#option "`--examples`" }}
+{{actionverb}} all examples targets.
+{{/option}}
+
