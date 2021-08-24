@@ -378,3 +378,5 @@ Cargo exposes this environment variable to 3rd party subcommands
 (ie. programs named `cargo-foobar` placed in `$PATH`):
 
 * `CARGO` — Path to the `cargo` binary performing the build.
+
+For extended information about your environment you may run `cargo metadata`.
