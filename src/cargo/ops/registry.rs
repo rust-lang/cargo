@@ -242,6 +242,20 @@ fn transmit(
                 .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
         })
         .transpose()?;
+
+    let readme_path_relative_to_repo = readme.as_ref().map(|readme| {
+        || -> Option<String> {
+            let repo = git2::Repository::discover(pkg.root()).ok()?;
+            let repo_root = repo.workdir()?;
+            let rel =
+                paths::strip_prefix_canonical(pkg.root().join(readme), repo_root.to_path_buf())
+                    .ok()?;
+            let rel = rel.to_str()?;
+            Some(rel.replace("\\", "/"))
+        }()
+        .unwrap_or(readme.clone())
+    });
+
     if let Some(ref file) = *license_file {
         if !pkg.root().join(file).exists() {
             bail!("the license file `{}` does not exist", file)
@@ -281,7 +295,7 @@ fn transmit(
                 keywords: keywords.clone(),
                 categories: categories.clone(),
                 readme: readme_content,
-                readme_file: readme.clone(),
+                readme_file: readme_path_relative_to_repo,
                 repository: repository.clone(),
                 license: license.clone(),
                 license_file: license_file.clone(),

@@ -1800,3 +1800,237 @@ See [..]
 
     validate_upload_bar();
 }
+
+#[cargo_test]
+fn with_readme() {
+    registry::init();
+
+    let p = git::new("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                readme = "README"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("README", "HELLO")
+    });
+
+    p.cargo("publish --no-verify --token sekrit").run();
+
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": "HELLO",
+          "readme_file": "README",
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "README",
+            ".cargo_vcs_info.json",
+        ],
+    );
+}
+
+#[cargo_test]
+fn with_non_root_readme() {
+    registry::init();
+
+    let p = git::new("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["inner"]
+            "#,
+        )
+        .file(
+            "inner/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                readme = "docs/README"
+            "#,
+        )
+        .file("inner/src/main.rs", "fn main() {}")
+        .file("inner/docs/README", "HELLO")
+    });
+
+    p.cargo("publish --no-verify --token sekrit")
+        .cwd("inner")
+        .run();
+
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": "HELLO",
+          "readme_file": "inner/docs/README",
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "docs/README",
+            ".cargo_vcs_info.json",
+        ],
+    );
+}
+
+#[cargo_test]
+fn in_workspace_with_readme() {
+    registry::init();
+
+    let p = git::new("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                readme = "README"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("foo/README", "HELLO FOO")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+                readme = "../README"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("README", "HELLO WS")
+    });
+
+    p.cargo("publish --no-verify --token sekrit -p foo").run();
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": "HELLO FOO",
+          "readme_file": "foo/README",
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "README",
+            ".cargo_vcs_info.json",
+        ],
+    );
+
+    p.cargo("publish --no-verify --token sekrit -p bar").run();
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "bar",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "bar",
+          "readme": "HELLO WS",
+          "readme_file": "README",
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "bar-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+    );
+}
