@@ -648,7 +648,6 @@ unstable_cli_options!(
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
-    patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
@@ -696,6 +695,8 @@ const STABILIZED_EXTRA_LINK_ARG: &str = "Additional linker arguments are now \
     supported without passing this flag.";
 
 const STABILIZED_CONFIGURABLE_ENV: &str = "The [env] section is now always enabled.";
+
+const STABILIZED_PATCH_IN_CONFIG: &str = "The patch-in-config feature is now always enabled.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -841,7 +842,6 @@ impl CliUnstable {
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
-            "patch-in-config" => self.patch_in_config = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some
                 // unstable options like "compare"). This should be removed at
@@ -877,6 +877,7 @@ impl CliUnstable {
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
             "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "configurable-env" => stabilized_warn(k, "1.56", STABILIZED_CONFIGURABLE_ENV),
+            "patch-in-config" => stabilized_warn(k, "1.56", STABILIZED_PATCH_IN_CONFIG),
             "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }

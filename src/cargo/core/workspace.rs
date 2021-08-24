@@ -362,11 +362,6 @@ impl<'cfg> Workspace<'cfg> {
             BTreeMap<String, BTreeMap<String, TomlDependency<ConfigRelativePath>>>,
         > = self.config.get("patch")?;
 
-        if config_patch.is_some() && !self.config.cli_unstable().patch_in_config {
-            self.config.shell().warn("`[patch]` in cargo config was ignored, the -Zpatch-in-config command-line flag is required".to_owned())?;
-            return Ok(HashMap::new());
-        }
-
         let source = SourceId::for_path(self.root())?;
 
         let mut warnings = Vec::new();
