@@ -211,14 +211,14 @@ fn from_config_precedence() {
                 bar = "0.1.0"
 
                 [patch.crates-io]
-                bar = { path = 'bar' }
+                bar = { path = 'no-such-path' }
             "#,
         )
         .file(
             ".cargo/config.toml",
             r#"
                 [patch.crates-io]
-                bar = { path = 'no-such-path' }
+                bar = { path = 'bar' }
             "#,
         )
         .file("src/lib.rs", "")
