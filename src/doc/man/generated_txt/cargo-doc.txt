@@ -82,6 +82,13 @@ OPTIONS
        --bins
            Document all binary targets.
 
+       --example name...
+           Document the specified example. This flag may be specified multiple
+           times and supports common Unix glob patterns.
+
+       --examples
+           Document all examples targets.
+
    Feature Selection
        The feature flags allow you to control which features are enabled. When
        no feature options are given, the default feature is activated for every

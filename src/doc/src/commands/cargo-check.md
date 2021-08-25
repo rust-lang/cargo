@@ -81,18 +81,6 @@ use single quotes or double quotes around each glob pattern.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-check---lib"><a class="option-anchor" href="#option-cargo-check---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Check the package's library.</dd>
-
-
-<dt class="option-term" id="option-cargo-check---bin"><a class="option-anchor" href="#option-cargo-check---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Check the specified binary. This flag may be specified multiple times
-and supports common Unix glob patterns.</dd>
-
-
-<dt class="option-term" id="option-cargo-check---bins"><a class="option-anchor" href="#option-cargo-check---bins"></a><code>--bins</code></dt>
-<dd class="option-desc">Check all binary targets.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-check---example"><a class="option-anchor" href="#option-cargo-check---example"></a><code>--example</code> <em>name</em>...</dt>

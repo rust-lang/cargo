@@ -76,18 +76,6 @@ use single quotes or double quotes around each glob pattern.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-build---lib"><a class="option-anchor" href="#option-cargo-build---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Build the package's library.</dd>
-
-
-<dt class="option-term" id="option-cargo-build---bin"><a class="option-anchor" href="#option-cargo-build---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Build the specified binary. This flag may be specified multiple times
-and supports common Unix glob patterns.</dd>
-
-
-<dt class="option-term" id="option-cargo-build---bins"><a class="option-anchor" href="#option-cargo-build---bins"></a><code>--bins</code></dt>
-<dd class="option-desc">Build all binary targets.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---example"><a class="option-anchor" href="#option-cargo-build---example"></a><code>--example</code> <em>name</em>...</dt>

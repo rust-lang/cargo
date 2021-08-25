@@ -140,18 +140,6 @@ use single quotes or double quotes around each glob pattern.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-bench---lib"><a class="option-anchor" href="#option-cargo-bench---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Benchmark the package's library.</dd>
-
-
-<dt class="option-term" id="option-cargo-bench---bin"><a class="option-anchor" href="#option-cargo-bench---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Benchmark the specified binary. This flag may be specified multiple times
-and supports common Unix glob patterns.</dd>
-
-
-<dt class="option-term" id="option-cargo-bench---bins"><a class="option-anchor" href="#option-cargo-bench---bins"></a><code>--bins</code></dt>
-<dd class="option-desc">Benchmark all binary targets.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-bench---example"><a class="option-anchor" href="#option-cargo-bench---example"></a><code>--example</code> <em>name</em>...</dt>

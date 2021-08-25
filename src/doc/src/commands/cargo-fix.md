@@ -161,18 +161,6 @@ use single quotes or double quotes around each glob pattern.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-fix---lib"><a class="option-anchor" href="#option-cargo-fix---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Fix the package's library.</dd>
-
-
-<dt class="option-term" id="option-cargo-fix---bin"><a class="option-anchor" href="#option-cargo-fix---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Fix the specified binary. This flag may be specified multiple times
-and supports common Unix glob patterns.</dd>
-
-
-<dt class="option-term" id="option-cargo-fix---bins"><a class="option-anchor" href="#option-cargo-fix---bins"></a><code>--bins</code></dt>
-<dd class="option-desc">Fix all binary targets.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-fix---example"><a class="option-anchor" href="#option-cargo-fix---example"></a><code>--example</code> <em>name</em>...</dt>
