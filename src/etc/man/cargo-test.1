@@ -154,6 +154,22 @@ support common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However,
 shell accidentally expanding glob patterns before Cargo handles them, you must 
 use single quotes or double quotes around each glob pattern.
 .sp
+\fB\-\-lib\fR
+.RS 4
+Test the package's library.
+.RE
+.sp
+\fB\-\-bin\fR \fIname\fR\&...
+.RS 4
+Test the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.
+.RE
+.sp
+\fB\-\-bins\fR
+.RS 4
+Test all binary targets.
+.RE
+.sp
 \fB\-\-example\fR \fIname\fR\&...
 .RS 4
 Test the specified example. This flag may be specified multiple times
