@@ -215,6 +215,10 @@ fn run_doc_tests(
             p.arg("--test-args").arg(arg);
         }
 
+        if config.shell().verbosity() == Verbosity::Quiet {
+            p.arg("--test-args").arg("--quiet");
+        }
+
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
