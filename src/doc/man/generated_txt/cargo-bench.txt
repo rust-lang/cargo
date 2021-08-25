@@ -118,6 +118,16 @@ OPTIONS
        accidentally expanding glob patterns before Cargo handles them, you must
        use single quotes or double quotes around each glob pattern.
 
+       --lib
+           Benchmark the package's library.
+
+       --bin name...
+           Benchmark the specified binary. This flag may be specified multiple
+           times and supports common Unix glob patterns.
+
+       --bins
+           Benchmark all binary targets.
+
        --example name...
            Benchmark the specified example. This flag may be specified multiple
            times and supports common Unix glob patterns.

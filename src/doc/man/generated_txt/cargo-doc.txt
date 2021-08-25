@@ -87,7 +87,7 @@ OPTIONS
            times and supports common Unix glob patterns.
 
        --examples
-           Document all examples targets.
+           Document all example targets.
 
    Feature Selection
        The feature flags allow you to control which features are enabled. When

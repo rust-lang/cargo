@@ -78,6 +78,18 @@ use single quotes or double quotes around each glob pattern.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-rustdoc---lib"><a class="option-anchor" href="#option-cargo-rustdoc---lib"></a><code>--lib</code></dt>
+<dd class="option-desc">Document the package's library.</dd>
+
+
+<dt class="option-term" id="option-cargo-rustdoc---bin"><a class="option-anchor" href="#option-cargo-rustdoc---bin"></a><code>--bin</code> <em>name</em>...</dt>
+<dd class="option-desc">Document the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
+
+
+<dt class="option-term" id="option-cargo-rustdoc---bins"><a class="option-anchor" href="#option-cargo-rustdoc---bins"></a><code>--bins</code></dt>
+<dd class="option-desc">Document all binary targets.</dd>
+
 
 
 <dt class="option-term" id="option-cargo-rustdoc---example"><a class="option-anchor" href="#option-cargo-rustdoc---example"></a><code>--example</code> <em>name</em>...</dt>
