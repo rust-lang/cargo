@@ -1,8 +1,8 @@
 use super::unit_graph::UnitGraph;
+use crate::core::resolver::errors::describe_path;
 use crate::core::{PackageId, Resolve};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
 
 /// Validate `links` field does not conflict between packages.
 pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<()> {
@@ -28,17 +28,15 @@ pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<
             None => continue,
         };
         if let Some(&prev) = links.get(lib) {
+            let prev_path = resolve
+                .path_to_top(&prev)
+                .into_iter()
+                .map(|(p, d)| (p, d.and_then(|d| d.iter().next())));
             let pkg = unit.pkg.package_id();
-
-            let describe_path = |pkgid: PackageId| -> String {
-                let dep_path = resolve.path_to_top(&pkgid);
-                let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-                for dep in dep_path.iter().skip(1) {
-                    write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
-                }
-                dep_path_desc
-            };
-
+            let path = resolve
+                .path_to_top(&pkg)
+                .into_iter()
+                .map(|(p, d)| (p, d.and_then(|d| d.iter().next())));
             anyhow::bail!(
                 "multiple packages link to native library `{}`, \
                  but a native library can be linked only once\n\
@@ -47,9 +45,9 @@ pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<
                  \n\
                  {}\nalso links to native library `{}`",
                 lib,
-                describe_path(prev),
+                describe_path(prev_path),
                 lib,
-                describe_path(pkg),
+                describe_path(path),
                 lib
             )
         }

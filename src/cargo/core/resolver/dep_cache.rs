@@ -10,7 +10,7 @@
 //! This module impl that cache in all the gory details
 
 use crate::core::resolver::context::Context;
-use crate::core::resolver::errors::describe_path;
+use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
     ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
@@ -216,7 +216,7 @@ impl<'a> RegistryQueryer<'a> {
                     format!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),
-                        describe_path(&cx.parents.path_to_bottom(&candidate.package_id())),
+                        describe_path_in_context(cx, &candidate.package_id()),
                     )
                 })?;
                 Ok((dep, candidates, features))

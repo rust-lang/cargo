@@ -1498,7 +1498,7 @@ fn cyclic_good_error_message() {
     assert_eq!("\
 cyclic package dependency: package `A v0.0.0 (registry `https://example.com/`)` depends on itself. Cycle:
 package `A v0.0.0 (registry `https://example.com/`)`
-    ... which is depended on by `C v0.0.0 (registry `https://example.com/`)`
-    ... which is depended on by `A v0.0.0 (registry `https://example.com/`)`\
+    ... which satisfies dependency `A = \"*\"` of package `C v0.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `C = \"*\"` of package `A v0.0.0 (registry `https://example.com/`)`\
 ", error.to_string());
 }

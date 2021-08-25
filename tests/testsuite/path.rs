@@ -1046,8 +1046,8 @@ fn deep_path_error() {
         .with_stderr(
             "\
 [ERROR] failed to get `c` as a dependency of package `b v0.1.0 [..]`
-    ... which is depended on by `a v0.1.0 [..]`
-    ... which is depended on by `foo v0.1.0 [..]`
+    ... which satisfies path dependency `b` of package `a v0.1.0 [..]`
+    ... which satisfies path dependency `a` of package `foo v0.1.0 [..]`
 
 Caused by:
   failed to load source for dependency `c`
