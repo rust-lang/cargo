@@ -249,6 +249,7 @@ pub enum CompileFilter {
     },
     Only {
         all_targets: bool,
+        warn_unmatched: bool,
         lib: LibRule,
         bins: FilterRule,
         examples: FilterRule,
@@ -714,6 +715,7 @@ impl CompileFilter {
         {
             CompileFilter::Only {
                 all_targets: false,
+                warn_unmatched: true,
                 lib: rule_lib,
                 bins: rule_bins,
                 examples: rule_exms,
@@ -730,6 +732,7 @@ impl CompileFilter {
     pub fn new_all_targets() -> CompileFilter {
         CompileFilter::Only {
             all_targets: true,
+            warn_unmatched: true,
             lib: LibRule::Default,
             bins: FilterRule::All,
             examples: FilterRule::All,
@@ -1003,6 +1006,7 @@ fn generate_targets(
             ref examples,
             ref tests,
             ref benches,
+            ..
         } => {
             if *lib != LibRule::False {
                 let mut libs = Vec::new();
@@ -1158,14 +1162,15 @@ fn unmatched_target_filters(
 ) -> CargoResult<()> {
     if let CompileFilter::Only {
         all_targets,
-        lib: _,
+        warn_unmatched,
         ref bins,
         ref examples,
         ref tests,
         ref benches,
+        ..
     } = *filter
     {
-        if units.is_empty() {
+        if units.is_empty() && warn_unmatched {
             let mut filters = String::new();
             let mut miss_count = 0;
 

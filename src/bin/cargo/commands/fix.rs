@@ -79,6 +79,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {
             all_targets: true,
+            warn_unmatched: true,
             lib: LibRule::Default,
             bins: FilterRule::All,
             examples: FilterRule::All,

@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
-use cargo::ops;
+use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
 use cargo::util::IntoUrl;
 
 pub fn cli() -> App {
@@ -136,6 +136,18 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     compile_opts.build_config.requested_profile =
         args.get_profile_name(config, "release", ProfileChecking::Custom)?;
+
+    if !compile_opts.filter.is_specific() {
+        compile_opts.filter = CompileFilter::Only {
+            all_targets: false,
+            warn_unmatched: false,
+            lib: LibRule::False,
+            bins: FilterRule::All,
+            examples: FilterRule::none(),
+            benches: FilterRule::none(),
+            tests: FilterRule::none(),
+        }
+    }
 
     if args.is_present("list") {
         ops::install_list(root, config)?;
