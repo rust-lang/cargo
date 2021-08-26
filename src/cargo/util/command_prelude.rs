@@ -544,7 +544,7 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            rustdoc_scrape_examples: false,
+            rustdoc_scrape_examples: None,
             honor_rust_version: !self._is_present("ignore-rust-version"),
         };
 

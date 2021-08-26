@@ -80,7 +80,7 @@ pub struct CompileOptions {
     pub rustdoc_document_private_items: bool,
     /// Whether the `--scrape-examples` flag was specified and build flags for
     /// examples should be forwarded to `rustdoc`.
-    pub rustdoc_scrape_examples: bool,
+    pub rustdoc_scrape_examples: Option<CompileFilter>,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
     pub honor_rust_version: bool,
@@ -99,7 +99,7 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            rustdoc_scrape_examples: false,
+            rustdoc_scrape_examples: None,
             honor_rust_version: true,
         })
     }
@@ -231,7 +231,7 @@ impl Packages {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LibRule {
     /// Include the library, fail if not present
     True,
@@ -241,13 +241,13 @@ pub enum LibRule {
     False,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FilterRule {
     All,
     Just(Vec<String>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompileFilter {
     Default {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
@@ -340,7 +340,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
-        rustdoc_scrape_examples,
+        ref rustdoc_scrape_examples,
         honor_rust_version,
     } = *options;
     let config = ws.config();
@@ -593,21 +593,14 @@ pub fn create_bcx<'a, 'cfg>(
         }
     }
 
-    if rustdoc_scrape_examples {
+    if let Some(filter) = rustdoc_scrape_examples {
         let compile_mode = CompileMode::Doc { deps: false };
         let mut example_compile_opts = CompileOptions::new(ws.config(), compile_mode)?;
         example_compile_opts.cli_features = options.cli_features.clone();
         example_compile_opts.build_config.mode = compile_mode;
         example_compile_opts.spec = Packages::All;
-        example_compile_opts.filter = CompileFilter::Only {
-            all_targets: false,
-            lib: LibRule::False,
-            bins: FilterRule::none(),
-            examples: FilterRule::All,
-            benches: FilterRule::none(),
-            tests: FilterRule::none(),
-        };
-        example_compile_opts.rustdoc_scrape_examples = false;
+        example_compile_opts.filter = filter.clone();
+        example_compile_opts.rustdoc_scrape_examples = None;
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
         let interner = UnitInterner::new();

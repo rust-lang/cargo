@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, DocOptions};
+use anyhow::anyhow;
+use cargo::ops::{self, CompileFilter, DocOptions, FilterRule, LibRule};
 
 pub fn cli() -> App {
     subcommand("doc")
@@ -19,10 +20,13 @@ pub fn cli() -> App {
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))
-        .arg(opt(
-            "scrape-examples",
-            "Scrape examples from examples/ directory to include as function documentation",
-        ))
+        .arg(
+            opt(
+                "scrape-examples",
+                "Scrape examples from examples/ directory to include as function documentation",
+            )
+            .value_name("FLAGS"),
+        )
         .arg_jobs()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
@@ -51,9 +55,35 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
-    compile_opts.rustdoc_scrape_examples = args.is_present("scrape-examples");
+    compile_opts.rustdoc_scrape_examples = match args.value_of("scrape-examples") {
+        Some(s) => {
+            let (examples, lib) = match s {
+                "all" => (true, true),
+                "examples" => (true, false),
+                "lib" => (false, true),
+                _ => {
+                    return Err(CliError::from(anyhow!(
+                        r#"--scrape-examples must take "all", "examples", or "lib" as an argument"#
+                    )));
+                }
+            };
+            Some(CompileFilter::Only {
+                all_targets: false,
+                lib: if lib { LibRule::True } else { LibRule::False },
+                bins: FilterRule::none(),
+                examples: if examples {
+                    FilterRule::All
+                } else {
+                    FilterRule::none()
+                },
+                benches: FilterRule::none(),
+                tests: FilterRule::none(),
+            })
+        }
+        None => None,
+    };
 
-    if compile_opts.rustdoc_scrape_examples {
+    if compile_opts.rustdoc_scrape_examples.is_some() {
         // FIXME(wcrichto): add a tracking issue once this gets merged and add issue number below
         config
             .cli_unstable()
