@@ -1719,7 +1719,7 @@ fn fix_with_run_cargo_in_proc_macros() {
     
                 #[proc_macro]
                 pub fn foo(_input: TokenStream) -> TokenStream {
-                    let output = std::process::Command::new("cargo")
+                    let output = std::process::Command::new(env!("CARGO"))
                         .args(&["metadata", "--format-version=1"])
                         .output()
                         .unwrap();
