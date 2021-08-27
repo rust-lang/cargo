@@ -5,6 +5,8 @@ use std::fmt::{self, Display};
 pub enum OptVersionReq {
     Any,
     Req(VersionReq),
+    /// The exact locked version and the original version requirement.
+    Locked(Version, VersionReq),
 }
 
 pub trait VersionExt {
@@ -49,6 +51,30 @@ impl OptVersionReq {
                     cmp.op == Op::Exact && cmp.minor.is_some() && cmp.patch.is_some()
                 }
             }
+            OptVersionReq::Locked(..) => true,
+        }
+    }
+
+    pub fn lock_to(&mut self, version: &Version) {
+        assert!(self.matches(version), "cannot lock {} to {}", self, version);
+        use OptVersionReq::*;
+        let version = version.clone();
+        *self = match self {
+            Any => Locked(version, VersionReq::STAR),
+            Req(req) => Locked(version, req.clone()),
+            Locked(_, req) => Locked(version, req.clone()),
+        };
+    }
+
+    pub fn is_locked(&self) -> bool {
+        matches!(self, OptVersionReq::Locked(..))
+    }
+
+    /// Gets the version to which this req is locked, if any.
+    pub fn locked_version(&self) -> Option<&Version> {
+        match self {
+            OptVersionReq::Locked(version, _) => Some(version),
+            _ => None,
         }
     }
 
@@ -56,15 +82,17 @@ impl OptVersionReq {
         match self {
             OptVersionReq::Any => true,
             OptVersionReq::Req(req) => req.matches(version),
+            OptVersionReq::Locked(v, _) => VersionReq::exact(v).matches(version),
         }
     }
 }
 
 impl Display for OptVersionReq {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OptVersionReq::Any => formatter.write_str("*"),
-            OptVersionReq::Req(req) => Display::fmt(req, formatter),
+            OptVersionReq::Any => f.write_str("*"),
+            OptVersionReq::Req(req) => Display::fmt(req, f),
+            OptVersionReq::Locked(_, req) => Display::fmt(req, f),
         }
     }
 }
