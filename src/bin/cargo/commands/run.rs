@@ -104,39 +104,22 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 }
 
 fn get_default_runs(ws: &Workspace<'_>, compile_opts: &CompileOptions) -> CargoResult<Vec<String>> {
-    const ERROR: &'static str =
-        "`cargo run` cannot find pkgid either in the workspace or among the workspace dependencies";
+    const ERROR_NOTFOUND: &'static str = "`cargo run` cannot find pkgid either in the workspace or among direct build or development dependencies";
+    let matching_dependencies = cargo::ops::packages_eligible_to_run(ws, &compile_opts.spec);
+    match matching_dependencies {
+        Ok(packages) => {
+            if packages.is_empty() {
+                anyhow::bail!(ERROR_NOTFOUND);
+            }
 
-    let workspace_packages = compile_opts.spec.get_packages(ws);
-
-    let default_runs = if let Ok(packages) = workspace_packages {
-        // Package is workspace member
-        packages
-            .iter()
-            .filter_map(|pkg| pkg.manifest().default_run())
-            .map(str::to_owned)
-            .collect()
-    } else if let Packages::Packages(ref pkg_names) = compile_opts.spec {
-        // Search dependencies
-        let (package_set, resolver) = ops::resolve_ws(ws)?;
-        let deps: Vec<_> = pkg_names
-            .iter()
-            .flat_map(|name| resolver.query(name))
-            .collect();
-
-        if deps.is_empty() {
-            anyhow::bail!(ERROR);
+            let default_runs = packages
+                .into_iter()
+                .filter_map(|pkg| pkg.manifest().default_run().map(|s| s.to_owned()))
+                .collect();
+            Ok(default_runs)
         }
-
-        package_set
-            .get_many(deps)?
-            .iter()
-            .filter_map(|pkg| pkg.manifest().default_run())
-            .map(str::to_owned)
-            .collect()
-    } else {
-        anyhow::bail!(ERROR);
-    };
-
-    Ok(default_runs)
+        Err(_) => {
+            anyhow::bail!(ERROR_NOTFOUND);
+        }
+    }
 }

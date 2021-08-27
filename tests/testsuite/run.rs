@@ -1142,8 +1142,10 @@ fn run_multiple_packages() {
 
                 [workspace]
 
-                [dependencies]
-                d1 = { path = "d1" }
+                [build-dependencies]
+                b1 = { path = "b1" }
+
+                [dev-dependencies]
                 d2 = { path = "d2" }
                 d3 = { path = "../d3" } # outside of the workspace
 
@@ -1152,9 +1154,9 @@ fn run_multiple_packages() {
             "#,
         )
         .file("foo/src/foo.rs", "fn main() { println!(\"foo\"); }")
-        .file("foo/d1/Cargo.toml", &basic_bin_manifest("d1"))
-        .file("foo/d1/src/lib.rs", "")
-        .file("foo/d1/src/main.rs", "fn main() { println!(\"d1\"); }")
+        .file("foo/b1/Cargo.toml", &basic_bin_manifest("b1"))
+        .file("foo/b1/src/lib.rs", "")
+        .file("foo/b1/src/main.rs", "fn main() { println!(\"b1\"); }")
         .file("foo/d2/Cargo.toml", &basic_bin_manifest("d2"))
         .file("foo/d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .file("d3/Cargo.toml", &basic_bin_manifest("d3"))
@@ -1167,7 +1169,7 @@ fn run_multiple_packages() {
         process_builder
     };
 
-    cargo().arg("-p").arg("d1").with_stdout("d1").run();
+    cargo().arg("-p").arg("b1").with_stdout("b1").run();
 
     cargo()
         .arg("-p")
@@ -1179,7 +1181,7 @@ fn run_multiple_packages() {
 
     cargo().with_stdout("foo").run();
 
-    cargo().arg("-p").arg("d1").arg("-p").arg("d2")
+    cargo().arg("-p").arg("b1").arg("-p").arg("d2")
                     .with_status(1)
                     .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times").run();
 
@@ -1197,37 +1199,47 @@ fn run_multiple_packages() {
 
 #[cargo_test]
 fn run_dependency_package() {
-    Package::new("bdep", "0.1.0")
+    for i in 1..=3 {
+        Package::new(&format!("bdep{}", i), "0.1.1")
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                [package]
+                name = "bdep{}"
+                version = "0.1.1"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "bdep{}"
+            "#,
+                    i, i
+                ),
+            )
+            .file(
+                "src/main.rs",
+                &format!("fn main() {{ println!(\"bdep{} 0.1.1\"); }}", i),
+            )
+            .publish();
+    }
+
+    Package::new("bdep1", "0.1.0") // older version
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bdep"
+            name = "bdep1"
             version = "0.1.0"
             authors = ["wycats@example.com"]
 
             [[bin]]
-            name = "bdep"
+            name = "bdep1"
         "#,
         )
-        .file("src/main.rs", "fn main() { println!(\"bdep 0.1.0\"); }")
+        .file("src/main.rs", "fn main() { println!(\"bdep1 0.1.0\"); }")
         .publish();
-    Package::new("bdep", "0.1.1")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bdep"
-            version = "0.1.1"
-            authors = ["wycats@example.com"]
 
-            [[bin]]
-            name = "bdep"
-        "#,
-        )
-        .file("src/main.rs", "fn main() { println!(\"bdep 0.1.1\"); }")
-        .publish();
-    Package::new("libdep", "0.1.0")
+    Package::new("libdep", "0.1.0") // library (not runnable)
         .file(
             "Cargo.toml",
             r#"
@@ -1252,20 +1264,27 @@ fn run_dependency_package() {
                 edition = "2018"
 
                 [build-dependencies]
-                bdep = "0.1"
+                bdep1 = "0.1"
                 libdep = "0.1"
+
+                [dev-dependencies]
+                bdep2 = "0.1.1"
+
+                [dependencies]
+                bdep3 = "0"
             "#,
         )
         .file("src/main.rs", "fn main() { println!(\"foo\"); }")
         .build();
 
     let testcases = [
-        ("bdep", "bdep 0.1.1"),
-        ("bdep:0.1.1", "bdep 0.1.1"),
+        ("bdep1", "bdep1 0.1.1"),
+        ("bdep1:0.1.1", "bdep1 0.1.1"),
         (
-            "https://github.com/rust-lang/crates.io-index#bdep",
-            "bdep 0.1.1",
+            "https://github.com/rust-lang/crates.io-index#bdep1",
+            "bdep1 0.1.1",
         ),
+        ("bdep2", "bdep2 0.1.1"),
     ];
     for (pkgid, expected_output) in testcases {
         p.cargo("run")
@@ -1283,10 +1302,11 @@ fn run_dependency_package() {
         .run();
 
     let invalid_pkgids = [
-        "bdep:0.1.0",
-        "https://github.com/rust-lang/crates.io-index#bdep:0.1.0",
-        "bdep:0.2.0",
-        "https://github.com/rust-lang/crates.io-index#bdep:0.2.0",
+        "bdep1:0.1.0",
+        "https://github.com/rust-lang/crates.io-index#bdep1:0.1.0",
+        "bdep1:0.2.0",
+        "https://github.com/rust-lang/crates.io-index#bdep1:0.2.0",
+        "bdep3",
     ];
     for pkgid in invalid_pkgids {
         p.cargo("run")
@@ -1294,7 +1314,7 @@ fn run_dependency_package() {
                 .arg(pkgid)
                 .with_status(101)
                 .with_stderr_contains(
-                    "[ERROR] `cargo run` cannot find pkgid either in the workspace or among the workspace dependencies",
+                    "[ERROR] `cargo run` cannot find pkgid either in the workspace or among direct build or development dependencies",
                 )
                 .run();
     }
