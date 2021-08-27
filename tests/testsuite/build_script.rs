@@ -1000,7 +1000,7 @@ fn links_duplicates_old_registry() {
     but a native library can be linked only once
 
 package `bar v0.1.0`
-    ... which satisfies dependency `bar = \"=0.1.0\"` of package `foo v0.1.0 ([..]foo)`
+    ... which satisfies dependency `bar = \"^0.1\"` (locked to 0.1.0) of package `foo v0.1.0 ([..]foo)`
 links to native library `a`
 
 package `foo v0.1.0 ([..]foo)`

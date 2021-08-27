@@ -387,10 +387,16 @@ pub(crate) fn describe_path<'a>(
             } else {
                 dep.name_in_toml().to_string()
             };
+            let locked_version = dep
+                .version_req()
+                .locked_version()
+                .map(|v| format!("(locked to {}) ", v))
+                .unwrap_or_default();
+
             write!(
                 dep_path_desc,
-                "\n    ... which satisfies {}dependency `{}` of package `{}`",
-                source_kind, requirement, pkg
+                "\n    ... which satisfies {}dependency `{}` {}of package `{}`",
+                source_kind, requirement, locked_version, pkg
             )
             .unwrap();
         }

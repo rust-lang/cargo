@@ -339,6 +339,16 @@ impl Dependency {
         self
     }
 
+    /// Locks this dependency to a specified version.
+    ///
+    /// Mainly used in dependency patching like `[patch]` or `[replace]`, which
+    /// doesn't need to lock the entire dependency to a specific [`PackageId`].
+    pub fn lock_version(&mut self, version: &semver::Version) -> &mut Dependency {
+        let me = Rc::make_mut(&mut self.inner);
+        me.req.lock_to(version);
+        self
+    }
+
     /// Returns `true` if this is a "locked" dependency. Basically a locked
     /// dependency has an exact version req, but not vice versa.
     pub fn is_locked(&self) -> bool {
