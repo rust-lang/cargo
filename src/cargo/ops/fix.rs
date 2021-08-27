@@ -824,7 +824,17 @@ impl FixArgs {
 
     fn apply(&self, cmd: &mut Command, config: &Config) {
         cmd.arg(&self.file);
-        cmd.args(&self.other).arg("--cap-lints=warn");
+        cmd.args(&self.other);
+        if self.prepare_for_edition.is_some() && config.nightly_features_allowed {
+            // When migrating an edition, we don't want to fix other lints as
+            // they can sometimes add suggestions that fail to apply, causing
+            // the entire migration to fail. But those lints aren't needed to
+            // migrate.
+            cmd.arg("--cap-lints=allow");
+        } else {
+            // This allows `cargo fix` to work even if the crate has #[deny(warnings)].
+            cmd.arg("--cap-lints=warn");
+        }
         if let Some(edition) = self.enabled_edition {
             cmd.arg("--edition").arg(edition.to_string());
             if self.idioms && edition.supports_idiom_lint() {

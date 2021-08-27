@@ -1745,3 +1745,50 @@ fn fix_with_run_cargo_in_proc_macros() {
         .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
         .run();
 }
+
+#[cargo_test]
+fn non_edition_lint_migration() {
+    // Migrating to a new edition where a non-edition lint causes problems.
+    if !is_nightly() {
+        // Remove once force-warn hits stable.
+        return;
+    }
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                // This is only used in a test.
+                // To be correct, this should be gated on #[cfg(test)], but
+                // sometimes people don't do that. If the unused_imports
+                // lint removes this, then the unittest will fail to compile.
+                use std::str::from_utf8;
+
+                pub mod foo {
+                    pub const FOO: &[u8] = &[102, 111, 111];
+                }
+
+                #[test]
+                fn example() {
+                    assert_eq!(
+                        from_utf8(::foo::FOO), Ok("foo")
+                    );
+                }
+            "#,
+        )
+        .build();
+    // Check that it complains about an unused import.
+    p.cargo("check --lib")
+        .with_stderr_contains("[..]unused_imports[..]")
+        .with_stderr_contains("[..]std::str::from_utf8[..]")
+        .run();
+    p.cargo("fix --edition --allow-no-vcs")
+        // Remove once --force-warn is stabilized
+        .masquerade_as_nightly_cargo()
+        .run();
+    let contents = p.read_file("src/lib.rs");
+    // Check it does not remove the "unused" import.
+    assert!(contents.contains("use std::str::from_utf8;"));
+    // Check that it made the edition migration.
+    assert!(contents.contains("from_utf8(crate::foo::FOO)"));
+}
