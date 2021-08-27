@@ -75,11 +75,13 @@ use crate::core::compiler::future_incompat::{
     FutureBreakageItem, FutureIncompatReportPackage, OnDiskReports,
 };
 use crate::core::resolver::ResolveBehavior;
+use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, Shell, TargetKind};
+use crate::sources::SourceConfigMap;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
-use crate::util::{self, internal, profile};
+use crate::util::{self, internal, iter_join, profile};
 use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -911,15 +913,12 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         // Get a list of unique and sorted package name/versions.
-        let package_vers: BTreeSet<_> = self
+        let package_ids: BTreeSet<_> = self
             .per_package_future_incompat_reports
             .iter()
             .map(|r| r.package_id)
             .collect();
-        let package_vers: Vec<_> = package_vers
-            .into_iter()
-            .map(|pid| pid.to_string())
-            .collect();
+        let package_vers: Vec<_> = package_ids.iter().map(|pid| pid.to_string()).collect();
 
         if should_display_message || bcx.build_config.future_incompat_report {
             drop(bcx.config.shell().warn(&format!(
@@ -934,8 +933,76 @@ impl<'cfg> DrainState<'cfg> {
         let report_id = on_disk_reports.last_id();
 
         if bcx.build_config.future_incompat_report {
-            let rendered = on_disk_reports.get_report(report_id, bcx.config).unwrap();
-            drop(bcx.config.shell().print_ansi_stderr(rendered.as_bytes()));
+            let upstream_info = package_ids
+                .iter()
+                .map(|package_id| {
+                    let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
+                    format!(
+                        "
+  - {name}
+    - Repository: {url}
+    - Detailed warning command: `cargo report future-incompatibilities --id {id} --crate '{name}'",
+                        name = package_id,
+                        url = manifest
+                            .metadata()
+                            .repository
+                            .as_deref()
+                            .unwrap_or("<not found>"),
+                        id = report_id,
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            let (compat, incompat) =
+                get_updates(bcx.ws, &package_ids).unwrap_or((String::new(), String::new()));
+
+            let compat_message = if !compat.is_empty() {
+                format!(
+                    "
+- Some affected dependencies have minor or patch version updates available:
+{compat}",
+                    compat = compat
+                )
+            } else {
+                String::new()
+            };
+
+            let incompat_message = if !incompat.is_empty() {
+                format!(
+                    "
+- If a minor dependency update does not help, you can try updating to a new 
+  major version of those dependencies. You have to do this manually:
+{incompat}
+                ",
+                    incompat = incompat
+                )
+            } else {
+                String::new()
+            };
+
+            drop(bcx.config.shell().note(&format!(
+                "
+To solve this problem, you can try the following approaches:
+
+{compat_message}
+{incompat_message}
+- If the issue is not solved by updating the dependencies, a fix has to be
+  implemented by those dependencies. You can help with that by notifying the
+  maintainers of this problem (e.g. by creating a bug report) or by proposing a
+  fix to the maintainers (e.g. by creating a pull request):
+  {upstream_info}
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+  section in `Cargo.toml` to use your own version of the dependency. For more
+  information, see:
+  https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+            ",
+                upstream_info = upstream_info,
+                compat_message = compat_message,
+                incompat_message = incompat_message
+            )));
+
             drop(bcx.config.shell().note(&format!(
                 "this report can be shown with `cargo report \
                  future-incompatibilities -Z future-incompat-report --id {}`",
@@ -1282,4 +1349,76 @@ feature resolver. Try updating to diesel 1.4.8 to fix this error.
         )?;
         Ok(())
     }
+}
+
+// Returns a pair (compatible_updates, incompatible_updates),
+// of semver-compatible and semver-incompatible update versions,
+// respectively.
+fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<(String, String)> {
+    // This in general ignores all errors since this is opportunistic.
+    let _lock = ws.config().acquire_package_cache_lock().ok()?;
+    // Create a set of updated registry sources.
+    let map = SourceConfigMap::new(ws.config()).ok()?;
+    let package_ids: BTreeSet<_> = package_ids
+        .iter()
+        .filter(|pkg_id| pkg_id.source_id().is_registry())
+        .collect();
+    let source_ids: HashSet<_> = package_ids
+        .iter()
+        .map(|pkg_id| pkg_id.source_id())
+        .collect();
+    let mut sources: HashMap<_, _> = source_ids
+        .into_iter()
+        .filter_map(|sid| {
+            let source = map.load(sid, &HashSet::new()).ok()?;
+            Some((sid, source))
+        })
+        .collect();
+    // Query the sources for new versions.
+    let mut compatible = String::new();
+    let mut incompatible = String::new();
+    for pkg_id in package_ids {
+        let source = match sources.get_mut(&pkg_id.source_id()) {
+            Some(s) => s,
+            None => continue,
+        };
+        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
+        let summaries = source.query_vec(&dep).ok()?;
+        let (mut compatible_versions, mut incompatible_versions): (Vec<_>, Vec<_>) = summaries
+            .iter()
+            .map(|summary| summary.version())
+            .filter(|version| *version > pkg_id.version())
+            .partition(|version| version.major == pkg_id.version().major);
+        compatible_versions.sort();
+        incompatible_versions.sort();
+
+        let compatible_versions = compatible_versions
+            .into_iter()
+            .map(|version| version.to_string());
+        let compatible_versions = iter_join(compatible_versions, ", ");
+
+        let incompatible_versions = incompatible_versions
+            .into_iter()
+            .map(|version| version.to_string());
+        let incompatible_versions = iter_join(incompatible_versions, ", ");
+
+        if !compatible_versions.is_empty() {
+            writeln!(
+                compatible,
+                "{} has the following newer versions available: {}",
+                pkg_id, compatible_versions
+            )
+            .unwrap();
+        }
+
+        if !incompatible_versions.is_empty() {
+            writeln!(
+                incompatible,
+                "{} has the following newer versions available: {}",
+                pkg_id, incompatible_versions
+            )
+            .unwrap();
+        }
+    }
+    Some((compatible, incompatible))
 }

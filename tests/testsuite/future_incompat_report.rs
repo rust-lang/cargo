@@ -161,7 +161,7 @@ frequency = 'never'
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
-            .with_stderr_contains("The package `foo v0.0.0 ([..])` currently triggers the following future incompatibility lints:")
+            .with_stderr_contains("  - foo v0.0.0[..]")
             .run();
     }
 }
@@ -202,16 +202,30 @@ fn test_multi_crate() {
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_does_not_contain(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
-            // Check that we don't have the 'triggers' message shown at the bottom of this loop
+            // Check that we don't have the 'triggers' message shown at the bottom of this loop,
+            // and that we don't explain how to show a per-package report
             .with_stderr_does_not_contain("[..]triggers[..]")
+            .with_stderr_does_not_contain("[..]--crate[..]")
             .run();
 
         p.cargo(command).arg("-Zunstable-options").arg("-Zfuture-incompat-report").arg("--future-incompat-report")
             .masquerade_as_nightly_cargo()
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
-            .with_stderr_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
-            .with_stderr_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
+            .with_stderr_contains("  - first-dep v0.0.1")
+            .with_stderr_contains("  - second-dep v0.0.2")
+            .run();
+
+        p.cargo("report future-incompatibilities").arg("--crate").arg("first-dep v0.0.1").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
+            .masquerade_as_nightly_cargo()
+            .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
+            .with_stdout_contains(FUTURE_OUTPUT)
+            .run();
+
+        p.cargo("report future-incompatibilities").arg("--crate").arg("second-dep v0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
+            .masquerade_as_nightly_cargo()
+            .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
+            .with_stdout_contains(FUTURE_OUTPUT)
             .run();
     }
 
@@ -252,6 +266,7 @@ fn test_multi_crate() {
         .exec_with_output()
         .unwrap();
     let output = std::str::from_utf8(&output.stdout).unwrap();
+    //if true { panic!("Got output: \n{}", output) }
     assert!(output.starts_with("The following warnings were discovered"));
     let mut lines = output
         .lines()
@@ -263,7 +278,9 @@ fn test_multi_crate() {
                 "The package `{}` currently triggers the following future incompatibility lints:",
                 expected
             ),
-            lines.next().unwrap()
+            lines.next().unwrap(),
+            "Bad output:\n{}",
+            output
         );
         let mut count = 0;
         while let Some(line) = lines.next() {
@@ -383,6 +400,9 @@ fn suggestions_for_updates() {
     Package::new("with_updates", "1.0.2")
         .file("src/lib.rs", "")
         .publish();
+    Package::new("with_updates", "3.0.1")
+        .file("src/lib.rs", "")
+        .publish();
     Package::new("big_update", "2.0.0")
         .file("src/lib.rs", "")
         .publish();
@@ -396,21 +416,19 @@ fn suggestions_for_updates() {
     // in a long while?).
     p.cargo("update -p without_updates").run();
 
-    p.cargo("check -Zfuture-incompat-report")
+    p.cargo("check -Zfuture-incompat-report -Zunstable-options --future-incompat-report")
         .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .with_stderr_contains("[..]cargo report future-incompatibilities --id 1[..]")
-        .run();
-
-    p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
-        .with_stdout_contains(
+        .with_stderr_contains(
             "\
-The following packages appear to have newer versions available.
-You may want to consider updating them to a newer version to see if the issue has been fixed.
-
-big_update v1.0.0 has the following newer versions available: 2.0.0
+- Some affected dependencies have minor or patch version updates available:
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2
+
+
+- If a minor dependency update does not help, you can try updating to a new 
+  major version of those dependencies. You have to do this manually:
+big_update v1.0.0 has the following newer versions available: 2.0.0
+with_updates v1.0.0 has the following newer versions available: 3.0.1
 ",
         )
         .run();

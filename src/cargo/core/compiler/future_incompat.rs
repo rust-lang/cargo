@@ -1,12 +1,10 @@
 //! Support for future-incompatible warning reporting.
 
-use crate::core::{Dependency, PackageId, Workspace};
-use crate::sources::SourceConfigMap;
+use crate::core::{PackageId, Workspace};
 use crate::util::{iter_join, CargoResult, Config};
 use anyhow::{bail, format_err, Context};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::fmt::Write as _;
+use std::collections::BTreeMap;
 use std::io::{Read, Write};
 
 pub const REPORT_PREAMBLE: &str = "\
@@ -78,7 +76,10 @@ struct OnDiskReport {
     /// Unique reference to the report for the `--id` CLI flag.
     id: u32,
     /// Report, suitable for printing to the console.
-    report: String,
+    /// Maps crate names to the corresponding report
+    /// We use a `BTreeMap` so that the iteration order
+    /// is stable across multiple runs of `cargo`
+    per_crate: BTreeMap<String, String>,
 }
 
 impl Default for OnDiskReports {
@@ -109,7 +110,7 @@ impl OnDiskReports {
         };
         let report = OnDiskReport {
             id: current_reports.next_id,
-            report: render_report(ws, per_package_reports),
+            per_crate: render_report(per_package_reports),
         };
         current_reports.next_id += 1;
         current_reports.reports.push(report);
@@ -176,7 +177,12 @@ impl OnDiskReports {
         self.reports.last().map(|r| r.id).unwrap()
     }
 
-    pub fn get_report(&self, id: u32, config: &Config) -> CargoResult<String> {
+    pub fn get_report(
+        &self,
+        id: u32,
+        config: &Config,
+        package: Option<&str>,
+    ) -> CargoResult<String> {
         let report = self.reports.iter().find(|r| r.id == id).ok_or_else(|| {
             let available = iter_join(self.reports.iter().map(|r| r.id.to_string()), ", ");
             format_err!(
@@ -186,25 +192,45 @@ impl OnDiskReports {
                 available
             )
         })?;
-        let report = if config.shell().err_supports_color() {
-            report.report.clone()
+        let to_display = if let Some(package) = package {
+            report
+                .per_crate
+                .get(package)
+                .ok_or_else(|| {
+                    format_err!(
+                        "could not find package with ID `{}`\n
+                Available packages are: {}\n
+                Omit the `--crate` flag to display a report for all crates",
+                        package,
+                        iter_join(report.per_crate.keys(), ", ")
+                    )
+                })?
+                .clone()
         } else {
-            strip_ansi_escapes::strip(&report.report)
+            report
+                .per_crate
+                .values()
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        let to_display = if config.shell().err_supports_color() {
+            to_display
+        } else {
+            strip_ansi_escapes::strip(&to_display)
                 .map(|v| String::from_utf8(v).expect("utf8"))
                 .expect("strip should never fail")
         };
-        Ok(report)
+        Ok(to_display)
     }
 }
 
-fn render_report(
-    ws: &Workspace<'_>,
-    per_package_reports: &[FutureIncompatReportPackage],
-) -> String {
-    let mut per_package_reports: Vec<_> = per_package_reports.iter().collect();
-    per_package_reports.sort_by_key(|r| r.package_id);
-    let mut rendered = String::new();
-    for per_package in &per_package_reports {
+fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMap<String, String> {
+    let mut report: BTreeMap<String, String> = BTreeMap::new();
+    for per_package in per_package_reports {
+        let rendered = report
+            .entry(per_package.package_id.to_string())
+            .or_default();
         rendered.push_str(&format!(
             "The package `{}` currently triggers the following future \
              incompatibility lints:\n",
@@ -218,72 +244,6 @@ fn render_report(
                     .map(|l| format!("> {}\n", l)),
             );
         }
-        rendered.push('\n');
     }
-    if let Some(s) = render_suggestions(ws, &per_package_reports) {
-        rendered.push_str(&s);
-    }
-    rendered
-}
-
-fn render_suggestions(
-    ws: &Workspace<'_>,
-    per_package_reports: &[&FutureIncompatReportPackage],
-) -> Option<String> {
-    // This in general ignores all errors since this is opportunistic.
-    let _lock = ws.config().acquire_package_cache_lock().ok()?;
-    // Create a set of updated registry sources.
-    let map = SourceConfigMap::new(ws.config()).ok()?;
-    let package_ids: BTreeSet<_> = per_package_reports
-        .iter()
-        .map(|r| r.package_id)
-        .filter(|pkg_id| pkg_id.source_id().is_registry())
-        .collect();
-    let source_ids: HashSet<_> = package_ids
-        .iter()
-        .map(|pkg_id| pkg_id.source_id())
-        .collect();
-    let mut sources: HashMap<_, _> = source_ids
-        .into_iter()
-        .filter_map(|sid| {
-            let source = map.load(sid, &HashSet::new()).ok()?;
-            Some((sid, source))
-        })
-        .collect();
-    // Query the sources for new versions.
-    let mut suggestions = String::new();
-    for pkg_id in package_ids {
-        let source = match sources.get_mut(&pkg_id.source_id()) {
-            Some(s) => s,
-            None => continue,
-        };
-        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
-        let summaries = source.query_vec(&dep).ok()?;
-        let versions = itertools::sorted(
-            summaries
-                .iter()
-                .map(|summary| summary.version())
-                .filter(|version| *version > pkg_id.version()),
-        );
-        let versions = versions.map(|version| version.to_string());
-        let versions = iter_join(versions, ", ");
-        if !versions.is_empty() {
-            writeln!(
-                suggestions,
-                "{} has the following newer versions available: {}",
-                pkg_id, versions
-            )
-            .unwrap();
-        }
-    }
-    if suggestions.is_empty() {
-        None
-    } else {
-        Some(format!(
-            "The following packages appear to have newer versions available.\n\
-             You may want to consider updating them to a newer version to see if the \
-             issue has been fixed.\n\n{}",
-            suggestions
-        ))
-    }
+    report
 }
