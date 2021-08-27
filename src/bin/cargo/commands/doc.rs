@@ -23,7 +23,7 @@ pub fn cli() -> App {
         .arg(
             opt(
                 "scrape-examples",
-                "Scrape examples from examples/ directory to include as function documentation",
+                "Scrape examples to include as function documentation",
             )
             .value_name("FLAGS"),
         )
