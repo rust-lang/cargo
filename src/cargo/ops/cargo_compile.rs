@@ -594,42 +594,54 @@ pub fn create_bcx<'a, 'cfg>(
     }
 
     if let Some(filter) = rustdoc_scrape_examples {
-        let compile_mode = CompileMode::Doc { deps: false };
-        let mut example_compile_opts = CompileOptions::new(ws.config(), compile_mode)?;
-        example_compile_opts.cli_features = options.cli_features.clone();
-        example_compile_opts.build_config.mode = compile_mode;
-        example_compile_opts.spec = Packages::All;
-        example_compile_opts.filter = filter.clone();
-        example_compile_opts.rustdoc_scrape_examples = None;
-
-        let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-        let interner = UnitInterner::new();
-        let mut bcx = create_bcx(ws, &example_compile_opts, &interner)?;
-        let dest = bcx.profiles.get_dir_name();
+        // Run cargo rustdoc --scrape-examples to generate calls.jsons for each file in `filter`
         let paths = {
-            // FIXME(wcrichto): is there a better place to store these files?
-            let layout = Layout::new(ws, None, &dest)?;
-            let output_dir = layout.prepare_tmp()?;
-            bcx.roots
-                .iter()
-                .map(|unit| output_dir.join(format!("{}-calls.json", unit.buildkey())))
-                .collect::<Vec<_>>()
+            // Run in doc mode with the given `filter`
+            let compile_mode = CompileMode::Doc { deps: false };
+            let mut example_compile_opts = CompileOptions::new(ws.config(), compile_mode)?;
+            example_compile_opts.cli_features = options.cli_features.clone();
+            example_compile_opts.build_config.mode = compile_mode;
+            example_compile_opts.spec = Packages::All;
+            example_compile_opts.filter = filter.clone();
+            example_compile_opts.rustdoc_scrape_examples = None;
+
+            // Setup recursive Cargo context
+            let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
+            let interner = UnitInterner::new();
+            let mut bcx = create_bcx(ws, &example_compile_opts, &interner)?;
+
+            // Make an output path for calls.json for each build unit
+            let paths = {
+                // FIXME(wcrichto): is there a better place to store these files?
+                let dest = bcx.profiles.get_dir_name();
+                let layout = Layout::new(ws, None, &dest)?;
+                let output_dir = layout.prepare_tmp()?;
+                bcx.roots
+                    .iter()
+                    .map(|unit| output_dir.join(format!("{}-calls.json", unit.buildkey())))
+                    .collect::<Vec<_>>()
+            };
+
+            // Add --scrape-examples to each build unit's rustdoc args
+            for (path, unit) in paths.iter().zip(bcx.roots.iter()) {
+                bcx.extra_compiler_args
+                    .entry(unit.clone())
+                    .or_insert_with(Vec::new)
+                    .extend_from_slice(&[
+                        "-Zunstable-options".into(),
+                        "--scrape-examples".into(),
+                        path.clone().into_os_string(),
+                    ]);
+            }
+
+            // Invoke recursive Cargo
+            let cx = Context::new(&bcx)?;
+            cx.compile(&exec)?;
+
+            paths
         };
 
-        for (path, unit) in paths.iter().zip(bcx.roots.iter()) {
-            bcx.extra_compiler_args
-                .entry(unit.clone())
-                .or_insert_with(Vec::new)
-                .extend_from_slice(&[
-                    "-Zunstable-options".into(),
-                    "--scrape-examples".into(),
-                    path.clone().into_os_string(),
-                ]);
-        }
-
-        let cx = Context::new(&bcx)?;
-        cx.compile(&exec)?;
-
+        // Add "--with-examples *-calls.json" to the current rustdoc invocation
         let args = paths
             .into_iter()
             .map(|path| vec!["--with-examples".into(), path.into_os_string()].into_iter())
