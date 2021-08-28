@@ -694,7 +694,7 @@ fn no_track() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[ERROR] binary `foo[EXE]` already exists in destination
+[ERROR] binary `foo[EXE]` already exists in destination `[..]/.cargo/bin/foo`
 Add --force to overwrite
 ",
         )
