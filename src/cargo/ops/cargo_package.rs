@@ -76,6 +76,7 @@ struct GitVcsInfo {
 pub fn package_one(
     ws: &Workspace<'_>,
     pkg: &Package,
+    repo: Option<&git2::Repository>,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<FileLock>> {
     let config = ws.config();
@@ -96,9 +97,9 @@ pub fn package_one(
 
     // Check (git) repository state, getting the current commit hash if not
     // dirty.
-    let vcs_info = if !opts.allow_dirty {
+    let vcs_info = if repo.is_some() && !opts.allow_dirty {
         // This will error if a dirty repo is found.
-        check_repo_state(pkg, &src_files, config)?
+        check_repo_state(repo.unwrap(), pkg, &src_files, config)?
     } else {
         None
     };
@@ -165,9 +166,11 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     }
 
     for (pkg, cli_features) in pkgs {
+        let repo = get_repo(pkg, opts.config)?;
         let result = package_one(
             ws,
             pkg,
+            repo.as_ref(),
             &PackageOpts {
                 config: opts.config,
                 list: opts.list,
@@ -388,44 +391,53 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-/// Checks if the package source is in a *git* DVCS repository. If *git*, and
-/// the source is *dirty* (e.g., has uncommitted changes) then `bail!` with an
-/// informative message. Otherwise return the sha1 hash of the current *HEAD*
-/// commit, or `None` if no repo is found.
-fn check_repo_state(
-    p: &Package,
-    src_files: &[PathBuf],
-    config: &Config,
-) -> CargoResult<Option<VcsInfo>> {
+pub fn get_repo(p: &Package, config: &Config) -> CargoResult<Option<git2::Repository>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
-        if let Some(workdir) = repo.workdir() {
-            debug!("found a git repo at {:?}", workdir);
-            let path = p.manifest_path();
-            let path = path.strip_prefix(workdir).unwrap_or(path);
-            if let Ok(status) = repo.status_file(path) {
-                if (status & git2::Status::IGNORED).is_empty() {
-                    debug!(
-                        "found (git) Cargo.toml at {:?} in workdir {:?}",
-                        path, workdir
-                    );
-                    return Ok(Some(VcsInfo {
-                        git: git(p, src_files, &repo)?,
-                    }));
-                }
-            }
-            config.shell().verbose(|shell| {
-                shell.warn(format!(
-                    "No (git) Cargo.toml found at `{}` in workdir `{}`",
-                    path.display(),
-                    workdir.display()
-                ))
-            })?;
+        if repo.workdir().is_some() {
+            Ok(Some(repo))
+        } else {
+            Ok(None)
         }
     } else {
         config.shell().verbose(|shell| {
             shell.warn(format!("No (git) VCS found for `{}`", p.root().display()))
         })?;
+        Ok(None)
     }
+}
+
+/// Checks if the package source is in a *git* DVCS repository. If *git*, and
+/// the source is *dirty* (e.g., has uncommitted changes) then `bail!` with an
+/// informative message. Otherwise return the sha1 hash of the current *HEAD*
+/// commit, or `None` if no repo is found.
+fn check_repo_state(
+    repo: &git2::Repository,
+    p: &Package,
+    src_files: &[PathBuf],
+    config: &Config,
+) -> CargoResult<Option<VcsInfo>> {
+    let workdir = repo.workdir().unwrap();
+    debug!("found a git repo at {:?}", workdir);
+    let path = p.manifest_path();
+    let path = path.strip_prefix(workdir).unwrap_or(path);
+    if let Ok(status) = repo.status_file(path) {
+        if (status & git2::Status::IGNORED).is_empty() {
+            debug!(
+                "found (git) Cargo.toml at {:?} in workdir {:?}",
+                path, workdir
+            );
+            return Ok(Some(VcsInfo {
+                git: git(p, src_files, &repo)?,
+            }));
+        }
+    }
+    config.shell().verbose(|shell| {
+        shell.warn(format!(
+            "No (git) Cargo.toml found at `{}` in workdir `{}`",
+            path.display(),
+            workdir.display()
+        ))
+    })?;
 
     // No VCS with a checked in `Cargo.toml` found, so we don't know if the
     // directory is dirty or not, thus we have to assume that it's clean.

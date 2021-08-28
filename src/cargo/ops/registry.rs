@@ -103,11 +103,14 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?;
     verify_dependencies(pkg, &registry, reg_id)?;
 
+    let repo = ops::get_repo(pkg, opts.config)?;
+
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
     let tarball = ops::package_one(
         ws,
         pkg,
+        repo.as_ref(),
         &ops::PackageOpts {
             config: opts.config,
             verify: opts.verify,
@@ -128,6 +131,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     transmit(
         opts.config,
         pkg,
+        repo,
         tarball.file(),
         &mut registry,
         reg_id,
@@ -175,6 +179,7 @@ fn verify_dependencies(
 fn transmit(
     config: &Config,
     pkg: &Package,
+    repo: Option<git2::Repository>,
     tarball: &File,
     registry: &mut Registry,
     registry_id: SourceId,
@@ -245,11 +250,8 @@ fn transmit(
 
     let readme_path_relative_to_repo = readme.as_ref().map(|readme| {
         || -> Option<String> {
-            let repo = git2::Repository::discover(pkg.root()).ok()?;
-            let repo_root = repo.workdir()?;
-            let rel =
-                paths::strip_prefix_canonical(pkg.root().join(readme), repo_root.to_path_buf())
-                    .ok()?;
+            let repo_root = repo?.workdir().unwrap().to_owned();
+            let rel = paths::strip_prefix_canonical(pkg.root().join(readme), repo_root).ok()?;
             let rel = rel.to_str()?;
             Some(rel.replace("\\", "/"))
         }()
