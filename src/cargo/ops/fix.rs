@@ -346,7 +346,8 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
-    let rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
+    let mut rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
+    rustc.env_remove(FIX_ENV);
 
     trace!("start rustfixing {:?}", args.file);
     let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
@@ -363,6 +364,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         let mut cmd = rustc.build_command();
         args.apply(&mut cmd, config);
         cmd.arg("--error-format=json");
+        debug!("calling rustc for final verification: {:?}", cmd);
         let output = cmd.output().context("failed to spawn rustc")?;
 
         if output.status.success() {
@@ -388,6 +390,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         if !output.status.success() {
             if env::var_os(BROKEN_CODE_ENV).is_none() {
                 for (path, file) in fixes.files.iter() {
+                    debug!("reverting {:?} due to errors", path);
                     paths::write(path, &file.original_code)?;
                 }
             }
@@ -406,6 +409,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         // things like colored output to work correctly.
         cmd.arg(arg);
     }
+    debug!("calling rustc to display remaining diagnostics: {:?}", cmd);
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
@@ -431,7 +435,10 @@ fn rustfix_crate(
     args: &FixArgs,
     config: &Config,
 ) -> Result<FixedCrate, Error> {
-    args.check_edition_and_send_status(config)?;
+    if !args.can_run_rustfix(config)? {
+        // This fix should not be run. Skipping...
+        return Ok(FixedCrate::default());
+    }
 
     // First up, we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
@@ -541,6 +548,10 @@ fn rustfix_and_fix(
     let mut cmd = rustc.build_command();
     cmd.arg("--error-format=json");
     args.apply(&mut cmd, config);
+    debug!(
+        "calling rustc to collect suggestions and validate previous fixes: {:?}",
+        cmd
+    );
     let output = cmd.output().with_context(|| {
         format!(
             "failed to execute `{}`",
@@ -605,6 +616,7 @@ fn rustfix_and_fix(
             continue;
         }
 
+        trace!("adding suggestion for {:?}: {:?}", file_name, suggestion);
         file_map
             .entry(file_name)
             .or_insert_with(Vec::new)
@@ -834,15 +846,16 @@ impl FixArgs {
     }
 
     /// Validates the edition, and sends a message indicating what is being
-    /// done.
-    fn check_edition_and_send_status(&self, config: &Config) -> CargoResult<()> {
+    /// done. Returns a flag indicating whether this fix should be run.
+    fn can_run_rustfix(&self, config: &Config) -> CargoResult<bool> {
         let to_edition = match self.prepare_for_edition {
             Some(s) => s,
             None => {
                 return Message::Fixing {
                     file: self.file.display().to_string(),
                 }
-                .post();
+                .post()
+                .and(Ok(true));
             }
         };
         // Unfortunately determining which cargo targets are being built
@@ -856,18 +869,31 @@ impl FixArgs {
         // multiple jobs run in parallel (the error appears multiple
         // times). Hopefully this doesn't happen often in practice.
         if !to_edition.is_stable() && !config.nightly_features_allowed {
-            bail!(
-                "cannot migrate {} to edition {to_edition}\n\
-                 Edition {to_edition} is unstable and not allowed in this release, \
-                 consider trying the nightly release channel.",
-                self.file.display(),
+            let message = format!(
+                "`{file}` is on the latest edition, but trying to \
+                 migrate to edition {to_edition}.\n\
+                 Edition {to_edition} is unstable and not allowed in \
+                 this release, consider trying the nightly release channel.",
+                file = self.file.display(),
                 to_edition = to_edition
             );
+            return Message::EditionAlreadyEnabled {
+                message,
+                edition: to_edition.previous().unwrap(),
+            }
+            .post()
+            .and(Ok(false)); // Do not run rustfix for this the edition.
         }
         let from_edition = self.enabled_edition.unwrap_or(Edition::Edition2015);
         if from_edition == to_edition {
+            let message = format!(
+                "`{}` is already on the latest edition ({}), \
+                 unable to migrate further",
+                self.file.display(),
+                to_edition
+            );
             Message::EditionAlreadyEnabled {
-                file: self.file.display().to_string(),
+                message,
                 edition: to_edition,
             }
             .post()
@@ -879,5 +905,6 @@ impl FixArgs {
             }
             .post()
         }
+        .and(Ok(true))
     }
 }

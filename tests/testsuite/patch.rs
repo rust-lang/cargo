@@ -1618,10 +1618,10 @@ fn cycle() {
         .with_stderr(
             "\
 [UPDATING] [..]
-error: cyclic package dependency: [..]
+[ERROR] cyclic package dependency: [..]
 package `[..]`
-    ... which is depended on by `[..]`
-    ... which is depended on by `[..]`
+    ... which satisfies dependency `[..]` of package `[..]`
+    ... which satisfies dependency `[..]` of package `[..]`
 ",
         )
         .run();

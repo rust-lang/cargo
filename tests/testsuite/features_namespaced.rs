@@ -77,7 +77,7 @@ required by package `foo v0.1.0 ([..]/foo)`
         .run();
 
     // Publish a version without namespaced features, it should ignore 1.0.0
-    // an use this instead.
+    // and use this instead.
     Package::new("bar", "1.0.1")
         .add_dep(Dependency::new("baz", "1.0").optional(true))
         .feature("feat", &["baz"])

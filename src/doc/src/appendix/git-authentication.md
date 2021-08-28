@@ -44,7 +44,7 @@ most Unix-like systems), and that the correct keys are added (with `ssh-add`).
 Windows uses Pageant for SSH authentication.
 
 > **Note:** Cargo does not support git's shorthand SSH URLs like
-> `git@example.com/user/repo.git`. Use a full SSH URL like
+> `git@example.com:user/repo.git`. Use a full SSH URL like
 > `ssh://git@example.com/user/repo.git`.
 
 > **Note:** SSH configuration files (like OpenSSH's `~/.ssh/config`) are not

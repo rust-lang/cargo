@@ -100,9 +100,9 @@ A full-featured registry that supports publishing will additionally need to
 have a web API service that conforms to the API used by Cargo. The web API is
 documented below.
 
-At this time, there is no widely used software for running a custom registry.
-There is interest in documenting projects that implement registry support, or
-existing package caches that add support for Cargo.
+Commercial and community projects are available for building and running a
+registry. See <https://github.com/rust-lang/cargo/wiki/Third-party-registries>
+for a list of what is available.
 
 ### Index Format
 
@@ -135,6 +135,7 @@ The keys are:
   - `{prefix}`: A directory prefix computed from the crate name. For example,
     a crate named `cargo` has a prefix of `ca/rg`. See below for details.
   - `{lowerprefix}`: Lowercase variant of `{prefix}`.
+  - `{sha256-checksum}`: The crate's sha256 checksum.
 
   If none of the markers are present, then the value
   `/{crate}/{version}/download` is appended to the end.

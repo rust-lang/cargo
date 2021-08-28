@@ -2,8 +2,8 @@ use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
-    RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
-    VERSION_TEMPLATE,
+    RegistryConfig, RegistryData, CHECKSUM_TEMPLATE, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE,
+    PREFIX_TEMPLATE, VERSION_TEMPLATE,
 };
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -243,7 +243,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let filename = self.filename(pkg);
 
         // Attempt to open an read-only copy first to avoid an exclusive write
@@ -267,6 +267,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             && !url.contains(VERSION_TEMPLATE)
             && !url.contains(PREFIX_TEMPLATE)
             && !url.contains(LOWER_PREFIX_TEMPLATE)
+            && !url.contains(CHECKSUM_TEMPLATE)
         {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
@@ -275,7 +276,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
             .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase());
+            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
+            .replace(CHECKSUM_TEMPLATE, checksum);
 
         Ok(MaybeLock::Download {
             url,

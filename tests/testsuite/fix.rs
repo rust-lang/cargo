@@ -809,6 +809,7 @@ fn prepare_for_unstable() {
         }
     };
     let latest_stable = Edition::LATEST_STABLE;
+    let prev = latest_stable.previous().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
@@ -828,13 +829,24 @@ fn prepare_for_unstable() {
     // -j1 to make the error more deterministic (otherwise there can be
     // multiple errors since they run in parallel).
     p.cargo("fix --edition --allow-no-vcs -j1")
-        .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr(&format_args!("\
 [CHECKING] foo [..]
-[ERROR] cannot migrate src/lib.rs to edition {next}
+[WARNING] `src/lib.rs` is on the latest edition, but trying to migrate to edition {next}.
 Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
-error: could not compile `foo`
-", next=next))
+
+If you are trying to migrate from the previous edition ({prev}), the
+process requires following these steps:
+
+1. Start with `edition = \"{prev}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{latest_stable}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+
+[FINISHED] [..]
+", next=next, latest_stable=latest_stable, prev=prev))
         .run();
 
     if !is_nightly() {
@@ -1682,5 +1694,54 @@ fn abnormal_exit() {
         // "signal: 6, SIGABRT: process abort signal" on some platforms
         .with_stderr_contains("rustc exited abnormally: [..]")
         .with_stderr_contains("Original diagnostics will follow.")
+        .run();
+}
+
+#[cargo_test]
+fn fix_with_run_cargo_in_proc_macros() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use proc_macro::*;
+    
+                #[proc_macro]
+                pub fn foo(_input: TokenStream) -> TokenStream {
+                    let output = std::process::Command::new(env!("CARGO"))
+                        .args(&["metadata", "--format-version=1"])
+                        .output()
+                        .unwrap();
+                    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
+                    println!("{}", std::str::from_utf8(&output.stdout).unwrap());
+                    "".parse().unwrap()
+                }                    
+            "#,
+        )
+        .file(
+            "src/bin/main.rs",
+            r#"
+                use foo::foo;
+
+                fn main() {
+                    foo!("bar")
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fix --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
         .run();
 }

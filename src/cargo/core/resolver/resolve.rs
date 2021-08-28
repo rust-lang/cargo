@@ -117,7 +117,10 @@ impl Resolve {
 
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
-    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
+    pub fn path_to_top<'a>(
+        &'a self,
+        pkg: &'a PackageId,
+    ) -> Vec<(&'a PackageId, Option<&'a HashSet<Dependency>>)> {
         self.graph.path_to_top(pkg)
     }
 
