@@ -85,7 +85,7 @@ impl ConflictStoreTrie {
         } else {
             // We are at the end of the set we are adding, there are three cases for what to do
             // next:
-            // 1. `self` is a empty dummy Node inserted by `or_insert_with`
+            // 1. `self` is an empty dummy Node inserted by `or_insert_with`
             //      in witch case we should replace it with `Leaf(con)`.
             // 2. `self` is a `Node` because we previously inserted a superset of
             //      the thing we are working on (I don't know if this happens in practice)

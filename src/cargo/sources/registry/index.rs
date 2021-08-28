@@ -685,7 +685,7 @@ impl Summaries {
 // * `2`: Added the "index format version" field so that if the index format
 //   changes, different versions of cargo won't get confused reading each
 //   other's caches.
-// * `3`: Bumped the version to work around a issue where multiple versions of
+// * `3`: Bumped the version to work around an issue where multiple versions of
 //   a package were published that differ only by semver metadata. For
 //   example, openssl-src 110.0.0 and 110.0.0+1.1.0f. Previously, the cache
 //   would be incorrectly populated with two entries, both 110.0.0. After

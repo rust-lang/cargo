@@ -1000,7 +1000,7 @@ fn links_duplicates_old_registry() {
     but a native library can be linked only once
 
 package `bar v0.1.0`
-    ... which is depended on by `foo v0.1.0 ([..]foo)`
+    ... which satisfies dependency `bar = \"=0.1.0\"` of package `foo v0.1.0 ([..]foo)`
 links to native library `a`
 
 package `foo v0.1.0 ([..]foo)`
@@ -1064,7 +1064,7 @@ fn links_duplicates_deep_dependency() {
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
     ... required by package `a v0.5.0 ([..])`
-    ... which is depended on by `foo v0.5.0 ([..])`
+    ... which satisfies path dependency `a` of package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:

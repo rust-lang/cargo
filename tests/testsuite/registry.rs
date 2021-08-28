@@ -547,7 +547,7 @@ error: failed to select a version for the requirement `baz = \"=0.0.2\"`
 candidate versions found which didn't match: 0.0.1
 location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `bar v0.0.1`
-    ... which is depended on by `foo [..]`
+    ... which satisfies dependency `bar = \"*\"` of package `foo [..]`
 ",
         )
         .run();

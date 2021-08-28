@@ -178,6 +178,7 @@ pub struct Config {
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
     /// Cached configuration parsed by Cargo
     http_config: LazyCell<CargoHttpConfig>,
+    future_incompat_config: LazyCell<CargoFutureIncompatConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
@@ -187,14 +188,14 @@ pub struct Config {
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
-    /// - this is a integration test that uses `ProcessBuilder`
+    /// - this is an integration test that uses `ProcessBuilder`
     ///      that does not opt in with `masquerade_as_nightly_cargo`
     /// This should be true if:
     /// - this is an artifact of the rustc distribution process for "nightly"
     /// - this is being used in the rustc distribution process internally
     /// - this is a cargo executable that was built from source
     /// - this is an `#[test]` that called `enable_nightly_features`
-    /// - this is a integration test that uses `ProcessBuilder`
+    /// - this is an integration test that uses `ProcessBuilder`
     ///       that called `masquerade_as_nightly_cargo`
     /// It's public to allow tests use nightly features.
     /// NOTE: this should be set before `configure()`. If calling this from an integration test,
@@ -275,6 +276,7 @@ impl Config {
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
+            future_incompat_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
@@ -834,7 +836,7 @@ impl Config {
         Ok(())
     }
 
-    /// Low-level method for getting a config value as a `OptValue<HashMap<String, CV>>`.
+    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
     ///
     /// NOTE: This does not read from env. The caller is responsible for that.
     fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
@@ -1436,6 +1438,11 @@ impl Config {
             .try_borrow_with(|| self.get::<CargoHttpConfig>("http"))
     }
 
+    pub fn future_incompat_config(&self) -> CargoResult<&CargoFutureIncompatConfig> {
+        self.future_incompat_config
+            .try_borrow_with(|| self.get::<CargoFutureIncompatConfig>("future-incompat-report"))
+    }
+
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
         self.net_config
             .try_borrow_with(|| self.get::<CargoNetConfig>("net"))
@@ -2032,6 +2039,37 @@ pub struct CargoHttpConfig {
     pub debug: Option<bool>,
     pub multiplexing: Option<bool>,
     pub ssl_version: Option<SslVersionConfig>,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoFutureIncompatConfig {
+    frequency: Option<CargoFutureIncompatFrequencyConfig>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CargoFutureIncompatFrequencyConfig {
+    Always,
+    Never,
+}
+
+impl CargoFutureIncompatConfig {
+    pub fn should_display_message(&self) -> bool {
+        use CargoFutureIncompatFrequencyConfig::*;
+
+        let frequency = self.frequency.as_ref().unwrap_or(&Always);
+        match frequency {
+            Always => true,
+            Never => false,
+        }
+    }
+}
+
+impl Default for CargoFutureIncompatFrequencyConfig {
+    fn default() -> Self {
+        Self::Always
+    }
 }
 
 /// Configuration for `ssl-version` in `http` section

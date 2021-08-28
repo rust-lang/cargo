@@ -724,6 +724,196 @@ fn run_dylib_dep() {
 }
 
 #[cargo_test]
+fn run_with_bin_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("bar/src/main.rs", r#"fn main() { println!("bar"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar` which is missing a lib target
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn run_with_bin_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar1]
+                path = "bar1"
+                [dependencies.bar2]
+                path = "bar2"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "bar1/Cargo.toml",
+            r#"
+                [package]
+                name = "bar1"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar1"
+            "#,
+        )
+        .file("bar1/src/main.rs", r#"fn main() { println!("bar1"); }"#)
+        .file(
+            "bar2/Cargo.toml",
+            r#"
+                [package]
+                name = "bar2"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar2"
+            "#,
+        )
+        .file("bar2/src/main.rs", r#"fn main() { println!("bar2"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar1` which is missing a lib target
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar2` which is missing a lib target
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn run_with_bin_dep_in_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo1", "foo2"]
+            "#,
+        )
+        .file(
+            "foo1/Cargo.toml",
+            r#"
+                [package]
+                name = "foo1"
+                version = "0.0.1"
+
+                [dependencies.bar1]
+                path = "bar1"
+            "#,
+        )
+        .file("foo1/src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "foo1/bar1/Cargo.toml",
+            r#"
+                [package]
+                name = "bar1"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar1"
+            "#,
+        )
+        .file(
+            "foo1/bar1/src/main.rs",
+            r#"fn main() { println!("bar1"); }"#,
+        )
+        .file(
+            "foo2/Cargo.toml",
+            r#"
+                [package]
+                name = "foo2"
+                version = "0.0.1"
+
+                [dependencies.bar2]
+                path = "bar2"
+            "#,
+        )
+        .file("foo2/src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "foo2/bar2/Cargo.toml",
+            r#"
+                [package]
+                name = "bar2"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar2"
+            "#,
+        )
+        .file(
+            "foo2/bar2/src/main.rs",
+            r#"fn main() { println!("bar2"); }"#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `cargo run` could not determine which binary to run[..]
+available binaries: bar1, bar2, foo1, foo2",
+        )
+        .run();
+
+    p.cargo("run --bin foo1")
+        .with_stderr(
+            "\
+[WARNING] foo1 v0.0.1 ([CWD]/foo1) ignoring invalid dependency `bar1` which is missing a lib target
+[WARNING] foo2 v0.0.1 ([CWD]/foo2) ignoring invalid dependency `bar2` which is missing a lib target
+[COMPILING] foo1 v0.0.1 ([CWD]/foo1)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo1[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
 fn release_works() {
     let p = project()
         .file(

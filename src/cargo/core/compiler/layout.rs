@@ -175,7 +175,7 @@ impl Layout {
             examples: dest.join("examples"),
             doc: root.join("doc"),
             src: root.join("doc/src"),
-            tmp: dest.join("tmp"),
+            tmp: root.join("tmp"),
             root,
             dest,
             _lock: lock,

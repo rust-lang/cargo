@@ -102,6 +102,31 @@ fn list_command_looks_at_path() {
 }
 
 #[cargo_test]
+fn list_command_handles_known_external_commands() {
+    let p = project()
+        .executable(Path::new("path-test").join("cargo-fmt"), "")
+        .build();
+
+    let fmt_desc = "    fmt                  Formats all bin and lib files of the current crate using rustfmt.";
+
+    // Without path - fmt isn't there
+    p.cargo("--list")
+        .env("PATH", "")
+        .with_stdout_does_not_contain(fmt_desc)
+        .run();
+
+    // With path - fmt is there with known description
+    let mut path = path();
+    path.push(p.root().join("path-test"));
+    let path = env::join_paths(path.iter()).unwrap();
+
+    p.cargo("--list")
+        .env("PATH", &path)
+        .with_stdout_contains(fmt_desc)
+        .run();
+}
+
+#[cargo_test]
 fn list_command_resolves_symlinks() {
     let proj = project()
         .symlink(cargo_exe(), Path::new("path-test").join("cargo-2"))
