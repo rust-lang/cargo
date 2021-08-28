@@ -549,3 +549,32 @@ fn clean_spec_reserved() {
         )
         .run();
 }
+
+#[cargo_test]
+fn clean_spec_doc() {
+    // `clean -p package` make target/doc/package clear
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("doc").run();
+
+    let doc_path = &p.build_dir().join("doc");
+    assert!(doc_path.is_dir());
+
+    p.cargo("clean -p foo").run();
+
+    assert!(!doc_path.join("foo").is_dir());
+    assert!(!doc_path.join("src").join("foo").is_dir());
+
+    assert!(p.build_dir().is_dir());
+}
