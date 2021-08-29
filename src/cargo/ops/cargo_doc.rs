@@ -1,10 +1,12 @@
-use crate::core::{Shell, Workspace};
-use crate::ops;
-use crate::util::config::PathAndArgs;
-use crate::util::CargoResult;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+
+use crate::core::{Shell, Workspace};
+use crate::ops;
+use crate::util::command_prelude::CompileMode;
+use crate::util::config::PathAndArgs;
+use crate::util::CargoResult;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
@@ -18,6 +20,29 @@ pub struct DocOptions {
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
+
+    // When excluding dependencies for rendered docs, warn if output from a
+    // previous `cargo doc` invocations exists and suggest recreating the
+    // target/doc directory.
+    if let CompileMode::Doc { deps } = options.compile_opts.build_config.mode {
+        if !deps {
+            let kind = options.compile_opts.build_config.single_requested_kind()?;
+            let src_path = compilation.root_output[&kind]
+                .with_file_name("doc")
+                .join("src");
+            if let Ok(src_directory_entries) = std::fs::read_dir(src_path) {
+                let has_unexpected_src_directories = src_directory_entries
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                    .filter_map(|e| e.file_name().into_string().ok())
+                    .any(|entry| compilation.root_crate_names.contains(&entry));
+                if has_unexpected_src_directories {
+                    let mut shell = ws.config().shell();
+                    shell.warn("Detected docs rendered for non-target units, consider deleting target/docs and re-running cargo doc")?;
+                }
+            }
+        }
+    }
 
     if options.open_result {
         let name = &compilation.root_crate_names[0];
