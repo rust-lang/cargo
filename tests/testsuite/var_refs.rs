@@ -115,10 +115,8 @@ fn basic_with_default() {
         )
         .build();
 
-        // Note: UTILS_ROOT is not set in the environment.
-    p.cargo("build")
-        .cwd("bar")
-        .run();
+    // Note: UTILS_ROOT is not set in the environment.
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("bar").is_file());
 }
 

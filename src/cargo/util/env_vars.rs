@@ -20,13 +20,13 @@ pub fn expand_env_vars<'a>(s: &'a str) -> CargoResult<Cow<'a, str>> {
 /// references with values.  The caller provides a `query` function which gives
 /// the values of the variables.
 ///
-/// The syntax used for variable references is `${name}` or ${name?default}` if
-/// a default value is provided.  The curly braces are always required;
+/// The syntax used for variable references is `${name}` or `${name?default}` if
+/// a default value is provided. The curly braces are always required;
 /// `$FOO` will not be interpreted as a variable reference (and will be copied
 /// to the output).
 ///
 /// If a variable is referenced, then it must have a value (`query` must return
-/// `Some) or the variable reference must provide a default value (using the
+/// `Some`) or the variable reference must provide a default value (using the
 /// `...?default` syntax). If `query` returns `None` and the variable reference
 /// does not provide a default value, then the expansion of the entire string
 /// will fail and the function will return `Err`.
