@@ -1437,3 +1437,10 @@ serde = "1.0.117"
 [profile.dev.package.foo]
 codegen-backend = "cranelift"
 ```
+
+### patch-in-config
+
+The `-Z patch-in-config` flag, and the corresponding support for
+`[patch]` section in Cargo configuration files has been stabilized in
+the 1.56 release. See the [patch field](config.html#patch) for more
+information.
