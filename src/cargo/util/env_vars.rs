@@ -3,89 +3,116 @@
 use crate::util::CargoResult;
 use std::borrow::Cow;
 
+/// Expands a string, replacing references to environment variables with their
+/// values.
+///
+/// This function uses [expand_env_vars_with] to expand references to the
+/// environment variables of the current process.
 pub fn expand_env_vars<'a>(s: &'a str) -> CargoResult<Cow<'a, str>> {
-    expand_env_vars_with(s, |n| std::env::var(n).ok())
+    expand_vars_with(s, |n| std::env::var(n).ok())
 }
 
-pub fn expand_env_vars_with<'a, Q>(s: &'a str, query: Q) -> CargoResult<Cow<'a, str>>
+/// Expands a string, replacing references to variables with values provided by
+/// the caller.
+///
+/// This function looks for references to variables, similar to environment
+/// variable references in command-line shells or Makefiles, and replaces the
+/// references with values.  The caller provides a `query` function which gives
+/// the values of the variables.
+///
+/// The syntax used for variable references is `${name}` or ${name?default}` if
+/// a default value is provided.  The curly braces are always required;
+/// `$FOO` will not be interpreted as a variable reference (and will be copied
+/// to the output).
+///
+/// If a variable is referenced, then it must have a value (`query` must return
+/// `Some) or the variable reference must provide a default value (using the
+/// `...?default` syntax). If `query` returns `None` and the variable reference
+/// does not provide a default value, then the expansion of the entire string
+/// will fail and the function will return `Err`.
+///
+/// Most strings processed by Cargo will not contain variable references.
+/// Hence, this function uses `Cow<str>` for its return type; it will return
+/// its input string as `Cow::Borrowed` if no variable references were found.
+pub fn expand_vars_with<'a, Q>(s: &'a str, query: Q) -> CargoResult<Cow<'a, str>>
 where
     Q: Fn(&str) -> Option<String>,
 {
-    // Most strings do not contain environment variable references.
-    // We optimize for the case where there is no reference, and
-    // return the same (borrowed) string.
-    if s.contains('$') {
-        Ok(Cow::Owned(expand_env_vars_with_slow(s, query)?))
+    let mut rest: &str;
+    let mut result: String;
+    if let Some(pos) = s.find('$') {
+        result = String::with_capacity(s.len() + 50);
+        result.push_str(&s[..pos]);
+        rest = &s[pos..];
     } else {
-        Ok(Cow::Borrowed(s))
-    }
-}
+        // Most strings do not contain environment variable references.
+        // We optimize for the case where there is no reference, and
+        // return the same (borrowed) string.
+        return Ok(Cow::Borrowed(s));
+    };
 
-fn expand_env_vars_with_slow<Q>(s: &str, query: Q) -> CargoResult<String>
-where
-    Q: Fn(&str) -> Option<String>,
-{
-    let mut result = String::with_capacity(s.len() + 50);
-    let mut rest = s;
     while let Some(pos) = rest.find('$') {
-        let (lo, hi) = rest.split_at(pos);
-        result.push_str(lo);
-        let mut ci = hi.chars();
-        let c0 = ci.next();
+        result.push_str(&rest[..pos]);
+        rest = &rest[pos..];
+        let mut chars = rest.chars();
+        let c0 = chars.next();
         debug_assert_eq!(c0, Some('$')); // because rest.find()
-        match ci.next() {
-            Some('(') => {
+        match chars.next() {
+            Some('{') => {
                 // the expected case, which is handled below.
             }
             Some(c) => {
-                // We found '$' that was not paired with '('.
+                // We found '$' that was not paired with '{'.
                 // This is not a variable reference.
                 // Output the $ and continue.
                 result.push('$');
                 result.push(c);
-                rest = ci.as_str();
+                rest = chars.as_str();
                 continue;
             }
             None => {
-                // We found '$ at the end of the string.
+                // We found '$' at the end of the string.
                 result.push('$');
                 break;
             }
         }
-        let name_start = ci.as_str();
-        let mut name: &str = "";
-        let mut default_value: Option<&str> = None;
-        // Look for ')' or '?'
+        let name_start = chars.as_str();
+        let name: &str;
+        let default_value: Option<&str>;
+        // Look for '}' or '?'
         loop {
-            let ci_s = ci.as_str();
-            let pos = name_start.len() - ci.as_str().len();
-            match ci.next() {
+            let pos = name_start.len() - chars.as_str().len();
+            match chars.next() {
                 None => {
-                    anyhow::bail!("environment variable reference is missing closing parenthesis.")
+                    anyhow::bail!("environment variable reference is missing closing brace.")
                 }
-                Some(')') => {
-                    match default_value {
-                        Some(d) => default_value = Some(&d[..d.len() - ci_s.len()]),
-                        None => name = &name_start[..name_start.len() - ci_s.len()],
-                    }
-                    rest = ci.as_str();
+                Some('}') => {
+                    name = &name_start[..pos];
+                    default_value = None;
                     break;
                 }
                 Some('?') => {
-                    if default_value.is_some() {
-                        anyhow::bail!("environment variable reference has too many '?'");
-                    }
                     name = &name_start[..pos];
-                    default_value = Some(ci.as_str());
+                    let default_value_start = chars.as_str();
+                    loop {
+                        let pos = chars.as_str();
+                        if let Some(c) = chars.next() {
+                            if c == '}' {
+                                default_value = Some(
+                                    &default_value_start[..default_value_start.len() - pos.len()],
+                                );
+                                break;
+                            }
+                        } else {
+                            anyhow::bail!(
+                                "environment variable reference is missing closing brace."
+                            );
+                        }
+                    }
+                    break;
                 }
-                Some(_) if default_value.is_some() => {
-                    // consume this, for default value
-                }
-                Some(c) if is_legal_env_var_char(c) => {
-                    // continue for next char
-                }
-                Some(c) => {
-                    anyhow::bail!("environment variable reference has invalid character {:?}.", c);
+                Some(_) => {
+                    // consume this character (as part of var name)
                 }
             }
         }
@@ -103,83 +130,126 @@ where
                 name
             )),
         }
+        rest = chars.as_str();
     }
     result.push_str(rest);
-
-    Ok(result)
-}
-
-fn is_legal_env_var_char(c: char) -> bool {
-    match c {
-        'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => true,
-        _ => false,
-    }
+    Ok(Cow::Owned(result))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    macro_rules! assert_str_contains {
-        ($haystack:expr, $needle:expr) => {{
-            let haystack = $haystack;
-            let needle = $needle;
-            assert!(
-                haystack.contains(needle),
-                "expected {:?} to contain {:?}",
-                haystack,
-                needle
-            );
-        }};
-    }
-
     #[test]
     fn basic() {
         let query = |name: &str| match name {
-            "FOO" => Some("c:/foo".to_string()),
-            "BAR" => Some("c:/bar".to_string()),
+            "FOO" => Some("/foo".to_string()),
+            "BAR" => Some("/bar".to_string()),
+            "FOO(ZAP)" => Some("/foo/zap".to_string()),
+            "WINKING_FACE" => Some("\u{1F609}".to_string()),
+            "\u{1F916}" => Some("ROBOT FACE".to_string()),
             _ => None,
         };
 
-        let expand = |s| expand_env_vars_with(s, query);
-        let expand_ok = |s| match expand(s) {
-            Ok(value) => value,
-            Err(e) => panic!(
-                "expected '{}' to expand successfully, but failed: {:?}",
-                s, e
-            ),
-        };
-        let expand_err = |s| expand(s).unwrap_err().to_string();
-        assert_eq!(expand_ok(""), "");
-        assert_eq!(expand_ok("identity"), "identity");
-        assert_eq!(expand_ok("$(FOO)/some_package"), "c:/foo/some_package");
-        assert_eq!(expand_ok("$FOO/some_package"), "$FOO/some_package");
+        let expand = |s| expand_vars_with(s, query);
 
-        assert_eq!(expand_ok("alpha $(FOO) beta"), "alpha c:/foo beta");
-        assert_eq!(
-            expand_ok("one $(FOO) two $(BAR) three"),
-            "one c:/foo two c:/bar three"
-        );
+        macro_rules! case {
+            ($input:expr, $expected_output:expr) => {{
+                let input = $input;
+                let expected_output = $expected_output;
+                match expand(input) {
+                    Ok(output) => {
+                        assert_eq!(output, expected_output, "input = {:?}", input);
+                    }
+                    Err(e) => {
+                        panic!(
+                            "Expected string {:?} to expand successfully, but it failed: {:?}",
+                            input, e
+                        );
+                    }
+                }
+            }};
+        }
 
-        assert_eq!(expand_ok("one $(FOO)"), "one c:/foo");
+        macro_rules! err_case {
+            ($input:expr, $expected_error:expr) => {{
+                let input = $input;
+                let expected_error = $expected_error;
+                match expand(input) {
+                    Ok(output) => {
+                        panic!("Expected expansion of string {:?} to fail, but it succeeded with value {:?}", input, output);
+                    }
+                    Err(e) => {
+                        let message = e.to_string();
+                        assert_eq!(message, expected_error, "input = {:?}", input);
+                    }
+                }
+            }}
+        }
 
-        // has default, but value is present
-        assert_eq!(expand_ok("$(FOO?d:/default)"), "c:/foo");
-        assert_eq!(expand_ok("$(ZAP?d:/default)"), "d:/default");
+        // things without references should not change.
+        case!("", "");
+        case!("identity", "identity");
 
-        // error cases
-        assert_eq!(
-            expand_err("$(VAR_NOT_SET)"),
+        // we require ${...} (braces), so we ignore $FOO.
+        case!("$FOO/some_package", "$FOO/some_package");
+
+        // make sure variable references at the beginning, middle, and end
+        // of a string all work correctly.
+        case!("${FOO}", "/foo");
+        case!("${FOO} one", "/foo one");
+        case!("one ${FOO}", "one /foo");
+        case!("one ${FOO} two", "one /foo two");
+        case!("one ${FOO} two ${BAR} three", "one /foo two /bar three");
+
+        // variable names can contain most characters, except for '}' or '?'
+        // (Windows sets "ProgramFiles(x86)", for example.)
+        case!("${FOO(ZAP)}", "/foo/zap");
+
+        // variable is set, and has a default (which goes unused)
+        case!("${FOO?/default}", "/foo");
+
+        // variable is not set, but does have default
+        case!("${VAR_NOT_SET?/default}", "/default");
+
+        // variable is not set and has no default
+        err_case!(
+            "${VAR_NOT_SET}",
             "environment variable 'VAR_NOT_SET' is not set and has no default value"
         );
 
-        // invalid name
-        assert_str_contains!(
-            expand("$(111)").unwrap_err().to_string(),
-            "" // "environment variable reference has invalid character."
-        );
+        // environment variables with unicode values are ok
+        case!("${WINKING_FACE}", "\u{1F609}");
 
-        expand_err("$(");
-        expand_err("$(FOO");
+        // strings with unicode in them are ok
+        case!("\u{1F609}${FOO}", "\u{1F609}/foo");
+
+        // environment variable names with unicode in them are ok
+        case!("${\u{1F916}}", "ROBOT FACE");
+
+        // default values with unicode in them are ok
+        case!("${VAR_NOT_SET?\u{1F916}}", "\u{1F916}");
+
+        // invalid names
+        err_case!(
+            "${}",
+            "environment variable reference has invalid empty name"
+        );
+        err_case!(
+            "${?default}",
+            "environment variable reference has invalid empty name"
+        );
+        err_case!(
+            "${",
+            "environment variable reference is missing closing brace."
+        );
+        err_case!(
+            "${FOO",
+            "environment variable reference is missing closing brace."
+        );
+        err_case!(
+            "${FOO?default",
+            "environment variable reference is missing closing brace."
+        );
     }
 }
