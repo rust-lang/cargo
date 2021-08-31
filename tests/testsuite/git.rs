@@ -231,6 +231,68 @@ fn cargo_compile_git_dep_tag() {
 }
 
 #[cargo_test]
+fn cargo_compile_git_dep_pull_request() {
+    let project = project();
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file(
+                "src/dep1.rs",
+                r#"
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
+            )
+    });
+
+    // Make a reference in GitHub's pull request ref naming convention.
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let oid = repo.refname_to_id("HEAD").unwrap();
+    let force = false;
+    let log_message = "open pull request";
+    repo.reference("refs/pull/330/head", oid, force, log_message)
+        .unwrap();
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.0.0"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}", rev = "refs/pull/330/head" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
+        )
+        .build();
+
+    let git_root = git_project.root();
+
+    project
+        .cargo("build")
+        .with_stderr(&format!(
+            "[UPDATING] git repository `{}`\n\
+             [COMPILING] dep1 v0.5.0 ({}?rev=refs/pull/330/head#[..])\n\
+             [COMPILING] foo v0.0.0 ([CWD])\n\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+            path2url(&git_root),
+            path2url(&git_root),
+        ))
+        .run();
+
+    assert!(project.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn cargo_compile_with_nested_paths() {
     let git_project = git::new("dep1", |project| {
         project
