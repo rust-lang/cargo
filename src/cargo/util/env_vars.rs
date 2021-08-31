@@ -133,13 +133,18 @@ mod tests {
 
     #[test]
     fn basic() {
-        let query = |name: &str| match name {
-            "FOO" => Some("/foo".to_string()),
-            "BAR" => Some("/bar".to_string()),
-            "FOO(ZAP)" => Some("/foo/zap".to_string()),
-            "WINKING_FACE" => Some("\u{1F609}".to_string()),
-            "\u{1F916}" => Some("ROBOT FACE".to_string()),
-            _ => None,
+        let query = |name: &str| {
+            Ok(Some(
+                match name {
+                    "FOO" => "/foo",
+                    "BAR" => "/bar",
+                    "FOO(ZAP)" => "/foo/zap",
+                    "WINKING_FACE" => "\u{1F609}",
+                    "\u{1F916}" => "ROBOT FACE",
+                    _ => return Ok(None),
+                }
+                .to_string(),
+            ))
         };
 
         let expand = |s| expand_vars_with(s, query);
