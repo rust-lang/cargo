@@ -128,7 +128,7 @@ you need to specify is the location of the repository with the `git` key:
 
 ```toml
 [dependencies]
-rand = { git = "https://github.com/rust-lang-nursery/rand" }
+regex = { git = "https://github.com/rust-lang/regex" }
 ```
 
 Cargo will fetch the `git` repository at this location then look for a
@@ -144,7 +144,7 @@ the latest commit on a branch named `next`:
 
 ```toml
 [dependencies]
-rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
+regex = { git = "https://github.com/rust-lang/regex", branch = "next" }
 ```
 
 Once a `git` dependency has been added, Cargo will lock that dependency to the
