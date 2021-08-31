@@ -1029,9 +1029,13 @@ fn github_up_to_date(
         GitReference::Branch(branch) => branch,
         GitReference::Tag(tag) => tag,
         GitReference::DefaultBranch => "HEAD",
-        GitReference::Rev(_) => {
-            debug!("can't use github fast path with `rev`");
-            return Ok(false);
+        GitReference::Rev(rev) => {
+            if rev.starts_with("refs/") {
+                rev
+            } else {
+                debug!("can't use github fast path with `rev = \"{}\"`", rev);
+                return Ok(false);
+            }
         }
     };
 
