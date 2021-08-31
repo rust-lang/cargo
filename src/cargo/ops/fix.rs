@@ -836,7 +836,7 @@ impl FixArgs {
     fn apply(&self, cmd: &mut Command) {
         cmd.arg(&self.file);
         cmd.args(&self.other);
-        if self.prepare_for_edition.is_some() && config.nightly_features_allowed {
+        if self.prepare_for_edition.is_some() && env::var_os(SUPPORTS_FORCE_WARN).is_some() {
             // When migrating an edition, we don't want to fix other lints as
             // they can sometimes add suggestions that fail to apply, causing
             // the entire migration to fail. But those lints aren't needed to
