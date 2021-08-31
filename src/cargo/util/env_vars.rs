@@ -3,15 +3,6 @@
 use crate::util::CargoResult;
 use std::borrow::Cow;
 
-/// Expands a string, replacing references to environment variables with their
-/// values.
-///
-/// This function uses [expand_env_vars_with] to expand references to the
-/// environment variables of the current process.
-pub fn expand_env_vars<'a>(s: &'a str) -> CargoResult<Cow<'a, str>> {
-    expand_vars_with(s, |n| std::env::var(n).ok())
-}
-
 /// Expands a string, replacing references to variables with values provided by
 /// the caller.
 ///
@@ -36,7 +27,7 @@ pub fn expand_env_vars<'a>(s: &'a str) -> CargoResult<Cow<'a, str>> {
 /// its input string as `Cow::Borrowed` if no variable references were found.
 pub fn expand_vars_with<'a, Q>(s: &'a str, query: Q) -> CargoResult<Cow<'a, str>>
 where
-    Q: Fn(&str) -> Option<String>,
+    Q: Fn(&str) -> CargoResult<Option<String>>,
 {
     let mut rest: &str;
     let mut result: String;
@@ -122,7 +113,7 @@ where
         }
         // We now have the environment variable name, and have parsed the end of the
         // name reference.
-        match (query(name), default_value) {
+        match (query(name)?, default_value) {
             (Some(value), _) => result.push_str(&value),
             (None, Some(value)) => result.push_str(value),
             (None, None) => anyhow::bail!(format!(

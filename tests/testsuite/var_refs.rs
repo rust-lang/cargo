@@ -1,13 +1,9 @@
 //! Tests for variable references, e.g. { path = "${FOO}/bar/foo" }
-#![allow(unused_imports)]
 
-use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
-use std::env;
-use std::fs;
+use cargo_test_support::project;
 
 #[cargo_test]
-fn basic() {
+fn simple() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -37,6 +33,8 @@ fn basic() {
         .file(
             "bar/Cargo.toml",
             r#"
+        cargo-features = ["expand-env-vars"]
+
         [package]
         name = "bar"
         version = "1.0.0"
@@ -58,6 +56,7 @@ fn basic() {
         .build();
 
     p.cargo("build")
+        .masquerade_as_nightly_cargo()
         .cwd("bar")
         .env("UTILS_ROOT", "../utils")
         .run();
@@ -95,6 +94,8 @@ fn basic_with_default() {
         .file(
             "bar/Cargo.toml",
             r#"
+        cargo-features = ["expand-env-vars"]
+
         [package]
         name = "bar"
         version = "1.0.0"
@@ -116,17 +117,51 @@ fn basic_with_default() {
         .build();
 
     // Note: UTILS_ROOT is not set in the environment.
-    p.cargo("build").cwd("bar").run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Zunstable-options")
+        .arg("-Zexpand-env-vars")
+        .cwd("bar")
+        .run();
     assert!(p.bin("bar").is_file());
 }
 
-#[cfg(todo)] // error propagation is not working correctly.
+#[cargo_test]
+fn missing_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+        edition = "2018"
+
+        [lib]
+
+        [dependencies]
+        utils = { path = "${UTILS_ROOT}/utils" }
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Zexpand-env-vars")
+        .with_status(101)
+        .with_stderr_contains("[..]this manifest uses environment variable references [..] but has not specified `cargo-features = [\"expand-env-vars\"]`.[..]")
+        .run();
+}
+
 #[cargo_test]
 fn var_not_set() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
+        cargo-features = ["expand-env-vars"]
+
         [package]
         name = "foo"
         version = "1.0.0"
@@ -141,18 +176,20 @@ fn var_not_set() {
         .build();
 
     p.cargo("build")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains("environment variable 'BAD_VAR' is not set")
+        .with_stderr_contains("[..]environment variable 'BAD_VAR' is not set[..]")
         .run();
 }
 
-#[cfg(todo)] // error propagation is not working correctly.
 #[cargo_test]
 fn bad_syntax() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
+        cargo-features = ["expand-env-vars"]
+
         [package]
         name = "foo"
         version = "1.0.0"
@@ -167,7 +204,8 @@ fn bad_syntax() {
         .build();
 
     p.cargo("build")
+        .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains("environment variable reference is missing closing brace.")
+        .with_stderr_contains("[..]environment variable reference is missing closing brace.[..]")
         .run();
 }

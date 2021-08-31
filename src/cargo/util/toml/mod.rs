@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
@@ -251,19 +252,59 @@ impl<'de, P: Deserialize<'de>> de::Deserialize<'de> for TomlDependency<P> {
     }
 }
 
+/// Expands any environment variables found in `string`.
+///
+/// Expanding environment variables is currently an unstable feature.
+/// If the feature is not enabled, then we do not expand variable
+/// references, so "${FOO}" remains exactly "${FOO}" in the output.
+///
+/// This feature may be in one of _three_ modes:
+/// * Completely disabled. This is the default (stable) behavior. In this mode,
+///   variable references in `string` are ignored (treated like normal text).
+/// * `-Z expand_env_vars` was specified on the command-line, but the current
+///   manifest does not specify `cargo-features = ["expand_env_vars"]. In this
+///   mode, we do look for variable references. If we find _any_ variable
+///   reference, then we report an error. This mode is intended only to allow us
+///   to do Crater runs, so that we can find any projects that this new
+///   feature would break, since they contain strings that match our `${FOO}` syntax.
+/// * The current manifest contains `cargo-features = ["expand_env_vars"]`.
+///   In this mode, we look for variable references and process them.
+///   This is the mode that will eventually be stabilized and become the default.
+fn expand_env_var<'a>(
+    string: &'a str,
+    config: &Config,
+    features: &Features,
+) -> CargoResult<Cow<'a, str>> {
+    if config.cli_unstable().expand_env_vars || features.is_enabled(Feature::expand_env_vars()) {
+        let expanded_path = crate::util::env_vars::expand_vars_with(string, |name| {
+            if features.is_enabled(Feature::expand_env_vars()) {
+                Ok(std::env::var(name).ok())
+            } else {
+                // This manifest contains a string which looks like a variable
+                // reference, but the manifest has not enabled the feature.
+                // Report an error.
+                anyhow::bail!("this manifest uses environment variable references (e.g. ${FOO}) but has not specified `cargo-features = [\"expand-env-vars\"]`.");
+            }
+        })?;
+        Ok(expanded_path)
+    } else {
+        Ok(Cow::Borrowed(string))
+    }
+}
+
 pub trait ResolveToPath {
-    fn resolve(&self, config: &Config) -> CargoResult<PathBuf>;
+    fn resolve(&self, config: &Config, features: &Features) -> CargoResult<PathBuf>;
 }
 
 impl ResolveToPath for String {
-    fn resolve(&self, _: &Config) -> CargoResult<PathBuf> {
-        let expanded_path = crate::util::env_vars::expand_env_vars(self)?;
-        Ok(expanded_path.to_string().into())
+    fn resolve(&self, config: &Config, features: &Features) -> CargoResult<PathBuf> {
+        let expanded = expand_env_var(self, config, features)?;
+        Ok(expanded.to_string().into())
     }
 }
 
 impl ResolveToPath for ConfigRelativePath {
-    fn resolve(&self, c: &Config) -> CargoResult<PathBuf> {
+    fn resolve(&self, c: &Config, _features: &Features) -> CargoResult<PathBuf> {
         Ok(self.resolve_path(c))
     }
 }
@@ -1888,7 +1929,7 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
                 SourceId::for_git(&loc, reference)?
             }
             (None, Some(path), _, _) => {
-                let path = path.resolve(cx.config)?;
+                let path = path.resolve(cx.config, cx.features)?;
                 cx.nested_paths.push(path.clone());
                 // If the source ID for the package we're parsing is a path
                 // source, then we normalize the path here to get rid of

@@ -1328,6 +1328,29 @@ filename = "007bar"
 path = "src/main.rs"
 ```
 
+### expand-env-vars
+
+The `expand-env-vars` feature allows certain fields within manifests to refer
+to environment variables, using `${FOO}` syntax. Currently, the only field that
+may refer to environment variables is the `path` field of a dependency.
+
+For example:
+
+```toml
+cargo-features = ["expand-env-vars"]
+
+[dependencies]
+foo = { path = "${MY_PROJECT_ROOT}/some/long/path/utils" }
+```
+
+For organizations that manage large code bases, using relative walk-up paths
+(e.g. `../../../../long/path/utils`) is not practical; some organizations
+forbid using walk-up paths. The `expand-env-vars` feature allows Cargo
+to work in such systems.
+
+The curly braces are required; `$FOO` will not be interpreted as a variable
+reference.
+
 ## Stabilized and removed features
 
 ### Compile progress

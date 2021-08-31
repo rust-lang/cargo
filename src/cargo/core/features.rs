@@ -408,6 +408,8 @@ features! {
 
     // Allow specifying different binary name apart from the crate name
     (unstable, different_binary_name, "", "reference/unstable.html#different-binary-name"),
+
+    (unstable, expand_env_vars, "", "reference/unstable.html#expand-env-vars"),
 }
 
 pub struct Feature {
@@ -656,6 +658,7 @@ unstable_cli_options!(
     unstable_options: bool = ("Allow the usage of unstable options"),
     weak_dep_features: bool = ("Allow `dep_name?/feature` feature syntax"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
+    expand_env_vars: bool = ("Expand environment variable references like ${FOO} in certain contexts, such as `path = \"...\"` in dependencies."),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -878,6 +881,7 @@ impl CliUnstable {
             "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "configurable-env" => stabilized_warn(k, "1.56", STABILIZED_CONFIGURABLE_ENV),
             "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
+            "expand-env-vars" => self.expand_env_vars = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
