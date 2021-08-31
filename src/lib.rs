@@ -100,7 +100,7 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
                 .chars()
                 .take_while(|&c| char::is_whitespace(c))
                 .count();
-            std::cmp::min(indent, line.highlight_start)
+            std::cmp::min(indent, line.highlight_start - 1)
         })
         .min()?;
 

@@ -22,3 +22,4 @@ expect_empty_json_test! {out_of_bounds_test, "out_of_bounds.recorded.json"}
 expect_empty_json_test! {utf8_identifiers_test, "utf8_idents.recorded.json"}
 expect_empty_json_test! {empty, "empty.json"}
 expect_empty_json_test! {no_main, "no_main.json"}
+expect_empty_json_test! {indented_whitespace, "indented_whitespace.json"}
