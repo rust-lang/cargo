@@ -377,6 +377,10 @@ fn new_with_reference_link() {
 
 #[cargo_test]
 fn lockfile_constant_during_new() {
+    if !cargo_test_support::is_nightly() {
+        // Remove when 1.56 is stable (cargo new defaults to 2021).
+        return;
+    }
     cargo_process("new foo").run();
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
