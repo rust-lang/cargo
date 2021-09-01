@@ -362,11 +362,6 @@ impl<'cfg> Workspace<'cfg> {
             BTreeMap<String, BTreeMap<String, TomlDependency<ConfigRelativePath>>>,
         > = self.config.get("patch")?;
 
-        if config_patch.is_some() && !self.config.cli_unstable().patch_in_config {
-            self.config.shell().warn("`[patch]` in cargo config was ignored, the -Zpatch-in-config command-line flag is required".to_owned())?;
-            return Ok(HashMap::new());
-        }
-
         let source = SourceId::for_path(self.root())?;
 
         let mut warnings = Vec::new();
@@ -434,24 +429,24 @@ impl<'cfg> Workspace<'cfg> {
 
         // We could just chain from_manifest and from_config,
         // but that's not quite right as it won't deal with overlaps.
-        let mut combined = from_manifest.clone();
-        for (url, cdeps) in from_config {
-            if let Some(deps) = combined.get_mut(&url) {
-                // We want from_manifest to take precedence for each patched name.
+        let mut combined = from_config;
+        for (url, deps_from_manifest) in from_manifest {
+            if let Some(deps_from_config) = combined.get_mut(&url) {
+                // We want from_config to take precedence for each patched name.
                 // NOTE: This is inefficient if the number of patches is large!
-                let mut left = cdeps.clone();
-                for dep in &mut *deps {
-                    if let Some(i) = left.iter().position(|cdep| {
+                let mut from_manifest_pruned = deps_from_manifest.clone();
+                for dep_from_config in &mut *deps_from_config {
+                    if let Some(i) = from_manifest_pruned.iter().position(|dep_from_manifest| {
                         // XXX: should this also take into account version numbers?
-                        dep.name_in_toml() == cdep.name_in_toml()
+                        dep_from_config.name_in_toml() == dep_from_manifest.name_in_toml()
                     }) {
-                        left.swap_remove(i);
+                        from_manifest_pruned.swap_remove(i);
                     }
                 }
                 // Whatever is left does not exist in manifest dependencies.
-                deps.extend(left);
+                deps_from_config.extend(from_manifest_pruned);
             } else {
-                combined.insert(url.clone(), cdeps.clone());
+                combined.insert(url.clone(), deps_from_manifest.clone());
             }
         }
         Ok(combined)
