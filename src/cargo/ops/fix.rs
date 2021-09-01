@@ -51,7 +51,7 @@ use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
-use crate::core::compiler::RustcTargetData;
+use crate::core::compiler::{CompileKind, RustcTargetData, TargetInfo};
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Workspace};
@@ -67,6 +67,7 @@ const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
+const SUPPORTS_FORCE_WARN: &str = "__CARGO_SUPPORTS_FORCE_WARN";
 
 pub struct FixOptions {
     pub edition: bool,
@@ -121,6 +122,17 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
 
     let rustc = ws.config().load_global_rustc(Some(ws))?;
     wrapper.arg(&rustc.path);
+
+    // Remove this once 1.56 is stabilized.
+    let target_info = TargetInfo::new(
+        ws.config(),
+        &opts.compile_opts.build_config.requested_kinds,
+        &rustc,
+        CompileKind::Host,
+    )?;
+    if target_info.supports_force_warn {
+        wrapper.env(SUPPORTS_FORCE_WARN, "1");
+    }
 
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
     // repeating build until there are no more changes to be applied
@@ -362,7 +374,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     // that we have to back it all out.
     if !fixes.files.is_empty() {
         let mut cmd = rustc.build_command();
-        args.apply(&mut cmd, config);
+        args.apply(&mut cmd);
         cmd.arg("--error-format=json");
         debug!("calling rustc for final verification: {:?}", cmd);
         let output = cmd.output().context("failed to spawn rustc")?;
@@ -403,7 +415,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     // - If `--broken-code`, show the error messages.
     // - If the fix succeeded, show any remaining warnings.
     let mut cmd = rustc.build_command();
-    args.apply(&mut cmd, config);
+    args.apply(&mut cmd);
     for arg in args.format_args {
         // Add any json/error format arguments that Cargo wants. This allows
         // things like colored output to work correctly.
@@ -497,7 +509,7 @@ fn rustfix_crate(
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        rustfix_and_fix(&mut fixes, rustc, filename, args, config)?;
+        rustfix_and_fix(&mut fixes, rustc, filename, args)?;
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
@@ -539,7 +551,6 @@ fn rustfix_and_fix(
     rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
-    config: &Config,
 ) -> Result<(), Error> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
@@ -547,7 +558,7 @@ fn rustfix_and_fix(
 
     let mut cmd = rustc.build_command();
     cmd.arg("--error-format=json");
-    args.apply(&mut cmd, config);
+    args.apply(&mut cmd);
     debug!(
         "calling rustc to collect suggestions and validate previous fixes: {:?}",
         cmd
@@ -822,10 +833,10 @@ impl FixArgs {
         })
     }
 
-    fn apply(&self, cmd: &mut Command, config: &Config) {
+    fn apply(&self, cmd: &mut Command) {
         cmd.arg(&self.file);
         cmd.args(&self.other);
-        if self.prepare_for_edition.is_some() && config.nightly_features_allowed {
+        if self.prepare_for_edition.is_some() && env::var_os(SUPPORTS_FORCE_WARN).is_some() {
             // When migrating an edition, we don't want to fix other lints as
             // they can sometimes add suggestions that fail to apply, causing
             // the entire migration to fail. But those lints aren't needed to
@@ -844,7 +855,7 @@ impl FixArgs {
 
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
-                if config.nightly_features_allowed {
+                if env::var_os(SUPPORTS_FORCE_WARN).is_some() {
                     cmd.arg("--force-warn")
                         .arg(format!("rust-{}-compatibility", edition))
                         .arg("-Zunstable-options");

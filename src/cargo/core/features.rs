@@ -139,6 +139,7 @@ pub enum Edition {
 // - Set LATEST_STABLE to the new version.
 // - Update `is_stable` to `true`.
 // - Set the editionNNNN feature to stable in the features macro below.
+// - Update any tests that are affected.
 // - Update the man page for the --edition flag.
 // - Update unstable.md to move the edition section to the bottom.
 // - Update the documentation:
@@ -150,9 +151,9 @@ impl Edition {
     /// The latest edition that is unstable.
     ///
     /// This is `None` if there is no next unstable edition.
-    pub const LATEST_UNSTABLE: Option<Edition> = Some(Edition::Edition2021);
+    pub const LATEST_UNSTABLE: Option<Edition> = None;
     /// The latest stable edition.
-    pub const LATEST_STABLE: Edition = Edition::Edition2018;
+    pub const LATEST_STABLE: Edition = Edition::Edition2021;
     /// Possible values allowed for the `--edition` CLI flag.
     ///
     /// This requires a static value due to the way clap works, otherwise I
@@ -176,7 +177,7 @@ impl Edition {
         match self {
             Edition2015 => true,
             Edition2018 => true,
-            Edition2021 => false,
+            Edition2021 => true,
         }
     }
 
@@ -398,7 +399,7 @@ features! {
     (stable, rust_version, "1.56", "reference/manifest.html#the-rust-version-field"),
 
     // Support for 2021 edition.
-    (unstable, edition2021, "", "reference/unstable.html#edition-2021"),
+    (stable, edition2021, "1.56", "reference/manifest.html#the-edition-field"),
 
     // Allow to specify per-package targets (compile kinds)
     (unstable, per_package_target, "", "reference/unstable.html#per-package-target"),
