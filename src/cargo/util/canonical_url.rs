@@ -19,7 +19,7 @@ impl CanonicalUrl {
     pub fn new(url: &Url) -> CargoResult<CanonicalUrl> {
         let mut url = url.clone();
 
-        // cannot-be-a-base-urls (e.g., `github.com:rust-lang-nursery/rustfmt.git`)
+        // cannot-be-a-base-urls (e.g., `github.com:rust-lang/rustfmt.git`)
         // are not supported.
         if url.cannot_be_a_base() {
             anyhow::bail!(

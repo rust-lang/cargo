@@ -52,6 +52,16 @@ flag and will always document the given target.
 
 {{#options}}
 {{> options-targets-lib-bin }}
+
+{{#option "`--example` _name_..." }}
+{{actionverb}} the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
+{{/option}}
+
+{{#option "`--examples`" }}
+{{actionverb}} all example targets.
+{{/option}}
+
 {{/options}}
 
 {{> section-features }}

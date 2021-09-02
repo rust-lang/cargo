@@ -258,7 +258,13 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         if !self.force && !duplicates.is_empty() {
             let mut msg: Vec<String> = duplicates
                 .iter()
-                .map(|(name, _)| format!("binary `{}` already exists in destination", name))
+                .map(|(name, _)| {
+                    format!(
+                        "binary `{}` already exists in destination `{}`",
+                        name,
+                        dst.join(name).to_string_lossy()
+                    )
+                })
                 .collect();
             msg.push("Add --force to overwrite".to_string());
             bail!("{}", msg.join("\n"));

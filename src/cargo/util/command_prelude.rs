@@ -87,9 +87,7 @@ pub trait AppExt: Sized {
         benches: &'static str,
         all: &'static str,
     ) -> Self {
-        self.arg_targets_lib_bin(lib, bin, bins)
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(opt("examples", examples))
+        self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
             ._arg(optional_multi_opt("test", "NAME", test))
             ._arg(opt("tests", tests))
             ._arg(optional_multi_opt("bench", "NAME", bench))
@@ -97,10 +95,19 @@ pub trait AppExt: Sized {
             ._arg(opt("all-targets", all))
     }
 
-    fn arg_targets_lib_bin(self, lib: &'static str, bin: &'static str, bins: &'static str) -> Self {
+    fn arg_targets_lib_bin_example(
+        self,
+        lib: &'static str,
+        bin: &'static str,
+        bins: &'static str,
+        example: &'static str,
+        examples: &'static str,
+    ) -> Self {
         self._arg(opt("lib", lib))
             ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
+            ._arg(optional_multi_opt("example", "NAME", example))
+            ._arg(opt("examples", examples))
     }
 
     fn arg_targets_bins_examples(

@@ -31,7 +31,8 @@ fn simple_lib() {
 mod tests {
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let result = 2 + 2;
+        assert_eq!(result, 4);
     }
 }
 "#
@@ -355,7 +356,7 @@ fn new_with_edition_2018() {
 fn new_default_edition() {
     cargo_process("new foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(manifest.contains("edition = \"2018\""));
+    assert!(manifest.contains("edition = \"2021\""));
 }
 
 #[cargo_test]
@@ -376,6 +377,10 @@ fn new_with_reference_link() {
 
 #[cargo_test]
 fn lockfile_constant_during_new() {
+    if !cargo_test_support::is_nightly() {
+        // Remove when 1.56 is stable (cargo new defaults to 2021).
+        return;
+    }
     cargo_process("new foo").run();
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();

@@ -107,6 +107,16 @@ and supports common Unix glob patterns.</dd>
 <dd class="option-desc">Document all binary targets.</dd>
 
 
+
+<dt class="option-term" id="option-cargo-doc---example"><a class="option-anchor" href="#option-cargo-doc---example"></a><code>--example</code> <em>name</em>...</dt>
+<dd class="option-desc">Document the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
+
+
+<dt class="option-term" id="option-cargo-doc---examples"><a class="option-anchor" href="#option-cargo-doc---examples"></a><code>--examples</code></dt>
+<dd class="option-desc">Document all example targets.</dd>
+
+
 </dl>
 
 ### Feature Selection

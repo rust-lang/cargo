@@ -514,6 +514,108 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
 }
 
 #[cargo_test]
+fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                //! Binary documentation
+                extern crate foo;
+                fn main() {
+                    foo::foo();
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                //! Library documentation
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "examples/ex1.rs",
+            r#"
+                //! Example1 documentation
+                pub fn x() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --example ex1")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/ex1/index.html");
+    assert!(!doc_html.contains("Library"));
+    assert!(!doc_html.contains("Binary"));
+    assert!(doc_html.contains("Example1"));
+}
+
+#[cargo_test]
+fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                //! Binary documentation
+                extern crate foo;
+                fn main() {
+                    foo::foo();
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                //! Library documentation
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "examples/ex1.rs",
+            r#"
+                //! Example1 documentation
+                pub fn example1() { f(); }
+            "#,
+        )
+        .file(
+            "examples/ex2.rs",
+            r#"
+                //! Example2 documentation
+                pub fn example2() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --examples")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let example_doc_html_1 = p.read_file("target/doc/ex1/index.html");
+    let example_doc_html_2 = p.read_file("target/doc/ex2/index.html");
+
+    assert!(!example_doc_html_1.contains("Library"));
+    assert!(!example_doc_html_1.contains("Binary"));
+
+    assert!(!example_doc_html_2.contains("Library"));
+    assert!(!example_doc_html_2.contains("Binary"));
+
+    assert!(example_doc_html_1.contains("Example1"));
+    assert!(example_doc_html_2.contains("Example2"));
+}
+
+#[cargo_test]
 fn doc_dash_p() {
     let p = project()
         .file(

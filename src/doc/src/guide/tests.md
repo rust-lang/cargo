@@ -11,7 +11,7 @@ currently has no tests:
 
 ```console
 $ cargo test
-   Compiling rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
+   Compiling regex v1.5.0 (https://github.com/rust-lang/regex.git#9f9f693)
    Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
      Running target/test/hello_world-9c2b65bbb79eabce
 

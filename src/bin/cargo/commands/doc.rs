@@ -20,10 +20,12 @@ pub fn cli() -> App {
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))
         .arg_jobs()
-        .arg_targets_lib_bin(
+        .arg_targets_lib_bin_example(
             "Document only this package's library",
             "Document only the specified binary",
             "Document all binaries",
+            "Document only the specified example",
+            "Document all examples",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
