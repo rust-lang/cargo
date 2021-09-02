@@ -14,9 +14,12 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let opts = args.new_options(config)?;
-    
+
     // obtain all packages on the path.
-    let paths = args.values_of("path").unwrap_or_default().collect::<Vec<_>>();
+    let paths = args
+        .values_of("path")
+        .unwrap_or_default()
+        .collect::<Vec<_>>();
 
     ops::new(&opts, paths, config)?;
 

@@ -422,19 +422,27 @@ fn new_one(opts: &NewOptions, name: Option<&str>, config: &Config) -> CargoResul
         anyhow::bail!(
             "destination `{}` already exists\n\n\
              Use `cargo init` to initialize the directory",
-             work_path.join(package_name).display()
+            work_path.join(package_name).display()
         )
     }
 
     let is_bin = opts.kind.is_bin();
-    
-    check_name(name.unwrap(), opts.name.is_none(), is_bin, &mut config.shell())?;
+
+    check_name(
+        name.unwrap(),
+        opts.name.is_none(),
+        is_bin,
+        &mut config.shell(),
+    )?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path: absolute_path.as_path(),
         name: name.unwrap(),
-        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.unwrap().to_string())],
+        source_files: vec![plan_new_source_file(
+            opts.kind.is_bin(),
+            name.unwrap().to_string(),
+        )],
         bin: is_bin,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
@@ -474,7 +482,6 @@ pub fn new(opts: &NewOptions, paths: Vec<&str>, config: &Config) -> CargoResult<
                 "Successfully crated {} '{}' !",
                 opts.kind,
                 succeeded.join(", ")
-    
             ));
         }
         if !failed.is_empty() {
@@ -492,10 +499,9 @@ pub fn new(opts: &NewOptions, paths: Vec<&str>, config: &Config) -> CargoResult<
     };
 
     if success && paths.len() == 1 {
-        config.shell().status(
-            "Created",
-            format!("{} `{}` package", opts.kind, paths[0]),
-        )?;
+        config
+            .shell()
+            .status("Created", format!("{} `{}` package", opts.kind, paths[0]))?;
     }
 
     if error {
