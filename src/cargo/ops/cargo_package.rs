@@ -66,6 +66,8 @@ enum GeneratedFile {
 #[derive(Serialize)]
 struct VcsInfo {
     git: GitVcsInfo,
+    /// Path to the package within repo (empty string if root). / not \
+    path_in_vcs: String,
 }
 
 #[derive(Serialize)]
@@ -408,8 +410,14 @@ fn check_repo_state(
                         "found (git) Cargo.toml at {:?} in workdir {:?}",
                         path, workdir
                     );
+                    let path_in_vcs = path
+                        .parent()
+                        .and_then(|p| p.to_str())
+                        .unwrap_or("")
+                        .replace("\\", "/");
                     return Ok(Some(VcsInfo {
                         git: git(p, src_files, &repo)?,
+                        path_in_vcs,
                     }));
                 }
             }
