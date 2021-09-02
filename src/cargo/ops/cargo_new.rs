@@ -427,21 +427,16 @@ fn new_one(opts: &NewOptions, name: Option<&str>, config: &Config) -> CargoResul
     }
 
     let is_bin = opts.kind.is_bin();
-
-    check_name(
-        name.unwrap(),
-        opts.name.is_none(),
-        is_bin,
-        &mut config.shell(),
-    )?;
+    let file_name = get_name(&opts.path, opts)?;
+    check_name(file_name, opts.name.is_none(), is_bin, &mut config.shell())?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path: absolute_path.as_path(),
-        name: name.unwrap(),
+        name: file_name,
         source_files: vec![plan_new_source_file(
             opts.kind.is_bin(),
-            name.unwrap().to_string(),
+            file_name.to_string(),
         )],
         bin: is_bin,
         edition: opts.edition.as_deref(),
