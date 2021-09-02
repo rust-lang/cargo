@@ -2,7 +2,7 @@ use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
@@ -412,26 +412,29 @@ fn calculate_new_project_kind(
     requested_kind
 }
 
-pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
-    let path = &opts.path;
-    if path.exists() {
+fn new_one(opts: &NewOptions, name: Option<&str>, config: &Config) -> CargoResult<()> {
+    // Current working path
+    let work_path = config.cwd();
+    let package_name = name.map(str::to_string).unwrap();
+    let absolute_path = work_path.join(Path::new(&package_name));
+
+    if work_path.join(&package_name).exists() {
         anyhow::bail!(
             "destination `{}` already exists\n\n\
              Use `cargo init` to initialize the directory",
-            path.display()
+             work_path.join(package_name).display()
         )
     }
 
     let is_bin = opts.kind.is_bin();
-
-    let name = get_name(path, opts)?;
-    check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
+    
+    check_name(name.unwrap(), opts.name.is_none(), is_bin, &mut config.shell())?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
-        path,
-        name,
-        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
+        path: absolute_path.as_path(),
+        name: name.unwrap(),
+        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.unwrap().to_string())],
         bin: is_bin,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
@@ -440,10 +443,65 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     mk(config, &mkopts).with_context(|| {
         format!(
             "Failed to create package `{}` at `{}`",
-            name,
-            path.display()
+            name.unwrap(),
+            absolute_path.as_path().display()
         )
     })?;
+    Ok(())
+}
+
+pub fn new(opts: &NewOptions, paths: Vec<&str>, config: &Config) -> CargoResult<()> {
+    let (success, error) = if paths.len() <= 1 {
+        new_one(opts, paths.clone().into_iter().next(), config)?;
+        (true, false)
+    } else {
+        let mut succeeded = vec![];
+        let mut failed = vec![];
+
+        for path in paths.clone() {
+            match new_one(opts, Some(path), config) {
+                Ok(()) => succeeded.push(path),
+                Err(e) => {
+                    crate::display_error(&e, &mut config.shell());
+                    failed.push(path)
+                }
+            }
+        }
+
+        let mut summary = vec![];
+        if !succeeded.is_empty() {
+            summary.push(format!(
+                "Successfully crated {} '{}' !",
+                opts.kind,
+                succeeded.join(", ")
+    
+            ));
+        }
+        if !failed.is_empty() {
+            summary.push(format!(
+                "Failed to crated {} '{}' !",
+                opts.kind,
+                failed.join(", ")
+            ));
+        }
+
+        if !succeeded.is_empty() || !failed.is_empty() {
+            config.shell().status("Summary", summary.join(" "))?;
+        }
+        (!succeeded.is_empty(), !failed.is_empty())
+    };
+
+    if success && paths.len() == 1 {
+        config.shell().status(
+            "Created",
+            format!("{} `{}` package", opts.kind, paths[0]),
+        )?;
+    }
+
+    if error {
+        bail!("some packages failed to crated");
+    }
+
     Ok(())
 }
 
