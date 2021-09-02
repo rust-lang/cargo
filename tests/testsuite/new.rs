@@ -89,7 +89,7 @@ fn no_argument() {
         .with_stderr_contains(
             "\
 error: The following required arguments were not provided:
-    <path>
+    <path>...
 ",
         )
         .run();
@@ -493,4 +493,81 @@ fn git_default_branch() {
     let repo = git2::Repository::open(paths::root().join("bar")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
     assert_eq!(head.symbolic_target().unwrap(), "refs/heads/hello");
+}
+
+#[cargo_test]
+fn mulit_crate() {
+    // Check for creating multiple projects at the same time
+    cargo_process("new a b c")
+        .with_stderr("[SUMMARY] Successfully crated binary (application) 'a, b, c' !")
+        .run();
+
+    assert!(paths::root().join("a").is_dir());
+    assert!(paths::root().join("a/Cargo.toml").is_file());
+    assert!(paths::root().join("a/src/main.rs").is_file());
+
+    assert!(paths::root().join("b").is_dir());
+    assert!(paths::root().join("b/Cargo.toml").is_file());
+    assert!(paths::root().join("b/src/main.rs").is_file());
+
+    assert!(paths::root().join("c").is_dir());
+    assert!(paths::root().join("c/Cargo.toml").is_file());
+    assert!(paths::root().join("c/src/main.rs").is_file());
+}
+
+#[cargo_test]
+fn mulit_lib() {
+    // Check for creating multiple lib at the same time
+    cargo_process("new --lib a b c").run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("a/Cargo.toml").is_file());
+    assert!(paths::root().join("a/src/lib.rs").is_file());
+    assert!(paths::root().join("a/.git").is_dir());
+    assert!(paths::root().join("a/.gitignore").is_file());
+
+    let fp = paths::root().join("a/.gitignore");
+    let contents = fs::read_to_string(&fp).unwrap();
+    assert_eq!(contents, "/target\nCargo.lock\n",);
+
+    cargo_process("build").cwd(&paths::root().join("a")).run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("b/Cargo.toml").is_file());
+    assert!(paths::root().join("b/src/lib.rs").is_file());
+    assert!(paths::root().join("b/.git").is_dir());
+    assert!(paths::root().join("b/.gitignore").is_file());
+
+    let fp = paths::root().join("b/.gitignore");
+    let contents = fs::read_to_string(&fp).unwrap();
+    assert_eq!(contents, "/target\nCargo.lock\n",);
+
+    cargo_process("build").cwd(&paths::root().join("b")).run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("c/Cargo.toml").is_file());
+    assert!(paths::root().join("c/src/lib.rs").is_file());
+    assert!(paths::root().join("c/.git").is_dir());
+    assert!(paths::root().join("c/.gitignore").is_file());
+
+    let fp = paths::root().join("c/.gitignore");
+    let contents = fs::read_to_string(&fp).unwrap();
+    assert_eq!(contents, "/target\nCargo.lock\n",);
+
+    cargo_process("build").cwd(&paths::root().join("c")).run();
+}
+
+#[cargo_test]
+fn mulit_crate_part_of_failed() {
+    let dst = paths::root().join("a");
+    fs::create_dir(&dst).unwrap();
+    cargo_process("new a b c")
+        .with_status(101)
+        .with_stderr(
+"[ERROR] destination `[CWD]/a` already exists\n\n\
+Use `cargo init` to initialize the directory
+[SUMMARY] Successfully crated binary (application) 'b, c' ! Failed to crated binary (application) 'a' !
+[ERROR] some packages failed to crated",
+        )
+        .run();
 }
