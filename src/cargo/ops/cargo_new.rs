@@ -494,9 +494,16 @@ pub fn new(opts: &NewOptions, paths: Vec<&str>, config: &Config) -> CargoResult<
     };
 
     if success && paths.len() == 1 {
+        
+        let package_name = if opts.name.is_some() {
+            opts.name.as_ref().unwrap()
+        } else {
+            paths.clone().into_iter().next().unwrap()
+        };
+
         config
             .shell()
-            .status("Created", format!("{} `{}` package", opts.kind, paths[0]))?;
+            .status("Created", format!("{} `{}` package", opts.kind, package_name))?;
     }
 
     if error {
