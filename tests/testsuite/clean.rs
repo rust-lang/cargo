@@ -561,20 +561,32 @@ fn clean_spec_doc() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+
+                [dependencies.bar]
+                path = "bar"
             "#,
         )
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     p.cargo("doc").run();
 
     let doc_path = &p.build_dir().join("doc");
+    let foo_doc_path = &doc_path.join("foo");
+    let bar_doc_path = &doc_path.join("bar");
     assert!(doc_path.is_dir());
+    assert!(foo_doc_path.is_dir());
+    assert!(bar_doc_path.is_dir());
 
     p.cargo("clean -p foo").run();
 
-    assert!(!doc_path.join("foo").is_dir());
+    assert!(!foo_doc_path.is_dir());
+    assert!(bar_doc_path.is_dir());
+
     assert!(!doc_path.join("src").join("foo").is_dir());
+    assert!(doc_path.join("src").join("bar").is_dir());
 
     assert!(p.build_dir().is_dir());
 }

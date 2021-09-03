@@ -126,7 +126,7 @@ pub struct Layout {
     /// The directory for rustdoc output: `$root/doc`
     doc: PathBuf,
     /// The directory for rustdoc output: `$root/doc/src`
-    src: PathBuf,
+    doc_src: PathBuf,
     /// The directory for temporary data of integration tests and benches: `$dest/tmp`
     tmp: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
@@ -174,7 +174,7 @@ impl Layout {
             fingerprint: dest.join(".fingerprint"),
             examples: dest.join("examples"),
             doc: root.join("doc"),
-            src: root.join("doc/src"),
+            doc_src: root.join("doc/src"),
             tmp: root.join("tmp"),
             root,
             dest,
@@ -210,8 +210,8 @@ impl Layout {
         &self.doc
     }
     /// Fetch the doc/src path.
-    pub fn src(&self) -> &Path {
-        &self.src
+    pub fn doc_src(&self) -> &Path {
+        &self.doc_src
     }
     /// Fetch the root path (`/…/target`).
     pub fn root(&self) -> &Path {

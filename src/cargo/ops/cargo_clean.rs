@@ -139,10 +139,10 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         for (_, layout) in &layouts_with_host {
             // Clean fingerprints.
             rm_rf_glob(&layout.fingerprint().join(&pkg_dir), config)?;
-            // Clean target/doc.
-            rm_rf(&layout.doc(), config)?;
-            // Clean target/doc/src.
-            rm_rf(&layout.src(), config)?;
+            // Clean target/doc/pkg.
+            rm_rf(&layout.doc().join(pkg.name()), config)?;
+            // Clean target/doc/src/pkg.
+            rm_rf(&layout.doc_src().join(pkg.name()), config)?;
         }
 
         for target in pkg.targets() {
