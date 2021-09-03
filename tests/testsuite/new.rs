@@ -518,7 +518,7 @@ fn mulit_crate() {
 #[cargo_test]
 fn mulit_lib() {
     // Check for creating multiple lib at the same time
-    cargo_process("new --lib a b c --edition 2021").run();
+    cargo_process("new --lib a b c --edition 2018").run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("a/Cargo.toml").is_file());
