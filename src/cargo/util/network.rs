@@ -1,6 +1,6 @@
 use anyhow::Error;
 
-use crate::util::errors::{CargoResult, HttpNot200};
+use crate::util::errors::{CargoResult, GitCliError, HttpNot200};
 use crate::util::Config;
 
 pub struct Retry<'a> {
@@ -42,6 +42,9 @@ fn maybe_spurious(err: &Error) -> bool {
             | git2::ErrorClass::Http => return true,
             _ => (),
         }
+    }
+    if let Some(git_cli_err) = err.downcast_ref::<GitCliError>() {
+        return git_cli_err.is_retryable();
     }
     if let Some(curl_err) = err.downcast_ref::<curl::Error>() {
         if curl_err.is_couldnt_connect()
@@ -94,54 +97,97 @@ where
     }
 }
 
-#[test]
-fn with_retry_repeats_the_call_then_works() {
-    use crate::core::Shell;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cargo_util::ProcessError;
 
-    //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
-    let error1 = HttpNot200 {
-        code: 501,
-        url: "Uri".to_string(),
+    #[test]
+    fn with_retry_repeats_the_call_then_works() {
+        use crate::core::Shell;
+
+        //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
+        let error1 = HttpNot200 {
+            code: 501,
+            url: "Uri".to_string(),
+        }
+        .into();
+        let error2 = HttpNot200 {
+            code: 502,
+            url: "Uri".to_string(),
+        }
+        .into();
+        let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
+        let config = Config::default().unwrap();
+        *config.shell() = Shell::from_write(Box::new(Vec::new()));
+        let result = with_retry(&config, || results.pop().unwrap());
+        assert!(result.is_ok())
     }
-    .into();
-    let error2 = HttpNot200 {
-        code: 502,
-        url: "Uri".to_string(),
+
+    #[test]
+    fn with_retry_finds_nested_spurious_errors() {
+        use crate::core::Shell;
+
+        //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
+        //String error messages are not considered spurious
+        let error1 = anyhow::Error::from(HttpNot200 {
+            code: 501,
+            url: "Uri".to_string(),
+        });
+        let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
+        let error2 = anyhow::Error::from(HttpNot200 {
+            code: 502,
+            url: "Uri".to_string(),
+        });
+        let error2 = anyhow::Error::from(error2.context("A second chained error"));
+        let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
+        let config = Config::default().unwrap();
+        *config.shell() = Shell::from_write(Box::new(Vec::new()));
+        let result = with_retry(&config, || results.pop().unwrap());
+        assert!(result.is_ok())
     }
-    .into();
-    let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
-    let config = Config::default().unwrap();
-    *config.shell() = Shell::from_write(Box::new(Vec::new()));
-    let result = with_retry(&config, || results.pop().unwrap());
-    assert!(result.is_ok())
-}
 
-#[test]
-fn with_retry_finds_nested_spurious_errors() {
-    use crate::core::Shell;
+    #[test]
+    fn curle_http2_stream_is_spurious() {
+        let code = curl_sys::CURLE_HTTP2_STREAM;
+        let err = curl::Error::new(code);
+        assert!(maybe_spurious(&err.into()));
+    }
 
-    //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
-    //String error messages are not considered spurious
-    let error1 = anyhow::Error::from(HttpNot200 {
-        code: 501,
-        url: "Uri".to_string(),
-    });
-    let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
-    let error2 = anyhow::Error::from(HttpNot200 {
-        code: 502,
-        url: "Uri".to_string(),
-    });
-    let error2 = anyhow::Error::from(error2.context("A second chained error"));
-    let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
-    let config = Config::default().unwrap();
-    *config.shell() = Shell::from_write(Box::new(Vec::new()));
-    let result = with_retry(&config, || results.pop().unwrap());
-    assert!(result.is_ok())
-}
+    #[test]
+    fn git_cli_error_is_spurious() {
+        // This test is important because it also verifies that the regular
+        // expressions used to match git CLI transient errors are compilable,
+        // which is checked only at runtime.
 
-#[test]
-fn curle_http2_stream_is_spurious() {
-    let code = curl_sys::CURLE_HTTP2_STREAM;
-    let err = curl::Error::new(code);
-    assert!(maybe_spurious(&err.into()));
+        fn assert_retryable(err: &str) {
+            let err = GitCliError::new(
+                ProcessError::new_raw(
+                    err,
+                    None,
+                    "status_doesnt_matter",
+                    None,
+                    Some(err.as_bytes()),
+                )
+                .into(),
+            );
+
+            let err: Error = err.into();
+
+            assert!(
+                maybe_spurious(&err),
+                "Git CLI wasn't parsed as retryable: {}",
+                err
+            );
+        }
+
+        // The test data is taken from real git failures
+        assert_retryable(
+        "fatal: unable to access 'org/repo.git': Failed to connect to github.com port 443: Timed out",
+    );
+        assert_retryable(
+            "error: RPC failed; HTTP 412 curl 22 The requested URL returned error: 412\n\
+            fatal: the remote end hung up unexpectedly",
+        );
+    }
 }

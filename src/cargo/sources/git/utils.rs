@@ -2,7 +2,7 @@
 //! authentication/cloning.
 
 use crate::core::GitReference;
-use crate::util::errors::CargoResult;
+use crate::util::errors::{CargoResult, GitCliError};
 use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
@@ -893,11 +893,24 @@ fn fetch_with_cli(
         .env_remove("GIT_OBJECT_DIRECTORY")
         .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
         .cwd(repo.path());
-    config
-        .shell()
-        .verbose(|s| s.status("Running", &cmd.to_string()))?;
-    cmd.exec_with_output()?;
+
+    run_git_cli_with_retries(config, &cmd)?;
+
     Ok(())
+}
+
+/// Run the given command assuming it's spawning `git` CLI process
+/// retrying all the possible transient errors it may fail with.
+fn run_git_cli_with_retries(config: &Config, cmd: &ProcessBuilder) -> CargoResult<()> {
+    network::with_retry(config, || {
+        config
+            .shell()
+            .verbose(|s| s.status("Running", &cmd.to_string()))?;
+
+        cmd.exec_with_output().map_err(GitCliError::new)?;
+
+        Ok(())
+    })
 }
 
 /// Cargo has a bunch of long-lived git repositories in its global cache and
