@@ -371,8 +371,8 @@ pieces of functionality:
 * The library crate should link to the native library `libfoo`. This will often
   probe the current system for `libfoo` before resorting to building from
   source.
-* The library crate should provide **declarations** for functions in `libfoo`,
-  but **not** bindings or higher-level abstractions.
+* The library crate should provide **declarations** for types and functions in
+  `libfoo`, but **not** higher-level abstractions.
 
 The set of `*-sys` packages provides a common set of dependencies for linking
 to native libraries. There are a number of benefits earned from having this
