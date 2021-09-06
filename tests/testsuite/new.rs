@@ -89,7 +89,7 @@ fn no_argument() {
         .with_stderr_contains(
             "\
 error: The following required arguments were not provided:
-    <path>...
+    <path>
 ",
         )
         .run();
