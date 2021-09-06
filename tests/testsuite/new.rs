@@ -498,7 +498,7 @@ fn git_default_branch() {
 #[cargo_test]
 fn mulit_crate() {
     // Check for creating multiple projects at the same time
-    cargo_process("new a b c")
+    cargo_process("new a,b,c")
         .with_stderr("[SUMMARY] Successfully crated binary (application) 'a, b, c' !")
         .run();
 
@@ -516,9 +516,64 @@ fn mulit_crate() {
 }
 
 #[cargo_test]
+fn mulit_crate_vcs() {
+    cargo_process("new a,b,c --vcs git").run();
+
+    assert!(paths::root().join("a/.gitignore").exists());
+    assert!(paths::root().join("a").is_dir());
+
+    assert!(paths::root().join("b/.gitignore").exists());
+    assert!(paths::root().join("b").is_dir());
+
+    assert!(paths::root().join("c/.gitignore").exists());
+    assert!(paths::root().join("c").is_dir());
+}
+
+#[cargo_test]
+fn mulit_crate_edition() {
+    cargo_process("new a,b,c --edition 2018")
+        .with_stderr("[SUMMARY] Successfully crated binary (application) 'a, b, c' !")
+        .run();
+
+    let contens = fs::read_to_string(paths::root().join("a/Cargo.toml")).unwrap();
+    assert!(contens.contains("edition = \"2018\""));
+
+    let contens = fs::read_to_string(paths::root().join("b/Cargo.toml")).unwrap();
+    assert!(contens.contains("edition = \"2018\""));
+
+    let contens = fs::read_to_string(paths::root().join("c/Cargo.toml")).unwrap();
+    assert!(contens.contains("edition = \"2018\""));
+}
+
+#[cargo_test]
+fn mulit_crate_name() {
+    cargo_process("new a,b,c --name bar")
+        .with_stderr("[SUMMARY] Successfully crated binary (application) 'a, b, c' !")
+        .run();
+
+    assert!(paths::root().join("a").is_dir());
+    assert!(paths::root().join("a/Cargo.toml").is_file());
+    assert!(paths::root().join("a/src/main.rs").exists());
+    let contens = fs::read_to_string(paths::root().join("a/Cargo.toml")).unwrap();
+    assert!(contens.contains("name = \"bar\""));
+
+    assert!(paths::root().join("b").is_dir());
+    assert!(paths::root().join("b/Cargo.toml").is_file());
+    assert!(paths::root().join("b/src/main.rs").exists());
+    let contens = fs::read_to_string(paths::root().join("b/Cargo.toml")).unwrap();
+    assert!(contens.contains("name = \"bar\""));
+
+    assert!(paths::root().join("c").is_dir());
+    assert!(paths::root().join("c/Cargo.toml").is_file());
+    assert!(paths::root().join("c/src/main.rs").exists());
+    let contens = fs::read_to_string(paths::root().join("c/Cargo.toml")).unwrap();
+    assert!(contens.contains("name = \"bar\""));
+}
+
+#[cargo_test]
 fn mulit_lib() {
     // Check for creating multiple lib at the same time
-    cargo_process("new --lib a b c --edition 2018").run();
+    cargo_process("new --lib a,b,c --edition 2018").run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("a/Cargo.toml").is_file());
@@ -558,10 +613,82 @@ fn mulit_lib() {
 }
 
 #[cargo_test]
-fn mulit_crate_part_of_failed() {
+fn mulit_lib_vcs() {
+    cargo_process("new --lib a,b,c --vcs git")
+        .with_stderr("[SUMMARY] Successfully crated library 'a, b, c' !")
+        .run();
+
+    assert!(paths::root().join("a").is_dir());
+    assert!(paths::root().join("b").is_dir());
+    assert!(paths::root().join("c").is_dir());
+}
+
+#[cargo_test]
+fn mulit_lib_name() {
+    cargo_process("new --lib a,b,c --name bar")
+        .with_stderr("[SUMMARY] Successfully crated library 'a, b, c' !")
+        .run();
+
+    assert!(paths::root().join("a").is_dir());
+    assert!(paths::root().join("a").join("src/lib.rs").exists());
+    let a_contens = fs::read_to_string(paths::root().join("a/Cargo.toml")).unwrap();
+    assert!(a_contens.contains("name = \"bar\""));
+
+    assert!(paths::root().join("b").is_dir());
+    assert!(paths::root().join("b").join("src/lib.rs").exists());
+    let b_contens = fs::read_to_string(paths::root().join("b/Cargo.toml")).unwrap();
+    assert!(b_contens.contains("name = \"bar\""));
+
+    assert!(paths::root().join("c").is_dir());
+    assert!(paths::root().join("c").join("src/lib.rs").exists());
+    let c_contens = fs::read_to_string(paths::root().join("c/Cargo.toml")).unwrap();
+    assert!(c_contens.contains("name = \"bar\""));
+}
+
+#[cargo_test]
+fn mulit_lib_registry() {
+    cargo_process("new --lib a,b,c --registry bar")
+        .with_stderr("[SUMMARY] Successfully crated library 'a, b, c' !")
+        .run();
+
+    assert!(paths::root().join("a").is_dir());
+    assert!(paths::root().join("a").join("src/lib.rs").exists());
+    let a_contens = fs::read_to_string(paths::root().join("a/Cargo.toml")).unwrap();
+    assert!(a_contens.contains("publish = [\"bar\"]"));
+
+    assert!(paths::root().join("b").is_dir());
+    assert!(paths::root().join("b").join("src/lib.rs").exists());
+    let b_contens = fs::read_to_string(paths::root().join("b/Cargo.toml")).unwrap();
+    assert!(b_contens.contains("publish = [\"bar\"]"));
+
+    assert!(paths::root().join("c").is_dir());
+    assert!(paths::root().join("c").join("src/lib.rs").exists());
+    let c_contens = fs::read_to_string(paths::root().join("c/Cargo.toml")).unwrap();
+    assert!(c_contens.contains("publish = [\"bar\"]"));
+}
+
+#[cargo_test]
+fn mulit_crate_or_lib_failed() {
+    // test of cargo new specifying multiple name values.
+    cargo_process("new a,b,c --name foo bar")
+        .with_status(1)
+        .with_stderr_contains(
+            "error: Found argument 'bar' which wasn't expected, or isn't valid in this context",
+        )
+        .run();
+
+    // test of cargo new --lib specifying multiple name values.
+    cargo_process("new --lib a,b,c --name foo bar")
+        .with_status(1)
+        .with_stderr_contains(
+            "error: Found argument 'bar' which wasn't expected, or isn't valid in this context",
+        )
+        .run();
+
+    // test of cargo new an existing crate.
     let dst = paths::root().join("a");
     fs::create_dir(&dst).unwrap();
-    cargo_process("new a b c")
+    cargo_process("new a,b,c")
         .with_status(101)
         .with_stderr(
 "[ERROR] destination `[CWD]/a` already exists\n\n\
