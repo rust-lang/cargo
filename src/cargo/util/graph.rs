@@ -1,26 +1,26 @@
 use std::borrow::Borrow;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 pub struct Graph<N: Clone, E: Clone> {
-    nodes: im_rc::OrdMap<N, im_rc::OrdMap<N, E>>,
+    nodes: BTreeMap<N, BTreeMap<N, E>>,
 }
 
 impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
     pub fn new() -> Graph<N, E> {
         Graph {
-            nodes: im_rc::OrdMap::new(),
+            nodes: BTreeMap::new(),
         }
     }
 
     pub fn add(&mut self, node: N) {
-        self.nodes.entry(node).or_insert_with(im_rc::OrdMap::new);
+        self.nodes.entry(node).or_insert_with(BTreeMap::new);
     }
 
     pub fn link(&mut self, node: N, child: N) -> &mut E {
         self.nodes
             .entry(node)
-            .or_insert_with(im_rc::OrdMap::new)
+            .or_insert_with(BTreeMap::new)
             .entry(child)
             .or_insert_with(Default::default)
     }

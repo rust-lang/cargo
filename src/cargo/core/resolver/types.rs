@@ -4,7 +4,7 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Config;
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -91,7 +91,7 @@ impl ResolverProgress {
 /// This is sorted so that it impls Hash, and owns its contents,
 /// needed so it can be part of the key for caching in the `DepsCache`.
 /// It is also cloned often as part of `Context`, hence the `RC`.
-/// `im-rs::OrdSet` was slower of small sets like this,
+/// `im_rc::OrdSet` was slower of small sets like this,
 /// but this can change with improvements to std, im, or llvm.
 /// Using a consistent type for this allows us to use the highly
 /// optimized comparison operators like `is_subset` at the interfaces.
@@ -200,41 +200,37 @@ impl Ord for DepsFrame {
     fn cmp(&self, other: &DepsFrame) -> Ordering {
         self.just_for_error_messages
             .cmp(&other.just_for_error_messages)
-            .reverse()
-            .then_with(|| self.min_candidates().cmp(&other.min_candidates()))
+            .then_with(||
+            // the frame with the sibling that has the least number of candidates
+            // needs to get bubbled up to the top of the heap we use below, so
+            // reverse comparison here.
+            self.min_candidates().cmp(&other.min_candidates()).reverse())
     }
 }
 
-/// Note that an `OrdSet` is used for the remaining dependencies that need
-/// activation. This set is sorted by how many candidates each dependency has.
+/// Note that a `BinaryHeap` is used for the remaining dependencies that need
+/// activation. This heap is sorted such that the "largest value" is the most
+/// constrained dependency, or the one with the least candidates.
 ///
 /// This helps us get through super constrained portions of the dependency
 /// graph quickly and hopefully lock down what later larger dependencies can
 /// use (those with more candidates).
 #[derive(Clone)]
 pub struct RemainingDeps {
-    /// a monotonic counter, increased for each new insertion.
-    time: u32,
-    /// the data is augmented by the insertion time.
-    /// This insures that no two items will cmp eq.
-    /// Forcing the OrdSet into a multi set.
-    data: im_rc::OrdSet<(DepsFrame, u32)>,
+    deps: BinaryHeap<DepsFrame>,
 }
 
 impl RemainingDeps {
     pub fn new() -> RemainingDeps {
         RemainingDeps {
-            time: 0,
-            data: im_rc::OrdSet::new(),
+            deps: BinaryHeap::new(),
         }
     }
     pub fn push(&mut self, x: DepsFrame) {
-        let insertion_time = self.time;
-        self.data.insert((x, insertion_time));
-        self.time += 1;
+        self.deps.push(x);
     }
     pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, DepInfo))> {
-        while let Some((mut deps_frame, insertion_time)) = self.data.remove_min() {
+        while let Some(mut deps_frame) = self.deps.pop() {
             let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
             // Figure out what our next dependency to activate is, and if nothing is
@@ -242,14 +238,14 @@ impl RemainingDeps {
             // move on to the next frame.
             if let Some(sibling) = deps_frame.remaining_siblings.next() {
                 let parent = Summary::clone(&deps_frame.parent);
-                self.data.insert((deps_frame, insertion_time));
+                self.deps.push(deps_frame);
                 return Some((just_here_for_the_error_messages, (parent, sibling)));
             }
         }
         None
     }
     pub fn iter(&mut self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
-        self.data.iter().flat_map(|(other, _)| other.flatten())
+        self.deps.iter().flat_map(|other| other.flatten())
     }
 }
 

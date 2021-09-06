@@ -7,7 +7,7 @@ use crate::util::interning::InternedString;
 use crate::util::Graph;
 use anyhow::format_err;
 use log::debug;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::num::NonZeroU64;
 
 pub use super::encode::Metadata;
@@ -23,16 +23,16 @@ pub struct Context {
     pub age: ContextAge,
     pub activations: Activations,
     /// list the features that are activated for each package
-    pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet>,
+    pub resolve_features: HashMap<PackageId, FeaturesSet>,
     /// get the package that will be linking to a native library by its links attribute
-    pub links: im_rc::HashMap<InternedString, PackageId>,
+    pub links: HashMap<InternedString, PackageId>,
     /// for each package the list of names it can see,
     /// then for each name the exact version that name represents and whether the name is public.
     pub public_dependency: Option<PublicDependency>,
 
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
-    pub parents: Graph<PackageId, im_rc::HashSet<Dependency>>,
+    pub parents: Graph<PackageId, HashSet<Dependency>>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -47,7 +47,7 @@ pub type ContextAge = usize;
 /// semver compatible version of each crate.
 /// This all so stores the `ContextAge`.
 pub type ActivationsKey = (InternedString, SourceId, SemverCompatibility);
-pub type Activations = im_rc::HashMap<ActivationsKey, (Summary, ContextAge)>;
+pub type Activations = HashMap<ActivationsKey, (Summary, ContextAge)>;
 
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
@@ -81,15 +81,15 @@ impl Context {
     pub fn new(check_public_visible_dependencies: bool) -> Context {
         Context {
             age: 0,
-            resolve_features: im_rc::HashMap::new(),
-            links: im_rc::HashMap::new(),
+            resolve_features: HashMap::new(),
+            links: HashMap::new(),
             public_dependency: if check_public_visible_dependencies {
                 Some(PublicDependency::new())
             } else {
                 None
             },
             parents: Graph::new(),
-            activations: im_rc::HashMap::new(),
+            activations: HashMap::new(),
         }
     }
 
@@ -109,14 +109,14 @@ impl Context {
         let id = summary.package_id();
         let age: ContextAge = self.age;
         match self.activations.entry(id.as_activations_key()) {
-            im_rc::hashmap::Entry::Occupied(o) => {
+            Entry::Occupied(o) => {
                 debug_assert_eq!(
                     &o.get().0,
                     summary,
                     "cargo does not allow two semver compatible versions"
                 );
             }
-            im_rc::hashmap::Entry::Vacant(v) => {
+            Entry::Vacant(v) => {
                 if let Some(link) = summary.links() {
                     if self.links.insert(link, id).is_some() {
                         return Err(format_err!(
@@ -278,7 +278,7 @@ impl Context {
     }
 }
 
-impl Graph<PackageId, im_rc::HashSet<Dependency>> {
+impl Graph<PackageId, HashSet<Dependency>> {
     pub fn parents_of(&self, p: PackageId) -> impl Iterator<Item = (PackageId, bool)> + '_ {
         self.edges(&p)
             .map(|(grand, d)| (*grand, d.iter().any(|x| x.is_public())))
@@ -291,16 +291,13 @@ pub struct PublicDependency {
     /// for each name the exact package that name resolves to,
     ///     the `ContextAge` when it was first visible,
     ///     and the `ContextAge` when it was first exported.
-    inner: im_rc::HashMap<
-        PackageId,
-        im_rc::HashMap<InternedString, (PackageId, ContextAge, Option<ContextAge>)>,
-    >,
+    inner: HashMap<PackageId, HashMap<InternedString, (PackageId, ContextAge, Option<ContextAge>)>>,
 }
 
 impl PublicDependency {
     fn new() -> Self {
         PublicDependency {
-            inner: im_rc::HashMap::new(),
+            inner: HashMap::new(),
         }
     }
     fn publicly_exports(&self, candidate_pid: PackageId) -> Vec<PackageId> {
@@ -344,7 +341,7 @@ impl PublicDependency {
         parent_pid: PackageId,
         is_public: bool,
         age: ContextAge,
-        parents: &Graph<PackageId, im_rc::HashSet<Dependency>>,
+        parents: &Graph<PackageId, HashSet<Dependency>>,
     ) {
         // one tricky part is that `candidate_pid` may already be active and
         // have public dependencies of its own. So we not only need to mark
@@ -355,7 +352,7 @@ impl PublicDependency {
             let mut stack = vec![(parent_pid, is_public)];
             while let Some((p, public)) = stack.pop() {
                 match self.inner.entry(p).or_default().entry(c.name()) {
-                    im_rc::hashmap::Entry::Occupied(mut o) => {
+                    Entry::Occupied(mut o) => {
                         // the (transitive) parent can already see something by `c`s name, it had better be `c`.
                         assert_eq!(o.get().0, c);
                         if o.get().2.is_some() {
@@ -370,7 +367,7 @@ impl PublicDependency {
                             o.insert((c, old_age, if public { Some(age) } else { None }));
                         }
                     }
-                    im_rc::hashmap::Entry::Vacant(v) => {
+                    Entry::Vacant(v) => {
                         // The (transitive) parent does not have anything by `c`s name,
                         // so we add `c`.
                         v.insert((c, age, if public { Some(age) } else { None }));
@@ -389,7 +386,7 @@ impl PublicDependency {
         b_id: PackageId,
         parent: PackageId,
         is_public: bool,
-        parents: &Graph<PackageId, im_rc::HashSet<Dependency>>,
+        parents: &Graph<PackageId, HashSet<Dependency>>,
     ) -> Result<
         (),
         (

@@ -66,7 +66,6 @@ walkdir = "2.2"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
-im-rc = "15.0.0"
 itertools = "0.10.0"
 
 # A noop dependency that changes in the Rust repository, it's a bit of a hack.
