@@ -1,28 +1,33 @@
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::rc::Rc;
 
 pub struct Graph<N: Clone, E: Clone> {
-    nodes: BTreeMap<N, BTreeMap<N, E>>,
+    nodes: Rc<BTreeMap<N, Rc<BTreeMap<N, E>>>>,
 }
 
 impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
     pub fn new() -> Graph<N, E> {
         Graph {
-            nodes: BTreeMap::new(),
+            nodes: Rc::new(BTreeMap::new()),
         }
     }
 
     pub fn add(&mut self, node: N) {
-        self.nodes.entry(node).or_insert_with(BTreeMap::new);
+        Rc::make_mut(&mut self.nodes)
+            .entry(node)
+            .or_insert(Rc::new(BTreeMap::new()));
     }
 
     pub fn link(&mut self, node: N, child: N) -> &mut E {
-        self.nodes
-            .entry(node)
-            .or_insert_with(BTreeMap::new)
-            .entry(child)
-            .or_insert_with(Default::default)
+        Rc::make_mut(
+            Rc::make_mut(&mut self.nodes)
+                .entry(node)
+                .or_insert_with(|| Rc::new(BTreeMap::new())),
+        )
+        .entry(child)
+        .or_insert_with(Default::default)
     }
 
     pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
@@ -148,7 +153,7 @@ impl<N: fmt::Display + Eq + Ord + Clone, E: Clone> fmt::Debug for Graph<N, E> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "Graph {{")?;
 
-        for (n, e) in &self.nodes {
+        for (n, e) in self.nodes.iter() {
             writeln!(fmt, "  - {}", n)?;
 
             for n in e.keys() {
