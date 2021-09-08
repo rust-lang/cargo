@@ -130,23 +130,42 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         opts.config.shell().status_with_color(status, msg, color)
     };
     for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
-        for (pre_package, tar_package) in removed.iter().zip(added.iter()) {
-            let msg = if pre_package.source_id().is_git() {
+        if removed.len() == 1 && added.len() == 1 {
+            let msg = if removed[0].source_id().is_git() {
                 format!(
-                    "{} {} -> #{}",
-                    pre_package,
-                    pre_package.version(),
-                    &tar_package.source_id().precise().unwrap()[..8]
+                    "{} -> #{}",
+                    removed[0],
+                    &added[0].source_id().precise().unwrap()[..8]
                 )
             } else {
-                format!(
-                    "{} v{} -> v{}",
-                    pre_package.name(),
-                    pre_package.version(),
-                    tar_package.version()
-                )
+                format!("{} -> v{}", removed[0], added[0].version())
             };
             print_change("Updating", msg, Green)?;
+        } else if removed.len() == added.len() {
+            for (pre_package, tar_package) in removed.iter().zip(added.iter()) {
+                let msg = if pre_package.source_id().is_git() {
+                    format!(
+                        "{} -> #{}",
+                        pre_package,
+                        &tar_package.source_id().precise().unwrap()[..8]
+                    )
+                } else {
+                    format!(
+                        "{} v{} -> v{}",
+                        pre_package.name(),
+                        pre_package.version(),
+                        tar_package.version()
+                    )
+                };
+                print_change("Updating", msg, Green)?;
+            }
+        } else {
+            for package in removed.iter() {
+                print_change("Removing", format!("{}", package), Red)?;
+            }
+            for package in added.iter() {
+                print_change("Adding", format!("{}", package), Cyan)?;
+            }
         }
     }
     if opts.dry_run {
