@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use log::debug;
-use termcolor::Color::{self, Cyan, Green, Red};
+use termcolor::Color::{self, Green};
 
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
