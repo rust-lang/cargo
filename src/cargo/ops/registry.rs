@@ -482,9 +482,6 @@ fn registry(
                     registry.as_deref(),
                     &api_host,
                 )?;
-                let mut mask_token = token.clone();
-                mask_token.replace_range(0..token.len() / 2, &"*".repeat(token.len() / 2));
-                log::debug!("found token {:?}", mask_token);
                 Some(token)
             }
         }
