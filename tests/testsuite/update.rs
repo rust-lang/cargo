@@ -678,3 +678,60 @@ fn workspace_only() {
     assert!(!lock1.contains("0.0.2"));
     assert!(!lock2.contains("0.0.1"));
 }
+
+#[cargo_test]
+fn update_mulit_dependence_after_precise() {
+    Package::new("serde", "0.1.0").publish();
+    Package::new("serde", "0.2.0").publish();
+    Package::new("serde", "0.1.5").publish();
+    Package::new("serde", "0.2.5").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                    [package]
+                    name = "bar"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    serde_1 = { package = "serde", version = "0.1.0" }
+                    serde_2 = { package = "serde", version = "0.2.0" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    p.cargo("update -p serde:0.1.5 --precise 0.1.0")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.1.5 -> v0.1.0",
+        )
+        .run();
+
+    p.cargo("update -p serde:0.2.5 --precise 0.2.0")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.5 -> v0.2.0",
+        )
+        .run();
+
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.1.0 -> v0.1.5
+[UPDATING] serde v0.2.0 -> v0.2.5",
+        )
+        .run();
+}
