@@ -414,13 +414,8 @@ fn test_multiple_required_features() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_default_features() {
-    if !is_nightly() {
-        // #[bench] is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -487,13 +482,8 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_arg_features() {
-    if !is_nightly() {
-        // #[bench] is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -535,13 +525,8 @@ fn bench_arg_features() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_multiple_required_features() {
-    if !is_nightly() {
-        // #[bench] is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

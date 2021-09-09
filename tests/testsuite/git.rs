@@ -1,6 +1,5 @@
 //! Tests for git support.
 
-use std::env;
 use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
@@ -13,13 +12,6 @@ use std::thread;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, t, Project};
-
-fn disable_git_cli() -> bool {
-    // mingw git on Windows does not support Windows-style file URIs.
-    // Appveyor in the rust repo has that git up front in the PATH instead
-    // of Git-for-Windows, which causes this to fail.
-    env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string())
-}
 
 #[cargo_test]
 fn cargo_compile_simple_git_dep() {
@@ -2650,11 +2642,8 @@ fn failed_submodule_checkout() {
     t.join().unwrap();
 }
 
-#[cargo_test]
+#[cargo_test(disable_git_cli)]
 fn use_the_cli() {
-    if disable_git_cli() {
-        return;
-    }
     let project = project();
     let git_project = git::new("dep1", |project| {
         project
@@ -2754,11 +2743,8 @@ fn templatedir_doesnt_cause_problems() {
     p.cargo("build").run();
 }
 
-#[cargo_test]
+#[cargo_test(disable_git_cli)]
 fn git_with_cli_force() {
-    if disable_git_cli() {
-        return;
-    }
     // Supports a force-pushed repo.
     let git_project = git::new("dep1", |project| {
         project
@@ -2814,11 +2800,8 @@ fn git_with_cli_force() {
     p.rename_run("foo", "foo2").with_stdout("two").run();
 }
 
-#[cargo_test]
+#[cargo_test(disable_git_cli)]
 fn git_fetch_cli_env_clean() {
-    if disable_git_cli() {
-        return;
-    }
     // This tests that git-fetch-with-cli works when GIT_DIR environment
     // variable is set (for whatever reason).
     let git_dep = git::new("dep1", |project| {
@@ -3517,12 +3500,9 @@ fn corrupted_checkout() {
     _corrupted_checkout(false);
 }
 
-#[cargo_test]
+#[cargo_test(disable_git_cli)]
 fn corrupted_checkout_with_cli() {
     // Test what happens if the checkout is corrupted somehow with git cli.
-    if disable_git_cli() {
-        return;
-    }
     _corrupted_checkout(true);
 }
 

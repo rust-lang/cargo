@@ -9,7 +9,7 @@
 
 use super::config::write_config_toml;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+use cargo_test_support::{basic_manifest, project, Project};
 
 // An arbitrary lint (unused_variables) that triggers a lint.
 // We use a special flag to force it to generate a report.
@@ -24,12 +24,11 @@ fn simple_project() -> Project {
         .build()
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn output_on_stable() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
     let p = simple_project();
 
     p.cargo("check")
@@ -54,13 +53,11 @@ fn no_gate_future_incompat_report() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn test_zero_future_incompat() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/main.rs", "fn main() {}")
@@ -88,13 +85,11 @@ note: 0 dependencies had future-incompatible warnings
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn test_single_crate() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = simple_project();
 
     for command in &["build", "check", "rustc", "test"] {
@@ -144,13 +139,11 @@ frequency = 'never'
     }
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn test_multi_crate() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     Package::new("first-dep", "0.0.1")
         .file("src/lib.rs", FUTURE_EXAMPLE)
         .publish();
@@ -267,13 +260,11 @@ fn test_multi_crate() {
     assert_eq!(lines.next(), None);
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn color() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = simple_project();
 
     p.cargo("check")
@@ -291,13 +282,11 @@ fn color() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn bad_ids() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = simple_project();
 
     p.cargo("report future-incompatibilities --id 1")
@@ -326,13 +315,11 @@ Available IDs are: 1
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn suggestions_for_updates() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     Package::new("with_updates", "1.0.0")
         .file("src/lib.rs", FUTURE_EXAMPLE)
         .publish();

@@ -6104,12 +6104,8 @@ fn target_directory_backup_exclusion() {
     assert!(!&cachedir_tag.is_file());
 }
 
-#[cargo_test]
+#[cargo_test(>=1.64, reason = "--diagnostic-width is stabilized in 1.64")]
 fn simple_terminal_width() {
-    if !is_nightly() {
-        // --diagnostic-width is stabilized in 1.64
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",

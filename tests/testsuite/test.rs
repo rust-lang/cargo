@@ -5,7 +5,7 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project,
 };
-use cargo_test_support::{cross_compile, is_nightly, paths};
+use cargo_test_support::{cross_compile, paths};
 use cargo_test_support::{rustc_host, sleep_ms};
 use std::fs;
 
@@ -3983,12 +3983,8 @@ fn test_dep_with_dev() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn cargo_test_doctest_xcompile_ignores() {
-    if !is_nightly() {
-        // -Zdoctest-xcompile is unstable
-        return;
-    }
     // -Zdoctest-xcompile also enables --enable-per-target-ignores which
     // allows the ignore-TARGET syntax.
     let p = project()
@@ -4038,13 +4034,9 @@ fn cargo_test_doctest_xcompile_ignores() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn cargo_test_doctest_xcompile() {
     if !cross_compile::can_run_on_host() {
-        return;
-    }
-    if !is_nightly() {
-        // -Zdoctest-xcompile is unstable
         return;
     }
     let p = project()
@@ -4078,13 +4070,9 @@ fn cargo_test_doctest_xcompile() {
     .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn cargo_test_doctest_xcompile_runner() {
     if !cross_compile::can_run_on_host() {
-        return;
-    }
-    if !is_nightly() {
-        // -Zdoctest-xcompile is unstable
         return;
     }
 
@@ -4159,13 +4147,9 @@ fn cargo_test_doctest_xcompile_runner() {
     .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn cargo_test_doctest_xcompile_no_runner() {
     if !cross_compile::can_run_on_host() {
-        return;
-    }
-    if !is_nightly() {
-        // -Zdoctest-xcompile is unstable
         return;
     }
 
@@ -4202,13 +4186,8 @@ fn cargo_test_doctest_xcompile_no_runner() {
     .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zpanic-abort-tests in rustc is unstable")]
 fn panic_abort_tests() {
-    if !is_nightly() {
-        // -Zpanic-abort-tests in rustc is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -4247,13 +4226,8 @@ fn panic_abort_tests() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zpanic-abort-tests in rustc is unstable")]
 fn panic_abort_only_test() {
-    if !is_nightly() {
-        // -Zpanic-abort-tests in rustc is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -4288,13 +4262,8 @@ fn panic_abort_only_test() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zpanic-abort-tests in rustc is unstable")]
 fn panic_abort_test_profile_inherits() {
-    if !is_nightly() {
-        // -Zpanic-abort-tests in rustc is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

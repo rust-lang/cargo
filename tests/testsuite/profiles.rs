@@ -1,9 +1,8 @@
 //! Tests for profiles.
 
-use std::env;
-
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use std::env;
 
 #[cargo_test]
 fn profile_overrides() {

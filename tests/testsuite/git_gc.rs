@@ -3,7 +3,6 @@
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
-use std::process::Command;
 
 use cargo_test_support::git;
 use cargo_test_support::paths;
@@ -90,11 +89,8 @@ fn run_test(path_env: Option<&OsStr>) {
     );
 }
 
-#[cargo_test]
+#[cargo_test(requires_git)]
 fn use_git_gc() {
-    if Command::new("git").arg("--version").output().is_err() {
-        return;
-    }
     run_test(None);
 }
 

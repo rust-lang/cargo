@@ -907,15 +907,11 @@ fn prepare_for_latest_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "fundamentally always nightly")]
 fn prepare_for_already_on_latest_unstable() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will check what happens if you are already on the latest. If
     // there is no next edition, it does nothing.
-    if !is_nightly() {
-        // This test is fundamentally always nightly.
-        return;
-    }
     let next_edition = match Edition::LATEST_UNSTABLE {
         Some(next) => next,
         None => {

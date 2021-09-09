@@ -1,7 +1,7 @@
 //! Tests for edition setting.
 
 use cargo::core::Edition;
-use cargo_test_support::{basic_lib_manifest, is_nightly, project};
+use cargo_test_support::{basic_lib_manifest, project};
 
 #[cargo_test]
 fn edition_works_for_build_script() {
@@ -82,15 +82,11 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "fundamentally always nightly")]
 fn edition_unstable() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will verify that it can be used with `cargo-features`. If
     // there is no next edition, it does nothing.
-    if !is_nightly() {
-        // This test is fundamentally always nightly.
-        return;
-    }
     let next = match Edition::LATEST_UNSTABLE {
         Some(next) => next,
         None => {

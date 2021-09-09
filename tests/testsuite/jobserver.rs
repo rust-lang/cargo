@@ -1,5 +1,6 @@
 //! Tests for the jobserver protocol.
 
+use cargo_util::is_ci;
 use std::net::TcpListener;
 use std::process::Command;
 use std::thread;
@@ -64,7 +65,7 @@ fn makes_jobserver_used() {
     } else {
         "make"
     };
-    if Command::new(make).arg("--version").output().is_err() {
+    if !is_ci() && Command::new(make).arg("--version").output().is_err() {
         return;
     }
 
@@ -176,7 +177,7 @@ fn jobserver_and_j() {
     } else {
         "make"
     };
-    if Command::new(make).arg("--version").output().is_err() {
+    if !is_ci() && Command::new(make).arg("--version").output().is_err() {
         return;
     }
 

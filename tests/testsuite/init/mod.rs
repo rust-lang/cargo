@@ -1,5 +1,4 @@
 //! Tests for the `cargo init` command.
-use std::process::Command;
 
 mod auto_git;
 mod bin_already_exists_explicit;
@@ -39,15 +38,3 @@ mod simple_hg_ignore_exists;
 mod simple_lib;
 mod unknown_flags;
 mod with_argument;
-
-pub fn mercurial_available() -> bool {
-    let result = Command::new("hg")
-        .arg("--version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !result {
-        println!("`hg` not available, skipping test");
-    }
-    result
-}

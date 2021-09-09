@@ -1,15 +1,10 @@
 //! Tests for rustc plugins.
 
+use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_manifest, project};
-use cargo_test_support::{is_nightly, rustc_host};
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_to_the_max() {
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
     let foo = project()
         .file(
             "Cargo.toml",
@@ -103,13 +98,8 @@ fn plugin_to_the_max() {
     foo.cargo("doc").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_with_dynamic_native_dependency() {
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
     let build = project()
         .at("builder")
         .file(
@@ -335,13 +325,8 @@ fn native_plugin_dependency_with_custom_linker() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires rustc_private")]
 fn panic_abort_plugins() {
-    if !is_nightly() {
-        // requires rustc_private
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -383,13 +368,8 @@ fn panic_abort_plugins() {
     p.cargo("build").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires rustc_private")]
 fn shared_panic_abort_plugins() {
-    if !is_nightly() {
-        // requires rustc_private
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
