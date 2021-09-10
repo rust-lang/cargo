@@ -935,9 +935,8 @@ fn dep_with_submodule() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
-[UPDATING] git submodule `file://[..]/deployment`
-[COMPILING] deployment [..]
-[COMPILING] base [..]
+[UPDATING] git submodule `file://[..]/dep2`
+[COMPILING] dep1 [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
@@ -1002,8 +1001,9 @@ fn dep_with_relative_submodule() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
-[UPDATING] git submodule `file://[..]/dep2`
-[COMPILING] dep1 [..]
+[UPDATING] git submodule `file://[..]/deployment`
+[COMPILING] deployment [..]
+[COMPILING] base [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
