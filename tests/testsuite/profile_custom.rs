@@ -702,3 +702,32 @@ fn legacy_commands_support_custom() {
         p.build_dir().rm_rf();
     }
 }
+
+#[cargo_test]
+fn legacy_rustc() {
+    // `cargo rustc` historically has supported dev/test/bench/check
+    // other profiles are covered in check::rustc_check
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.dev]
+                codegen-units = 3
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("rustc --profile dev -v")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..]-C codegen-units=3[..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
