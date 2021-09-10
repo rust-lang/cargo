@@ -290,7 +290,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/foo.bar.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"foo.bar\"
     path = \"src/main.rs\"
 
@@ -317,7 +317,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/test.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"test\"
     path = \"src/main.rs\"
 

@@ -121,7 +121,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/foo.rs.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"foo.rs\"
     path = \"src/main.rs\"
 
@@ -143,7 +143,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/test.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"test\"
     path = \"src/main.rs\"
 
@@ -188,7 +188,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/pub.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"pub\"
     path = \"src/main.rs\"
 
@@ -210,7 +210,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/core.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"core\"
     path = \"src/main.rs\"
 
@@ -322,7 +322,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/10-invalid.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"10-invalid\"
     path = \"src/main.rs\"
 
@@ -443,7 +443,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"ⒶⒷⒸ\"
     path = \"src/main.rs\"
 
@@ -463,7 +463,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/a¼.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"a¼\"
     path = \"src/main.rs\"
 

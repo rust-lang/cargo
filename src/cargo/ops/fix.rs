@@ -857,8 +857,7 @@ impl FixArgs {
             if edition.supports_compat_lint() {
                 if env::var_os(SUPPORTS_FORCE_WARN).is_some() {
                     cmd.arg("--force-warn")
-                        .arg(format!("rust-{}-compatibility", edition))
-                        .arg("-Zunstable-options");
+                        .arg(format!("rust-{}-compatibility", edition));
                 } else {
                     cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
                 }
