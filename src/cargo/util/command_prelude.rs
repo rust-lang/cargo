@@ -363,7 +363,7 @@ pub trait ArgMatchesExt {
         // This is an early exit, since it allows combination with `--release`.
         match (specified_profile, profile_checking) {
             // `cargo rustc` has legacy handling of these names
-            (Some(name @ ("test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
             _ => {}
