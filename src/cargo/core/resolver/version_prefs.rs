@@ -9,8 +9,8 @@ use crate::util::interning::InternedString;
 
 /// A collection of preferences for particular package versions.
 ///
-/// This is built up with [`prefer_package_id`] and [`prefer_dep`], then used to sort the set of
-/// summaries for a package during resolution via [`sort_summaries`].
+/// This is built up with [`Self::prefer_package_id`] and [`Self::prefer_dependency`], then used to sort the set of
+/// summaries for a package during resolution via [`Self::sort_summaries`].
 ///
 /// As written, a version is either "preferred" or "not preferred".  Later extensions may
 /// introduce more granular preferences.

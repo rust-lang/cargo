@@ -135,8 +135,8 @@ impl Rustc {
 /// for no-op builds, we cache it here, based on compiler's mtime and rustup's
 /// current toolchain.
 ///
-/// https://github.com/rust-lang/cargo/issues/5315
-/// https://github.com/rust-lang/rust/issues/49761
+/// <https://github.com/rust-lang/cargo/issues/5315>
+/// <https://github.com/rust-lang/rust/issues/49761>
 #[derive(Debug)]
 struct Cache {
     cache_location: Option<PathBuf>,
