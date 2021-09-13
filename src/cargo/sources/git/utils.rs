@@ -1,9 +1,13 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
-use crate::core::GitReference;
-use crate::util::errors::CargoResult;
-use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
+use std::env;
+use std::fmt;
+use std::fs::canonicalize;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{Duration, Instant};
+
 use anyhow::{anyhow, Context as _};
 use cargo_util::paths::normalize_path;
 use cargo_util::{paths, ProcessBuilder};
@@ -12,12 +16,11 @@ use git2::{self, ErrorClass, ObjectType};
 use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
-use std::env;
-use std::fmt;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::{Duration, Instant};
 use url::{ParseError, Url};
+
+use crate::core::GitReference;
+use crate::util::errors::CargoResult;
+use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
 
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
@@ -395,12 +398,12 @@ impl<'a> GitCheckout<'a> {
                     if Path::new(child_url.path()).is_relative() {
                         let parent_remote_path = Path::new(parent_remote_url.path());
                         let child_remote_path = Path::new(child_url.path());
-                        let normalized_path_buf =
-                            normalize_path(&parent_remote_path.join(child_remote_path));
-                        normalized_path_buf
-                            .to_str()
-                            .expect("We had a utf-8 url earlier, but now we don't?")
-                            .to_string()
+                        let canonical = canonicalize(normalize_path(
+                            &parent_remote_path.join(child_remote_path),
+                        ))?;
+                        let mut final_path = parent_remote_url.clone();
+                        final_path.set_path(canonical.to_string_lossy().as_ref());
+                        final_path.to_string()
                     } else {
                         child_url.to_string()
                     }
@@ -414,13 +417,15 @@ impl<'a> GitCheckout<'a> {
                         Err(err) => Err(err)
                             .with_context(|| format!("Failed to parse child submodule url"))?,
                     };
+                    let final_path = canonicalize(Path::new(new_parent_remote_url.path()))?;
+                    new_parent_remote_url.set_path(final_path.to_string_lossy().as_ref());
                     new_parent_remote_url.to_string()
                 }
                 Err(err) => {
                     return Err(anyhow::format_err!(
                         "Error parsing submodule url: {:?}?",
                         err
-                    ))
+                    ));
                 }
             };
 
@@ -700,9 +705,9 @@ where
         msg.push_str("https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli");
         err = err.context(msg);
 
-    // Otherwise if we didn't even get to the authentication phase them we may
-    // have failed to set up a connection, in these cases hint on the
-    // `net.git-fetch-with-cli` configuration option.
+        // Otherwise if we didn't even get to the authentication phase them we may
+        // have failed to set up a connection, in these cases hint on the
+        // `net.git-fetch-with-cli` configuration option.
     } else if let Some(e) = err.downcast_ref::<git2::Error>() {
         match e.class() {
             ErrorClass::Net
