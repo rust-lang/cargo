@@ -34,24 +34,24 @@ jobs:
     strategy:
       matrix:
         include:
-        - os: ubuntu-latest
-          rust: stable
-          other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
-          rust: beta
-          other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
-          rust: nightly
-          other: i686-unknown-linux-gnu
-        - os: macos-latest
+        # - os: ubuntu-latest
+        #   rust: stable
+        #   other: i686-unknown-linux-gnu
+        # - os: ubuntu-latest
+        #   rust: beta
+        #   other: i686-unknown-linux-gnu
+        # - os: ubuntu-latest
+        #   rust: nightly
+        #   other: i686-unknown-linux-gnu
+        - os: macos-11
           rust: stable
           other: x86_64-apple-ios
-        - os: windows-latest
-          rust: stable-msvc
-          other: i686-pc-windows-msvc
-        - os: windows-latest
-          rust: nightly-gnu
-          other: i686-pc-windows-gnu
+        # - os: windows-latest
+        #   rust: stable-msvc
+        #   other: i686-pc-windows-msvc
+        # - os: windows-latest
+        #   rust: nightly-gnu
+        #   other: i686-pc-windows-gnu
     steps:
     - uses: actions/checkout@v2
     - name: Update Rustup (temporary workaround)
