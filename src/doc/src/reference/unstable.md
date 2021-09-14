@@ -1207,7 +1207,7 @@ for the appropriate target and influenced by any other RUSTFLAGS.
 * Tracking Issue: [#9778](https://github.com/rust-lang/cargo/issues/9778)
 * PR: [#9627](https://github.com/rust-lang/cargo/pull/9627)
 
-The `different-binary-name` feature allows setting the filename of the binary without having to obey the 
+The `different-binary-name` feature allows setting the filename of the binary without having to obey the
 restrictions placed on crate names. For example, the crate name must use only `alphanumeric` characters
 or `-` or `_`, and cannot be empty.
 
@@ -1378,7 +1378,23 @@ The 2021 edition has been stabilized in the 1.56 release.
 See the [`edition` field](manifest.md#the-edition-field) for more information on setting the edition.
 See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](../../edition-guide/index.html) for more information on migrating existing projects.
 
+
 ### Custom named profiles
 
 Custom named profiles have been stabilized in the 1.57 release. See the
 [profiles chapter](profiles.md#custom-profiles) for more information.
+
+
+### scrape-examples
+
+* RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
+* Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
+
+The `--scrape-examples` argument to the `doc` command tells Rustdoc to search
+crates in the current workspace for calls to functions. Those call-sites are then
+included as documentation. The flag can take an argument of `all`, `lib`, or `examples`
+which configures which crate in the workspace to analyze for examples. For instance:
+
+```
+cargo doc --scrape-examples examples -Z unstable-options
+```

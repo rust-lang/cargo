@@ -84,10 +84,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
 
     if compile_opts.rustdoc_scrape_examples.is_some() {
-        // FIXME(wcrichto): add a tracking issue once this gets merged and add issue number below
         config
             .cli_unstable()
-            .fail_if_stable_opt("--scrape-examples", 0)?;
+            .fail_if_stable_opt("--scrape-examples", 9910)?;
     }
 
     let doc_opts = DocOptions {
