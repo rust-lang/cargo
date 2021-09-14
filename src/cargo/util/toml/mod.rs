@@ -1762,11 +1762,14 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
         kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
-            bail!(
+            let msg = format!(
                 "dependency ({}) specified without \
-                 providing a local path, Git repository, or version to use.",
+                 providing a local path, Git repository, or \
+                 version to use. This will be considered an \
+                 error in future versions",
                 name_in_toml
             );
+            cx.warnings.push(msg);
         }
 
         if let Some(version) = &self.version {

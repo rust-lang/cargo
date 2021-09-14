@@ -763,14 +763,10 @@ fn empty_dependencies() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  dependency (bar) specified without providing a local path, Git repository, or version \
-to use.
+warning: dependency (bar) specified without providing a local path, Git repository, or version \
+to use. This will be considered an error in future versions
 ",
         )
         .run();
