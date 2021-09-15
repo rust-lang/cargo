@@ -158,6 +158,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &specs,
         has_dev,
         force_all,
+        ops::BinaryOnlyDepsBehavior::Warn,
     )?;
 
     let package_map: HashMap<PackageId, &Package> = ws_resolve

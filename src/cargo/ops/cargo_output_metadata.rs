@@ -7,7 +7,7 @@ use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use cargo_platform::Platform;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -18,6 +18,7 @@ pub struct OutputMetadataOptions {
     pub no_deps: bool,
     pub version: u32,
     pub filter_platforms: Vec<String>,
+    pub binary_deps: BinaryDepsMode,
 }
 
 /// Loads the manifest, resolves the dependencies of the package to the concrete
@@ -88,16 +89,49 @@ struct Dep {
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord)]
 struct DepKindInfo {
-    kind: DepKind,
+    kind: DepKindIncludingBinaryDeps,
     target: Option<Platform>,
 }
 
 impl From<&Dependency> for DepKindInfo {
     fn from(dep: &Dependency) -> DepKindInfo {
         DepKindInfo {
-            kind: dep.kind(),
+            kind: dep.kind().into(),
             target: dep.platform().cloned(),
         }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+enum DepKindIncludingBinaryDeps {
+    Normal,
+    Development,
+    Build,
+    Binary,
+}
+
+impl From<DepKind> for DepKindIncludingBinaryDeps {
+    fn from(dep_kind: DepKind) -> Self {
+        match dep_kind {
+            DepKind::Normal => DepKindIncludingBinaryDeps::Normal,
+            DepKind::Development => DepKindIncludingBinaryDeps::Development,
+            DepKind::Build => DepKindIncludingBinaryDeps::Build,
+        }
+    }
+}
+
+impl Serialize for DepKindIncludingBinaryDeps {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {
+            DepKindIncludingBinaryDeps::Normal => None,
+            DepKindIncludingBinaryDeps::Development => Some("dev"),
+            DepKindIncludingBinaryDeps::Build => Some("build"),
+            DepKindIncludingBinaryDeps::Binary => Some("binary"),
+        }
+        .serialize(s)
     }
 }
 
@@ -119,6 +153,11 @@ fn build_resolve_graph(
         crate::core::resolver::features::ForceAllTargets::No
     };
 
+    let binary_only_deps_behavior = match metadata_opts.binary_deps {
+        BinaryDepsMode::Ignore => ops::BinaryOnlyDepsBehavior::Warn,
+        BinaryDepsMode::IncludeIfNoLibraryDep => ops::BinaryOnlyDepsBehavior::Ignore,
+    };
+
     // Note that even with --filter-platform we end up downloading host dependencies as well,
     // as that is the behavior of download_accessible.
     let ws_resolve = ops::resolve_ws_with_opts(
@@ -129,6 +168,7 @@ fn build_resolve_graph(
         &specs,
         HasDevUnits::Yes,
         force_all,
+        binary_only_deps_behavior,
     )?;
 
     let package_map: BTreeMap<PackageId, Package> = ws_resolve
@@ -149,6 +189,7 @@ fn build_resolve_graph(
             &package_map,
             &target_data,
             &requested_kinds,
+            metadata_opts.binary_deps,
         );
     }
     // Get a Vec of Packages.
@@ -166,6 +207,12 @@ fn build_resolve_graph(
     Ok((actual_packages, mr))
 }
 
+#[derive(Clone, Copy)]
+pub enum BinaryDepsMode {
+    IncludeIfNoLibraryDep,
+    Ignore,
+}
+
 fn build_resolve_graph_r(
     node_map: &mut BTreeMap<PackageId, MetadataResolveNode>,
     pkg_id: PackageId,
@@ -173,6 +220,7 @@ fn build_resolve_graph_r(
     package_map: &BTreeMap<PackageId, Package>,
     target_data: &RustcTargetData<'_>,
     requested_kinds: &[CompileKind],
+    binary_deps: BinaryDepsMode,
 ) {
     if node_map.contains_key(&pkg_id) {
         return;
@@ -206,14 +254,42 @@ fn build_resolve_graph_r(
                 })
             }
         })
-        .filter_map(|(dep_id, deps)| {
-            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
-            dep_kinds.sort();
+        .flat_map(|(dep_id, deps)| {
             package_map
                 .get(&dep_id)
-                .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                .and_then(|lib_target| resolve.extern_crate_name(pkg_id, dep_id, lib_target).ok())
-                .map(|name| Dep {
+                .into_iter()
+                .flat_map(move |pkg| {
+                    if let Some(lib_target) = pkg.targets().iter().find(|t| t.is_lib()) {
+                        let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+                        dep_kinds.sort();
+                        vec![(lib_target, dep_kinds)]
+                    } else {
+                        match binary_deps {
+                            BinaryDepsMode::IncludeIfNoLibraryDep => pkg
+                                .targets()
+                                .iter()
+                                .filter(|t| t.is_bin())
+                                .map(|t| {
+                                    (
+                                        t,
+                                        vec![DepKindInfo {
+                                            kind: DepKindIncludingBinaryDeps::Binary,
+                                            target: None,
+                                        }],
+                                    )
+                                })
+                                .collect(),
+                            BinaryDepsMode::Ignore => vec![],
+                        }
+                    }
+                })
+                .filter_map(move |(lib_target, dep_kinds)| {
+                    resolve
+                        .extern_crate_name(pkg_id, dep_id, lib_target)
+                        .ok()
+                        .map(|crate_name| (crate_name, dep_kinds))
+                })
+                .map(move |(name, dep_kinds)| Dep {
                     name,
                     pkg: normalize_id(dep_id),
                     dep_kinds,
@@ -237,6 +313,7 @@ fn build_resolve_graph_r(
             package_map,
             target_data,
             requested_kinds,
+            binary_deps,
         );
     }
 }

@@ -69,6 +69,12 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
     Ok((packages, resolve))
 }
 
+#[derive(Eq, PartialEq)]
+pub enum BinaryOnlyDepsBehavior {
+    Warn,
+    Ignore,
+}
+
 /// Resolves dependencies for some packages of the workspace,
 /// taking into account `paths` overrides and activated features.
 ///
@@ -87,6 +93,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
+    binary_only_deps_behaviour: BinaryOnlyDepsBehavior,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -178,6 +185,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         requested_targets,
         target_data,
         force_all_targets,
+        binary_only_deps_behaviour == BinaryOnlyDepsBehavior::Ignore,
     );
     for (pkg_id, dep_pkgs) in no_lib_pkgs {
         for dep_pkg in dep_pkgs {

@@ -252,6 +252,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
             &specs,
             has_dev_units,
             crate::core::resolver::features::ForceAllTargets::No,
+            ops::BinaryOnlyDepsBehavior::Warn,
         )?;
 
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);

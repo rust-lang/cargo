@@ -1,5 +1,6 @@
 use crate::command_prelude::*;
-use cargo::ops::{self, OutputMetadataOptions};
+use anyhow::anyhow;
+use cargo::ops::{self, BinaryDepsMode, OutputMetadataOptions};
 
 pub fn cli() -> App {
     subcommand("metadata")
@@ -26,6 +27,11 @@ pub fn cli() -> App {
                 .value_name("VERSION")
                 .possible_value("1"),
         )
+        .arg(
+            opt("binary-deps", "How to treat binary dependencies")
+                .possible_values(&["include-if-no-library-dep", "ignore"])
+                .default_value("ignore"),
+        )
         .after_help("Run `cargo help metadata` for more detailed information.\n")
 }
 
@@ -43,11 +49,30 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some(version) => version.parse().unwrap(),
     };
 
+    let binary_deps = {
+        match args
+            .value_of("binary-deps")
+            .unwrap()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "include-if-no-library-dep" => BinaryDepsMode::IncludeIfNoLibraryDep,
+            "ignore" => BinaryDepsMode::Ignore,
+            s => {
+                return Err(CliError::new(
+                    anyhow!("invalid binary-deps specifier: `{}`", s),
+                    1,
+                ))
+            }
+        }
+    };
+
     let options = OutputMetadataOptions {
         cli_features: args.cli_features()?,
         no_deps: args.is_present("no-deps"),
         filter_platforms: args._values_of("filter-platform"),
         version,
+        binary_deps,
     };
 
     let result = ops::output_metadata(&ws, &options)?;

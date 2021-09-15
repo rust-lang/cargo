@@ -118,6 +118,7 @@ pub fn resolve_std<'cfg>(
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
+        ops::BinaryOnlyDepsBehavior::Warn,
     )?;
     Ok((
         resolve.pkg_set,

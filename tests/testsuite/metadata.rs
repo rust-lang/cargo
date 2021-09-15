@@ -2136,6 +2136,153 @@ fn deps_with_bin_only() {
             "#,
         )
         .run();
+
+    p.cargo("metadata")
+        .arg("--binary-deps=include-if-no-library-dep")
+        .with_json(
+            r#"
+            {
+              "metadata": null,
+              "packages": [
+                {
+                  "authors": [
+                    "wycats@example.com"
+                  ],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "bdep 0.5.0 ([..])",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/bdep/Cargo.toml",
+                  "metadata": null,
+                  "name": "bdep",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "bdep",
+                      "src_path": "[..]/foo/bdep/src/main.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "bdep",
+                      "optional": false,
+                      "path": "[..]/foo/bdep",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    }
+                  ],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "foo 0.1.0 (path+file:/[..]/foo)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/Cargo.toml",
+                  "metadata": null,
+                  "name": "foo",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "foo",
+                      "src_path": "[..]/foo/src/lib.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.1.0"
+                }
+              ],
+              "resolve": {
+                "nodes": [
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "bdep 0.5.0 (path+file:/[..]/foo/bdep)"
+                  },
+                  {
+                    "dependencies": [
+                      "bdep 0.5.0 (path+file:/[..]/foo/bdep)"
+                    ],
+                    "deps": [
+                      {
+                        "dep_kinds": [
+                          {
+                            "kind": "binary",
+                            "target": null
+                          }
+                        ],
+                        "name": "bdep",
+                        "pkg": "bdep 0.5.0 (path+file:/[..]/foo/bdep)"
+                      }
+                    ],
+                    "features": [],
+                    "id": "foo 0.1.0 (path+file:/[..]/foo)"
+                  }
+                ],
+                "root": "foo 0.1.0 (path+file:/[..]/foo)"
+              },
+              "target_directory": "[..]/foo/target",
+              "version": 1,
+              "workspace_members": [
+                "foo 0.1.0 (path+file:/[..]/foo)"
+              ],
+              "workspace_root": "[..]/foo"
+            }
+            "#,
+        )
+        .run();
 }
 
 #[cargo_test]

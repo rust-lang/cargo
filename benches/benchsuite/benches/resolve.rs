@@ -2,7 +2,7 @@ use cargo::core::compiler::{CompileKind, RustcTargetData};
 use cargo::core::resolver::features::{CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets};
 use cargo::core::resolver::{HasDevUnits, ResolveBehavior};
 use cargo::core::{PackageIdSpec, Workspace};
-use cargo::ops::WorkspaceResolve;
+use cargo::ops::{BinaryOnlyDepsBehavior, WorkspaceResolve};
 use cargo::Config;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::fs;
@@ -198,6 +198,7 @@ fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
         &specs,
         has_dev_units,
         force_all_targets,
+        BinaryOnlyDepsBehavior::Ignore,
     )
     .unwrap();
     ResolveInfo {
@@ -272,6 +273,7 @@ fn resolve_ws(c: &mut Criterion) {
                     specs,
                     *has_dev_units,
                     *force_all_targets,
+                    BinaryOnlyDepsBehavior::Ignore,
                 )
                 .unwrap();
             })

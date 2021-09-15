@@ -12,7 +12,9 @@ pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
 pub use self::cargo_install::{install, install_list};
 pub use self::cargo_new::{init, new, NewOptions, VersionControl};
-pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
+pub use self::cargo_output_metadata::{
+    output_metadata, BinaryDepsMode, ExportInfo, OutputMetadataOptions,
+};
 pub use self::cargo_package::{package, package_one, PackageOpts};
 pub use self::cargo_pkgid::pkgid;
 pub use self::cargo_read_manifest::{read_package, read_packages};
@@ -28,7 +30,7 @@ pub use self::registry::{needs_custom_http_transport, registry_login, registry_l
 pub use self::registry::{publish, registry_configuration, RegistryConfig};
 pub use self::resolve::{
     add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_with_opts,
-    WorkspaceResolve,
+    BinaryOnlyDepsBehavior, WorkspaceResolve,
 };
 pub use self::vendor::{vendor, VendorOptions};
 

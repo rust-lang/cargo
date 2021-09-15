@@ -377,6 +377,7 @@ pub fn create_bcx<'a, 'cfg>(
         &specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
+        ops::BinaryOnlyDepsBehavior::Warn,
     )?;
     let WorkspaceResolve {
         mut pkg_set,

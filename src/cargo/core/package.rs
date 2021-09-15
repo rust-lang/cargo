@@ -569,6 +569,7 @@ impl<'cfg> PackageSet<'cfg> {
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
+        treat_binary_only_as_lib: bool,
     ) -> BTreeMap<PackageId, Vec<&Package>> {
         root_ids
             .iter()
@@ -583,7 +584,11 @@ impl<'cfg> PackageSet<'cfg> {
                 )
                 .filter_map(|package_id| {
                     if let Ok(dep_pkg) = self.get_one(package_id) {
-                        if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
+                        if !dep_pkg
+                            .targets()
+                            .iter()
+                            .any(|t| t.is_lib() || (treat_binary_only_as_lib && t.is_bin()))
+                        {
                             Some(dep_pkg)
                         } else {
                             None
