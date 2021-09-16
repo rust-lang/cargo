@@ -279,3 +279,34 @@ fn link_arg_transitive_not_allowed() {
         .with_stderr_does_not_contain("--bogus")
         .run();
 }
+
+#[cargo_test]
+fn link_arg_with_doctest() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                //! ```
+                //! let x = 5;
+                //! assert_eq!(x, 5);
+                //! ```
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rustc-link-arg=--this-is-a-bogus-flag");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .masquerade_as_nightly_cargo()
+        .without_status()
+        .with_stderr_contains(
+            "[RUNNING] `rustdoc [..]--crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        )
+        .run();
+}

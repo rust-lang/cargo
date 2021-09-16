@@ -2,15 +2,14 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use anyhow::{bail, Context as _};
-use filetime::FileTime;
-use jobserver::Client;
-
 use crate::core::compiler::compilation::{self, UnitOutput};
 use crate::core::compiler::{self, Unit};
 use crate::core::PackageId;
 use crate::util::errors::CargoResult;
 use crate::util::profile;
+use anyhow::{bail, Context as _};
+use filetime::FileTime;
+use jobserver::Client;
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
@@ -240,6 +239,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         for cfg in &output.cfgs {
                             args.push("--cfg".into());
                             args.push(cfg.into());
+                        }
+
+                        for (lt, arg) in &output.linker_args {
+                            if lt.applies_to(&unit.target) {
+                                args.push("-C".into());
+                                args.push(format!("link-arg={}", arg).into());
+                            }
                         }
                     }
                 }
