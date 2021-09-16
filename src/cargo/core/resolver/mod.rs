@@ -654,8 +654,12 @@ fn activate(
     };
 
     let now = Instant::now();
-    let (used_features, deps) =
-        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, opts)?;
+    let (used_features, deps) = &*registry.build_deps(
+        cx,
+        parent.map(|(summary, dep)| (summary.package_id(), dep.platform().map(|p| p.to_owned()))),
+        &candidate,
+        opts,
+    )?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {

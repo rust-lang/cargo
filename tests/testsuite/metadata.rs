@@ -2,7 +2,7 @@
 
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
 use serde_json::json;
 
@@ -3066,6 +3066,285 @@ fn dep_kinds_workspace() {
               }
             }
             "#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn target_specific_feature() {
+    Package::new("optdep", "1.0.0").publish();
+    Package::new("common", "1.0.0")
+        .add_dep(Dependency::new("optdep", "1.0").optional(true))
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+
+            [dependencies]
+            common = "1.0"
+
+            [target.x86_64-unknown-linux-gnu.dependencies]
+            common = { version = "1.0.0" }
+
+            [target.x86_64-apple-darwin.dependencies]
+            common = { version = "1.0.0", features = ["optdep"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_json(
+            r#"{
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [
+        {
+          "features": [],
+          "kind": null,
+          "name": "optdep",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "^1.0",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "common 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]/common-1.0.0/Cargo.toml",
+      "metadata": null,
+      "name": "common",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "common",
+          "src_path": "[..]/common-1.0.0/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [
+        {
+          "features": [],
+          "kind": null,
+          "name": "common",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "^1.0",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "features": [
+            "optdep"
+          ],
+          "kind": null,
+          "name": "common",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "^1.0.0",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": "x86_64-apple-darwin",
+          "uses_default_features": true
+        },
+        {
+          "features": [],
+          "kind": null,
+          "name": "common",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "^1.0.0",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": "x86_64-unknown-linux-gnu",
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "foo 1.0.0 (path+file://[..]/foo)",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[..]/foo/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "optdep 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]/optdep-1.0.0/Cargo.toml",
+      "metadata": null,
+      "name": "optdep",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "optdep",
+          "src_path": "[..]/optdep-1.0.0/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "1.0.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [
+          "optdep 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "x86_64-apple-darwin"
+              }
+            ],
+            "name": "optdep",
+            "pkg": "optdep 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": [
+          "optdep"
+        ],
+        "id": "common 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)"
+      },
+      {
+        "dependencies": [
+          "common 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              },
+              {
+                "kind": null,
+                "target": "x86_64-apple-darwin"
+              },
+              {
+                "kind": null,
+                "target": "x86_64-unknown-linux-gnu"
+              }
+            ],
+            "name": "common",
+            "pkg": "common 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": [],
+        "id": "foo 1.0.0 (path+file://[..]/foo)"
+      },
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "optdep 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)"
+      }
+    ],
+    "root": "foo 1.0.0 (path+file://[..]/foo)"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_members": [
+    "foo 1.0.0 (path+file://[..]/foo)"
+  ],
+  "workspace_root": "[..]/foo"
+}"#,
         )
         .run();
 }

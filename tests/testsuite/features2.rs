@@ -1905,7 +1905,6 @@ fn doc_optional() {
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
-[DOWNLOADED] spin v1.0.0 [..]
 [DOWNLOADED] bar v1.0.0 [..]
 [DOCUMENTING] bar v1.0.0
 [CHECKING] bar v1.0.0

@@ -21,6 +21,7 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
 use anyhow::Context as _;
+use cargo_platform::Platform;
 use log::debug;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
@@ -37,7 +38,7 @@ pub struct RegistryQueryer<'a> {
     registry_cache: HashMap<Dependency, Rc<Vec<Summary>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
-        (Option<PackageId>, Summary, ResolveOpts),
+        (Option<(PackageId, Option<Platform>)>, Summary, ResolveOpts),
         Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
     >,
     /// all the cases we ended up using a supplied replacement
@@ -189,7 +190,7 @@ impl<'a> RegistryQueryer<'a> {
     pub fn build_deps(
         &mut self,
         cx: &Context,
-        parent: Option<PackageId>,
+        parent: Option<(PackageId, Option<Platform>)>,
         candidate: &Summary,
         opts: &ResolveOpts,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
@@ -197,21 +198,27 @@ impl<'a> RegistryQueryer<'a> {
         // as it is a "pure" query of its arguments.
         if let Some(out) = self
             .summary_cache
-            .get(&(parent, candidate.clone(), opts.clone()))
+            .get(&(parent.clone(), candidate.clone(), opts.clone()))
             .cloned()
         {
             return Ok(out);
         }
+
+        let (parent_package_id, parent_platform) = match parent.clone() {
+            Some((package_id, platform)) => (Some(package_id), platform),
+            None => (None, None),
+        };
+
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(parent_package_id, candidate, opts)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
         let mut deps = deps
             .into_iter()
-            .map(|(dep, features)| {
+            .map(|(mut dep, features)| {
                 let candidates = self.query(&dep).with_context(|| {
                     format!(
                         "failed to get `{}` as a dependency of {}",
@@ -219,6 +226,11 @@ impl<'a> RegistryQueryer<'a> {
                         describe_path_in_context(cx, &candidate.package_id()),
                     )
                 })?;
+                if dep.platform().is_none() && parent_platform.is_some() {
+                    // If the parent has a specific target, the child will also only be used in that target.
+                    // Tracking this allows for analysing platform-specificness of transitive dependencies in `cargo metadata`.
+                    dep.set_platform(parent_platform.clone());
+                }
                 Ok((dep, candidates, features))
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;

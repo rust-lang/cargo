@@ -1479,7 +1479,6 @@ fn itarget_opt_dep() {
             "\
 foo v1.0.0 ([..]/foo)
 └── common v1.0.0
-    └── optdep v1.0.0
 ",
         )
         .run();
