@@ -1331,6 +1331,19 @@ fn error_if_parent_cargo_toml_is_invalid() {
 }
 
 #[cargo_test]
+fn no_error_if_parent_cargo_toml_is_valid_toml_but_invalid_manifest() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("{{no_a_valid_workspace_project}}", "0.1.0"))
+        .file("valid/Cargo.toml", &basic_manifest("valid", "0.1.0"))
+        .file("valid/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build")
+        .cwd("valid")
+        .run();
+}
+
+#[cargo_test]
 fn relative_path_for_member_works() {
     let p = project()
         .file(
