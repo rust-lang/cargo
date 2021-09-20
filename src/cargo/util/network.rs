@@ -1,35 +1,58 @@
 use anyhow::Error;
+use std::cmp::min;
+use std::thread::sleep;
+use std::time;
 
 use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::Config;
 
 pub struct Retry<'a> {
     config: &'a Config,
-    remaining: u32,
+    retries: u32,
+    max_retry: u32,
+    retry_max_time: u64,
+    retry_delay: Option<u64>,
 }
 
 impl<'a> Retry<'a> {
     pub fn new(config: &'a Config) -> CargoResult<Retry<'a>> {
         Ok(Retry {
             config,
-            remaining: config.net_config()?.retry.unwrap_or(2),
+            max_retry: config.net_config()?.retry.unwrap_or(2),
+            retries: 0,
+            retry_max_time: config.net_config()?.retry_max_time.unwrap_or(32),
+            retry_delay: config.net_config()?.retry_delay,
         })
     }
 
     pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> CargoResult<Option<T>> {
         match f() {
-            Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
+            Err(ref e) if maybe_spurious(e) && self.retries < self.max_retry => {
                 let msg = format!(
                     "spurious network error ({} tries remaining): {}",
-                    self.remaining,
+                    (self.max_retry - self.retries),
                     e.root_cause(),
                 );
                 self.config.shell().warn(msg)?;
-                self.remaining -= 1;
+                self.retries += 1;
+                self.backoff();
                 Ok(None)
             }
             other => other.map(Some),
         }
+    }
+
+    fn backoff(&self) {
+        let backoff_time = if let Some(delay) = self.retry_delay {
+            time::Duration::from_secs(delay)
+        } else {
+            min(
+                time::Duration::from_secs(1 << self.retries),
+                time::Duration::from_secs(self.retry_max_time),
+            )
+        };
+
+        sleep(backoff_time);
     }
 }
 

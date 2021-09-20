@@ -2102,6 +2102,8 @@ pub struct SslVersionConfigRange {
 #[serde(rename_all = "kebab-case")]
 pub struct CargoNetConfig {
     pub retry: Option<u32>,
+    pub retry_max_time: Option<u64>,
+    pub retry_delay: Option<u64>,
     pub offline: Option<bool>,
     pub git_fetch_with_cli: Option<bool>,
 }
