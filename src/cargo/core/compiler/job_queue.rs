@@ -62,6 +62,7 @@ use cargo_util::ProcessBuilder;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
+use semver::Version;
 
 use super::context::OutputFile;
 use super::job::{
@@ -74,9 +75,8 @@ use crate::core::compiler::future_incompat::{
     FutureBreakageItem, FutureIncompatReportPackage, OnDiskReports,
 };
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{FeatureValue, PackageId, Shell, TargetKind};
+use crate::core::{PackageId, Shell, TargetKind};
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
-use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
 use crate::util::{self, internal, profile};
@@ -1248,56 +1248,41 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     fn back_compat_notice(&self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+        fn is_broken_diesel(version: &Version) -> bool {
+            use semver::{Comparator, Op, Prerelease};
+
+            Comparator {
+                op: Op::Less,
+                major: 1,
+                minor: Some(4),
+                patch: Some(8),
+                pre: Prerelease::EMPTY,
+            }
+            .matches(version)
+        }
+
         if unit.pkg.name() != "diesel"
-            || unit.pkg.version().major != 1
+            || !is_broken_diesel(unit.pkg.version())
             || cx.bcx.ws.resolve_behavior() == ResolveBehavior::V1
             || !unit.pkg.package_id().source_id().is_registry()
             || !unit.features.is_empty()
         {
             return Ok(());
         }
-        let other_diesel = match cx
+        if !cx
             .bcx
             .unit_graph
             .keys()
-            .find(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
+            .any(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
         {
-            Some(u) => u,
-            // Unlikely due to features.
-            None => return Ok(()),
-        };
-        let mut features_suggestion: BTreeSet<_> = other_diesel.features.iter().collect();
-        let fmap = other_diesel.pkg.summary().features();
-        // Remove any unnecessary features.
-        for feature in &other_diesel.features {
-            if let Some(feats) = fmap.get(feature) {
-                for feat in feats {
-                    if let FeatureValue::Feature(f) = feat {
-                        features_suggestion.remove(&f);
-                    }
-                }
-            }
+            return Ok(());
         }
-        features_suggestion.remove(&InternedString::new("default"));
-        let features_suggestion = toml::to_string(&features_suggestion).unwrap();
-
-        cx.bcx.config.shell().note(&format!(
+        cx.bcx.config.shell().note(
             "\
 This error may be due to an interaction between diesel and Cargo's new
-feature resolver. Some workarounds you may want to consider:
-- Add a build-dependency in Cargo.toml on diesel to force Cargo to add the appropriate
-  features. This may look something like this:
-
-    [build-dependencies]
-    diesel = {{ version = \"{}\", features = {} }}
-
-- Try using the previous resolver by setting `resolver = \"1\"` in `Cargo.toml`
-  (see <https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions>
-  for more information).
+feature resolver. Try updating to diesel 1.4.8 to fix this error.
 ",
-            unit.pkg.version(),
-            features_suggestion
-        ))?;
+        )?;
         Ok(())
     }
 }
