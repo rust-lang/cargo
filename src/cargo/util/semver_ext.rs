@@ -82,7 +82,12 @@ impl OptVersionReq {
         match self {
             OptVersionReq::Any => true,
             OptVersionReq::Req(req) => req.matches(version),
-            OptVersionReq::Locked(v, _) => VersionReq::exact(v).matches(version),
+            OptVersionReq::Locked(v, _) => {
+                v.major == version.major
+                    && v.minor == version.minor
+                    && v.patch == version.patch
+                    && v.pre == version.pre
+            }
         }
     }
 }
@@ -100,5 +105,42 @@ impl Display for OptVersionReq {
 impl From<VersionReq> for OptVersionReq {
     fn from(req: VersionReq) -> Self {
         OptVersionReq::Req(req)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn locked_has_the_same_with_exact() {
+        fn test_versions(target_ver: &str, vers: &[&str]) {
+            let ver = Version::parse(target_ver).unwrap();
+            let exact = OptVersionReq::exact(&ver);
+            let mut locked = exact.clone();
+            locked.lock_to(&ver);
+            for v in vers {
+                let v = Version::parse(v).unwrap();
+                assert_eq!(exact.matches(&v), locked.matches(&v));
+            }
+        }
+
+        test_versions(
+            "1.0.0",
+            &["1.0.0", "1.0.1", "0.9.9", "0.10.0", "0.1.0", "1.0.0-pre"],
+        );
+        test_versions("0.9.0", &["0.9.0", "0.9.1", "1.9.0", "0.0.9", "0.9.0-pre"]);
+        test_versions("0.0.2", &["0.0.2", "0.0.1", "0.0.3", "0.0.2-pre"]);
+        test_versions(
+            "0.1.0-beta2.a",
+            &[
+                "0.1.0-beta2.a",
+                "0.9.1",
+                "0.1.0",
+                "0.1.1-beta2.a",
+                "0.1.0-beta2",
+            ],
+        );
+        test_versions("0.1.0+meta", &["0.1.0", "0.1.0+meta", "0.1.0+any"]);
     }
 }
