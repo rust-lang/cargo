@@ -596,7 +596,7 @@ pub fn create_bcx<'a, 'cfg>(
     }
 
     if let Some(filter) = rustdoc_scrape_examples {
-        // Run cargo rustdoc --scrape-examples to generate calls.jsons for each file in `filter`
+        // Run cargo rustdoc --scrape-examples to generate calls for each file in `filter`
         let paths = {
             // Run in doc mode with the given `filter`
             let compile_mode = CompileMode::Doc { deps: false };
@@ -612,7 +612,7 @@ pub fn create_bcx<'a, 'cfg>(
             let interner = UnitInterner::new();
             let mut bcx = create_bcx(ws, &example_compile_opts, &interner)?;
 
-            // Make an output path for calls.json for each build unit
+            // Make an output path for calls for each build unit
             let paths = {
                 // FIXME(wcrichto): is there a better place to store these files?
                 let dest = bcx.profiles.get_dir_name();
@@ -620,7 +620,7 @@ pub fn create_bcx<'a, 'cfg>(
                 let output_dir = layout.prepare_tmp()?;
                 bcx.roots
                     .iter()
-                    .map(|unit| output_dir.join(format!("{}-calls.json", unit.buildkey())))
+                    .map(|unit| output_dir.join(format!("{}.calls", unit.buildkey())))
                     .collect::<Vec<_>>()
             };
 
@@ -688,7 +688,7 @@ pub fn create_bcx<'a, 'cfg>(
             paths
         };
 
-        // Add "--with-examples *-calls.json" to the current rustdoc invocation
+        // Add "--with-examples *.calls" to the current rustdoc invocation
         let args = paths
             .into_iter()
             .map(|path| vec!["--with-examples".into(), path.into_os_string()].into_iter())
