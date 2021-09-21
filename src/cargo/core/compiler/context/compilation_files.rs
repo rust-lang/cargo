@@ -540,17 +540,7 @@ fn compute_metadata(
     // `panic=abort` and `panic=unwind` artifacts, additionally with various
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
-
-    // For RFC #3123, we need the metadata of a Check and Doc unit of the same crate
-    // to be the same. So we add a special case that ensures Doc and Check are hashed
-    // to the same value.
-    match unit.mode {
-        CompileMode::Doc { .. } | CompileMode::Check { .. } => {
-            (CompileMode::Check { test: false }).hash(&mut hasher)
-        }
-        mode => mode.hash(&mut hasher),
-    };
-
+    unit.mode.hash(&mut hasher);
     cx.lto[unit].hash(&mut hasher);
 
     // Artifacts compiled for the host should have a different metadata

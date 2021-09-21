@@ -12,7 +12,7 @@ mod job;
 mod job_queue;
 mod layout;
 mod links;
-mod lto;
+pub mod lto;
 mod output_depinfo;
 pub mod rustdoc;
 pub mod standard_lib;
@@ -639,10 +639,6 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     for feat in &unit.features {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
-
-    // This is needed so StableCrateId can be computed correctly.
-    let meta = cx.files().metadata(unit);
-    rustdoc.arg("-C").arg(&format!("metadata={}", meta));
 
     add_error_format_and_color(cx, &mut rustdoc, false);
     add_allow_features(cx, &mut rustdoc);

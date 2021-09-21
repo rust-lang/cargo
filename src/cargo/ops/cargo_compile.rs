@@ -25,8 +25,10 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::OsString;
 use std::hash::{Hash, Hasher};
+use std::iter;
 use std::sync::Arc;
 
+use crate::core::compiler::lto;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::Layout;
@@ -647,6 +649,37 @@ pub fn create_bcx<'a, 'cfg>(
                     })
                     .flatten();
                 args.extend(crate_names);
+            }
+
+            // Find the check unit corresponding to each documented crate, then add the -C metadata=...
+            // flag to the doc unit for that crate
+            {
+                let mut cx = Context::new(&bcx)?;
+                cx.lto = lto::generate(&bcx)?;
+                cx.prepare_units()?;
+
+                for unit in units.iter() {
+                    let mut root_deps = bcx
+                        .unit_graph
+                        .iter()
+                        .map(|(k, v)| iter::once(k).chain(v.iter().map(|dep| &dep.unit)))
+                        .flatten();
+
+                    let check_unit = root_deps.find(|dep| {
+                        dep.pkg == unit.pkg && dep.target == unit.target && dep.mode.is_check()
+                    });
+
+                    if let Some(check_unit) = check_unit {
+                        let metadata = cx.files().metadata(check_unit);
+                        extra_compiler_args
+                            .entry(unit.clone())
+                            .or_default()
+                            .extend_from_slice(&[
+                                "-C".into(),
+                                OsString::from(format!("metadata={}", metadata)),
+                            ]);
+                    }
+                }
             }
 
             // Invoke recursive Cargo
