@@ -1248,21 +1248,8 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     fn back_compat_notice(&self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
-        fn is_broken_diesel(version: &Version) -> bool {
-            use semver::{Comparator, Op, Prerelease};
-
-            Comparator {
-                op: Op::Less,
-                major: 1,
-                minor: Some(4),
-                patch: Some(8),
-                pre: Prerelease::EMPTY,
-            }
-            .matches(version)
-        }
-
         if unit.pkg.name() != "diesel"
-            || !is_broken_diesel(unit.pkg.version())
+            || unit.pkg.version() >= &Version::new(1, 4, 8)
             || cx.bcx.ws.resolve_behavior() == ResolveBehavior::V1
             || !unit.pkg.package_id().source_id().is_registry()
             || !unit.features.is_empty()

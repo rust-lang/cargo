@@ -50,7 +50,7 @@ use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuild
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
-use semver::{Comparator, Op, Prerelease};
+use semver::Version;
 
 use crate::core::compiler::{CompileKind, RustcTargetData, TargetInfo};
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
@@ -323,17 +323,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
 
 fn report_maybe_diesel(config: &Config, resolve: &Resolve) -> CargoResult<()> {
     fn is_broken_diesel(pid: PackageId) -> bool {
-        if pid.name() != "diesel" {
-            return false;
-        }
-        Comparator {
-            op: Op::Less,
-            major: 1,
-            minor: Some(4),
-            patch: Some(8),
-            pre: Prerelease::EMPTY,
-        }
-        .matches(pid.version())
+        pid.name() == "diesel" && pid.version() < &Version::new(1, 4, 8)
     }
 
     fn is_broken_diesel_migration(pid: PackageId) -> bool {
