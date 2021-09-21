@@ -83,7 +83,6 @@ Some guidelines on working on a change:
 * All code changes are expected to comply with the formatting suggested by
   `rustfmt`. You can use `rustup component add rustfmt` to install `rustfmt`
   and use `cargo fmt` to automatically format your code.
-* [Commit as you go][githelp].
 * Include tests that cover all non-trivial code. See the [Testing chapter] for
   more about writing and running tests.
 * All code should be warning-free. This is checked during tests.
@@ -136,7 +135,6 @@ more information on how Cargo releases are made.
 [git]: https://git-scm.com/
 [GitHub]: https://github.com/
 [how-to-clone]: https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository
-[githelp]: https://dont-be-afraid-to-commit.readthedocs.io/en/latest/git/commandlinegit.html
 [Testing chapter]: ../tests/index.md
 [GitHub's keywords]: https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
 [rust-highfive]: https://github.com/rust-highfive
