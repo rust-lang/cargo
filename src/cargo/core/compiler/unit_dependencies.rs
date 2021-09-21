@@ -419,10 +419,17 @@ fn compute_deps_doc(
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep>> {
-    let deps = state.deps(unit, unit_for, &|dep| match dep.kind() {
-        DepKind::Normal | DepKind::Development => true,
-        DepKind::Build => false,
-    });
+    // FIXME(wcrichto): target.is_lib() is probably not the correct way to check
+    //   if the unit needs dev-dependencies
+    let deps = state.deps(
+        unit,
+        unit_for,
+        &|dep| match (unit.target.is_lib(), dep.kind()) {
+            (_, DepKind::Normal) => true,
+            (false, DepKind::Development) => true,
+            _ => false,
+        },
+    );
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
