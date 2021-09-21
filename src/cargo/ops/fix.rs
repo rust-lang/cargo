@@ -50,11 +50,12 @@ use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuild
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
+use semver::Version;
 
 use crate::core::compiler::{CompileKind, RustcTargetData, TargetInfo};
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
-use crate::core::{Edition, MaybePackage, Workspace};
+use crate::core::{Edition, MaybePackage, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -321,17 +322,21 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
 }
 
 fn report_maybe_diesel(config: &Config, resolve: &Resolve) -> CargoResult<()> {
-    if resolve
-        .iter()
-        .any(|pid| pid.name() == "diesel" && pid.version().major == 1)
-        && resolve.iter().any(|pid| pid.name() == "diesel_migrations")
-    {
+    fn is_broken_diesel(pid: PackageId) -> bool {
+        pid.name() == "diesel" && pid.version() < &Version::new(1, 4, 8)
+    }
+
+    fn is_broken_diesel_migration(pid: PackageId) -> bool {
+        pid.name() == "diesel_migrations" && pid.version().major <= 1
+    }
+
+    if resolve.iter().any(is_broken_diesel) && resolve.iter().any(is_broken_diesel_migration) {
         config.shell().note(
             "\
 This project appears to use both diesel and diesel_migrations. These packages have
 a known issue where the build may fail due to the version 2 resolver preventing
-feature unification between those two packages. See
-<https://github.com/rust-lang/cargo/issues/9450> for some potential workarounds.
+feature unification between those two packages. Please update to at least diesel 1.4.8
+to prevent this issue from happening.
 ",
         )?;
     }
