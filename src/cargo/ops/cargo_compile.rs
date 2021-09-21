@@ -542,7 +542,6 @@ pub fn create_bcx<'a, 'cfg>(
     if build_config.mode == (CompileMode::Doc { deps: true }) {
         remove_duplicate_doc(build_config, &units, &mut unit_graph);
     }
-    lift_doc_units_to_root(&mut units, &mut unit_graph);
 
     if build_config
         .requested_kinds
@@ -1726,27 +1725,6 @@ fn opt_patterns_and_names(
         }
     }
     Ok((opt_patterns, opt_names))
-}
-
-/// Removes all CompileMode::Doc units from the unit graph and lifts them to the root set.
-///
-/// This is sound because rustdoc has no actual dependency on the generated files from one
-/// invocation to the next.
-///
-/// This is necessary because for RFC #3123, we need Doc and Check units of the same crate
-/// to have the same metadata hash. This pass ensures that they have the same dependency set.
-/// Also it exposes more parallelism during document generation!
-fn lift_doc_units_to_root(root_units: &mut Vec<Unit>, unit_graph: &mut UnitGraph) {
-    for deps in unit_graph.values_mut() {
-        deps.retain(|dep| {
-            if dep.unit.mode.is_doc() {
-                root_units.push(dep.unit.clone());
-                false
-            } else {
-                true
-            }
-        });
-    }
 }
 
 /// Removes duplicate CompileMode::Doc units that would cause problems with
