@@ -482,7 +482,6 @@ fn registry(
                     registry.as_deref(),
                     &api_host,
                 )?;
-                log::debug!("found token {:?}", token);
                 Some(token)
             }
         }

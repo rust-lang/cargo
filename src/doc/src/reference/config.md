@@ -109,7 +109,7 @@ root = "/some/path"         # `cargo install` destination directory
 [net]
 retry = 2                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
-offline = false             # do not access the network
+offline = true              # do not access the network
 
 [patch.<registry>]
 # Same keys as for [patch] in Cargo.toml

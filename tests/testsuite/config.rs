@@ -656,6 +656,7 @@ Caused by:
     );
 
     #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct S {
         f1: i64,
         f2: String,
@@ -1155,6 +1156,7 @@ fn table_merge_failure() {
     );
 
     #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct Table {
         key: StringList,
     }
