@@ -42,8 +42,13 @@ pub fn main(config: &mut Config) -> CliResult {
             }
         }
     };
+    
+    // Global args need to be extracted before expanding aliases because the
+    // clap code for extracting a subcommand discards global options
+    // (appearing before the subcommand).
+    let (expanded_args, global_args) = expand_aliases(config, args)?;
 
-    if args.value_of("unstable-features") == Some("help") {
+    if expanded_args.value_of("unstable-features") == Some("help") {
         let options = CliUnstable::help();
         let non_hidden_options: Vec<(String, String)> = options
             .iter()
@@ -95,20 +100,20 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
         return Ok(());
     }
 
-    let is_verbose = args.occurrences_of("verbose") > 0;
+    let is_verbose = expanded_args.occurrences_of("verbose") > 0;
     if args.is_present("version") {
         let version = get_version_string(is_verbose);
         drop_print!(config, "{}", version);
         return Ok(());
     }
 
-    if let Some(code) = args.value_of("explain") {
+    if let Some(code) = expanded_args.value_of("explain") {
         let mut procss = config.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
         return Ok(());
     }
 
-    if args.is_present("list") {
+    if expanded_args.is_present("list") {
         drop_println!(config, "Installed Commands:");
         for (name, command) in list_commands(config) {
             let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
@@ -140,10 +145,6 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
         return Ok(());
     }
 
-    // Global args need to be extracted before expanding aliases because the
-    // clap code for extracting a subcommand discards global options
-    // (appearing before the subcommand).
-    let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
     let (cmd, subcommand_args) = match expanded_args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {
