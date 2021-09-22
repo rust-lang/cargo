@@ -101,7 +101,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
     }
 
     let is_verbose = expanded_args.occurrences_of("verbose") > 0;
-    if args.is_present("version") {
+    if expanded_args.is_present("version") {
         let version = get_version_string(is_verbose);
         drop_print!(config, "{}", version);
         return Ok(());
