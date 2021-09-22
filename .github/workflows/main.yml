@@ -79,6 +79,8 @@ jobs:
       if: matrix.os == 'macos-latest'
     - run: cargo build --manifest-path crates/credential/cargo-credential-wincred/Cargo.toml
       if: matrix.os == 'windows-latest'
+    - name: Fetch smoke test
+      run: ci/fetch-smoke-test.sh
 
   resolver:
     runs-on: ubuntu-latest
