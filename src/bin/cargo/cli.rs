@@ -42,11 +42,11 @@ pub fn main(config: &mut Config) -> CliResult {
             }
         }
     };
-    
+
     // Global args need to be extracted before expanding aliases because the
     // clap code for extracting a subcommand discards global options
     // (appearing before the subcommand).
-    let (expanded_args, global_args) = expand_aliases(config, args)?;
+    let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
 
     if expanded_args.value_of("unstable-features") == Some("help") {
         let options = CliUnstable::help();
