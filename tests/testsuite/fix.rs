@@ -1791,3 +1791,47 @@ fn non_edition_lint_migration() {
     // Check that it made the edition migration.
     assert!(contents.contains("from_utf8(crate::foo::FOO)"));
 }
+
+// For rust-lang/cargo#9857
+#[cargo_test]
+fn fix_in_dependency() {
+    Package::new("bar", "1.0.0")
+        .file(
+            "src/lib.rs",
+            r#"
+                #[macro_export]
+                macro_rules! m {
+                    ($i:tt) => {
+                        let $i = 1;
+                    };
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    bar::m!(abc);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_does_not_contain("[FIXED] [..]")
+        .run();
+}
