@@ -998,20 +998,30 @@ impl<'cfg> DrainState<'cfg> {
 
     fn name_for_progress(&self, unit: &Unit) -> String {
         let pkg_name = unit.pkg.name();
+        let target_name = unit.target.name();
         match unit.mode {
             CompileMode::Doc { .. } => format!("{}(doc)", pkg_name),
             CompileMode::RunCustomBuild => format!("{}(build)", pkg_name),
-            _ => {
-                let annotation = match unit.target.kind() {
-                    TargetKind::Lib(_) => return pkg_name.to_string(),
-                    TargetKind::CustomBuild => return format!("{}(build.rs)", pkg_name),
-                    TargetKind::Bin => "bin",
-                    TargetKind::Test => "test",
-                    TargetKind::Bench => "bench",
-                    TargetKind::ExampleBin | TargetKind::ExampleLib(_) => "example",
-                };
-                format!("{}({})", unit.target.name(), annotation)
-            }
+            CompileMode::Test | CompileMode::Check { test: true } => match unit.target.kind() {
+                TargetKind::Lib(_) => format!("{}(test)", target_name),
+                TargetKind::CustomBuild => panic!("cannot test build script"),
+                TargetKind::Bin => format!("{}(bin test)", target_name),
+                TargetKind::Test => format!("{}(test)", target_name),
+                TargetKind::Bench => format!("{}(bench)", target_name),
+                TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
+                    format!("{}(example test)", target_name)
+                }
+            },
+            _ => match unit.target.kind() {
+                TargetKind::Lib(_) => pkg_name.to_string(),
+                TargetKind::CustomBuild => format!("{}(build.rs)", pkg_name),
+                TargetKind::Bin => format!("{}(bin)", target_name),
+                TargetKind::Test => format!("{}(test)", target_name),
+                TargetKind::Bench => format!("{}(bench)", target_name),
+                TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
+                    format!("{}(example)", target_name)
+                }
+            },
         }
     }
 
