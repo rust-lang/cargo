@@ -1398,8 +1398,12 @@ impl TomlManifest {
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(
-                "only one of `license` or \
-                 `license-file` is necessary"
+                "only one of `license` or `license-file` is necessary\n\
+                 `license` should be used if the package license can be expressed \
+                 with a standard SPDX expression.\n\
+                 `license-file` should be used if the package uses a non-standard license.\n\
+                 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields \
+                 for more information."
                     .to_string(),
             );
         }
