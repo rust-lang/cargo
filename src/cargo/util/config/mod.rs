@@ -63,7 +63,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Once;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
@@ -1542,7 +1542,7 @@ impl Config {
         assert!(
             self.package_cache_lock.borrow().is_some(),
             "package cache lock is not currently held, Cargo forgot to call \
-             `acquire_package_cache_lock` before we got to this stack frame",
+            `acquire_package_cache_lock` before we got to this stack frame",
         );
         assert!(ret.starts_with(self.home_path.as_path_unlocked()));
         ret
@@ -2102,8 +2102,8 @@ pub struct SslVersionConfigRange {
 #[serde(rename_all = "kebab-case")]
 pub struct CargoNetConfig {
     pub retry: Option<u32>,
-    pub retry_max_time: Option<u64>,
-    pub retry_delay: Option<u64>,
+    pub retry_max_time: Option<DurationString>,
+    pub retry_delay: Option<DurationString>,
     pub offline: Option<bool>,
     pub git_fetch_with_cli: Option<bool>,
 }
@@ -2288,6 +2288,67 @@ impl StringList {
 /// This is currently only used by `PathAndArgs`
 #[derive(Debug, Deserialize)]
 pub struct UnmergedStringList(Vec<String>);
+
+/// A type to convert string in config values to Duration type
+///
+/// Supports deserializing duration-based string with the following format:
+/// {value}{s|ms}
+#[derive(Debug, Clone, Copy)]
+pub struct DurationString {
+    inner: Duration,
+}
+
+impl DurationString {
+    pub fn inner(&self) -> Duration {
+        self.inner
+    }
+}
+
+impl<'de> Deserialize<'de> for DurationString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        struct DurationStringVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for DurationStringVisitor {
+            type Value = DurationString;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a value of positive integer followed by a unit (s or ms)")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let unit_offset = match s.find(|ch: char| !ch.is_ascii_digit()) {
+                    Some(offset) => offset,
+                    None => {
+                        return Err(E::custom(format!("No unit is found on value: {}", s)));
+                    }
+                };
+                let (value_str, unit_str) = s.split_at(unit_offset);
+                let value = if let Ok(val) = value_str.parse() {
+                    val
+                } else {
+                    return Err(E::custom(format!("Invalid value format: {}", value_str)));
+                };
+                let duration = match unit_str {
+                    "s" => Duration::from_secs(value),
+                    "ms" => Duration::from_millis(value),
+                    _ => {
+                        return Err(E::unknown_variant(unit_str, &["s", "ms"]));
+                    }
+                };
+
+                Ok(DurationString { inner: duration })
+            }
+        }
+
+        deserializer.deserialize_str(DurationStringVisitor)
+    }
+}
 
 #[macro_export]
 macro_rules! __shell_print {

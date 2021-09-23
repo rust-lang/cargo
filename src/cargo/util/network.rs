@@ -1,7 +1,7 @@
 use anyhow::Error;
 use std::cmp::min;
 use std::thread::sleep;
-use std::time;
+use std::time::Duration;
 
 use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::Config;
@@ -10,8 +10,8 @@ pub struct Retry<'a> {
     config: &'a Config,
     retries: u32,
     max_retry: u32,
-    retry_max_time: u64,
-    retry_delay: Option<u64>,
+    retry_max_time: Duration,
+    retry_delay: Option<Duration>,
 }
 
 impl<'a> Retry<'a> {
@@ -20,8 +20,11 @@ impl<'a> Retry<'a> {
             config,
             max_retry: config.net_config()?.retry.unwrap_or(2),
             retries: 0,
-            retry_max_time: config.net_config()?.retry_max_time.unwrap_or(32),
-            retry_delay: config.net_config()?.retry_delay,
+            retry_max_time: config
+                .net_config()?
+                .retry_max_time
+                .map_or(Duration::from_secs(32), |e| e.inner()),
+            retry_delay: config.net_config()?.retry_delay.map(|e| e.inner()),
         })
     }
 
@@ -44,12 +47,9 @@ impl<'a> Retry<'a> {
 
     fn backoff(&self) {
         let backoff_time = if let Some(delay) = self.retry_delay {
-            time::Duration::from_secs(delay)
+            delay
         } else {
-            min(
-                time::Duration::from_secs(1 << self.retries),
-                time::Duration::from_secs(self.retry_max_time),
-            )
+            min(Duration::from_secs(1 << self.retries), self.retry_max_time)
         };
 
         sleep(backoff_time);
