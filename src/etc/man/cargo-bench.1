@@ -50,6 +50,12 @@ running benchmarks on the stable channel, such as
 .br
 .RE
 .ll
+.sp
+By default, \fBcargo bench\fR uses the \fI\f(BIbench\fI profile\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html#bench>, which enables
+optimizations and disables debugging information. If you need to debug a
+benchmark, you can use the \fB\-\-profile=dev\fR command\-line option to switch to
+the dev profile. You can then run the debug\-enabled benchmark within a
+debugger.
 .SH "OPTIONS"
 .SS "Benchmark Options"
 .sp
@@ -251,6 +257,12 @@ target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Benchmark with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
 \fB\-\-ignore\-rust\-version\fR
 .RS 4
 Benchmark the target even if the selected Rust compiler is older than the
@@ -420,21 +432,6 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See
-\fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html>
-for more details.
-.sp
-Benchmarks are always built with the \fBbench\fR profile. Binary and lib targets
-are built separately as benchmarks with the \fBbench\fR profile. Library targets
-are built with the \fBrelease\fR profiles when linked to binaries and benchmarks.
-Dependencies use the \fBrelease\fR profile.
-.sp
-If you need a debug build of a benchmark, try building it with
-\fBcargo\-build\fR(1) which will use the \fBtest\fR profile which is by default
-unoptimized and includes debug information. You can then run the debug\-enabled
-benchmark manually.
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

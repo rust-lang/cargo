@@ -353,7 +353,7 @@ pub trait ArgMatchesExt {
 
     fn get_profile_name(
         &self,
-        config: &Config,
+        _config: &Config,
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
@@ -367,10 +367,6 @@ pub trait ArgMatchesExt {
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
             _ => {}
-        }
-
-        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-            bail!("usage of `--profile` requires `-Z unstable-options`");
         }
 
         let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {

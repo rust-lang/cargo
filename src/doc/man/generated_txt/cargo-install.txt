@@ -51,7 +51,7 @@ DESCRIPTION
 
        o  The chosen features.
 
-       o  The release mode (--debug).
+       o  The profile (--profile).
 
        o  The target (--target).
 
@@ -197,7 +197,13 @@ OPTIONS
            workspace of the local crate unless --target-dir is specified.
 
        --debug
-           Build with the dev profile instead the release profile.
+           Build with the dev profile instead the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Install with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
 
    Manifest Options
        --frozen, --locked

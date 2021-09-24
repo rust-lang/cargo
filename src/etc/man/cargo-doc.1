@@ -149,9 +149,14 @@ target artifacts are placed in a separate directory. See the
 .sp
 \fB\-\-release\fR
 .RS 4
-Document optimized artifacts with the \fBrelease\fR profile. See the
-PROFILES section for details on how this affects profile
-selection.
+Document optimized artifacts with the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Document with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .sp
 \fB\-\-ignore\-rust\-version\fR
@@ -311,43 +316,6 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more
-details.
-.sp
-Profile selection depends on the target and crate being built. By default the
-\fBdev\fR or \fBtest\fR profiles are used. If the \fB\-\-release\fR flag is given, then the
-\fBrelease\fR or \fBbench\fR profiles are used.
-
-.TS
-allbox tab(:);
-lt lt lt.
-T{
-Target
-T}:T{
-Default Profile
-T}:T{
-\fB\-\-release\fR Profile
-T}
-T{
-lib, bin, example
-T}:T{
-\fBdev\fR
-T}:T{
-\fBrelease\fR
-T}
-T{
-test, bench, or any target in "test" or "bench" mode
-T}:T{
-\fBtest\fR
-T}:T{
-\fBbench\fR
-T}
-.TE
-.sp
-.sp
-Dependencies use the \fBdev\fR/\fBrelease\fR profiles.
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

@@ -4,30 +4,11 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_lib_manifest, project};
 
 #[cargo_test]
-fn gated() {
-    let p = project().file("src/lib.rs", "").build();
-    // `rustc`, `fix`, and `check` have had `--profile` before custom named profiles.
-    // Without unstable, these shouldn't be allowed to access non-legacy names.
-    for command in [
-        "rustc", "fix", "check", "bench", "clean", "install", "test", "build", "doc", "run",
-        "rustdoc",
-    ] {
-        p.cargo(command)
-            .arg("--profile=release")
-            .with_status(101)
-            .with_stderr("error: usage of `--profile` requires `-Z unstable-options`")
-            .run();
-    }
-}
-
-#[cargo_test]
 fn inherits_on_release() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -41,7 +22,6 @@ fn inherits_on_release() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -57,8 +37,6 @@ fn missing_inherits() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -72,7 +50,6 @@ fn missing_inherits() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -89,8 +66,6 @@ fn invalid_profile_name() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -105,7 +80,6 @@ fn invalid_profile_name() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -126,8 +100,6 @@ fn invalid_dir_name() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -143,7 +115,6 @@ fn invalid_dir_name() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -161,8 +132,6 @@ fn dir_name_disabled() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -177,7 +146,6 @@ fn dir_name_disabled() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -197,8 +165,6 @@ fn invalid_inherits() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -213,7 +179,6 @@ fn invalid_inherits() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "error: profile `release-lto` inherits from `.release`, \
@@ -228,8 +193,6 @@ fn non_existent_inherits() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -244,7 +207,6 @@ fn non_existent_inherits() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -260,8 +222,6 @@ fn self_inherits() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -276,7 +236,6 @@ fn self_inherits() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -292,8 +251,6 @@ fn inherits_loop() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -312,7 +269,6 @@ fn inherits_loop() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -328,8 +284,6 @@ fn overrides_with_custom() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -365,7 +319,6 @@ fn overrides_with_custom() {
     // profile overrides are inherited between profiles using inherits and have a
     // higher priority than profile options provided by custom profiles
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [COMPILING] xxx [..]
@@ -380,8 +333,7 @@ fn overrides_with_custom() {
         .run();
 
     // This also verifies that the custom profile names appears in the finished line.
-    p.cargo("build --profile=other -Z unstable-options -v")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --profile=other -v")
         .with_stderr_unordered(
             "\
 [COMPILING] xxx [..]
@@ -411,8 +363,7 @@ fn conflicting_usage() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z unstable-options --profile=dev --release")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --profile=dev --release")
         .with_status(101)
         .with_stderr(
             "\
@@ -423,8 +374,7 @@ Remove one flag or the other to continue.
         )
         .run();
 
-    p.cargo("install -Z unstable-options --profile=release --debug")
-        .masquerade_as_nightly_cargo()
+    p.cargo("install --profile=release --debug")
         .with_status(101)
         .with_stderr(
             "\
@@ -442,8 +392,6 @@ fn clean_custom_dirname() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["named-profiles"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -457,7 +405,6 @@ fn clean_custom_dirname() {
         .build();
 
     p.cargo("build --release")
-        .masquerade_as_nightly_cargo()
         .with_stdout("")
         .with_stderr(
             "\
@@ -470,7 +417,6 @@ fn clean_custom_dirname() {
     p.cargo("clean -p foo").masquerade_as_nightly_cargo().run();
 
     p.cargo("build --release")
-        .masquerade_as_nightly_cargo()
         .with_stdout("")
         .with_stderr(
             "\
@@ -479,12 +425,9 @@ fn clean_custom_dirname() {
         )
         .run();
 
-    p.cargo("clean -p foo --release")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("clean -p foo --release").run();
 
     p.cargo("build --release")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -494,7 +437,6 @@ fn clean_custom_dirname() {
         .run();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stdout("")
         .with_stderr(
             "\
@@ -504,8 +446,7 @@ fn clean_custom_dirname() {
         )
         .run();
 
-    p.cargo("build -Z unstable-options --profile=other")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --profile=other")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -514,10 +455,7 @@ fn clean_custom_dirname() {
         )
         .run();
 
-    p.cargo("clean")
-        .arg("--release")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("clean").arg("--release").run();
 
     // Make sure that 'other' was not cleaned
     assert!(p.build_dir().is_dir());
@@ -526,10 +464,7 @@ fn clean_custom_dirname() {
     assert!(!p.build_dir().join("release").is_dir());
 
     // This should clean 'other'
-    p.cargo("clean -Z unstable-options --profile=other")
-        .masquerade_as_nightly_cargo()
-        .with_stderr("")
-        .run();
+    p.cargo("clean --profile=other").with_stderr("").run();
     assert!(p.build_dir().join("debug").is_dir());
     assert!(!p.build_dir().join("other").is_dir());
 }
@@ -540,8 +475,6 @@ fn unknown_profile() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -550,14 +483,12 @@ fn unknown_profile() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --profile alpha -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --profile alpha")
         .with_stderr("[ERROR] profile `alpha` is not defined")
         .with_status(101)
         .run();
     // Clean has a separate code path, need to check it too.
-    p.cargo("clean --profile alpha -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("clean --profile alpha")
         .with_stderr("[ERROR] profile `alpha` is not defined")
         .with_status(101)
         .run();
@@ -580,15 +511,13 @@ fn reserved_profile_names() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --profile=doc -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --profile=doc")
         .with_status(101)
         .with_stderr("error: profile `doc` is reserved and not allowed to be explicitly specified")
         .run();
     // Not an exhaustive list, just a sample.
     for name in ["build", "cargo", "check", "rustc", "CaRgO_startswith"] {
-        p.cargo(&format!("build --profile={} -Zunstable-options", name))
-            .masquerade_as_nightly_cargo()
+        p.cargo(&format!("build --profile={}", name))
             .with_status(101)
             .with_stderr(&format!(
                 "\
@@ -605,8 +534,6 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
             "Cargo.toml",
             &format!(
                 r#"
-                    cargo-features = ["named-profiles"]
-
                     [package]
                     name = "foo"
                     version = "0.1.0"
@@ -619,7 +546,6 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
         );
 
         p.cargo("build")
-            .masquerade_as_nightly_cargo()
             .with_status(101)
             .with_stderr(&format!(
                 "\
@@ -638,8 +564,6 @@ Caused by:
     p.change_file(
         "Cargo.toml",
         r#"
-               cargo-features = ["named-profiles"]
-
                [package]
                name = "foo"
                version = "0.1.0"
@@ -652,7 +576,6 @@ Caused by:
     );
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -674,8 +597,6 @@ fn legacy_commands_support_custom() {
         .file(
             "Cargo.toml",
             r#"
-               cargo-features = ["named-profiles"]
-
                [package]
                name = "foo"
                version = "0.1.0"
@@ -694,9 +615,7 @@ fn legacy_commands_support_custom() {
             pb.arg("--allow-no-vcs");
         }
         pb.arg("--profile=super-dev")
-            .arg("-Zunstable-options")
             .arg("-v")
-            .masquerade_as_nightly_cargo()
             .with_stderr_contains("[RUNNING] [..]codegen-units=3[..]")
             .run();
         p.build_dir().rm_rf();

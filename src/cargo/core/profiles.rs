@@ -20,6 +20,11 @@ pub struct Profiles {
     dir_names: HashMap<InternedString, InternedString>,
     /// The profile makers. Key is the profile name.
     by_name: HashMap<InternedString, ProfileMaker>,
+    /// The original profiles written by the user in the manifest and config.
+    ///
+    /// This is here to assist with error reporting, as the `ProfileMaker`
+    /// values have the inherits chains all merged together.
+    original_profiles: BTreeMap<InternedString, TomlProfile>,
     /// Whether or not unstable "named" profiles are enabled.
     named_profiles_enabled: bool,
     /// The profile the user requested to use.
@@ -44,6 +49,7 @@ impl Profiles {
                 named_profiles_enabled: false,
                 dir_names: Self::predefined_dir_names(),
                 by_name: HashMap::new(),
+                original_profiles: profiles.clone(),
                 requested_profile,
                 rustc_host,
             };
@@ -97,6 +103,7 @@ impl Profiles {
             named_profiles_enabled: true,
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
+            original_profiles: profiles.clone(),
             requested_profile,
             rustc_host,
         };
@@ -420,6 +427,19 @@ impl Profiles {
         resolve: &Resolve,
     ) -> CargoResult<()> {
         for (name, profile) in &self.by_name {
+            // If the user did not specify an override, skip this. This is here
+            // to avoid generating errors for inherited profiles which don't
+            // specify package overrides. The `by_name` profile has had the inherits
+            // chain merged, so we need to look at the original source to check
+            // if an override was specified.
+            if self
+                .original_profiles
+                .get(name)
+                .and_then(|orig| orig.package.as_ref())
+                .is_none()
+            {
+                continue;
+            }
             let found = validate_packages_unique(resolve, name, &profile.toml)?;
             // We intentionally do not validate unmatched packages for config
             // profiles, in case they are defined in a central location. This
@@ -456,6 +476,10 @@ struct ProfileMaker {
     /// The starting, hard-coded defaults for the profile.
     default: Profile,
     /// The TOML profile defined in `Cargo.toml` or config.
+    ///
+    /// This is None if the user did not specify one, in which case the
+    /// `default` is used. Note that the built-in defaults for test/bench/doc
+    /// always set this since they need to declare the `inherits` value.
     toml: Option<TomlProfile>,
 }
 
