@@ -353,7 +353,7 @@ pub trait ArgMatchesExt {
 
     fn get_profile_name(
         &self,
-        _config: &Config,
+        config: &Config,
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
@@ -363,9 +363,19 @@ pub trait ArgMatchesExt {
         // This is an early exit, since it allows combination with `--release`.
         match (specified_profile, profile_checking) {
             // `cargo rustc` has legacy handling of these names
-            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
-            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
+                if self._is_present("release") {
+                    config.shell().warn(
+                        "the `--release` flag should not be specified with the `--profile` flag\n\
+                         The `--release` flag will be ignored.\n\
+                         This was historically accepted, but will become an error \
+                         in a future release."
+                    )?;
+                }
+                return Ok(InternedString::new(name));
+            }
             _ => {}
         }
 

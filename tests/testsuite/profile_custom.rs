@@ -360,7 +360,7 @@ fn conflicting_usage() {
                 authors = []
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build --profile=dev --release")
@@ -375,6 +375,82 @@ Remove one flag or the other to continue.
         .run();
 
     p.cargo("install --profile=release --debug")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: conflicting usage of --profile=release and --debug
+The `--debug` flag is the same as `--profile=dev`.
+Remove one flag or the other to continue.
+",
+        )
+        .run();
+
+    p.cargo("rustc --profile=dev --release")
+        .with_stderr(
+            "\
+warning: the `--release` flag should not be specified with the `--profile` flag
+The `--release` flag will be ignored.
+This was historically accepted, but will become an error in a future release.
+[COMPILING] foo [..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+
+    p.cargo("check --profile=dev --release")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: conflicting usage of --profile=dev and --release
+The `--release` flag is the same as `--profile=release`.
+Remove one flag or the other to continue.
+",
+        )
+        .run();
+
+    p.cargo("check --profile=test --release")
+        .with_stderr(
+            "\
+warning: the `--release` flag should not be specified with the `--profile` flag
+The `--release` flag will be ignored.
+This was historically accepted, but will become an error in a future release.
+[CHECKING] foo [..]
+[FINISHED] test [..]
+",
+        )
+        .run();
+
+    // This is OK since the two are the same.
+    p.cargo("rustc --profile=release --release")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] release [..]
+",
+        )
+        .run();
+
+    p.cargo("build --profile=release --release")
+        .with_stderr(
+            "\
+[FINISHED] release [..]
+",
+        )
+        .run();
+
+    p.cargo("install --path . --profile=dev --debug")
+        .with_stderr(
+            "\
+[INSTALLING] foo [..]
+[FINISHED] dev [..]
+[INSTALLING] [..]
+[INSTALLED] [..]
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+
+    p.cargo("install --path . --profile=release --debug")
         .with_status(101)
         .with_stderr(
             "\
