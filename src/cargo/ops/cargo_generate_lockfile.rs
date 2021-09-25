@@ -1,8 +1,3 @@
-use std::collections::{BTreeMap, HashSet};
-
-use log::debug;
-use termcolor::Color::{self, Cyan, Green, Red};
-
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::{PackageId, PackageIdSpec};
@@ -10,6 +5,10 @@ use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::util::config::Config;
 use crate::util::CargoResult;
+use anyhow::Context;
+use log::debug;
+use std::collections::{BTreeMap, HashSet};
+use termcolor::Color::{self, Cyan, Green, Red};
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
@@ -95,6 +94,9 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         //       seems like a pretty hokey reason to single out
                         //       the registry as well.
                         let precise = if dep.source_id().is_registry() {
+                            semver::Version::parse(precise).with_context(|| {
+                                format!("invalid version format for precise version `{}`", precise)
+                            })?;
                             format!("{}={}->{}", dep.name(), dep.version(), precise)
                         } else {
                             precise.to_string()

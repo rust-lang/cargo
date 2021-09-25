@@ -460,19 +460,40 @@ impl<'cfg> RegistryIndex<'cfg> {
         // this source, `<p_req>` is the version installed and `<f_req> is the
         // version requested (argument to `--precise`).
         let name = dep.package_name().as_str();
-        let summaries = summaries.filter(|s| match source_id.precise() {
+        let precise = match source_id.precise() {
             Some(p) if p.starts_with(name) && p[name.len()..].starts_with('=') => {
                 let mut vers = p[name.len() + 1..].splitn(2, "->");
-                if dep
-                    .version_req()
-                    .matches(&vers.next().unwrap().to_semver().unwrap())
-                {
-                    vers.next().unwrap() == s.version().to_string()
+                let current_vers = vers.next().unwrap().to_semver().unwrap();
+                let requested_vers = vers.next().unwrap().to_semver().unwrap();
+                Some((current_vers, requested_vers))
+            }
+            _ => None,
+        };
+        let summaries = summaries.filter(|s| match &precise {
+            Some((current, requested)) => {
+                if dep.version_req().matches(current) {
+                    // Unfortunately crates.io allows versions to differ only
+                    // by build metadata. This shouldn't be allowed, but since
+                    // it is, this will honor it if requested. However, if not
+                    // specified, then ignore it.
+                    let s_vers = s.version();
+                    match (s_vers.build.is_empty(), requested.build.is_empty()) {
+                        (true, true) => s_vers == requested,
+                        (true, false) => false,
+                        (false, true) => {
+                            // Strip out the metadata.
+                            s_vers.major == requested.major
+                                && s_vers.minor == requested.minor
+                                && s_vers.patch == requested.patch
+                                && s_vers.pre == requested.pre
+                        }
+                        (false, false) => s_vers == requested,
+                    }
                 } else {
                     true
                 }
             }
-            _ => true,
+            None => true,
         });
 
         let mut count = 0;
