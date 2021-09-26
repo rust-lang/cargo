@@ -613,7 +613,7 @@ Sets the path to the root directory for installing executables for [`cargo
 install`]. Executables go into a `bin` directory underneath the root.
 
 To track information of installed executables, some extra files, such as
-`.crates.toml` and `.crates2.json`, would also be created under this root.
+`.crates.toml` and `.crates2.json`, are also created under this root.
 
 The default if not specified is Cargo's home directory (default `.cargo` in
 your home directory).
