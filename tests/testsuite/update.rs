@@ -678,3 +678,81 @@ fn workspace_only() {
     assert!(!lock1.contains("0.0.2"));
     assert!(!lock2.contains("0.0.1"));
 }
+
+#[cargo_test]
+fn precise_with_build_metadata() {
+    // +foo syntax shouldn't be necessary with --precise
+    Package::new("bar", "0.1.0+extra-stuff.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("generate-lockfile").run();
+    Package::new("bar", "0.1.1+extra-stuff.1").publish();
+    Package::new("bar", "0.1.2+extra-stuff.2").publish();
+
+    p.cargo("update -p bar --precise 0.1")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid version format for precise version `0.1`
+
+Caused by:
+  unexpected end of input while parsing minor version number
+",
+        )
+        .run();
+
+    p.cargo("update -p bar --precise 0.1.1+does-not-match")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+error: no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([ROOT]/foo)`
+",
+        )
+        .run();
+
+    p.cargo("update -p bar --precise 0.1.1")
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[UPDATING] bar v0.1.0+extra-stuff.0 -> v0.1.1+extra-stuff.1
+",
+        )
+        .run();
+
+    Package::new("bar", "0.1.3").publish();
+    p.cargo("update -p bar --precise 0.1.3+foo")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+error: no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([ROOT]/foo)`
+",
+        )
+        .run();
+
+    p.cargo("update -p bar --precise 0.1.3")
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[UPDATING] bar v0.1.1+extra-stuff.1 -> v0.1.3
+",
+        )
+        .run();
+}
