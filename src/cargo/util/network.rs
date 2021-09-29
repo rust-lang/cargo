@@ -3,6 +3,8 @@ use std::cmp::min;
 use std::thread::sleep;
 use std::time::Duration;
 
+use log::debug;
+
 use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::Config;
 
@@ -52,6 +54,7 @@ impl<'a> Retry<'a> {
             min(Duration::from_secs(1 << self.retries), self.retry_max_time)
         };
 
+        debug!("backing off for {} ms", backoff_time.as_millis());
         sleep(backoff_time);
     }
 }
