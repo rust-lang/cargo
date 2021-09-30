@@ -2309,44 +2309,35 @@ impl<'de> Deserialize<'de> for DurationString {
     where
         D: serde::de::Deserializer<'de>,
     {
-        struct DurationStringVisitor;
+        let s = String::deserialize(deserializer)?;
 
-        impl<'de> serde::de::Visitor<'de> for DurationStringVisitor {
-            type Value = DurationString;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a value of positive integer followed by a unit (s or ms)")
+        let unit_offset = match s.find(|ch: char| !ch.is_ascii_digit()) {
+            Some(offset) => offset,
+            None => {
+                return Err(serde::de::Error::custom(format!(
+                    "No unit is found on value: `{}`",
+                    s
+                )));
             }
-
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let unit_offset = match s.find(|ch: char| !ch.is_ascii_digit()) {
-                    Some(offset) => offset,
-                    None => {
-                        return Err(E::custom(format!("No unit is found on value: {}", s)));
-                    }
-                };
-                let (value_str, unit_str) = s.split_at(unit_offset);
-                let value = if let Ok(val) = value_str.parse() {
-                    val
-                } else {
-                    return Err(E::custom(format!("Invalid value format: {}", value_str)));
-                };
-                let duration = match unit_str {
-                    "s" => Duration::from_secs(value),
-                    "ms" => Duration::from_millis(value),
-                    _ => {
-                        return Err(E::unknown_variant(unit_str, &["s", "ms"]));
-                    }
-                };
-
-                Ok(DurationString { inner: duration })
+        };
+        let (value_str, unit_str) = s.split_at(unit_offset);
+        let value = if let Ok(val) = value_str.parse() {
+            val
+        } else {
+            return Err(serde::de::Error::custom(format!(
+                "Invalid value format: `{}`, expecting a positive number followed by unit",
+                s
+            )));
+        };
+        let duration = match unit_str {
+            "s" => Duration::from_secs(value),
+            "ms" => Duration::from_millis(value),
+            _ => {
+                return Err(serde::de::Error::unknown_variant(unit_str, &["s", "ms"]));
             }
-        }
+        };
 
-        deserializer.deserialize_str(DurationStringVisitor)
+        Ok(DurationString { inner: duration })
     }
 }
 
