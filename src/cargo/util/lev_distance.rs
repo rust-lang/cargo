@@ -1,7 +1,7 @@
 use std::cmp;
 
 pub fn lev_distance(me: &str, t: &str) -> usize {
-    let t_len = t.chars().count(); 
+    let t_len = t.chars().count();
     if me.is_empty() {
         return t_len;
     }
