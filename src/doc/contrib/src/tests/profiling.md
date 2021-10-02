@@ -1,4 +1,4 @@
-# Profiling
+# Benchmarking and Profiling
 
 ## Internal profiler
 
@@ -11,7 +11,15 @@ profile stack to print results for.
 CARGO_PROFILE=3 cargo generate-lockfile
 ```
 
-## Informal profiling
+## Benchmarking
+
+### Benchsuite
+
+Head over to the [`benches`
+directory](https://github.com/rust-lang/cargo/tree/master/benches) for more
+information about the benchmarking suite.
+
+### Informal benchmarking
 
 The overhead for starting a build should be kept as low as possible
 (preferably, well under 0.5 seconds on most projects and systems). Currently,
@@ -23,12 +31,10 @@ the primary parts that affect this are:
 * Scanning the local project.
 * Building the unit dependency graph.
 
-We currently don't have any automated systems or tools for measuring or
-tracking the startup time. We informally measure these on changes that are
-likely to affect the performance. Usually this is done by measuring the time
-for `cargo build` to finish in a large project where the build is fresh (no
-actual compilation is performed). [Hyperfine] is a command-line tool that can
-be used to roughly measure the difference between different commands and
-settings.
+One way to test this is to use [hyperfine]. This is a tool that can be used to
+measure the difference between different commands and settings. Usually this
+is done by measuring the time it takes for `cargo build` to finish in a large
+project where the build is fresh (no actual compilation is performed). Just
+run `cargo build` once before using hyperfine.
 
-[Hyperfine]: https://github.com/sharkdp/hyperfine
+[hyperfine]: https://github.com/sharkdp/hyperfine
