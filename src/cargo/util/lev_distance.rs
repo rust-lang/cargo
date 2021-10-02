@@ -1,14 +1,15 @@
 use std::cmp;
 
 pub fn lev_distance(me: &str, t: &str) -> usize {
+    let t_len = t.chars().count(); 
     if me.is_empty() {
-        return t.chars().count();
+        return t_len;
     }
     if t.is_empty() {
         return me.chars().count();
     }
 
-    let mut dcol = (0..=t.len()).collect::<Vec<_>>();
+    let mut dcol = (0..=t_len).collect::<Vec<_>>();
     let mut t_last = 0;
 
     for (i, sc) in me.chars().enumerate() {
