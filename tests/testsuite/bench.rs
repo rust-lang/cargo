@@ -1209,6 +1209,8 @@ fn test_bench_no_run() {
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] bench [optimized] target(s) in [..]
+[EXECUTABLE] [..] (target/release/deps/foo-[..][EXE])
+[EXECUTABLE] [..] (target/release/deps/bbaz-[..][EXE])
 ",
         )
         .run();

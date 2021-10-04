@@ -144,6 +144,7 @@ fn substitute_macros(input: &str) -> String {
         ("[YANK]", "        Yank"),
         ("[OWNER]", "       Owner"),
         ("[MIGRATING]", "   Migrating"),
+        ("[EXECUTABLE]", "  Executable"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

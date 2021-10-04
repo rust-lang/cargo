@@ -406,6 +406,9 @@ fn panic_unwind_does_not_build_twice() {
 [RUNNING] `rustc --crate-name foo src/main.rs [..] --test [..]
 [RUNNING] `rustc --crate-name t1 tests/t1.rs [..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/t1-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();

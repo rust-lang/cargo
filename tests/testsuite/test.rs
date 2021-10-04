@@ -1346,6 +1346,7 @@ fn test_no_run() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] [..] (target/debug/deps/foo-[..][EXE])
 ",
         )
         .run();
@@ -1963,6 +1964,7 @@ fn example_bin_same_name() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();
@@ -2498,6 +2500,9 @@ fn bin_does_not_rebuild_tests() {
 [RUNNING] `rustc [..] src/main.rs [..]`
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();
@@ -2556,6 +2561,7 @@ fn selective_test_optional_dep() {
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] `[..]/target/debug/deps/a-[..][EXE]`
 ",
         )
         .run();

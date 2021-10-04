@@ -849,6 +849,7 @@ fn fresh_swapping_commands() {
 [FRESH] bar v1.0.0
 [FRESH] foo [..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/release/deps/foo-[..][EXE]`
 ",
         )
         .run();
