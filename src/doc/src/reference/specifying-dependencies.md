@@ -25,6 +25,24 @@ if we had specified `"^0.1.12"`, which is called a caret requirement.
 
 [semver]: https://github.com/steveklabnik/semver#requirements
 
+### Exact version requirement
+
+Allows you to specify a specific version.
+
+Here are some examples:
+
+```notrust
+= 0.0.1
+= 1.2.30
+= 0.1.12
+```
+
+Example using the `time` crate:
+
+```toml
+time = "= 0.1.12"
+```
+
 ### Caret requirements
 
 **Caret requirements** allow SemVer compatible updates to a specified version.
@@ -87,8 +105,7 @@ positioned.
 
 ### Comparison requirements
 
-**Comparison requirements** allow manually specifying a version range or an
-exact version to depend on.
+**Comparison requirements** allow manually specifying a version range.
 
 Here are some examples of comparison requirements:
 
@@ -96,7 +113,6 @@ Here are some examples of comparison requirements:
 >= 1.2.0
 > 1
 < 2
-= 1.2.3
 ```
 
 ### Multiple requirements
