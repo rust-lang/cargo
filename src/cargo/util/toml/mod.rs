@@ -1553,16 +1553,15 @@ impl TomlManifest {
             }
 
             let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
-            {
-                let version = spec.version().ok_or_else(|| {
-                    anyhow!(
-                        "replacements must specify a version \
-                         to replace, but `{}` does not",
-                        spec
-                    )
-                })?;
-                dep.set_version_req(VersionReq::exact(version));
-            }
+            let version = spec.version().ok_or_else(|| {
+                anyhow!(
+                    "replacements must specify a version \
+                     to replace, but `{}` does not",
+                    spec
+                )
+            })?;
+            dep.set_version_req(VersionReq::exact(version))
+                .lock_version(version);
             replace.push((spec, dep));
         }
         Ok(replace)

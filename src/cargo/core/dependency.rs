@@ -320,7 +320,6 @@ impl Dependency {
     /// Locks this dependency to depending on the specified package ID.
     pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
-        assert!(self.inner.req.matches(id.version()));
         trace!(
             "locking dep from `{}` with `{}` at {} to {}",
             self.package_name(),
@@ -329,7 +328,7 @@ impl Dependency {
             id
         );
         let me = Rc::make_mut(&mut self.inner);
-        me.req = OptVersionReq::exact(id.version());
+        me.req.lock_to(id.version());
 
         // Only update the `precise` of this source to preserve other
         // information about dependency's source which may not otherwise be
@@ -340,10 +339,20 @@ impl Dependency {
         self
     }
 
-    /// Returns `true` if this is a "locked" dependency, basically whether it has
-    /// an exact version req.
+    /// Locks this dependency to a specified version.
+    ///
+    /// Mainly used in dependency patching like `[patch]` or `[replace]`, which
+    /// doesn't need to lock the entire dependency to a specific [`PackageId`].
+    pub fn lock_version(&mut self, version: &semver::Version) -> &mut Dependency {
+        let me = Rc::make_mut(&mut self.inner);
+        me.req.lock_to(version);
+        self
+    }
+
+    /// Returns `true` if this is a "locked" dependency. Basically a locked
+    /// dependency has an exact version req, but not vice versa.
     pub fn is_locked(&self) -> bool {
-        self.inner.req.is_exact()
+        self.inner.req.is_locked()
     }
 
     /// Returns `false` if the dependency is only used to build the local package.
