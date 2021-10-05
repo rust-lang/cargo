@@ -19,10 +19,7 @@ pub fn cli() -> App {
                     )
                     .value_name("id"),
                 )
-                .arg(
-                    opt("crate", "identifier of the crate to display a report for")
-                        .value_name("crate"),
-                ),
+                .arg_package("Package to display a report for")
         )
 }
 
@@ -42,7 +39,7 @@ fn report_future_incompatibilies(config: &Config, args: &ArgMatches<'_>) -> CliR
     let id = args
         .value_of_u32("id")?
         .unwrap_or_else(|| reports.last_id());
-    let krate = args.value_of("crate");
+    let krate = args.value_of("package");
     let report = reports.get_report(id, config, krate)?;
     drop_println!(config, "{}", REPORT_PREAMBLE);
     drop(config.shell().print_ansi_stdout(report.as_bytes()));

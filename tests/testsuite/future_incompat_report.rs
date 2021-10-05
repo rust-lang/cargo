@@ -205,7 +205,8 @@ fn test_multi_crate() {
             // Check that we don't have the 'triggers' message shown at the bottom of this loop,
             // and that we don't explain how to show a per-package report
             .with_stderr_does_not_contain("[..]triggers[..]")
-            .with_stderr_does_not_contain("[..]--crate[..]")
+            .with_stderr_does_not_contain("[..]--package[..]")
+            .with_stderr_does_not_contain("[..]-p[..]")
             .run();
 
         p.cargo(command).arg("-Zunstable-options").arg("-Zfuture-incompat-report").arg("--future-incompat-report")
@@ -216,16 +217,18 @@ fn test_multi_crate() {
             .with_stderr_contains("  - second-dep v0.0.2")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--crate").arg("first-dep v0.0.1").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
+        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep v0.0.1").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
+            .with_stdout_does_not_contain("[..]second-dep[..]")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--crate").arg("second-dep v0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
+        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep v0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
+            .with_stdout_does_not_contain("[..]first-dep[..]")
             .run();
     }
 
