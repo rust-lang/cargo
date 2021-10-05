@@ -107,7 +107,9 @@ user-agent = "…"            # the user-agent header
 root = "/some/path"         # `cargo install` destination directory
 
 [net]
-retry = 2                   # network retries
+retry = 2                   # maximum number of network retries
+retry-max-time = 10s        # maximum time between each exponential backoff retries
+retry-delay = 10ms          # if present, override backoff time with a constant
 git-fetch-with-cli = true   # use the `git` executable for git operations
 offline = true              # do not access the network
 
@@ -630,6 +632,25 @@ The `[net]` table controls networking configuration.
 * Environment: `CARGO_NET_RETRY`
 
 Number of times to retry possibly spurious network errors.
+
+#### `net.retry-max-time`
+* Type: string (*duration)
+* Default: 32s
+* Environment: `CARGO_NET_RETRY_MAX_TIME`
+
+Upper bound for time between exponential backoff retries
+
+Valid format: "{INT_VALUE}{s|ms}"
+
+### `net.retry-delay`
+* Type: string (duration)
+* Default: None
+* Environment: `CARGO_NET_RETRY_DELAY`
+
+Use constant time in between network retries instead of exponential increments. If present,
+overrides `net.retry-max-time`.
+
+Valid format: "{INT_VALUE}{s|ms}"
 
 ##### `net.git-fetch-with-cli`
 * Type: boolean
