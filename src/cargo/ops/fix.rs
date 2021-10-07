@@ -514,7 +514,7 @@ fn rustfix_crate(
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        rustfix_and_fix(&mut fixes, rustc, filename, args)?;
+        rustfix_and_fix(&mut fixes, rustc, filename, args, config)?;
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
@@ -556,6 +556,7 @@ fn rustfix_and_fix(
     rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
+    config: &Config,
 ) -> Result<(), Error> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
@@ -609,6 +610,8 @@ fn rustfix_and_fix(
     // Collect suggestions by file so we can apply them one at a time later.
     let mut file_map = HashMap::new();
     let mut num_suggestion = 0;
+    // It's safe since we won't read any content under home dir.
+    let home_path = config.home().as_path_unlocked();
     for suggestion in suggestions {
         trace!("suggestion");
         // Make sure we've got a file associated with this suggestion and all
@@ -626,6 +629,11 @@ fn rustfix_and_fix(
             trace!("rejecting as it has no solutions {:?}", suggestion);
             continue;
         };
+
+        // Do not write into registry cache. See rust-lang/cargo#9857.
+        if Path::new(&file_name).starts_with(home_path) {
+            continue;
+        }
 
         if !file_names.clone().all(|f| f == &file_name) {
             trace!("rejecting as it changes multiple files: {:?}", suggestion);
