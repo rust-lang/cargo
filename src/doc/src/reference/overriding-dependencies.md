@@ -19,6 +19,9 @@ it's been published to [crates.io]. For example:
 These scenarios can be solved with the [`[patch]` manifest
 section](#the-patch-section).
 
+> **Note**: In a [workspace] create, the `[patch]` and `[replace]` sections must be 
+> ocated in the root crate.
+
 This chapter walks through a few different use cases, and includes details
 on the different ways to override a dependency.
 
@@ -343,3 +346,4 @@ Cargo how to find local unpublished crates.
 [crates.io]: https://crates.io/
 [multiple locations]: specifying-dependencies.md#multiple-locations
 [dependencies]: specifying-dependencies.md
+[workspace]: workspaces.md
