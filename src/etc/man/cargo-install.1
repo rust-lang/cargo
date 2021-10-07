@@ -71,7 +71,7 @@ change, then Cargo will reinstall the package:
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The release mode (\fB\-\-debug\fR).
+\h'-04'\(bu\h'+02'The profile (\fB\-\-profile\fR).
 .RE
 .sp
 .RS 4
@@ -258,6 +258,13 @@ is specified.
 \fB\-\-debug\fR
 .RS 4
 Build with the \fBdev\fR profile instead the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Install with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .SS "Manifest Options"
 .sp

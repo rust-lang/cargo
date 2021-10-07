@@ -87,7 +87,6 @@ Each new feature described below should explain how to use it.
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
 * Information and metadata
@@ -237,49 +236,6 @@ or running tests for both targets:
 ```
 cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
 ```
-
-### Custom named profiles
-
-* Tracking Issue: [rust-lang/cargo#6988](https://github.com/rust-lang/cargo/issues/6988)
-* RFC: [#2678](https://github.com/rust-lang/rfcs/pull/2678)
-
-With this feature you can define custom profiles having new names. With the
-custom profile enabled, build artifacts can be emitted by default to
-directories other than `release` or `debug`, based on the custom profile's
-name.
-
-For example:
-
-```toml
-cargo-features = ["named-profiles"]
-
-[profile.release-lto]
-inherits = "release"
-lto = true
-````
-
-An `inherits` key is used in order to receive attributes from other profiles,
-so that a new custom profile can be based on the standard `dev` or `release`
-profile presets. Cargo emits errors in case `inherits` loops are detected. When
-considering inheritance hierarchy, all profiles directly or indirectly inherit
-from either from `release` or from `dev`.
-
-Valid profile names are: must not be empty, use only alphanumeric characters or
-`-` or `_`.
-
-Passing `--profile` with the profile's name to various Cargo commands, directs
-operations to use the profile's attributes. Overrides that are specified in the
-profiles from which the custom profile inherits are inherited too.
-
-For example, using `cargo build` with `--profile` and the manifest from above:
-
-```sh
-cargo +nightly build --profile release-lto -Z unstable-options
-```
-
-When a custom profile is used, build artifacts go to a different target by
-default. In the example above, you can expect to see the outputs under
-`target/release-lto`.
 
 
 #### New `dir-name` attribute
@@ -1421,3 +1377,8 @@ information.
 The 2021 edition has been stabilized in the 1.56 release.
 See the [`edition` field](manifest.md#the-edition-field) for more information on setting the edition.
 See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](../../edition-guide/index.html) for more information on migrating existing projects.
+
+### Custom named profiles
+
+Custom named profiles have been stabilized in the 1.57 release. See the
+[profiles chapter](profiles.md#custom-profiles) for more information.
