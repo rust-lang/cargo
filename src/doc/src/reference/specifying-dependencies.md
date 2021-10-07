@@ -2,90 +2,93 @@
 
 Your crates can depend on other libraries from [crates.io] or other
 registries, `git` repositories, or subdirectories on your local file system.
-You can also temporarily override the location of a dependency — for example,
-to be able to test out a bug fix in the dependency that you are working on
-locally. You can have different dependencies for different platforms, and
-dependencies that are only used during development. Let's take a look at how
-to do each of these.
+
+It's possible to temporarily change the version or path of a dependency, this
+can be useful for checking the new features or bug fixes after some major
+release.
+
+You can specify different dependencies for:
+- Development and release profiles.
+- Different platforms, architectures and operating systems.
+- Crate "features" that can be enabled and disabled.
 
 ### Specifying dependencies from crates.io
 
-Cargo is configured to look for dependencies on [crates.io] by default. Only
-the name and a version string are required in this case. In [the cargo
-guide](../guide/index.md), we specified a dependency on the `time` crate:
+Here is an example of the most common method for specifying dependencies:
 
 ```toml
 [dependencies]
 time = "0.1.12"
 ```
 
-The string `"0.1.12"` is a [semver] version requirement. Since this
-string does not have any operators in it, it is interpreted the same way as
-if we had specified `"^0.1.12"`, which is called a caret requirement.
+Cargo looks for dependencies on [crates.io] by default. For this case, it only
+requires the name and a version string.
 
-[semver]: https://github.com/steveklabnik/semver#requirements
+The strings `"0.1.12"` is a [semver] version requirement, and since it does not
+contain any extra operators, it is interpreted as the caret requirement
+`"^0.1.12"`, so that line will download the crate `time` with a version that is
+compatible with `0.1.12` following the Caret requirement rules.
 
-### Exact version requirement
+There are five types of version requirements:
 
-Allows you to specify a specific version.
+Type | Operators | Examples
+-------|-------|-------
+Caret | None or `^` | `"1.2.3"` and `"^1.2.3"`
+Tilde | `~` | `"~1.2.3"`
+Wildcard | `*` | `"1.2.*"`
+Comparison | `>`, `<` and `>=` | `">1.2.3"`, `"<1.2.3"` and `">=1.2.3"`
+Strict | `=` | `"= 1.2.3"`
 
-Here are some examples:
-
-```notrust
-= 0.0.1
-= 1.2.30
-= 0.1.12
-```
-
-Example using the `time` crate:
-
-```toml
-time = "= 0.1.12"
-```
+[semver]: https://github.com/dtolnay/semver
 
 ### Caret requirements
 
-**Caret requirements** allow SemVer compatible updates to a specified version.
-An update is allowed if the new version number does not modify the left-most
-non-zero digit in the major, minor, patch grouping. In this case, if we ran
-`cargo update -p time`, cargo should update us to version `0.1.13` if it is the
-latest `0.1.z` release, but would not update us to `0.2.0`. If instead we had
-specified the version string as `^1.0`, cargo should update to `1.1` if it is
-the latest `1.y` release, but not `2.0`. The version `0.0.x` is not considered
-compatible with any other version.
+**Caret requirements** allow SemVer compatible updates, it's the only
+requirement type that uses specific rules for versions with and without the zero
+digits.
+
+Updates are only allowed if the new version number does not modify the left-most
+non-zero digit, so the version `0.0.x` is not considered compatible with any
+other version.
+
+If we specify the version string as `"1.0.4"`, compatible versions are, `1.0.x`
+where `x` is greater than 4.
+
+If we specify the version string as `"1.4"`, compatible versions are, `1.x.y`
+where `x` is greater than 4 and `y` is anything.
 
 Here are some more examples of caret requirements and the versions that would
 be allowed with them:
 
 ```notrust
-^1.2.3  :=  >=1.2.3, <2.0.0
-^1.2    :=  >=1.2.0, <2.0.0
 ^1      :=  >=1.0.0, <2.0.0
-^0.2.3  :=  >=0.2.3, <0.3.0
-^0.2    :=  >=0.2.0, <0.3.0
-^0.0.3  :=  >=0.0.3, <0.0.4
-^0.0    :=  >=0.0.0, <0.1.0
+^1.2    :=  >=1.2.0, <2.0.0
+^1.2.3  :=  >=1.2.3, <2.0.0
 ^0      :=  >=0.0.0, <1.0.0
+^0.0    :=  >=0.0.0, <0.1.0
+^0.0.3  :=  >=0.0.3, <0.0.4 (exact)
+^0.2    :=  >=0.2.0, <0.3.0
+^0.2.3  :=  >=0.2.3, <0.3.0
 ```
 
 This compatibility convention is different from SemVer in the way it treats
 versions before 1.0.0. While SemVer says there is no compatibility before
 1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
-and `x > 0`.
+and `x` is not zero.
 
 ### Tilde requirements
 
 **Tilde requirements** specify a minimal version with some ability to update.
-If you specify a major, minor, and patch version or only a major and minor
-version, only patch-level changes are allowed. If you only specify a major
-version, then minor- and patch-level changes are allowed.
+If you specify a string with minor or patch version, only patch-level changes
+are allowed. If you only specify a major version, then minor-level changes are
+also allowed.
 
-`~1.2.3` is an example of a tilde requirement.
+Examples:
 
 ```notrust
-~1.2.3  := >=1.2.3, <1.3.0
-~1.2    := >=1.2.0, <1.3.0
-~1      := >=1.0.0, <2.0.0
+~1      :=  >=1.0.0, <2.0.0
+~1.2    :=  >=1.2.0, <1.3.0
+~1.2.3  :=  >=1.2.3, <1.3.0
 ```
 
 ### Wildcard requirements
@@ -93,32 +96,73 @@ version, then minor- and patch-level changes are allowed.
 **Wildcard requirements** allow for any version where the wildcard is
 positioned.
 
-`*`, `1.*` and `1.2.*` are examples of wildcard requirements.
+Examples:
 
 ```notrust
-*     := >=0.0.0
-1.*   := >=1.0.0, <2.0.0
-1.2.* := >=1.2.0, <1.3.0
+*      :=  >=0.0.0
+1.*    :=  >=1.0.0, <2.0.0
+1.2.*  :=  >=1.2.0, <1.3.0
 ```
 
 > **Note**: [crates.io] does not allow bare `*` versions.
 
 ### Comparison requirements
 
-**Comparison requirements** allow manually specifying a version range.
+**Comparison requirements** allow manually specifying a version range or an
+exact version to depend on.
 
-Here are some examples of comparison requirements:
+Examples:
 
 ```notrust
->= 1.2.0
-> 1
-< 2
+ >1.2
+ <2
+>=1.2.0
+>=1.2.0, <1.3.0
+>=1.2.2, <1.2.5
 ```
 
 ### Multiple requirements
 
-As shown in the examples above, multiple version requirements can be
-separated with a comma, e.g., `>= 1.2, < 1.5`.
+As shown in the examples above, it is possible to combine any requirements to
+restrict the version even further, however, this is only necessary with
+[comparison requirements](#Comparison-requirements).
+
+Examples (all of them are equivalent):
+
+```notrust
+  1.0.0, < 1.0.5
+ ^1.0.0, < 1.0.5
+ ~1.0.0, < 1.0.5
+>=1.0.0, < 1.0.5
+ =1.0  , < 1.0.5
+```
+
+Example using the `time` crate:
+```toml
+[dependencies]
+time = ">=0.2.7, <0.2.15"
+```
+
+### Strict version requirements
+
+**Strict version requirements** allow you to lock the numbers for major, minor
+and patch versions. You can specify the exact version if the patch part is
+given.
+
+Here are some examples:
+
+```notrust
+=0      :=  >=0.0.0, <1.0.0
+=0.1    :=  >=0.1.0, <0.2.0
+=0.1.2  :=  >=0.1.2, <0.1.2 (exact)
+=1      :=  >=1.0.0, <2.0.0
+=1.2    :=  >=1.2.0, <1.3.0
+=1.2.3  :=  >=1.2.3, <1.2.4 (exact)
+```
+
+> **Note**: Using strict requirements with exact versions are a bad practice and
+> should be avoided, as it disables the ability of receiving important patches
+> of security, soundness and bugfixes.
 
 ### Specifying dependencies from other registries
 
