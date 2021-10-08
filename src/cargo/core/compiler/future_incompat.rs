@@ -76,10 +76,10 @@ struct OnDiskReport {
     /// Unique reference to the report for the `--id` CLI flag.
     id: u32,
     /// Report, suitable for printing to the console.
-    /// Maps crate names to the corresponding report
+    /// Maps package names to the corresponding report
     /// We use a `BTreeMap` so that the iteration order
     /// is stable across multiple runs of `cargo`
-    per_crate: BTreeMap<String, String>,
+    per_package: BTreeMap<String, String>,
 }
 
 impl Default for OnDiskReports {
@@ -110,7 +110,7 @@ impl OnDiskReports {
         };
         let report = OnDiskReport {
             id: current_reports.next_id,
-            per_crate: render_report(per_package_reports),
+            per_package: render_report(per_package_reports),
         };
         current_reports.next_id += 1;
         current_reports.reports.push(report);
@@ -194,7 +194,7 @@ impl OnDiskReports {
         })?;
         let to_display = if let Some(package) = package {
             report
-                .per_crate
+                .per_package
                 .get(package)
                 .ok_or_else(|| {
                     format_err!(
@@ -202,13 +202,13 @@ impl OnDiskReports {
                 Available packages are: {}\n
                 Omit the `--crate` flag to display a report for all crates",
                         package,
-                        iter_join(report.per_crate.keys(), ", ")
+                        iter_join(report.per_package.keys(), ", ")
                     )
                 })?
                 .clone()
         } else {
             report
-                .per_crate
+                .per_package
                 .values()
                 .cloned()
                 .collect::<Vec<_>>()
