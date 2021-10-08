@@ -954,28 +954,15 @@ impl<'cfg> DrainState<'cfg> {
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            let (compat, incompat) =
-                get_updates(bcx.ws, &package_ids).unwrap_or((String::new(), String::new()));
+            let updated_versions =
+                get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
 
-            let compat_message = if !compat.is_empty() {
+            let update_message = if !updated_versions.is_empty() {
                 format!(
                     "
-- Some affected dependencies have minor or patch version updates available:
-{compat}",
-                    compat = compat
-                )
-            } else {
-                String::new()
-            };
-
-            let incompat_message = if !incompat.is_empty() {
-                format!(
-                    "
-- If a minor dependency update does not help, you can try updating to a new 
-  major version of those dependencies. You have to do this manually:
-{incompat}
-                ",
-                    incompat = incompat
+- Some affected dependencies have updates available:
+{updated_versions}",
+                    updated_versions = updated_versions
                 )
             } else {
                 String::new()
@@ -985,8 +972,7 @@ impl<'cfg> DrainState<'cfg> {
                 "
 To solve this problem, you can try the following approaches:
 
-{compat_message}
-{incompat_message}
+{update_message}
 - If the issue is not solved by updating the dependencies, a fix has to be
   implemented by those dependencies. You can help with that by notifying the
   maintainers of this problem (e.g. by creating a bug report) or by proposing a
@@ -999,8 +985,7 @@ To solve this problem, you can try the following approaches:
   https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
             ",
                 upstream_info = upstream_info,
-                compat_message = compat_message,
-                incompat_message = incompat_message
+                update_message = update_message,
             )));
 
             drop(bcx.config.shell().note(&format!(
@@ -1354,7 +1339,7 @@ feature resolver. Try updating to diesel 1.4.8 to fix this error.
 // Returns a pair (compatible_updates, incompatible_updates),
 // of semver-compatible and semver-incompatible update versions,
 // respectively.
-fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<(String, String)> {
+fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<String> {
     // This in general ignores all errors since this is opportunistic.
     let _lock = ws.config().acquire_package_cache_lock().ok()?;
     // Create a set of updated registry sources.
@@ -1375,8 +1360,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         })
         .collect();
     // Query the sources for new versions.
-    let mut compatible = String::new();
-    let mut incompatible = String::new();
+    let mut updates = String::new();
     for pkg_id in package_ids {
         let source = match sources.get_mut(&pkg_id.source_id()) {
             Some(s) => s,
@@ -1384,41 +1368,24 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         };
         let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
         let summaries = source.query_vec(&dep).ok()?;
-        let (mut compatible_versions, mut incompatible_versions): (Vec<_>, Vec<_>) = summaries
-            .iter()
-            .map(|summary| summary.version())
+        let mut updated_versions: Vec<_> = summaries.iter().map(|summary| summary.version())
             .filter(|version| *version > pkg_id.version())
-            .partition(|version| version.major == pkg_id.version().major);
-        compatible_versions.sort();
-        incompatible_versions.sort();
+            .collect();
+        updated_versions.sort();
 
-        let compatible_versions = compatible_versions
+        let updated_versions = iter_join(updated_versions
             .into_iter()
-            .map(|version| version.to_string());
-        let compatible_versions = iter_join(compatible_versions, ", ");
+            .map(|version| version.to_string()),
+            ", ");
 
-        let incompatible_versions = incompatible_versions
-            .into_iter()
-            .map(|version| version.to_string());
-        let incompatible_versions = iter_join(incompatible_versions, ", ");
-
-        if !compatible_versions.is_empty() {
+        if !updated_versions.is_empty() {
             writeln!(
-                compatible,
+                updates,
                 "{} has the following newer versions available: {}",
-                pkg_id, compatible_versions
-            )
-            .unwrap();
-        }
-
-        if !incompatible_versions.is_empty() {
-            writeln!(
-                incompatible,
-                "{} has the following newer versions available: {}",
-                pkg_id, incompatible_versions
+                pkg_id, updated_versions
             )
             .unwrap();
         }
     }
-    Some((compatible, incompatible))
+    Some(updates)
 }

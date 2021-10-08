@@ -424,14 +424,9 @@ fn suggestions_for_updates() {
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(
             "\
-- Some affected dependencies have minor or patch version updates available:
-with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2
-
-
-- If a minor dependency update does not help, you can try updating to a new 
-  major version of those dependencies. You have to do this manually:
+- Some affected dependencies have updates available:
 big_update v1.0.0 has the following newer versions available: 2.0.0
-with_updates v1.0.0 has the following newer versions available: 3.0.1
+with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 ",
         )
         .run();
