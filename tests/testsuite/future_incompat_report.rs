@@ -161,7 +161,7 @@ frequency = 'never'
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
-            .with_stderr_contains("  - foo v0.0.0[..]")
+            .with_stderr_contains("  - foo:0.0.0[..]")
             .run();
     }
 }
@@ -213,18 +213,18 @@ fn test_multi_crate() {
             .masquerade_as_nightly_cargo()
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
-            .with_stderr_contains("  - first-dep v0.0.1")
-            .with_stderr_contains("  - second-dep v0.0.2")
+            .with_stderr_contains("  - first-dep:0.0.1")
+            .with_stderr_contains("  - second-dep:0.0.2")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep v0.0.1").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
+        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep:0.0.1").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
             .with_stdout_does_not_contain("[..]second-dep[..]")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep v0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
+        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep:0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)

@@ -942,7 +942,7 @@ impl<'cfg> DrainState<'cfg> {
   - {name}
     - Repository: {url}
     - Detailed warning command: `cargo report future-incompatibilities --id {id} --crate '{name}'",
-                        name = package_id,
+                        name = format!("{}:{}", package_id.name(), package_id.version()),
                         url = manifest
                             .metadata()
                             .repository
