@@ -1,6 +1,6 @@
 //! Tests for displaying the cargo version.
 
-use cargo_test_support::project;
+use cargo_test_support::{cargo_process, project};
 
 #[cargo_test]
 fn simple() {
@@ -40,4 +40,15 @@ fn version_works_with_bad_target_dir() {
         )
         .build();
     p.cargo("version").run();
+}
+
+#[cargo_test]
+fn verbose() {
+    // This is mainly to check that it doesn't explode.
+    cargo_process("-vV")
+        .with_stdout_contains(&format!("cargo {}", cargo::version()))
+        .with_stdout_contains("host: [..]")
+        .with_stdout_contains("libgit2: [..]")
+        .with_stdout_contains("libcurl: [..]")
+        .run();
 }

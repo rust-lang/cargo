@@ -4,6 +4,7 @@ use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use super::commands;
 use super::list_commands;
@@ -173,8 +174,61 @@ pub fn get_version_string(is_verbose: bool) -> String {
                 version_string.push_str(&format!("commit-date: {}\n", ci.commit_date));
             }
         }
+        writeln!(version_string, "host: {}", env!("RUST_HOST_TARGET")).unwrap();
+        add_libgit2(&mut version_string);
+        add_curl(&mut version_string);
+        add_ssl(&mut version_string);
     }
     version_string
+}
+
+fn add_libgit2(version_string: &mut String) {
+    let git2_v = git2::Version::get();
+    let lib_v = git2_v.libgit2_version();
+    let vendored = if git2_v.vendored() {
+        format!("vendored")
+    } else {
+        format!("system")
+    };
+    writeln!(
+        version_string,
+        "libgit2: {}.{}.{} (sys:{} {})",
+        lib_v.0,
+        lib_v.1,
+        lib_v.2,
+        git2_v.crate_version(),
+        vendored
+    )
+    .unwrap();
+}
+
+fn add_curl(version_string: &mut String) {
+    let curl_v = curl::Version::get();
+    let vendored = if curl_v.vendored() {
+        format!("vendored")
+    } else {
+        format!("system")
+    };
+    writeln!(
+        version_string,
+        "libcurl: {} (sys:{} {} ssl:{})",
+        curl_v.version(),
+        curl_sys::rust_crate_version(),
+        vendored,
+        curl_v.ssl_version().unwrap_or("none")
+    )
+    .unwrap();
+}
+
+fn add_ssl(version_string: &mut String) {
+    #[cfg(feature = "openssl")]
+    {
+        writeln!(version_string, "ssl: {}", openssl::version::version()).unwrap();
+    }
+    #[cfg(not(feature = "openssl"))]
+    {
+        let _ = version_string; // Silence unused warning.
+    }
 }
 
 fn expand_aliases(
