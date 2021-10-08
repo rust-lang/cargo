@@ -19,7 +19,7 @@ pub fn cli() -> App {
                     )
                     .value_name("id"),
                 )
-                .arg_package("Package to display a report for")
+                .arg_package("Package to display a report for"),
         )
 }
 

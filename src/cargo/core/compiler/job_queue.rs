@@ -954,8 +954,7 @@ impl<'cfg> DrainState<'cfg> {
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            let updated_versions =
-                get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
+            let updated_versions = get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
 
             let update_message = if !updated_versions.is_empty() {
                 format!(
@@ -1368,15 +1367,19 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         };
         let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
         let summaries = source.query_vec(&dep).ok()?;
-        let mut updated_versions: Vec<_> = summaries.iter().map(|summary| summary.version())
+        let mut updated_versions: Vec<_> = summaries
+            .iter()
+            .map(|summary| summary.version())
             .filter(|version| *version > pkg_id.version())
             .collect();
         updated_versions.sort();
 
-        let updated_versions = iter_join(updated_versions
-            .into_iter()
-            .map(|version| version.to_string()),
-            ", ");
+        let updated_versions = iter_join(
+            updated_versions
+                .into_iter()
+                .map(|version| version.to_string()),
+            ", ",
+        );
 
         if !updated_versions.is_empty() {
             writeln!(

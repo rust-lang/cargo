@@ -228,10 +228,12 @@ impl OnDiskReports {
 fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMap<String, String> {
     let mut report: BTreeMap<String, String> = BTreeMap::new();
     for per_package in per_package_reports {
-        let package_spec = format!("{}:{}", per_package.package_id.name(), per_package.package_id.version());
-        let rendered = report
-            .entry(package_spec)
-            .or_default();
+        let package_spec = format!(
+            "{}:{}",
+            per_package.package_id.name(),
+            per_package.package_id.version()
+        );
+        let rendered = report.entry(package_spec).or_default();
         rendered.push_str(&format!(
             "The package `{}` currently triggers the following future \
              incompatibility lints:\n",
