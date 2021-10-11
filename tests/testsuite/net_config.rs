@@ -58,7 +58,7 @@ fn net_retry_git_outputs_warning() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay="10ms"
+           retry-delay= "10ms"
            [http]
            timeout=1
             "#,
@@ -206,7 +206,7 @@ fn net_retry_config_bad_format2() {
     p.cargo("build -v -j 1")
         .with_status(101)
         .with_stderr_contains(
-            "[..] Invalid value format: `m10`, expecting a positive number followed by unit",
+            "[..] invalid value format: `m10`, expecting a non-negative number followed by unit suffix",
         )
         .run();
 }
@@ -240,6 +240,8 @@ fn net_retry_config_bad_format3() {
 
     p.cargo("build -v -j 1")
         .with_status(101)
-        .with_stderr_contains("[..] No unit is found on value: `10`")
+        .with_stderr_contains(
+            "[..] no unit is found on value: `10`, expected an `s` or `ms` suffix",
+        )
         .run();
 }
