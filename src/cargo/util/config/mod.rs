@@ -1542,7 +1542,7 @@ impl Config {
         assert!(
             self.package_cache_lock.borrow().is_some(),
             "package cache lock is not currently held, Cargo forgot to call \
-            `acquire_package_cache_lock` before we got to this stack frame",
+             `acquire_package_cache_lock` before we got to this stack frame",
         );
         assert!(ret.starts_with(self.home_path.as_path_unlocked()));
         ret
@@ -2315,7 +2315,7 @@ impl<'de> Deserialize<'de> for DurationString {
             Some(offset) => offset,
             None => {
                 return Err(serde::de::Error::custom(format!(
-                    "No unit is found on value: `{}`",
+                    "no unit is found on value: `{}`, expected an `s` or `ms` suffix",
                     s
                 )));
             }
@@ -2325,7 +2325,7 @@ impl<'de> Deserialize<'de> for DurationString {
             val
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Invalid value format: `{}`, expecting a positive number followed by unit",
+                "invalid value format: `{}`, expecting a non-negative number followed by unit suffix",
                 s
             )));
         };
