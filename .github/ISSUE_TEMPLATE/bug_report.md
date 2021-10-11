@@ -22,7 +22,7 @@ labels: C-bug
 
 **Notes**
 
-Output of `cargo version`:
+Output of `cargo version --verbose`:
 
 <!-- Also, any additional context or information you feel may be relevant to the issue. -->
 <!-- (e.g rust version, OS platform/distribution/version, target toolchain(s), release channel.. -->

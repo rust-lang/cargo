@@ -5,6 +5,10 @@ use std::path::Path;
 
 fn main() {
     compress_man();
+    println!(
+        "cargo:rustc-env=RUST_HOST_TARGET={}",
+        std::env::var("TARGET").unwrap()
+    );
 }
 
 fn compress_man() {
