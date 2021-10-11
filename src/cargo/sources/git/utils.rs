@@ -54,7 +54,7 @@ pub struct GitDatabase {
 
 /// `GitCheckout` is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a `anyhow::Error` if no revision for that reference was found.
+/// and return an `anyhow::Error` if no revision for that reference was found.
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
@@ -799,13 +799,17 @@ pub fn fetch(
             refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
         }
 
-        // For `rev` dependencies we don't know what the rev will point to. To
-        // handle this situation we fetch all branches and tags, and then we
-        // pray it's somewhere in there.
-        GitReference::Rev(_) => {
-            refspecs.push(String::from("refs/heads/*:refs/remotes/origin/*"));
-            refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
-            tags = true;
+        GitReference::Rev(rev) => {
+            if rev.starts_with("refs/") {
+                refspecs.push(format!("{0}:{0}", rev));
+            } else {
+                // We don't know what the rev will point to. To handle this
+                // situation we fetch all branches and tags, and then we pray
+                // it's somewhere in there.
+                refspecs.push(String::from("refs/heads/*:refs/remotes/origin/*"));
+                refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
+                tags = true;
+            }
         }
     }
 
@@ -1025,9 +1029,13 @@ fn github_up_to_date(
         GitReference::Branch(branch) => branch,
         GitReference::Tag(tag) => tag,
         GitReference::DefaultBranch => "HEAD",
-        GitReference::Rev(_) => {
-            debug!("can't use github fast path with `rev`");
-            return Ok(false);
+        GitReference::Rev(rev) => {
+            if rev.starts_with("refs/") {
+                rev
+            } else {
+                debug!("can't use github fast path with `rev = \"{}\"`", rev);
+                return Ok(false);
+            }
         }
     };
 

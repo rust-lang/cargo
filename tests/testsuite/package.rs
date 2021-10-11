@@ -140,8 +140,8 @@ fn package_verbose() {
     let repo = git::repo(&root)
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("src/main.rs", "fn main() {}")
-        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
-        .file("a/src/lib.rs", "")
+        .file("a/a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/a/src/lib.rs", "")
         .build();
     cargo_process("build").cwd(repo.root()).run();
 
@@ -167,7 +167,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         r#"{{
   "git": {{
     "sha1": "{}"
-  }}
+  }},
+  "path_in_vcs": ""
 }}
 "#,
         repo.revparse_head()
@@ -187,7 +188,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 
     println!("package sub-repo");
     cargo_process("package -v --no-verify")
-        .cwd(repo.root().join("a"))
+        .cwd(repo.root().join("a/a"))
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -200,6 +201,29 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 ",
         )
         .run();
+
+    let f = File::open(&repo.root().join("a/a/target/package/a-0.0.1.crate")).unwrap();
+    let vcs_contents = format!(
+        r#"{{
+  "git": {{
+    "sha1": "{}"
+  }},
+  "path_in_vcs": "a/a"
+}}
+"#,
+        repo.revparse_head()
+    );
+    validate_crate_contents(
+        f,
+        "a-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            ".cargo_vcs_info.json",
+        ],
+        &[(".cargo_vcs_info.json", &vcs_contents)],
+    );
 }
 
 #[cargo_test]

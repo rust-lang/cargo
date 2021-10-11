@@ -809,6 +809,7 @@ fn prepare_for_unstable() {
         }
     };
     let latest_stable = Edition::LATEST_STABLE;
+    let prev = latest_stable.previous().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
@@ -828,13 +829,24 @@ fn prepare_for_unstable() {
     // -j1 to make the error more deterministic (otherwise there can be
     // multiple errors since they run in parallel).
     p.cargo("fix --edition --allow-no-vcs -j1")
-        .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr(&format_args!("\
 [CHECKING] foo [..]
-[ERROR] cannot migrate src/lib.rs to edition {next}
+[WARNING] `src/lib.rs` is on the latest edition, but trying to migrate to edition {next}.
 Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
-error: could not compile `foo`
-", next=next))
+
+If you are trying to migrate from the previous edition ({prev}), the
+process requires following these steps:
+
+1. Start with `edition = \"{prev}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{latest_stable}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+
+[FINISHED] [..]
+", next=next, latest_stable=latest_stable, prev=prev))
         .run();
 
     if !is_nightly() {
@@ -938,6 +950,10 @@ fn prepare_for_already_on_latest_unstable() {
 #[cargo_test]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
+    if !is_nightly() {
+        // Remove once 1.56 is stabilized.
+        return;
+    }
     if Edition::LATEST_UNSTABLE.is_some() {
         eprintln!("This test cannot run while the latest edition is unstable, skipping.");
         return;
@@ -1422,10 +1438,6 @@ fn fix_color_message() {
 #[cargo_test]
 fn edition_v2_resolver_report() {
     // Show a report if the V2 resolver shows differences.
-    if !is_nightly() {
-        // 2021 is unstable
-        return;
-    }
     Package::new("common", "1.0.0")
         .feature("f1", &[])
         .feature("dev-feat", &[])
@@ -1465,7 +1477,6 @@ fn edition_v2_resolver_report() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered("\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
@@ -1518,7 +1529,7 @@ fn rustfix_handles_multi_spans() {
 fn fix_edition_2021() {
     // Can migrate 2021, even when lints are allowed.
     if !is_nightly() {
-        // 2021 is unstable
+        // Remove once 1.56 is stabilized.
         return;
     }
     let p = project()
@@ -1682,5 +1693,145 @@ fn abnormal_exit() {
         // "signal: 6, SIGABRT: process abort signal" on some platforms
         .with_stderr_contains("rustc exited abnormally: [..]")
         .with_stderr_contains("Original diagnostics will follow.")
+        .run();
+}
+
+#[cargo_test]
+fn fix_with_run_cargo_in_proc_macros() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use proc_macro::*;
+    
+                #[proc_macro]
+                pub fn foo(_input: TokenStream) -> TokenStream {
+                    let output = std::process::Command::new(env!("CARGO"))
+                        .args(&["metadata", "--format-version=1"])
+                        .output()
+                        .unwrap();
+                    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
+                    println!("{}", std::str::from_utf8(&output.stdout).unwrap());
+                    "".parse().unwrap()
+                }                    
+            "#,
+        )
+        .file(
+            "src/bin/main.rs",
+            r#"
+                use foo::foo;
+
+                fn main() {
+                    foo!("bar")
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fix --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
+        .run();
+}
+
+#[cargo_test]
+fn non_edition_lint_migration() {
+    // Migrating to a new edition where a non-edition lint causes problems.
+    if !is_nightly() {
+        // Remove once force-warn hits stable.
+        return;
+    }
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                // This is only used in a test.
+                // To be correct, this should be gated on #[cfg(test)], but
+                // sometimes people don't do that. If the unused_imports
+                // lint removes this, then the unittest will fail to compile.
+                use std::str::from_utf8;
+
+                pub mod foo {
+                    pub const FOO: &[u8] = &[102, 111, 111];
+                }
+
+                #[test]
+                fn example() {
+                    assert_eq!(
+                        from_utf8(::foo::FOO), Ok("foo")
+                    );
+                }
+            "#,
+        )
+        .build();
+    // Check that it complains about an unused import.
+    p.cargo("check --lib")
+        .with_stderr_contains("[..]unused_imports[..]")
+        .with_stderr_contains("[..]std::str::from_utf8[..]")
+        .run();
+    p.cargo("fix --edition --allow-no-vcs")
+        // Remove once --force-warn is stabilized
+        .masquerade_as_nightly_cargo()
+        .run();
+    let contents = p.read_file("src/lib.rs");
+    // Check it does not remove the "unused" import.
+    assert!(contents.contains("use std::str::from_utf8;"));
+    // Check that it made the edition migration.
+    assert!(contents.contains("from_utf8(crate::foo::FOO)"));
+}
+
+// For rust-lang/cargo#9857
+#[cargo_test]
+fn fix_in_dependency() {
+    Package::new("bar", "1.0.0")
+        .file(
+            "src/lib.rs",
+            r#"
+                #[macro_export]
+                macro_rules! m {
+                    ($i:tt) => {
+                        let $i = 1;
+                    };
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    bar::m!(abc);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_does_not_contain("[FIXED] [..]")
         .run();
 }

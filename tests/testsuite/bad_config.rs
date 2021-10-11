@@ -763,40 +763,25 @@ fn empty_dependencies() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  dependency (bar) specified without providing a local path, Git repository, or version \
-to use.
+warning: dependency (bar) specified without providing a local path, Git repository, or version \
+to use. This will be considered an error in future versions
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn invalid_toml_historically_allowed_is_warned() {
+fn invalid_toml_historically_allowed_fails() {
     let p = project()
         .file(".cargo/config", "[bar] baz = 2")
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-warning: TOML file found which contains invalid syntax and will soon not parse
-at `[..]config`.
-
-The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
-invalid), but this file has a table header which does not have a newline after
-it. A newline needs to be added and this warning will soon become a hard error
-in the future.
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_status(101)
+        .with_stderr_contains("  expected newline, found an identifier at line 1 column 7")
         .run();
 }
 

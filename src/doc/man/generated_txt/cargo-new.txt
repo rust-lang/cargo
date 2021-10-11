@@ -25,7 +25,7 @@ OPTIONS
            Create a package with a library target (src/lib.rs).
 
        --edition edition
-           Specify the Rust edition to use. Default is 2018. Possible values:
+           Specify the Rust edition to use. Default is 2021. Possible values:
            2015, 2018, 2021
 
        --name name

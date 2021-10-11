@@ -220,8 +220,13 @@ OPTIONS
            documentation for more details.
 
        --release
-           Test optimized artifacts with the release profile. See the PROFILES
-           section for details on how this affects profile selection.
+           Test optimized artifacts with the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Test with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
 
        --ignore-rust-version
            Test the target even if the selected Rust compiler is older than the
@@ -351,36 +356,6 @@ OPTIONS
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
-
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
-
-       Profile selection depends on the target and crate being built. By
-       default the dev or test profiles are used. If the --release flag is
-       given, then the release or bench profiles are used.
-
-       +----------------------------------------+-------------+--------------+
-       | Target                                 | Default     | --release    |
-       |                                        | Profile     | Profile      |
-       +----------------------------------------+-------------+--------------+
-       | lib, bin, example                      | dev         | release      |
-       +----------------------------------------+-------------+--------------+
-       | test, bench, or any target in "test"   | test        | bench        |
-       | or "bench" mode                        |             |              |
-       +----------------------------------------+-------------+--------------+
-
-       Dependencies use the dev/release profiles.
-
-       Unit tests are separate executable artifacts which use the test/bench
-       profiles. Example targets are built the same as with cargo build (using
-       the dev/release profiles) unless you are building them with the test
-       harness (by setting test = true in the manifest or using the --example
-       flag) in which case they use the test/bench profiles. Library targets
-       are built with the dev/release profiles when linked to an integration
-       test, binary, or doctest.
 
 ENVIRONMENT
        See the reference

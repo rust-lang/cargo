@@ -139,6 +139,7 @@ pub enum Edition {
 // - Set LATEST_STABLE to the new version.
 // - Update `is_stable` to `true`.
 // - Set the editionNNNN feature to stable in the features macro below.
+// - Update any tests that are affected.
 // - Update the man page for the --edition flag.
 // - Update unstable.md to move the edition section to the bottom.
 // - Update the documentation:
@@ -150,9 +151,9 @@ impl Edition {
     /// The latest edition that is unstable.
     ///
     /// This is `None` if there is no next unstable edition.
-    pub const LATEST_UNSTABLE: Option<Edition> = Some(Edition::Edition2021);
+    pub const LATEST_UNSTABLE: Option<Edition> = None;
     /// The latest stable edition.
-    pub const LATEST_STABLE: Edition = Edition::Edition2018;
+    pub const LATEST_STABLE: Edition = Edition::Edition2021;
     /// Possible values allowed for the `--edition` CLI flag.
     ///
     /// This requires a static value due to the way clap works, otherwise I
@@ -176,7 +177,7 @@ impl Edition {
         match self {
             Edition2015 => true,
             Edition2018 => true,
-            Edition2021 => false,
+            Edition2021 => true,
         }
     }
 
@@ -386,7 +387,7 @@ features! {
     (unstable, public_dependency, "", "reference/unstable.html#public-dependency"),
 
     // Allow to specify profiles other than 'dev', 'release', 'test', etc.
-    (unstable, named_profiles, "", "reference/unstable.html#custom-named-profiles"),
+    (stable, named_profiles, "1.57", "reference/profiles.html#custom-profiles"),
 
     // Opt-in new-resolver behavior.
     (stable, resolver, "1.51", "reference/resolver.html#resolver-versions"),
@@ -398,7 +399,7 @@ features! {
     (stable, rust_version, "1.56", "reference/manifest.html#the-rust-version-field"),
 
     // Support for 2021 edition.
-    (unstable, edition2021, "", "reference/unstable.html#edition-2021"),
+    (stable, edition2021, "1.56", "reference/manifest.html#the-edition-field"),
 
     // Allow to specify per-package targets (compile kinds)
     (unstable, per_package_target, "", "reference/unstable.html#per-package-target"),
@@ -642,13 +643,11 @@ unstable_cli_options!(
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
-    named_profiles: bool = ("Allow defining custom profiles"),
     namespaced_features: bool = ("Allow features with `dep:` prefix"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
-    patch_in_config: bool = ("Allow `[patch]` sections in .cargo/config.toml files"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
@@ -696,6 +695,12 @@ const STABILIZED_EXTRA_LINK_ARG: &str = "Additional linker arguments are now \
     supported without passing this flag.";
 
 const STABILIZED_CONFIGURABLE_ENV: &str = "The [env] section is now always enabled.";
+
+const STABILIZED_PATCH_IN_CONFIG: &str = "The patch-in-config feature is now always enabled.";
+
+const STABILIZED_NAMED_PROFILES: &str = "The named-profiles feature is now always enabled.\n\
+    See https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles \
+    for more information";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -828,7 +833,7 @@ impl CliUnstable {
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
-            "named-profiles" => self.named_profiles = parse_empty(k, v)?,
+            "named-profiles" => stabilized_warn(k, "1.57", STABILIZED_NAMED_PROFILES),
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
@@ -841,7 +846,6 @@ impl CliUnstable {
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
-            "patch-in-config" => self.patch_in_config = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some
                 // unstable options like "compare"). This should be removed at
@@ -877,6 +881,7 @@ impl CliUnstable {
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
             "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "configurable-env" => stabilized_warn(k, "1.56", STABILIZED_CONFIGURABLE_ENV),
+            "patch-in-config" => stabilized_warn(k, "1.56", STABILIZED_PATCH_IN_CONFIG),
             "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }

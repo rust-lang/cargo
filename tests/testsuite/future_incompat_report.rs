@@ -7,6 +7,7 @@
 //! So we pick some random lint that will likely always be the same
 //! over time.
 
+use super::config::write_config_toml;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, is_nightly, project, Project};
 
@@ -115,14 +116,46 @@ fn test_single_crate() {
     let p = simple_project();
 
     for command in &["build", "check", "rustc", "test"] {
-        p.cargo(command).arg("-Zfuture-incompat-report")
+        let check_has_future_compat = || {
+            p.cargo(command).arg("-Zfuture-incompat-report")
+                .masquerade_as_nightly_cargo()
+                .env("RUSTFLAGS", "-Zfuture-incompat-test")
+                .with_stderr_contains(FUTURE_OUTPUT)
+                .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
+                .with_stderr_does_not_contain("[..]incompatibility[..]")
+                .run();
+        };
+
+        // Check that we show a message with no [future-incompat-report] config section
+        write_config_toml("");
+        check_has_future_compat();
+
+        // Check that we show a message with `frequence = "always"`
+        write_config_toml(
+            "\
+[future-incompat-report]
+frequency = 'always'
+",
+        );
+        check_has_future_compat();
+
+        // Check that we do not show a message with `frequency = "never"`
+        write_config_toml(
+            "\
+[future-incompat-report]
+frequency = 'never'
+",
+        );
+        p.cargo(command)
+            .arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
-            .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
+            .with_stderr_does_not_contain("[..]rejected[..]")
             .with_stderr_does_not_contain("[..]incompatibility[..]")
             .run();
 
+        // Check that passing `--future-incompat-report` overrides `frequency = 'never'`
         p.cargo(command).arg("-Zfuture-incompat-report").arg("-Zunstable-options").arg("--future-incompat-report")
             .masquerade_as_nightly_cargo()
             .env("RUSTFLAGS", "-Zfuture-incompat-test")

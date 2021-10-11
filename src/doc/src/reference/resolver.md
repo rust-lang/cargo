@@ -408,8 +408,9 @@ version = "1.0.0"
 resolver = "2"
 ```
 
-The version `"1"` resolver is the original resolver that shipped with Cargo up
-to version 1.50, and is the default if the `resolver` is not specified.
+The version `"1"` resolver is the original resolver that shipped with Cargo up to version 1.50.
+The default is `"2"` if the root package specifies [`edition = "2021"`](manifest.md#the-edition-field) or a newer edition.
+Otherwise the default is `"1"`.
 
 The version `"2"` resolver introduces changes in [feature
 unification](#features). See the [features chapter][features-2] for more

@@ -87,9 +87,7 @@ pub trait AppExt: Sized {
         benches: &'static str,
         all: &'static str,
     ) -> Self {
-        self.arg_targets_lib_bin(lib, bin, bins)
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(opt("examples", examples))
+        self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
             ._arg(optional_multi_opt("test", "NAME", test))
             ._arg(opt("tests", tests))
             ._arg(optional_multi_opt("bench", "NAME", bench))
@@ -97,10 +95,19 @@ pub trait AppExt: Sized {
             ._arg(opt("all-targets", all))
     }
 
-    fn arg_targets_lib_bin(self, lib: &'static str, bin: &'static str, bins: &'static str) -> Self {
+    fn arg_targets_lib_bin_example(
+        self,
+        lib: &'static str,
+        bin: &'static str,
+        bins: &'static str,
+        example: &'static str,
+        examples: &'static str,
+    ) -> Self {
         self._arg(opt("lib", lib))
             ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
+            ._arg(optional_multi_opt("example", "NAME", example))
+            ._arg(opt("examples", examples))
     }
 
     fn arg_targets_bins_examples(
@@ -356,14 +363,20 @@ pub trait ArgMatchesExt {
         // This is an early exit, since it allows combination with `--release`.
         match (specified_profile, profile_checking) {
             // `cargo rustc` has legacy handling of these names
-            (Some(name @ ("test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
-            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
+                if self._is_present("release") {
+                    config.shell().warn(
+                        "the `--release` flag should not be specified with the `--profile` flag\n\
+                         The `--release` flag will be ignored.\n\
+                         This was historically accepted, but will become an error \
+                         in a future release."
+                    )?;
+                }
+                return Ok(InternedString::new(name));
+            }
             _ => {}
-        }
-
-        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-            bail!("usage of `--profile` requires `-Z unstable-options`");
         }
 
         let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {

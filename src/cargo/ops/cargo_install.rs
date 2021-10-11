@@ -260,7 +260,13 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         if !self.force && !duplicates.is_empty() {
             let mut msg: Vec<String> = duplicates
                 .iter()
-                .map(|(name, _)| format!("binary `{}` already exists in destination", name))
+                .map(|(name, _)| {
+                    format!(
+                        "binary `{}` already exists in destination `{}`",
+                        name,
+                        dst.join(name).to_string_lossy()
+                    )
+                })
                 .collect();
             msg.push("Add --force to overwrite".to_string());
             bail!("{}", msg.join("\n"));
@@ -677,7 +683,7 @@ fn installed_exact_package<T>(
 where
     T: Source,
 {
-    if !dep.is_locked() {
+    if !dep.version_req().is_exact() {
         // If the version isn't exact, we may need to update the registry and look for a newer
         // version - we can't know if the package is installed without doing so.
         return Ok(None);

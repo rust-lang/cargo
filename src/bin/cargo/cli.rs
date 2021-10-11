@@ -3,11 +3,22 @@ use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
+use std::collections::HashMap;
 
 use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
 use cargo::core::features::HIDDEN;
+
+lazy_static::lazy_static! {
+    // Maps from commonly known external commands (not builtin to cargo) to their
+    // description, for the help page. Reserved for external subcommands that are
+    // core within the rust ecosystem (esp ones that might become internal in the future).
+    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = vec![
+        ("clippy", "Checks a package to catch common mistakes and improve your Rust code."),
+        ("fmt", "Formats all bin and lib files of the current crate using rustfmt."),
+    ].into_iter().collect();
+}
 
 pub fn main(config: &mut Config) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
@@ -32,7 +43,12 @@ pub fn main(config: &mut Config) -> CliResult {
         }
     };
 
-    if args.value_of("unstable-features") == Some("help") {
+    // Global args need to be extracted before expanding aliases because the
+    // clap code for extracting a subcommand discards global options
+    // (appearing before the subcommand).
+    let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
+
+    if expanded_args.value_of("unstable-features") == Some("help") {
         let options = CliUnstable::help();
         let non_hidden_options: Vec<(String, String)> = options
             .iter()
@@ -84,30 +100,38 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
         return Ok(());
     }
 
-    let is_verbose = args.occurrences_of("verbose") > 0;
-    if args.is_present("version") {
+    let is_verbose = expanded_args.occurrences_of("verbose") > 0;
+    if expanded_args.is_present("version") {
         let version = get_version_string(is_verbose);
         drop_print!(config, "{}", version);
         return Ok(());
     }
 
-    if let Some(code) = args.value_of("explain") {
+    if let Some(code) = expanded_args.value_of("explain") {
         let mut procss = config.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
         return Ok(());
     }
 
-    if args.is_present("list") {
+    if expanded_args.is_present("list") {
         drop_println!(config, "Installed Commands:");
         for (name, command) in list_commands(config) {
+            let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
             match command {
                 CommandInfo::BuiltIn { about } => {
+                    assert!(
+                        known_external_desc.is_none(),
+                        "KNOWN_EXTERNAL_COMMANDS shouldn't contain builtin \"{}\"",
+                        name
+                    );
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
                     drop_println!(config, "    {:<20} {}", name, summary);
                 }
                 CommandInfo::External { path } => {
-                    if is_verbose {
+                    if let Some(desc) = known_external_desc {
+                        drop_println!(config, "    {:<20} {}", name, desc);
+                    } else if is_verbose {
                         drop_println!(config, "    {:<20} {}", name, path.display());
                     } else {
                         drop_println!(config, "    {}", name);
@@ -121,10 +145,6 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
         return Ok(());
     }
 
-    // Global args need to be extracted before expanding aliases because the
-    // clap code for extracting a subcommand discards global options
-    // (appearing before the subcommand).
-    let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
     let (cmd, subcommand_args) = match expanded_args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {

@@ -270,7 +270,7 @@ struct SerializedTarget<'a> {
     /// Serialized as a list of strings for historical reasons.
     kind: &'a TargetKind,
     /// Corresponds to `--crate-type` compiler attribute.
-    /// See https://doc.rust-lang.org/reference/linkage.html
+    /// See <https://doc.rust-lang.org/reference/linkage.html>
     crate_types: Vec<CrateType>,
     name: &'a str,
     src_path: Option<&'a PathBuf>,
@@ -278,7 +278,7 @@ struct SerializedTarget<'a> {
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
     /// Whether docs should be built for the target via `cargo doc`
-    /// See https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection
+    /// See <https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection>
     doc: bool,
     doctest: bool,
     /// Whether tests should be run for the target (`test` field in `Cargo.toml`)

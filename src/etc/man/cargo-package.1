@@ -67,6 +67,22 @@ fields in the manifest.
 .sp
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/publishing.html> for more details about
 packaging and publishing.
+.SS ".cargo_vcs_info.json format"
+Will generate a \fB\&.cargo_vcs_info.json\fR in the following format
+.sp
+.RS 4
+.nf
+{
+ "git": {
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+ },
+ "path_in_vcs": ""
+}
+.fi
+.RE
+.sp
+\fBpath_in_vcs\fR will be set to a repo\-relative path for packages
+in subdirectories of the version control repository.
 .SH "OPTIONS"
 .SS "Package Options"
 .sp

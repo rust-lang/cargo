@@ -566,7 +566,11 @@ impl BuildOutput {
             let (key, value) = match (key, value) {
                 (Some(a), Some(b)) => (a, b.trim_end()),
                 // Line started with `cargo:` but didn't match `key=value`.
-                _ => bail!("Wrong output in {}: `{}`", whence, line),
+                _ => bail!("invalid output in {}: `{}`\n\
+                    Expected a line with `cargo:key=value` with an `=` character, \
+                    but none was found.\n\
+                    See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+                    for more information about build script outputs.", whence, line),
             };
 
             // This will rewrite paths if the target directory has been moved.

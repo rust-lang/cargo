@@ -87,10 +87,8 @@ Each new feature described below should explain how to use it.
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
-    * [Edition 2021](#edition-2021) — Adds support for the 2021 Edition.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
@@ -100,7 +98,6 @@ Each new feature described below should explain how to use it.
 * Configuration
     * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
     * [config-include](#config-include) — Adds the ability for config files to include other files.
-    * [patch-in-config](#patch-in-config) — Adds support for specifying the `[patch]` table in config files.
     * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
 * Registries
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
@@ -239,49 +236,6 @@ or running tests for both targets:
 ```
 cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
 ```
-
-### Custom named profiles
-
-* Tracking Issue: [rust-lang/cargo#6988](https://github.com/rust-lang/cargo/issues/6988)
-* RFC: [#2678](https://github.com/rust-lang/rfcs/pull/2678)
-
-With this feature you can define custom profiles having new names. With the
-custom profile enabled, build artifacts can be emitted by default to
-directories other than `release` or `debug`, based on the custom profile's
-name.
-
-For example:
-
-```toml
-cargo-features = ["named-profiles"]
-
-[profile.release-lto]
-inherits = "release"
-lto = true
-````
-
-An `inherits` key is used in order to receive attributes from other profiles,
-so that a new custom profile can be based on the standard `dev` or `release`
-profile presets. Cargo emits errors in case `inherits` loops are detected. When
-considering inheritance hierarchy, all profiles directly or indirectly inherit
-from either from `release` or from `dev`.
-
-Valid profile names are: must not be empty, use only alphanumeric characters or
-`-` or `_`.
-
-Passing `--profile` with the profile's name to various Cargo commands, directs
-operations to use the profile's attributes. Overrides that are specified in the
-profiles from which the custom profile inherits are inherited too.
-
-For example, using `cargo build` with `--profile` and the manifest from above:
-
-```sh
-cargo +nightly build --profile release-lto -Z unstable-options
-```
-
-When a custom profile is used, build artifacts go to a different target by
-default. In the example above, you can expect to see the outputs under
-`target/release-lto`.
 
 
 #### New `dir-name` attribute
@@ -1170,34 +1124,6 @@ cargo logout -Z credential-process
 [crates.io]: https://crates.io/
 [config file]: config.md
 
-### edition 2021
-* Tracking Issue: [rust-lang/rust#85811](https://github.com/rust-lang/rust/issues/85811)
-
-Support for the 2021 [edition] can be enabled by adding the `edition2021`
-unstable feature to the top of `Cargo.toml`:
-
-```toml
-cargo-features = ["edition2021"]
-
-[package]
-name = "my-package"
-version = "0.1.0"
-edition = "2021"
-```
-
-If you want to transition an existing project from a previous edition, then
-`cargo fix --edition` can be used on the nightly channel. After running `cargo
-fix`, you can switch the edition to 2021 as illustrated above.
-
-This feature is very unstable, and is only intended for early testing and
-experimentation. Future nightly releases may introduce changes for the 2021
-edition that may break your build.
-
-The 2021 edition will set the default [resolver version] to "2".
-
-[edition]: ../../edition-guide/index.html
-[resolver version]: resolver.md#resolver-versions
-
 ### future incompat report
 * RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
 * rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
@@ -1215,30 +1141,17 @@ the `--future-incompat-report` flag. The developer should then update their
 dependencies to a version where the issue is fixed, or work with the
 developers of the dependencies to help resolve the issue.
 
-### patch-in-config
-* Original Pull Request: [#9204](https://github.com/rust-lang/cargo/pull/9204)
-* Tracking Issue: [#9269](https://github.com/rust-lang/cargo/issues/9269)
+This feature can be configured through a `[future-incompat-report]`
+section in `.cargo/config`. Currently, the supported options are:
 
-The `-Z patch-in-config` flag enables the use of `[patch]` sections in
-cargo configuration files (`.cargo/config.toml`). The format of such
-`[patch]` sections is identical to the one used in `Cargo.toml`.
+```
+[future-incompat-report]
+frequency = FREQUENCY
+```
 
-Since `.cargo/config.toml` files are not usually checked into source
-control, you should prefer patching using `Cargo.toml` where possible to
-ensure that other developers can compile your crate in their own
-environments. Patching through cargo configuration files is generally
-only appropriate when the patch section is automatically generated by an
-external build tool.
+The supported values for `FREQUENCY` are 'always` and 'never', which control
+whether or not a message is printed out at the end of `cargo build` / `cargo check`.
 
-If a given dependency is patched both in a cargo configuration file and
-a `Cargo.toml` file, the patch in `Cargo.toml` is used. If multiple
-configuration files patch the same dependency, standard cargo
-configuration merging is used, which prefers the value defined closest
-to the current directory, with `$HOME/.cargo/config.toml` taking the
-lowest precedence.
-
-Relative `path` dependencies in such a `[patch]` section are resolved
-relative to the configuration file they appear in.
 
 ### `cargo config`
 
@@ -1451,3 +1364,21 @@ serde = "1.0.117"
 [profile.dev.package.foo]
 codegen-backend = "cranelift"
 ```
+
+### patch-in-config
+
+The `-Z patch-in-config` flag, and the corresponding support for
+`[patch]` section in Cargo configuration files has been stabilized in
+the 1.56 release. See the [patch field](config.html#patch) for more
+information.
+
+### edition 2021
+
+The 2021 edition has been stabilized in the 1.56 release.
+See the [`edition` field](manifest.md#the-edition-field) for more information on setting the edition.
+See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](../../edition-guide/index.html) for more information on migrating existing projects.
+
+### Custom named profiles
+
+Custom named profiles have been stabilized in the 1.57 release. See the
+[profiles chapter](profiles.md#custom-profiles) for more information.

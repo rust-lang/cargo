@@ -207,7 +207,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .iter()
         .map(|p| PackageIdSpec::parse(p))
         .map(|r| {
-            // Provide a error message if pkgid is not within the resolved
+            // Provide an error message if pkgid is not within the resolved
             // dependencies graph.
             r.and_then(|spec| spec.query(ws_resolve.targeted_resolve.iter()).and(Ok(spec)))
         })

@@ -142,6 +142,7 @@ fn attach_std_deps(
     std_unit_deps: UnitGraph,
 ) {
     // Attach the standard library as a dependency of every target unit.
+    let mut found = false;
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
             deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
@@ -152,12 +153,16 @@ fn attach_std_deps(
                 public: true,
                 noprelude: true,
             }));
+            found = true;
         }
     }
-    // And also include the dependencies of the standard library itself.
-    for (unit, deps) in std_unit_deps.into_iter() {
-        if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
-            panic!("std unit collision with existing unit: {:?}", other_unit);
+    // And also include the dependencies of the standard library itself. Don't
+    // include these if no units actually needed the standard library.
+    if found {
+        for (unit, deps) in std_unit_deps.into_iter() {
+            if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
+                panic!("std unit collision with existing unit: {:?}", other_unit);
+            }
         }
     }
 }

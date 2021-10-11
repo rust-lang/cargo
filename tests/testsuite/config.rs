@@ -148,7 +148,7 @@ pub fn write_config_at(path: impl AsRef<Path>, contents: &str) {
     fs::write(path, contents).unwrap();
 }
 
-fn write_config_toml(config: &str) {
+pub fn write_config_toml(config: &str) {
     write_config_at(paths::root().join(".cargo/config.toml"), config);
 }
 
@@ -656,6 +656,7 @@ Caused by:
     );
 
     #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct S {
         f1: i64,
         f2: String,
@@ -1155,6 +1156,7 @@ fn table_merge_failure() {
     );
 
     #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct Table {
         key: StringList,
     }

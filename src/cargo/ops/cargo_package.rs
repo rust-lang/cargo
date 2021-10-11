@@ -20,6 +20,7 @@ use cargo_util::paths;
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use log::debug;
+use serde::Serialize;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 
 pub struct PackageOpts<'cfg> {
@@ -58,8 +59,20 @@ enum GeneratedFile {
     Manifest,
     /// Generates `Cargo.lock` in some cases (like if there is a binary).
     Lockfile,
-    /// Adds a `.cargo-vcs_info.json` file if in a (clean) git repo.
-    VcsInfo(String),
+    /// Adds a `.cargo_vcs_info.json` file if in a (clean) git repo.
+    VcsInfo(VcsInfo),
+}
+
+#[derive(Serialize)]
+struct VcsInfo {
+    git: GitVcsInfo,
+    /// Path to the package within repo (empty string if root). / not \
+    path_in_vcs: String,
+}
+
+#[derive(Serialize)]
+struct GitVcsInfo {
+    sha1: String,
 }
 
 pub fn package_one(
@@ -88,7 +101,6 @@ pub fn package_one(
     let vcs_info = if !opts.allow_dirty {
         // This will error if a dirty repo is found.
         check_repo_state(pkg, &src_files, config)?
-            .map(|h| format!("{{\n  \"git\": {{\n    \"sha1\": \"{}\"\n  }}\n}}\n", h))
     } else {
         None
     };
@@ -189,7 +201,7 @@ fn build_ar_list(
     ws: &Workspace<'_>,
     pkg: &Package,
     src_files: Vec<PathBuf>,
-    vcs_info: Option<String>,
+    vcs_info: Option<VcsInfo>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = Vec::new();
     let root = pkg.root();
@@ -442,7 +454,7 @@ fn check_repo_state(
     p: &Package,
     src_files: &[PathBuf],
     config: &Config,
-) -> CargoResult<Option<String>> {
+) -> CargoResult<Option<VcsInfo>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
             debug!("found a git repo at {:?}", workdir);
@@ -454,7 +466,15 @@ fn check_repo_state(
                         "found (git) Cargo.toml at {:?} in workdir {:?}",
                         path, workdir
                     );
-                    return git(p, src_files, &repo);
+                    let path_in_vcs = path
+                        .parent()
+                        .and_then(|p| p.to_str())
+                        .unwrap_or("")
+                        .replace("\\", "/");
+                    return Ok(Some(VcsInfo {
+                        git: git(p, src_files, &repo)?,
+                        path_in_vcs,
+                    }));
                 }
             }
             config.shell().verbose(|shell| {
@@ -475,11 +495,7 @@ fn check_repo_state(
     // directory is dirty or not, thus we have to assume that it's clean.
     return Ok(None);
 
-    fn git(
-        p: &Package,
-        src_files: &[PathBuf],
-        repo: &git2::Repository,
-    ) -> CargoResult<Option<String>> {
+    fn git(p: &Package, src_files: &[PathBuf], repo: &git2::Repository) -> CargoResult<GitVcsInfo> {
         // This is a collection of any dirty or untracked files. This covers:
         // - new/modified/deleted/renamed/type change (index or worktree)
         // - untracked files (which are "new" worktree files)
@@ -506,7 +522,9 @@ fn check_repo_state(
             .collect();
         if dirty_src_files.is_empty() {
             let rev_obj = repo.revparse_single("HEAD")?;
-            Ok(Some(rev_obj.id().to_string()))
+            Ok(GitVcsInfo {
+                sha1: rev_obj.id().to_string(),
+            })
         } else {
             anyhow::bail!(
                 "{} files in the working directory contain changes that were \
@@ -618,7 +636,7 @@ fn tar(
                 let contents = match generated_kind {
                     GeneratedFile::Manifest => pkg.to_registry_toml(ws)?,
                     GeneratedFile::Lockfile => build_lock(ws, pkg)?,
-                    GeneratedFile::VcsInfo(s) => s,
+                    GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };
                 header.set_entry_type(EntryType::file());
                 header.set_mode(0o644);

@@ -41,6 +41,13 @@ DESCRIPTION
           benchmarks on the stable channel, such as Criterion
           <https://crates.io/crates/criterion>.
 
+       By default, cargo bench uses the bench profile
+       <https://doc.rust-lang.org/cargo/reference/profiles.html#bench>, which
+       enables optimizations and disables debugging information. If you need to
+       debug a benchmark, you can use the --profile=dev command-line option to
+       switch to the dev profile. You can then run the debug-enabled benchmark
+       within a debugger.
+
 OPTIONS
    Benchmark Options
        --no-run
@@ -202,6 +209,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
+       --profile name
+           Benchmark with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
+
        --ignore-rust-version
            Benchmark the target even if the selected Rust compiler is older
            than the required Rust version as configured in the project's
@@ -328,22 +340,6 @@ OPTIONS
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
-
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
-
-       Benchmarks are always built with the bench profile. Binary and lib
-       targets are built separately as benchmarks with the bench profile.
-       Library targets are built with the release profiles when linked to
-       binaries and benchmarks. Dependencies use the release profile.
-
-       If you need a debug build of a benchmark, try building it with
-       cargo-build(1) which will use the test profile which is by default
-       unoptimized and includes debug information. You can then run the
-       debug-enabled benchmark manually.
 
 ENVIRONMENT
        See the reference

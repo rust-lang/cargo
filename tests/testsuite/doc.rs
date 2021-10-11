@@ -4,7 +4,7 @@ use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{is_nightly, rustc_host, symlink_supported};
+use cargo_test_support::{is_nightly, rustc_host, symlink_supported, tools};
 use std::fs;
 use std::str;
 
@@ -511,6 +511,108 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
     let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(!doc_html.contains("Library"));
     assert!(doc_html.contains("Binary"));
+}
+
+#[cargo_test]
+fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                //! Binary documentation
+                extern crate foo;
+                fn main() {
+                    foo::foo();
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                //! Library documentation
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "examples/ex1.rs",
+            r#"
+                //! Example1 documentation
+                pub fn x() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --example ex1")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/ex1/index.html");
+    assert!(!doc_html.contains("Library"));
+    assert!(!doc_html.contains("Binary"));
+    assert!(doc_html.contains("Example1"));
+}
+
+#[cargo_test]
+fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                //! Binary documentation
+                extern crate foo;
+                fn main() {
+                    foo::foo();
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                //! Library documentation
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "examples/ex1.rs",
+            r#"
+                //! Example1 documentation
+                pub fn example1() { f(); }
+            "#,
+        )
+        .file(
+            "examples/ex2.rs",
+            r#"
+                //! Example2 documentation
+                pub fn example2() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --examples")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let example_doc_html_1 = p.read_file("target/doc/ex1/index.html");
+    let example_doc_html_2 = p.read_file("target/doc/ex2/index.html");
+
+    assert!(!example_doc_html_1.contains("Library"));
+    assert!(!example_doc_html_1.contains("Binary"));
+
+    assert!(!example_doc_html_2.contains("Library"));
+    assert!(!example_doc_html_2.contains("Binary"));
+
+    assert!(example_doc_html_1.contains("Example1"));
+    assert!(example_doc_html_2.contains("Example2"));
 }
 
 #[cargo_test]
@@ -1148,7 +1250,6 @@ fn doc_all_member_dependency_same_name() {
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_help_message() {
     let p = project()
         .file(
@@ -1166,7 +1267,7 @@ fn doc_workspace_open_help_message() {
 
     // The order in which bar is compiled or documented is not deterministic
     p.cargo("doc --workspace --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] Opening [..]/bar/index.html")
@@ -1174,7 +1275,6 @@ fn doc_workspace_open_help_message() {
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_extern_map_local() {
     if !is_nightly() {
         // -Zextern-html-root-url is unstable
@@ -1195,7 +1295,7 @@ fn doc_extern_map_local() {
         .build();
 
     p.cargo("doc -v --no-deps -Zrustdoc-map --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -1209,7 +1309,6 @@ fn doc_extern_map_local() {
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
@@ -1233,7 +1332,7 @@ fn doc_workspace_open_different_library_and_package_names() {
         .build();
 
     p.cargo("doc --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
         .with_stdout_contains("[CWD]/target/doc/foolib/index.html")
@@ -1241,21 +1340,23 @@ fn doc_workspace_open_different_library_and_package_names() {
 
     p.change_file(
         ".cargo/config.toml",
-        r#"
-        [doc]
-        browser = ["echo", "a"]
-    "#,
+        &format!(
+            r#"
+                [doc]
+                browser = ["{}", "a"]
+            "#,
+            tools::echo().display().to_string().replace('\\', "\\\\")
+        ),
     );
 
     // check that the cargo config overrides the browser env var
     p.cargo("doc --open")
-        .env("BROWSER", "true")
+        .env("BROWSER", "do_not_run_me")
         .with_stdout_contains("a [CWD]/target/doc/foolib/index.html")
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_binary() {
     let p = project()
         .file(
@@ -1280,14 +1381,13 @@ fn doc_workspace_open_binary() {
         .build();
 
     p.cargo("doc --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] Opening [CWD]/target/doc/foobin/index.html")
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_binary_and_library() {
     let p = project()
         .file(
@@ -1315,7 +1415,7 @@ fn doc_workspace_open_binary_and_library() {
         .build();
 
     p.cargo("doc --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] Opening [CWD]/target/doc/foolib/index.html")
         .run();

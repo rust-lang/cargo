@@ -36,7 +36,7 @@
 //!
 //! "NeedsToken" indicates that a rustc is interested in acquiring a token, but
 //! never that it would be impossible to make progress without one (i.e., it
-//! would be incorrect for rustc to not terminate due to a unfulfilled
+//! would be incorrect for rustc to not terminate due to an unfulfilled
 //! NeedsToken request); we do not usually fulfill all NeedsToken requests for a
 //! given rustc.
 //!
@@ -62,6 +62,7 @@ use cargo_util::ProcessBuilder;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
+use semver::Version;
 
 use super::context::OutputFile;
 use super::job::{
@@ -74,9 +75,8 @@ use crate::core::compiler::future_incompat::{
     FutureBreakageItem, FutureIncompatReportPackage, OnDiskReports,
 };
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{FeatureValue, PackageId, Shell, TargetKind};
+use crate::core::{PackageId, Shell, TargetKind};
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
-use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
 use crate::util::{self, internal, profile};
@@ -885,7 +885,21 @@ impl<'cfg> DrainState<'cfg> {
         if !bcx.config.cli_unstable().future_incompat_report {
             return;
         }
+        let should_display_message = match bcx.config.future_incompat_config() {
+            Ok(config) => config.should_display_message(),
+            Err(e) => {
+                crate::display_warning_with_error(
+                    "failed to read future-incompat config from disk",
+                    &e,
+                    &mut bcx.config.shell(),
+                );
+                true
+            }
+        };
+
         if self.per_package_future_incompat_reports.is_empty() {
+            // Explicitly passing a command-line flag overrides
+            // `should_display_message` from the config file
             if bcx.build_config.future_incompat_report {
                 drop(
                     bcx.config
@@ -907,11 +921,13 @@ impl<'cfg> DrainState<'cfg> {
             .map(|pid| pid.to_string())
             .collect();
 
-        drop(bcx.config.shell().warn(&format!(
-            "the following packages contain code that will be rejected by a future \
-             version of Rust: {}",
-            package_vers.join(", ")
-        )));
+        if should_display_message || bcx.build_config.future_incompat_report {
+            drop(bcx.config.shell().warn(&format!(
+                "the following packages contain code that will be rejected by a future \
+                 version of Rust: {}",
+                package_vers.join(", ")
+            )));
+        }
 
         let on_disk_reports =
             OnDiskReports::save_report(bcx.ws, &self.per_package_future_incompat_reports);
@@ -925,7 +941,7 @@ impl<'cfg> DrainState<'cfg> {
                  future-incompatibilities -Z future-incompat-report --id {}`",
                 report_id
             )));
-        } else {
+        } else if should_display_message {
             drop(bcx.config.shell().note(&format!(
                 "to see what the problems were, use the option \
                  `--future-incompat-report`, or run `cargo report \
@@ -982,20 +998,30 @@ impl<'cfg> DrainState<'cfg> {
 
     fn name_for_progress(&self, unit: &Unit) -> String {
         let pkg_name = unit.pkg.name();
+        let target_name = unit.target.name();
         match unit.mode {
             CompileMode::Doc { .. } => format!("{}(doc)", pkg_name),
             CompileMode::RunCustomBuild => format!("{}(build)", pkg_name),
-            _ => {
-                let annotation = match unit.target.kind() {
-                    TargetKind::Lib(_) => return pkg_name.to_string(),
-                    TargetKind::CustomBuild => return format!("{}(build.rs)", pkg_name),
-                    TargetKind::Bin => "bin",
-                    TargetKind::Test => "test",
-                    TargetKind::Bench => "bench",
-                    TargetKind::ExampleBin | TargetKind::ExampleLib(_) => "example",
-                };
-                format!("{}({})", unit.target.name(), annotation)
-            }
+            CompileMode::Test | CompileMode::Check { test: true } => match unit.target.kind() {
+                TargetKind::Lib(_) => format!("{}(test)", target_name),
+                TargetKind::CustomBuild => panic!("cannot test build script"),
+                TargetKind::Bin => format!("{}(bin test)", target_name),
+                TargetKind::Test => format!("{}(test)", target_name),
+                TargetKind::Bench => format!("{}(bench)", target_name),
+                TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
+                    format!("{}(example test)", target_name)
+                }
+            },
+            _ => match unit.target.kind() {
+                TargetKind::Lib(_) => pkg_name.to_string(),
+                TargetKind::CustomBuild => format!("{}(build.rs)", pkg_name),
+                TargetKind::Bin => format!("{}(bin)", target_name),
+                TargetKind::Test => format!("{}(test)", target_name),
+                TargetKind::Bench => format!("{}(bench)", target_name),
+                TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
+                    format!("{}(example)", target_name)
+                }
+            },
         }
     }
 
@@ -1233,55 +1259,27 @@ impl<'cfg> DrainState<'cfg> {
 
     fn back_compat_notice(&self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
         if unit.pkg.name() != "diesel"
-            || unit.pkg.version().major != 1
+            || unit.pkg.version() >= &Version::new(1, 4, 8)
             || cx.bcx.ws.resolve_behavior() == ResolveBehavior::V1
             || !unit.pkg.package_id().source_id().is_registry()
             || !unit.features.is_empty()
         {
             return Ok(());
         }
-        let other_diesel = match cx
+        if !cx
             .bcx
             .unit_graph
             .keys()
-            .find(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
+            .any(|unit| unit.pkg.name() == "diesel" && !unit.features.is_empty())
         {
-            Some(u) => u,
-            // Unlikely due to features.
-            None => return Ok(()),
-        };
-        let mut features_suggestion: BTreeSet<_> = other_diesel.features.iter().collect();
-        let fmap = other_diesel.pkg.summary().features();
-        // Remove any unnecessary features.
-        for feature in &other_diesel.features {
-            if let Some(feats) = fmap.get(feature) {
-                for feat in feats {
-                    if let FeatureValue::Feature(f) = feat {
-                        features_suggestion.remove(&f);
-                    }
-                }
-            }
+            return Ok(());
         }
-        features_suggestion.remove(&InternedString::new("default"));
-        let features_suggestion = toml::to_string(&features_suggestion).unwrap();
-
-        cx.bcx.config.shell().note(&format!(
+        cx.bcx.config.shell().note(
             "\
 This error may be due to an interaction between diesel and Cargo's new
-feature resolver. Some workarounds you may want to consider:
-- Add a build-dependency in Cargo.toml on diesel to force Cargo to add the appropriate
-  features. This may look something like this:
-
-    [build-dependencies]
-    diesel = {{ version = \"{}\", features = {} }}
-
-- Try using the previous resolver by setting `resolver = \"1\"` in `Cargo.toml`
-  (see <https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions>
-  for more information).
+feature resolver. Try updating to diesel 1.4.8 to fix this error.
 ",
-            unit.pkg.version(),
-            features_suggestion
-        ))?;
+        )?;
         Ok(())
     }
 }

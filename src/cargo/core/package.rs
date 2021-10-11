@@ -516,32 +516,19 @@ impl<'cfg> PackageSet<'cfg> {
             if !used.insert(pkg_id) {
                 return Ok(());
             }
-            let filtered_deps = resolve.deps(pkg_id).filter(|&(_id, deps)| {
-                deps.iter().any(|dep| {
-                    if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
-                        return false;
-                    }
-                    // This is overly broad, since not all target-specific
-                    // dependencies are used both for target and host. To tighten this
-                    // up, this function would need to track "for_host" similar to how
-                    // unit dependencies handles it.
-                    if force_all_targets == ForceAllTargets::No {
-                        let activated = requested_kinds
-                            .iter()
-                            .chain(Some(&CompileKind::Host))
-                            .any(|kind| target_data.dep_platform_activated(dep, *kind));
-                        if !activated {
-                            return false;
-                        }
-                    }
-                    true
-                })
-            });
-            for (dep_id, _deps) in filtered_deps {
+            let filtered_deps = PackageSet::filter_deps(
+                pkg_id,
+                resolve,
+                has_dev_units,
+                requested_kinds,
+                target_data,
+                force_all_targets,
+            );
+            for pkg_id in filtered_deps {
                 collect_used_deps(
                     used,
                     resolve,
-                    dep_id,
+                    pkg_id,
                     has_dev_units,
                     requested_kinds,
                     target_data,
@@ -569,6 +556,75 @@ impl<'cfg> PackageSet<'cfg> {
         }
         self.get_many(to_download.into_iter())?;
         Ok(())
+    }
+
+    /// Check if there are any dependency packages that do not have any libs.
+    pub(crate) fn no_lib_pkgs(
+        &self,
+        resolve: &Resolve,
+        root_ids: &[PackageId],
+        has_dev_units: HasDevUnits,
+        requested_kinds: &[CompileKind],
+        target_data: &RustcTargetData<'_>,
+        force_all_targets: ForceAllTargets,
+    ) -> BTreeMap<PackageId, Vec<&Package>> {
+        root_ids
+            .iter()
+            .map(|&root_id| {
+                let pkgs = PackageSet::filter_deps(
+                    root_id,
+                    resolve,
+                    has_dev_units,
+                    requested_kinds,
+                    target_data,
+                    force_all_targets,
+                )
+                .filter_map(|package_id| {
+                    if let Ok(dep_pkg) = self.get_one(package_id) {
+                        if !dep_pkg.targets().iter().any(|t| t.is_lib()) {
+                            Some(dep_pkg)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+                (root_id, pkgs)
+            })
+            .collect()
+    }
+
+    fn filter_deps<'a>(
+        pkg_id: PackageId,
+        resolve: &'a Resolve,
+        has_dev_units: HasDevUnits,
+        requested_kinds: &'a [CompileKind],
+        target_data: &'a RustcTargetData<'_>,
+        force_all_targets: ForceAllTargets,
+    ) -> impl Iterator<Item = PackageId> + 'a {
+        resolve
+            .deps(pkg_id)
+            .filter(move |&(_id, deps)| {
+                deps.iter().any(|dep| {
+                    if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
+                        return false;
+                    }
+                    if force_all_targets == ForceAllTargets::No {
+                        let activated = requested_kinds
+                            .iter()
+                            .chain(Some(&CompileKind::Host))
+                            .any(|kind| target_data.dep_platform_activated(dep, *kind));
+                        if !activated {
+                            return false;
+                        }
+                    }
+                    true
+                })
+            })
+            .map(|(pkg_id, _)| pkg_id)
+            .into_iter()
     }
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
