@@ -50,5 +50,6 @@ fn verbose() {
         .with_stdout_contains("host: [..]")
         .with_stdout_contains("libgit2: [..]")
         .with_stdout_contains("libcurl: [..]")
+        .with_stdout_contains("os: [..]")
         .run();
 }

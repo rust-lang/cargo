@@ -178,6 +178,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
         add_libgit2(&mut version_string);
         add_curl(&mut version_string);
         add_ssl(&mut version_string);
+        writeln!(version_string, "os: {}", os_info::get()).unwrap();
     }
     version_string
 }
