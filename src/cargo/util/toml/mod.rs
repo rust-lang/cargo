@@ -1346,7 +1346,7 @@ impl TomlManifest {
         source_id: SourceId,
         package_root: &Path,
         config: &Config,
-        inherit: &InheritableFields,
+        inherit: Option<&InheritableFields>,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec![];
         let mut warnings = vec![];
@@ -1360,9 +1360,40 @@ impl TomlManifest {
         let project = me.project.clone().or_else(|| me.package.clone());
         let project = &mut project.ok_or_else(|| anyhow!("no `package` section found"))?;
 
-        TomlManifest::parse_toml_project(project, inherit)?;
+        let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
+            (Some(toml_workspace), None) => WorkspaceConfig::Root(
+                WorkspaceRootConfig::from_toml_workspace(package_root, toml_workspace),
+            ),
+            (None, root) => WorkspaceConfig::Member {
+                root: root.cloned(),
+            },
+            (Some(..), Some(..)) => bail!(
+                "cannot configure both `package.workspace` and \
+                 `[workspace]`, only one can be specified"
+            ),
+        };
 
-        project.license_file = match (project.license_file.clone(), inherit.license_file.as_ref()) {
+        let inheritable = if inherit.is_some() {
+            inherit.unwrap().to_owned()
+        } else {
+            match find_inheritable(
+                source_id,
+                config,
+                package_root.join("Cargo.toml"),
+                project.name.to_string(),
+                workspace_config,
+            )? {
+                None => InheritableFields::default(),
+                Some(inherit) => inherit,
+            }
+        };
+
+        TomlManifest::parse_toml_project(project, &inheritable)?;
+
+        project.license_file = match (
+            project.license_file.clone(),
+            inheritable.license_file.as_ref(),
+        ) {
             (None, _) => None,
             (Some(MaybeWorkspace::Defined(defined)), _) => Some(MaybeWorkspace::Defined(defined)),
             (Some(MaybeWorkspace::Workspace(_)), None) => {
@@ -1370,14 +1401,14 @@ impl TomlManifest {
             }
             (Some(MaybeWorkspace::Workspace(_)), Some(ws_license_file)) => {
                 Some(MaybeWorkspace::Defined(join_relative_path(
-                    inherit.ws_path.clone().unwrap().as_path(),
+                    inheritable.ws_path.clone().unwrap().as_path(),
                     package_root,
                     ws_license_file,
                 )?))
             }
         };
 
-        project.readme = match (project.readme.clone(), inherit.readme.as_ref()) {
+        project.readme = match (project.readme.clone(), inheritable.readme.as_ref()) {
             (None, _) => match default_readme_from_package_root(package_root) {
                 None => None,
                 Some(readme) => Some(MaybeWorkspace::Defined(StringOrBool::String(readme))),
@@ -1389,7 +1420,7 @@ impl TomlManifest {
             (Some(MaybeWorkspace::Workspace(_)), Some(defined)) => match defined {
                 StringOrBool::String(file) => Some(MaybeWorkspace::Defined(StringOrBool::String(
                     join_relative_path(
-                        inherit.ws_path.clone().unwrap().as_path(),
+                        inheritable.ws_path.clone().unwrap().as_path(),
                         package_root,
                         file,
                     )?,
@@ -1568,19 +1599,20 @@ impl TomlManifest {
         }
 
         // Collect the dependencies.
-        let dependencies = process_dependencies(&mut cx, me.dependencies.as_ref(), None, inherit)?;
+        let dependencies =
+            process_dependencies(&mut cx, me.dependencies.as_ref(), None, &inheritable)?;
         let dev_deps = me
             .dev_dependencies
             .as_ref()
             .or_else(|| me.dev_dependencies2.as_ref());
         let dev_dependencies =
-            process_dependencies(&mut cx, dev_deps, Some(DepKind::Development), inherit)?;
+            process_dependencies(&mut cx, dev_deps, Some(DepKind::Development), &inheritable)?;
         let build_deps = me
             .build_dependencies
             .as_ref()
             .or_else(|| me.build_dependencies2.as_ref());
         let build_dependencies =
-            process_dependencies(&mut cx, build_deps, Some(DepKind::Build), inherit)?;
+            process_dependencies(&mut cx, build_deps, Some(DepKind::Build), &inheritable)?;
 
         for (name, platform) in me.target.iter().flatten() {
             cx.platform = {
@@ -1588,17 +1620,17 @@ impl TomlManifest {
                 platform.check_cfg_attributes(&mut cx.warnings);
                 Some(platform)
             };
-            process_dependencies(&mut cx, platform.dependencies.as_ref(), None, inherit)?;
+            process_dependencies(&mut cx, platform.dependencies.as_ref(), None, &inheritable)?;
             let build_deps = platform
                 .build_dependencies
                 .as_ref()
                 .or_else(|| platform.build_dependencies2.as_ref());
-            process_dependencies(&mut cx, build_deps, Some(DepKind::Build), inherit)?;
+            process_dependencies(&mut cx, build_deps, Some(DepKind::Build), &inheritable)?;
             let dev_deps = platform
                 .dev_dependencies
                 .as_ref()
                 .or_else(|| platform.dev_dependencies2.as_ref());
-            process_dependencies(&mut cx, dev_deps, Some(DepKind::Development), inherit)?;
+            process_dependencies(&mut cx, dev_deps, Some(DepKind::Development), &inheritable)?;
         }
 
         replace = me.replace(&mut cx)?;
@@ -1636,7 +1668,7 @@ impl TomlManifest {
 
         let badges = ws_default(
             me.badges.clone(),
-            inherit,
+            &inheritable,
             |inherit| &inherit.badges,
             "badges",
         )?;
@@ -2498,11 +2530,42 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
     }
 
     fn infer_path_version(&mut self, cx: &mut Context<'_, '_>, name: &str) -> CargoResult<()> {
+        fn find_version(
+            base_path: PathBuf,
+            source_id: SourceId,
+            config: &Config,
+            name: &str,
+            package: &Box<TomlProject>,
+            workspace_config: WorkspaceConfig,
+        ) -> CargoResult<Option<Version>> {
+            let inherit = match find_inheritable(
+                source_id,
+                config,
+                base_path,
+                name.to_string(),
+                workspace_config,
+            )? {
+                Some(inheritable) => inheritable,
+                None => bail!(
+                    "workspace does not define version information required by {}",
+                    name
+                ),
+            };
+            match (package.publish.as_ref(), inherit.publish) {
+                (Some(MaybeWorkspace::Defined(VecStringOrBool::Bool(false))), _) => Ok(None),
+                (_, Some(VecStringOrBool::Bool(false))) => Ok(None),
+                _ => Ok(Some(inherit.version.expect(&format!(
+                    "workspace does not define version information required by {}",
+                    name
+                )))),
+            }
+        }
         if let (None, Some(p)) = (&self.version, &self.path) {
-            let base_path = &cx.root.join(p.resolve(cx.config));
-            let (manifest, _) =
-                read_manifest(&base_path.join("Cargo.toml"), cx.source_id, cx.config)
-                    .with_context(|| format!("failed to get dependency `{}`", name))?;
+            let base_path = &cx.root.join(p.resolve(cx.config)).join("Cargo.toml");
+            let key = base_path.parent().unwrap();
+            let source_id = SourceId::for_path(key)?;
+            let (manifest, _) = read_manifest(base_path, source_id, cx.config)
+                .with_context(|| format!("failed to get dependency `{}`", name))?;
             self.version = if let EitherManifest::Real(ref intermediate) = manifest {
                 let toml = intermediate.original();
                 let package = toml
@@ -2510,54 +2573,40 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
                     .as_ref()
                     .or_else(|| toml.project.as_ref())
                     .ok_or_else(|| anyhow!("no `package` section found"))?;
-                let v = match package.version {
-                    MaybeWorkspace::Workspace(_) => {
-                        let root_path =
-                            find_workspace_root(&base_path.join("Cargo.toml"), cx.config)?
-                                .expect("workspace was referenced, none found");
-                        let (root_man, _) = read_manifest(&root_path, cx.source_id, cx.config)
-                            .with_context(|| format!("failed to get workspace for `{}`", name))?;
-                        if let WorkspaceConfig::Root(ws_config) = root_man.workspace_config() {
-                            let inherit = ws_config.inheritable_fields().clone();
-                            match (package.publish.as_ref(), inherit.publish) {
-                                (
-                                    Some(MaybeWorkspace::Defined(VecStringOrBool::Bool(false))),
-                                    _,
-                                ) => None,
-                                (_, Some(VecStringOrBool::Bool(false))) => None,
-                                _ => Some(inherit.version.expect(&format!(
-                                    "workspace does not define version information required by {}",
-                                    name
-                                ))),
-                            }
-                        } else {
-                            bail!(
-                                "workspace does not define version information required by {}",
-                                name
-                            )
-                        }
+                let workspace_config = match (toml.workspace.as_ref(), package.workspace.as_ref()) {
+                    (Some(toml_workspace), None) => {
+                        WorkspaceConfig::Root(WorkspaceRootConfig::from_toml_workspace(
+                            &cx.root.join(p.resolve(cx.config)),
+                            toml_workspace,
+                        ))
                     }
+                    (None, root) => WorkspaceConfig::Member {
+                        root: root.cloned(),
+                    },
+                    (Some(..), Some(..)) => bail!(
+                        "cannot configure both `package.workspace` and \
+                 `[workspace]`, only one can be specified"
+                    ),
+                };
+                let v = match package.version {
+                    MaybeWorkspace::Workspace(_) => find_version(
+                        base_path.clone(),
+                        source_id,
+                        cx.config,
+                        name,
+                        package,
+                        workspace_config,
+                    )?,
                     MaybeWorkspace::Defined(ref version) => match package.publish {
                         Some(MaybeWorkspace::Defined(VecStringOrBool::Bool(false))) => None,
-                        Some(MaybeWorkspace::Workspace(_)) => {
-                            let root_path =
-                                find_workspace_root(&base_path.join("Cargo.toml"), cx.config)?
-                                    .expect("workspace was referenced, none found");
-                            let (root_man, _) = read_manifest(&root_path, cx.source_id, cx.config)
-                                .with_context(|| format!("failed to get dependency `{}`", name))?;
-                            if let WorkspaceConfig::Root(ws_config) = root_man.workspace_config() {
-                                let inherit = ws_config.inheritable_fields().clone();
-                                match inherit.publish {
-                                    Some(VecStringOrBool::Bool(false)) => None,
-                                    _ => Some(version.clone()),
-                                }
-                            } else {
-                                bail!(
-                                    "workspace does not define version information required by {}",
-                                    name
-                                )
-                            }
-                        }
+                        Some(MaybeWorkspace::Workspace(_)) => find_version(
+                            base_path.clone(),
+                            source_id,
+                            cx.config,
+                            name,
+                            package,
+                            workspace_config,
+                        )?,
                         _ => Some(version.clone()),
                     },
                 };
@@ -2668,5 +2717,64 @@ impl TomlTarget {
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+fn find_inheritable(
+    source_id: SourceId,
+    config: &Config,
+    resolved_path: PathBuf,
+    name: String,
+    workspace_config: WorkspaceConfig,
+) -> CargoResult<Option<InheritableFields>> {
+    fn inheritable(
+        source_id: SourceId,
+        config: &Config,
+        resolved_path: PathBuf,
+        name: String,
+    ) -> CargoResult<InheritableFields> {
+        let mut inheritable_map = config.inheritable.borrow_mut();
+        match inheritable_map.get(&resolved_path) {
+            Some(inheritable) => Ok(inheritable.clone()),
+            None => {
+                let (man, _) = read_manifest(&resolved_path, source_id, config)
+                    .expect(format!("failed to get workspace for `{}`", name).as_str());
+                match man.workspace_config() {
+                    WorkspaceConfig::Root(root) => {
+                        let fields = root.inheritable_fields().clone();
+                        inheritable_map.insert(resolved_path, fields.clone());
+                        Ok(fields)
+                    }
+                    _ => bail!(
+                        "root of a workspace inferred but wasn't a root: {}",
+                        resolved_path.display()
+                    ),
+                }
+            }
+        }
+    }
+
+    match workspace_config {
+        WorkspaceConfig::Root(root) => Ok(Some(root.inheritable_fields().clone())),
+        WorkspaceConfig::Member {
+            root: Some(ref path_to_root),
+        } => {
+            let path = resolved_path
+                .parent()
+                .unwrap()
+                .join(path_to_root)
+                .join("Cargo.toml");
+            debug!("find_root - pointer {}", path.display());
+            let root_path = paths::normalize_path(&path);
+            inheritable(source_id, config, root_path, name).map(|inherit| Some(inherit))
+        }
+        WorkspaceConfig::Member { root: None } => {
+            match find_workspace_root(&resolved_path, config)? {
+                Some(path_to_root) => {
+                    inheritable(source_id, config, path_to_root, name).map(|inherit| Some(inherit))
+                }
+                None => Ok(None),
+            }
+        }
     }
 }

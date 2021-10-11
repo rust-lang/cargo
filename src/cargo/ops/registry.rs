@@ -18,7 +18,7 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
-use crate::core::{InheritableFields, Package, SourceId, Workspace};
+use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
@@ -904,11 +904,7 @@ fn get_source_id(
         (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
-            let src = map.load(
-                SourceId::crates_io(config)?,
-                &HashSet::new(),
-                &InheritableFields::default(),
-            )?;
+            let src = map.load(SourceId::crates_io(config)?, &HashSet::new())?;
             Ok(src.replaced_source_id())
         }
     }

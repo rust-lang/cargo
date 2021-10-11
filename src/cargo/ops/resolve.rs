@@ -63,7 +63,7 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let mut registry = PackageRegistry::new(ws.config(), ws.inheritable_fields().clone())?;
+    let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
@@ -88,7 +88,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
-    let mut registry = PackageRegistry::new(ws.config(), ws.inheritable_fields().clone())?;
+    let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
     let resolve = if ws.ignore_lock() {
         None
@@ -495,8 +495,7 @@ pub fn add_overrides<'a>(
 
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
-        let mut source =
-            PathSource::new_recursive(&path, id, ws.config(), ws.inheritable_fields().clone());
+        let mut source = PathSource::new_recursive(&path, id, ws.config());
         source.update().with_context(|| {
             format!(
                 "failed to update path override `{}` \

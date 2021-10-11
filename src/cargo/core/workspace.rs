@@ -203,14 +203,13 @@ impl<'cfg> Workspace<'cfg> {
                 manifest_path
             )
         } else {
-            ws.root_manifest = find_workspace_root(manifest_path, config)?;
+            ws.root_manifest = ws.find_root(manifest_path)?;
         }
 
         let mut cfg = ws.load_workspace_config()?;
         ws.custom_metadata = cfg.as_mut().and_then(|c| c.custom_metadata.take());
         ws.inheritable_fields = cfg.map(|c| c.inheritable_fields).unwrap_or_default();
 
-        ws.load_current_manifest()?;
         ws.find_members()?;
         ws.set_resolve_behavior();
         ws.validate()?;
@@ -618,7 +617,9 @@ impl<'cfg> Workspace<'cfg> {
         // If we didn't find a root, it must mean there is no [workspace] section, and thus no
         // metadata.
         if let Some(root_path) = &self.root_manifest {
-            let root_package = self.packages.load(root_path, &self.inheritable_fields)?;
+            let root_package = self
+                .packages
+                .load(root_path, None, &self.inheritable_fields)?;
             match root_package.workspace_config() {
                 WorkspaceConfig::Root(ref root_config) => {
                     return Ok(Some(root_config.clone()));
@@ -632,6 +633,156 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         Ok(None)
+    }
+
+    /// Finds the root of a workspace for the crate whose manifest is located
+    /// at `manifest_path`.
+    ///
+    /// This will parse the `Cargo.toml` at `manifest_path` and then interpret
+    /// the workspace configuration, optionally walking up the filesystem
+    /// looking for other workspace roots.
+    ///
+    /// Returns an error if `manifest_path` isn't actually a valid manifest or
+    /// if some other transient error happens.
+    fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
+        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
+            let path = member_manifest
+                .parent()
+                .unwrap()
+                .join(root_link)
+                .join("Cargo.toml");
+            debug!("find_root - pointer {}", path.display());
+            paths::normalize_path(&path)
+        }
+
+        let mut to_finalize_parse: Vec<(PathBuf, EitherManifest)> = Vec::new();
+
+        {
+            let current = self.parse_manifest(manifest_path)?;
+            match current.workspace_config().clone() {
+                WorkspaceConfig::Root(root) => {
+                    debug!("find_root - is root {}", manifest_path.display());
+                    self.packages
+                        .load(manifest_path, Some(current), &root.inheritable_fields)?;
+                    self.config
+                        .inheritable
+                        .borrow_mut()
+                        .insert(PathBuf::from(manifest_path), root.inheritable_fields);
+                    return Ok(Some(manifest_path.to_path_buf()));
+                }
+                WorkspaceConfig::Member {
+                    root: Some(ref path_to_root),
+                } => {
+                    let path = read_root_pointer(manifest_path, path_to_root);
+                    let root = self.parse_manifest(&path)?;
+                    let inherit = if let WorkspaceConfig::Root(root) = root.workspace_config() {
+                        root.inheritable_fields.clone()
+                    } else {
+                        bail!(
+                            "root of a workspace inferred but wasn't a root: {}",
+                            path.display()
+                        )
+                    };
+                    self.packages.load(manifest_path, Some(current), &inherit)?;
+                    self.packages.load(&path, Some(root), &inherit)?;
+                    self.config
+                        .inheritable
+                        .borrow_mut()
+                        .insert(path.clone(), inherit);
+                    return Ok(Some(path));
+                }
+                WorkspaceConfig::Member { root: None } => {
+                    to_finalize_parse.push((PathBuf::from(manifest_path), current))
+                }
+            }
+        }
+
+        for path in paths::ancestors(manifest_path, None).skip(2) {
+            if path.ends_with("target/package") {
+                break;
+            }
+
+            let ances_manifest_path = path.join("Cargo.toml");
+            debug!("find_root - trying {}", ances_manifest_path.display());
+            if ances_manifest_path.exists() {
+                let current = self.parse_manifest(&ances_manifest_path)?;
+                match current.workspace_config().clone() {
+                    WorkspaceConfig::Root(ref ances_root_config) => {
+                        debug!("find_root - found a root checking exclusion");
+                        if !ances_root_config.is_excluded(manifest_path) {
+                            debug!("find_root - found!");
+                            for (man_path, manifest) in to_finalize_parse {
+                                self.packages.load(
+                                    &man_path,
+                                    Some(manifest),
+                                    &ances_root_config.inheritable_fields,
+                                )?;
+                            }
+                            self.packages.load(
+                                &ances_manifest_path,
+                                Some(current),
+                                &ances_root_config.inheritable_fields,
+                            )?;
+                            self.config.inheritable.borrow_mut().insert(
+                                PathBuf::from(manifest_path),
+                                ances_root_config.inheritable_fields.clone(),
+                            );
+                            return Ok(Some(ances_manifest_path));
+                        }
+                    }
+                    WorkspaceConfig::Member {
+                        root: Some(ref path_to_root),
+                    } => {
+                        debug!("find_root - found pointer");
+                        let path = read_root_pointer(&ances_manifest_path, path_to_root);
+                        let root = self.parse_manifest(&path)?;
+                        let inherit = if let WorkspaceConfig::Root(root) = root.workspace_config() {
+                            root.inheritable_fields.clone()
+                        } else {
+                            bail!(
+                                "root of a workspace inferred but wasn't a root: {}",
+                                path.display()
+                            )
+                        };
+                        for (man_path, manifest) in to_finalize_parse {
+                            self.packages.load(&man_path, Some(manifest), &inherit)?;
+                        }
+                        self.packages.load(&path, Some(root), &inherit)?;
+                        self.config
+                            .inheritable
+                            .borrow_mut()
+                            .insert(path.clone(), inherit);
+                        return Ok(Some(path));
+                    }
+                    WorkspaceConfig::Member { .. } => {
+                        to_finalize_parse.push((ances_manifest_path, current))
+                    }
+                }
+            }
+
+            // Don't walk across `CARGO_HOME` when we're looking for the
+            // workspace root. Sometimes a package will be organized with
+            // `CARGO_HOME` pointing inside of the workspace root or in the
+            // current package, but we don't want to mistakenly try to put
+            // crates.io crates into the workspace by accident.
+            if self.config.home() == path {
+                break;
+            }
+        }
+
+        for (man_path, manifest) in to_finalize_parse {
+            self.packages
+                .load(&man_path, Some(manifest), &InheritableFields::default())?;
+        }
+
+        Ok(None)
+    }
+
+    fn parse_manifest(&mut self, manifest_path: &Path) -> CargoResult<EitherManifest> {
+        let key = manifest_path.parent().unwrap();
+        let source_id = SourceId::for_path(key)?;
+        let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, self.config)?;
+        Ok(manifest)
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -725,7 +876,7 @@ impl<'cfg> Workspace<'cfg> {
         }
         if is_path_dep
             && !manifest_path.parent().unwrap().starts_with(self.root())
-            && find_workspace_root(&manifest_path, self.config)? != self.root_manifest
+            && self.find_root(&manifest_path)? != self.root_manifest
         {
             // If `manifest_path` is a path dependency outside of the workspace,
             // don't add it, or any of its dependencies, as a members.
@@ -734,7 +885,7 @@ impl<'cfg> Workspace<'cfg> {
 
         if let WorkspaceConfig::Root(ref root_config) = *self
             .packages
-            .load(root_manifest, &self.inheritable_fields)?
+            .load(root_manifest, None, &self.inheritable_fields)?
             .workspace_config()
         {
             if root_config.is_excluded(&manifest_path) {
@@ -747,7 +898,7 @@ impl<'cfg> Workspace<'cfg> {
         let candidates = {
             let pkg = match *self
                 .packages
-                .load(&manifest_path, &self.inheritable_fields)?
+                .load(&manifest_path, None, &self.inheritable_fields)?
             {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
@@ -871,7 +1022,7 @@ impl<'cfg> Workspace<'cfg> {
 
     fn validate_members(&mut self) -> CargoResult<()> {
         for member in self.members.clone() {
-            let root = find_workspace_root(&member, self.config)?;
+            let root = self.find_root(&member)?;
             if root == self.root_manifest {
                 continue;
             }
@@ -1014,7 +1165,7 @@ impl<'cfg> Workspace<'cfg> {
             manifest_path,
             source_id,
             self.config,
-            &self.inheritable_fields,
+            Some(&self.inheritable_fields),
         )?;
         loaded.insert(manifest_path.to_path_buf(), package.clone());
         Ok(package)
@@ -1041,12 +1192,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(ref p) => p.clone(),
                 MaybePackage::Virtual(_) => continue,
             };
-            let mut src = PathSource::new(
-                pkg.root(),
-                pkg.package_id().source_id(),
-                self.config,
-                self.inheritable_fields.clone(),
-            );
+            let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), self.config);
             src.preload_with(pkg);
             registry.add_preloaded(Box::new(src));
         }
@@ -1518,11 +1664,6 @@ impl<'cfg> Workspace<'cfg> {
 
         ms
     }
-    fn load_current_manifest(&mut self) -> CargoResult<()> {
-        self.packages
-            .load(&self.current_manifest, &self.inheritable_fields)?;
-        Ok(())
-    }
 }
 
 impl<'cfg> Packages<'cfg> {
@@ -1545,15 +1686,22 @@ impl<'cfg> Packages<'cfg> {
     fn load(
         &mut self,
         manifest_path: &Path,
+        manifest: Option<EitherManifest>,
         inheritable_fields: &InheritableFields,
     ) -> CargoResult<&MaybePackage> {
         let key = manifest_path.parent().unwrap();
         match self.packages.entry(key.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = SourceId::for_path(key)?;
-                let (manifest, _nested_paths) =
-                    read_manifest(manifest_path, source_id, self.config)?;
+                let manifest = match manifest {
+                    Some(either) => either,
+                    None => {
+                        let source_id = SourceId::for_path(key)?;
+                        let (manifest, _nested_paths) =
+                            read_manifest(manifest_path, source_id, self.config)?;
+                        manifest
+                    }
+                };
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
                         // This checks if the manifest is also a workspace root so you can get
@@ -1565,7 +1713,7 @@ impl<'cfg> Packages<'cfg> {
                                 inheritable_fields.clone()
                             };
                         let (pkg, _nested_paths) =
-                            manifest.to_package(manifest_path, self.config, &inherit)?;
+                            manifest.to_package(manifest_path, self.config, Some(&inherit))?;
                         MaybePackage::Package(pkg)
                     }
                     EitherManifest::Virtual(vm) => MaybePackage::Virtual(vm),
@@ -1715,19 +1863,6 @@ pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult
             .join("Cargo.toml");
         debug!("find_root - pointer {}", path.display());
         paths::normalize_path(&path)
-    }
-
-    {
-        match *parse_manifest(manifest_path, config)?.workspace_config() {
-            WorkspaceConfig::Root(_) => {
-                debug!("find_root - is root {}", manifest_path.display());
-                return Ok(Some(manifest_path.to_path_buf()));
-            }
-            WorkspaceConfig::Member {
-                root: Some(ref path_to_root),
-            } => return Ok(Some(read_root_pointer(manifest_path, path_to_root))),
-            WorkspaceConfig::Member { root: None } => {}
-        }
     }
 
     for path in paths::ancestors(manifest_path, None).skip(2) {

@@ -551,9 +551,7 @@ fn dangling_member() {
         .with_status(101)
         .with_stderr(
             "\
-error: package `[..]` is a member of the wrong workspace
-expected: [..]
-actual: [..]
+error: root of a workspace inferred but wasn't a root: [..]
 ",
         )
         .run();

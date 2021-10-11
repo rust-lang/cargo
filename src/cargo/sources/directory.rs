@@ -3,7 +3,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 
 use crate::core::source::MaybePackage;
-use crate::core::{Dependency, InheritableFields, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
@@ -112,12 +112,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             if !path.join("Cargo.toml").exists() {
                 continue;
             }
-            let mut src = PathSource::new(
-                &path,
-                self.source_id,
-                self.config,
-                InheritableFields::default(),
-            );
+            let mut src = PathSource::new(&path, self.source_id, self.config);
             src.update()?;
             let mut pkg = src.root_package()?;
 

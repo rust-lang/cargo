@@ -3,9 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::core::{
-    EitherManifest, InheritableFields, Package, PackageId, SourceId, WorkspaceConfig,
-};
+use crate::core::{EitherManifest, InheritableFields, Package, PackageId, SourceId};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
@@ -17,7 +15,7 @@ pub fn read_package(
     path: &Path,
     source_id: SourceId,
     config: &Config,
-    inherit: &InheritableFields,
+    inherit: Option<&InheritableFields>,
 ) -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!(
         "read_package; path={}; source-id={}",
@@ -40,7 +38,6 @@ pub fn read_packages(
     path: &Path,
     source_id: SourceId,
     config: &Config,
-    inherit: &InheritableFields,
 ) -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
@@ -83,7 +80,6 @@ pub fn read_packages(
                 config,
                 &mut visited,
                 &mut errors,
-                inherit,
             )?;
         }
         Ok(true)
@@ -148,7 +144,6 @@ fn read_nested_packages(
     config: &Config,
     visited: &mut HashSet<PathBuf>,
     errors: &mut Vec<anyhow::Error>,
-    inherit: &InheritableFields,
 ) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) {
         return Ok(());
@@ -179,28 +174,7 @@ fn read_nested_packages(
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => return Ok(()),
     };
-
-    let inheritable_fields = match manifest.workspace_config() {
-        WorkspaceConfig::Root(ws_root) => ws_root.inheritable_fields().clone(),
-        WorkspaceConfig::Member {
-            root: Some(ref path_to_root),
-        } => {
-            let path = Path::new(path_to_root);
-            let (root_manifest, _) = read_manifest(
-                &path.join("Cargo.toml"),
-                SourceId::for_path(path.parent().unwrap())?,
-                config,
-            )
-            .unwrap();
-            if let WorkspaceConfig::Root(ws_config) = root_manifest.workspace_config().clone() {
-                ws_config.inheritable_fields().clone()
-            } else {
-                inherit.clone()
-            }
-        }
-        WorkspaceConfig::Member { root: None } => inherit.clone(),
-    };
-    let (pkg, nested) = match manifest.to_package(&manifest_path, config, &inheritable_fields) {
+    let (pkg, nested) = match manifest.to_package(&manifest_path, config, None) {
         Err(err) => {
             // Ignore malformed manifests found on git repositories
             //
@@ -245,15 +219,8 @@ fn read_nested_packages(
     if !source_id.is_registry() {
         for p in nested.iter() {
             let path = paths::normalize_path(&path.join(p));
-            let result = read_nested_packages(
-                &path,
-                all_packages,
-                source_id,
-                config,
-                visited,
-                errors,
-                inherit,
-            );
+            let result =
+                read_nested_packages(&path, all_packages, source_id, config, visited, errors);
             // Ignore broken manifests found on git repositories.
             //
             // A well formed manifest might still fail to load due to reasons

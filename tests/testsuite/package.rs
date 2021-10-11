@@ -1951,7 +1951,7 @@ src/main.rs
 
 Caused by:
   no matching package named `bar` found
-  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  location searched: registry `crates-io`
   required by package `foo v0.1.0 [..]`
 ",
         )

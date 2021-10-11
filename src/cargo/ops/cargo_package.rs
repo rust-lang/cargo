@@ -68,12 +68,7 @@ pub fn package_one(
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<FileLock>> {
     let config = ws.config();
-    let mut src = PathSource::new(
-        pkg.root(),
-        pkg.package_id().source_id(),
-        config,
-        ws.inheritable_fields().clone(),
-    );
+    let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), config);
     src.update()?;
 
     if opts.check_metadata {
@@ -376,7 +371,7 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
         source_id,
         package_root,
         config,
-        ws.inheritable_fields(),
+        Some(ws.inheritable_fields()),
     )?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
@@ -776,7 +771,7 @@ fn run_verify(
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.
     let id = SourceId::for_path(&dst)?;
-    let mut src = PathSource::new(&dst, id, ws.config(), ws.inheritable_fields().clone());
+    let mut src = PathSource::new(&dst, id, ws.config());
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true, ws.inheritable_fields().clone())?;

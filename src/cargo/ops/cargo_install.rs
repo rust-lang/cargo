@@ -141,7 +141,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     config,
                 )?
             } else if let Some(dep) = dep {
-                let mut source = map.load(source_id, &HashSet::new(), &InheritableFields::default())?;
+                let mut source = map.load(source_id, &HashSet::new())?;
                 if let Ok(Some(pkg)) = installed_exact_package(
                     dep.clone(),
                     &mut source,

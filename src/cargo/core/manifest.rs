@@ -1019,7 +1019,7 @@ impl IntermediateManifest {
         &self,
         manifest_path: &Path,
         config: &Config,
-        inheritable_fields: &InheritableFields,
+        inheritable_fields: Option<&InheritableFields>,
     ) -> CargoResult<(Package, Vec<PathBuf>)> {
         let (mut manifest, nested_paths) = TomlManifest::to_real_manifest(
             &self.original,
