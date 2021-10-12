@@ -417,6 +417,10 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 // but Cargo does not know about that.
                 vec![]
             }
+            CompileMode::Docscrape => {
+                // FIXME(wcrichto): should this include the *.examples files?
+                vec![]
+            }
             CompileMode::Test
             | CompileMode::Build
             | CompileMode::Bench

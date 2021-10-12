@@ -48,6 +48,8 @@ pub struct BuildContext<'a, 'cfg> {
     /// The dependency graph of units to compile.
     pub unit_graph: UnitGraph,
 
+    pub scrape_units: Vec<Unit>,
+
     /// The list of all kinds that are involved in this build
     pub all_kinds: HashSet<CompileKind>,
 }
@@ -62,6 +64,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
+        scrape_units: Vec<Unit>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let all_kinds = unit_graph
             .keys()
@@ -80,6 +83,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             target_data,
             roots,
             unit_graph,
+            scrape_units,
             all_kinds,
         })
     }

@@ -47,6 +47,7 @@ struct State<'a, 'cfg> {
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+    scrape_roots: &'a [Unit],
 
     /// A set of edges in `unit_dependencies` where (a, b) means that the
     /// dependency from a to b was added purely because it was a dev-dependency.
@@ -61,6 +62,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit],
+    scrape_roots: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
@@ -91,12 +93,14 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         target_data,
         profiles,
         interner,
+        scrape_roots,
         dev_dependency_edges: HashSet::new(),
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
 
     deps_of_roots(roots, &mut state)?;
+    deps_of_roots(scrape_roots, &mut state)?;
     super::links::validate_links(state.resolve(), &state.unit_dependencies)?;
     // Hopefully there aren't any links conflicts with the standard library?
 
@@ -477,6 +481,17 @@ fn compute_deps_doc(
     if unit.target.is_bin() || unit.target.is_example() {
         ret.extend(maybe_lib(unit, state, unit_for)?);
     }
+
+    for scrape_unit in state.scrape_roots.iter() {
+        ret.push(UnitDep {
+            unit: scrape_unit.clone(),
+            unit_for: unit_for.with_dependency(scrape_unit, &scrape_unit.target),
+            extern_crate_name: InternedString::new(""),
+            public: false,
+            noprelude: false,
+        });
+    }
+
     Ok(ret)
 }
 
@@ -568,7 +583,7 @@ fn dep_build_script(
 /// Choose the correct mode for dependencies.
 fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
     match mode {
-        CompileMode::Check { .. } | CompileMode::Doc { .. } => {
+        CompileMode::Check { .. } | CompileMode::Doc { .. } | CompileMode::Docscrape => {
             if target.for_host() {
                 // Plugin and proc macro targets should be compiled like
                 // normal.

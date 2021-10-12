@@ -149,6 +149,7 @@ pub enum CompileMode {
     Doc { deps: bool },
     /// A target that will be tested with `rustdoc`.
     Doctest,
+    Docscrape,
     /// A marker for Units that represent the execution of a `build.rs` script.
     RunCustomBuild,
 }
@@ -166,6 +167,7 @@ impl ser::Serialize for CompileMode {
             Bench => "bench".serialize(s),
             Doc { .. } => "doc".serialize(s),
             Doctest => "doctest".serialize(s),
+            Docscrape => "docscrape".serialize(s),
             RunCustomBuild => "run-custom-build".serialize(s),
         }
     }
@@ -185,6 +187,11 @@ impl CompileMode {
     /// Returns `true` if this a doc test.
     pub fn is_doc_test(self) -> bool {
         self == CompileMode::Doctest
+    }
+
+    /// Returns `true` if this is scraping examples for documentation.
+    pub fn is_doc_scrape(self) -> bool {
+        self == CompileMode::Docscrape
     }
 
     /// Returns `true` if this is any type of test (test, benchmark, doc test, or

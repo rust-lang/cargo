@@ -165,7 +165,7 @@ fn compile<'cfg>(
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;
         job.before(if job.freshness() == Freshness::Dirty {
-            let work = if unit.mode.is_doc() {
+            let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
                 rustdoc(cx, unit)?
             } else {
                 rustc(cx, unit, exec)?
@@ -645,6 +645,48 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
+    }
+
+    let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
+        let layout = cx.files().layout(unit.kind);
+        let output_dir = layout.prepare_tmp()?;
+        Ok(output_dir.join(format!("{}.examples", unit.buildkey())))
+    };
+
+    if unit.mode.is_doc_scrape() {
+        rustdoc.arg("-Zunstable-options");
+
+        rustdoc
+            .arg("--scrape-examples-output-path")
+            .arg(scrape_output_path(unit)?);
+
+        for root in &cx.bcx.roots {
+            rustdoc
+                .arg("--scrape-examples-target-crate")
+                .arg(root.pkg.name());
+        }
+    } else if cx.bcx.scrape_units.len() > 0 {
+        rustdoc.arg("-Zunstable-options");
+
+        for scrape_unit in &cx.bcx.scrape_units {
+            rustdoc
+                .arg("--with-examples")
+                .arg(scrape_output_path(scrape_unit)?);
+        }
+
+        let mut all_units = cx
+            .bcx
+            .unit_graph
+            .values()
+            .map(|deps| deps.iter().map(|dep| &dep.unit))
+            .flatten();
+        let check_unit = all_units
+            .find(|other| {
+                unit.pkg == other.pkg && unit.target == other.target && other.mode.is_check()
+            })
+            .with_context(|| format!("Could not find check unit for {:?}", unit))?;
+        let metadata = cx.files().metadata(check_unit);
+        rustdoc.arg("-C").arg(format!("metadata={}", metadata));
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
