@@ -138,7 +138,9 @@ pub enum CompileMode {
     /// Building a target with `rustc` to emit `rmeta` metadata only. If
     /// `test` is true, then it is also compiled with `--test` to check it like
     /// a test.
-    Check { test: bool },
+    Check {
+        test: bool,
+    },
     /// Used to indicate benchmarks should be built. This is not used in
     /// `Unit`, because it is essentially the same as `Test` (indicating
     /// `--test` should be passed to rustc) and by using `Test` instead it
@@ -146,7 +148,9 @@ pub enum CompileMode {
     Bench,
     /// A target that will be documented with `rustdoc`.
     /// If `deps` is true, then it will also document all dependencies.
-    Doc { deps: bool },
+    Doc {
+        deps: bool,
+    },
     /// A target that will be tested with `rustdoc`.
     Doctest,
     Docscrape,
