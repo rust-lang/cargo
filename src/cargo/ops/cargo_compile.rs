@@ -23,7 +23,6 @@
 //!       repeats until the queue is empty.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::ffi::OsString;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -545,24 +544,6 @@ pub fn create_bcx<'a, 'cfg>(
         Default::default()
     };
 
-    let fmt_unit = |u: &Unit| format!("{} {:?} / {:?}", u.target.name(), u.target.kind(), u.mode);
-    let fmt_units = |v: &[Unit]| v.iter().map(|u| fmt_unit(u)).collect::<Vec<_>>().join(", ");
-    let fmt_graph = |g: &UnitGraph| {
-        g.iter()
-            .map(|(k, vs)| {
-                format!(
-                    "{} =>\n{}",
-                    fmt_unit(k),
-                    vs.iter()
-                        .map(|u| format!("  {}", fmt_unit(&u.unit)))
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
-
     let mut unit_graph = build_unit_dependencies(
         ws,
         &pkg_set,
@@ -577,9 +558,6 @@ pub fn create_bcx<'a, 'cfg>(
         &profiles,
         interner,
     )?;
-    println!("SCRAPE UNITS: {}", fmt_units(&scrape_units));
-    println!("BEFORE ROOTS: {}", fmt_units(&units));
-    println!("BEFORE GRAPH: {}", fmt_graph(&unit_graph));
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
@@ -607,8 +585,6 @@ pub fn create_bcx<'a, 'cfg>(
         scrape_units = new_graph.1;
         unit_graph = new_graph.2;
     }
-    println!("AFTER UNITS: {}", fmt_units(&units));
-    println!("AFTER GRAPH: {}", fmt_graph(&unit_graph));
 
     let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
@@ -620,10 +596,7 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_args_name
             );
         }
-        extra_compiler_args.insert(
-            units[0].clone(),
-            args.into_iter().map(OsString::from).collect::<Vec<_>>(),
-        );
+        extra_compiler_args.insert(units[0].clone(), args);
     }
 
     for unit in &units {
@@ -643,7 +616,7 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_compiler_args
                     .entry(unit.clone())
                     .or_default()
-                    .extend(args.into_iter().map(OsString::from));
+                    .extend(args);
             }
         }
     }

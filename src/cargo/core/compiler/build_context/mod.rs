@@ -8,7 +8,6 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Rustc;
 use std::collections::{HashMap, HashSet};
-use std::ffi::OsString;
 use std::path::PathBuf;
 
 mod target_info;
@@ -32,7 +31,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub build_config: &'a BuildConfig,
 
     /// Extra compiler args for either `rustc` or `rustdoc`.
-    pub extra_compiler_args: HashMap<Unit, Vec<OsString>>,
+    pub extra_compiler_args: HashMap<Unit, Vec<String>>,
 
     /// Package downloader.
     ///
@@ -60,7 +59,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         packages: PackageSet<'cfg>,
         build_config: &'a BuildConfig,
         profiles: Profiles,
-        extra_compiler_args: HashMap<Unit, Vec<OsString>>,
+        extra_compiler_args: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
@@ -124,7 +123,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         &self.target_data.info(unit.kind).rustdocflags
     }
 
-    pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<OsString>> {
+    pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
     }
 }

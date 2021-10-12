@@ -665,7 +665,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 .arg("--scrape-examples-target-crate")
                 .arg(root.pkg.name());
         }
-    } else if cx.bcx.scrape_units.len() > 0 {
+    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.roots.contains(unit) {
         rustdoc.arg("-Zunstable-options");
 
         for scrape_unit in &cx.bcx.scrape_units {
