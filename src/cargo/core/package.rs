@@ -102,6 +102,7 @@ pub struct SerializedPackage {
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
+    rust_version: Option<String>,
 }
 
 impl Package {
@@ -268,6 +269,7 @@ impl Package {
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
+            rust_version: self.rust_version().map(|s| s.to_owned()),
         }
     }
 }

@@ -464,6 +464,7 @@ fn update_precise_first_run() {
       "name": "bar",
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "source": null,
       "targets": [
         {
@@ -504,6 +505,7 @@ fn update_precise_first_run() {
       "name": "serde",
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "targets": [
         {
