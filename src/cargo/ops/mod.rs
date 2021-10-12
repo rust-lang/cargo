@@ -28,6 +28,7 @@ pub use self::registry::{needs_custom_http_transport, registry_login, registry_l
 pub use self::registry::{publish, registry_configuration, RegistryConfig};
 pub use self::resolve::{
     add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_with_opts,
+    WorkspaceResolve,
 };
 pub use self::vendor::{vendor, VendorOptions};
 
