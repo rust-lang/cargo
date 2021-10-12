@@ -12,7 +12,7 @@ mod job;
 mod job_queue;
 mod layout;
 mod links;
-pub mod lto;
+mod lto;
 mod output_depinfo;
 pub mod rustdoc;
 pub mod standard_lib;
