@@ -75,6 +75,9 @@ pub struct OnDiskReports {
 struct OnDiskReport {
     /// Unique reference to the report for the `--id` CLI flag.
     id: u32,
+    /// A (possibly empty) message describing which affected
+    /// packages have newer versions available
+    update_message: String,
     /// Report, suitable for printing to the console.
     /// Maps package names to the corresponding report
     /// We use a `BTreeMap` so that the iteration order
@@ -96,6 +99,7 @@ impl OnDiskReports {
     /// Saves a new report.
     pub fn save_report(
         ws: &Workspace<'_>,
+        update_message: String,
         per_package_reports: &[FutureIncompatReportPackage],
     ) -> OnDiskReports {
         let mut current_reports = match Self::load(ws) {
@@ -110,6 +114,7 @@ impl OnDiskReports {
         };
         let report = OnDiskReport {
             id: current_reports.next_id,
+            update_message,
             per_package: render_report(per_package_reports),
         };
         current_reports.next_id += 1;
@@ -192,7 +197,10 @@ impl OnDiskReports {
                 available
             )
         })?;
-        let to_display = if let Some(package) = package {
+
+        let mut to_display = report.update_message.clone();
+
+        let package_report = if let Some(package) = package {
             report
                 .per_package
                 .get(package)
@@ -205,7 +213,7 @@ impl OnDiskReports {
                         iter_join(report.per_package.keys(), ", ")
                     )
                 })?
-                .clone()
+                .to_string()
         } else {
             report
                 .per_package
@@ -214,6 +222,8 @@ impl OnDiskReports {
                 .collect::<Vec<_>>()
                 .join("\n")
         };
+        to_display += &package_report;
+
         let to_display = if config.shell().err_supports_color() {
             to_display
         } else {

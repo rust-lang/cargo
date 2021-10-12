@@ -419,15 +419,22 @@ fn suggestions_for_updates() {
     // in a long while?).
     p.cargo("update -p without_updates").run();
 
+    let update_message = "\
+- Some affected dependencies have newer versions available.
+You may want to consider updating them to a newer version to see if the issue has been fixed.
+
+big_update v1.0.0 has the following newer versions available: 2.0.0
+with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
+";
+
     p.cargo("check -Zfuture-incompat-report -Zunstable-options --future-incompat-report")
         .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .with_stderr_contains(
-            "\
-- Some affected dependencies have updates available:
-big_update v1.0.0 has the following newer versions available: 2.0.0
-with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
-",
-        )
+        .with_stderr_contains(update_message)
         .run();
+
+    p.cargo("report future-incompatibilities")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains(update_message)
+        .run()
 }

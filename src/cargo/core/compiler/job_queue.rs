@@ -928,8 +928,26 @@ impl<'cfg> DrainState<'cfg> {
             )));
         }
 
-        let on_disk_reports =
-            OnDiskReports::save_report(bcx.ws, &self.per_package_future_incompat_reports);
+        let updated_versions = get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
+
+        let update_message = if !updated_versions.is_empty() {
+            format!(
+                "
+- Some affected dependencies have newer versions available.
+You may want to consider updating them to a newer version to see if the issue has been fixed.
+
+{updated_versions}\n",
+                updated_versions = updated_versions
+            )
+        } else {
+            String::new()
+        };
+
+        let on_disk_reports = OnDiskReports::save_report(
+            bcx.ws,
+            update_message.clone(),
+            &self.per_package_future_incompat_reports,
+        );
         let report_id = on_disk_reports.last_id();
 
         if bcx.build_config.future_incompat_report {
@@ -953,20 +971,6 @@ impl<'cfg> DrainState<'cfg> {
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
-
-            let updated_versions = get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
-
-            let update_message = if !updated_versions.is_empty() {
-                format!(
-                    "
-- Some affected dependencies have updates available:
-{updated_versions}",
-                    updated_versions = updated_versions
-                )
-            } else {
-                String::new()
-            };
-
             drop(bcx.config.shell().note(&format!(
                 "
 To solve this problem, you can try the following approaches:
