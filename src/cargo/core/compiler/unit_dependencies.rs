@@ -100,7 +100,6 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
 
     deps_of_roots(roots, &mut state)?;
-    deps_of_roots(scrape_roots, &mut state)?;
     super::links::validate_links(state.resolve(), &state.unit_dependencies)?;
     // Hopefully there aren't any links conflicts with the standard library?
 
@@ -425,15 +424,7 @@ fn compute_deps_doc(
 ) -> CargoResult<Vec<UnitDep>> {
     // FIXME(wcrichto): target.is_lib() is probably not the correct way to check
     //   if the unit needs dev-dependencies
-    let deps = state.deps(
-        unit,
-        unit_for,
-        &|dep| match (unit.target.is_lib(), dep.kind()) {
-            (_, DepKind::Normal) => true,
-            (false, DepKind::Development) => true,
-            _ => false,
-        },
-    );
+    let deps = state.deps(unit, unit_for, &|dep| dep.kind() == DepKind::Normal);
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
@@ -483,13 +474,17 @@ fn compute_deps_doc(
     }
 
     for scrape_unit in state.scrape_roots.iter() {
-        ret.push(UnitDep {
-            unit: scrape_unit.clone(),
-            unit_for: unit_for.with_dependency(scrape_unit, &scrape_unit.target),
-            extern_crate_name: InternedString::new(""),
-            public: false,
-            noprelude: false,
-        });
+        let unit_for = UnitFor::new_normal();
+        deps_of(scrape_unit, state, unit_for)?;
+        ret.push(new_unit_dep(
+            state,
+            scrape_unit,
+            &scrape_unit.pkg,
+            &scrape_unit.target,
+            unit_for,
+            scrape_unit.kind,
+            scrape_unit.mode,
+        )?);
     }
 
     Ok(ret)
@@ -720,6 +715,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                         && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
+                .filter(|(_, other)| !other.unit.mode.is_doc_scrape())
                 // Skip dependencies induced via dev-dependencies since
                 // connections between `links` and build scripts only happens
                 // via normal dependencies. Otherwise since dev-dependencies can

@@ -21,6 +21,7 @@ mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
 
+use std::collections::HashSet;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -660,33 +661,37 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             .arg("--scrape-examples-output-path")
             .arg(scrape_output_path(unit)?);
 
-        for root in &cx.bcx.roots {
-            rustdoc
-                .arg("--scrape-examples-target-crate")
-                .arg(root.pkg.name());
+        let root_packages = cx
+            .bcx
+            .roots
+            .iter()
+            .map(|root| root.pkg.name())
+            .collect::<HashSet<_>>();
+        for pkg in root_packages {
+            rustdoc.arg("--scrape-examples-target-crate").arg(pkg);
         }
     } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.roots.contains(unit) {
-        rustdoc.arg("-Zunstable-options");
-
-        for scrape_unit in &cx.bcx.scrape_units {
-            rustdoc
-                .arg("--with-examples")
-                .arg(scrape_output_path(scrape_unit)?);
-        }
-
-        let mut all_units = cx
+        let all_units = cx
             .bcx
             .unit_graph
             .values()
             .map(|deps| deps.iter().map(|dep| &dep.unit))
             .flatten();
-        let check_unit = all_units
-            .find(|other| {
-                unit.pkg == other.pkg && unit.target == other.target && other.mode.is_check()
-            })
-            .with_context(|| format!("Could not find check unit for {:?}", unit))?;
-        let metadata = cx.files().metadata(check_unit);
-        rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+        let check_unit = all_units.into_iter().find(|other| {
+            unit.pkg == other.pkg && unit.target == other.target && other.mode.is_check()
+        });
+        if let Some(check_unit) = check_unit {
+            let metadata = cx.files().metadata(check_unit);
+            rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+
+            rustdoc.arg("-Zunstable-options");
+
+            for scrape_unit in &cx.bcx.scrape_units {
+                rustdoc
+                    .arg("--with-examples")
+                    .arg(scrape_output_path(scrape_unit)?);
+            }
+        }
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;

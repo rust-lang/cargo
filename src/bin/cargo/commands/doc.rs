@@ -56,30 +56,21 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
     compile_opts.rustdoc_scrape_examples = match args.value_of("scrape-examples") {
-        Some(s) => {
-            let (examples, lib) = match s {
-                "all" => (true, true),
-                "examples" => (true, false),
-                "lib" => (false, true),
-                _ => {
-                    return Err(CliError::from(anyhow!(
-                        r#"--scrape-examples must take "all", "examples", or "lib" as an argument"#
-                    )));
-                }
-            };
-            Some(CompileFilter::Only {
-                all_targets: false,
-                lib: if lib { LibRule::True } else { LibRule::False },
-                bins: FilterRule::none(),
-                examples: if examples {
-                    FilterRule::All
-                } else {
-                    FilterRule::none()
-                },
-                benches: FilterRule::none(),
-                tests: FilterRule::none(),
-            })
-        }
+        Some(s) => Some(match s {
+            "all" => CompileFilter::new_all_targets(),
+            "examples" => CompileFilter::new(
+                LibRule::False,
+                FilterRule::none(),
+                FilterRule::none(),
+                FilterRule::All,
+                FilterRule::none(),
+            ),
+            _ => {
+                return Err(CliError::from(anyhow!(
+                    r#"--scrape-examples must take "all", "examples", or "lib" as an argument"#
+                )));
+            }
+        }),
         None => None,
     };
 

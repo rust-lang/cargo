@@ -1514,9 +1514,7 @@ fn rebuild_unit_graph_shared(
         .collect();
     let new_scrape_units = scrape_units
         .iter()
-        .map(|unit| {
-            traverse_and_share(interner, &mut memo, &mut result, &unit_graph, unit, to_host)
-        })
+        .map(|unit| memo.get(unit).unwrap().clone())
         .collect();
     (new_roots, new_scrape_units, result)
 }
