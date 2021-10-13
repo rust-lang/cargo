@@ -648,6 +648,30 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.args(args);
     }
 
+    // rustdoc needs a -Cmetadata flag in order to recognize StableCrateIds that refer to
+    // items in the crate being documented. The -Cmetadata flag used by reverse-dependencies
+    // will be the metadata of the Cargo unit that generated the current library's rmeta file,
+    // which should be a Check unit.
+    //
+    // If the current crate has reverse-dependencies, such a Check unit should exist, and so
+    // we use that crate's metadata. If not, we use the crate's Doc unit so at least examples
+    // scraped from the current crate can be used when documenting the current crate.
+    let matching_units = cx
+        .bcx
+        .unit_graph
+        .keys()
+        .filter(|other| {
+            unit.pkg == other.pkg && unit.target == other.target && !other.mode.is_doc_scrape()
+        })
+        .collect::<Vec<_>>();
+    let metadata_unit = matching_units
+        .iter()
+        .find(|other| other.mode.is_check())
+        .or_else(|| matching_units.iter().find(|other| other.mode.is_doc()))
+        .unwrap_or(&unit);
+    let metadata = cx.files().metadata(metadata_unit);
+    rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+
     let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
         let layout = cx.files().layout(unit.kind);
         let output_dir = layout.prepare_tmp()?;
@@ -661,6 +685,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             .arg("--scrape-examples-output-path")
             .arg(scrape_output_path(unit)?);
 
+        // Limit the scraped examples to just crates in the root set
         let root_packages = cx
             .bcx
             .roots
@@ -671,26 +696,12 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             rustdoc.arg("--scrape-examples-target-crate").arg(pkg);
         }
     } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.roots.contains(unit) {
-        let all_units = cx
-            .bcx
-            .unit_graph
-            .values()
-            .map(|deps| deps.iter().map(|dep| &dep.unit))
-            .flatten();
-        let check_unit = all_units.into_iter().find(|other| {
-            unit.pkg == other.pkg && unit.target == other.target && other.mode.is_check()
-        });
-        if let Some(check_unit) = check_unit {
-            let metadata = cx.files().metadata(check_unit);
-            rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+        rustdoc.arg("-Zunstable-options");
 
-            rustdoc.arg("-Zunstable-options");
-
-            for scrape_unit in &cx.bcx.scrape_units {
-                rustdoc
-                    .arg("--with-examples")
-                    .arg(scrape_output_path(scrape_unit)?);
-            }
+        for scrape_unit in &cx.bcx.scrape_units {
+            rustdoc
+                .arg("--with-examples")
+                .arg(scrape_output_path(scrape_unit)?);
         }
     }
 

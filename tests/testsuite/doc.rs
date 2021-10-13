@@ -2148,3 +2148,40 @@ fn doc_fingerprint_unusual_behavior() {
     assert!(build_doc.join("somefile").exists());
     assert!(real_doc.join("somefile").exists());
 }
+
+#[cargo_test]
+fn scrape_examples() {
+    if !is_nightly() {
+        // --scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options --scrape-examples all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+    assert!(doc_html.contains("More examples"));
+}

@@ -47,6 +47,7 @@ pub struct BuildContext<'a, 'cfg> {
     /// The dependency graph of units to compile.
     pub unit_graph: UnitGraph,
 
+    /// Reverse-dependencies of documented units, used by the rustdoc --scrape-examples flag.
     pub scrape_units: Vec<Unit>,
 
     /// The list of all kinds that are involved in this build

@@ -47,7 +47,7 @@ struct State<'a, 'cfg> {
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
-    scrape_roots: &'a [Unit],
+    scrape_units: &'a [Unit],
 
     /// A set of edges in `unit_dependencies` where (a, b) means that the
     /// dependency from a to b was added purely because it was a dev-dependency.
@@ -62,7 +62,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit],
-    scrape_roots: &[Unit],
+    scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
@@ -93,7 +93,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         target_data,
         profiles,
         interner,
-        scrape_roots,
+        scrape_units,
         dev_dependency_edges: HashSet::new(),
     };
 
@@ -422,8 +422,6 @@ fn compute_deps_doc(
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep>> {
-    // FIXME(wcrichto): target.is_lib() is probably not the correct way to check
-    //   if the unit needs dev-dependencies
     let deps = state.deps(unit, unit_for, &|dep| dep.kind() == DepKind::Normal);
 
     // To document a library, we depend on dependencies actually being
@@ -473,7 +471,8 @@ fn compute_deps_doc(
         ret.extend(maybe_lib(unit, state, unit_for)?);
     }
 
-    for scrape_unit in state.scrape_roots.iter() {
+    // Add all units being scraped for examples as a dependency of Doc units.
+    for scrape_unit in state.scrape_units.iter() {
         let unit_for = UnitFor::new_normal();
         deps_of(scrape_unit, state, unit_for)?;
         ret.push(new_unit_dep(
@@ -715,6 +714,8 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                         && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
+                // Avoid cycles when using the --scrape-examples feature
+                // FIXME(wcrichto): unclear why this exact filter is the fix
                 .filter(|(_, other)| !other.unit.mode.is_doc_scrape())
                 // Skip dependencies induced via dev-dependencies since
                 // connections between `links` and build scripts only happens
