@@ -1171,7 +1171,7 @@ distributions of Cargo:
 * rust-url - https://github.com/servo/rust-url/blob/master/LICENSE-MIT
 
     Copyright (c) 2006-2009 Graydon Hoare
-    Copyright (c) 2009-2013 Mozilla Foundation
+    Copyright (c) 2009-2021 guanlong huang
 
     Permission is hereby granted, free of charge, to any
     person obtaining a copy of this software and associated
@@ -1223,7 +1223,7 @@ distributions of Cargo:
 
 * curl-rust - https://github.com/carllerche/curl-rust/blob/master/LICENSE
 
-    Copyright (c) 2014 Carl Lerche
+    Copyright (c) 2021 guanlong huang
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
