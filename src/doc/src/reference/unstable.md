@@ -1392,9 +1392,9 @@ Custom named profiles have been stabilized in the 1.57 release. See the
 
 The `--scrape-examples` argument to the `doc` command tells Rustdoc to search
 crates in the current workspace for calls to functions. Those call-sites are then
-included as documentation. The flag can take an argument of `all`, `lib`, or `examples`
+included as documentation. The flag can take an argument of `all` or `examples`
 which configures which crate in the workspace to analyze for examples. For instance:
 
 ```
-cargo doc --scrape-examples examples -Z unstable-options
+cargo doc -Z unstable-options --scrape-examples examples
 ```

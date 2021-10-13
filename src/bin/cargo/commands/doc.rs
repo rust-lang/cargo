@@ -67,7 +67,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             ),
             _ => {
                 return Err(CliError::from(anyhow!(
-                    r#"--scrape-examples must take "all", "examples", or "lib" as an argument"#
+                    r#"--scrape-examples must take "all" or "examples" as an argument"#
                 )));
             }
         }),
