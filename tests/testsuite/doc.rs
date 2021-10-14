@@ -2150,7 +2150,7 @@ fn doc_fingerprint_unusual_behavior() {
 }
 
 #[cargo_test]
-fn scrape_examples() {
+fn scrape_examples_basic() {
     if !is_nightly() {
         // --scrape-examples is unstable
         return;
@@ -2184,4 +2184,51 @@ fn scrape_examples() {
     let doc_html = p.read_file("target/doc/foo/fn.foo.html");
     assert!(doc_html.contains("Examples found in repository"));
     assert!(doc_html.contains("More examples"));
+}
+
+#[cargo_test]
+fn scrape_examples_avoid_build_script_cycle() {
+    if !is_nightly() {
+        // --scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        // package with build dependency
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                links = "foo"
+
+                [workspace]
+                members = ["bar"]
+
+                [build-dependencies]
+                bar = {path = "bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main(){}")
+        // dependency
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                links = "bar"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main(){}")
+        .build();
+
+    p.cargo("doc --all -Zunstable-options --scrape-examples all")
+        .masquerade_as_nightly_cargo()
+        .run();
 }

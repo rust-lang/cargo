@@ -648,28 +648,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.args(args);
     }
 
-    // rustdoc needs a -Cmetadata flag in order to recognize StableCrateIds that refer to
-    // items in the crate being documented. The -Cmetadata flag used by reverse-dependencies
-    // will be the metadata of the Cargo unit that generated the current library's rmeta file,
-    // which should be a Check unit.
-    //
-    // If the current crate has reverse-dependencies, such a Check unit should exist, and so
-    // we use that crate's metadata. If not, we use the crate's Doc unit so at least examples
-    // scraped from the current crate can be used when documenting the current crate.
-    let matching_units = cx
-        .bcx
-        .unit_graph
-        .keys()
-        .filter(|other| {
-            unit.pkg == other.pkg && unit.target == other.target && !other.mode.is_doc_scrape()
-        })
-        .collect::<Vec<_>>();
-    let metadata_unit = matching_units
-        .iter()
-        .find(|other| other.mode.is_check())
-        .or_else(|| matching_units.iter().find(|other| other.mode.is_doc()))
-        .unwrap_or(&unit);
-    let metadata = cx.files().metadata(metadata_unit);
+    let metadata = cx.metadata_for_doc_units[&unit];
     rustdoc.arg("-C").arg(format!("metadata={}", metadata));
 
     let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {

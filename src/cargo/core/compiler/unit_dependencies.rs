@@ -714,9 +714,14 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                         && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
-                // Avoid cycles when using the --scrape-examples feature
-                // FIXME(wcrichto): unclear why this exact filter is the fix
-                .filter(|(_, other)| !other.unit.mode.is_doc_scrape())
+                // Avoid cycles when using the doc --scrape-examples feature:
+                // Say a workspace has crates A and B where A has a build-dependency on B.
+                // The Doc units for A and B will have a dependency on the Docscrape for both A and B.
+                // So this would add a dependency from B-build to A-build, causing a cycle:
+                //   B (build) -> A (build) -> B(build)
+                // See the test scrape_examples_avoid_build_script_cycle for a concrete example.
+                // To avoid this cycle, we filter out the B -> A (docscrape) dependency.
+                .filter(|(_parent, other)| !other.unit.mode.is_doc_scrape())
                 // Skip dependencies induced via dev-dependencies since
                 // connections between `links` and build scripts only happens
                 // via normal dependencies. Otherwise since dev-dependencies can
