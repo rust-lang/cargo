@@ -780,22 +780,20 @@ impl CompileFilter {
 
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
-            CompileMode::Test
-            | CompileMode::Doctest
-            | CompileMode::Bench
-            | CompileMode::Docscrape => true,
+            CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
             CompileMode::Check { test: true } => true,
-            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { test: false } => {
-                match *self {
-                    CompileFilter::Default { .. } => false,
-                    CompileFilter::Only {
-                        ref examples,
-                        ref tests,
-                        ref benches,
-                        ..
-                    } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
-                }
-            }
+            CompileMode::Build
+            | CompileMode::Doc { .. }
+            | CompileMode::Docscrape
+            | CompileMode::Check { test: false } => match *self {
+                CompileFilter::Default { .. } => false,
+                CompileFilter::Only {
+                    ref examples,
+                    ref tests,
+                    ref benches,
+                    ..
+                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+            },
             CompileMode::RunCustomBuild => panic!("Invalid mode"),
         }
     }

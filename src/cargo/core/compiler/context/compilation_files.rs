@@ -418,7 +418,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 vec![]
             }
             CompileMode::Docscrape => {
-                // FIXME(wcrichto): should this include the *.examples files?
+                // Docscrape only generates temporary *.examples files to pass to rustdoc
+                // so they're not important to track
                 vec![]
             }
             CompileMode::Test

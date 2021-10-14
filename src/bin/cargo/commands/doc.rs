@@ -55,6 +55,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+
+    // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
+    // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
     compile_opts.rustdoc_scrape_examples = match args.value_of("scrape-examples") {
         Some(s) => Some(match s {
             "all" => CompileFilter::new_all_targets(),

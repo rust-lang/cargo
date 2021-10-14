@@ -696,6 +696,9 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             rustdoc.arg("--scrape-examples-target-crate").arg(pkg);
         }
     } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.roots.contains(unit) {
+        // We only pass scraped examples to packages in the workspace (bcx.roots)
+        // since examples are only coming from reverse-dependencies of workspace packages
+
         rustdoc.arg("-Zunstable-options");
 
         for scrape_unit in &cx.bcx.scrape_units {
