@@ -50,7 +50,7 @@
 //! improved.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
 use std::marker;
@@ -72,16 +72,14 @@ use super::job::{
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::compiler::future_incompat::{
-    FutureBreakageItem, FutureIncompatReportPackage, OnDiskReports,
+    self, FutureBreakageItem, FutureIncompatReportPackage,
 };
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, Shell, TargetKind};
-use crate::sources::SourceConfigMap;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
-use crate::util::{self, internal, iter_join, profile};
+use crate::util::{self, internal, profile};
 use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -884,126 +882,7 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     fn emit_future_incompat(&mut self, bcx: &BuildContext<'_, '_>) {
-        if !bcx.config.cli_unstable().future_incompat_report {
-            return;
-        }
-        let should_display_message = match bcx.config.future_incompat_config() {
-            Ok(config) => config.should_display_message(),
-            Err(e) => {
-                crate::display_warning_with_error(
-                    "failed to read future-incompat config from disk",
-                    &e,
-                    &mut bcx.config.shell(),
-                );
-                true
-            }
-        };
-
-        if self.per_package_future_incompat_reports.is_empty() {
-            // Explicitly passing a command-line flag overrides
-            // `should_display_message` from the config file
-            if bcx.build_config.future_incompat_report {
-                drop(
-                    bcx.config
-                        .shell()
-                        .note("0 dependencies had future-incompatible warnings"),
-                );
-            }
-            return;
-        }
-
-        // Get a list of unique and sorted package name/versions.
-        let package_ids: BTreeSet<_> = self
-            .per_package_future_incompat_reports
-            .iter()
-            .map(|r| r.package_id)
-            .collect();
-        let package_vers: Vec<_> = package_ids.iter().map(|pid| pid.to_string()).collect();
-
-        if should_display_message || bcx.build_config.future_incompat_report {
-            drop(bcx.config.shell().warn(&format!(
-                "the following packages contain code that will be rejected by a future \
-                 version of Rust: {}",
-                package_vers.join(", ")
-            )));
-        }
-
-        let updated_versions = get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
-
-        let update_message = if !updated_versions.is_empty() {
-            format!(
-                "
-- Some affected dependencies have newer versions available.
-You may want to consider updating them to a newer version to see if the issue has been fixed.
-
-{updated_versions}\n",
-                updated_versions = updated_versions
-            )
-        } else {
-            String::new()
-        };
-
-        let on_disk_reports = OnDiskReports::save_report(
-            bcx.ws,
-            update_message.clone(),
-            &self.per_package_future_incompat_reports,
-        );
-        let report_id = on_disk_reports.last_id();
-
-        if bcx.build_config.future_incompat_report {
-            let upstream_info = package_ids
-                .iter()
-                .map(|package_id| {
-                    let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
-                    format!(
-                        "
-  - {name}
-    - Repository: {url}
-    - Detailed warning command: `cargo report future-incompatibilities --id {id} --crate \"{name}\"",
-                        name = format!("{}:{}", package_id.name(), package_id.version()),
-                        url = manifest
-                            .metadata()
-                            .repository
-                            .as_deref()
-                            .unwrap_or("<not found>"),
-                        id = report_id,
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            drop(bcx.config.shell().note(&format!(
-                "
-To solve this problem, you can try the following approaches:
-
-{update_message}
-- If the issue is not solved by updating the dependencies, a fix has to be
-  implemented by those dependencies. You can help with that by notifying the
-  maintainers of this problem (e.g. by creating a bug report) or by proposing a
-  fix to the maintainers (e.g. by creating a pull request):
-  {upstream_info}
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-  section in `Cargo.toml` to use your own version of the dependency. For more
-  information, see:
-  https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-            ",
-                upstream_info = upstream_info,
-                update_message = update_message,
-            )));
-
-            drop(bcx.config.shell().note(&format!(
-                "this report can be shown with `cargo report \
-                 future-incompatibilities -Z future-incompat-report --id {}`",
-                report_id
-            )));
-        } else if should_display_message {
-            drop(bcx.config.shell().note(&format!(
-                "to see what the problems were, use the option \
-                 `--future-incompat-report`, or run `cargo report \
-                 future-incompatibilities --id {}`",
-                report_id
-            )));
-        }
+        future_incompat::render_message(bcx, &self.per_package_future_incompat_reports);
     }
 
     fn handle_error(
@@ -1337,62 +1216,4 @@ feature resolver. Try updating to diesel 1.4.8 to fix this error.
         )?;
         Ok(())
     }
-}
-
-// Returns a pair (compatible_updates, incompatible_updates),
-// of semver-compatible and semver-incompatible update versions,
-// respectively.
-fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<String> {
-    // This in general ignores all errors since this is opportunistic.
-    let _lock = ws.config().acquire_package_cache_lock().ok()?;
-    // Create a set of updated registry sources.
-    let map = SourceConfigMap::new(ws.config()).ok()?;
-    let package_ids: BTreeSet<_> = package_ids
-        .iter()
-        .filter(|pkg_id| pkg_id.source_id().is_registry())
-        .collect();
-    let source_ids: HashSet<_> = package_ids
-        .iter()
-        .map(|pkg_id| pkg_id.source_id())
-        .collect();
-    let mut sources: HashMap<_, _> = source_ids
-        .into_iter()
-        .filter_map(|sid| {
-            let source = map.load(sid, &HashSet::new()).ok()?;
-            Some((sid, source))
-        })
-        .collect();
-    // Query the sources for new versions.
-    let mut updates = String::new();
-    for pkg_id in package_ids {
-        let source = match sources.get_mut(&pkg_id.source_id()) {
-            Some(s) => s,
-            None => continue,
-        };
-        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
-        let summaries = source.query_vec(&dep).ok()?;
-        let mut updated_versions: Vec<_> = summaries
-            .iter()
-            .map(|summary| summary.version())
-            .filter(|version| *version > pkg_id.version())
-            .collect();
-        updated_versions.sort();
-
-        let updated_versions = iter_join(
-            updated_versions
-                .into_iter()
-                .map(|version| version.to_string()),
-            ", ",
-        );
-
-        if !updated_versions.is_empty() {
-            writeln!(
-                updates,
-                "{} has the following newer versions available: {}",
-                pkg_id, updated_versions
-            )
-            .unwrap();
-        }
-    }
-    Some(updates)
 }
