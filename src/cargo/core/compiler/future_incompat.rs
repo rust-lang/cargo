@@ -400,7 +400,7 @@ You may want to consider updating them to a newer version to see if the issue ha
                     "
   - {name}
   - Repository: {url}
-  - Detailed warning command: `cargo report future-incompatibilities --id {id} --crate \"{name}\"",
+  - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {name}`",
                     name = format!("{}:{}", package_id.name(), package_id.version()),
                     url = manifest
                         .metadata()

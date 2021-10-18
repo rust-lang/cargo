@@ -871,7 +871,7 @@ impl<'cfg> DrainState<'cfg> {
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
                 drop(cx.bcx.config.shell().status("Finished", message));
-                self.emit_future_incompat(cx.bcx);
+                future_incompat::render_message(cx.bcx, &self.per_package_future_incompat_reports);
             }
 
             None
@@ -879,10 +879,6 @@ impl<'cfg> DrainState<'cfg> {
             debug!("queue: {:#?}", self.queue);
             Some(internal("finished with jobs still left in the queue"))
         }
-    }
-
-    fn emit_future_incompat(&mut self, bcx: &BuildContext<'_, '_>) {
-        future_incompat::render_message(bcx, &self.per_package_future_incompat_reports);
     }
 
     fn handle_error(
