@@ -239,7 +239,7 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
         );
         let rendered = report.entry(package_spec).or_default();
         rendered.push_str(&format!(
-"The package `{}` currently triggers the following future incompatibility lints:\n",
+            "The package `{}` currently triggers the following future incompatibility lints:\n",
             per_package.package_id
         ));
         for item in &per_package.items {
@@ -359,7 +359,6 @@ pub fn save_and_display_report(
     };
     let report_id = current_reports.next_id;
 
-
     // Get a list of unique and sorted package name/versions.
     let package_ids: BTreeSet<_> = per_package_future_incompat_reports
         .iter()
@@ -409,10 +408,10 @@ You may want to consider updating them to a newer version to see if the issue ha
             )
         })
         .collect::<Vec<_>>()
-            .join("\n");
+        .join("\n");
 
     let suggestion_message = format!(
-            "
+        "
 To solve this problem, you can try the following approaches:
 
 {update_message}
@@ -427,10 +426,9 @@ section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
         ",
-            upstream_info = upstream_info,
-            update_message = update_message,
+        upstream_info = upstream_info,
+        update_message = update_message,
     );
-
 
     current_reports.save_report(
         bcx.ws,

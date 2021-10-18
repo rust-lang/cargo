@@ -871,7 +871,10 @@ impl<'cfg> DrainState<'cfg> {
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
                 drop(cx.bcx.config.shell().status("Finished", message));
-                future_incompat::save_and_display_report(cx.bcx, &self.per_package_future_incompat_reports);
+                future_incompat::save_and_display_report(
+                    cx.bcx,
+                    &self.per_package_future_incompat_reports,
+                );
             }
 
             None
