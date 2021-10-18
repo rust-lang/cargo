@@ -269,7 +269,6 @@ fn test_multi_crate() {
         .exec_with_output()
         .unwrap();
     let output = std::str::from_utf8(&output.stdout).unwrap();
-    //if true { panic!("Got output: \n{}", output) }
     assert!(output.starts_with("The following warnings were discovered"));
     let mut lines = output
         .lines()

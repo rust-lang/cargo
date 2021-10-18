@@ -254,9 +254,9 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
     report
 }
 
-// Returns a pair (compatible_updates, incompatible_updates),
-// of semver-compatible and semver-incompatible update versions,
-// respectively.
+/// Returns a user-readable message explaining which of
+/// the packages in `package_ids` have updates available.
+/// This is best-effort - if an error occurs, `None` will be returned.
 fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<String> {
     // This in general ignores all errors since this is opportunistic.
     let _lock = ws.config().acquire_package_cache_lock().ok()?;
@@ -312,7 +312,10 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     Some(updates)
 }
 
-pub fn render_message(
+/// Writes a future-incompat report to disk, using the per-package
+/// reports gathered during the build. If requested by the user,
+/// a message is also displayed in the build output.
+pub fn save_and_display_report(
     bcx: &BuildContext<'_, '_>,
     per_package_future_incompat_reports: &[FutureIncompatReportPackage],
 ) {
