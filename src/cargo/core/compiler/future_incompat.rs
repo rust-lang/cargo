@@ -78,9 +78,9 @@ pub struct OnDiskReports {
 struct OnDiskReport {
     /// Unique reference to the report for the `--id` CLI flag.
     id: u32,
-    /// A (possibly empty) message describing which affected
-    /// packages have newer versions available
-    update_message: String,
+    /// A message describing suggestions for fixing the
+    /// reported issues
+    suggestion_message: String,
     /// Report, suitable for printing to the console.
     /// Maps package names to the corresponding report
     /// We use a `BTreeMap` so that the iteration order
@@ -101,31 +101,22 @@ impl Default for OnDiskReports {
 impl OnDiskReports {
     /// Saves a new report.
     pub fn save_report(
+        mut self,
         ws: &Workspace<'_>,
-        update_message: String,
+        suggestion_message: String,
         per_package_reports: &[FutureIncompatReportPackage],
-    ) -> OnDiskReports {
-        let mut current_reports = match Self::load(ws) {
-            Ok(r) => r,
-            Err(e) => {
-                log::debug!(
-                    "saving future-incompatible reports failed to load current reports: {:?}",
-                    e
-                );
-                OnDiskReports::default()
-            }
-        };
+    ) {
         let report = OnDiskReport {
-            id: current_reports.next_id,
-            update_message,
+            id: self.next_id,
+            suggestion_message,
             per_package: render_report(per_package_reports),
         };
-        current_reports.next_id += 1;
-        current_reports.reports.push(report);
-        if current_reports.reports.len() > MAX_REPORTS {
-            current_reports.reports.remove(0);
+        self.next_id += 1;
+        self.reports.push(report);
+        if self.reports.len() > MAX_REPORTS {
+            self.reports.remove(0);
         }
-        let on_disk = serde_json::to_vec(&current_reports).unwrap();
+        let on_disk = serde_json::to_vec(&self).unwrap();
         if let Err(e) = ws
             .target_dir()
             .open_rw(
@@ -146,7 +137,6 @@ impl OnDiskReports {
                 &mut ws.config().shell(),
             );
         }
-        current_reports
     }
 
     /// Loads the on-disk reports.
@@ -201,7 +191,8 @@ impl OnDiskReports {
             )
         })?;
 
-        let mut to_display = report.update_message.clone();
+        let mut to_display = report.suggestion_message.clone();
+        to_display += "\n";
 
         let package_report = if let Some(package) = package {
             report
@@ -248,8 +239,7 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
         );
         let rendered = report.entry(package_spec).or_default();
         rendered.push_str(&format!(
-            "The package `{}` currently triggers the following future \
-             incompatibility lints:\n",
+"The package `{}` currently triggers the following future incompatibility lints:\n",
             per_package.package_id
         ));
         for item in &per_package.items {
@@ -354,6 +344,19 @@ pub fn render_message(
         return;
     }
 
+    let current_reports = match OnDiskReports::load(bcx.ws) {
+        Ok(r) => r,
+        Err(e) => {
+            log::debug!(
+                "saving future-incompatible reports failed to load current reports: {:?}",
+                e
+            );
+            OnDiskReports::default()
+        }
+    };
+    let report_id = current_reports.next_id;
+
+
     // Get a list of unique and sorted package name/versions.
     let package_ids: BTreeSet<_> = per_package_future_incompat_reports
         .iter()
@@ -384,35 +387,28 @@ You may want to consider updating them to a newer version to see if the issue ha
         String::new()
     };
 
-    let on_disk_reports = OnDiskReports::save_report(
-        bcx.ws,
-        update_message.clone(),
-        per_package_future_incompat_reports,
-    );
-    let report_id = on_disk_reports.last_id();
-
-    if bcx.build_config.future_incompat_report {
-        let upstream_info = package_ids
-            .iter()
-            .map(|package_id| {
-                let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
-                format!(
-                    "
+    let upstream_info = package_ids
+        .iter()
+        .map(|package_id| {
+            let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
+            format!(
+                "
   - {name}
   - Repository: {url}
   - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {name}`",
-                    name = format!("{}:{}", package_id.name(), package_id.version()),
-                    url = manifest
-                        .metadata()
-                        .repository
-                        .as_deref()
-                        .unwrap_or("<not found>"),
-                    id = report_id,
-                )
-            })
-            .collect::<Vec<_>>()
+                name = format!("{}:{}", package_id.name(), package_id.version()),
+                url = manifest
+                    .metadata()
+                    .repository
+                    .as_deref()
+                    .unwrap_or("<not found>"),
+                id = report_id,
+            )
+        })
+        .collect::<Vec<_>>()
             .join("\n");
-        drop(bcx.config.shell().note(&format!(
+
+    let suggestion_message = format!(
             "
 To solve this problem, you can try the following approaches:
 
@@ -430,8 +426,17 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         ",
             upstream_info = upstream_info,
             update_message = update_message,
-        )));
+    );
 
+
+    current_reports.save_report(
+        bcx.ws,
+        suggestion_message.clone(),
+        per_package_future_incompat_reports,
+    );
+
+    if bcx.build_config.future_incompat_report {
+        drop(bcx.config.shell().note(&suggestion_message));
         drop(bcx.config.shell().note(&format!(
             "this report can be shown with `cargo report \
              future-incompatibilities -Z future-incompat-report --id {}`",

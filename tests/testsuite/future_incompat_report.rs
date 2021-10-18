@@ -221,14 +221,14 @@ fn test_multi_crate() {
             .masquerade_as_nightly_cargo()
             .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
-            .with_stdout_does_not_contain("[..]second-dep[..]")
+            .with_stdout_does_not_contain("[..]second-dep-0.0.2/src[..]")
             .run();
 
         p.cargo("report future-incompatibilities").arg("--package").arg("second-dep:0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
             .masquerade_as_nightly_cargo()
             .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
-            .with_stdout_does_not_contain("[..]first-dep[..]")
+            .with_stdout_does_not_contain("[..]first-dep-0.0.1/src[..]")
             .run();
     }
 
