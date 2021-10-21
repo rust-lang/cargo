@@ -125,8 +125,7 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
             if candidate.is_file() {
                 // PATH may have a component like "." in it, so we still need to
                 // canonicalize.
-                // Only do so if there are relative path components, otherwise symlinks to 'echo' may be resolved to their
-                // root program like 'coreutils' which relies on the executable name for proper function.
+                // Only do so if there are relative path components
                 let has_relative_path_components = candidate.components().any(|c| {
                     matches!(
                         c,
@@ -134,7 +133,22 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
                     )
                 });
                 return Ok(if has_relative_path_components {
-                    candidate.canonicalize()?
+                    // Assure symlinks to programs like 'echo' don't change the file-name after resolution.
+                    // root program like 'coreutils' which relies on the executable name for proper function.
+                    let file_name = candidate
+                        .file_name()
+                        .expect("executables have a file name")
+                        .to_owned();
+                    let candidate = candidate
+                        .canonicalize()?
+                        .parent()
+                        .expect("a parent is always available for tools called in test-suite")
+                        .join(file_name)
+                        .to_owned();
+                    if !candidate.is_file() {
+                        continue;
+                    }
+                    candidate
                 } else {
                     candidate
                 });
