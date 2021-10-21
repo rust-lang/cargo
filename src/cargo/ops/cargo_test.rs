@@ -165,6 +165,7 @@ fn run_doc_tests(
             unit,
             linker,
             script_meta,
+            env,
         } = doctest_info;
 
         if !doctest_xcompile {
@@ -191,6 +192,10 @@ fn run_doc_tests(
 
         config.shell().status("Doc-tests", unit.target.name())?;
         let mut p = compilation.rustdoc_process(unit, *script_meta)?;
+
+        for (var, value) in env {
+            p.env(var, value);
+        }
         p.arg("--crate-name").arg(&unit.target.crate_name());
         p.arg("--test");
 

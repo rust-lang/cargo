@@ -331,6 +331,7 @@ pub struct Dependency {
     name: String,
     vers: String,
     kind: String,
+    artifact: Option<(String, Option<String>)>,
     target: Option<String>,
     features: Vec<String>,
     registry: Option<String>,
@@ -591,6 +592,7 @@ impl Package {
                     "features": dep.features,
                     "default_features": true,
                     "target": dep.target,
+                    "artifact": dep.artifact,
                     "optional": dep.optional,
                     "kind": dep.kind,
                     "registry": registry_url,
@@ -744,6 +746,12 @@ impl Package {
             "#,
                 target, kind, dep.name, dep.vers
             ));
+            if let Some((artifact, target)) = &dep.artifact {
+                manifest.push_str(&format!("artifact = \"{}\"\n", artifact));
+                if let Some(target) = &target {
+                    manifest.push_str(&format!("target = \"{}\"\n", target))
+                }
+            }
             if let Some(registry) = &dep.registry {
                 assert_eq!(registry, "alternative");
                 manifest.push_str(&format!("registry-index = \"{}\"", alt_registry_url()));
@@ -799,6 +807,7 @@ impl Dependency {
             name: name.to_string(),
             vers: vers.to_string(),
             kind: "normal".to_string(),
+            artifact: None,
             target: None,
             features: Vec::new(),
             package: None,
@@ -822,6 +831,13 @@ impl Dependency {
     /// Changes this to `[target.$target.dependencies]`.
     pub fn target(&mut self, target: &str) -> &mut Self {
         self.target = Some(target.to_string());
+        self
+    }
+
+    /// Change the artifact to be of the given kind, like "bin", or "staticlib",
+    /// along with a specific target triple if provided.
+    pub fn artifact(&mut self, kind: &str, target: Option<String>) -> &mut Self {
+        self.artifact = Some((kind.to_string(), target));
         self
     }
 

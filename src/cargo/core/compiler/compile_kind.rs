@@ -158,8 +158,8 @@ impl CompileTarget {
     /// Typically this is pretty much the same as `short_name`, but for the case
     /// of JSON target files this will be a full canonicalized path name for the
     /// current filesystem.
-    pub fn rustc_target(&self) -> &str {
-        &self.name
+    pub fn rustc_target(&self) -> InternedString {
+        self.name
     }
 
     /// Returns a "short" version of the target name suitable for usage within

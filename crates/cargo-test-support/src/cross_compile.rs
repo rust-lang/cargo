@@ -191,6 +191,7 @@ pub fn native_arch() -> &'static str {
         .expect("Target triple has unexpected format")
     {
         "x86_64" => "x86_64",
+        "aarch64" => "aarch64",
         "i686" => "x86",
         _ => panic!("This test should be gated on cross_compile::disabled."),
     }
@@ -200,7 +201,9 @@ pub fn native_arch() -> &'static str {
 ///
 /// Only use this function on tests that check `cross_compile::disabled`.
 pub fn alternate() -> &'static str {
-    if cfg!(target_os = "macos") {
+    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "x86_64-apple-darwin"
+    } else if cfg!(target_os = "macos") {
         "x86_64-apple-ios"
     } else if cfg!(target_os = "linux") {
         "i686-unknown-linux-gnu"

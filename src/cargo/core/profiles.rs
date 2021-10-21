@@ -1,4 +1,5 @@
-use crate::core::compiler::{CompileKind, CompileMode, Unit};
+use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, Unit};
+use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
 use crate::core::{Feature, PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
@@ -331,7 +332,7 @@ impl Profiles {
             (self.requested_profile, None)
         };
         let maker = self.get_profile_maker(profile_name).unwrap();
-        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
+        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
         // treatment. Be sure to process all the various options here.
@@ -342,7 +343,9 @@ impl Profiles {
                 if let Some(inherits) = inherits {
                     // TODO: Fixme, broken with named profiles.
                     let maker = self.get_profile_maker(inherits).unwrap();
-                    profile.panic = maker.get_profile(Some(pkg_id), is_member, unit_for).panic;
+                    profile.panic = maker
+                        .get_profile(Some(pkg_id), is_member, unit_for.is_for_host())
+                        .panic;
                 }
             }
         }
@@ -410,7 +413,7 @@ impl Profiles {
         };
 
         let maker = self.get_profile_maker(profile_name).unwrap();
-        maker.get_profile(None, true, UnitFor::new_normal())
+        maker.get_profile(None, /*is_member*/ true, /*is_for_host*/ false)
     }
 
     /// Gets the directory name for a profile, like `debug` or `release`.
@@ -498,7 +501,7 @@ impl ProfileMaker {
         &self,
         pkg_id: Option<PackageId>,
         is_member: bool,
-        unit_for: UnitFor,
+        is_for_host: bool,
     ) -> Profile {
         let mut profile = self.default.clone();
 
@@ -510,7 +513,7 @@ impl ProfileMaker {
 
         // Next start overriding those settings. First comes build dependencies
         // which default to opt-level 0...
-        if unit_for.is_for_host() {
+        if is_for_host {
             // For-host units are things like procedural macros, build scripts, and
             // their dependencies. For these units most projects simply want them
             // to compile quickly and the runtime doesn't matter too much since
@@ -526,7 +529,7 @@ impl ProfileMaker {
         // profiles, such as `[profile.release.build-override]` or
         // `[profile.release.package.foo]`
         if let Some(toml) = &self.toml {
-            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
+            merge_toml_overrides(pkg_id, is_member, is_for_host, &mut profile, toml);
         }
         profile
     }
@@ -536,11 +539,11 @@ impl ProfileMaker {
 fn merge_toml_overrides(
     pkg_id: Option<PackageId>,
     is_member: bool,
-    unit_for: UnitFor,
+    is_for_host: bool,
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    if unit_for.is_for_host() {
+    if is_for_host {
         if let Some(build_override) = &toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -879,6 +882,9 @@ impl fmt::Display for Strip {
 
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
+///
+/// This means these are passed down from the root of the dependency tree to apply
+/// to most child dependencies.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies, or a proc-macro or
@@ -932,6 +938,24 @@ pub struct UnitFor {
     /// handle test/benches inheriting from dev/release, as well as forcing
     /// `for_host` units to always unwind.
     panic_setting: PanicSetting,
+
+    /// The compile kind of the root unit for which artifact dependencies are built.
+    /// This is required particularly for the `target = "target"` setting of artifact
+    /// dependencies which mean to inherit the `--target` specified on the command-line.
+    /// However, that is a multi-value argument and root units are already created to
+    /// reflect one unit per --target. Thus we have to build one artifact with the
+    /// correct target for each of these trees.
+    /// Note that this will always be set as we don't initially know if there are
+    /// artifacts that make use of it.
+    root_compile_kind: CompileKind,
+
+    /// This is only set for artifact dependencies which have their
+    /// `<target-triple>|target` set.
+    /// If so, this information is used as part of the key for resolving their features,
+    /// allowing for target-dependent feature resolution within the entire dependency tree.
+    /// Note that this target corresponds to the target used to build the units in that
+    /// dependency tree, too, but this copy of it is specifically used for feature lookup.
+    artifact_target_for_features: Option<CompileTarget>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -952,11 +976,13 @@ enum PanicSetting {
 impl UnitFor {
     /// A unit for a normal target/dependency (i.e., not custom build,
     /// proc macro/plugin, or test/bench).
-    pub fn new_normal() -> UnitFor {
+    pub fn new_normal(root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             host_features: false,
             panic_setting: PanicSetting::ReadProfile,
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
@@ -966,18 +992,20 @@ impl UnitFor {
     /// dependency or proc-macro (something that requires being built "on the
     /// host"). Build scripts for non-host units should use `false` because
     /// they want to use the features of the package they are running for.
-    pub fn new_host(host_features: bool) -> UnitFor {
+    pub fn new_host(host_features: bool, root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: true,
             host_features,
             // Force build scripts to always use `panic=unwind` for now to
             // maximally share dependencies with procedural macros.
             panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
     /// A unit for a compiler plugin or their dependencies.
-    pub fn new_compiler() -> UnitFor {
+    pub fn new_compiler(root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             // The feature resolver doesn't know which dependencies are
@@ -988,6 +1016,8 @@ impl UnitFor {
             // not abort the process but instead end with a reasonable error
             // message that involves catching the panic in the compiler.
             panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
@@ -997,7 +1027,7 @@ impl UnitFor {
     /// whether `panic=abort` is supported for tests. Historical versions of
     /// rustc did not support this, but newer versions do with an unstable
     /// compiler flag.
-    pub fn new_test(config: &Config) -> UnitFor {
+    pub fn new_test(config: &Config, root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             host_features: false,
@@ -1010,14 +1040,16 @@ impl UnitFor {
             } else {
                 PanicSetting::AlwaysUnwind
             },
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
     /// This is a special case for unit tests of a proc-macro.
     ///
     /// Proc-macro unit tests are forced to be run on the host.
-    pub fn new_host_test(config: &Config) -> UnitFor {
-        let mut unit_for = UnitFor::new_test(config);
+    pub fn new_host_test(config: &Config, root_compile_kind: CompileKind) -> UnitFor {
+        let mut unit_for = UnitFor::new_test(config, root_compile_kind);
         unit_for.host = true;
         unit_for.host_features = true;
         unit_for
@@ -1029,7 +1061,12 @@ impl UnitFor {
     /// transition in a sticky fashion. As the dependency graph is being
     /// built, once those flags are set, they stay set for the duration of
     /// that portion of tree.
-    pub fn with_dependency(self, parent: &Unit, dep_target: &Target) -> UnitFor {
+    pub fn with_dependency(
+        self,
+        parent: &Unit,
+        dep_target: &Target,
+        root_compile_kind: CompileKind,
+    ) -> UnitFor {
         // A build script or proc-macro transitions this to being built for the host.
         let dep_for_host = dep_target.for_host();
         // This is where feature decoupling of host versus target happens.
@@ -1054,7 +1091,27 @@ impl UnitFor {
             host: self.host || dep_for_host,
             host_features,
             panic_setting,
+            root_compile_kind,
+            artifact_target_for_features: self.artifact_target_for_features,
         }
+    }
+
+    /// Set the artifact compile target for use in features using the given `artifact`.
+    pub(crate) fn with_artifact_features(mut self, artifact: &Artifact) -> UnitFor {
+        self.artifact_target_for_features = artifact.target().and_then(|t| t.to_compile_target());
+        self
+    }
+
+    /// Set the artifact compile target as determined by a resolved compile target. This is used if `target = "target"`.
+    pub(crate) fn with_artifact_features_from_resolved_compile_kind(
+        mut self,
+        kind: Option<CompileKind>,
+    ) -> UnitFor {
+        self.artifact_target_for_features = kind.and_then(|kind| match kind {
+            CompileKind::Host => None,
+            CompileKind::Target(triple) => Some(triple),
+        });
+        self
     }
 
     /// Returns `true` if this unit is for a build script or any of its
@@ -1072,47 +1129,25 @@ impl UnitFor {
         self.panic_setting
     }
 
-    /// All possible values, used by `clean`.
-    pub fn all_values() -> &'static [UnitFor] {
-        static ALL: &[UnitFor] = &[
-            UnitFor {
-                host: false,
-                host_features: false,
-                panic_setting: PanicSetting::ReadProfile,
+    /// We might contain a parent artifact compile kind for features already, but will
+    /// gladly accept the one of this dependency as an override as it defines how
+    /// the artifact is built.
+    /// If we are an artifact but don't specify a `target`, we assume the default
+    /// compile kind that is suitable in this situation.
+    pub(crate) fn map_to_features_for(&self, dep_artifact: Option<&Artifact>) -> FeaturesFor {
+        FeaturesFor::from_for_host_or_artifact_target(
+            self.is_for_host_features(),
+            match dep_artifact {
+                Some(artifact) => artifact
+                    .target()
+                    .and_then(|t| t.to_resolved_compile_target(self.root_compile_kind)),
+                None => self.artifact_target_for_features,
             },
-            UnitFor {
-                host: true,
-                host_features: false,
-                panic_setting: PanicSetting::AlwaysUnwind,
-            },
-            UnitFor {
-                host: false,
-                host_features: false,
-                panic_setting: PanicSetting::AlwaysUnwind,
-            },
-            UnitFor {
-                host: false,
-                host_features: false,
-                panic_setting: PanicSetting::Inherit,
-            },
-            // host_features=true must always have host=true
-            // `Inherit` is not used in build dependencies.
-            UnitFor {
-                host: true,
-                host_features: true,
-                panic_setting: PanicSetting::ReadProfile,
-            },
-            UnitFor {
-                host: true,
-                host_features: true,
-                panic_setting: PanicSetting::AlwaysUnwind,
-            },
-        ];
-        ALL
+        )
     }
 
-    pub(crate) fn map_to_features_for(&self) -> FeaturesFor {
-        FeaturesFor::from_for_host(self.is_for_host_features())
+    pub(crate) fn root_compile_kind(&self) -> CompileKind {
+        self.root_compile_kind
     }
 }
 

@@ -395,7 +395,8 @@ impl<'cfg> JobQueue<'cfg> {
             .filter(|dep| {
                 // Binaries aren't actually needed to *compile* tests, just to run
                 // them, so we don't include this dependency edge in the job graph.
-                !dep.unit.target.is_test() && !dep.unit.target.is_bin()
+                (!dep.unit.target.is_test() && !dep.unit.target.is_bin())
+                    || dep.unit.artifact.is_true()
             })
             .map(|dep| {
                 // Handle the case here where our `unit -> dep` dependency may

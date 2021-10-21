@@ -201,6 +201,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
             self.layout(unit.kind).examples().to_path_buf()
+        } else if unit.artifact.is_true() {
+            self.artifact_dir(unit)
         } else {
             self.deps_dir(unit).to_path_buf()
         }
@@ -287,6 +289,30 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(CompileKind::Host).build().join(dir)
     }
 
+    /// Returns the directory for compiled artifacts files.
+    /// `/path/to/target/{debug,release}/deps/artifact/KIND/PKG-HASH`
+    fn artifact_dir(&self, unit: &Unit) -> PathBuf {
+        assert!(self.metas.contains_key(unit));
+        assert!(unit.artifact.is_true());
+        let dir = self.pkg_dir(unit);
+        let kind = match unit.target.kind() {
+            TargetKind::Bin => "bin",
+            TargetKind::Lib(lib_kinds) => match lib_kinds.as_slice() {
+                &[CrateType::Cdylib] => "cdylib",
+                &[CrateType::Staticlib] => "staticlib",
+                invalid => unreachable!(
+                    "BUG: unexpected artifact library type(s): {:?} - these should have been split",
+                    invalid
+                ),
+            },
+            invalid => unreachable!(
+                "BUG: {:?} are not supposed to be used as artifacts",
+                invalid
+            ),
+        };
+        self.layout(unit.kind).artifact().join(dir).join(kind)
+    }
+
     /// Returns the directory where information about running a build script
     /// is stored.
     /// `/path/to/target/{debug,release}/build/PKG-HASH`
@@ -354,7 +380,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         if unit.mode != CompileMode::Build || file_type.flavor == FileFlavor::Rmeta {
             return None;
         }
-        // Only uplift:
+
+        // Artifact dependencies are never uplifted.
+        if unit.artifact.is_true() {
+            return None;
+        }
+
         // - Binaries: The user always wants to see these, even if they are
         //   implicitly built (for example for integration tests).
         // - dylibs: This ensures that the dynamic linker pulls in all the

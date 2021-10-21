@@ -3,12 +3,16 @@ use log::trace;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
+use std::borrow::Cow;
+use std::fmt;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::toml::StringOrVec;
 use crate::util::OptVersionReq;
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -40,6 +44,8 @@ struct Inner {
     public: bool,
     default_features: bool,
     features: Vec<InternedString>,
+    // The presence of this information turns a dependency into an artifact dependency.
+    artifact: Option<Artifact>,
 
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
@@ -57,6 +63,8 @@ struct SerializedDependency<'a> {
     optional: bool,
     uses_default_features: bool,
     features: &'a [InternedString],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    artifact: Option<&'a Artifact>,
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
@@ -85,6 +93,7 @@ impl ser::Serialize for Dependency {
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
             registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
             path: self.source_id().local_path(),
+            artifact: self.artifact(),
         }
         .serialize(s)
     }
@@ -159,6 +168,7 @@ impl Dependency {
                 specified_req: false,
                 platform: None,
                 explicit_name_in_toml: None,
+                artifact: None,
             }),
         }
     }
@@ -402,5 +412,214 @@ impl Dependency {
             self.set_source_id(replace_with);
         }
         self
+    }
+
+    pub(crate) fn set_artifact(&mut self, artifact: Artifact) {
+        Rc::make_mut(&mut self.inner).artifact = Some(artifact);
+    }
+
+    pub(crate) fn artifact(&self) -> Option<&Artifact> {
+        self.inner.artifact.as_ref()
+    }
+
+    /// Dependencies are potential rust libs if they are not artifacts or they are an
+    /// artifact which allows to be seen as library.
+    /// Previously, every dependency was potentially seen as library.
+    pub(crate) fn maybe_lib(&self) -> bool {
+        self.artifact().map(|a| a.is_lib).unwrap_or(true)
+    }
+}
+
+/// The presence of an artifact turns an ordinary dependency into an Artifact dependency.
+/// As such, it will build one or more different artifacts of possibly various kinds
+/// for making them available at build time for rustc invocations or runtime
+/// for build scripts.
+///
+/// This information represents a requirement in the package this dependency refers to.
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct Artifact {
+    inner: Rc<Vec<ArtifactKind>>,
+    is_lib: bool,
+    target: Option<ArtifactTarget>,
+}
+
+#[derive(Serialize)]
+pub struct SerializedArtifact<'a> {
+    kinds: &'a [ArtifactKind],
+    lib: bool,
+    target: Option<&'a str>,
+}
+
+impl ser::Serialize for Artifact {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        SerializedArtifact {
+            kinds: self.kinds(),
+            lib: self.is_lib,
+            target: self.target.as_ref().map(|t| match t {
+                ArtifactTarget::BuildDependencyAssumeTarget => "target",
+                ArtifactTarget::Force(target) => target.rustc_target().as_str(),
+            }),
+        }
+        .serialize(s)
+    }
+}
+
+impl Artifact {
+    pub(crate) fn parse(
+        artifacts: &StringOrVec,
+        is_lib: bool,
+        target: Option<&str>,
+    ) -> CargoResult<Self> {
+        let kinds = ArtifactKind::validate(
+            artifacts
+                .iter()
+                .map(|s| ArtifactKind::parse(s))
+                .collect::<Result<Vec<_>, _>>()?,
+        )?;
+        Ok(Artifact {
+            inner: Rc::new(kinds),
+            is_lib,
+            target: target.map(ArtifactTarget::parse).transpose()?,
+        })
+    }
+
+    pub(crate) fn kinds(&self) -> &[ArtifactKind] {
+        &self.inner
+    }
+
+    pub(crate) fn is_lib(&self) -> bool {
+        self.is_lib
+    }
+
+    pub(crate) fn target(&self) -> Option<ArtifactTarget> {
+        self.target
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Ord, PartialOrd, Debug)]
+pub enum ArtifactTarget {
+    /// Only applicable to build-dependencies, causing them to be built
+    /// for the given target (i.e. via `--target <triple>`) instead of for the host.
+    /// Has no effect on non-build dependencies.
+    BuildDependencyAssumeTarget,
+    /// The name of the platform triple, like `x86_64-apple-darwin`, that this
+    /// artifact will always be built for, no matter if it is a build,
+    /// normal or dev dependency.
+    Force(CompileTarget),
+}
+
+impl ArtifactTarget {
+    pub fn parse(target: &str) -> CargoResult<ArtifactTarget> {
+        Ok(match target {
+            "target" => ArtifactTarget::BuildDependencyAssumeTarget,
+            name => ArtifactTarget::Force(CompileTarget::new(name)?),
+        })
+    }
+
+    pub fn to_compile_kind(&self) -> Option<CompileKind> {
+        self.to_compile_target().map(CompileKind::Target)
+    }
+
+    pub fn to_compile_target(&self) -> Option<CompileTarget> {
+        match self {
+            ArtifactTarget::BuildDependencyAssumeTarget => None,
+            ArtifactTarget::Force(target) => Some(*target),
+        }
+    }
+    pub(crate) fn to_resolved_compile_kind(
+        &self,
+        root_unit_compile_kind: CompileKind,
+    ) -> CompileKind {
+        match self {
+            ArtifactTarget::Force(target) => CompileKind::Target(*target),
+            ArtifactTarget::BuildDependencyAssumeTarget => root_unit_compile_kind,
+        }
+    }
+
+    pub(crate) fn to_resolved_compile_target(
+        &self,
+        root_unit_compile_kind: CompileKind,
+    ) -> Option<CompileTarget> {
+        match self.to_resolved_compile_kind(root_unit_compile_kind) {
+            CompileKind::Host => None,
+            CompileKind::Target(target) => Some(target),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Ord, PartialOrd, Debug)]
+pub enum ArtifactKind {
+    /// We represent all binaries in this dependency
+    AllBinaries,
+    /// We represent a single binary
+    SelectedBinary(InternedString),
+    Cdylib,
+    Staticlib,
+}
+
+impl ser::Serialize for ArtifactKind {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        let out: Cow<'_, str> = match *self {
+            ArtifactKind::AllBinaries => "bin".into(),
+            ArtifactKind::Staticlib => "staticlib".into(),
+            ArtifactKind::Cdylib => "cdylib".into(),
+            ArtifactKind::SelectedBinary(name) => format!("bin:{}", name.as_str()).into(),
+        };
+        out.serialize(s)
+    }
+}
+
+impl fmt::Display for ArtifactKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            ArtifactKind::Cdylib => "cdylib",
+            ArtifactKind::Staticlib => "staticlib",
+            ArtifactKind::AllBinaries => "bin",
+            ArtifactKind::SelectedBinary(bin_name) => return write!(f, "bin:{}", bin_name),
+        })
+    }
+}
+
+impl ArtifactKind {
+    fn parse(kind: &str) -> CargoResult<Self> {
+        Ok(match kind {
+            "bin" => ArtifactKind::AllBinaries,
+            "cdylib" => ArtifactKind::Cdylib,
+            "staticlib" => ArtifactKind::Staticlib,
+            _ => {
+                return kind
+                    .strip_prefix("bin:")
+                    .map(|bin_name| ArtifactKind::SelectedBinary(InternedString::new(bin_name)))
+                    .ok_or_else(|| anyhow::anyhow!("'{}' is not a valid artifact specifier", kind))
+            }
+        })
+    }
+
+    fn validate(kinds: Vec<ArtifactKind>) -> CargoResult<Vec<ArtifactKind>> {
+        if kinds.iter().any(|k| matches!(k, ArtifactKind::AllBinaries))
+            && kinds
+                .iter()
+                .any(|k| matches!(k, ArtifactKind::SelectedBinary(_)))
+        {
+            anyhow::bail!("Cannot specify both 'bin' and 'bin:<name>' binary artifacts, as 'bin' selects all available binaries.");
+        }
+        let mut kinds_without_dupes = kinds.clone();
+        kinds_without_dupes.sort();
+        kinds_without_dupes.dedup();
+        let num_dupes = kinds.len() - kinds_without_dupes.len();
+        if num_dupes != 0 {
+            anyhow::bail!(
+                "Found {} duplicate binary artifact{}",
+                num_dupes,
+                (num_dupes > 1).then(|| "s").unwrap_or("")
+            );
+        }
+        Ok(kinds)
     }
 }

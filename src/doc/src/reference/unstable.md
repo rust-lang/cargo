@@ -88,6 +88,7 @@ Each new feature described below should explain how to use it.
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
+    * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
@@ -811,6 +812,54 @@ In this example, the crate is always built for
 `wasm32-unknown-unknown`, for instance because it is going to be used
 as a plugin for a main program that runs on the host (or provided on
 the command line) target.
+
+### artifact-dependencies
+
+* Tracking Issue: [#9096](https://github.com/rust-lang/cargo/pull/9096)
+* Original Pull Request: [#9992](https://github.com/rust-lang/cargo/pull/9992)
+
+Allow Cargo packages to depend on `bin`, `cdylib`, and `staticlib` crates, 
+and use the artifacts built by those crates at compile time.
+
+Run `cargo` with `-Z bindeps` to enable this functionality.
+
+**Example:** use _cdylib_ artifact in build script
+
+The `Cargo.toml` in the consuming package, building the `bar` library as `cdylib` 
+for a specific build target…
+
+```toml
+[build-dependencies]
+bar = { artifact = "cdylib", version = "1.0", target = "wasm32-unknown-unknown" }
+```
+
+…along with the build script in `build.rs`.
+
+```rust
+fn main() {
+  wasm::run_file(env!("CARGO_CDYLIB_FILE_BAR"));
+}
+```
+
+**Example:** use _binary_ artifact and its library in a binary
+
+The `Cargo.toml` in the consuming package, building the `bar` binary for inclusion
+as artifact while making it available as library as well…
+
+```toml
+[dependencies]
+bar = { artifact = "bin", version = "1.0", lib = true }
+```
+
+…along with the executable using `main.rs`.
+
+```rust
+fn main() {
+  bar::init();
+  command::run(env!("CARGO_BIN_FILE_BAR"));
+}
+```
+
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)

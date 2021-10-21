@@ -829,6 +829,13 @@ impl Target {
         }
     }
 
+    pub fn is_staticlib(&self) -> bool {
+        match self.kind() {
+            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Staticlib),
+            _ => false,
+        }
+    }
+
     /// Returns whether this target produces an artifact which can be linked
     /// into a Rust crate.
     ///

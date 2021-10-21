@@ -17,7 +17,7 @@ use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
-use crate::core::dependency::DepKind;
+use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
@@ -277,6 +277,13 @@ pub struct DetailedTomlDependency<P = String> {
     default_features2: Option<bool>,
     package: Option<String>,
     public: Option<bool>,
+
+    /// One ore more of 'bin', 'cdylib', 'staticlib', 'bin:<name>'.
+    artifact: Option<StringOrVec>,
+    /// If set, the artifact should also be a dependency
+    lib: Option<bool>,
+    /// A platform name, like `x86_64-apple-darwin`
+    target: Option<String>,
 }
 
 // Explicit implementation so we avoid pulling in P: Default
@@ -297,6 +304,9 @@ impl<P> Default for DetailedTomlDependency<P> {
             default_features2: Default::default(),
             package: Default::default(),
             public: Default::default(),
+            artifact: Default::default(),
+            lib: Default::default(),
+            target: Default::default(),
         }
     }
 }
@@ -1949,6 +1959,41 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
             }
 
             dep.set_public(p);
+        }
+
+        if let (Some(artifact), is_lib, target) = (
+            self.artifact.as_ref(),
+            self.lib.unwrap_or(false),
+            self.target.as_deref(),
+        ) {
+            if cx.config.cli_unstable().bindeps {
+                let artifact = Artifact::parse(artifact, is_lib, target)?;
+                if dep.kind() != DepKind::Build
+                    && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
+                {
+                    bail!(
+                        r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
+                        name_in_toml
+                    );
+                }
+                dep.set_artifact(artifact)
+            } else {
+                bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
+            }
+        } else if self.lib.is_some() || self.target.is_some() {
+            for (is_set, specifier) in [
+                (self.lib.is_some(), "lib"),
+                (self.target.is_some(), "target"),
+            ] {
+                if !is_set {
+                    continue;
+                }
+                bail!(
+                    "'{}' specifier cannot be used without an 'artifact = …' value ({})",
+                    specifier,
+                    name_in_toml
+                )
+            }
         }
         Ok(dep)
     }
