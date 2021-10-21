@@ -125,7 +125,19 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
             if candidate.is_file() {
                 // PATH may have a component like "." in it, so we still need to
                 // canonicalize.
-                return Ok(candidate.canonicalize()?);
+                // Only do so if there are relative path components, otherwise symlinks to 'echo' may be resolved to their
+                // root program like 'coreutils' which relies on the executable name for proper function.
+                let has_relative_path_components = candidate.components().any(|c| {
+                    matches!(
+                        c,
+                        std::path::Component::ParentDir | std::path::Component::CurDir
+                    )
+                });
+                return Ok(if has_relative_path_components {
+                    candidate.canonicalize()?
+                } else {
+                    candidate
+                });
             }
         }
 
