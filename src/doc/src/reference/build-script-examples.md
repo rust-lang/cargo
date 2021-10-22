@@ -147,7 +147,7 @@ Pretty similar to before! Next, the manifest:
 [package]
 name = "hello-world-from-c"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 ```
 
 For now we’re not going to use any build dependencies, so let’s take a look at
@@ -297,7 +297,7 @@ with `pkg-config` installed. Let's start by setting up the manifest:
 [package]
 name = "libz-sys"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 links = "z"
 
 [build-dependencies]
@@ -384,7 +384,7 @@ Here's an example:
 [package]
 name = "zuser"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 libz-sys = "1.0.25"
