@@ -950,10 +950,6 @@ fn prepare_for_already_on_latest_unstable() {
 #[cargo_test]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
-    if !is_nightly() {
-        // Remove once 1.56 is stabilized.
-        return;
-    }
     if Edition::LATEST_UNSTABLE.is_some() {
         eprintln!("This test cannot run while the latest edition is unstable, skipping.");
         return;
@@ -1528,10 +1524,6 @@ fn rustfix_handles_multi_spans() {
 #[cargo_test]
 fn fix_edition_2021() {
     // Can migrate 2021, even when lints are allowed.
-    if !is_nightly() {
-        // Remove once 1.56 is stabilized.
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1748,10 +1740,6 @@ fn fix_with_run_cargo_in_proc_macros() {
 #[cargo_test]
 fn non_edition_lint_migration() {
     // Migrating to a new edition where a non-edition lint causes problems.
-    if !is_nightly() {
-        // Remove once force-warn hits stable.
-        return;
-    }
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file(
