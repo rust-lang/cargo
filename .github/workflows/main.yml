@@ -68,7 +68,9 @@ jobs:
 
     # Deny warnings on CI to avoid warnings getting into the codebase.
     - run: cargo test --features 'deny-warnings'
-    - run: cargo test --features 'deny-warnings' -p cargo-test-support
+    - run: cargo test --features 'deny-warnings' --manifest-path crates/cargo-test-support/Cargo.toml
+      env:
+        CARGO_TARGET_DIR: target
     - run: cargo test -p cargo-platform
     - run: cargo test -p cargo-util
     - run: cargo test --manifest-path crates/mdman/Cargo.toml
