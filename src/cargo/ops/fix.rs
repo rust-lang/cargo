@@ -52,7 +52,7 @@ use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 use semver::Version;
 
-use crate::core::compiler::{CompileKind, RustcTargetData, TargetInfo};
+use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, PackageId, Workspace};
@@ -68,7 +68,6 @@ const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
-const SUPPORTS_FORCE_WARN: &str = "__CARGO_SUPPORTS_FORCE_WARN";
 
 pub struct FixOptions {
     pub edition: bool,
@@ -123,17 +122,6 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
 
     let rustc = ws.config().load_global_rustc(Some(ws))?;
     wrapper.arg(&rustc.path);
-
-    // Remove this once 1.56 is stabilized.
-    let target_info = TargetInfo::new(
-        ws.config(),
-        &opts.compile_opts.build_config.requested_kinds,
-        &rustc,
-        CompileKind::Host,
-    )?;
-    if target_info.supports_force_warn {
-        wrapper.env(SUPPORTS_FORCE_WARN, "1");
-    }
 
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
     // repeating build until there are no more changes to be applied
@@ -849,7 +837,7 @@ impl FixArgs {
     fn apply(&self, cmd: &mut Command) {
         cmd.arg(&self.file);
         cmd.args(&self.other);
-        if self.prepare_for_edition.is_some() && env::var_os(SUPPORTS_FORCE_WARN).is_some() {
+        if self.prepare_for_edition.is_some() {
             // When migrating an edition, we don't want to fix other lints as
             // they can sometimes add suggestions that fail to apply, causing
             // the entire migration to fail. But those lints aren't needed to
@@ -868,12 +856,8 @@ impl FixArgs {
 
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
-                if env::var_os(SUPPORTS_FORCE_WARN).is_some() {
-                    cmd.arg("--force-warn")
-                        .arg(format!("rust-{}-compatibility", edition));
-                } else {
-                    cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
-                }
+                cmd.arg("--force-warn")
+                    .arg(format!("rust-{}-compatibility", edition));
             }
         }
     }
