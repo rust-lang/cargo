@@ -2,9 +2,6 @@
 name = "cargo"
 version = "0.59.0"
 edition = "2021"
-authors = ["Yehuda Katz <wycats@gmail.com>",
-           "Carl Lerche <me@carllerche.com>",
-           "Alex Crichton <alex@alexcrichton.com>"]
 license = "MIT OR Apache-2.0"
 homepage = "https://crates.io"
 repository = "https://github.com/rust-lang/cargo"
