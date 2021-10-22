@@ -113,6 +113,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: rustup update nightly && rustup default nightly
+    - run: rustup update stable
     - run: rustup component add rust-docs
     - run: ci/validate-man.sh
     # This requires rustfmt, use stable.
