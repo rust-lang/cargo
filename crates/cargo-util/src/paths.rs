@@ -123,15 +123,13 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
         });
         for candidate in candidates {
             if candidate.is_file() {
-                // PATH may have a component like "." in it, so we still need to
-                // canonicalize.
-                return Ok(candidate.canonicalize()?);
+                return Ok(candidate);
             }
         }
 
         anyhow::bail!("no executable for `{}` found in PATH", exec.display())
     } else {
-        Ok(exec.canonicalize()?)
+        Ok(exec.into())
     }
 }
 
