@@ -35,7 +35,7 @@ crates:
 [package]
 name = "hello_world"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 time = "0.1.12"

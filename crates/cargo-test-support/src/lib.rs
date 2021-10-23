@@ -5,6 +5,7 @@
 #![allow(clippy::all)]
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
+#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 use std::env;
 use std::ffi::OsStr;

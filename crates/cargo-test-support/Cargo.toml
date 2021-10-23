@@ -1,9 +1,8 @@
 [package]
 name = "cargo-test-support"
 version = "0.1.0"
-authors = ["Alex Crichton <alex@alexcrichton.com>"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [lib]
 doctest = false
@@ -24,3 +23,6 @@ tar = { version = "0.4.18", default-features = false }
 termcolor = "1.1.2"
 toml = "0.5.7"
 url = "2.2.2"
+
+[features]
+deny-warnings = []
