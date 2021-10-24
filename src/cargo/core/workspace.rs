@@ -431,7 +431,7 @@ impl<'cfg> Workspace<'cfg> {
         // but that's not quite right as it won't deal with overlaps.
         let mut combined = from_config;
         for (url, deps_from_manifest) in from_manifest {
-            if let Some(deps_from_config) = combined.get_mut(&url) {
+            if let Some(deps_from_config) = combined.get_mut(url) {
                 // We want from_config to take precedence for each patched name.
                 // NOTE: This is inefficient if the number of patches is large!
                 let mut from_manifest_pruned = deps_from_manifest.clone();
