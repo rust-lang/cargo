@@ -617,7 +617,13 @@ impl Ord for SourceKind {
 // you're able to restore the hash to its original value, please do so!
 // Otherwise please just leave a comment in your PR as to why the hash value is
 // changing and why the old value can't be easily preserved.
+//
+// The hash value differs depending on endianess and bit-width since Rust 1.45
+// (see https://github.com/rust-lang/rust/issues/74215). We run this test only
+// on 64-bit little-endian platforms which are most commonly used for
+// development and tested in CI.
 #[test]
+#[cfg(all(target_endian = "little", target_pointer_width = "64"))]
 fn test_cratesio_hash() {
     let config = Config::default().unwrap();
     let crates_io = SourceId::crates_io(&config).unwrap();
