@@ -188,7 +188,11 @@ impl<'cfg> Compilation<'cfg> {
         unit: &Unit,
         script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
-        let rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
+        let mut rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
+        if self.config.extra_verbose() {
+            rustdoc.display_env_vars();
+        }
+
         let cmd = fill_rustc_tool_env(rustdoc, unit);
         let mut p = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
         unit.target.edition().cmd_edition_arg(&mut p);

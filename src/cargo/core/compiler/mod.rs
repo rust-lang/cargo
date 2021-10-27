@@ -652,12 +652,13 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     rustdoc.arg("-C").arg(format!("metadata={}", metadata));
 
     let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
-        let layout = cx.files().layout(unit.kind);
-        let output_dir = layout.prepare_tmp()?;
+        let output_dir = cx.files().deps_dir(unit);
         Ok(output_dir.join(format!("{}.examples", unit.buildkey())))
     };
 
     if unit.mode.is_doc_scrape() {
+        debug_assert!(cx.bcx.scrape_units.contains(unit));
+
         rustdoc.arg("-Zunstable-options");
 
         rustdoc

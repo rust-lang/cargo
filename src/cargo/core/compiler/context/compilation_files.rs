@@ -191,7 +191,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the directory where the artifacts for the given unit are
     /// initially created.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
-        if unit.mode.is_doc() {
+        if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
             self.layout(unit.kind).doc().to_path_buf()
         } else if unit.mode.is_doc_test() {
             panic!("doc tests do not have an out dir");
@@ -418,9 +418,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 vec![]
             }
             CompileMode::Docscrape => {
-                // Docscrape only generates temporary *.examples files to pass to rustdoc
-                // so they're not important to track
-                vec![]
+                let path = self
+                    .deps_dir(unit)
+                    .join(format!("{}.examples", unit.buildkey()));
+                vec![OutputFile {
+                    path,
+                    hardlink: None,
+                    export_path: None,
+                    flavor: FileFlavor::Normal,
+                }]
             }
             CompileMode::Test
             | CompileMode::Build

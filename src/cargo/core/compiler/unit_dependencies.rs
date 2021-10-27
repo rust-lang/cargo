@@ -256,6 +256,7 @@ fn compute_deps(
         if !dep.is_transitive()
             && !unit.target.is_test()
             && !unit.target.is_example()
+            && !unit.mode.is_doc_scrape()
             && !unit.mode.is_any_test()
         {
             return false;
@@ -473,7 +474,8 @@ fn compute_deps_doc(
 
     // Add all units being scraped for examples as a dependency of Doc units.
     for scrape_unit in state.scrape_units.iter() {
-        let unit_for = UnitFor::new_normal();
+        // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
+        let unit_for = UnitFor::new_host(scrape_unit.target.proc_macro());
         deps_of(scrape_unit, state, unit_for)?;
         ret.push(new_unit_dep(
             state,

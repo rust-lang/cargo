@@ -2184,6 +2184,9 @@ fn scrape_examples_basic() {
     let doc_html = p.read_file("target/doc/foo/fn.foo.html");
     assert!(doc_html.contains("Examples found in repository"));
     assert!(doc_html.contains("More examples"));
+
+    // Ensure that the reverse-dependency has its sources generated
+    assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
 }
 
 #[cargo_test]

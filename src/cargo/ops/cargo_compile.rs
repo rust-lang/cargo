@@ -368,18 +368,27 @@ pub fn create_bcx<'a, 'cfg>(
 
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
-    let specs = spec.to_package_id_specs(ws)?;
-    let has_dev_units = if filter.need_dev_deps(build_config.mode) {
-        HasDevUnits::Yes
+    let all_packages = &Packages::All;
+    let full_specs = if rustdoc_scrape_examples.is_some() {
+        all_packages
     } else {
-        HasDevUnits::No
+        spec
     };
+
+    let specs = spec.to_package_id_specs(ws)?;
+    let resolve_specs = full_specs.to_package_id_specs(ws)?;
+    let has_dev_units =
+        if filter.need_dev_deps(build_config.mode) || rustdoc_scrape_examples.is_some() {
+            HasDevUnits::Yes
+        } else {
+            HasDevUnits::No
+        };
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
         &build_config.requested_kinds,
         cli_features,
-        &specs,
+        &resolve_specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
     )?;
@@ -494,8 +503,7 @@ pub fn create_bcx<'a, 'cfg>(
 
     let mut scrape_units = match rustdoc_scrape_examples {
         Some(scrape_filter) => {
-            let specs = Packages::All.to_package_id_specs(ws)?;
-            let to_build_ids = resolve.specs_to_ids(&specs)?;
+            let to_build_ids = resolve.specs_to_ids(&resolve_specs)?;
             let to_builds = pkg_set.get_many(to_build_ids)?;
             let mode = CompileMode::Docscrape;
 
