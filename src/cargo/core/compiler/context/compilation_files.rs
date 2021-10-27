@@ -191,6 +191,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the directory where the artifacts for the given unit are
     /// initially created.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
+        // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
+        // will be put into doc/ and not into deps/ where the *.examples files are stored.
         if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
             self.layout(unit.kind).doc().to_path_buf()
         } else if unit.mode.is_doc_test() {

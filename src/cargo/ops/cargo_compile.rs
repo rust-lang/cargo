@@ -229,7 +229,7 @@ impl Packages {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LibRule {
     /// Include the library, fail if not present
     True,
@@ -239,13 +239,13 @@ pub enum LibRule {
     False,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum FilterRule {
     All,
     Just(Vec<String>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum CompileFilter {
     Default {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
