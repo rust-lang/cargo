@@ -369,20 +369,19 @@ pub fn create_bcx<'a, 'cfg>(
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
     let all_packages = &Packages::All;
-    let full_specs = if rustdoc_scrape_examples.is_some() {
+    let need_reverse_dependencies = rustdoc_scrape_examples.is_some();
+    let full_specs = if need_reverse_dependencies {
         all_packages
     } else {
         spec
     };
 
-    let specs = spec.to_package_id_specs(ws)?;
     let resolve_specs = full_specs.to_package_id_specs(ws)?;
-    let has_dev_units =
-        if filter.need_dev_deps(build_config.mode) || rustdoc_scrape_examples.is_some() {
-            HasDevUnits::Yes
-        } else {
-            HasDevUnits::No
-        };
+    let has_dev_units = if filter.need_dev_deps(build_config.mode) || need_reverse_dependencies {
+        HasDevUnits::Yes
+    } else {
+        HasDevUnits::No
+    };
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
@@ -422,6 +421,11 @@ pub fn create_bcx<'a, 'cfg>(
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
+    let specs = if need_reverse_dependencies {
+        spec.to_package_id_specs(ws)?
+    } else {
+        resolve_specs.clone()
+    };
     let to_build_ids = resolve.specs_to_ids(&specs)?;
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
