@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, DocOptions};
+use anyhow::anyhow;
+use cargo::ops::{self, CompileFilter, DocOptions, FilterRule, LibRule};
 
 pub fn cli() -> App {
     subcommand("doc")
@@ -19,6 +20,13 @@ pub fn cli() -> App {
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))
+        .arg(
+            opt(
+                "scrape-examples",
+                "Scrape examples to include as function documentation",
+            )
+            .value_name("FLAGS"),
+        )
         .arg_jobs()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
@@ -47,6 +55,33 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+
+    // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
+    // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
+    compile_opts.rustdoc_scrape_examples = match args.value_of("scrape-examples") {
+        Some(s) => Some(match s {
+            "all" => CompileFilter::new_all_targets(),
+            "examples" => CompileFilter::new(
+                LibRule::False,
+                FilterRule::none(),
+                FilterRule::none(),
+                FilterRule::All,
+                FilterRule::none(),
+            ),
+            _ => {
+                return Err(CliError::from(anyhow!(
+                    r#"--scrape-examples must take "all" or "examples" as an argument"#
+                )));
+            }
+        }),
+        None => None,
+    };
+
+    if compile_opts.rustdoc_scrape_examples.is_some() {
+        config
+            .cli_unstable()
+            .fail_if_stable_opt("--scrape-examples", 9910)?;
+    }
 
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),

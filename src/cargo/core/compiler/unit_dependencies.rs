@@ -47,6 +47,7 @@ struct State<'a, 'cfg> {
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+    scrape_units: &'a [Unit],
 
     /// A set of edges in `unit_dependencies` where (a, b) means that the
     /// dependency from a to b was added purely because it was a dev-dependency.
@@ -61,6 +62,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit],
+    scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
@@ -91,6 +93,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         target_data,
         profiles,
         interner,
+        scrape_units,
         dev_dependency_edges: HashSet::new(),
     };
 
@@ -253,6 +256,7 @@ fn compute_deps(
         if !dep.is_transitive()
             && !unit.target.is_test()
             && !unit.target.is_example()
+            && !unit.mode.is_doc_scrape()
             && !unit.mode.is_any_test()
         {
             return false;
@@ -467,6 +471,25 @@ fn compute_deps_doc(
     if unit.target.is_bin() || unit.target.is_example() {
         ret.extend(maybe_lib(unit, state, unit_for)?);
     }
+
+    // Add all units being scraped for examples as a dependency of Doc units.
+    if state.ws.is_member(&unit.pkg) {
+        for scrape_unit in state.scrape_units.iter() {
+            // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
+            let unit_for = UnitFor::new_host(scrape_unit.target.proc_macro());
+            deps_of(scrape_unit, state, unit_for)?;
+            ret.push(new_unit_dep(
+                state,
+                scrape_unit,
+                &scrape_unit.pkg,
+                &scrape_unit.target,
+                unit_for,
+                scrape_unit.kind,
+                scrape_unit.mode,
+            )?);
+        }
+    }
+
     Ok(ret)
 }
 
@@ -558,7 +581,7 @@ fn dep_build_script(
 /// Choose the correct mode for dependencies.
 fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
     match mode {
-        CompileMode::Check { .. } | CompileMode::Doc { .. } => {
+        CompileMode::Check { .. } | CompileMode::Doc { .. } | CompileMode::Docscrape => {
             if target.for_host() {
                 // Plugin and proc macro targets should be compiled like
                 // normal.
@@ -695,6 +718,14 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                         && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
+                // Avoid cycles when using the doc --scrape-examples feature:
+                // Say a workspace has crates A and B where A has a build-dependency on B.
+                // The Doc units for A and B will have a dependency on the Docscrape for both A and B.
+                // So this would add a dependency from B-build to A-build, causing a cycle:
+                //   B (build) -> A (build) -> B(build)
+                // See the test scrape_examples_avoid_build_script_cycle for a concrete example.
+                // To avoid this cycle, we filter out the B -> A (docscrape) dependency.
+                .filter(|(_parent, other)| !other.unit.mode.is_doc_scrape())
                 // Skip dependencies induced via dev-dependencies since
                 // connections between `links` and build scripts only happens
                 // via normal dependencies. Otherwise since dev-dependencies can

@@ -76,6 +76,9 @@ pub struct CompileOptions {
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
+    /// Whether the `--scrape-examples` flag was specified and build flags for
+    /// examples should be forwarded to `rustdoc`.
+    pub rustdoc_scrape_examples: Option<CompileFilter>,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
     pub honor_rust_version: bool,
@@ -94,12 +97,13 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            rustdoc_scrape_examples: None,
             honor_rust_version: true,
         })
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Packages {
     Default,
     All,
@@ -334,6 +338,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
+        ref rustdoc_scrape_examples,
         honor_rust_version,
     } = *options;
     let config = ws.config();
@@ -351,7 +356,7 @@ pub fn create_bcx<'a, 'cfg>(
                 )?;
             }
         }
-        CompileMode::Doc { .. } | CompileMode::Doctest => {
+        CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::Docscrape => {
             if std::env::var("RUSTDOC_FLAGS").is_ok() {
                 config.shell().warn(
                     "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
@@ -363,8 +368,16 @@ pub fn create_bcx<'a, 'cfg>(
 
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
-    let specs = spec.to_package_id_specs(ws)?;
-    let has_dev_units = if filter.need_dev_deps(build_config.mode) {
+    let all_packages = &Packages::All;
+    let need_reverse_dependencies = rustdoc_scrape_examples.is_some();
+    let full_specs = if need_reverse_dependencies {
+        all_packages
+    } else {
+        spec
+    };
+
+    let resolve_specs = full_specs.to_package_id_specs(ws)?;
+    let has_dev_units = if filter.need_dev_deps(build_config.mode) || need_reverse_dependencies {
         HasDevUnits::Yes
     } else {
         HasDevUnits::No
@@ -374,7 +387,7 @@ pub fn create_bcx<'a, 'cfg>(
         &target_data,
         &build_config.requested_kinds,
         cli_features,
-        &specs,
+        &resolve_specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
     )?;
@@ -408,6 +421,11 @@ pub fn create_bcx<'a, 'cfg>(
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
+    let specs = if need_reverse_dependencies {
+        spec.to_package_id_specs(ws)?
+    } else {
+        resolve_specs.clone()
+    };
     let to_build_ids = resolve.specs_to_ids(&specs)?;
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
@@ -487,6 +505,30 @@ pub fn create_bcx<'a, 'cfg>(
         interner,
     )?;
 
+    let mut scrape_units = match rustdoc_scrape_examples {
+        Some(scrape_filter) => {
+            let to_build_ids = resolve.specs_to_ids(&resolve_specs)?;
+            let to_builds = pkg_set.get_many(to_build_ids)?;
+            let mode = CompileMode::Docscrape;
+
+            generate_targets(
+                ws,
+                &to_builds,
+                scrape_filter,
+                &build_config.requested_kinds,
+                explicit_host_kind,
+                mode,
+                &resolve,
+                &workspace_resolve,
+                &resolved_features,
+                &pkg_set,
+                &profiles,
+                interner,
+            )?
+        }
+        None => Vec::new(),
+    };
+
     let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
         // Only build libtest if it looks like it is needed.
         let mut crates = crates.clone();
@@ -521,6 +563,7 @@ pub fn create_bcx<'a, 'cfg>(
         &resolved_features,
         std_resolve_features.as_ref(),
         &units,
+        &scrape_units,
         &std_roots,
         build_config.mode,
         &target_data,
@@ -542,10 +585,17 @@ pub fn create_bcx<'a, 'cfg>(
         // Rebuild the unit graph, replacing the explicit host targets with
         // CompileKind::Host, merging any dependencies shared with build
         // dependencies.
-        let new_graph = rebuild_unit_graph_shared(interner, unit_graph, &units, explicit_host_kind);
+        let new_graph = rebuild_unit_graph_shared(
+            interner,
+            unit_graph,
+            &units,
+            &scrape_units,
+            explicit_host_kind,
+        );
         // This would be nicer with destructuring assignment.
         units = new_graph.0;
-        unit_graph = new_graph.1;
+        scrape_units = new_graph.1;
+        unit_graph = new_graph.2;
     }
 
     let mut extra_compiler_args = HashMap::new();
@@ -560,6 +610,7 @@ pub fn create_bcx<'a, 'cfg>(
         }
         extra_compiler_args.insert(units[0].clone(), args);
     }
+
     for unit in &units {
         if unit.mode.is_doc() || unit.mode.is_doc_test() {
             let mut extra_args = local_rustdoc_args.clone();
@@ -621,6 +672,7 @@ pub fn create_bcx<'a, 'cfg>(
         target_data,
         units,
         unit_graph,
+        scrape_units,
     )?;
 
     Ok(bcx)
@@ -742,17 +794,18 @@ impl CompileFilter {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
             CompileMode::Check { test: true } => true,
-            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { test: false } => {
-                match *self {
-                    CompileFilter::Default { .. } => false,
-                    CompileFilter::Only {
-                        ref examples,
-                        ref tests,
-                        ref benches,
-                        ..
-                    } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
-                }
-            }
+            CompileMode::Build
+            | CompileMode::Doc { .. }
+            | CompileMode::Docscrape
+            | CompileMode::Check { test: false } => match *self {
+                CompileFilter::Default { .. } => false,
+                CompileFilter::Only {
+                    ref examples,
+                    ref tests,
+                    ref benches,
+                    ..
+                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+            },
             CompileMode::RunCustomBuild => panic!("Invalid mode"),
         }
     }
@@ -1342,7 +1395,9 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
                 })
                 .collect()
         }
-        CompileMode::Doctest | CompileMode::RunCustomBuild => panic!("Invalid mode {:?}", mode),
+        CompileMode::Doctest | CompileMode::Docscrape | CompileMode::RunCustomBuild => {
+            panic!("Invalid mode {:?}", mode)
+        }
     }
 }
 
@@ -1454,8 +1509,9 @@ fn rebuild_unit_graph_shared(
     interner: &UnitInterner,
     unit_graph: UnitGraph,
     roots: &[Unit],
+    scrape_units: &[Unit],
     to_host: CompileKind,
-) -> (Vec<Unit>, UnitGraph) {
+) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
     let mut result = UnitGraph::new();
     // Map of the old unit to the new unit, used to avoid recursing into units
     // that have already been computed to improve performance.
@@ -1466,7 +1522,11 @@ fn rebuild_unit_graph_shared(
             traverse_and_share(interner, &mut memo, &mut result, &unit_graph, root, to_host)
         })
         .collect();
-    (new_roots, result)
+    let new_scrape_units = scrape_units
+        .iter()
+        .map(|unit| memo.get(unit).unwrap().clone())
+        .collect();
+    (new_roots, new_scrape_units, result)
 }
 
 /// Recursive function for rebuilding the graph.

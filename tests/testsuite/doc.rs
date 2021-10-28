@@ -2148,3 +2148,152 @@ fn doc_fingerprint_unusual_behavior() {
     assert!(build_doc.join("somefile").exists());
     assert!(real_doc.join("somefile").exists());
 }
+
+#[cargo_test]
+fn scrape_examples_basic() {
+    if !is_nightly() {
+        // --scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options --scrape-examples all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+    assert!(doc_html.contains("More examples"));
+
+    // Ensure that the reverse-dependency has its sources generated
+    assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
+}
+
+#[cargo_test]
+fn scrape_examples_avoid_build_script_cycle() {
+    if !is_nightly() {
+        // --scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        // package with build dependency
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                links = "foo"
+
+                [workspace]
+                members = ["bar"]
+
+                [build-dependencies]
+                bar = {path = "bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main(){}")
+        // dependency
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                links = "bar"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main(){}")
+        .build();
+
+    p.cargo("doc --all -Zunstable-options --scrape-examples all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn scrape_examples_complex_reverse_dependencies() {
+    if !is_nightly() {
+        // --scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dev-dependencies]
+                a = {path = "a", features = ["feature"]}
+                b = {path = "b"}
+
+                [workspace]
+                members = ["b"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "fn main() { a::f(); }")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                b = {path = "../b"}
+
+                [features]
+                feature = []
+            "#,
+        )
+        .file("a/src/lib.rs", "#[cfg(feature)] pub fn f();")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zunstable-options --scrape-examples all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}

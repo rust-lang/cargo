@@ -323,7 +323,9 @@ impl Profiles {
                         (InternedString::new("dev"), None)
                     }
                 }
-                CompileMode::Doc { .. } => (InternedString::new("doc"), None),
+                CompileMode::Doc { .. } | CompileMode::Docscrape => {
+                    (InternedString::new("doc"), None)
+                }
             }
         } else {
             (self.requested_profile, None)
