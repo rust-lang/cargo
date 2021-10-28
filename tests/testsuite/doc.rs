@@ -2236,7 +2236,6 @@ fn scrape_examples_avoid_build_script_cycle() {
         .run();
 }
 
-
 #[cargo_test]
 fn scrape_examples_complex_reverse_dependencies() {
     if !is_nightly() {
@@ -2281,7 +2280,7 @@ fn scrape_examples_complex_reverse_dependencies() {
                 feature = []
             "#,
         )
-        .file("a/src/lib.rs",  "#[cfg(feature)] pub fn f();")
+        .file("a/src/lib.rs", "#[cfg(feature)] pub fn f();")
         .file(
             "b/Cargo.toml",
             r#"
