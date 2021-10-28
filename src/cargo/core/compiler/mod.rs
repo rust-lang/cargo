@@ -21,7 +21,6 @@ mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
 
-use std::collections::HashSet;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -665,18 +664,14 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             .arg("--scrape-examples-output-path")
             .arg(scrape_output_path(unit)?);
 
-        // Limit the scraped examples to just crates in the root set
-        let root_packages = cx
-            .bcx
-            .roots
-            .iter()
-            .map(|root| root.pkg.name())
-            .collect::<HashSet<_>>();
-        for pkg in root_packages {
-            rustdoc.arg("--scrape-examples-target-crate").arg(pkg);
+        // Only scrape example for items from crates in the workspace, to reduce generated file size
+        for pkg in cx.bcx.ws.members() {
+            rustdoc
+                .arg("--scrape-examples-target-crate")
+                .arg(pkg.name());
         }
-    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.roots.contains(unit) {
-        // We only pass scraped examples to packages in the workspace (bcx.roots)
+    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.is_member(&unit.pkg) {
+        // We only pass scraped examples to packages in the workspace
         // since examples are only coming from reverse-dependencies of workspace packages
 
         rustdoc.arg("-Zunstable-options");

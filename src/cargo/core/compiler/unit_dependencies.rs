@@ -473,19 +473,21 @@ fn compute_deps_doc(
     }
 
     // Add all units being scraped for examples as a dependency of Doc units.
-    for scrape_unit in state.scrape_units.iter() {
-        // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
-        let unit_for = UnitFor::new_host(scrape_unit.target.proc_macro());
-        deps_of(scrape_unit, state, unit_for)?;
-        ret.push(new_unit_dep(
-            state,
-            scrape_unit,
-            &scrape_unit.pkg,
-            &scrape_unit.target,
-            unit_for,
-            scrape_unit.kind,
-            scrape_unit.mode,
-        )?);
+    if state.ws.is_member(&unit.pkg) {
+        for scrape_unit in state.scrape_units.iter() {
+            // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
+            let unit_for = UnitFor::new_host(scrape_unit.target.proc_macro());
+            deps_of(scrape_unit, state, unit_for)?;
+            ret.push(new_unit_dep(
+                state,
+                scrape_unit,
+                &scrape_unit.pkg,
+                &scrape_unit.target,
+                unit_for,
+                scrape_unit.kind,
+                scrape_unit.mode,
+            )?);
+        }
     }
 
     Ok(ret)

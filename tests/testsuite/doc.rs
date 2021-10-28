@@ -2235,3 +2235,66 @@ fn scrape_examples_avoid_build_script_cycle() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+
+#[cargo_test]
+fn scrape_examples_complex_reverse_dependencies() {
+    if !is_nightly() {
+        // --scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dev-dependencies]
+                a = {path = "a", features = ["feature"]}
+                b = {path = "b"}
+
+                [workspace]
+                members = ["b"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "fn main() { a::f(); }")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                b = {path = "../b"}
+
+                [features]
+                feature = []
+            "#,
+        )
+        .file("a/src/lib.rs",  "#[cfg(feature)] pub fn f();")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zunstable-options --scrape-examples all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
