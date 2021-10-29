@@ -15,10 +15,10 @@ lazy_static::lazy_static! {
     // Maps from commonly known external commands (not builtin to cargo) to their
     // description, for the help page. Reserved for external subcommands that are
     // core within the rust ecosystem (esp ones that might become internal in the future).
-    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = vec![
+    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = HashMap::from([
         ("clippy", "Checks a package to catch common mistakes and improve your Rust code."),
         ("fmt", "Formats all bin and lib files of the current crate using rustfmt."),
-    ].into_iter().collect();
+    ]);
 }
 
 pub fn main(config: &mut Config) -> CliResult {
