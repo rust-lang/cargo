@@ -45,7 +45,7 @@ use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 
 /// Contains information about how a package should be compiled.
 ///
@@ -76,9 +76,6 @@ pub struct CompileOptions {
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
-    /// Whether the `--scrape-examples` flag was specified and build flags for
-    /// examples should be forwarded to `rustdoc`.
-    pub rustdoc_scrape_examples: Option<CompileFilter>,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
     pub honor_rust_version: bool,
@@ -97,7 +94,6 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            rustdoc_scrape_examples: None,
             honor_rust_version: true,
         })
     }
@@ -338,7 +334,6 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
-        ref rustdoc_scrape_examples,
         honor_rust_version,
     } = *options;
     let config = ws.config();
@@ -369,6 +364,7 @@ pub fn create_bcx<'a, 'cfg>(
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
     let all_packages = &Packages::All;
+    let rustdoc_scrape_examples = &config.cli_unstable().rustdoc_scrape_examples;
     let need_reverse_dependencies = rustdoc_scrape_examples.is_some();
     let full_specs = if need_reverse_dependencies {
         all_packages
@@ -506,7 +502,22 @@ pub fn create_bcx<'a, 'cfg>(
     )?;
 
     let mut scrape_units = match rustdoc_scrape_examples {
-        Some(scrape_filter) => {
+        Some(arg) => {
+            let filter = match arg.as_str() {
+                "all" => CompileFilter::new_all_targets(),
+                "examples" => CompileFilter::new(
+                    LibRule::False,
+                    FilterRule::none(),
+                    FilterRule::none(),
+                    FilterRule::All,
+                    FilterRule::none(),
+                ),
+                _ => {
+                    bail!(
+                        r#"-Z rustdoc-scrape-examples must take "all" or "examples" as an argument"#
+                    )
+                }
+            };
             let to_build_ids = resolve.specs_to_ids(&resolve_specs)?;
             let to_builds = pkg_set.get_many(to_build_ids)?;
             let mode = CompileMode::Docscrape;
@@ -514,7 +525,7 @@ pub fn create_bcx<'a, 'cfg>(
             generate_targets(
                 ws,
                 &to_builds,
-                scrape_filter,
+                &filter,
                 &build_config.requested_kinds,
                 explicit_host_kind,
                 mode,
