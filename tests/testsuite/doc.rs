@@ -2152,7 +2152,7 @@ fn doc_fingerprint_unusual_behavior() {
 #[cargo_test]
 fn scrape_examples_basic() {
     if !is_nightly() {
-        // --scrape-examples is unstable
+        // -Z rustdoc-scrape-examples is unstable
         return;
     }
 
@@ -2170,7 +2170,7 @@ fn scrape_examples_basic() {
         .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
         .build();
 
-    p.cargo("doc -Zunstable-options --scrape-examples all")
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -2192,7 +2192,7 @@ fn scrape_examples_basic() {
 #[cargo_test]
 fn scrape_examples_avoid_build_script_cycle() {
     if !is_nightly() {
-        // --scrape-examples is unstable
+        // -Z rustdoc-scrape-examples is unstable
         return;
     }
 
@@ -2231,7 +2231,7 @@ fn scrape_examples_avoid_build_script_cycle() {
         .file("bar/build.rs", "fn main(){}")
         .build();
 
-    p.cargo("doc --all -Zunstable-options --scrape-examples all")
+    p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
         .masquerade_as_nightly_cargo()
         .run();
 }
@@ -2239,7 +2239,7 @@ fn scrape_examples_avoid_build_script_cycle() {
 #[cargo_test]
 fn scrape_examples_complex_reverse_dependencies() {
     if !is_nightly() {
-        // --scrape-examples is unstable
+        // -Z rustdoc-scrape-examples is unstable
         return;
     }
 
@@ -2293,7 +2293,7 @@ fn scrape_examples_complex_reverse_dependencies() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zunstable-options --scrape-examples all")
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
         .masquerade_as_nightly_cargo()
         .run();
 }

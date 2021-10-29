@@ -1390,11 +1390,11 @@ Custom named profiles have been stabilized in the 1.57 release. See the
 * RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
 * Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
 
-The `--scrape-examples` argument to the `doc` command tells Rustdoc to search
-crates in the current workspace for calls to functions. Those call-sites are then
-included as documentation. The flag can take an argument of `all` or `examples`
-which configures which crate in the workspace to analyze for examples. For instance:
+The `-Z rustdoc-scrape-examples` argument tells Rustdoc to search crates in the current workspace
+for calls to functions. Those call-sites are then included as documentation. The flag can take an
+argument of `all` or `examples` which configures which crate in the workspace to analyze for examples.
+For instance:
 
 ```
-cargo doc -Z unstable-options --scrape-examples examples
+cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
 ```

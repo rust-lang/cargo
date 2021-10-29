@@ -765,7 +765,6 @@ fn run_verify(
             target_rustc_args: rustc_args,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            rustdoc_scrape_examples: None,
             honor_rust_version: true,
         },
         &exec,
