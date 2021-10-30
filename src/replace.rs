@@ -56,7 +56,7 @@ impl Data {
         self.parts.iter().fold(Vec::new(), |mut acc, d| {
             match d.data {
                 State::Initial => acc.extend_from_slice(&self.original[d.start..=d.end]),
-                State::Replaced(ref d) | State::Inserted(ref d) => acc.extend_from_slice(&d),
+                State::Replaced(ref d) | State::Inserted(ref d) => acc.extend_from_slice(d),
             };
             acc
         })
@@ -164,7 +164,7 @@ impl Data {
 
             // Previous parts
             if let Some(ps) = self.parts.get(..index_of_part_to_split) {
-                new_parts.extend_from_slice(&ps);
+                new_parts.extend_from_slice(ps);
             }
 
             // Keep initial data on left side of part
@@ -198,7 +198,7 @@ impl Data {
 
             // Following parts
             if let Some(ps) = self.parts.get(index_of_part_to_split + 1..) {
-                new_parts.extend_from_slice(&ps);
+                new_parts.extend_from_slice(ps);
             }
 
             new_parts
