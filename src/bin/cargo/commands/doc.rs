@@ -19,6 +19,10 @@ pub fn cli() -> App {
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))
+        .arg(opt(
+            "check",
+            "Run rustdoc checks and report errors, but don't build documentation",
+        ))
         .arg_jobs()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
@@ -47,6 +51,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    compile_opts.rustdoc_check = args.is_present("check");
+
+    if compile_opts.rustdoc_check {
+        config.cli_unstable().fail_if_stable_opt("--check", 10025)?;
+    }
 
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),

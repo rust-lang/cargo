@@ -1398,3 +1398,9 @@ For instance:
 ```
 cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
 ```
+
+### check
+
+* Tracking Issue: [#10025](https://github.com/rust-lang/cargo/issues/10025)
+
+The `--check` argument runs Rustdoc checks and report errors, but doesn't build documentation.

@@ -545,6 +545,7 @@ pub trait ArgMatchesExt {
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: !self._is_present("ignore-rust-version"),
+            rustdoc_check: false,
         };
 
         if let Some(ws) = workspace {

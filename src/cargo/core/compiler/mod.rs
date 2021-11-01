@@ -629,12 +629,20 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     }
     let doc_dir = cx.files().out_dir(unit);
 
+    let rustdoc_check = cx
+        .bcx
+        .extra_args_for(unit)
+        .map(|a| a.iter().any(|c| c == "--check"))
+        .unwrap_or(false);
+
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
     // it doesn't already exist.
-    paths::create_dir_all(&doc_dir)?;
+    if rustdoc_check {
+        paths::create_dir_all(&doc_dir)?;
 
-    rustdoc.arg("-o").arg(&doc_dir);
+        rustdoc.arg("-o").arg(&doc_dir);
+    }
 
     for feat in &unit.features {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));

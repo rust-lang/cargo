@@ -2297,3 +2297,35 @@ fn scrape_examples_complex_reverse_dependencies() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn doc_check() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "checker"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![warn(rustdoc::all)]
+
+                pub struct Foo;
+            "#,
+        )
+        .build();
+    p.cargo("doc -Zunstable-options --check")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("warning: no documentation found for this crate's top-level module")
+        .with_stderr_contains("warning: missing code example in this documentation")
+        .run();
+    assert!(
+        !p.root().join("target/doc").exists()
+            || !p.root().join("target/doc/checker/index.html").exists()
+    );
+}

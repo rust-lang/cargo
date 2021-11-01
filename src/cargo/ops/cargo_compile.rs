@@ -79,6 +79,9 @@ pub struct CompileOptions {
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
     pub honor_rust_version: bool,
+    /// Whether the `--check` flags was specified and should be forwarded to
+    /// `rustdoc`.
+    pub rustdoc_check: bool,
 }
 
 impl<'a> CompileOptions {
@@ -95,6 +98,7 @@ impl<'a> CompileOptions {
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: true,
+            rustdoc_check: false,
         })
     }
 }
@@ -335,6 +339,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref local_rustdoc_args,
         rustdoc_document_private_items,
         honor_rust_version,
+        rustdoc_check,
     } = *options;
     let config = ws.config();
 
@@ -632,6 +637,13 @@ pub fn create_bcx<'a, 'cfg>(
             if rustdoc_document_private_items || unit.target.is_bin() {
                 let mut args = extra_args.take().unwrap_or_default();
                 args.push("--document-private-items".into());
+                extra_args = Some(args);
+            }
+            // Add `--check` rustdoc flag if requested.
+            if rustdoc_check {
+                let mut args = extra_args.take().unwrap_or_default();
+                args.push("-Zunstable-options".into());
+                args.push("--check".into());
                 extra_args = Some(args);
             }
 
