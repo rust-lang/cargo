@@ -79,6 +79,7 @@ use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
+use toml_edit::easy as toml;
 use url::Url;
 
 mod de;

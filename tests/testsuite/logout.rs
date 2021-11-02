@@ -3,6 +3,7 @@
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::{cargo_process, registry};
 use std::fs;
+use toml_edit::easy as toml;
 
 #[cargo_test]
 fn gated() {

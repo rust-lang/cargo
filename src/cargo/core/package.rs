@@ -16,6 +16,7 @@ use lazycell::LazyCell;
 use log::{debug, warn};
 use semver::Version;
 use serde::Serialize;
+use toml_edit::easy as toml;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
@@ -199,7 +200,7 @@ impl Package {
             .manifest()
             .original()
             .prepare_for_publish(ws, self.root())?;
-        let toml = toml::to_string(&manifest)?;
+        let toml = toml::to_string_pretty(&manifest)?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
 

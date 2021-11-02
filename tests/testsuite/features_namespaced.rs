@@ -950,6 +950,7 @@ version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+
 [dependencies.opt-dep1]
 version = "1.0"
 optional = true
@@ -1056,6 +1057,7 @@ version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+
 [dependencies.bar]
 version = "1.0"
 optional = true

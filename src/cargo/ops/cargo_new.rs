@@ -12,6 +12,7 @@ use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::{from_utf8, FromStr};
+use toml_edit::easy as toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl {

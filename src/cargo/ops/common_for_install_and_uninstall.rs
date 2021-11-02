@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use anyhow::{bail, format_err, Context as _};
 use serde::{Deserialize, Serialize};
+use toml_edit::easy as toml;
 
 use crate::core::compiler::Freshness;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};

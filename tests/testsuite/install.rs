@@ -924,7 +924,12 @@ Caused by:
   invalid TOML found for metadata
 
 Caused by:
-  unexpected character[..]
+  TOML parse error at line 1, column 1
+    |
+  1 | [..] = { \"foo 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)\" = [\"foo[EXE]\"] }
+    | ^
+  Unexpected `[..]`
+  Expected key or end of input
 ",
         )
         .run();

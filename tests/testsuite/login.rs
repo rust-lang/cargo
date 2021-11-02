@@ -6,6 +6,7 @@ use cargo_test_support::{cargo_process, paths, t};
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 use std::path::PathBuf;
+use toml_edit::easy as toml;
 
 const TOKEN: &str = "test-token";
 const TOKEN2: &str = "test-token2";

@@ -4,6 +4,7 @@ use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
+use toml_edit::easy as toml;
 
 /// Config definition of a `[target.'cfg(…)']` table.
 ///

@@ -10,6 +10,7 @@ use cargo_platform::Platform;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toml_edit::easy as toml;
 
 const VERSION: u32 = 1;
 

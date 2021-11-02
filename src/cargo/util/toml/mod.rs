@@ -13,6 +13,7 @@ use semver::{self, VersionReq};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -77,16 +78,21 @@ pub fn read_manifest_from_str(
         let pretty_filename = manifest_file
             .strip_prefix(config.cwd())
             .unwrap_or(manifest_file);
-        parse(contents, pretty_filename, config)?
+        parse_document(contents, pretty_filename, config)?
     };
 
     // Provide a helpful error message for a common user error.
     if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
         if let Some(feats) = package.get("cargo-features") {
+            let mut feats = feats.clone();
+            if let Some(value) = feats.as_value_mut() {
+                // Only keep formatting inside of the `[]` and not formatting around it
+                value.decor_mut().clear();
+            }
             bail!(
                 "cargo-features = {} was found in the wrong location: it \
                  should be set at the top of Cargo.toml before any tables",
-                toml::to_string(feats).unwrap()
+                feats.to_string()
             );
         }
     }
@@ -159,6 +165,16 @@ pub fn read_manifest_from_str(
 /// accepted and display a warning to the user in that case. The `file` and `config`
 /// parameters are only used by this fallback path.
 pub fn parse(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Value> {
+    // At the moment, no compatibility checks are needed.
+    toml.parse()
+        .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
+}
+
+pub fn parse_document(
+    toml: &str,
+    _file: &Path,
+    _config: &Config,
+) -> CargoResult<toml_edit::Document> {
     // At the moment, no compatibility checks are needed.
     toml.parse()
         .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))

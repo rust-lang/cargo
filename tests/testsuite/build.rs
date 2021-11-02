@@ -198,7 +198,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 3 column 23
+  TOML parse error at line 3, column 23
+    |
+  3 |                 foo = bar
+    |                       ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -218,7 +223,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 1 column 5
+  TOML parse error at line 1, column 5
+    |
+  1 | a = bar
+    |     ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -2740,7 +2750,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 1 column 6
+  TOML parse error at line 1, column 6
+    |
+  1 | this is not valid toml
+    |      ^
+  Unexpected `i`
+  Expected `.` or `=`
 ",
         )
         .run();

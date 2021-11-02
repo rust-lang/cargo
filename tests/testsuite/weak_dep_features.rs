@@ -608,6 +608,7 @@ version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+
 [dependencies.bar]
 version = "1.0"
 optional = true

@@ -1005,6 +1005,7 @@ license = "MIT"
 
 [package.metadata]
 foo = "bar"
+
 [dependencies.abc]
 version = "1.0"
 
