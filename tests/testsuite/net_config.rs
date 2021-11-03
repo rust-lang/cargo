@@ -23,7 +23,7 @@ fn net_retry_loads_from_config() {
             r#"
            [net]
            retry=1
-           retry-delay="10ms"
+           retry-max-time="10ms"
            [http]
            timeout=1
             "#,
@@ -58,7 +58,7 @@ fn net_retry_git_outputs_warning() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay= "10ms"
+           retry-max-time= "10ms"
            [http]
            timeout=1
             "#,
@@ -95,7 +95,7 @@ fn net_retry_backoff_time() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay="10ms"
+           retry-max-time="10ms"
            [http]
            timeout=1
             "#,
@@ -129,7 +129,7 @@ fn net_retry_config_bad_unit() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay="10m"
+           retry-max-time="10m"
            [http]
            timeout=1
             "#,
@@ -162,7 +162,7 @@ fn net_retry_config_bad_format() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay="10m1"
+           retry-max-time="10m1"
            [http]
            timeout=1
             "#,
@@ -195,7 +195,7 @@ fn net_retry_config_bad_format2() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay="m10"
+           retry-max-time="m10"
            [http]
            timeout=1
             "#,
@@ -230,7 +230,7 @@ fn net_retry_config_bad_format3() {
             ".cargo/config",
             r#"
            [net]
-           retry-delay="10"
+           retry-max-time="10"
            [http]
            timeout=1
             "#,

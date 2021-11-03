@@ -13,7 +13,6 @@ pub struct Retry<'a> {
     retries: u32,
     max_retry: u32,
     retry_max_time: Duration,
-    retry_delay: Option<Duration>,
 }
 
 impl<'a> Retry<'a> {
@@ -26,7 +25,6 @@ impl<'a> Retry<'a> {
                 .net_config()?
                 .retry_max_time
                 .map_or(Duration::from_secs(32), |e| e.inner()),
-            retry_delay: config.net_config()?.retry_delay.map(|e| e.inner()),
         })
     }
 
@@ -48,12 +46,7 @@ impl<'a> Retry<'a> {
     }
 
     fn backoff(&self) {
-        let backoff_time = if let Some(delay) = self.retry_delay {
-            delay
-        } else {
-            min(Duration::from_secs(1 << self.retries), self.retry_max_time)
-        };
-
+        let backoff_time = min(Duration::from_secs(1 << self.retries), self.retry_max_time);
         debug!("backing off for {} ms", backoff_time.as_millis());
         sleep(backoff_time);
     }

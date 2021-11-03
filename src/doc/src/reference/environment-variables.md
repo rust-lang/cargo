@@ -95,7 +95,6 @@ supported environment variables are:
 * `CARGO_INSTALL_ROOT` — The default directory for [`cargo install`], see [`install.root`].
 * `CARGO_NET_RETRY` — Number of times to retry network errors, see [`net.retry`].
 * `CARGO_NET_RETRY_MAX_TIME` — Maximum time for exponential backoff between network retries, see [`net.retry-max-time`]
-* `CARGO_NET_RETRY_MAX_TIME` — Use constant time between network retries instead of exponential backoff, see [`net.retry-delay`]
 * `CARGO_NET_GIT_FETCH_WITH_CLI` — Enables the use of the `git` executable to fetch, see [`net.git-fetch-with-cli`].
 * `CARGO_NET_OFFLINE` — Offline mode, see [`net.offline`].
 * `CARGO_PROFILE_<name>_BUILD_OVERRIDE_<key>` — Override build script profile, see [`profile.<name>.build-override`].

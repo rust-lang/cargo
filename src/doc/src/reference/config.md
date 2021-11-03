@@ -109,7 +109,6 @@ root = "/some/path"         # `cargo install` destination directory
 [net]
 retry = 2                   # maximum number of network retries
 retry-max-time = "10s"      # maximum time between each exponential backoff retries
-retry-delay = "10ms"        # if present, override backoff time with a constant
 git-fetch-with-cli = true   # use the `git` executable for git operations
 offline = true              # do not access the network
 
@@ -644,21 +643,6 @@ By default, Cargo adds a delay between each network retry attempt. Exponential b
 exponentially increasing delay times for each attempt. `net.retry-max-time` ensures that the
 delay duration will not exceed this value. This is useful if longer backoff is required in some
 cases.
-
-See `net.retry-delay` to disable exponential backoff.
-
-Valid format is a string starting with non-negative integer followed by `s` for seconds or
-`ms` for milliseconds.
-
-### `net.retry-delay`
-* Type: string (duration)
-* Default: None
-* Environment: `CARGO_NET_RETRY_DELAY`
-
-Use constant time in between network retries instead of exponential increments. If present,
-overrides `net.retry-max-time`. Setting this to 0 will disable any delay in between retry attempts.
-
-Setting this value can be helpful when there is a need to retry after a constant time.
 
 Valid format is a string starting with non-negative integer followed by `s` for seconds or
 `ms` for milliseconds.

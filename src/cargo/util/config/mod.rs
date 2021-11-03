@@ -2103,7 +2103,6 @@ pub struct SslVersionConfigRange {
 pub struct CargoNetConfig {
     pub retry: Option<u32>,
     pub retry_max_time: Option<DurationString>,
-    pub retry_delay: Option<DurationString>,
     pub offline: Option<bool>,
     pub git_fetch_with_cli: Option<bool>,
 }
