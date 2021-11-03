@@ -156,6 +156,7 @@ supported environment variables are:
 [`http.user-agent`]: config.md#httpuser-agent
 [`install.root`]: config.md#installroot
 [`net.retry`]: config.md#netretry
+[`net.retry-max-time`]: config.md#netretry-max-time
 [`net.git-fetch-with-cli`]: config.md#netgit-fetch-with-cli
 [`net.offline`]: config.md#netoffline
 [`profile.<name>.build-override`]: config.md#profilenamebuild-override
