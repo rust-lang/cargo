@@ -2297,3 +2297,32 @@ fn scrape_examples_complex_reverse_dependencies() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn scrape_examples_crate_with_dash() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "da-sh"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("examples/a.rs", "fn main() { da_sh::foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+}
