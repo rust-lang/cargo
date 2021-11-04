@@ -21,6 +21,7 @@ mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
 
+use std::collections::HashSet;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -666,9 +667,14 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
         // Only scrape example for items from crates in the workspace, to reduce generated file size
         for pkg in cx.bcx.ws.members() {
-            rustdoc
-                .arg("--scrape-examples-target-crate")
-                .arg(pkg.name());
+            let names = pkg
+                .targets()
+                .iter()
+                .map(|target| target.crate_name())
+                .collect::<HashSet<_>>();
+            for name in names {
+                rustdoc.arg("--scrape-examples-target-crate").arg(name);
+            }
         }
     } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.is_member(&unit.pkg) {
         // We only pass scraped examples to packages in the workspace
