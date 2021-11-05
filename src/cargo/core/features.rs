@@ -874,7 +874,15 @@ impl CliUnstable {
             "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
             "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
             "credential-process" => self.credential_process = parse_empty(k, v)?,
-            "rustdoc-scrape-examples" => self.rustdoc_scrape_examples = v.map(|s| s.to_string()),
+            "rustdoc-scrape-examples" => {
+                if let Some(s) = v {
+                    self.rustdoc_scrape_examples = Some(s.to_string())
+                } else {
+                    bail!(
+                        r#"-Z rustdoc-scrape-examples must take "all" or "examples" as an argument"#
+                    )
+                }
+            }
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
             "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
             "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,
