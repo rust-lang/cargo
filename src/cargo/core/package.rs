@@ -1006,7 +1006,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let dl = &self.pending[&token].0;
         dl.total.set(total);
         let now = Instant::now();
-        if cur != dl.current.get() {
+        if cur > dl.current.get() {
             let delta = cur - dl.current.get();
             let threshold = self.next_speed_check_bytes_threshold.get();
 
