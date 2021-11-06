@@ -5,6 +5,7 @@ use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{add_path_args, CargoTestError, Config, Test};
 use cargo_util::ProcessError;
+use crossbeam_utils::thread;
 use std::ffi::OsString;
 
 pub struct TestOptions {
@@ -76,63 +77,85 @@ fn run_unit_tests(
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let cwd = config.cwd();
-    let mut errors = Vec::new();
+    let mut errors: Vec<(TargetKind, String, String, anyhow::Error)> = Vec::new();
 
-    for UnitOutput {
-        unit,
-        path,
-        script_meta,
-    } in compilation.tests.iter()
-    {
-        let test = unit.target.name().to_string();
+    thread::scope(|s| {
+        let mut handles = vec![];
+        let parallel = true;
 
-        let test_path = unit.target.src_path().path().unwrap();
-        let exe_display = if let TargetKind::Test = unit.target.kind() {
-            format!(
-                "{} ({})",
-                test_path
-                    .strip_prefix(unit.pkg.root())
-                    .unwrap_or(test_path)
-                    .display(),
-                path.strip_prefix(cwd).unwrap_or(path).display()
-            )
-        } else {
-            format!(
-                "unittests ({})",
-                path.strip_prefix(cwd).unwrap_or(path).display()
-            )
-        };
+        for UnitOutput {
+            unit,
+            path,
+            script_meta,
+        } in compilation.tests.iter()
+        {
+            let test_path = unit.target.src_path().path().unwrap();
+            let exe_display = if let TargetKind::Test = unit.target.kind() {
+                format!(
+                    "{} ({})",
+                    test_path
+                        .strip_prefix(unit.pkg.root())
+                        .unwrap_or(test_path)
+                        .display(),
+                    path.strip_prefix(cwd).unwrap_or(path).display()
+                )
+            } else {
+                format!(
+                    "unittests ({})",
+                    path.strip_prefix(cwd).unwrap_or(path).display()
+                )
+            };
 
-        let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
-        cmd.args(test_args);
-        if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
-            cmd.arg("--quiet");
-        }
-        config
-            .shell()
-            .concise(|shell| shell.status("Running", &exe_display))?;
-        config
-            .shell()
-            .verbose(|shell| shell.status("Running", &cmd))?;
+            let mut cmd = compilation.target_process(&path, unit.kind, &unit.pkg, *script_meta)?;
+            cmd.args(test_args);
+            if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
+                cmd.arg("--quiet");
+            }
+            config
+                .shell()
+                .concise(|shell| shell.status("Running", &exe_display))?;
+            config
+                .shell()
+                .verbose(|shell| shell.status("Running", &cmd))?;
 
-        let result = cmd.exec();
-
-        match result {
-            Err(e) => {
-                let e = e.downcast::<ProcessError>()?;
-                errors.push((
-                    unit.target.kind().clone(),
-                    test.clone(),
-                    unit.pkg.name().to_string(),
-                    e,
-                ));
-                if !options.no_fail_fast {
-                    break;
+            let pkg_name = unit.pkg.name().to_string();
+            let target = &unit.target;
+            let handle = s.spawn(move |_| {
+                cmd.exec().map_err(|e| {
+                    (
+                        target.kind().clone(),
+                        target.name().to_string(),
+                        pkg_name,
+                        e,
+                    )
+                })
+            });
+            if parallel {
+                handles.push(handle);
+            } else {
+                let result = handle.join().unwrap();
+                if let Err(err) = result {
+                    errors.push(err);
+                    if !options.no_fail_fast {
+                        break;
+                    }
                 }
             }
-            Ok(()) => {}
         }
-    }
+
+        for handle in handles {
+            let result = handle.join().unwrap();
+            if let Err(err) = result {
+                errors.push(err);
+                if !options.no_fail_fast {
+                    break; // TODO: we can be clever than this
+                }
+            }
+        }
+        let out: Result<(), anyhow::Error> = Ok(());
+        out
+    })
+    .unwrap()?;
 
     if errors.len() == 1 {
         let (kind, name, pkg_name, e) = errors.pop().unwrap();
@@ -142,13 +165,14 @@ fn run_unit_tests(
                 name,
                 pkg_name,
             },
-            vec![e],
+            vec![e.downcast::<ProcessError>()?],
         ))
     } else {
-        Ok((
-            Test::Multiple,
-            errors.into_iter().map(|(_, _, _, e)| e).collect(),
-        ))
+        let mut res = vec![];
+        for (_, _, _, e) in errors.into_iter() {
+            res.push(e.downcast::<ProcessError>()?);
+        }
+        Ok((Test::Multiple, res))
     }
 }
 
