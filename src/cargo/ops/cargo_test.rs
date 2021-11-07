@@ -221,7 +221,7 @@ fn process_output<'scope>(
         }
     }
     let result = handle.join().unwrap();
-    
+
     if let Err(err) = result {
         errors.push(err);
         if !options.no_fail_fast {
