@@ -755,7 +755,13 @@ fn run_verify(
     ops::compile_with_exec(
         &ws,
         &ops::CompileOptions {
-            build_config: BuildConfig::new(config, opts.jobs, None, &opts.targets, CompileMode::Build)?,
+            build_config: BuildConfig::new(
+                config,
+                opts.jobs,
+                None,
+                &opts.targets,
+                CompileMode::Build,
+            )?,
             cli_features: opts.cli_features.clone(),
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {

@@ -508,7 +508,13 @@ pub trait ArgMatchesExt {
             }
         }
 
-        let mut build_config = BuildConfig::new(config, self.jobs()?, self.test_jobs()?, &self.targets(), mode)?;
+        let mut build_config = BuildConfig::new(
+            config,
+            self.jobs()?,
+            self.test_jobs()?,
+            &self.targets(),
+            mode,
+        )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
