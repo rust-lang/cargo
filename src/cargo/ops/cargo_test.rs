@@ -8,6 +8,8 @@ use cargo_util::ProcessError;
 use crossbeam_utils::thread::{self, ScopedJoinHandle};
 use std::ffi::OsString;
 use std::fmt::Write;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::Duration;
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
@@ -93,6 +95,7 @@ fn run_unit_tests(
     let cwd = config.cwd();
     let mut errors: Vec<TestError> = Vec::new();
 
+    let processing = AtomicU32::new(0);
     thread::scope(|s| {
         let mut handles = vec![];
         let test_jobs = options.compile_opts.build_config.test_jobs;
@@ -135,40 +138,67 @@ fn run_unit_tests(
             };
             write!(ctx.cmd, "{}", &cmd).unwrap();
 
+            let processing_t = &processing;
             let pkg_name = unit.pkg.name().to_string();
             let target = &unit.target;
             let (tx, rx) = std::sync::mpsc::channel();
             let handle = s.spawn(move |_| {
-                cmd.exec_with_streaming(
-                    &mut |line| {
-                        tx.send(OutOrErr::Out(line.to_string())).unwrap();
-                        Ok(())
-                    },
-                    &mut |line| {
-                        tx.send(OutOrErr::Err(line.to_string())).unwrap();
-                        Ok(())
-                    },
-                    false,
-                )
-                .map_err(|e| {
-                    (
-                        target.kind().clone(),
-                        target.name().to_string(),
-                        pkg_name,
-                        e,
+                std::thread::park();
+
+                let result = cmd
+                    .exec_with_streaming(
+                        &mut |line| {
+                            tx.send(OutOrErr::Out(line.to_string())).unwrap();
+                            Ok(())
+                        },
+                        &mut |line| {
+                            tx.send(OutOrErr::Err(line.to_string())).unwrap();
+                            Ok(())
+                        },
+                        false,
                     )
-                })
+                    .map_err(|e| {
+                        (
+                            target.kind().clone(),
+                            target.name().to_string(),
+                            pkg_name,
+                            e,
+                        )
+                    });
+                processing_t.fetch_sub(1, Ordering::Relaxed);
+                result
             });
             if parallel {
                 handles.push((handle, rx, ctx));
-            } else if !process_output(handle, &mut errors, ctx, config, options, rx)? {
-                break;
+            } else {
+                handle.thread().unpark();
+                if !process_output(handle, &mut errors, ctx, config, options, rx)? {
+                    break;
+                }
             }
         }
 
-        for (handle, rx, ctx) in handles {
-            if !process_output(handle, &mut errors, ctx, config, options, rx)? {
-                break;
+        if parallel {
+            let mut threads: Vec<_> = handles.iter().map(|(h, _, _)| h.thread().clone()).collect();
+
+            //Have a thread unparking so that there's no more than n running at once...
+            let proc = &processing;
+            s.spawn(move |_| {
+                while !threads.is_empty() {
+                    if proc.load(Ordering::Relaxed) < test_jobs {
+                        proc.fetch_add(1, Ordering::Relaxed);
+                        threads.pop().unwrap().unpark();
+                    } else {
+                        std::thread::sleep(Duration::from_millis(500));
+                    }
+                }
+            });
+
+            // Report results in the standard order...
+            for (handle, rx, ctx) in handles {
+                if !process_output(handle, &mut errors, ctx, config, options, rx)? {
+                    break;
+                }
             }
         }
         let out: Result<(), anyhow::Error> = Ok(());
