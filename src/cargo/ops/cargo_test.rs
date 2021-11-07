@@ -78,7 +78,7 @@ enum OutOrErr {
 }
 
 struct Context {
-    exe: String,
+    exe_display: String,
     cmd: String,
 }
 
@@ -95,7 +95,7 @@ fn run_unit_tests(
 
     thread::scope(|s| {
         let mut handles = vec![];
-        let parallel = std::env::var("CARGO_TEST_PARALLEL")
+        let parallel = std::env::var("CARGO_PARALLEL_TESTS")
             .unwrap_or("TRUE".into())
             .to_uppercase()
             .eq("TRUE");
@@ -107,6 +107,7 @@ fn run_unit_tests(
         } in compilation.tests.iter()
         {
             let test_path = unit.target.src_path().path().unwrap();
+            let path_display = path.strip_prefix(cwd).unwrap_or(path).display();
             let exe_display = if let TargetKind::Test = unit.target.kind() {
                 format!(
                     "{} ({})",
@@ -114,13 +115,10 @@ fn run_unit_tests(
                         .strip_prefix(unit.pkg.root())
                         .unwrap_or(test_path)
                         .display(),
-                    path.strip_prefix(cwd).unwrap_or(path).display()
+                    path_display
                 )
             } else {
-                format!(
-                    "unittests ({})",
-                    path.strip_prefix(cwd).unwrap_or(path).display()
-                )
+                format!("unittests ({})", path_display)
             };
 
             let mut cmd = compilation.target_process(&path, unit.kind, &unit.pkg, *script_meta)?;
@@ -128,9 +126,13 @@ fn run_unit_tests(
             if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
                 cmd.arg("--quiet");
             }
+            // exec_with_streaming doesn't look like a tty so we have to be explicit
+            if !test_args.contains(&"--color=never") && config.shell().err_supports_color() {
+                cmd.arg("--color=always");
+            }
 
             let mut ctx = Context {
-                exe: exe_display,
+                exe_display,
                 cmd: String::new(),
             };
             write!(ctx.cmd, "{}", &cmd).unwrap();
@@ -208,7 +210,7 @@ fn process_output<'scope>(
     let result = handle.join().unwrap();
     config
         .shell()
-        .concise(|shell| shell.status("Running", &ctx.exe))?;
+        .concise(|shell| shell.status("Running", &ctx.exe_display))?;
     config
         .shell()
         .verbose(|shell| shell.status("Running", &ctx.cmd))?;
