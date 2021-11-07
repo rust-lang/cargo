@@ -207,7 +207,6 @@ fn process_output<'scope>(
     options: &TestOptions,
     rx: std::sync::mpsc::Receiver<OutOrErr>,
 ) -> CargoResult<bool> {
-    let result = handle.join().unwrap();
     config
         .shell()
         .concise(|shell| shell.status("Running", &ctx.exe_display))?;
@@ -221,6 +220,8 @@ fn process_output<'scope>(
             OutOrErr::Err(line) => writeln!(config.shell().err(), "{}", line).unwrap(),
         }
     }
+    let result = handle.join().unwrap();
+    
     if let Err(err) = result {
         errors.push(err);
         if !options.no_fail_fast {
