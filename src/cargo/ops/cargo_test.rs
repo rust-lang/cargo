@@ -7,6 +7,7 @@ use crate::util::{add_path_args, CargoTestError, Config, Test};
 use cargo_util::ProcessError;
 use crossbeam_utils::thread;
 use std::ffi::OsString;
+use std::fmt::Write;
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
@@ -70,6 +71,17 @@ fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<C
 }
 
 /// Runs the unit and integration tests of a package.
+
+enum OutOrErr {
+    Out(String),
+    Err(String),
+}
+
+struct Context {
+    exe: String,
+    cmd: String,
+}
+
 fn run_unit_tests(
     config: &Config,
     options: &TestOptions,
@@ -111,29 +123,64 @@ fn run_unit_tests(
             if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
                 cmd.arg("--quiet");
             }
-            config
-                .shell()
-                .concise(|shell| shell.status("Running", &exe_display))?;
-            config
-                .shell()
-                .verbose(|shell| shell.status("Running", &cmd))?;
+            //cmd.arg("--message-format json");
+
+            let mut ctx = Context {
+                exe: exe_display,
+                cmd: String::new(),
+            };
+            write!(ctx.cmd, "{}", &cmd).unwrap();
 
             let pkg_name = unit.pkg.name().to_string();
             let target = &unit.target;
             let handle = s.spawn(move |_| {
-                cmd.exec().map_err(|e| {
-                    (
-                        target.kind().clone(),
-                        target.name().to_string(),
-                        pkg_name,
-                        e,
+                let buf = std::sync::Mutex::new(vec![]);
+                //TODO: is there a better way than locking here?
+                let res = cmd
+                    .exec_with_streaming(
+                        &mut |line| {
+                            buf.lock().unwrap().push(OutOrErr::Out(line.to_string()));
+                            Ok(())
+                        },
+                        &mut |line| {
+                            buf.lock().unwrap().push(OutOrErr::Err(line.to_string()));
+                            Ok(())
+                        },
+                        false,
                     )
-                })
+                    .map_err(|e| {
+                        (
+                            target.kind().clone(),
+                            target.name().to_string(),
+                            pkg_name,
+                            e,
+                        )
+                    });
+
+                (ctx, buf, res)
             });
             if parallel {
                 handles.push(handle);
             } else {
-                let result = handle.join().unwrap();
+                let (ctx, buf, result) = handle.join().unwrap();
+                config
+                    .shell()
+                    .concise(|shell| shell.status("Running", &ctx.exe))?;
+                config
+                    .shell()
+                    .verbose(|shell| shell.status("Running", &ctx.cmd))?;
+
+                let buf = buf.lock().unwrap();
+                for line in &*buf {
+                    match line {
+                        OutOrErr::Out(line) => {
+                            writeln!(config.shell().out(), "{}", line).unwrap();
+                        }
+                        OutOrErr::Err(line) => {
+                            writeln!(config.shell().err(), "{}", line).unwrap();
+                        }
+                    }
+                }
                 if let Err(err) = result {
                     errors.push(err);
                     if !options.no_fail_fast {
@@ -144,7 +191,25 @@ fn run_unit_tests(
         }
 
         for handle in handles {
-            let result = handle.join().unwrap();
+            let (ctx, buf, result) = handle.join().unwrap();
+            config
+                .shell()
+                .concise(|shell| shell.status("Running", &ctx.exe))?;
+            config
+                .shell()
+                .verbose(|shell| shell.status("Running", &ctx.cmd))?;
+
+            let buf = buf.lock().unwrap();
+            for line in &*buf {
+                match line {
+                    OutOrErr::Out(line) => {
+                        writeln!(config.shell().out(), "{}", line).unwrap();
+                    }
+                    OutOrErr::Err(line) => {
+                        writeln!(config.shell().err(), "{}", line).unwrap();
+                    }
+                }
+            }
             if let Err(err) = result {
                 errors.push(err);
                 if !options.no_fail_fast {
