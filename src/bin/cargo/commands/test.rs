@@ -46,6 +46,7 @@ pub fn cli() -> App {
             "Exclude packages from the test",
         )
         .arg_jobs()
+        .arg_test_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
         .arg_features()

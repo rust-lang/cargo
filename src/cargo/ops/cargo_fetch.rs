@@ -21,7 +21,7 @@ pub fn fetch<'a>(
 
     let jobs = Some(1);
     let config = ws.config();
-    let build_config = BuildConfig::new(config, jobs, &options.targets, CompileMode::Build)?;
+    let build_config = BuildConfig::new(config, jobs, None, &options.targets, CompileMode::Build)?;
     let data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
     let mut fetched_packages = HashSet::new();
     let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();

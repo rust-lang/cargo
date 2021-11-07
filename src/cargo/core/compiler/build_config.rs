@@ -14,6 +14,8 @@ pub struct BuildConfig {
     pub requested_kinds: Vec<CompileKind>,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
+    /// Number of crates to test in parallel.
+    pub test_jobs: u32,
     /// Build profile
     pub requested_profile: InternedString,
     /// The mode we are compiling in.
@@ -53,6 +55,7 @@ impl BuildConfig {
     pub fn new(
         config: &Config,
         jobs: Option<u32>,
+        test_jobs: Option<u32>,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
@@ -72,10 +75,15 @@ impl BuildConfig {
         if jobs == 0 {
             anyhow::bail!("jobs may not be 0");
         }
+        let test_jobs = test_jobs.or(cfg.test_jobs).unwrap_or(1);
+        if test_jobs == 0 {
+            anyhow::bail!("test jobs may not be 0");
+        }
 
         Ok(BuildConfig {
             requested_kinds,
             jobs,
+            test_jobs,
             requested_profile: InternedString::new("dev"),
             mode,
             message_format: MessageFormat::Human,

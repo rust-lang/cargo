@@ -95,10 +95,8 @@ fn run_unit_tests(
 
     thread::scope(|s| {
         let mut handles = vec![];
-        let parallel = std::env::var("CARGO_PARALLEL_TESTS")
-            .unwrap_or("TRUE".into())
-            .to_uppercase()
-            .eq("TRUE");
+        let test_jobs = options.compile_opts.build_config.test_jobs;
+        let parallel = test_jobs > 1;
 
         for UnitOutput {
             unit,

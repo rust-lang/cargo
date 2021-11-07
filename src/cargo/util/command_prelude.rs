@@ -74,6 +74,14 @@ pub trait AppExt: Sized {
         )
     }
 
+    fn arg_test_jobs(self) -> Self {
+        self._arg(
+            opt("test-jobs", "Number of parallel crates tested")
+                .value_name("N")
+                .default_value("1"),
+        )
+    }
+
     fn arg_targets_all(
         self,
         lib: &'static str,
@@ -347,6 +355,10 @@ pub trait ArgMatchesExt {
         self.value_of_u32("jobs")
     }
 
+    fn test_jobs(&self) -> CargoResult<Option<u32>> {
+        self.value_of_u32("test-jobs")
+    }
+
     fn targets(&self) -> Vec<String> {
         self._values_of("target")
     }
@@ -496,7 +508,7 @@ pub trait ArgMatchesExt {
             }
         }
 
-        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.targets(), mode)?;
+        let mut build_config = BuildConfig::new(config, self.jobs()?, self.test_jobs()?, &self.targets(), mode)?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
