@@ -5,7 +5,7 @@ use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{add_path_args, CargoTestError, Config, Test};
 use cargo_util::ProcessError;
-use crossbeam_utils::thread;
+use crossbeam_utils::thread::{self, ScopedJoinHandle};
 use std::ffi::OsString;
 use std::fmt::Write;
 
@@ -82,6 +82,8 @@ struct Context {
     cmd: String,
 }
 
+type TestError = (TargetKind, String, String, anyhow::Error);
+
 fn run_unit_tests(
     config: &Config,
     options: &TestOptions,
@@ -89,11 +91,14 @@ fn run_unit_tests(
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let cwd = config.cwd();
-    let mut errors: Vec<(TargetKind, String, String, anyhow::Error)> = Vec::new();
+    let mut errors: Vec<TestError> = Vec::new();
 
     thread::scope(|s| {
         let mut handles = vec![];
-        let parallel = true;
+        let parallel = std::env::var("CARGO_TEST_PARALLEL")
+            .unwrap_or("TRUE".into())
+            .to_uppercase()
+            .eq("TRUE");
 
         for UnitOutput {
             unit,
@@ -123,7 +128,6 @@ fn run_unit_tests(
             if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
                 cmd.arg("--quiet");
             }
-            //cmd.arg("--message-format json");
 
             let mut ctx = Context {
                 exe: exe_display,
@@ -133,88 +137,38 @@ fn run_unit_tests(
 
             let pkg_name = unit.pkg.name().to_string();
             let target = &unit.target;
+            let (tx, rx) = std::sync::mpsc::channel();
             let handle = s.spawn(move |_| {
-                let buf = std::sync::Mutex::new(vec![]);
-                //TODO: is there a better way than locking here?
-                let res = cmd
-                    .exec_with_streaming(
-                        &mut |line| {
-                            buf.lock().unwrap().push(OutOrErr::Out(line.to_string()));
-                            Ok(())
-                        },
-                        &mut |line| {
-                            buf.lock().unwrap().push(OutOrErr::Err(line.to_string()));
-                            Ok(())
-                        },
-                        false,
+                cmd.exec_with_streaming(
+                    &mut |line| {
+                        tx.send(OutOrErr::Out(line.to_string())).unwrap();
+                        Ok(())
+                    },
+                    &mut |line| {
+                        tx.send(OutOrErr::Err(line.to_string())).unwrap();
+                        Ok(())
+                    },
+                    false,
+                )
+                .map_err(|e| {
+                    (
+                        target.kind().clone(),
+                        target.name().to_string(),
+                        pkg_name,
+                        e,
                     )
-                    .map_err(|e| {
-                        (
-                            target.kind().clone(),
-                            target.name().to_string(),
-                            pkg_name,
-                            e,
-                        )
-                    });
-
-                (ctx, buf, res)
+                })
             });
             if parallel {
-                handles.push(handle);
-            } else {
-                let (ctx, buf, result) = handle.join().unwrap();
-                config
-                    .shell()
-                    .concise(|shell| shell.status("Running", &ctx.exe))?;
-                config
-                    .shell()
-                    .verbose(|shell| shell.status("Running", &ctx.cmd))?;
-
-                let buf = buf.lock().unwrap();
-                for line in &*buf {
-                    match line {
-                        OutOrErr::Out(line) => {
-                            writeln!(config.shell().out(), "{}", line).unwrap();
-                        }
-                        OutOrErr::Err(line) => {
-                            writeln!(config.shell().err(), "{}", line).unwrap();
-                        }
-                    }
-                }
-                if let Err(err) = result {
-                    errors.push(err);
-                    if !options.no_fail_fast {
-                        break;
-                    }
-                }
+                handles.push((handle, rx, ctx));
+            } else if !process_output(handle, &mut errors, ctx, config, options, rx)? {
+                break;
             }
         }
 
-        for handle in handles {
-            let (ctx, buf, result) = handle.join().unwrap();
-            config
-                .shell()
-                .concise(|shell| shell.status("Running", &ctx.exe))?;
-            config
-                .shell()
-                .verbose(|shell| shell.status("Running", &ctx.cmd))?;
-
-            let buf = buf.lock().unwrap();
-            for line in &*buf {
-                match line {
-                    OutOrErr::Out(line) => {
-                        writeln!(config.shell().out(), "{}", line).unwrap();
-                    }
-                    OutOrErr::Err(line) => {
-                        writeln!(config.shell().err(), "{}", line).unwrap();
-                    }
-                }
-            }
-            if let Err(err) = result {
-                errors.push(err);
-                if !options.no_fail_fast {
-                    break; // TODO: we can be clever than this
-                }
+        for (handle, rx, ctx) in handles {
+            if !process_output(handle, &mut errors, ctx, config, options, rx)? {
+                break;
             }
         }
         let out: Result<(), anyhow::Error> = Ok(());
@@ -241,6 +195,38 @@ fn run_unit_tests(
     }
 }
 
+/// Puts test output on the sceen.
+/// Returns false if we should early exit due to test failures.
+fn process_output<'scope>(
+    handle: ScopedJoinHandle<'scope, Result<std::process::Output, TestError>>,
+    errors: &mut Vec<TestError>,
+    ctx: Context,
+    config: &Config,
+    options: &TestOptions,
+    rx: std::sync::mpsc::Receiver<OutOrErr>,
+) -> CargoResult<bool> {
+    let result = handle.join().unwrap();
+    config
+        .shell()
+        .concise(|shell| shell.status("Running", &ctx.exe))?;
+    config
+        .shell()
+        .verbose(|shell| shell.status("Running", &ctx.cmd))?;
+
+    for line in &rx {
+        match line {
+            OutOrErr::Out(line) => writeln!(config.shell().out(), "{}", line).unwrap(),
+            OutOrErr::Err(line) => writeln!(config.shell().err(), "{}", line).unwrap(),
+        }
+    }
+    if let Err(err) = result {
+        errors.push(err);
+        if !options.no_fail_fast {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
 fn run_doc_tests(
     ws: &Workspace<'_>,
     options: &TestOptions,
