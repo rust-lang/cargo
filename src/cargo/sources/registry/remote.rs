@@ -7,6 +7,7 @@ use crate::sources::registry::{
 };
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::network::PollExt;
 use crate::util::{Config, Filesystem};
 use anyhow::Context as _;
 use cargo_util::{paths, registry::make_dep_path, Sha256};
@@ -20,6 +21,7 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
+use std::task::Poll;
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are
@@ -168,7 +170,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         _root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()> {
+    ) -> Poll<CargoResult<()>> {
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
@@ -178,9 +180,15 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let object = entry.to_object(repo)?;
         let blob = match object.as_blob() {
             Some(blob) => blob,
-            None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
+            None => {
+                return Err(anyhow::anyhow!(
+                    "path `{}` is not a blob in the git repo",
+                    path.display()
+                ))
+                .into()
+            }
         };
-        data(blob.content())
+        Poll::Ready(Ok(data(blob.content())?))
     }
 
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
@@ -191,7 +199,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.load(Path::new(""), Path::new("config.json"), &mut |json| {
             config = Some(serde_json::from_slice(json)?);
             Ok(())
-        })?;
+        })
+        .expect("git registries never return pending")?;
         trace!("config loaded");
         Ok(config)
     }
@@ -328,6 +337,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             return meta.len() > 0;
         }
         false
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        Ok(())
     }
 }
 

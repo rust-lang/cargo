@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
@@ -43,21 +44,25 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
         for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
-        Ok(())
+        Poll::Ready(Ok(()))
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        _dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
         let packages = self.packages.values().map(|p| &p.0);
         for summary in packages.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
-        Ok(())
+        Poll::Ready(Ok(()))
     }
 
     fn supports_checksums(&self) -> bool {
@@ -204,5 +209,9 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        Ok(())
     }
 }

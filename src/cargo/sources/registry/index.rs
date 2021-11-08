@@ -80,6 +80,7 @@ use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use std::str;
+use std::task::Poll;
 
 /// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
 /// Therefore, the index must store uncanonicalized version of the name so old Cargo's can find it.
@@ -263,16 +264,18 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Returns the hash listed for a specified `PackageId`.
-    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<&str> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
-        let summary = self
-            .summaries(pkg.name(), &req, load)?
-            .next()
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?;
-        summary
+        let summary = self.summaries(pkg.name(), &req, load)?;
+        let summary = match summary {
+            Poll::Ready(mut summary) => summary.next(),
+            Poll::Pending => return Poll::Pending,
+        };
+        Poll::Ready(Ok(summary
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
             .summary
             .checksum()
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
     }
 
     /// Load a list of summaries for `name` package in this registry which
@@ -287,7 +290,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         name: InternedString,
         req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
-    ) -> CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>
+    ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>>
     where
         'a: 'b,
     {
@@ -298,7 +301,10 @@ impl<'cfg> RegistryIndex<'cfg> {
         // has run previously this will parse a Cargo-specific cache file rather
         // than the registry itself. In effect this is intended to be a quite
         // cheap operation.
-        let summaries = self.load_summaries(name, load)?;
+        let summaries = match self.load_summaries(name, load)? {
+            Poll::Ready(x) => x,
+            Poll::Pending => return Poll::Pending,
+        };
 
         // Iterate over our summaries, extract all relevant ones which match our
         // version requirement, and then parse all corresponding rows in the
@@ -307,7 +313,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // minimize the amount of work being done here and parse as little as
         // necessary.
         let raw_data = &summaries.raw_data;
-        Ok(summaries
+        Poll::Ready(Ok(summaries
             .versions
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
@@ -332,18 +338,18 @@ impl<'cfg> RegistryIndex<'cfg> {
                 } else {
                     true
                 }
-            }))
+            })))
     }
 
     fn load_summaries(
         &mut self,
         name: InternedString,
         load: &mut dyn RegistryData,
-    ) -> CargoResult<&mut Summaries> {
+    ) -> Poll<CargoResult<&mut Summaries>> {
         // If we've previously loaded what versions are present for `name`, just
         // return that since our cache should still be valid.
         if self.summaries_cache.contains_key(&name) {
-            return Ok(self.summaries_cache.get_mut(&name).unwrap());
+            return Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()));
         }
 
         // Prepare the `RegistryData` which will lazily initialize internal data
@@ -363,12 +369,14 @@ impl<'cfg> RegistryIndex<'cfg> {
             .collect::<String>();
         let raw_path = make_dep_path(&fs_name, false);
 
+        let mut any_pending = false;
+
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries
         // associated with the first hit, however. The resolver will later
         // reject any candidates that have the wrong name, and with this it'll
         // along the way produce helpful "did you mean?" suggestions.
-        for path in UncanonicalizedIter::new(&raw_path).take(1024) {
+        for (i, path) in UncanonicalizedIter::new(&raw_path).take(1024).enumerate() {
             let summaries = Summaries::parse(
                 index_version.as_deref(),
                 root,
@@ -378,16 +386,30 @@ impl<'cfg> RegistryIndex<'cfg> {
                 load,
                 self.config,
             )?;
-            if let Some(summaries) = summaries {
-                self.summaries_cache.insert(name, summaries);
-                return Ok(self.summaries_cache.get_mut(&name).unwrap());
+            if summaries.is_pending() {
+                if i == 0 {
+                    // If we have not herd back about the name as requested
+                    // then don't ask about other spellings yet.
+                    // This prevents us spamming all the variations in the
+                    // case where we have the correct spelling.
+                    return Poll::Pending;
+                }
+                any_pending = true;
             }
+            if let Poll::Ready(Some(summaries)) = summaries {
+                self.summaries_cache.insert(name, summaries);
+                return Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()));
+            }
+        }
+
+        if any_pending {
+            return Poll::Pending;
         }
 
         // If nothing was found then this crate doesn't exists, so just use an
         // empty `Summaries` list.
         self.summaries_cache.insert(name, Summaries::default());
-        Ok(self.summaries_cache.get_mut(&name).unwrap())
+        Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()))
     }
 
     pub fn query_inner(
@@ -396,11 +418,12 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
-    ) -> CargoResult<()> {
+    ) -> Poll<CargoResult<()>> {
         if self.config.offline()
-            && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0
+            && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)?
+                != Poll::Ready(0)
         {
-            return Ok(());
+            return Poll::Ready(Ok(()));
             // If offline, and there are no matches, try again with online.
             // This is necessary for dependencies that are not used (such as
             // target-cfg or optional), but are not downloaded. Normally the
@@ -410,8 +433,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             // indicating that the required dependency is unavailable while
             // offline will be displayed.
         }
-        self.query_inner_with_online(dep, load, yanked_whitelist, f, true)?;
-        Ok(())
+        self.query_inner_with_online(dep, load, yanked_whitelist, f, true)
+            .map_ok(|_| ())
     }
 
     fn query_inner_with_online(
@@ -421,10 +444,15 @@ impl<'cfg> RegistryIndex<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
         online: bool,
-    ) -> CargoResult<usize> {
+    ) -> Poll<CargoResult<usize>> {
         let source_id = self.source_id;
-        let summaries = self
-            .summaries(dep.package_name(), dep.version_req(), load)?
+
+        let summaries = match self.summaries(dep.package_name(), dep.version_req(), load)? {
+            Poll::Ready(x) => x,
+            Poll::Pending => return Poll::Pending,
+        };
+
+        let summaries = summaries
             // First filter summaries for `--offline`. If we're online then
             // everything is a candidate, otherwise if we're offline we're only
             // going to consider candidates which are actually present on disk.
@@ -489,15 +517,19 @@ impl<'cfg> RegistryIndex<'cfg> {
             f(summary);
             count += 1;
         }
-        Ok(count)
+        Poll::Ready(Ok(count))
     }
 
-    pub fn is_yanked(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<bool> {
+    pub fn is_yanked(
+        &mut self,
+        pkg: PackageId,
+        load: &mut dyn RegistryData,
+    ) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::exact(pkg.version());
         let found = self
-            .summaries(pkg.name(), &req, load)?
-            .any(|summary| summary.yanked);
-        Ok(found)
+            .summaries(pkg.name(), &req, load)
+            .map_ok(|mut p| p.any(|summary| summary.yanked));
+        found
     }
 }
 
@@ -531,7 +563,7 @@ impl Summaries {
         source_id: SourceId,
         load: &mut dyn RegistryData,
         config: &Config,
-    ) -> CargoResult<Option<Summaries>> {
+    ) -> Poll<CargoResult<Option<Summaries>>> {
         // First up, attempt to load the cache. This could fail for all manner
         // of reasons, but consider all of them non-fatal and just log their
         // occurrence in case anyone is debugging anything.
@@ -545,7 +577,7 @@ impl Summaries {
                         if cfg!(debug_assertions) {
                             cache_contents = Some(s.raw_data);
                         } else {
-                            return Ok(Some(s));
+                            return Poll::Ready(Ok(Some(s)));
                         }
                     }
                     Err(e) => {
@@ -598,14 +630,19 @@ impl Summaries {
             Ok(())
         });
 
+        if matches!(err, Poll::Pending) {
+            assert!(!hit_closure);
+            return Poll::Pending;
+        }
+
         // We ignore lookup failures as those are just crates which don't exist
         // or we haven't updated the registry yet. If we actually ran the
         // closure though then we care about those errors.
         if !hit_closure {
             debug_assert!(cache_contents.is_none());
-            return Ok(None);
+            return Poll::Ready(Ok(None));
         }
-        err?;
+        let _ = err?;
 
         // If we've got debug assertions enabled and the cache was previously
         // present and considered fresh this is where the debug assertions
@@ -636,7 +673,7 @@ impl Summaries {
             }
         }
 
-        Ok(Some(ret))
+        Poll::Ready(Ok(Some(ret)))
     }
 
     /// Parses an open `File` which represents information previously cached by

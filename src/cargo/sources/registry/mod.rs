@@ -164,6 +164,7 @@ use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use anyhow::Context as _;
 use flate2::read::GzDecoder;
@@ -179,6 +180,7 @@ use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
+use crate::util::network::PollExt;
 use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
@@ -440,12 +442,14 @@ pub trait RegistryData {
     /// * `root` is the root path to the index.
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
     /// * `data` is a callback that will receive the raw bytes of the index JSON file.
+    ///
+    /// If `load` returns a `Poll::Pending` then it must not have called data.
     fn load(
         &self,
         root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()>;
+    ) -> Poll<CargoResult<()>>;
 
     /// Loads the `config.json` file and returns it.
     ///
@@ -508,6 +512,9 @@ pub trait RegistryData {
     ///
     /// This is used by index caching to check if the cache is out of date.
     fn current_version(&self) -> Option<InternedString>;
+
+    /// Block until all outstanding Poll::Pending requests are Poll::Ready.
+    fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 
 /// The status of [`RegistryData::download`] which indicates if a `.crate`
@@ -678,6 +685,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let summary_with_cksum = self
             .index
             .summaries(package.name(), &req, &mut *self.ops)?
+            .expect("a downloaded dep now pending!?")
             .map(|s| s.summary.clone())
             .next()
             .expect("summary not found");
@@ -692,7 +700,7 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
         // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
@@ -700,15 +708,19 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         if dep.source_id().precise().is_some() && !self.updated {
             debug!("attempting query without update");
             let mut called = false;
-            self.index
-                .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                    if dep.matches(&s) {
-                        called = true;
-                        f(s);
-                    }
-                })?;
+            let pend =
+                self.index
+                    .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
+                        if dep.matches(&s) {
+                            called = true;
+                            f(s);
+                        }
+                    })?;
+            if pend.is_pending() {
+                return Poll::Pending;
+            }
             if called {
-                return Ok(());
+                return Poll::Ready(Ok(()));
             } else {
                 debug!("falling back to an update");
                 self.do_update()?;
@@ -723,7 +735,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             })
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
         self.index
             .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, f)
     }
@@ -757,7 +773,10 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
+        let hash = self
+            .index
+            .hash(package, &mut *self.ops)?
+            .expect("we got to downloading a dep while pending!?");
         match self.ops.download(package, hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download { url, descriptor } => {
@@ -767,7 +786,10 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
+        let hash = self
+            .index
+            .hash(package, &mut *self.ops)?
+            .expect("we got to downloading a dep while pending!?");
         let file = self.ops.finish_download(package, hash, &data)?;
         self.get_pkg(package, &file)
     }
@@ -788,6 +810,19 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         if !self.updated {
             self.do_update()?;
         }
-        self.index.is_yanked(pkg, &mut *self.ops)
+        loop {
+            match self.index.is_yanked(pkg, &mut *self.ops)? {
+                Poll::Ready(yanked) => {
+                    return Ok(yanked);
+                }
+                Poll::Pending => {
+                    self.block_until_ready()?;
+                }
+            }
+        }
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        self.ops.block_until_ready()
     }
 }
