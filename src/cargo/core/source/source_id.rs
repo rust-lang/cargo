@@ -618,8 +618,8 @@ impl Ord for SourceKind {
 // Otherwise please just leave a comment in your PR as to why the hash value is
 // changing and why the old value can't be easily preserved.
 //
-// The hash value depends on endianness and bit-width, so we only run this test on 
-// little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the 
+// The hash value depends on endianness and bit-width, so we only run this test on
+// little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the
 // well-known value.
 #[test]
 #[cfg(all(target_endian = "little", target_pointer_width = "64"))]
