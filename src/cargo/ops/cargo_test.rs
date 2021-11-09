@@ -149,11 +149,15 @@ fn run_unit_tests(
                 let result = cmd
                     .exec_with_streaming(
                         &mut |line| {
-                            tx.send(OutOrErr::Out(line.to_string())).unwrap();
+                            if let Err(_) = tx.send(OutOrErr::Out(line.to_string())) {
+                                println!("out-of-order: {}", line);
+                            }
                             Ok(())
                         },
                         &mut |line| {
-                            tx.send(OutOrErr::Err(line.to_string())).unwrap();
+                            if let Err(_) = tx.send(OutOrErr::Err(line.to_string())) {
+                                eprintln!("out-of-order: {}", line);
+                            };
                             Ok(())
                         },
                         false,
@@ -372,11 +376,15 @@ fn run_doc_tests(
                 let result = p
                     .exec_with_streaming(
                         &mut |line| {
-                            tx.send(OutOrErr::Out(line.to_string())).unwrap();
+                            if let Err(_) = tx.send(OutOrErr::Out(line.to_string())) {
+                                println!("out-of-order: {}", line);
+                            }
                             Ok(())
                         },
                         &mut |line| {
-                            tx.send(OutOrErr::Err(line.to_string())).unwrap();
+                            if let Err(_) = tx.send(OutOrErr::Err(line.to_string())) {
+                                eprintln!("out-of-order: {}", line);
+                            }
                             Ok(())
                         },
                         false,
