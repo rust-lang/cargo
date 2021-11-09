@@ -247,7 +247,7 @@ fn process_output<'scope>(
         .shell()
         .verbose(|shell| shell.status("Running", &ctx.cmd))?;
 
-    for line in &rx {
+    while let Ok(line) = rx.recv() {
         match line {
             OutOrErr::Out(line) => writeln!(config.shell().out(), "{}", line).unwrap(),
             OutOrErr::Err(line) => writeln!(config.shell().err(), "{}", line).unwrap(),
@@ -453,7 +453,7 @@ fn process_doc_output<'scope>(
         .shell()
         .verbose(|shell| shell.status("Running", &ctx.cmd))?;
 
-    for line in &rx {
+    while let Ok(line) = rx.recv() {
         match line {
             OutOrErr::Out(line) => writeln!(config.shell().out(), "{}", line).unwrap(),
             OutOrErr::Err(line) => writeln!(config.shell().err(), "{}", line).unwrap(),
