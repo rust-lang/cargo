@@ -287,15 +287,15 @@ pub fn subcommand(name: &'static str) -> App {
     ])
 }
 
-// Determines whether or not to gate `--profile` as unstable when resolving it.
+/// Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
-    // `cargo rustc` historically has allowed "test", "bench", and "check". This
-    // variant explicitly allows those.
+    /// `cargo rustc` historically has allowed "test", "bench", and "check". This
+    /// variant explicitly allows those.
     LegacyRustc,
-    // `cargo check` and `cargo fix` historically has allowed "test". This variant
-    // explicitly allows that on stable.
+    /// `cargo check` and `cargo fix` historically has allowed "test". This variant
+    /// explicitly allows that on stable.
     LegacyTestOnly,
-    // All other commands, which allow any valid custom named profile.
+    /// All other commands, which allow any valid custom named profile.
     Custom,
 }
 
