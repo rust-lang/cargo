@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::ops;
-use crate::util::{internal, CargoResult, Config};
+use crate::util::{internal, CargoResult, Config, Filesystem};
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
@@ -540,5 +540,13 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
+    }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        None
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        None
     }
 }

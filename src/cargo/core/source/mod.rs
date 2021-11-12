@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::core::package::PackageSet;
 use crate::core::{Dependency, Package, PackageId, Summary};
-use crate::util::{CargoResult, Config};
+use crate::util::{CargoResult, Config, Filesystem};
 
 mod source_id;
 
@@ -101,6 +101,10 @@ pub trait Source {
     /// Query if a package is yanked. Only registry sources can mark packages
     /// as yanked. This ignores the yanked whitelist.
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool>;
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem>;
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem>;
 }
 
 pub enum MaybePackage {
@@ -178,6 +182,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
         (**self).is_yanked(pkg)
     }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        (**self).source_cache()
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        (**self).dot_crate_cache()
+    }
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
@@ -239,6 +251,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
         (**self).is_yanked(pkg)
+    }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        (**self).source_cache()
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        (**self).dot_crate_cache()
     }
 }
 

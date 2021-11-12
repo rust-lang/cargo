@@ -329,6 +329,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
         false
     }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        Some(&mut self.cache_path)
+    }
 }
 
 impl<'cfg> Drop for RemoteRegistry<'cfg> {

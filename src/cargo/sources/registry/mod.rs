@@ -435,6 +435,8 @@ pub trait RegistryData {
     /// (remote=git, local=files).
     fn index_path(&self) -> &Filesystem;
 
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem>;
+
     /// Loads the JSON for a specific named package from the index.
     ///
     /// * `root` is the root path to the index.
@@ -789,5 +791,13 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             self.do_update()?;
         }
         self.index.is_yanked(pkg, &mut *self.ops)
+    }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        Some(&mut self.src_path)
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        self.ops.dot_crate_cache()
     }
 }

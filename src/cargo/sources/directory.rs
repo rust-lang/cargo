@@ -6,7 +6,7 @@ use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
-use crate::util::Config;
+use crate::util::{Config, Filesystem};
 
 use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
@@ -204,5 +204,13 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
+    }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        None
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        None
     }
 }

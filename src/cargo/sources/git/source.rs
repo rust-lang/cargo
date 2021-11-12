@@ -5,7 +5,7 @@ use crate::sources::git::utils::GitRemote;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
-use crate::util::Config;
+use crate::util::{Config, Filesystem};
 use anyhow::Context;
 use log::trace;
 use std::fmt::{self, Debug, Formatter};
@@ -211,6 +211,14 @@ impl<'cfg> Source for GitSource<'cfg> {
 
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
+    }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        None
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        None
     }
 }
 

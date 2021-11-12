@@ -1,7 +1,9 @@
 //! Tests for the `cargo clean` command.
 
+use cargo::core::SourceId;
+use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::is_symlink;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{registry_url, Package};
 use cargo_test_support::{basic_bin_manifest, basic_manifest, git, main_file, project, rustc_host};
 use std::env;
 use std::path::Path;
@@ -297,6 +299,89 @@ fn clean_verbose() {
         )
         .run();
     p.cargo("build").run();
+}
+
+#[cargo_test]
+fn clean_include_cache() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1"
+                baz = "0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+
+    p.cargo("build").run();
+
+    let src_cache = cargo_home().join("registry").join("src");
+    let dot_crate_cache = cargo_home().join("registry").join("cache");
+    assert!(src_cache.exists());
+    assert!(dot_crate_cache.exists());
+    p.cargo("clean --include-cache").with_stdout("").run();
+    assert!(!src_cache.exists());
+    assert!(!dot_crate_cache.exists());
+}
+#[cargo_test]
+fn clean_package_include_cache() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1"
+                baz = "0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+
+    p.cargo("build").run();
+
+    let id = SourceId::for_registry(&registry_url()).unwrap();
+    let hash = cargo::util::hex::short_hash(&id);
+    let src_cache = cargo_home()
+        .join("registry")
+        .join("src")
+        .join(format!("-{}", hash));
+    let bar_src_cache = src_cache.join(format!("bar-0.1.0"));
+    let baz_src_cache = src_cache.join(format!("baz-0.1.0"));
+    let dot_crate_cache = cargo_home()
+        .join("registry")
+        .join("cache")
+        .join(format!("-{}", hash));
+    let bar_dot_crate_cache = dot_crate_cache.join(format!("bar-0.1.0.crate"));
+    let baz_dot_crate_cache = dot_crate_cache.join(format!("baz-0.1.0.crate"));
+    assert!(bar_src_cache.exists());
+    assert!(baz_src_cache.exists());
+    assert!(bar_dot_crate_cache.exists());
+    assert!(baz_dot_crate_cache.exists());
+    p.cargo("clean --include-cache -p bar")
+        .with_stdout("")
+        .run();
+    assert!(!bar_src_cache.exists());
+    assert!(baz_src_cache.exists());
+    assert!(!bar_dot_crate_cache.exists());
+    assert!(baz_dot_crate_cache.exists());
 }
 
 #[cargo_test]

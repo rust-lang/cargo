@@ -1,6 +1,7 @@
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::util::errors::CargoResult;
+use crate::util::Filesystem;
 
 use anyhow::Context as _;
 
@@ -126,5 +127,13 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
         self.inner.is_yanked(pkg)
+    }
+
+    fn source_cache(&mut self) -> Option<&mut Filesystem> {
+        self.inner.source_cache()
+    }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        self.inner.dot_crate_cache()
     }
 }

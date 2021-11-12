@@ -2,6 +2,7 @@ use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
+use crate::sources::SourceConfigMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
@@ -9,6 +10,7 @@ use crate::util::Config;
 
 use anyhow::Context as _;
 use cargo_util::paths;
+use std::collections::{hash_map, HashMap};
 use std::fs;
 use std::path::Path;
 
@@ -24,6 +26,8 @@ pub struct CleanOptions<'a> {
     pub requested_profile: InternedString,
     /// Whether to just clean the doc directory
     pub doc: bool,
+    /// Whether to also clean the package cache
+    pub include_cache: bool,
 }
 
 /// Cleans the package's build artifacts.
@@ -53,6 +57,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
     if opts.spec.is_empty() {
+        if opts.include_cache {
+            // We also need to remove src/ and cache/ from CARGO_HOME.
+            rm_rf(&config.registry_cache_path().into_path_unlocked(), config)?;
+            rm_rf(&config.registry_source_path().into_path_unlocked(), config)?;
+        }
+
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
@@ -133,12 +143,46 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
     let packages = pkg_set.get_many(pkg_ids)?;
 
+    let mut registries = HashMap::new();
+    let (_pc_lock, sources) = if opts.include_cache {
+        (
+            Some(config.acquire_package_cache_lock()?),
+            Some(SourceConfigMap::new(config)?),
+        )
+    } else {
+        (None, None)
+    };
+
     for pkg in packages {
         let pkg_dir = format!("{}-*", pkg.name());
 
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
             rm_rf_glob(&layout.fingerprint().join(&pkg_dir), config)?;
+        }
+
+        if let Some(sources) = &sources {
+            let source_id = pkg.package_id().source_id();
+            let registry = match registries.entry(source_id) {
+                hash_map::Entry::Occupied(o) => o.into_mut(),
+                hash_map::Entry::Vacant(v) => {
+                    let reg = sources.load(source_id, &Default::default())?;
+                    v.insert(reg)
+                }
+            };
+
+            // The as_path_unlocked are okay since we've acquired the package cache lock.
+            if let Some(src_path) = registry.source_cache() {
+                rm_rf_glob(&src_path.as_path_unlocked().join(&pkg_dir), config)?;
+            }
+            if let Some(cache_path) = registry.dot_crate_cache() {
+                rm_rf_glob(
+                    &cache_path
+                        .as_path_unlocked()
+                        .join(&format!("{}.crate", pkg_dir)),
+                    config,
+                )?;
+            }
         }
 
         for target in pkg.targets() {

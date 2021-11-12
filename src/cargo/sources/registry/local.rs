@@ -120,4 +120,8 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
     ) -> CargoResult<File> {
         panic!("this source doesn't download")
     }
+
+    fn dot_crate_cache(&mut self) -> Option<&mut Filesystem> {
+        None
+    }
 }
