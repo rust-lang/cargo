@@ -3,12 +3,14 @@ use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{add_path_args, CargoTestError, Config, Test};
+use crate::util::{add_path_args, CargoTestError, Config, Progress, ProgressStyle, Test};
 use cargo_util::ProcessError;
 use crossbeam_utils::thread::{self, ScopedJoinHandle};
 use std::ffi::OsString;
 use std::fmt::Write;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 pub struct TestOptions {
@@ -96,11 +98,14 @@ fn run_unit_tests(
     let cwd = config.cwd();
     let mut errors: Vec<TestError> = Vec::new();
 
-    let processing = AtomicU32::new(0);
+    let processing: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(vec![]));
     thread::scope(|s| {
         let mut handles = vec![];
         let test_jobs = options.compile_opts.build_config.test_jobs;
         let parallel = test_jobs > 1;
+
+        let mut progress = Progress::with_style("Testing", ProgressStyle::Ratio, config);
+        let mut fin = 0;
 
         for UnitOutput {
             unit,
@@ -139,7 +144,7 @@ fn run_unit_tests(
             };
             write!(ctx.cmd, "{}", &cmd).unwrap();
 
-            let processing_t = &processing;
+            let processing_t = processing.clone();
             let pkg_name = unit.pkg.name().to_string();
             let target = &unit.target;
             let (tx, rx) = std::sync::mpsc::channel();
@@ -166,44 +171,85 @@ fn run_unit_tests(
                         (
                             target.kind().clone(),
                             target.name().to_string(),
-                            pkg_name,
+                            pkg_name.clone(),
                             e,
                         )
                     });
-                processing_t.fetch_sub(1, Ordering::Relaxed);
+                drop(cmd);
+                let mut list = processing_t.lock().unwrap();
+                let idx = list
+                    .iter()
+                    .position(|i| **i == target.name().to_string())
+                    .unwrap();
+                list.remove(idx);
                 result
             });
+            let pkg_name = unit.pkg.name().to_string();
             if parallel {
-                handles.push((handle, rx, ctx));
+                handles.push((handle, rx, ctx, target.name().to_string()));
             } else {
                 handle.thread().unpark();
-                if !process_output(handle, &mut errors, ctx, config, options, rx)? {
+                let active_names = vec![pkg_name];
+                if !process_output(
+                    handle,
+                    &mut errors,
+                    ctx,
+                    config,
+                    options,
+                    rx,
+                    fin,
+                    compilation.tests.len(),
+                    &active_names[..],
+                    &mut progress,
+                )? {
                     break;
                 }
+                fin += 1;
             }
         }
 
         if parallel {
-            let mut threads: Vec<_> = handles.iter().map(|(h, _, _)| h.thread().clone()).collect();
+            let mut threads: Vec<(_, _)> = handles
+                .iter()
+                .map(|(h, _, _, name)| (h.thread().clone(), name.clone()))
+                .collect();
 
             //Have a thread unparking so that there's no more than n running at once...
-            let proc = &processing;
+            let proc = processing.clone();
             s.spawn(move |_| {
                 while !threads.is_empty() {
-                    if proc.load(Ordering::Relaxed) < test_jobs {
-                        proc.fetch_add(1, Ordering::Relaxed);
-                        threads.pop().unwrap().unpark();
+                    if proc.lock().unwrap().len() < test_jobs as usize {
+                        let (thread, name) = threads.pop().unwrap();
+                        proc.lock().unwrap().push(name);
+                        thread.unpark();
                     } else {
                         std::thread::sleep(Duration::from_millis(500));
                     }
                 }
             });
-
+            std::thread::sleep(Duration::from_millis(100));
             // Report results in the standard order...
-            for (handle, rx, ctx) in handles {
-                if !process_output(handle, &mut errors, ctx, config, options, rx)? {
+            for (handle, rx, ctx, _name) in handles {
+                let active_names;
+                {
+                    active_names = processing.lock().unwrap().clone();
+                }
+
+                if !process_output(
+                    handle,
+                    &mut errors,
+                    ctx,
+                    config,
+                    options,
+                    rx,
+                    fin,
+                    compilation.tests.len(),
+                    &active_names[..],
+                    &mut progress,
+                )? {
                     break;
                 }
+                fin += 1;
             }
         }
         let out: Result<(), anyhow::Error> = Ok(());
@@ -239,7 +285,12 @@ fn process_output<'scope>(
     config: &Config,
     options: &TestOptions,
     rx: std::sync::mpsc::Receiver<OutOrErr>,
+    fin: usize,
+    max: usize,
+    active_names: &[String],
+    progress: &mut Progress<'_>,
 ) -> CargoResult<bool> {
+    progress.clear();
     config
         .shell()
         .concise(|shell| shell.status("Running", &ctx.exe_display))?;
@@ -248,10 +299,12 @@ fn process_output<'scope>(
         .verbose(|shell| shell.status("Running", &ctx.cmd))?;
 
     while let Ok(line) = rx.recv() {
+        progress.clear();
         match line {
             OutOrErr::Out(line) => writeln!(config.shell().out(), "{}", line).unwrap(),
             OutOrErr::Err(line) => writeln!(config.shell().err(), "{}", line).unwrap(),
         }
+        drop(progress.tick_now(fin, max, &format!(": {}", active_names.join(", "))));
     }
     let result = handle.join().unwrap();
 
