@@ -147,12 +147,16 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
     commands
 }
 
-fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
+fn find_external_subcommand(config: &Config, cmd: &str) -> Option<PathBuf> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
-    let path = search_directories(config)
+    search_directories(config)
         .iter()
         .map(|dir| dir.join(&command_exe))
-        .find(|file| is_executable(file));
+        .find(|file| is_executable(file))
+}
+
+fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
+    let path = find_external_subcommand(config, cmd);
     let command = match path {
         Some(command) => command,
         None => {

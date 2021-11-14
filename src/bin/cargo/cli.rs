@@ -261,6 +261,18 @@ fn expand_aliases(
             }
             (None, None) => {}
             (_, Some(mut alias)) => {
+                // Check if this alias is shadowing an external subcommand
+                // (binary of the form `cargo-<subcommand>`)
+                // Currently this is only a warning, but after a transition period this will become
+                // a hard error.
+                if let Some(path) = super::find_external_subcommand(config, cmd) {
+                    config.shell().warn(format!(
+                        "user-defined alias `{}` is shadowing an external subcommand found at: `{}`",
+                        cmd,
+                        path.display(),
+                    ))?;
+                }
+
                 alias.extend(
                     args.values_of("")
                         .unwrap_or_default()
