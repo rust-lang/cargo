@@ -1248,7 +1248,7 @@ impl TomlManifest {
             for (name, platform) in me.target.iter().flatten() {
                 cx.platform = {
                     let platform: Platform = name.parse()?;
-                    platform.check_cfg_attributes(&mut cx.warnings);
+                    platform.check_cfg_attributes(cx.warnings);
                     Some(platform)
                 };
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
