@@ -327,7 +327,7 @@ fn execute_tests(
                             break;
                         }
                     }
-                    
+
                     let result = cmd
                         .exec_with_streaming(
                             &mut |line| {
