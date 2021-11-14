@@ -100,14 +100,20 @@ fn default_args_alias() {
     p.cargo("echo")
         .env("PATH", &path)
         .with_status(101)
-        .with_stderr("error: alias echo has unresolvable recursive definition: echo -> echo")
+        .with_stderr("\
+warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo`
+error: alias echo has unresolvable recursive definition: echo -> echo
+",
+        )
         .run();
 
     p.cargo("test-1")
         .env("PATH", &path)
         .with_status(101)
-        .with_stderr(
-            "error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo",
+        .with_stderr("\
+warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo`
+error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo
+",
         )
         .run();
 
