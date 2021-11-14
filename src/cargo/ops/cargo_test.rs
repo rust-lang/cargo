@@ -94,7 +94,7 @@ fn run_unit_tests(
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let cwd = config.cwd();
 
-    let mut handles: Vec<Job> = vec![]; // jobs to run.
+    let mut jobs: Vec<Job> = vec![]; // jobs to run.
 
     for UnitOutput {
         unit,
@@ -130,7 +130,7 @@ fn run_unit_tests(
         let pkg_name = unit.pkg.name().to_string();
         let target = &unit.target;
         let (tx, rx) = std::sync::mpsc::channel();
-        handles.push(Job {
+        jobs.push(Job {
             state: JobState::NotStarted,
             cmd,
             name: target.name().to_string(),
@@ -142,7 +142,7 @@ fn run_unit_tests(
         });
     }
 
-    let mut errors = execute_tests(handles, config, options, compilation.tests.len(), false)?;
+    let mut errors = execute_tests(jobs, config, options, compilation.tests.len(), false)?;
 
     if errors.len() == 1 {
         let (kind, name, pkg_name, e) = errors.pop().unwrap();
@@ -173,7 +173,7 @@ fn run_doc_tests(
     let doctest_xcompile = config.cli_unstable().doctest_xcompile;
     let doctest_in_workspace = config.cli_unstable().doctest_in_workspace;
 
-    let mut handles = vec![];
+    let mut jobs = vec![];
     let mut total = 0;
     for doctest_info in &compilation.to_doc_test {
         total += 1;
@@ -267,7 +267,7 @@ fn run_doc_tests(
         let pkg_name = unit.pkg.name().to_string();
 
         let (tx, rx) = std::sync::mpsc::channel();
-        handles.push(Job {
+        jobs.push(Job {
             state: JobState::NotStarted,
             cmd: p,
             name: unit.target.name().to_string(),
@@ -278,7 +278,7 @@ fn run_doc_tests(
             tx: Some(tx),
         });
     }
-    let errors = execute_tests(handles, config, options, total, true)?;
+    let errors = execute_tests(jobs, config, options, total, true)?;
 
     let mut res = vec![];
     for (_, _, _, e) in errors.into_iter() {
@@ -288,7 +288,7 @@ fn run_doc_tests(
 }
 
 fn execute_tests(
-    handles: Vec<Job>,
+    jobs: Vec<Job>,
     config: &Config,
     options: &TestOptions,
     total: usize,
@@ -296,12 +296,12 @@ fn execute_tests(
 ) -> CargoResult<Vec<TestError>> {
     thread::scope(|s| {
         let mut errors: Vec<TestError> = Vec::new();
-        let handles = Arc::new(Mutex::new(handles));
+        let jobs = Arc::new(Mutex::new(jobs));
         let mut progress = Progress::with_style("Testing", ProgressStyle::Ratio, config);
 
         // Run n test crates in parallel
         for _ in 0..options.compile_opts.build_config.test_jobs {
-            let handles = handles.clone();
+            let jobs = jobs.clone();
             s.spawn(move |_| {
                 loop {
                     let tx;
@@ -311,7 +311,7 @@ fn execute_tests(
                     let pkg_name;
                     // Transition job to in progress and put rx in job.
                     {
-                        let mut jobs = handles.lock().unwrap();
+                        let mut jobs = jobs.lock().unwrap();
                         if let Some(mut job) = jobs
                             .iter_mut()
                             .filter(|job| matches!(job.state, JobState::NotStarted))
@@ -327,7 +327,7 @@ fn execute_tests(
                             break;
                         }
                     }
-
+                    
                     let result = cmd
                         .exec_with_streaming(
                             &mut |line| {
@@ -346,7 +346,7 @@ fn execute_tests(
                         tx.send(OutOrErr::Error(err)).unwrap();
                     }
 
-                    for mut job in &mut *handles.lock().unwrap() {
+                    for mut job in &mut *jobs.lock().unwrap() {
                         if let JobState::InProgress(thread_id) = job.state {
                             if thread_id == std::thread::current().id() {
                                 job.state = JobState::Finished;
@@ -358,12 +358,14 @@ fn execute_tests(
             });
         }
 
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
         // Report results in the standard order...
         for _ in 0..total {
             let active_names: Vec<String>;
             let done_count;
             let job: Job = {
-                let mut jobs = handles.lock().unwrap();
+                let mut jobs = jobs.lock().unwrap();
                 done_count = total
                     - jobs
                         .iter()
@@ -387,7 +389,7 @@ fn execute_tests(
                 .shell()
                 .verbose(|shell| shell.status("Running", &job.cmd))?;
 
-            while let Ok(line) = job.rx.recv() {
+            for line in job.rx.iter() {
                 progress.clear();
                 match line {
                     OutOrErr::Out(line) => writeln!(config.shell().out(), "{}", line).unwrap(),
@@ -412,6 +414,7 @@ fn execute_tests(
     .unwrap()
 }
 
+#[derive(Debug)]
 struct Job {
     name: String,
     cmd: ProcessBuilder,
@@ -423,6 +426,7 @@ struct Job {
     tx: Option<Sender<OutOrErr>>,
 }
 
+#[derive(Debug)]
 enum JobState {
     NotStarted,
     InProgress(ThreadId),
