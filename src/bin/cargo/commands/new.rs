@@ -5,7 +5,7 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("new")
         .about("Create a new cargo package at <path>")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg(Arg::with_name("path").required(true))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg_new_opts()

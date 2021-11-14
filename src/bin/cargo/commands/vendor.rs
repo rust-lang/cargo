@@ -5,7 +5,7 @@ use std::path::PathBuf;
 pub fn cli() -> App {
     subcommand("vendor")
         .about("Vendor all dependencies for a project locally")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg_manifest_path()
         .arg(Arg::with_name("path").help("Where to vendor crates (`vendor` by default)"))
         .arg(

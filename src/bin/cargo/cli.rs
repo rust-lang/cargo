@@ -438,7 +438,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .multiple(true)
             .global(true),
         )
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")
