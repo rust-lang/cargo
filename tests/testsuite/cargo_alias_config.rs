@@ -101,7 +101,7 @@ fn default_args_alias() {
         .env("PATH", &path)
         .with_status(101)
         .with_stderr("\
-warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo`
+warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
 error: alias echo has unresolvable recursive definition: echo -> echo
 ",
         )
