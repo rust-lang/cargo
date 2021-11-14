@@ -111,7 +111,7 @@ error: alias echo has unresolvable recursive definition: echo -> echo
         .env("PATH", &path)
         .with_status(101)
         .with_stderr("\
-warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo`
+warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
 error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo
 ",
         )
