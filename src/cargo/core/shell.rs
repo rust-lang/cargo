@@ -96,11 +96,15 @@ impl Shell {
     /// Creates a new shell (color choice and verbosity), defaulting to 'auto' color and verbose
     /// output.
     pub fn new() -> Shell {
-        let auto = ColorChoice::CargoAuto.to_termcolor_color_choice();
+        let auto_clr = ColorChoice::CargoAuto;
         Shell {
             output: ShellOut::Stream {
-                stdout: StandardStream::stdout(auto),
-                stderr: StandardStream::stderr(auto),
+                stdout: StandardStream::stdout(
+                    auto_clr.to_termcolor_color_choice(atty::Stream::Stdout),
+                ),
+                stderr: StandardStream::stderr(
+                    auto_clr.to_termcolor_color_choice(atty::Stream::Stderr),
+                ),
                 color_choice: ColorChoice::CargoAuto,
                 stderr_tty: atty::is(atty::Stream::Stderr),
             },
@@ -297,9 +301,8 @@ impl Shell {
                 ),
             };
             *color_choice = cfg;
-            let choice = cfg.to_termcolor_color_choice();
-            *stdout = StandardStream::stdout(choice);
-            *stderr = StandardStream::stderr(choice);
+            *stdout = StandardStream::stdout(cfg.to_termcolor_color_choice(atty::Stream::Stdout));
+            *stderr = StandardStream::stderr(cfg.to_termcolor_color_choice(atty::Stream::Stderr));
         }
         Ok(())
     }
@@ -320,6 +323,13 @@ impl Shell {
         match &self.output {
             ShellOut::Write(_) => false,
             ShellOut::Stream { stderr, .. } => stderr.supports_color(),
+        }
+    }
+
+    pub fn out_supports_color(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream { stdout, .. } => stdout.supports_color(),
         }
     }
 
@@ -432,12 +442,12 @@ impl ShellOut {
 
 impl ColorChoice {
     /// Converts our color choice to termcolor's version.
-    fn to_termcolor_color_choice(self) -> termcolor::ColorChoice {
+    fn to_termcolor_color_choice(self, stream: atty::Stream) -> termcolor::ColorChoice {
         match self {
             ColorChoice::Always => termcolor::ColorChoice::Always,
             ColorChoice::Never => termcolor::ColorChoice::Never,
             ColorChoice::CargoAuto => {
-                if atty::is(atty::Stream::Stderr) {
+                if atty::is(stream) {
                     termcolor::ColorChoice::Auto
                 } else {
                     termcolor::ColorChoice::Never
