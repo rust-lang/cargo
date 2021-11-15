@@ -46,9 +46,9 @@ If you can successfully run `cargo build`, you should be good to go!
 
 [homebrew]: https://brew.sh/
 
-Note: There is currently a bug on macOS that will cause an error while linking 
-cargo. To fix this, run `export MACOSX_DEPLOYMENT_TARGET=10.7` before attempting
-to build the cargo project. For more information, see 
+Note: There is currently a bug on arm64 M1 macOS machines that will cause an error 
+while linking cargo. To fix this, run `export MACOSX_DEPLOYMENT_TARGET=10.7` before 
+attempting to build the cargo project. For more information, see 
 [rust#90342](https://github.com/rust-lang/rust/issues/90342).
 
 ## Running Cargo
