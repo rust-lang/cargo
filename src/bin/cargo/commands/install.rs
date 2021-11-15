@@ -7,7 +7,7 @@ use cargo::util::IntoUrl;
 pub fn cli() -> App {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg(Arg::with_name("crate").empty_values(false).multiple(true))
         .arg(
             opt("version", "Specify a version to install")
