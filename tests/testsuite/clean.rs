@@ -302,7 +302,7 @@ fn clean_verbose() {
 }
 
 #[cargo_test]
-fn clean_include_cache() {
+fn clean_with_downloads() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -329,12 +329,12 @@ fn clean_include_cache() {
     let dot_crate_cache = cargo_home().join("registry").join("cache");
     assert!(src_cache.exists());
     assert!(dot_crate_cache.exists());
-    p.cargo("clean --include-cache").with_stdout("").run();
+    p.cargo("clean --with-downloads").with_stdout("").run();
     assert!(!src_cache.exists());
     assert!(!dot_crate_cache.exists());
 }
 #[cargo_test]
-fn clean_package_include_cache() {
+fn clean_package_with_downloads() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -375,7 +375,7 @@ fn clean_package_include_cache() {
     assert!(baz_src_cache.exists());
     assert!(bar_dot_crate_cache.exists());
     assert!(baz_dot_crate_cache.exists());
-    p.cargo("clean --include-cache -p bar")
+    p.cargo("clean --with-downloads -p bar")
         .with_stdout("")
         .run();
     assert!(!bar_src_cache.exists());

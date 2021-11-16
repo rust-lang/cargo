@@ -8,8 +8,8 @@ pub fn cli() -> App {
         .about("Remove artifacts that cargo has generated in the past")
         .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg(opt(
-            "include-cache",
-            "Whether to clean Cargo's cache directories",
+            "with-downloads",
+            "Whether to also clean Cargo's cache directories holding downloaded crates",
         ))
         .arg_package_spec_simple("Package to clean artifacts for")
         .arg_manifest_path()
@@ -35,7 +35,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         requested_profile: args.get_profile_name(config, "dev", ProfileChecking::Custom)?,
         profile_specified: args.is_present("profile") || args.is_present("release"),
         doc: args.is_present("doc"),
-        include_cache: args.is_present("include-cache"),
+        with_downloads: args.is_present("with-downloads"),
     };
     ops::clean(&ws, &opts)?;
     Ok(())

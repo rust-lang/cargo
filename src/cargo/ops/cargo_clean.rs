@@ -27,7 +27,7 @@ pub struct CleanOptions<'a> {
     /// Whether to just clean the doc directory
     pub doc: bool,
     /// Whether to also clean the package cache
-    pub include_cache: bool,
+    pub with_downloads: bool,
 }
 
 /// Cleans the package's build artifacts.
@@ -57,7 +57,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
     if opts.spec.is_empty() {
-        if opts.include_cache {
+        if opts.with_downloads {
             // We also need to remove src/ and cache/ from CARGO_HOME.
             rm_rf(&config.registry_cache_path().into_path_unlocked(), config)?;
             rm_rf(&config.registry_source_path().into_path_unlocked(), config)?;
@@ -144,7 +144,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let packages = pkg_set.get_many(pkg_ids)?;
 
     let mut registries = HashMap::new();
-    let (_pc_lock, sources) = if opts.include_cache {
+    let (_pc_lock, sources) = if opts.with_downloads {
         (
             Some(config.acquire_package_cache_lock()?),
             Some(SourceConfigMap::new(config)?),
