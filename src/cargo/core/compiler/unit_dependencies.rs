@@ -132,7 +132,7 @@ fn calc_deps_of_std(
     // Compute dependencies for the standard library.
     state.is_std = true;
     for roots in std_roots.values() {
-        deps_of_roots(roots, &mut state)?;
+        deps_of_roots(roots, state)?;
     }
     state.is_std = false;
     Ok(Some(std::mem::take(&mut state.unit_dependencies)))
@@ -172,7 +172,7 @@ fn attach_std_deps(
 
 /// Compute all the dependencies of the given root units.
 /// The result is stored in state.unit_dependencies.
-fn deps_of_roots(roots: &[Unit], mut state: &mut State<'_, '_>) -> CargoResult<()> {
+fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
         // We check the global test mode to see if we are running in `cargo
@@ -200,7 +200,7 @@ fn deps_of_roots(roots: &[Unit], mut state: &mut State<'_, '_>) -> CargoResult<(
         } else {
             UnitFor::new_normal()
         };
-        deps_of(unit, &mut state, unit_for)?;
+        deps_of(unit, state, unit_for)?;
     }
 
     Ok(())

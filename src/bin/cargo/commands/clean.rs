@@ -6,7 +6,7 @@ use cargo::util::print_available_packages;
 pub fn cli() -> App {
     subcommand("clean")
         .about("Remove artifacts that cargo has generated in the past")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg(opt(
             "include-cache",
             "Whether to clean Cargo's cache directories",

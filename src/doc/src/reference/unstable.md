@@ -506,7 +506,8 @@ units do not show when code generation starts).
 The "custom build" units are `build.rs` scripts, which when run are
 highlighted in orange.
 
-The second graph shows Cargo's concurrency over time. The three lines are:
+The second graph shows Cargo's concurrency over time. The background
+indicates CPU usage. The three lines are:
 - "Waiting" (red) — This is the number of units waiting for a CPU slot to
   open.
 - "Inactive" (blue) — This is the number of units that are waiting for their

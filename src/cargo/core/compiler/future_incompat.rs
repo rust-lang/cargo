@@ -218,7 +218,9 @@ impl OnDiskReports {
         };
         to_display += &package_report;
 
-        let to_display = if config.shell().err_supports_color() {
+        let shell = config.shell();
+
+        let to_display = if shell.err_supports_color() && shell.out_supports_color() {
             to_display
         } else {
             strip_ansi_escapes::strip(&to_display)
