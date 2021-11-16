@@ -393,47 +393,6 @@ pub fn create_bcx<'a, 'cfg>(
         targeted_resolve: resolve,
         resolved_features,
     } = resolve;
-
-    // Passing `build_config.requested_kinds` instead of
-    // `explicit_host_kinds` here so that `generate_targets` can do
-    // its own special handling of `CompileKind::Host`. It will
-    // internally replace the host kind by the `explicit_host_kind`
-    // before setting as a unit.
-    let mut units = generate_targets(
-        ws,
-        &to_builds,
-        filter,
-        &build_config.requested_kinds,
-        explicit_host_kind,
-        build_config.mode,
-        &resolve,
-        &workspace_resolve,
-        &resolved_features,
-        &pkg_set,
-        &profiles,
-        interner,
-    )?;
-    
-    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
-        }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
-        pkg_set.add_set(std_package_set);
-        Some((std_resolve, std_features))
-    } else {
-        None
-    };
-
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
@@ -538,6 +497,45 @@ pub fn create_bcx<'a, 'cfg>(
             )?
         }
         None => Vec::new(),
+    };
+    // Passing `build_config.requested_kinds` instead of
+    // `explicit_host_kinds` here so that `generate_targets` can do
+    // its own special handling of `CompileKind::Host`. It will
+    // internally replace the host kind by the `explicit_host_kind`
+    // before setting as a unit.
+    let mut units = generate_targets(
+        ws,
+        &to_builds,
+        filter,
+        &build_config.requested_kinds,
+        explicit_host_kind,
+        build_config.mode,
+        &resolve,
+        &workspace_resolve,
+        &resolved_features,
+        &pkg_set,
+        &profiles,
+        interner,
+    )?;
+    
+    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
+        if build_config.build_plan {
+            config
+                .shell()
+                .warn("-Zbuild-std does not currently fully support --build-plan")?;
+        }
+        if build_config.requested_kinds[0].is_host() {
+            // TODO: This should eventually be fixed. Unfortunately it is not
+            // easy to get the host triple in BuildConfig. Consider changing
+            // requested_target to an enum, or some other approach.
+            anyhow::bail!("-Zbuild-std requires --target");
+        }
+        let (std_package_set, std_resolve, std_features) =
+            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+        pkg_set.add_set(std_package_set);
+        Some((std_resolve, std_features))
+    } else {
+        None
     };
 
     let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
