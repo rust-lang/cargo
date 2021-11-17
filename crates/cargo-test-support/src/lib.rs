@@ -446,6 +446,11 @@ pub fn project() -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join("foo"))
 }
 
+// Generates a project layout in given directory
+pub fn project_in(dir: &str) -> ProjectBuilder {
+    ProjectBuilder::new(paths::root().join(dir).join("foo"))
+}
+
 // Generates a project layout inside our fake home dir
 pub fn project_in_home(name: &str) -> ProjectBuilder {
     ProjectBuilder::new(paths::home().join(name))
