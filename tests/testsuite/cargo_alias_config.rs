@@ -101,7 +101,9 @@ fn default_args_alias() {
         .env("PATH", &path)
         .with_status(101)
         .with_stderr("\
-warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
+[WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
 error: alias echo has unresolvable recursive definition: echo -> echo
 ",
         )
@@ -111,7 +113,9 @@ error: alias echo has unresolvable recursive definition: echo -> echo
         .env("PATH", &path)
         .with_status(101)
         .with_stderr("\
-warning: user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
+[WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
 error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo
 ",
         )

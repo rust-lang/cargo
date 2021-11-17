@@ -267,7 +267,10 @@ fn expand_aliases(
                 // a hard error.
                 if let Some(path) = super::find_external_subcommand(config, cmd) {
                     config.shell().warn(format!(
-                        "user-defined alias `{}` is shadowing an external subcommand found at: `{}`",
+                        "\
+user-defined alias `{}` is shadowing an external subcommand found at: `{}`
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.",
                         cmd,
                         path.display(),
                     ))?;
