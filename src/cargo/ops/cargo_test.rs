@@ -140,7 +140,7 @@ fn run_unit_tests(
         });
     }
 
-    let mut errors = execute_tests(jobs, config, options, compilation.tests.len(), false)?;
+    let mut errors = execute_tests(jobs, config, options, false)?;
 
     if errors.len() == 1 {
         let (kind, name, pkg_name, e) = errors.pop().unwrap();
@@ -172,9 +172,7 @@ fn run_doc_tests(
     let doctest_in_workspace = config.cli_unstable().doctest_in_workspace;
 
     let mut jobs = vec![];
-    let mut total = 0;
     for doctest_info in &compilation.to_doc_test {
-        total += 1;
         let Doctest {
             args,
             unstable_opts,
@@ -273,7 +271,7 @@ fn run_doc_tests(
             tx: Some(tx),
         });
     }
-    let errors = execute_tests(jobs, config, options, total, true)?;
+    let errors = execute_tests(jobs, config, options, true)?;
 
     let mut res = vec![];
     for (_, _, _, e) in errors.into_iter() {
@@ -286,11 +284,11 @@ fn execute_tests(
     jobs: Vec<Job>,
     config: &Config,
     options: &TestOptions,
-    total: usize,
     doc_tests: bool,
 ) -> CargoResult<Vec<TestError>> {
     thread::scope(|s| {
         let mut errors: Vec<TestError> = Vec::new();
+        let total = jobs.len();
         let jobs = Arc::new(Mutex::new(jobs));
         let mut progress = Progress::with_style("Testing", ProgressStyle::Ratio, config);
 
