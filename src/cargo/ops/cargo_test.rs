@@ -1,11 +1,12 @@
+#![allow(warnings)]
+
 use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{add_path_args, CargoTestError, Config, Progress, ProgressStyle, Test};
-use cargo_util::ProcessBuilder;
-use cargo_util::ProcessError;
+use cargo_util::{ProcessBuilder, ProcessError};
 use crossbeam_utils::thread;
 use std::ffi::OsString;
 use std::sync::{
@@ -75,8 +76,6 @@ fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<C
     Ok(compilation)
 }
 
-/// Runs the unit and integration tests of a package.
-
 enum OutOrErr {
     Out(String),
     Err(String),
@@ -86,6 +85,7 @@ enum OutOrErr {
 
 type TestError = (TargetKind, String, String, anyhow::Error);
 
+/// Runs the unit and integration tests of a package.
 fn run_unit_tests(
     config: &Config,
     options: &TestOptions,
@@ -94,7 +94,7 @@ fn run_unit_tests(
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let cwd = config.cwd();
 
-    let mut jobs: Vec<Job> = vec![]; // jobs to run.
+    let mut jobs: Vec<Job> = vec![];
 
     for UnitOutput {
         unit,
@@ -127,17 +127,15 @@ fn run_unit_tests(
             cmd.arg("--color=always");
         }
 
-        let pkg_name = unit.pkg.name().to_string();
-        let target = &unit.target;
         let (tx, rx) = std::sync::mpsc::channel();
         jobs.push(Job {
             state: JobState::NotStarted,
             cmd,
-            name: target.name().to_string(),
+            name: unit.target.name().to_string(),
             exe,
-            target_kind: target.kind().clone(),
-            pkg_name,
-            rx,
+            target_kind: unit.target.kind().clone(),
+            pkg_name: unit.pkg.name().to_string(),
+            rx: Some(rx),
             tx: Some(tx),
         });
     }
@@ -263,18 +261,15 @@ fn run_doc_tests(
             p.arg("--color=always");
         }
 
-        let exe = unit.target.name().to_string();
-        let pkg_name = unit.pkg.name().to_string();
-
         let (tx, rx) = std::sync::mpsc::channel();
         jobs.push(Job {
             state: JobState::NotStarted,
             cmd: p,
             name: unit.target.name().to_string(),
-            exe,
+            exe: unit.target.name().to_string(),
             target_kind: unit.target.kind().clone(),
-            pkg_name,
-            rx,
+            pkg_name: unit.pkg.name().to_string(),
+            rx: Some(rx),
             tx: Some(tx),
         });
     }
@@ -312,7 +307,7 @@ fn execute_tests(
                     // Transition job to in progress and put rx in job.
                     {
                         let mut jobs = jobs.lock().unwrap();
-                        if let Some(mut job) = jobs
+                        if let Some(job) = jobs
                             .iter_mut()
                             .filter(|job| matches!(job.state, JobState::NotStarted))
                             .nth(0)
@@ -341,12 +336,10 @@ fn execute_tests(
                             false,
                         )
                         .map_err(|e| (target_kind, name, pkg_name, e));
-                    drop(cmd);
                     if let Err(err) = result {
                         tx.send(OutOrErr::Error(err)).unwrap();
                     }
-
-                    for mut job in &mut *jobs.lock().unwrap() {
+                    for job in &mut *jobs.lock().unwrap() {
                         if let JobState::InProgress(thread_id) = job.state {
                             if thread_id == std::thread::current().id() {
                                 job.state = JobState::Finished;
@@ -358,13 +351,11 @@ fn execute_tests(
             });
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
         // Report results in the standard order...
-        for _ in 0..total {
+        for i in 0..total {
             let active_names: Vec<String>;
             let done_count;
-            let job: Job = {
+            let (exe, cmd, rx) = {
                 let mut jobs = jobs.lock().unwrap();
                 done_count = total
                     - jobs
@@ -378,18 +369,28 @@ fn execute_tests(
                     .filter(|job| matches!(job.state, JobState::InProgress(_)))
                     .map(|job| job.name.clone())
                     .collect();
-                jobs.remove(0)
+                let job = &mut jobs[i];
+                (
+                    job.exe.clone(),
+                    job.cmd.clone(),
+                    job.rx.take().expect("rx to exist"),
+                )
             };
 
             progress.clear();
-            config.shell().concise(|shell| {
-                shell.status(if doc_tests { "Doc-tests" } else { "Running" }, &job.exe)
-            })?;
+            if doc_tests {
+                config.shell().status("Doc-tests", &exe)?;
+            } else {
+                config
+                    .shell()
+                    .concise(|shell| shell.status("Running", &exe))?;
+            }
+
             config
                 .shell()
-                .verbose(|shell| shell.status("Running", &job.cmd))?;
+                .verbose(|shell| shell.status("Running", &cmd))?;
 
-            for line in job.rx.iter() {
+            for line in rx.into_iter() {
                 progress.clear();
                 match line {
                     OutOrErr::Out(line) => writeln!(config.shell().out(), "{}", line).unwrap(),
@@ -422,7 +423,7 @@ struct Job {
     target_kind: TargetKind,
     pkg_name: String,
     state: JobState,
-    rx: Receiver<OutOrErr>,
+    rx: Option<Receiver<OutOrErr>>,
     tx: Option<Sender<OutOrErr>>,
 }
 
