@@ -862,8 +862,14 @@ fn build_base_args(
     add_allow_features(cx, cmd);
 
     if !test {
-        for crate_type in crate_types.iter() {
-            cmd.arg("--crate-type").arg(crate_type.as_str());
+        if let Some(crate_types) = cx.bcx.rustc_crate_types_args_for(unit) {
+            for crate_type in crate_types.iter() {
+                cmd.arg("--crate-type").arg(crate_type);
+            }
+        } else {
+            for crate_type in crate_types.iter() {
+                cmd.arg("--crate-type").arg(crate_type.as_str());
+            }
         }
     }
 

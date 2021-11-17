@@ -71,6 +71,7 @@ pub struct CompileOptions {
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<Vec<String>>,
+    pub target_rustc_crate_types: Option<Vec<String>>,
     /// Extra arguments passed to all selected targets for rustdoc.
     pub local_rustdoc_args: Option<Vec<String>>,
     /// Whether the `--document-private-items` flags was specified and should
@@ -92,6 +93,7 @@ impl<'a> CompileOptions {
             },
             target_rustdoc_args: None,
             target_rustc_args: None,
+            target_rustc_crate_types: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: true,
@@ -332,6 +334,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
+        ref target_rustc_crate_types,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
         honor_rust_version,
@@ -644,6 +647,28 @@ pub fn create_bcx<'a, 'cfg>(
         }
     }
 
+    let mut crate_types = HashMap::new();
+    if let Some(args) = target_rustc_crate_types {
+        if units.len() != 1 {
+            anyhow::bail!(
+                "crate types to rustc can only be passed to one \
+                 target, consider filtering\nthe package by passing, \
+                 e.g., `--lib` to specify a single target"
+            );
+        }
+        match units[0].target.kind() {
+            TargetKind::Lib(_) | TargetKind::ExampleLib(_) => {
+                crate_types.insert(units[0].clone(), args.clone());
+            }
+            _ => {
+                anyhow::bail!(
+                    "crate types can only be specified for libraries and examples. \
+                    Binaries, tests, and benchmarks are always the `bin` crate type"
+                );
+            }
+        }
+    }
+
     if honor_rust_version {
         // Remove any pre-release identifiers for easier comparison
         let current_version = &target_data.rustc.version;
@@ -680,6 +705,7 @@ pub fn create_bcx<'a, 'cfg>(
         build_config,
         profiles,
         extra_compiler_args,
+        crate_types,
         target_data,
         units,
         unit_graph,
