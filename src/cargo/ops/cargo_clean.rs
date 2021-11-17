@@ -174,15 +174,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
             // The as_path_unlocked are okay since we've acquired the package cache lock.
             if let Some(src_path) = registry.source_cache() {
-                rm_rf_glob(&src_path.as_path_unlocked().join(&pkg_dir), config)?;
+                let dir = escape_glob_path(src_path.as_path_unlocked())?;
+                rm_rf_glob(&Path::new(&dir).join(&pkg_dir), config)?;
             }
             if let Some(cache_path) = registry.dot_crate_cache() {
-                rm_rf_glob(
-                    &cache_path
-                        .as_path_unlocked()
-                        .join(&format!("{}.crate", pkg_dir)),
-                    config,
-                )?;
+                let dir = escape_glob_path(cache_path.as_path_unlocked())?;
+                rm_rf_glob(&Path::new(&dir).join(&format!("{}.crate", pkg_dir)), config)?;
             }
         }
 
