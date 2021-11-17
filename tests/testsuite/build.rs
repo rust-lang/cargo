@@ -1900,6 +1900,40 @@ fn explicit_examples() {
 }
 
 #[cargo_test]
+fn non_existing_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[test]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --tests -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. \
+  Please specify test.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn non_existing_example() {
     let p = project()
         .file(
@@ -1908,7 +1942,6 @@ fn non_existing_example() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
-                authors = []
 
                 [lib]
                 name = "foo"
@@ -1921,14 +1954,49 @@ fn non_existing_example() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("test -v")
+    p.cargo("build --examples -v")
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `hello` example, specify example.path",
+  can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. \
+  Please specify example.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn non_existing_benchmark() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[bench]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --benches -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. \
+  Please specify bench.path if you want to use a non-default path.",
         )
         .run();
 }
@@ -1948,7 +2016,184 @@ fn non_existing_binary() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `foo` bin, specify bin.path",
+  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. \
+  Please specify bin.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[test]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("test/foo.rs", "")
+        .build();
+
+    p.cargo("build --tests -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` test at default paths, but found a file at `test/foo.rs`.
+  Perhaps rename the file to `tests/foo.rs` for target auto-discovery, \
+  or specify test.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[example]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("example/foo.rs", "")
+        .build();
+
+    p.cargo("build --examples -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` example at default paths, but found a file at `example/foo.rs`.
+  Perhaps rename the file to `examples/foo.rs` for target auto-discovery, \
+  or specify example.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_benchmark() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[bench]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bench/foo.rs", "")
+        .build();
+
+    p.cargo("build --benches -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
+  Perhaps rename the file to `benches/foo.rs` for target auto-discovery, \
+  or specify bench.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bins/foo.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bin at default paths, but found a file at `src/bins/foo.rs`.
+  Perhaps rename the file to `src/bin/foo.rs` for target auto-discovery, \
+  or specify bin.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_subdir_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bins/foo/main.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bin at default paths, but found a file at `src/bins/foo/main.rs`.
+  Perhaps rename the file to `src/bin/foo/main.rs` for target auto-discovery, \
+  or specify bin.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn found_multiple_target_files() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bin/foo.rs", "")
+        .file("src/bin/foo/main.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        // Don't assert the inferred pathes since the order is non-deterministic.
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  cannot infer path for `foo` bin
+  Cargo doesn't know which to use because multiple target files found \
+  at `src/bin/foo[..].rs` and `src/bin/foo[..].rs`.",
         )
         .run();
 }
@@ -4319,7 +4564,7 @@ fn no_bin_in_src_with_lib() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `foo` bin, specify bin.path",
+  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. [..]",
         )
         .run();
 }
@@ -4529,7 +4774,9 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("[..]can't find `a_bin` bin, specify bin.path")
+        .with_stderr_contains(
+            "[..]can't find `a_bin` bin at `src/bin/a_bin.rs` or `src/bin/a_bin/main.rs`[..]",
+        )
         .run();
 }
 

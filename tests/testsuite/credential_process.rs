@@ -403,13 +403,16 @@ fn libexec_path() {
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
+            // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
+            // On Windows, changing to a custom executable resolver has changed the
+            // error messages.
             &format!("\
 [UPDATING] [..]
 [ERROR] failed to execute `[..]libexec/cargo-credential-doesnotexist[EXE]` to store authentication token for registry `crates-io`
 
 Caused by:
-  {}
-", cargo_test_support::no_such_file_err_msg()),
+  [..]
+"),
         )
         .run();
 }
