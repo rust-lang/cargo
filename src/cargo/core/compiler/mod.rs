@@ -861,14 +861,19 @@ fn build_base_args(
     add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
     add_allow_features(cx, cmd);
 
+    let mut contains_dy_lib = false;
     if !test {
-        if let Some(crate_types) = cx.bcx.rustc_crate_types_args_for(unit) {
-            for crate_type in crate_types.iter() {
-                cmd.arg("--crate-type").arg(crate_type);
-            }
-        } else {
-            for crate_type in crate_types.iter() {
-                cmd.arg("--crate-type").arg(crate_type.as_str());
+        let mut crate_types = &crate_types
+            .iter()
+            .map(|t| t.as_str().to_string())
+            .collect::<Vec<String>>();
+        if let Some(types) = cx.bcx.rustc_crate_types_args_for(unit) {
+            crate_types = types;
+        }
+        for crate_type in crate_types.iter() {
+            cmd.arg("--crate-type").arg(crate_type);
+            if crate_type == CrateType::Dylib.as_str() {
+                contains_dy_lib = true;
             }
         }
     }
@@ -885,7 +890,7 @@ fn build_base_args(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&CrateType::Dylib) && !cx.is_primary_package(unit));
+        || (contains_dy_lib && !cx.is_primary_package(unit));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }

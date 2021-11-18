@@ -39,7 +39,7 @@ pub fn cli() -> App {
         .arg(multi_opt(
             CRATE_TYPE_ARG_NAME,
             "CRATE-TYPE",
-            "Rustc crate-types",
+            "Comma separated list of types of crates for the compiler to emit (unstable)",
         ))
         .arg_target_dir()
         .arg_manifest_path()

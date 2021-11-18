@@ -71,6 +71,7 @@ pub struct CompileOptions {
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<Vec<String>>,
+    /// Crate types to be passed to rustc (single target only)
     pub target_rustc_crate_types: Option<Vec<String>>,
     /// Extra arguments passed to all selected targets for rustdoc.
     pub local_rustdoc_args: Option<Vec<String>>,
@@ -653,7 +654,7 @@ pub fn create_bcx<'a, 'cfg>(
             anyhow::bail!(
                 "crate types to rustc can only be passed to one \
                  target, consider filtering\nthe package by passing, \
-                 e.g., `--lib` to specify a single target"
+                 e.g., `--lib` or `--example` to specify a single target"
             );
         }
         match units[0].target.kind() {
@@ -662,7 +663,7 @@ pub fn create_bcx<'a, 'cfg>(
             }
             _ => {
                 anyhow::bail!(
-                    "crate types can only be specified for libraries and examples. \
+                    "crate types can only be specified for libraries and example libraries.\n\
                     Binaries, tests, and benchmarks are always the `bin` crate type"
                 );
             }
