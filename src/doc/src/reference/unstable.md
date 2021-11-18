@@ -89,6 +89,7 @@ Each new feature described below should explain how to use it.
 * `Cargo.toml` extensions
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
+    * [natvis](#natvis) — Allows the specification of Natvis`(.natvis)` files to be embedded in a PDB when linking via the MSVC Linker.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
@@ -948,6 +949,32 @@ In this example, the crate is always built for
 `wasm32-unknown-unknown`, for instance because it is going to be used
 as a plugin for a main program that runs on the host (or provided on
 the command line) target.
+
+### natvis
+* Tracking Issue: [#0000](https://github.com/rust-lang/cargo/pull/0000)
+* Original Pull Request: [#0000](https://github.com/rust-lang/cargo/pull/0000)
+* Original Issue: [#0000](https://github.com/rust-lang/cargo/pull/0000)
+
+The `natvis` feature adds a new section and key to the manifest:
+`[debug-visualizations]` and `debug-visualizations.natvis`. The `natvis`
+key takes a list of `.natvis` files which will be linked into the PDB
+generated if using the MSVC Linker.
+
+Example:
+
+```toml
+cargo-features = ["natvis"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+
+[debug-visualizations]
+natvis = ["foo.natvis", "bar.natvis"]
+```
+
+In this example, the crate `foo` will embed `foo.natvis` and `bar.natvis`
+into the PDB being generated when using the MSVC Linker.
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)

@@ -409,6 +409,9 @@ features! {
 
     // Allow specifying different binary name apart from the crate name
     (unstable, different_binary_name, "", "reference/unstable.html#different-binary-name"),
+
+    // Allow specifying natvis files to embed in the PDB when using the MSVC Linker.
+    (unstable, natvis, "", "reference/unstable.html#natvis"),
 }
 
 pub struct Feature {

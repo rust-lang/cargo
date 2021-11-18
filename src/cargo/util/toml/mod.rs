@@ -302,6 +302,7 @@ pub struct TomlManifest {
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
+    debug_visualizations: Option<TomlDebugVisualizations>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
@@ -904,6 +905,16 @@ pub struct TomlWorkspace {
     metadata: Option<toml::Value>,
 }
 
+/// Represents the `debug-visualizations` section of a `Cargo.toml`.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TomlDebugVisualizations {
+    natvis: Option<Vec<String>>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
+}
+
 impl TomlProject {
     pub fn to_package_id(&self, source_id: SourceId) -> CargoResult<PackageId> {
         PackageId::new(self.name, self.version.clone(), source_id)
@@ -1019,6 +1030,7 @@ impl TomlManifest {
             replace: None,
             patch: None,
             workspace: None,
+            debug_visualizations: self.debug_visualizations.clone(),
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
         });
@@ -1372,6 +1384,11 @@ impl TomlManifest {
             .transpose()?
             .map(CompileKind::Target);
 
+        let natvis = if let Some(debug_visualizations) = me.debug_visualizations.clone() {
+            debug_visualizations.natvis.clone()
+        } else {
+            None
+        };
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,
@@ -1396,6 +1413,7 @@ impl TomlManifest {
             Rc::clone(me),
             project.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            natvis,
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(

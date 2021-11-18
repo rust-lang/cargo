@@ -32,6 +32,7 @@ pub enum EitherManifest {
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
+    natvis: Option<Vec<String>>,
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
     links: Option<String>,
@@ -392,6 +393,7 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        natvis: Option<Vec<String>>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -417,6 +419,7 @@ impl Manifest {
             default_run,
             metabuild,
             resolve_behavior,
+            natvis
         }
     }
 
@@ -483,6 +486,10 @@ impl Manifest {
     }
     pub fn links(&self) -> Option<&str> {
         self.links.as_deref()
+    }
+
+    pub fn natvis(&self) -> &Option<Vec<String>> {
+        &self.natvis
     }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {

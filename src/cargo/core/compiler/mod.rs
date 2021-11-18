@@ -611,6 +611,7 @@ fn prepare_rustc(
         base.inherit_jobserver(&cx.jobserver);
     }
     build_base_args(cx, &mut base, unit, crate_types)?;
+    build_natvis(&mut base, unit)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
 }
@@ -1055,6 +1056,24 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
         lto::Lto::OnlyObject => push("embed-bitcode=no"),
     }
     result
+}
+
+fn build_natvis(
+    cmd: &mut ProcessBuilder,
+    unit: &Unit,
+) -> CargoResult<()> {
+    if let Some(natvis) = &unit.pkg.manifest().natvis() {
+        unit.pkg.manifest().unstable_features().require(Feature::natvis())?;
+        cmd.arg("-Z").arg(&{
+            let mut arg = OsString::from("natvis=");
+            arg.push(OsString::from(natvis.iter().map(|file| {
+                unit.pkg.root().join(file).display().to_string()
+            }).collect::<Vec<String>>().join(",")));
+            arg
+        });
+    }
+
+    Ok(())
 }
 
 fn build_deps_args(
