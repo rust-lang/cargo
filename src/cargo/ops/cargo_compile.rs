@@ -393,6 +393,7 @@ pub fn create_bcx<'a, 'cfg>(
         targeted_resolve: resolve,
         resolved_features,
     } = resolve;
+
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
@@ -460,6 +461,26 @@ pub fn create_bcx<'a, 'cfg>(
         })
         .collect();
 
+    // Passing `build_config.requested_kinds` instead of
+    // `explicit_host_kinds` here so that `generate_targets` can do
+    // its own special handling of `CompileKind::Host`. It will
+    // internally replace the host kind by the `explicit_host_kind`
+    // before setting as a unit.
+    let mut units = generate_targets(
+        ws,
+        &to_builds,
+        filter,
+        &build_config.requested_kinds,
+        explicit_host_kind,
+        build_config.mode,
+        &resolve,
+        &workspace_resolve,
+        &resolved_features,
+        &pkg_set,
+        &profiles,
+        interner,
+    )?;
+
     let mut scrape_units = match rustdoc_scrape_examples {
         Some(arg) => {
             let filter = match arg.as_str() {
@@ -498,25 +519,6 @@ pub fn create_bcx<'a, 'cfg>(
         }
         None => Vec::new(),
     };
-    // Passing `build_config.requested_kinds` instead of
-    // `explicit_host_kinds` here so that `generate_targets` can do
-    // its own special handling of `CompileKind::Host`. It will
-    // internally replace the host kind by the `explicit_host_kind`
-    // before setting as a unit.
-    let mut units = generate_targets(
-        ws,
-        &to_builds,
-        filter,
-        &build_config.requested_kinds,
-        explicit_host_kind,
-        build_config.mode,
-        &resolve,
-        &workspace_resolve,
-        &resolved_features,
-        &pkg_set,
-        &profiles,
-        interner,
-    )?;
     
     let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
         if build_config.build_plan {
