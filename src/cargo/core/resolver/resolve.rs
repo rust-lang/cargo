@@ -22,10 +22,6 @@ pub struct Resolve {
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
-    /// An empty `Vec` to avoid creating a new `Vec` for every package
-    /// that does not have any features, and to avoid using `Option` to
-    /// simplify the API.
-    empty_features: Vec<InternedString>,
     /// Features enabled for a given package.
     features: HashMap<PackageId, Vec<InternedString>>,
     /// Checksum for each package. A SHA256 hash of the `.crate` file used to
@@ -107,7 +103,6 @@ impl Resolve {
             checksums,
             metadata,
             unused_patches,
-            empty_features: Vec::new(),
             reverse_replacements,
             public_dependencies,
             version,
@@ -264,7 +259,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn features(&self, pkg: PackageId) -> &[InternedString] {
-        self.features.get(&pkg).unwrap_or(&self.empty_features)
+        self.features.get(&pkg).map(|v| &**v).unwrap_or(&[])
     }
 
     /// This is only here for legacy support, it will be removed when
@@ -377,7 +372,7 @@ impl PartialEq for Resolve {
         }
         compare! {
             // fields to compare
-            graph replacements reverse_replacements empty_features features
+            graph replacements reverse_replacements features
             checksums metadata unused_patches public_dependencies summaries
             |
             // fields to ignore
