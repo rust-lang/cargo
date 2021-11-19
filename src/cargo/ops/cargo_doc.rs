@@ -1,7 +1,8 @@
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::config::PathAndArgs;
-use crate::util::CargoResult;
+use crate::util::{CargoResult, Filesystem};
+use cargo_util::paths;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -11,6 +12,8 @@ use std::process::Command;
 pub struct DocOptions {
     /// Whether to attempt to open the browser after compiling the docs
     pub open_result: bool,
+    /// Directory to copy the generated documentation to
+    pub publish_dir: Option<Filesystem>,
     /// Options to pass through to the compiler
     pub compile_opts: ops::CompileOptions,
 }
@@ -18,10 +21,34 @@ pub struct DocOptions {
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
+    let kind = options.compile_opts.build_config.single_requested_kind()?;
+
+    if let Some(publish_dir) = &options.publish_dir {
+        let mut shell = ws.config().shell();
+        shell.status("Publishing", publish_dir.display())?;
+
+        let publish_dir = publish_dir.as_path_unlocked();
+        paths::create_dir_all(publish_dir)?;
+
+        let doc_path = compilation.root_output[&kind].with_file_name("doc");
+        let doc_entries = walkdir::WalkDir::new(&doc_path)
+            .into_iter()
+            .filter_map(|e| e.ok());
+
+        for entry in doc_entries {
+            let from = entry.path();
+            let to = publish_dir.join(from.strip_prefix(&doc_path)?);
+
+            if entry.file_type().is_dir() {
+                paths::create_dir_all(to)?;
+            } else {
+                paths::copy(from, to)?;
+            }
+        }
+    }
 
     if options.open_result {
         let name = &compilation.root_crate_names[0];
-        let kind = options.compile_opts.build_config.single_requested_kind()?;
         let path = compilation.root_output[&kind]
             .with_file_name("doc")
             .join(&name)

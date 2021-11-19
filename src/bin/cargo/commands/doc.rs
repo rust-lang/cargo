@@ -1,6 +1,12 @@
+use std::path::PathBuf;
+
 use crate::command_prelude::*;
 
-use cargo::ops::{self, DocOptions};
+use cargo::{
+    ops::{self, DocOptions},
+    util::Filesystem,
+    CargoResult,
+};
 
 pub fn cli() -> App {
     subcommand("doc")
@@ -12,6 +18,13 @@ pub fn cli() -> App {
             "open",
             "Opens the docs in a browser after the operation",
         ))
+        .arg(
+            opt(
+                "publish-dir",
+                "Directory to copy the generated documentation to",
+            )
+            .value_name("DIR"),
+        )
         .arg_package_spec(
             "Package to document",
             "Document all packages in the workspace",
@@ -47,11 +60,27 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    let publish_dir_arg = args.value_of("publish-dir");
+    let publish_dir = resolved_doc_publish_dir(publish_dir_arg, config)?;
 
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
+        publish_dir,
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;
     Ok(())
+}
+
+/// Determines the publish_dir directory where documentation is placed.
+pub(crate) fn resolved_doc_publish_dir(
+    flag: Option<&str>,
+    config: &Config,
+) -> CargoResult<Option<Filesystem>> {
+    let config_publish_dir = config.get_path("doc.publish-dir")?;
+    Ok(flag
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("CARGO_DOC_PUBLISH_DIR").map(PathBuf::from))
+        .or_else(move || config_publish_dir.map(|v| v.val))
+        .map(Filesystem::new))
 }

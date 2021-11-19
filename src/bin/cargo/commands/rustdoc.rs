@@ -1,3 +1,4 @@
+use crate::commands::doc::resolved_doc_publish_dir;
 use cargo::ops::{self, DocOptions};
 
 use crate::command_prelude::*;
@@ -12,6 +13,13 @@ pub fn cli() -> App {
             "open",
             "Opens the docs in a browser after the operation",
         ))
+        .arg(
+            opt(
+                "publish-dir",
+                "Directory to copy the generated documentation to",
+            )
+            .value_name("DIR"),
+        )
         .arg_package("Package to document")
         .arg_jobs()
         .arg_targets_all(
@@ -52,8 +60,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else {
         Some(target_args)
     };
+    let publish_dir_arg = args.value_of("publish-dir");
+    let publish_dir = resolved_doc_publish_dir(publish_dir_arg, config)?;
+
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
+        publish_dir,
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;
