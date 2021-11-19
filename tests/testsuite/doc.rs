@@ -188,6 +188,66 @@ fn doc_only_bin() {
 }
 
 #[cargo_test]
+fn doc_publish() {
+    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
+
+    p.cargo("doc --publish-dir bar")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PUBLISHING] bar
+",
+        )
+        .run();
+
+    assert!(p.root().join("bar/foo/index.html").is_file());
+}
+
+#[cargo_test]
+fn doc_publish_env() {
+    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
+
+    p.cargo("doc")
+        .env("CARGO_DOC_PUBLISH_DIR", "bar")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PUBLISHING] bar
+",
+        )
+        .run();
+
+    assert!(p.root().join("bar/foo/index.html").is_file());
+}
+
+#[cargo_test]
+fn doc_publish_config() {
+    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [doc]
+            publish-dir = "bar"
+        "#,
+    );
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PUBLISHING] bar
+",
+        )
+        .run();
+
+    assert!(p.root().join("bar/foo/index.html").is_file());
+}
+
+#[cargo_test]
 fn doc_multiple_targets_same_name_lib() {
     let p = project()
         .file(

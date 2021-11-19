@@ -112,6 +112,7 @@ fn substitute_macros(input: &str) -> String {
         ("[COMPLETED]", "   Completed"),
         ("[CREATED]", "     Created"),
         ("[FINISHED]", "    Finished"),
+        ("[PUBLISHING]", "  Publishing"),
         ("[ERROR]", "error:"),
         ("[WARNING]", "warning:"),
         ("[NOTE]", "note:"),
