@@ -27,6 +27,16 @@ or use the <a href="../reference/config.html#docbrowser"><code>doc.browser</code
 option.</dd>
 
 
+<dt class="option-term" id="option-cargo-doc---publish-dir"><a class="option-anchor" href="#option-cargo-doc---publish-dir"></a><code>--publish-dir</code></dt>
+<dd class="option-desc">The generated documentation will be copied to the specified publish directory.
+This can be used to publish documentation straight into, for example, a
+directory that is being served up by a local web server already.
+This will override the corresponding
+<a href="../reference/config.html#docpublish-dir"><code>doc.publish-dir</code></a> configuration option and
+<a href="../reference/environment-variables.html#configuration-environment-variables"><code>CARGO_DOC_PUBLISH_DIR</code></a>
+environment variable.</dd>
+
+
 <dt class="option-term" id="option-cargo-doc---no-deps"><a class="option-anchor" href="#option-cargo-doc---no-deps"></a><code>--no-deps</code></dt>
 <dd class="option-desc">Do not build documentation for dependencies.</dd>
 

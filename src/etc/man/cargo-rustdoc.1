@@ -36,6 +36,17 @@ browser unless you define another one in the \fBBROWSER\fR environment variable
 or use the \fI\f(BIdoc.browser\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#docbrowser> configuration
 option.
 .RE
+.sp
+\fB\-\-publish\-dir\fR
+.RS 4
+The generated documentation will be copied to the specified publish directory.
+This can be used to publish documentation straight into, for example, a
+directory that is being served up by a local web server already.
+This will override the corresponding
+\fI\f(BIdoc.publish\-dir\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#docpublish\-dir> configuration option and
+\fI\f(BICARGO_DOC_PUBLISH_DIR\fI\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#configuration\-environment\-variables>
+environment variable.
+.RE
 .SS "Package Selection"
 By default, the package in the current working directory is selected. The \fB\-p\fR
 flag can be used to choose a different package in a workspace.

@@ -27,6 +27,16 @@ or use the [`doc.browser`](../reference/config.html#docbrowser) configuration
 option.
 {{/option}}
 
+{{#option "`--publish-dir`" }}
+The generated documentation will be copied to the specified publish directory.
+This can be used to publish documentation straight into, for example, a
+directory that is being served up by a local web server already.
+This will override the corresponding
+[`doc.publish-dir`](../reference/config.html#docpublish-dir) configuration option and
+[`CARGO_DOC_PUBLISH_DIR`](../reference/environment-variables.html#configuration-environment-variables)
+environment variable.
+{{/option}}
+
 {{#option "`--no-deps`" }}
 Do not build documentation for dependencies.
 {{/option}}

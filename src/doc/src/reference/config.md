@@ -78,6 +78,8 @@ pipelining = true             # rustc pipelining
 [doc]
 browser = "chromium"          # browser to use with `cargo doc --open`,
                               # overrides the `BROWSER` environment variable
+publish-dir = "/var/www/html" # directory to copy the generated documentation to
+                              # overrides the `CARGO_DOC_PUBLISH_DIR` environment variable
 
 [env]
 # Set ENV_VAR_NAME=value for any process run by Cargo
@@ -457,6 +459,18 @@ The `[doc]` table defines options for the [`cargo doc`] command.
 This option sets the browser to be used by [`cargo doc`], overriding the
 `BROWSER` environment variable when opening documentation with the `--open`
 option.
+
+##### `doc.publish-dir`
+
+* Type: string
+* Default: `CARGO_DOC_PUBLISH_DIR` environment variable, or, if that is
+  missing, documentation is not published.
+
+This option is used by [`cargo doc`] as a directory to copy the generated
+documentation to, overriding the `CARGO_DOC_PUBLISH_DIR` environment variable.
+It can also be set with the `--publish-dir` CLI option.
+This can be used to publish documentation straight into, for example, a
+directory that is being served up by a local web server already.
 
 #### `[cargo-new]`
 

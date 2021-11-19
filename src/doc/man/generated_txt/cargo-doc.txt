@@ -19,6 +19,16 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html#docbrowser>
            configuration option.
 
+       --publish-dir
+           The generated documentation will be copied to the specified publish
+           directory. This can be used to publish documentation straight into,
+           for example, a directory that is being served up by a local web
+           server already. This will override the corresponding doc.publish-dir
+           <https://doc.rust-lang.org/cargo/reference/config.html#docpublish-dir>
+           configuration option and CARGO_DOC_PUBLISH_DIR
+           <https://doc.rust-lang.org/cargo/reference/environment-variables.html#configuration-environment-variables>
+           environment variable.
+
        --no-deps
            Do not build documentation for dependencies.
 

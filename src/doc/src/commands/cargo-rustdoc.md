@@ -43,6 +43,16 @@ or use the <a href="../reference/config.html#docbrowser"><code>doc.browser</code
 option.</dd>
 
 
+<dt class="option-term" id="option-cargo-rustdoc---publish-dir"><a class="option-anchor" href="#option-cargo-rustdoc---publish-dir"></a><code>--publish-dir</code></dt>
+<dd class="option-desc">The generated documentation will be copied to the specified publish directory.
+This can be used to publish documentation straight into, for example, a
+directory that is being served up by a local web server already.
+This will override the corresponding
+<a href="../reference/config.html#docpublish-dir"><code>doc.publish-dir</code></a> configuration option and
+<a href="../reference/environment-variables.html#configuration-environment-variables"><code>CARGO_DOC_PUBLISH_DIR</code></a>
+environment variable.</dd>
+
+
 </dl>
 
 ### Package Selection

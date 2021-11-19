@@ -118,6 +118,7 @@ supported environment variables are:
 * `CARGO_TERM_COLOR` — The default color mode, see [`term.color`].
 * `CARGO_TERM_PROGRESS_WHEN` — The default progress bar showing mode, see [`term.progress.when`].
 * `CARGO_TERM_PROGRESS_WIDTH` — The default progress bar width, see [`term.progress.width`].
+* `CARGO_DOC_PUBLISH_DIR` — Directory to copy the generated documentation to, see [`doc.publish-dir`] for more details.
 
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo install`]: ../commands/cargo-install.md
@@ -141,6 +142,7 @@ supported environment variables are:
 [`build.dep-info-basedir`]: config.md#builddep-info-basedir
 [`build.pipelining`]: config.md#buildpipelining
 [`doc.browser`]: config.md#docbrowser
+[`doc.publish-dir`]: config.md#docpublish-dir
 [`cargo-new.name`]: config.md#cargo-newname
 [`cargo-new.email`]: config.md#cargo-newemail
 [`cargo-new.vcs`]: config.md#cargo-newvcs
