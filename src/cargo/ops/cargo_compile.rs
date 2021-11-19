@@ -519,7 +519,7 @@ pub fn create_bcx<'a, 'cfg>(
         }
         None => Vec::new(),
     };
-    
+
     let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
         if build_config.build_plan {
             config
