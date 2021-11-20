@@ -58,7 +58,7 @@ pub fn run_benches(
     let mut args = args.to_vec();
     args.push("--bench");
 
-    let (test, errors) = run_unit_tests(ws.config(), options, &args, &compilation, &r.lock().unwrap())?;
+    let (test, errors) = run_unit_tests(ws.config(), options, &args, &compilation)?;
     Ok((!errors.is_empty()).then(|| CargoTestError::new(test, errors)))
 }
 
