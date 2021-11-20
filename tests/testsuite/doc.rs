@@ -2326,3 +2326,28 @@ fn scrape_examples_crate_with_dash() {
     let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
     assert!(doc_html.contains("Examples found in repository"));
 }
+
+#[cargo_test]
+fn scrape_examples_missing_flag() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "//! These are the docs!")
+        .build();
+    p.cargo("doc -Zrustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
+        .run();
+}
