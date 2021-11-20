@@ -1,0 +1,7 @@
+name: Fork Sync
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # on button click
+  uses: tgymnich/fork-sync@v1.2.1
