@@ -394,26 +394,6 @@ pub fn create_bcx<'a, 'cfg>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
-        }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
-        pkg_set.add_set(std_package_set);
-        Some((std_resolve, std_features))
-    } else {
-        None
-    };
-
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
@@ -500,6 +480,29 @@ pub fn create_bcx<'a, 'cfg>(
         &profiles,
         interner,
     )?;
+
+
+    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
+        if build_config.build_plan {
+            config
+                .shell()
+                .warn("-Zbuild-std does not currently fully support --build-plan")?;
+        }
+        for u in units.iter_mut() {
+            if build_config.requested_kinds[0].is_host() && !&u.target.is_custom_build() {
+                // TODO: This should eventually be fixed. Unfortunately it is not
+                // easy to get the host triple in BuildConfig. Consider changing
+                // requested_target to an enum, or some other approach.
+                anyhow::bail!("-Zbuild-std requires --target");
+            }
+        }
+        let (std_package_set, std_resolve, std_features) =
+            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+        pkg_set.add_set(std_package_set);
+        Some((std_resolve, std_features))
+    } else {
+        None
+    };
 
     let mut scrape_units = match rustdoc_scrape_examples {
         Some(arg) => {
