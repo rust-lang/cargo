@@ -41,11 +41,7 @@ pub fn run_tests(
     let (doctest, docerrors) = run_doc_tests(ws, options, test_args, &compilation)?;
     let test = if docerrors.is_empty() { test } else { doctest };
     errors.extend(docerrors);
-    if errors.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(CargoTestError::new(test, errors)))
-    }
+    Ok((!errors.is_empty()).then(|| CargoTestError::new(test, errors)))
 }
 
 pub fn run_benches(
@@ -62,12 +58,8 @@ pub fn run_benches(
     let mut args = args.to_vec();
     args.push("--bench");
 
-    let (test, errors) = run_unit_tests(ws.config(), options, &args, &compilation)?;
-
-    match errors.len() {
-        0 => Ok(None),
-        _ => Ok(Some(CargoTestError::new(test, errors))),
-    }
+    let (test, errors) = run_unit_tests(ws.config(), options, &args, &compilation, &r.lock().unwrap())?;
+    Ok((!errors.is_empty()).then(|| CargoTestError::new(test, errors)))
 }
 
 fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<Compilation<'a>> {
@@ -297,40 +289,30 @@ fn execute_tests(
             let jobs = jobs.clone();
             s.spawn(move |_| {
                 loop {
-                    let tx;
-                    let cmd;
-                    let name;
-                    let target_kind;
-                    let pkg_name;
                     // Transition job to in progress and put rx in job.
-                    {
+                    let (tx, mut cmd, name, target_kind, pkg_name) = {
                         let mut jobs = jobs.lock().unwrap();
                         if let Some(job) = jobs
                             .iter_mut()
                             .filter(|job| matches!(job.state, JobState::NotStarted))
                             .nth(0)
                         {
-                            cmd = job.cmd.clone();
-                            name = job.name.clone();
-                            target_kind = job.target_kind.clone();
-                            pkg_name = job.pkg_name.clone();
                             job.state = JobState::InProgress(std::thread::current().id());
-                            tx = job.tx.take().expect("tx to exist");
+                            (
+                                job.tx.take().expect("tx to exist"),
+                                job.cmd.clone(),
+                                job.name.clone(),
+                                job.target_kind.clone(),
+                                job.pkg_name.clone(),
+                            )
                         } else {
                             break;
                         }
-                    }
-
+                    };
                     let result = cmd
                         .exec_with_streaming(
-                            &mut |line| {
-                                tx.send(OutOrErr::Out(line.to_string())).unwrap();
-                                Ok(())
-                            },
-                            &mut |line| {
-                                tx.send(OutOrErr::Err(line.to_string())).unwrap();
-                                Ok(())
-                            },
+                            &mut |line| Ok(tx.send(OutOrErr::Out(line.to_owned())).unwrap()),
+                            &mut |line| Ok(tx.send(OutOrErr::Err(line.to_owned())).unwrap()),
                             false,
                         )
                         .map_err(|e| (target_kind, name, pkg_name, e));
@@ -383,7 +365,6 @@ fn execute_tests(
                     .shell()
                     .concise(|shell| shell.status("Running", &exe))?;
             }
-
             config
                 .shell()
                 .verbose(|shell| shell.status("Running", &cmd))?;
