@@ -185,6 +185,9 @@ See also the `--profile` option for choosing a specific profile by name.
 
 {{#options}}
 {{> options-display }}
+
+{{> options-message-format }}
+
 {{/options}}
 
 {{> section-options-common }}

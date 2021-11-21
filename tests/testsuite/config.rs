@@ -1491,7 +1491,7 @@ fn all_profile_options() {
     let profile = toml::TomlProfile {
         build_override: Some(Box::new(base_settings.clone())),
         package: Some(overrides),
-        ..base_settings.clone()
+        ..base_settings
     };
     let profile_toml = ::toml::to_string(&profile).unwrap();
     let roundtrip: toml::TomlProfile = ::toml::from_str(&profile_toml).unwrap();
