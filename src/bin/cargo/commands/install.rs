@@ -71,6 +71,7 @@ pub fn cli() -> App {
                 .requires("crate")
                 .conflicts_with_all(&["git", "path", "index"]),
         )
+        .arg_message_format()
         .after_help("Run `cargo help install` for more detailed information.\n")
 }
 

@@ -307,6 +307,31 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
+
+<dt class="option-term" id="option-cargo-install---message-format"><a class="option-anchor" href="#option-cargo-install---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
+and consists of comma-separated values. Valid values:</p>
+<ul>
+<li><code>human</code> (default): Display in a human-readable text format. Conflicts with
+<code>short</code> and <code>json</code>.</li>
+<li><code>short</code>: Emit shorter, human-readable text messages. Conflicts with <code>human</code>
+and <code>json</code>.</li>
+<li><code>json</code>: Emit JSON messages to stdout. See
+<a href="../reference/external-tools.html#json-messages">the reference</a>
+for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
+<li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
+the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
+<li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
+contains embedded ANSI color codes for respecting rustc's default color
+scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
+</ul></dd>
+
+
+
 </dl>
 
 ### Common Options
