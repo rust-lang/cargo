@@ -21,7 +21,6 @@ pub struct DocOptions {
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
-    let kind = options.compile_opts.build_config.single_requested_kind()?;
 
     if let Some(publish_dir) = &options.publish_dir {
         let mut shell = ws.config().shell();
@@ -30,25 +29,28 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         let publish_dir = publish_dir.as_path_unlocked();
         paths::create_dir_all(publish_dir)?;
 
-        let doc_path = compilation.root_output[&kind].with_file_name("doc");
-        let doc_entries = walkdir::WalkDir::new(&doc_path)
-            .into_iter()
-            .filter_map(|e| e.ok());
+        for kind in options.compile_opts.build_config.requested_kinds.iter() {
+            let doc_path = compilation.root_output[kind].with_file_name("doc");
+            let doc_entries = walkdir::WalkDir::new(&doc_path)
+                .into_iter()
+                .filter_map(|e| e.ok());
 
-        for entry in doc_entries {
-            let from = entry.path();
-            let to = publish_dir.join(from.strip_prefix(&doc_path)?);
+            for entry in doc_entries {
+                let from = entry.path();
+                let to = publish_dir.join(from.strip_prefix(&doc_path)?);
 
-            if entry.file_type().is_dir() {
-                paths::create_dir_all(to)?;
-            } else {
-                paths::copy(from, to)?;
+                if entry.file_type().is_dir() {
+                    paths::create_dir_all(to)?;
+                } else {
+                    paths::copy(from, to)?;
+                }
             }
         }
     }
 
     if options.open_result {
         let name = &compilation.root_crate_names[0];
+        let kind = options.compile_opts.build_config.single_requested_kind()?;
         let path = compilation.root_output[&kind]
             .with_file_name("doc")
             .join(&name)
