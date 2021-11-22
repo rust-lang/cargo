@@ -289,8 +289,8 @@ fn count_tests(output: &[u8]) -> Option<i32> {
     if output.is_empty() {
         return None;
     }
-    let last_line: String = output.lines().last()?.ok()?;
-    last_line.split_once(' ')?.0.parse().ok()
+    let line = output.lines().last()?.ok()?;
+    line.split_once(' ')?.0.parse().ok().map(|num| 1.min(num))
 }
 
 fn execute_tests(
