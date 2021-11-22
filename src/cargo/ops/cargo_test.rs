@@ -290,7 +290,7 @@ fn count_tests(output: &[u8]) -> Option<i32> {
         return None;
     }
     let line = output.lines().last()?.ok()?;
-    line.split_once(' ')?.0.parse().ok().map(|num| 1.min(num))
+    line.split_once(' ')?.0.parse().ok().map(|num| 1.max(num))
 }
 
 fn execute_tests(
