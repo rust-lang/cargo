@@ -78,41 +78,46 @@ pub struct PerPackageTarget {
 // #9451
 impl PerPackageTarget {
     pub fn new(p: &str) -> Option<PerPackageTarget> {
-        let f = read_to_string(Path::new(p)).expect("Couldn't open manifest file");
+        let manifest_file = read_to_string(Path::new(p));
 
-        let default_target_re = Regex::new(r"(?m)^default-target.*").unwrap();
-        let forced_target_re = Regex::new(r"(?m)^forced-target.*").unwrap();
+        match manifest_file {
+            Ok(f) => {
+                let default_target_re = Regex::new(r"(?m)^default-target.*").unwrap();
+                let forced_target_re = Regex::new(r"(?m)^forced-target.*").unwrap();
 
-        if default_target_re.is_match(f.as_str()) {
-            Some(PerPackageTarget {
-                mode: PerPackageTargetMode::DefaultTarget,
-                value: String::from(
-                    default_target_re
-                        .captures(f.as_str())
-                        .unwrap()
-                        .get(0)
-                        .map_or("", |m| m.as_str())
-                        .split_whitespace()
-                        .last()
-                        .unwrap(),
-                ),
-            })
-        } else if forced_target_re.is_match(f.as_str()) {
-            Some(PerPackageTarget {
-                mode: PerPackageTargetMode::DefaultTarget,
-                value: String::from(
-                    default_target_re
-                        .captures(f.as_str())
-                        .unwrap()
-                        .get(0)
-                        .map_or("", |m| m.as_str())
-                        .split_whitespace()
-                        .last()
-                        .unwrap(),
-                ),
-            })
-        } else {
-            None
+                if default_target_re.is_match(f.as_str()) {
+                    Some(PerPackageTarget {
+                        mode: PerPackageTargetMode::DefaultTarget,
+                        value: String::from(
+                            default_target_re
+                                .captures(f.as_str())
+                                .unwrap()
+                                .get(0)
+                                .map_or("", |m| m.as_str())
+                                .split_whitespace()
+                                .last()
+                                .unwrap(),
+                        ),
+                    })
+                } else if forced_target_re.is_match(f.as_str()) {
+                    Some(PerPackageTarget {
+                        mode: PerPackageTargetMode::DefaultTarget,
+                        value: String::from(
+                            default_target_re
+                                .captures(f.as_str())
+                                .unwrap()
+                                .get(0)
+                                .map_or("", |m| m.as_str())
+                                .split_whitespace()
+                                .last()
+                                .unwrap(),
+                        ),
+                    })
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
         }
     }
 }
