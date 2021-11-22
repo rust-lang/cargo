@@ -541,12 +541,14 @@ pub fn create_bcx<'a, 'cfg>(
     let explicit_host_kind = match ppt {
         Some(ref target) => match target.mode {
             PerPackageTargetMode::DefaultTarget => {
-                let compile_kind = CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
+                let compile_kind =
+                    CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
                 compile_kind
             }
 
             PerPackageTargetMode::ForcedTarget => {
-                let compile_kind = CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
+                let compile_kind =
+                    CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
                 compile_kind
             }
         },
