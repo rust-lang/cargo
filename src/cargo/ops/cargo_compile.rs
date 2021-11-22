@@ -101,7 +101,7 @@ impl PerPackageTarget {
                     })
                 } else if forced_target_re.is_match(f.as_str()) {
                     Some(PerPackageTarget {
-                        mode: PerPackageTargetMode::DefaultTarget,
+                        mode: PerPackageTargetMode::ForcedTarget,
                         target_triple: String::from(
                             default_target_re
                                 .captures(f.as_str())
