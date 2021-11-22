@@ -72,7 +72,7 @@ pub enum PerPackageTargetMode {
 #[derive(Debug, Clone)]
 pub struct PerPackageTarget {
     pub mode: PerPackageTargetMode,
-    pub value: String,
+    pub target_triple: String,
 }
 
 // #9451
@@ -88,7 +88,7 @@ impl PerPackageTarget {
                 if default_target_re.is_match(f.as_str()) {
                     Some(PerPackageTarget {
                         mode: PerPackageTargetMode::DefaultTarget,
-                        value: String::from(
+                        target_triple: String::from(
                             default_target_re
                                 .captures(f.as_str())
                                 .unwrap()
@@ -102,7 +102,7 @@ impl PerPackageTarget {
                 } else if forced_target_re.is_match(f.as_str()) {
                     Some(PerPackageTarget {
                         mode: PerPackageTargetMode::DefaultTarget,
-                        value: String::from(
+                        target_triple: String::from(
                             default_target_re
                                 .captures(f.as_str())
                                 .unwrap()
@@ -154,7 +154,7 @@ impl<'a> CompileOptions {
         if ppt.is_some() {
             let per_package = ppt.unwrap(); // already know it's a Some at this point
             Ok(CompileOptions {
-                build_config: BuildConfig::new(config, None, &[per_package.value], mode)?,
+                build_config: BuildConfig::new(config, None, &[per_package.target_triple], mode)?,
                 cli_features: CliFeatures::new_all(false),
                 spec: ops::Packages::Packages(Vec::new()),
                 filter: CompileFilter::Default {
@@ -541,12 +541,12 @@ pub fn create_bcx<'a, 'cfg>(
     let explicit_host_kind = match ppt {
         Some(ref target) => match target.mode {
             PerPackageTargetMode::DefaultTarget => {
-                let compile_kind = CompileKind::Target(CompileTarget::new(target.value.as_str())?);
+                let compile_kind = CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
                 compile_kind
             }
 
             PerPackageTargetMode::ForcedTarget => {
-                let compile_kind = CompileKind::Target(CompileTarget::new(target.value.as_str())?);
+                let compile_kind = CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
                 compile_kind
             }
         },
