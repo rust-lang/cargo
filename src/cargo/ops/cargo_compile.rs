@@ -97,7 +97,10 @@ impl PerPackageTarget {
                                 .split_whitespace()
                                 .last()
                                 .unwrap(),
-                        ),
+                        )
+                        .split("\"")
+                        .collect::<Vec<_>>()[1]
+                            .to_string(),
                     })
                 } else if forced_target_re.is_match(f.as_str()) {
                     Some(PerPackageTarget {
@@ -111,7 +114,10 @@ impl PerPackageTarget {
                                 .split_whitespace()
                                 .last()
                                 .unwrap(),
-                        ),
+                        )
+                        .split("\"")
+                        .collect::<Vec<_>>()[1]
+                            .to_string(),
                     })
                 } else {
                     None
@@ -351,7 +357,7 @@ pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<
 /// calls and add custom logic. `compile` uses `DefaultExecutor` which just passes calls through.
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
-    options: &CompileOptions, // #9451
+    options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
@@ -446,7 +452,38 @@ pub fn create_bcx<'a, 'cfg>(
     }
     config.validate_term_config()?;
 
-    let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
+    // If `--target` has not been specified and per-package-target isn't enabled in Cargo,toml,
+    // then the unit graph is built assuming `--target $HOST` was specified. See
+    // `rebuild_unit_graph_shared` for more on why this is done.
+    let ppt = PerPackageTarget::new("Cargo.toml");
+
+    let mut explicit_host_kinds: Vec<_> = Vec::new();
+    let host_target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
+
+    let explicit_host_kind = match ppt {
+        Some(ref target) => match target.mode {
+            PerPackageTargetMode::DefaultTarget => {
+                let compile_kind =
+                    CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
+                explicit_host_kinds.push(compile_kind);
+                compile_kind
+            }
+
+            PerPackageTargetMode::ForcedTarget => {
+                let compile_kind =
+                    CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
+                explicit_host_kinds.push(compile_kind);
+                compile_kind
+            }
+        },
+        None => CompileKind::Target(CompileTarget::new(&host_target_data.rustc.host)?),
+    };
+
+    // In case it wasn't already obvious enough: explicit_host_kinds
+    // *now* contains not the data from the build_config argument passed
+    // to this function, but instead to the empty Vec that is pushed to
+    // if per-package-target is enabled.
+    let per_package_target_data = RustcTargetData::new(ws, &explicit_host_kinds)?;
 
     let all_packages = &Packages::All;
     let rustdoc_scrape_examples = &config.cli_unstable().rustdoc_scrape_examples;
@@ -463,15 +500,27 @@ pub fn create_bcx<'a, 'cfg>(
     } else {
         HasDevUnits::No
     };
-    let resolve = ops::resolve_ws_with_opts(
-        ws,
-        &target_data,
-        &build_config.requested_kinds,
-        cli_features,
-        &resolve_specs,
-        has_dev_units,
-        crate::core::resolver::features::ForceAllTargets::No,
-    )?;
+    let resolve = match ppt {
+        Some(_) => ops::resolve_ws_with_opts(
+            ws,
+            &per_package_target_data,
+            &explicit_host_kinds,
+            cli_features,
+            &resolve_specs,
+            has_dev_units,
+            crate::core::resolver::features::ForceAllTargets::No,
+        )?,
+        None => ops::resolve_ws_with_opts(
+            ws,
+            &host_target_data,
+            &build_config.requested_kinds,
+            cli_features,
+            &resolve_specs,
+            has_dev_units,
+            crate::core::resolver::features::ForceAllTargets::No,
+        )?,
+    };
+
     let WorkspaceResolve {
         mut pkg_set,
         workspace_resolve,
@@ -533,56 +582,41 @@ pub fn create_bcx<'a, 'cfg>(
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
 
-    // If `--target` has not been specified and per-package-target isn't enabled in Cargo,toml,
-    // then the unit graph is built assuming `--target $HOST` was specified. See
-    // `rebuild_unit_graph_shared` for more on why this is done.
-    let ppt = PerPackageTarget::new("Cargo.toml");
-
-    let explicit_host_kind = match ppt {
-        Some(ref target) => match target.mode {
-            PerPackageTargetMode::DefaultTarget => {
-                let compile_kind =
-                    CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
-                compile_kind
-            }
-
-            PerPackageTargetMode::ForcedTarget => {
-                let compile_kind =
-                    CompileKind::Target(CompileTarget::new(target.target_triple.as_str())?);
-                compile_kind
-            }
-        },
-        None => CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?),
-    };
-
-    let explicit_host_kinds: Vec<_> = build_config
-        .requested_kinds
-        .iter()
-        .map(|kind| match kind {
-            CompileKind::Host => explicit_host_kind,
-            CompileKind::Target(t) => CompileKind::Target(*t),
-        })
-        .collect();
-
     // Passing `build_config.requested_kinds` instead of
     // `explicit_host_kinds` here so that `generate_targets` can do
     // its own special handling of `CompileKind::Host`. It will
     // internally replace the host kind by the `explicit_host_kind`
     // before setting as a unit.
-    let mut units = generate_targets(
-        ws,
-        &to_builds,
-        filter,
-        &build_config.requested_kinds,
-        explicit_host_kind,
-        build_config.mode,
-        &resolve,
-        &workspace_resolve,
-        &resolved_features,
-        &pkg_set,
-        &profiles,
-        interner,
-    )?;
+    let mut units = match ppt {
+        Some(_) => generate_targets(
+            ws,
+            &to_builds,
+            filter,
+            &explicit_host_kinds,
+            explicit_host_kind,
+            build_config.mode,
+            &resolve,
+            &workspace_resolve,
+            &resolved_features,
+            &pkg_set,
+            &profiles,
+            interner,
+        )?,
+        None => generate_targets(
+            ws,
+            &to_builds,
+            filter,
+            &build_config.requested_kinds,
+            explicit_host_kind,
+            build_config.mode,
+            &resolve,
+            &workspace_resolve,
+            &resolved_features,
+            &pkg_set,
+            &profiles,
+            interner,
+        )?,
+    };
 
     let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
         if build_config.build_plan {
@@ -596,9 +630,23 @@ pub fn create_bcx<'a, 'cfg>(
             // requested_target to an enum, or some other approach.
             anyhow::bail!("-Zbuild-std requires --target");
         }
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+        let (std_package_set, std_resolve, std_features) = match ppt {
+            Some(_) => standard_lib::resolve_std(
+                ws,
+                &per_package_target_data,
+                &build_config.requested_kinds,
+                crates,
+            )?,
+            None => standard_lib::resolve_std(
+                ws,
+                &host_target_data,
+                &build_config.requested_kinds,
+                crates,
+            )?,
+        };
+
         pkg_set.add_set(std_package_set);
+
         Some((std_resolve, std_features))
     } else {
         None
@@ -625,20 +673,37 @@ pub fn create_bcx<'a, 'cfg>(
             let to_builds = pkg_set.get_many(to_build_ids)?;
             let mode = CompileMode::Docscrape;
 
-            generate_targets(
-                ws,
-                &to_builds,
-                &filter,
-                &build_config.requested_kinds,
-                explicit_host_kind,
-                mode,
-                &resolve,
-                &workspace_resolve,
-                &resolved_features,
-                &pkg_set,
-                &profiles,
-                interner,
-            )?
+            let generated = match ppt {
+                Some(_) => generate_targets(
+                    ws,
+                    &to_builds,
+                    &filter,
+                    &explicit_host_kinds,
+                    explicit_host_kind,
+                    mode,
+                    &resolve,
+                    &workspace_resolve,
+                    &resolved_features,
+                    &pkg_set,
+                    &profiles,
+                    interner,
+                )?,
+                None => generate_targets(
+                    ws,
+                    &to_builds,
+                    &filter,
+                    &build_config.requested_kinds,
+                    explicit_host_kind,
+                    mode,
+                    &resolve,
+                    &workspace_resolve,
+                    &resolved_features,
+                    &pkg_set,
+                    &profiles,
+                    interner,
+                )?,
+            };
+            generated
         }
         None => Vec::new(),
     };
@@ -670,20 +735,36 @@ pub fn create_bcx<'a, 'cfg>(
         Default::default()
     };
 
-    let mut unit_graph = build_unit_dependencies(
-        ws,
-        &pkg_set,
-        &resolve,
-        &resolved_features,
-        std_resolve_features.as_ref(),
-        &units,
-        &scrape_units,
-        &std_roots,
-        build_config.mode,
-        &target_data,
-        &profiles,
-        interner,
-    )?;
+    let mut unit_graph = match ppt {
+        Some(_) => build_unit_dependencies(
+            ws,
+            &pkg_set,
+            &resolve,
+            &resolved_features,
+            std_resolve_features.as_ref(),
+            &units,
+            &scrape_units,
+            &std_roots,
+            build_config.mode,
+            &per_package_target_data,
+            &profiles,
+            interner,
+        )?,
+        None => build_unit_dependencies(
+            ws,
+            &pkg_set,
+            &resolve,
+            &resolved_features,
+            std_resolve_features.as_ref(),
+            &units,
+            &scrape_units,
+            &std_roots,
+            build_config.mode,
+            &host_target_data,
+            &profiles,
+            interner,
+        )?,
+    };
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
@@ -749,7 +830,7 @@ pub fn create_bcx<'a, 'cfg>(
 
     if honor_rust_version {
         // Remove any pre-release identifiers for easier comparison
-        let current_version = &target_data.rustc.version;
+        let current_version = &host_target_data.rustc.version;
         let untagged_version = semver::Version::new(
             current_version.major,
             current_version.minor,
@@ -777,17 +858,30 @@ pub fn create_bcx<'a, 'cfg>(
         }
     }
 
-    let bcx = BuildContext::new(
-        ws,
-        pkg_set,
-        build_config,
-        profiles,
-        extra_compiler_args,
-        target_data,
-        units,
-        unit_graph,
-        scrape_units,
-    )?;
+    let bcx = match ppt {
+        Some(_) => BuildContext::new(
+            ws,
+            pkg_set,
+            build_config,
+            profiles,
+            extra_compiler_args,
+            per_package_target_data,
+            units,
+            unit_graph,
+            scrape_units,
+        )?,
+        None => BuildContext::new(
+            ws,
+            pkg_set,
+            build_config,
+            profiles,
+            extra_compiler_args,
+            host_target_data,
+            units,
+            unit_graph,
+            scrape_units,
+        )?,
+    };
 
     Ok(bcx)
 }
