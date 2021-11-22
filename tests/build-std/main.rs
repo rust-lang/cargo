@@ -133,10 +133,13 @@ fn cross_custom() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["per-package-target"]
+
                 [package]
                 name = "foo"
                 version = "0.1.0"
-                edition = "2018"
+                edition = "2021"
+                default-target="custom-target.json"
 
                 [target.custom-target.dependencies]
                 dep = { path = "dep" }
@@ -165,14 +168,27 @@ fn cross_custom() {
         )
         .build();
 
-    p.cargo("build --target custom-target.json -v")
-        .build_std_arg("core")
-        .run();
+    p.cargo("build -v").build_std_arg("core").run();
 }
 
 #[cargo_test(build_std)]
 fn custom_test_framework() {
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["per-package-target"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                default-target="custom.json"
+
+                [target.custom-target.dependencies]
+                dep = { path = "dep" }
+            "#,
+        )
         .file(
             "src/lib.rs",
             r#"
