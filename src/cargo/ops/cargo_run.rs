@@ -9,7 +9,7 @@ use crate::util::CargoResult;
 
 pub fn run(
     ws: &Workspace<'_>,
-    options: &ops::CompileOptions,
+    options: &ops::CompileOptions, // #9451
     args: &[OsString],
 ) -> CargoResult<()> {
     let config = ws.config();

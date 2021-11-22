@@ -57,6 +57,7 @@ impl BuildConfig {
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
+
         let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
         if jobs == Some(0) {
             anyhow::bail!("jobs must be at least 1")
@@ -104,6 +105,10 @@ impl BuildConfig {
             1 => Ok(self.requested_kinds[0]),
             _ => bail!("only one `--target` argument is supported"),
         }
+    }
+
+    pub fn set_requested_kind_at(&mut self, k: CompileKind, idx: usize) {
+        self.requested_kinds[idx] = k;
     }
 }
 

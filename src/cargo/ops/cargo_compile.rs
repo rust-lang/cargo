@@ -47,6 +47,11 @@ use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
 use anyhow::{bail, Context as _};
 
+// #9451
+use regex::Regex;
+use std::fs::read_to_string;
+use std::path::Path;
+
 /// Contains information about how a package should be compiled.
 ///
 /// Note on distinction between `CompileOptions` and `BuildConfig`:
@@ -55,6 +60,63 @@ use anyhow::{bail, Context as _};
 /// of it as `CompileOptions` are high-level settings requested on the
 /// command-line, and `BuildConfig` are low-level settings for actually
 /// driving `rustc`.
+
+// #9451
+#[derive(Debug, Clone)]
+pub enum PerPackageTargetMode {
+    DefaultTarget,
+    ForcedTarget,
+}
+
+// #9451
+#[derive(Debug, Clone)]
+pub struct PerPackageTarget {
+    pub mode: PerPackageTargetMode,
+    pub value: String,
+}
+
+// #9451
+impl PerPackageTarget {
+    pub fn new(p: &str) -> Option<PerPackageTarget> {
+        let f = read_to_string(Path::new(p)).expect("Couldn't open manifest file");
+
+        let default_target_re = Regex::new(r"(?m)^default-target.*").unwrap();
+        let forced_target_re = Regex::new(r"(?m)^forced-target.*").unwrap();
+
+        if default_target_re.is_match(f.as_str()) {
+            Some(PerPackageTarget {
+                mode: PerPackageTargetMode::DefaultTarget,
+                value: String::from(
+                    default_target_re
+                        .captures(f.as_str())
+                        .unwrap()
+                        .get(0)
+                        .map_or("", |m| m.as_str())
+                        .split_whitespace()
+                        .last()
+                        .unwrap(),
+                ),
+            })
+        } else if forced_target_re.is_match(f.as_str()) {
+            Some(PerPackageTarget {
+                mode: PerPackageTargetMode::DefaultTarget,
+                value: String::from(
+                    default_target_re
+                        .captures(f.as_str())
+                        .unwrap()
+                        .get(0)
+                        .map_or("", |m| m.as_str())
+                        .split_whitespace()
+                        .last()
+                        .unwrap(),
+                ),
+            })
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct CompileOptions {
     /// Configuration information for a rustc build
@@ -83,19 +145,37 @@ pub struct CompileOptions {
 
 impl<'a> CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
-        Ok(CompileOptions {
-            build_config: BuildConfig::new(config, None, &[], mode)?,
-            cli_features: CliFeatures::new_all(false),
-            spec: ops::Packages::Packages(Vec::new()),
-            filter: CompileFilter::Default {
-                required_features_filterable: false,
-            },
-            target_rustdoc_args: None,
-            target_rustc_args: None,
-            local_rustdoc_args: None,
-            rustdoc_document_private_items: false,
-            honor_rust_version: true,
-        })
+        let ppt = PerPackageTarget::new("Cargo.toml");
+        if ppt.is_some() {
+            let per_package = ppt.unwrap(); // already know it's a Some at this point
+            Ok(CompileOptions {
+                build_config: BuildConfig::new(config, None, &[per_package.value], mode)?,
+                cli_features: CliFeatures::new_all(false),
+                spec: ops::Packages::Packages(Vec::new()),
+                filter: CompileFilter::Default {
+                    required_features_filterable: false,
+                },
+                target_rustdoc_args: None,
+                target_rustc_args: None,
+                local_rustdoc_args: None,
+                rustdoc_document_private_items: false,
+                honor_rust_version: true,
+            })
+        } else {
+            Ok(CompileOptions {
+                build_config: BuildConfig::new(config, None, &[], mode)?,
+                cli_features: CliFeatures::new_all(false),
+                spec: ops::Packages::Packages(Vec::new()),
+                filter: CompileFilter::Default {
+                    required_features_filterable: false,
+                },
+                target_rustdoc_args: None,
+                target_rustc_args: None,
+                local_rustdoc_args: None,
+                rustdoc_document_private_items: false,
+                honor_rust_version: true,
+            })
+        }
     }
 }
 
@@ -266,7 +346,7 @@ pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<
 /// calls and add custom logic. `compile` uses `DefaultExecutor` which just passes calls through.
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
-    options: &CompileOptions,
+    options: &CompileOptions, // #9451
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
@@ -448,10 +528,34 @@ pub fn create_bcx<'a, 'cfg>(
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
 
-    // If `--target` has not been specified, then the unit graph is built
-    // assuming `--target $HOST` was specified. See
+    // If `--target` has not been specified and per-package-target isn't enabled in Cargo,toml,
+    // then the unit graph is built assuming `--target $HOST` was specified. See
     // `rebuild_unit_graph_shared` for more on why this is done.
-    let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
+    let ppt = PerPackageTarget::new("Cargo.toml");
+
+    let explicit_host_kind = match ppt {
+        Some(ref target) => {
+            //Debug
+            println!("{:?}", target.mode);
+            println!("{}", target.value);
+
+            match target.mode {
+                PerPackageTargetMode::DefaultTarget => {
+                    let compile_kind =
+                        CompileKind::Target(CompileTarget::new(target.value.as_str())?);
+                    compile_kind
+                }
+
+                PerPackageTargetMode::ForcedTarget => {
+                    let compile_kind =
+                        CompileKind::Target(CompileTarget::new(target.value.as_str())?);
+                    compile_kind
+                }
+            }
+        }
+        None => CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?),
+    };
+
     let explicit_host_kinds: Vec<_> = build_config
         .requested_kinds
         .iter()
@@ -487,13 +591,11 @@ pub fn create_bcx<'a, 'cfg>(
                 .shell()
                 .warn("-Zbuild-std does not currently fully support --build-plan")?;
         }
-        for u in units.iter_mut() {
-            if build_config.requested_kinds[0].is_host() && !&u.target.is_custom_build() {
-                // TODO: This should eventually be fixed. Unfortunately it is not
-                // easy to get the host triple in BuildConfig. Consider changing
-                // requested_target to an enum, or some other approach.
-                anyhow::bail!("-Zbuild-std requires --target");
-            }
+        if ppt.is_none() && build_config.requested_kinds[0].is_host() {
+            // TODO: This should eventually be fixed. Unfortunately it is not
+            // easy to get the host triple in BuildConfig. Consider changing
+            // requested_target to an enum, or some other approach.
+            anyhow::bail!("-Zbuild-std requires --target");
         }
         let (std_package_set, std_resolve, std_features) =
             standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;

@@ -47,6 +47,7 @@ num_cpus = "1.0"
 opener = "0.5"
 os_info = "3.0.7"
 percent-encoding = "2.0"
+regex = "1" # Issue 9451
 rustfix = "0.6.0"
 semver = { version = "1.0.3", features = ["serde"] }
 serde = { version = "1.0.123", features = ["derive"] }

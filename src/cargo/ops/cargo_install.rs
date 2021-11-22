@@ -523,7 +523,7 @@ pub fn install(
     source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions,
+    opts: &ops::CompileOptions, // #9451
     force: bool,
     no_track: bool,
 ) -> CargoResult<()> {
