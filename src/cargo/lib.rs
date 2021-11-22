@@ -17,6 +17,9 @@ use std::fmt;
 pub use crate::util::errors::{InternalError, VerboseError};
 pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};
 
+// Tests
+pub use crate::ops::{PerPackageTarget, PerPackageTargetMode};
+
 pub const CARGO_ENV: &str = "CARGO";
 
 #[macro_use]

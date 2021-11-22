@@ -2,7 +2,6 @@
 # This script validates that there aren't any changes to the man pages.
 
 set -e
-./ci/force-install-pwd.sh
 cd src/doc
 
 changes=$(git status --porcelain)
