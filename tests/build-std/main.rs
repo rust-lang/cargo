@@ -183,7 +183,7 @@ fn custom_test_framework() {
                 name = "foo"
                 version = "0.1.0"
                 edition = "2021"
-                default-target="custom.json"
+                default-target="target.json"
 
                 [target.custom-target.dependencies]
                 dep = { path = "dep" }
@@ -238,7 +238,7 @@ fn custom_test_framework() {
     paths.insert(0, sysroot_bin);
     let new_path = env::join_paths(paths).unwrap();
 
-    p.cargo("test --target target.json --no-run -v")
+    p.cargo("test --no-run -v")
         .env("PATH", new_path)
         .build_std_arg("core")
         .run();
