@@ -9,11 +9,15 @@ use crate::util::{add_path_args, CargoTestError, Config, Progress, ProgressStyle
 use cargo_util::{ProcessBuilder, ProcessError};
 use crossbeam_utils::thread;
 use std::ffi::OsString;
+use std::io::BufRead;
+use std::str;
 use std::sync::{
+    atomic::{AtomicI32, Ordering},
     mpsc::{Receiver, Sender},
     Arc, Mutex,
 };
 use std::thread::ThreadId;
+use std::time::Duration;
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
@@ -119,6 +123,13 @@ fn run_unit_tests(
             cmd.arg("--color=always");
         }
 
+        let mut test_count: i32 = cmd
+            .clone()
+            .arg("--list")
+            .exec_with_output()
+            .ok()
+            .and_then(|output| count_tests(&output.stdout))
+            .unwrap_or(i32::MAX);
         let (tx, rx) = std::sync::mpsc::channel();
         jobs.push(Job {
             state: JobState::NotStarted,
@@ -129,6 +140,7 @@ fn run_unit_tests(
             pkg_name: unit.pkg.name().to_string(),
             rx: Some(rx),
             tx: Some(tx),
+            test_count,
         });
     }
 
@@ -261,6 +273,7 @@ fn run_doc_tests(
             pkg_name: unit.pkg.name().to_string(),
             rx: Some(rx),
             tx: Some(tx),
+            test_count: i32::min(options.compile_opts.build_config.test_jobs as i32, i32::MAX),
         });
     }
     let errors = execute_tests(jobs, config, options, true)?;
@@ -272,12 +285,21 @@ fn run_doc_tests(
     Ok((Test::Doc, res))
 }
 
+fn count_tests(output: &[u8]) -> Option<i32> {
+    if output.is_empty() {
+        return None;
+    }
+    let last_line: String = output.lines().last()?.ok()?;
+    last_line.split_once(' ')?.0.parse().ok()
+}
+
 fn execute_tests(
     jobs: Vec<Job>,
     config: &Config,
     options: &TestOptions,
     doc_tests: bool,
 ) -> CargoResult<Vec<TestError>> {
+    let tests_free = AtomicI32::new(options.compile_opts.build_config.test_jobs as i32);
     thread::scope(|s| {
         let mut errors: Vec<TestError> = Vec::new();
         let total = jobs.len();
@@ -286,17 +308,28 @@ fn execute_tests(
 
         // Run n test crates in parallel
         for _ in 0..options.compile_opts.build_config.test_jobs {
+            let tests_free_ref = &tests_free;
             let jobs = jobs.clone();
             s.spawn(move |_| {
+                let mut sleep = false;
                 loop {
+                    if sleep {
+                        std::thread::sleep(Duration::from_millis(500));
+                        sleep = false;
+                    }
                     // Transition job to in progress and put rx in job.
-                    let (tx, mut cmd, name, target_kind, pkg_name) = {
+                    let (tx, mut cmd, name, target_kind, pkg_name, size) = {
                         let mut jobs = jobs.lock().unwrap();
                         if let Some(job) = jobs
                             .iter_mut()
                             .filter(|job| matches!(job.state, JobState::NotStarted))
-                            .nth(0)
+                            .next()
                         {
+                            if tests_free_ref.fetch_sub(job.test_count, Ordering::SeqCst) < 0 {
+                                tests_free_ref.fetch_add(job.test_count as i32, Ordering::SeqCst);
+                                sleep = true;
+                                continue;
+                            }
                             job.state = JobState::InProgress(std::thread::current().id());
                             (
                                 job.tx.take().expect("tx to exist"),
@@ -304,6 +337,7 @@ fn execute_tests(
                                 job.name.clone(),
                                 job.target_kind.clone(),
                                 job.pkg_name.clone(),
+                                job.test_count,
                             )
                         } else {
                             break;
@@ -321,6 +355,7 @@ fn execute_tests(
                     }
                     for job in &mut *jobs.lock().unwrap() {
                         if let JobState::InProgress(thread_id) = job.state {
+                            tests_free_ref.fetch_add(job.test_count, Ordering::SeqCst);
                             if thread_id == std::thread::current().id() {
                                 job.state = JobState::Finished;
                                 break;
@@ -331,8 +366,13 @@ fn execute_tests(
             });
         }
 
-        // Report results in the standard order...
-        for i in 0..total {
+        // Report results
+        let mut sleep = false;
+        loop {
+            if sleep {
+                std::thread::sleep(Duration::from_millis(200));
+                sleep = false;
+            }
             let active_names: Vec<String>;
             let done_count;
             let (exe, cmd, rx) = {
@@ -349,12 +389,22 @@ fn execute_tests(
                     .filter(|job| matches!(job.state, JobState::InProgress(_)))
                     .map(|job| job.name.clone())
                     .collect();
-                let job = &mut jobs[i];
-                (
-                    job.exe.clone(),
-                    job.cmd.clone(),
-                    job.rx.take().expect("rx to exist"),
-                )
+                if let Some(job) = jobs
+                    .iter_mut()
+                    .filter(|j| !matches!(j.state, JobState::NotStarted) && j.rx.is_some())
+                    .next()
+                {
+                    (
+                        job.exe.clone(),
+                        job.cmd.clone(),
+                        job.rx.take().expect("rx to exist"),
+                    )
+                } else if done_count == total {
+                    break;
+                } else {
+                    sleep = true;
+                    continue;
+                }
             };
 
             progress.clear();
@@ -404,6 +454,7 @@ struct Job {
     state: JobState,
     rx: Option<Receiver<OutOrErr>>,
     tx: Option<Sender<OutOrErr>>,
+    test_count: i32,
 }
 
 #[derive(Debug)]
