@@ -6,9 +6,4 @@ if [[ ! -f "Cargo.toml" ]]; then
     exit 1
 fi
 
-if [[ $(rustc -Vv | grep host:) != *linux* ]]; then
-    echo "Must be run on a Linux host."
-    exit 1
-fi
-
 cargo install --path . --force
