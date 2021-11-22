@@ -534,21 +534,17 @@ pub fn create_bcx<'a, 'cfg>(
     let ppt = PerPackageTarget::new("Cargo.toml");
 
     let explicit_host_kind = match ppt {
-        Some(ref target) => {
-            match target.mode {
-                PerPackageTargetMode::DefaultTarget => {
-                    let compile_kind =
-                        CompileKind::Target(CompileTarget::new(target.value.as_str())?);
-                    compile_kind
-                }
-
-                PerPackageTargetMode::ForcedTarget => {
-                    let compile_kind =
-                        CompileKind::Target(CompileTarget::new(target.value.as_str())?);
-                    compile_kind
-                }
+        Some(ref target) => match target.mode {
+            PerPackageTargetMode::DefaultTarget => {
+                let compile_kind = CompileKind::Target(CompileTarget::new(target.value.as_str())?);
+                compile_kind
             }
-        }
+
+            PerPackageTargetMode::ForcedTarget => {
+                let compile_kind = CompileKind::Target(CompileTarget::new(target.value.as_str())?);
+                compile_kind
+            }
+        },
         None => CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?),
     };
 
