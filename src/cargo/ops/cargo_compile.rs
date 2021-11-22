@@ -535,10 +535,6 @@ pub fn create_bcx<'a, 'cfg>(
 
     let explicit_host_kind = match ppt {
         Some(ref target) => {
-            //Debug
-            println!("{:?}", target.mode);
-            println!("{}", target.value);
-
             match target.mode {
                 PerPackageTargetMode::DefaultTarget => {
                     let compile_kind =
