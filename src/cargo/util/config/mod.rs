@@ -409,6 +409,32 @@ impl Config {
                 }
 
                 let exe = from_current_exe()
+                    .ok()
+                    .filter(|exe| {
+                        if let Some(name) = exe.file_name().and_then(|name| name.to_str()) {
+                            if name.starts_with("ld-")
+                                && (name.ends_with(".so") || name.contains(".so."))
+                            {
+                                // Cargo seems to be executed directly through the dynamic linker
+                                // (e.g., /usr/lib64/ld-linux-x86-64.so.2), which is then what
+                                // current_exe points at. That's not the path to Cargo itself
+                                // though, so we need to fall back to argv[0], which the step that
+                                // set up the invocation of Cargo this way has hopefully set
+                                // correctly (likely with exec -a).
+                                //
+                                // See
+                                //
+                                //   https://github.com/rust-lang/cargo/issues/10113
+                                //
+                                // and
+                                //
+                                //   https://linux.die.net/man/8/ld-linux.so
+                                return false;
+                            }
+                        }
+                        true
+                    })
+                    .ok_or(())
                     .or_else(|_| from_argv())
                     .with_context(|| "couldn't get the path to cargo executable")?;
                 Ok(exe)

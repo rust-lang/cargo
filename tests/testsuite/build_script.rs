@@ -3,8 +3,8 @@
 use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
+use cargo_test_support::{basic_manifest, cargo_exe, cross_compile, is_coarse_mtime, project};
+use cargo_test_support::{execs, process, tools};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;
@@ -135,6 +135,44 @@ fn custom_build_env_vars() {
     let p = p.file("bar/build.rs", &file_content).build();
 
     p.cargo("build --features bar_feat").run();
+}
+
+#[cargo_test]
+fn issue_10113() {
+    use std::path::Path;
+
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+            use std::path::Path;
+
+            fn main() {
+                let cargo = dbg!(env::var("CARGO").unwrap());
+                let cargo = Path::new(&cargo);
+                assert!(cargo.ends_with("cargo"));
+                assert!(cargo.exists());
+            }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    let ld = Path::new("/usr/lib64/ld-linux-x86-64.so.2");
+    if cfg!(target_os = "linux") {
+        assert!(ld.exists());
+        let mut proc = process(ld);
+        proc.cwd(p.root());
+        proc.arg(&cargo_exe());
+        proc.arg("build");
+        // Touch the file so build is re-run.
+        p.change_file("src/lib.rs", "");
+        let mut execs = execs().with_process_builder(proc);
+        execs.run();
+    }
 }
 
 #[cargo_test]
