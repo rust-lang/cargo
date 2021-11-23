@@ -161,8 +161,18 @@ fn issue_10113() {
 
     p.cargo("build").run();
 
-    let ld = Path::new("/usr/lib64/ld-linux-x86-64.so.2");
     if cfg!(target_os = "linux") {
+        let ld = if cfg!(target_arch = "x86_64") {
+            Some(Path::new("/usr/lib64/ld-linux-x86-64.so.2"))
+        } else if cfg!(target_arch = "x86") {
+            Some(Path::new("/usr/lib/ld-linux.so.2"))
+        } else {
+            None
+        };
+
+        // This test needs to be updated with the path to ld.so for this arch.
+        // We error on an unknown ld path to catch typos in the `cfg!`s above and such.
+        let ld = ld.expect("path to ld-linux.so unknown for current architecture");
         assert!(ld.exists());
         let mut proc = process(ld);
         proc.cwd(p.root());
