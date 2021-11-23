@@ -151,7 +151,7 @@ fn issue_10113() {
             fn main() {
                 let cargo = dbg!(env::var("CARGO").unwrap());
                 let cargo = Path::new(&cargo);
-                assert!(cargo.ends_with("cargo"));
+                assert!(cargo.ends_with(&format!("cargo{}", env::consts::EXE_SUFFIX)));
                 assert!(cargo.exists());
             }
         "#,
