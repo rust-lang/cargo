@@ -83,6 +83,7 @@ Each new feature described below should explain how to use it.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
+    * [crate-type](#crate-type) - Supports passing crate types to the compiler.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
@@ -554,6 +555,23 @@ It's currently unclear how this feature will be stabilized in Cargo, but we'd
 like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
+
+### crate-type
+* Tracking Issue: [#10083](https://github.com/rust-lang/cargo/issues/10083)
+* RFC: [#3180](https://github.com/rust-lang/rfcs/pull/3180)
+* Original Pull Request: [#10093](https://github.com/rust-lang/cargo/pull/10093)
+
+`cargo rustc --crate-type=lib,cdylib` forwards the `--crate-type` flag to `rustc`.
+This runs `rustc` with the corresponding
+[`--crate-type`](https://doc.rust-lang.org/rustc/command-line-arguments.html#--crate-type-a-list-of-types-of-crates-for-the-compiler-to-emit)
+flag, and compiling.
+
+When using it, it requires the `-Z unstable-options`
+command-line option:
+
+```console
+cargo rustc --crate-type lib,cdylib -Z unstable-options
+```
 
 ### config-cli
 * Tracking Issue: [#7722](https://github.com/rust-lang/cargo/issues/7722)
