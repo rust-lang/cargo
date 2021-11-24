@@ -13,6 +13,7 @@ use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use termcolor::Color::Green;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -55,6 +56,12 @@ pub struct PublishOpts<'cfg> {
     pub dry_run: bool,
     pub registry: Option<String>,
     pub cli_features: CliFeatures,
+}
+
+struct MessageInfo {
+    name: String,
+    space: String,
+    desc: String,
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
@@ -953,16 +960,27 @@ pub fn search(
     });
 
     for (name, description) in names.into_iter().zip(descriptions) {
-        let line = match description {
+        let message = match description {
             Some(desc) => {
                 let space = repeat(' ')
                     .take(description_margin - name.len())
                     .collect::<String>();
-                name + &space + "# " + &desc
+                MessageInfo {
+                    name: name,
+                    space: space,
+                    desc: desc,
+                }
             }
-            None => name,
+            None => {
+                MessageInfo {
+                    name: name,
+                    space: String::new(),
+                    desc: String::new(),
+                }
+            }
         };
-        drop_println!(config, "{}", line);
+                let _ = config.shell().print(&message.name, Some(&(message.space + "# " + &message.desc)), Green, true);
+
     }
 
     let search_max_limit = 100;
