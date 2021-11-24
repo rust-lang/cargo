@@ -13,7 +13,6 @@ use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
-use termcolor::Color::Green;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -977,12 +976,9 @@ pub fn search(
                 desc: String::new(),
             },
         };
-        let _ = config.shell().print(
-            &message.name,
-            Some(&(message.space + "# " + &message.desc)),
-            Green,
-            true,
-        );
+        let _ = config
+            .shell()
+            .status(&message.name, message.space + "# " + &message.desc);
     }
 
     let search_max_limit = 100;

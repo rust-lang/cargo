@@ -124,7 +124,7 @@ impl Shell {
 
     /// Prints a message, where the status will have `color` color, and can be justified. The
     /// messages follows without color.
-    pub fn print(
+    fn print(
         &mut self,
         status: &dyn fmt::Display,
         message: Option<&dyn fmt::Display>,
