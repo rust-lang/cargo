@@ -971,16 +971,18 @@ pub fn search(
                     desc: desc,
                 }
             }
-            None => {
-                MessageInfo {
-                    name: name,
-                    space: String::new(),
-                    desc: String::new(),
-                }
-            }
+            None => MessageInfo {
+                name: name,
+                space: String::new(),
+                desc: String::new(),
+            },
         };
-                let _ = config.shell().print(&message.name, Some(&(message.space + "# " + &message.desc)), Green, true);
-
+        let _ = config.shell().print(
+            &message.name,
+            Some(&(message.space + "# " + &message.desc)),
+            Green,
+            true,
+        );
     }
 
     let search_max_limit = 100;
