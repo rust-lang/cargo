@@ -803,7 +803,7 @@ fn output_not_captured() {
             "a/src/lib.rs",
             "
             /// ```
-            /// ☃
+            /// `
             /// ```
             pub fn foo() {}
         ",
@@ -811,9 +811,7 @@ fn output_not_captured() {
         .build();
 
     p.cargo("doc")
-        .without_status()
-        .with_stderr_contains("[..]☃")
-        .with_stderr_contains(r"[..]unknown start of token: \u{2603}")
+        .with_stderr_contains("[..]unknown start of token: `")
         .run();
 }
 
