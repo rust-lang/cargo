@@ -155,8 +155,8 @@ fn not_update() {
     drop(lock);
 
     cargo_process("search postgres")
-        .with_stderr_contains(SEARCH_RESULTS)
-        .with_stderr_does_not_contain("[..]Updating [..] index")
+        .with_stdout_contains(SEARCH_RESULTS)
+        .with_stderr("") // without "Updating ... index"
         .run();
 }
 
@@ -166,7 +166,7 @@ fn replace_default() {
     set_cargo_config();
 
     cargo_process("search postgres")
-        .with_stderr_contains(SEARCH_RESULTS)
+        .with_stdout_contains(SEARCH_RESULTS)
         .with_stderr_contains("[..]Updating [..] index")
         .run();
 }
@@ -177,7 +177,7 @@ fn simple() {
 
     cargo_process("search postgres --index")
         .arg(registry_url().to_string())
-        .with_stderr_contains(SEARCH_RESULTS)
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
@@ -189,7 +189,7 @@ fn simple_with_host() {
 
     cargo_process("search postgres --host")
         .arg(registry_url().to_string())
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -203,7 +203,7 @@ about this warning.
 [UPDATING] `[CWD]/registry` index
 ",
         )
-        .with_stderr_contains(SEARCH_RESULTS)
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
@@ -217,7 +217,7 @@ fn simple_with_index_and_host() {
         .arg(registry_url().to_string())
         .arg("--host")
         .arg(registry_url().to_string())
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -231,7 +231,7 @@ about this warning.
 [UPDATING] `[CWD]/registry` index
 ",
         )
-        .with_stderr_contains(SEARCH_RESULTS)
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
@@ -241,6 +241,6 @@ fn multiple_query_params() {
 
     cargo_process("search postgres sql --index")
         .arg(registry_url().to_string())
-        .with_stderr_contains(SEARCH_RESULTS)
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }

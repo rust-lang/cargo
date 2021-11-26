@@ -978,7 +978,7 @@ pub fn search(
         };
         let _ = config
             .shell()
-            .status(&message.name, message.space + "# " + &message.desc);
+            .status_stdout(&message.name, message.space + "# " + &message.desc);
     }
 
     let search_max_limit = 100;

@@ -143,6 +143,27 @@ impl Shell {
         }
     }
 
+    /// Prints a message to stdout, where the status will have `color` color, and can be justified. The
+    /// messages follows without color.
+    pub fn print_stdout(
+        &mut self,
+        status: &dyn fmt::Display,
+        message: Option<&dyn fmt::Display>,
+        color: Color,
+        justified: bool,
+    ) -> CargoResult<()> {
+        match self.verbosity {
+            Verbosity::Quiet => Ok(()),
+            _ => {
+                if self.needs_clear {
+                    self.err_erase_line();
+                }
+                self.output
+                    .message_stdout(status, message, color, justified)
+            }
+        }
+    }
+
     /// Sets whether the next print should clear the current line.
     pub fn set_needs_clear(&mut self, needs_clear: bool) {
         self.needs_clear = needs_clear;
@@ -195,13 +216,22 @@ impl Shell {
         }
     }
 
-    /// Shortcut to right-align and color green a status message.
+    /// Shortcut to right-align and color green a status message in stderr.
     pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
     where
         T: fmt::Display,
         U: fmt::Display,
     {
         self.print(&status, Some(&message), Green, true)
+    }
+
+    /// Shortcut to right-align and color green a status message in stdout.
+    pub fn status_stdout<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
+    where
+        T: fmt::Display,
+        U: fmt::Display,
+    {
+        self.print_stdout(&status, Some(&message), Green, true)
     }
 
     pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
@@ -406,6 +436,48 @@ impl ShellOut {
                 match message {
                     Some(message) => writeln!(stderr, " {}", message)?,
                     None => write!(stderr, " ")?,
+                }
+            }
+            ShellOut::Write(ref mut w) => {
+                if justified {
+                    write!(w, "{:>12}", status)?;
+                } else {
+                    write!(w, "{}:", status)?;
+                }
+                match message {
+                    Some(message) => writeln!(w, " {}", message)?,
+                    None => write!(w, " ")?,
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Prints out a message with a status to stdout. The status comes first, and is bold plus the given
+    /// color. The status can be justified, in which case the max width that will right align is
+    /// 12 chars.
+    fn message_stdout(
+        &mut self,
+        status: &dyn fmt::Display,
+        message: Option<&dyn fmt::Display>,
+        color: Color,
+        justified: bool,
+    ) -> CargoResult<()> {
+        match *self {
+            ShellOut::Stream { ref mut stdout, .. } => {
+                stdout.reset()?;
+                stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
+                if justified {
+                    write!(stdout, "{:>12}", status)?;
+                } else {
+                    write!(stdout, "{}", status)?;
+                    stdout.set_color(ColorSpec::new().set_bold(true))?;
+                    write!(stdout, ":")?;
+                }
+                stdout.reset()?;
+                match message {
+                    Some(message) => writeln!(stdout, " {}", message)?,
+                    None => write!(stdout, " ")?,
                 }
             }
             ShellOut::Write(ref mut w) => {
