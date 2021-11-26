@@ -33,6 +33,9 @@ pub struct BuildContext<'a, 'cfg> {
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit, Vec<String>>,
 
+    // Crate types for `rustc`.
+    pub target_rustc_crate_types: HashMap<Unit, Vec<String>>,
+
     /// Package downloader.
     ///
     /// This holds ownership of the `Package` objects.
@@ -61,6 +64,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         build_config: &'a BuildConfig,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
+        target_rustc_crate_types: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
@@ -80,6 +84,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             build_config,
             profiles,
             extra_compiler_args,
+            target_rustc_crate_types,
             target_data,
             roots,
             unit_graph,
@@ -126,5 +131,9 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
+    }
+
+    pub fn rustc_crate_types_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
+        self.target_rustc_crate_types.get(unit)
     }
 }
