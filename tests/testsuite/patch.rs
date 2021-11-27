@@ -358,10 +358,10 @@ fn unused() {
             "\
 [UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -374,10 +374,10 @@ fn unused() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]
 ",
         )
@@ -392,6 +392,60 @@ fn unused() {
         toml["patch"]["unused"][0]["version"].as_str(),
         Some("0.2.0")
     );
+}
+
+#[cargo_test]
+fn unused_with_mismatch_source_being_patched() {
+    registry::alt_init();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1.0"
+
+                [patch.alternative]
+                bar = { path = "bar" }
+
+                [patch.crates-io]
+                bar = { path = "baz" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
+        .file("bar/src/lib.rs", "not rust code")
+        .file("baz/Cargo.toml", &basic_manifest("bar", "0.3.0"))
+        .file("baz/src/lib.rs", "not rust code")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
+Perhaps you misspell the source URL being patched.
+Possible URLs for `[patch.<URL>]`:
+    crates-io
+[WARNING] Patch `bar v0.3.0 ([CWD]/baz)` was not used in the crate graph.
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 [..]
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -477,10 +531,10 @@ fn unused_from_config() {
             "\
 [UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -493,10 +547,10 @@ fn unused_from_config() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]
 ",
         )
@@ -550,10 +604,10 @@ fn unused_git() {
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -566,10 +620,10 @@ fn unused_git() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]
 ",
         )
@@ -752,10 +806,10 @@ fn add_ignored_patch() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
@@ -763,10 +817,10 @@ fn add_ignored_patch() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]",
         )
         .run();
@@ -1714,10 +1768,9 @@ fn two_semver_compatible() {
         .with_stderr(
             "\
 warning: Patch `bar v0.1.1 [..]` was not used in the crate graph.
-Check that [..]
-with the [..]
-what is [..]
-version. [..]
+Perhaps you misspell the source URL being patched.
+Possible URLs for `[patch.<URL>]`:
+    [CWD]/bar
 [FINISHED] [..]",
         )
         .run();
@@ -1769,10 +1822,9 @@ fn multipatch_select_big() {
         .with_stderr(
             "\
 warning: Patch `bar v0.1.0 [..]` was not used in the crate graph.
-Check that [..]
-with the [..]
-what is [..]
-version. [..]
+Perhaps you misspell the source URL being patched.
+Possible URLs for `[patch.<URL>]`:
+    [CWD]/bar
 [FINISHED] [..]",
         )
         .run();
