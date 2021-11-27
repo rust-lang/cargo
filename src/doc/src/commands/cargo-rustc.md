@@ -169,10 +169,25 @@ target artifacts are placed in a separate directory. See the
 
 
 <dt class="option-term" id="option-cargo-rustc---release"><a class="option-anchor" href="#option-cargo-rustc---release"></a><code>--release</code></dt>
-<dd class="option-desc">Build optimized artifacts with the <code>release</code> profile. See the
-<a href="#profiles">PROFILES</a> section for details on how this affects profile
-selection.</dd>
+<dd class="option-desc">Build optimized artifacts with the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
 
+
+
+<dt class="option-term" id="option-cargo-rustc---profile"><a class="option-anchor" href="#option-cargo-rustc---profile"></a><code>--profile</code> <em>name</em></dt>
+<dd class="option-desc">Build with the given profile.</p>
+<p>The <code>rustc</code> subcommand will treat the following named profiles with special behaviors:</p>
+<ul>
+<li><code>check</code> — Builds in the same way as the <a href="cargo-check.html">cargo-check(1)</a> command with
+the <code>dev</code> profile.</li>
+<li><code>test</code> — Builds in the same way as the <a href="cargo-test.html">cargo-test(1)</a> command,
+enabling building in test mode which will enable tests and enable the <code>test</code>
+cfg option. See <a href="https://doc.rust-lang.org/rustc/tests/index.html">rustc
+tests</a> for more detail.</li>
+<li><code>bench</code> — Builds in the same was as the <a href="cargo-bench.html">cargo-bench(1)</a> command,
+similar to the <code>test</code> profile.</li>
+</ul>
+<p>See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-rustc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
@@ -209,7 +224,7 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-rustc--q"><a class="option-anchor" href="#option-cargo-rustc--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-rustc---quiet"><a class="option-anchor" href="#option-cargo-rustc---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---color"><a class="option-anchor" href="#option-cargo-rustc---color"></a><code>--color</code> <em>when</em></dt>
@@ -323,24 +338,6 @@ the number of CPUs.</dd>
 
 
 </dl>
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See [the reference](../reference/profiles.html) for more
-details.
-
-Profile selection depends on the target and crate being built. By default the
-`dev` or `test` profiles are used. If the `--release` flag is given, then the
-`release` or `bench` profiles are used.
-
-Target | Default Profile | `--release` Profile
--------|-----------------|---------------------
-lib, bin, example | `dev` | `release`
-test, bench, or any target in "test" or "bench" mode | `test` | `bench`
-
-Dependencies use the `dev`/`release` profiles.
-
 
 ## ENVIRONMENT
 

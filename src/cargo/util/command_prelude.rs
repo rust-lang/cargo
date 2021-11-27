@@ -287,15 +287,15 @@ pub fn subcommand(name: &'static str) -> App {
     ])
 }
 
-// Determines whether or not to gate `--profile` as unstable when resolving it.
+/// Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
-    // `cargo rustc` historically has allowed "test", "bench", and "check". This
-    // variant explicitly allows those.
+    /// `cargo rustc` historically has allowed "test", "bench", and "check". This
+    /// variant explicitly allows those.
     LegacyRustc,
-    // `cargo check` and `cargo fix` historically has allowed "test". This variant
-    // explicitly allows that on stable.
+    /// `cargo check` and `cargo fix` historically has allowed "test". This variant
+    /// explicitly allows that on stable.
     LegacyTestOnly,
-    // All other commands, which allow any valid custom named profile.
+    /// All other commands, which allow any valid custom named profile.
     Custom,
 }
 
@@ -363,14 +363,20 @@ pub trait ArgMatchesExt {
         // This is an early exit, since it allows combination with `--release`.
         match (specified_profile, profile_checking) {
             // `cargo rustc` has legacy handling of these names
-            (Some(name @ ("test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
-            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
+                if self._is_present("release") {
+                    config.shell().warn(
+                        "the `--release` flag should not be specified with the `--profile` flag\n\
+                         The `--release` flag will be ignored.\n\
+                         This was historically accepted, but will become an error \
+                         in a future release."
+                    )?;
+                }
+                return Ok(InternedString::new(name));
+            }
             _ => {}
-        }
-
-        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-            bail!("usage of `--profile` requires `-Z unstable-options`");
         }
 
         let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
@@ -536,6 +542,7 @@ pub trait ArgMatchesExt {
             ),
             target_rustdoc_args: None,
             target_rustc_args: None,
+            target_rustc_crate_types: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: !self._is_present("ignore-rust-version"),

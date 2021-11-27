@@ -150,50 +150,10 @@ fn do_read_manifest(
 /// The purpose of this wrapper is to detect invalid TOML which was previously
 /// accepted and display a warning to the user in that case. The `file` and `config`
 /// parameters are only used by this fallback path.
-pub fn parse(toml: &str, file: &Path, config: &Config) -> CargoResult<toml::Value> {
-    let first_error = match toml.parse() {
-        Ok(ret) => return Ok(ret),
-        Err(e) => e,
-    };
-
-    let mut second_parser = toml::de::Deserializer::new(toml);
-    second_parser.set_require_newline_after_table(false);
-    if let Ok(ret) = toml::Value::deserialize(&mut second_parser) {
-        let msg = format!(
-            "\
-TOML file found which contains invalid syntax and will soon not parse
-at `{}`.
-
-The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
-invalid), but this file has a table header which does not have a newline after
-it. A newline needs to be added and this warning will soon become a hard error
-in the future.",
-            file.display()
-        );
-        config.shell().warn(&msg)?;
-        return Ok(ret);
-    }
-
-    let mut third_parser = toml::de::Deserializer::new(toml);
-    third_parser.set_allow_duplicate_after_longer_table(true);
-    if let Ok(ret) = toml::Value::deserialize(&mut third_parser) {
-        let msg = format!(
-            "\
-TOML file found which contains invalid syntax and will soon not parse
-at `{}`.
-
-The TOML spec requires that each table header is defined at most once, but
-historical versions of Cargo have erroneously accepted this file. The table
-definitions will need to be merged together with one table header to proceed,
-and this will become a hard error in the future.",
-            file.display()
-        );
-        config.shell().warn(&msg)?;
-        return Ok(ret);
-    }
-
-    let first_error = anyhow::Error::from(first_error);
-    Err(first_error.context("could not parse input as TOML"))
+pub fn parse(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Value> {
+    // At the moment, no compatibility checks are needed.
+    toml.parse()
+        .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
 }
 
 type TomlLibTarget = TomlTarget;
@@ -642,6 +602,7 @@ impl TomlProfile {
                 | "rust"
                 | "rustc"
                 | "rustdoc"
+                | "target"
                 | "tmp"
                 | "uninstall"
         ) || lower_name.starts_with("cargo")
@@ -1287,7 +1248,7 @@ impl TomlManifest {
             for (name, platform) in me.target.iter().flatten() {
                 cx.platform = {
                     let platform: Platform = name.parse()?;
-                    platform.check_cfg_attributes(&mut cx.warnings);
+                    platform.check_cfg_attributes(cx.warnings);
                     Some(platform)
                 };
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
@@ -1438,8 +1399,12 @@ impl TomlManifest {
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(
-                "only one of `license` or \
-                 `license-file` is necessary"
+                "only one of `license` or `license-file` is necessary\n\
+                 `license` should be used if the package license can be expressed \
+                 with a standard SPDX expression.\n\
+                 `license-file` should be used if the package uses a non-standard license.\n\
+                 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields \
+                 for more information."
                     .to_string(),
             );
         }
@@ -1589,16 +1554,15 @@ impl TomlManifest {
             }
 
             let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
-            {
-                let version = spec.version().ok_or_else(|| {
-                    anyhow!(
-                        "replacements must specify a version \
-                         to replace, but `{}` does not",
-                        spec
-                    )
-                })?;
-                dep.set_version_req(VersionReq::exact(version));
-            }
+            let version = spec.version().ok_or_else(|| {
+                anyhow!(
+                    "replacements must specify a version \
+                     to replace, but `{}` does not",
+                    spec
+                )
+            })?;
+            dep.set_version_req(VersionReq::exact(version))
+                .lock_version(version);
             replace.push((spec, dep));
         }
         Ok(replace)
@@ -1762,11 +1726,14 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
         kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
-            bail!(
+            let msg = format!(
                 "dependency ({}) specified without \
-                 providing a local path, Git repository, or version to use.",
+                 providing a local path, Git repository, or \
+                 version to use. This will be considered an \
+                 error in future versions",
                 name_in_toml
             );
+            cx.warnings.push(msg);
         }
 
         if let Some(version) = &self.version {

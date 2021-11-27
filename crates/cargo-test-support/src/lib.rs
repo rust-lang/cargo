@@ -5,6 +5,7 @@
 #![allow(clippy::all)]
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
+#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 use std::env;
 use std::ffi::OsStr;
@@ -443,6 +444,11 @@ impl Project {
 // Generates a project layout
 pub fn project() -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join("foo"))
+}
+
+// Generates a project layout in given directory
+pub fn project_in(dir: &str) -> ProjectBuilder {
+    ProjectBuilder::new(paths::root().join(dir).join("foo"))
 }
 
 // Generates a project layout inside our fake home dir

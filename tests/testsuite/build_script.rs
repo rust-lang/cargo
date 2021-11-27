@@ -1000,7 +1000,7 @@ fn links_duplicates_old_registry() {
     but a native library can be linked only once
 
 package `bar v0.1.0`
-    ... which satisfies dependency `bar = \"=0.1.0\"` of package `foo v0.1.0 ([..]foo)`
+    ... which satisfies dependency `bar = \"^0.1\"` (locked to 0.1.0) of package `foo v0.1.0 ([..]foo)`
 links to native library `a`
 
 package `foo v0.1.0 ([..]foo)`
@@ -4941,4 +4941,32 @@ fn duplicate_script_with_extra_env() {
             .with_stdout_contains("test src/lib.rs - (line 2) ... ok")
             .run();
     }
+}
+
+#[cargo_test]
+fn wrong_output() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:example");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:example`
+Expected a line with `cargo:key=value` with an `=` character, but none was found.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
 }

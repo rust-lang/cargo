@@ -42,7 +42,7 @@ change, then Cargo will reinstall the package:
 - The package version and source.
 - The set of binary names installed.
 - The chosen features.
-- The release mode (`--debug`).
+- The profile (`--profile`).
 - The target (`--target`).
 
 Installing with `--path` will always build and install, unless there are
@@ -162,7 +162,10 @@ Directory to install packages into.
 
 {{#option "`--debug`" }}
 Build with the `dev` profile instead the `release` profile.
+See also the `--profile` option for choosing a specific profile by name.
 {{/option}}
+
+{{> options-profile }}
 
 {{/options}}
 
@@ -182,6 +185,9 @@ Build with the `dev` profile instead the `release` profile.
 
 {{#options}}
 {{> options-display }}
+
+{{> options-message-format }}
+
 {{/options}}
 
 {{> section-options-common }}

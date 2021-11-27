@@ -185,7 +185,7 @@ fn check_name(
                 This can be done by setting the binary filename to `src/bin/{name}.rs` \
                 or change the name in Cargo.toml with:\n\
                 \n    \
-                [bin]\n    \
+                [[bin]]\n    \
                 name = \"{name}\"\n    \
                 path = \"src/main.rs\"\n\
             ",

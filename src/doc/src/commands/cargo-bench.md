@@ -46,6 +46,14 @@ function to handle running benchmarks.
 > running benchmarks on the stable channel, such as
 > [Criterion](https://crates.io/crates/criterion).
 
+By default, `cargo bench` uses the [`bench` profile], which enables
+optimizations and disables debugging information. If you need to debug a
+benchmark, you can use the `--profile=dev` command-line option to switch to
+the dev profile. You can then run the debug-enabled benchmark within a
+debugger.
+
+[`bench` profile]: ../reference/profiles.html#bench
+
 ## OPTIONS
 
 ### Benchmark Options
@@ -245,6 +253,12 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-bench---profile"><a class="option-anchor" href="#option-cargo-bench---profile"></a><code>--profile</code> <em>name</em></dt>
+<dd class="option-desc">Benchmark with the given profile.
+See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+
+
+
 <dt class="option-term" id="option-cargo-bench---ignore-rust-version"><a class="option-anchor" href="#option-cargo-bench---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Benchmark the target even if the selected Rust compiler is older than the
 required Rust version as configured in the project's <code>rust-version</code> field.</dd>
@@ -285,7 +299,7 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-bench--q"><a class="option-anchor" href="#option-cargo-bench--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-bench---quiet"><a class="option-anchor" href="#option-cargo-bench---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.</dd>
 
 
 <dt class="option-term" id="option-cargo-bench---color"><a class="option-anchor" href="#option-cargo-bench---color"></a><code>--color</code> <em>when</em></dt>
@@ -401,23 +415,6 @@ the number of CPUs.</dd>
 
 
 </dl>
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See
-[the reference](../reference/profiles.html)
-for more details.
-
-Benchmarks are always built with the `bench` profile. Binary and lib targets
-are built separately as benchmarks with the `bench` profile. Library targets
-are built with the `release` profiles when linked to binaries and benchmarks.
-Dependencies use the `release` profile.
-
-If you need a debug build of a benchmark, try building it with
-[cargo-build(1)](cargo-build.html) which will use the `test` profile which is by default
-unoptimized and includes debug information. You can then run the debug-enabled
-benchmark manually.
 
 ## ENVIRONMENT
 

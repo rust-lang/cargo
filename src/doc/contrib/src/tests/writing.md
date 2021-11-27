@@ -123,6 +123,34 @@ If you need to test with registry dependencies, see
 If you need to test git dependencies, see [`support::git`] to create a git
 dependency.
 
+## Debugging tests
+
+In some cases, you may need to dig into a test that is not working as you
+expect, or you just generally want to experiment within the sandbox
+environment. The general process is:
+
+1. Build the sandbox for the test you want to investigate. For example:
+
+   `cargo test --test testsuite -- features2::inactivate_targets`.
+2. In another terminal, head into the sandbox directory to inspect the files and run `cargo` directly.
+    1. The sandbox directories start with `t0` for the first test.
+
+       `cd target/tmp/cit/t0`
+    2. Set up the environment so that the sandbox configuration takes effect:
+
+       `export CARGO_HOME=$(pwd)/home/.cargo`
+    3. Most tests create a `foo` project, so head into that:
+
+       `cd foo`
+3. Run whatever cargo command you want. See [Running Cargo] for more details
+   on running the correct `cargo` process. Some examples:
+
+   * `/path/to/my/cargo/target/debug/cargo check`
+   * Using a debugger like `lldb` or `gdb`:
+        1. `lldb /path/to/my/cargo/target/debug/cargo`
+        2. Set a breakpoint, for example: `b generate_targets`
+        3. Run with arguments: `r check`
+
 [`testsuite`]: https://github.com/rust-lang/cargo/tree/master/tests/testsuite/
 [`ProjectBuilder`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L225-L231
 [`Execs`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L558-L579
@@ -130,3 +158,4 @@ dependency.
 [`support::compare`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/compare.rs
 [`support::registry::Package`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/registry.rs#L73-L149
 [`support::git`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs
+[Running Cargo]: ../process/working-on-cargo.md#running-cargo

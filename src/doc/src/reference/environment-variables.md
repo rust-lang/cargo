@@ -333,7 +333,11 @@ let out_dir = env::var("OUT_DIR").unwrap();
                compatible [jobserver] for sub-make invocations.
 * `OPT_LEVEL`, `DEBUG` — values of the corresponding variables for the
                          profile currently being built.
-* `PROFILE` — `release` for release builds, `debug` for other builds.
+* `PROFILE` — `release` for release builds, `debug` for other builds. This is
+  determined based on if the [profile] inherits from the [`dev`] or
+  [`release`] profile. Using this environment variable is not recommended.
+  Using other environment variables like `OPT_LEVEL` provide a more correct
+  view of the actual settings being used.
 * `DEP_<name>_<key>` — For more information about this set of environment
                        variables, see build script documentation about [`links`][links].
 * `RUSTC`, `RUSTDOC` — the compiler and documentation generator that Cargo has
@@ -371,6 +375,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [cargo-config]: config.md
 [Target Triple]: ../appendix/glossary.md#target
 [variables set for crates]: #environment-variables-cargo-sets-for-crates
+[profile]: profiles.md
+[`dev`]: profiles.md#dev
+[`release`]: profiles.md#release
 
 ### Environment variables Cargo sets for 3rd party subcommands
 

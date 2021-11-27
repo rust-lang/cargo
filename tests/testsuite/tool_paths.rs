@@ -1,8 +1,6 @@
 //! Tests for configuration values that point to programs.
 
-use cargo_test_support::{
-    basic_lib_manifest, no_such_file_err_msg, project, rustc_host, rustc_host_env,
-};
+use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -271,6 +269,9 @@ fn custom_runner_env() {
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
+        // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
+        // On Windows, changing to a custom executable resolver has changed the
+        // error messages.
         .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
@@ -279,9 +280,8 @@ fn custom_runner_env() {
 [ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
 
 Caused by:
-  {}
-",
-            no_such_file_err_msg()
+  [..]
+"
         ))
         .run();
 }
@@ -342,11 +342,6 @@ fn custom_linker_env() {
 
 #[cargo_test]
 fn target_in_environment_contains_lower_case() {
-    if cfg!(windows) && !cargo_test_support::is_nightly() {
-        // Remove this check when 1.55 is stabilized.
-        // https://github.com/rust-lang/rust/pull/85270
-        return;
-    }
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     let target = rustc_host();

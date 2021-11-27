@@ -102,6 +102,7 @@ pub struct SerializedPackage {
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
+    rust_version: Option<String>,
 }
 
 impl Package {
@@ -268,6 +269,7 @@ impl Package {
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
+            rust_version: self.rust_version().map(|s| s.to_owned()),
         }
     }
 }
@@ -1004,7 +1006,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let dl = &self.pending[&token].0;
         dl.total.set(total);
         let now = Instant::now();
-        if cur != dl.current.get() {
+        if cur > dl.current.get() {
             let delta = cur - dl.current.get();
             let threshold = self.next_speed_check_bytes_threshold.get();
 

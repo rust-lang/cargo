@@ -2,15 +2,14 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use anyhow::{bail, Context as _};
-use filetime::FileTime;
-use jobserver::Client;
-
 use crate::core::compiler::compilation::{self, UnitOutput};
 use crate::core::compiler::{self, Unit};
 use crate::core::PackageId;
 use crate::util::errors::CargoResult;
 use crate::util::profile;
+use anyhow::{bail, Context as _};
+use filetime::FileTime;
+use jobserver::Client;
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
@@ -81,6 +80,10 @@ pub struct Context<'a, 'cfg> {
     /// compilation is happening (only object, only bitcode, both, etc), and is
     /// precalculated early on.
     pub lto: HashMap<Unit, Lto>,
+
+    /// Map of Doc/Docscrape units to metadata for their -Cmetadata flag.
+    /// See Context::find_metadata_units for more details.
+    pub metadata_for_doc_units: HashMap<Unit, Metadata>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -121,6 +124,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             rustc_clients: HashMap::new(),
             pipelining,
             lto: HashMap::new(),
+            metadata_for_doc_units: HashMap::new(),
         })
     }
 
@@ -135,6 +139,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare()?;
         custom_build::build_map(&mut self)?;
         self.check_collisions()?;
+        self.compute_metadata_for_doc_units();
 
         // We need to make sure that if there were any previous docs
         // already compiled, they were compiled with the same Rustc version that we're currently
@@ -240,6 +245,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         for cfg in &output.cfgs {
                             args.push("--cfg".into());
                             args.push(cfg.into());
+                        }
+
+                        for (lt, arg) in &output.linker_args {
+                            if lt.applies_to(&unit.target) {
+                                args.push("-C".into());
+                                args.push(format!("link-arg={}", arg).into());
+                            }
                         }
                     }
                 }
@@ -613,5 +625,41 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         Ok(client)
+    }
+
+    /// Finds metadata for Doc/Docscrape units.
+    ///
+    /// rustdoc needs a -Cmetadata flag in order to recognize StableCrateIds that refer to
+    /// items in the crate being documented. The -Cmetadata flag used by reverse-dependencies
+    /// will be the metadata of the Cargo unit that generated the current library's rmeta file,
+    /// which should be a Check unit.
+    ///
+    /// If the current crate has reverse-dependencies, such a Check unit should exist, and so
+    /// we use that crate's metadata. If not, we use the crate's Doc unit so at least examples
+    /// scraped from the current crate can be used when documenting the current crate.
+    pub fn compute_metadata_for_doc_units(&mut self) {
+        for unit in self.bcx.unit_graph.keys() {
+            if !unit.mode.is_doc() && !unit.mode.is_doc_scrape() {
+                continue;
+            }
+
+            let matching_units = self
+                .bcx
+                .unit_graph
+                .keys()
+                .filter(|other| {
+                    unit.pkg == other.pkg
+                        && unit.target == other.target
+                        && !other.mode.is_doc_scrape()
+                })
+                .collect::<Vec<_>>();
+            let metadata_unit = matching_units
+                .iter()
+                .find(|other| other.mode.is_check())
+                .or_else(|| matching_units.iter().find(|other| other.mode.is_doc()))
+                .unwrap_or(&unit);
+            self.metadata_for_doc_units
+                .insert(unit.clone(), self.files().metadata(metadata_unit));
+        }
     }
 }

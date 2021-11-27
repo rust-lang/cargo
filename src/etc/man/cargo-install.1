@@ -71,7 +71,7 @@ change, then Cargo will reinstall the package:
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The release mode (\fB\-\-debug\fR).
+\h'-04'\(bu\h'+02'The profile (\fB\-\-profile\fR).
 .RE
 .sp
 .RS 4
@@ -258,6 +258,13 @@ is specified.
 \fB\-\-debug\fR
 .RS 4
 Build with the \fBdev\fR profile instead the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Install with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .SS "Manifest Options"
 .sp
@@ -312,7 +319,7 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -334,6 +341,46 @@ terminal.
 .sp
 May also be specified with the \fBterm.color\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+.RE
+.sp
+\fB\-\-message\-format\fR \fIfmt\fR
+.RS 4
+The output format for diagnostic messages. Can be specified multiple times
+and consists of comma\-separated values. Valid values:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format. Conflicts with
+\fBshort\fR and \fBjson\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages. Conflicts with \fBhuman\fR
+and \fBjson\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR: Emit JSON messages to stdout. See
+\fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
+for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
+the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
+contains embedded ANSI color codes for respecting rustc's default color
+scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+.RE
 .RE
 .SS "Common Options"
 .sp

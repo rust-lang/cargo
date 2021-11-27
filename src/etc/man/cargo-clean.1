@@ -33,7 +33,12 @@ the target directory.
 .sp
 \fB\-\-release\fR
 .RS 4
-Clean all artifacts that were built with the \fBrelease\fR or \fBbench\fR profiles.
+Remove all artifacts in the \fBrelease\fR directory.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Remove all artifacts in the directory with the given profile name.
 .RE
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR
@@ -72,7 +77,7 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR

@@ -5,10 +5,9 @@ use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{profile, CanonicalUrl, Config, VersionReqExt};
+use crate::util::{profile, CanonicalUrl, Config};
 use anyhow::{bail, Context as _};
 use log::{debug, trace};
-use semver::VersionReq;
 use url::Url;
 
 /// Source of information about a group of packages.
@@ -765,8 +764,7 @@ fn lock(
                 if locked.source_id() == dep.source_id() {
                     dep.lock_to(locked);
                 } else {
-                    let req = VersionReq::exact(locked.version());
-                    dep.set_version_req(req);
+                    dep.lock_version(locked.version());
                 }
                 return dep;
             }

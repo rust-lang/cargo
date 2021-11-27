@@ -43,6 +43,22 @@ fields in the manifest.
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
 
+### .cargo_vcs_info.json format
+
+Will generate a `.cargo_vcs_info.json` in the following format
+
+```javascript
+{
+ "git": {
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+ },
+ "path_in_vcs": ""
+}
+```
+
+`path_in_vcs` will be set to a repo-relative path for packages
+in subdirectories of the version control repository.
+
 ## OPTIONS
 
 ### Package Options
@@ -227,7 +243,7 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-package--q"><a class="option-anchor" href="#option-cargo-package--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-package---quiet"><a class="option-anchor" href="#option-cargo-package---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---color"><a class="option-anchor" href="#option-cargo-package---color"></a><code>--color</code> <em>when</em></dt>

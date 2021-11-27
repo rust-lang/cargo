@@ -50,11 +50,12 @@ use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuild
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
+use semver::Version;
 
-use crate::core::compiler::{CompileKind, RustcTargetData, TargetInfo};
+use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
-use crate::core::{Edition, MaybePackage, Workspace};
+use crate::core::{Edition, MaybePackage, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -67,7 +68,6 @@ const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
-const SUPPORTS_FORCE_WARN: &str = "__CARGO_SUPPORTS_FORCE_WARN";
 
 pub struct FixOptions {
     pub edition: bool,
@@ -122,17 +122,6 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
 
     let rustc = ws.config().load_global_rustc(Some(ws))?;
     wrapper.arg(&rustc.path);
-
-    // Remove this once 1.56 is stabilized.
-    let target_info = TargetInfo::new(
-        ws.config(),
-        &opts.compile_opts.build_config.requested_kinds,
-        &rustc,
-        CompileKind::Host,
-    )?;
-    if target_info.supports_force_warn {
-        wrapper.env(SUPPORTS_FORCE_WARN, "1");
-    }
 
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
     // repeating build until there are no more changes to be applied
@@ -321,17 +310,21 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
 }
 
 fn report_maybe_diesel(config: &Config, resolve: &Resolve) -> CargoResult<()> {
-    if resolve
-        .iter()
-        .any(|pid| pid.name() == "diesel" && pid.version().major == 1)
-        && resolve.iter().any(|pid| pid.name() == "diesel_migrations")
-    {
+    fn is_broken_diesel(pid: PackageId) -> bool {
+        pid.name() == "diesel" && pid.version() < &Version::new(1, 4, 8)
+    }
+
+    fn is_broken_diesel_migration(pid: PackageId) -> bool {
+        pid.name() == "diesel_migrations" && pid.version().major <= 1
+    }
+
+    if resolve.iter().any(is_broken_diesel) && resolve.iter().any(is_broken_diesel_migration) {
         config.shell().note(
             "\
 This project appears to use both diesel and diesel_migrations. These packages have
 a known issue where the build may fail due to the version 2 resolver preventing
-feature unification between those two packages. See
-<https://github.com/rust-lang/cargo/issues/9450> for some potential workarounds.
+feature unification between those two packages. Please update to at least diesel 1.4.8
+to prevent this issue from happening.
 ",
         )?;
     }
@@ -509,7 +502,7 @@ fn rustfix_crate(
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        rustfix_and_fix(&mut fixes, rustc, filename, args)?;
+        rustfix_and_fix(&mut fixes, rustc, filename, args, config)?;
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
@@ -551,6 +544,7 @@ fn rustfix_and_fix(
     rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
+    config: &Config,
 ) -> Result<(), Error> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
@@ -604,6 +598,8 @@ fn rustfix_and_fix(
     // Collect suggestions by file so we can apply them one at a time later.
     let mut file_map = HashMap::new();
     let mut num_suggestion = 0;
+    // It's safe since we won't read any content under home dir.
+    let home_path = config.home().as_path_unlocked();
     for suggestion in suggestions {
         trace!("suggestion");
         // Make sure we've got a file associated with this suggestion and all
@@ -621,6 +617,11 @@ fn rustfix_and_fix(
             trace!("rejecting as it has no solutions {:?}", suggestion);
             continue;
         };
+
+        // Do not write into registry cache. See rust-lang/cargo#9857.
+        if Path::new(&file_name).starts_with(home_path) {
+            continue;
+        }
 
         if !file_names.clone().all(|f| f == &file_name) {
             trace!("rejecting as it changes multiple files: {:?}", suggestion);
@@ -836,7 +837,7 @@ impl FixArgs {
     fn apply(&self, cmd: &mut Command) {
         cmd.arg(&self.file);
         cmd.args(&self.other);
-        if self.prepare_for_edition.is_some() && env::var_os(SUPPORTS_FORCE_WARN).is_some() {
+        if self.prepare_for_edition.is_some() {
             // When migrating an edition, we don't want to fix other lints as
             // they can sometimes add suggestions that fail to apply, causing
             // the entire migration to fail. But those lints aren't needed to
@@ -855,13 +856,8 @@ impl FixArgs {
 
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
-                if env::var_os(SUPPORTS_FORCE_WARN).is_some() {
-                    cmd.arg("--force-warn")
-                        .arg(format!("rust-{}-compatibility", edition))
-                        .arg("-Zunstable-options");
-                } else {
-                    cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
-                }
+                cmd.arg("--force-warn")
+                    .arg(format!("rust-{}-compatibility", edition));
             }
         }
     }

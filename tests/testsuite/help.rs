@@ -138,3 +138,54 @@ fn help_alias() {
     .unwrap();
     help_with_man_and_path("", "my-alias", "build", Path::new(""));
 }
+
+#[cargo_test]
+fn alias_z_flag_help() {
+    cargo_process("build -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("run -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("check -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("test -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("b -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("r -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("c -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("t -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+}
