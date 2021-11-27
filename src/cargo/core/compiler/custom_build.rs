@@ -1,5 +1,6 @@
 use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
+use crate::core::compiler::CompileMode;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
@@ -201,6 +202,19 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .env("HOST", &bcx.host_triple())
         .env("RUSTC", &bcx.rustc().path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
+        .env(
+            "CARGO_MODE",
+            match unit.root_mode {
+                CompileMode::Test => "Test",
+                CompileMode::Build => "Build",
+                CompileMode::Check { test } => if test { "Check_test" } else { "Check" },
+                CompileMode::Bench => "Bench",
+                CompileMode::Doc { deps }  => if deps { "Doc_with_deps" } else { "Doc" },
+                CompileMode::Doctest => "Doctest",
+                CompileMode::Docscrape => "Docscrape",
+                CompileMode::RunCustomBuild => "RunCustomBuild",
+            },
+        )
         .inherit_jobserver(&cx.jobserver);
 
     if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {

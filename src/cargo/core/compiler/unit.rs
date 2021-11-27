@@ -52,6 +52,8 @@ pub struct UnitInner {
     pub kind: CompileKind,
     /// The "mode" this unit is being compiled for. See [`CompileMode`] for more details.
     pub mode: CompileMode,
+    /// The "mode" of the root unit. Required when unit's mode is `CompileMode::RunCustomBuild`
+    pub root_mode: CompileMode,
     /// The `cfg` features to enable for this unit.
     /// This must be sorted.
     pub features: Vec<InternedString>,
@@ -176,6 +178,7 @@ impl UnitInterner {
         profile: Profile,
         kind: CompileKind,
         mode: CompileMode,
+        root_mode: CompileMode,
         features: Vec<InternedString>,
         is_std: bool,
         dep_hash: u64,
@@ -207,6 +210,7 @@ impl UnitInterner {
             profile,
             kind,
             mode,
+            root_mode,
             features,
             is_std,
             dep_hash,
