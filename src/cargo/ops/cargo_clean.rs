@@ -137,7 +137,6 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         let pkg_dir = format!("{}-*", pkg.name());
 
         for (_, layout) in &layouts_with_host {
-
             // Clean entries of workspace members under target/doc.
             for doc_bin in pkg.targets().iter().filter(|t| t.documented()) {
                 if doc_bin.name() == pkg.name().as_str() {
@@ -153,7 +152,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                     rm_rf(&layout.doc_src().join(pkg.name()), config)?;
                 }
             }
-            
+
             // Clean fingerprints.
             let dir = escape_glob_path(layout.fingerprint())?;
             rm_rf_glob(&Path::new(&dir).join(&pkg_dir), config)?;
