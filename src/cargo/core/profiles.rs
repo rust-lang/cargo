@@ -312,7 +312,9 @@ impl Profiles {
                         )
                     }
                 }
-                CompileMode::Build | CompileMode::Check { .. } | CompileMode::RunCustomBuild => {
+                CompileMode::Build
+                | CompileMode::Check { .. }
+                | CompileMode::RunCustomBuild { .. } => {
                     // Note: `RunCustomBuild` doesn't normally use this code path.
                     // `build_unit_profiles` normally ensures that it selects the
                     // ancestor's profile. However, `cargo clean -p` can hit this

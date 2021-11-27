@@ -408,7 +408,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     flavor: FileFlavor::Normal,
                 }]
             }
-            CompileMode::RunCustomBuild => {
+            CompileMode::RunCustomBuild { .. } => {
                 // At this time, this code path does not handle build script
                 // outputs.
                 vec![]

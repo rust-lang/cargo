@@ -152,7 +152,8 @@ pub enum CompileMode {
     /// An example or library that will be scraped for function calls by `rustdoc`.
     Docscrape,
     /// A marker for Units that represent the execution of a `build.rs` script.
-    RunCustomBuild,
+    /// `root_mode` tells build script which `cargo` command was used to call it.
+    RunCustomBuild { root_mode: &'static str },
 }
 
 impl ser::Serialize for CompileMode {
@@ -169,7 +170,7 @@ impl ser::Serialize for CompileMode {
             Doc { .. } => "doc".serialize(s),
             Doctest => "doctest".serialize(s),
             Docscrape => "docscrape".serialize(s),
-            RunCustomBuild => "run-custom-build".serialize(s),
+            RunCustomBuild { .. } => "run-custom-build".serialize(s),
         }
     }
 }
@@ -217,6 +218,9 @@ impl CompileMode {
 
     /// Returns `true` if this is the *execution* of a `build.rs` script.
     pub fn is_run_custom_build(self) -> bool {
-        self == CompileMode::RunCustomBuild
+        match self {
+            CompileMode::RunCustomBuild { .. } => true,
+            _ => false,
+        }
     }
 }

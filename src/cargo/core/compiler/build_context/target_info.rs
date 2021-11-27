@@ -455,7 +455,7 @@ impl TargetInfo {
             CompileMode::Doc { .. }
             | CompileMode::Doctest
             | CompileMode::Docscrape
-            | CompileMode::RunCustomBuild => {
+            | CompileMode::RunCustomBuild { .. } => {
                 panic!("asked for rustc output for non-rustc mode")
             }
         }

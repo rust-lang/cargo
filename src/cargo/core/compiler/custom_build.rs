@@ -204,27 +204,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .env(
             "CARGO_MODE",
-            match unit.root_mode {
-                CompileMode::Test => "Test",
-                CompileMode::Build => "Build",
-                CompileMode::Check { test } => {
-                    if test {
-                        "Check_test"
-                    } else {
-                        "Check"
-                    }
-                }
-                CompileMode::Bench => "Bench",
-                CompileMode::Doc { deps } => {
-                    if deps {
-                        "Doc_with_deps"
-                    } else {
-                        "Doc"
-                    }
-                }
-                CompileMode::Doctest => "Doctest",
-                CompileMode::Docscrape => "Docscrape",
-                CompileMode::RunCustomBuild => "RunCustomBuild",
+            if let CompileMode::RunCustomBuild { root_mode } = unit.mode {
+                root_mode
+            } else {
+                panic!("Unexpected mode {:?}", unit.mode)
             },
         )
         .inherit_jobserver(&cx.jobserver);

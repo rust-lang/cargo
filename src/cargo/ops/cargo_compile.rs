@@ -348,7 +348,7 @@ pub fn create_bcx<'a, 'cfg>(
         | CompileMode::Build
         | CompileMode::Check { .. }
         | CompileMode::Bench
-        | CompileMode::RunCustomBuild => {
+        | CompileMode::RunCustomBuild { .. } => {
             if std::env::var("RUST_FLAGS").is_ok() {
                 config.shell().warn(
                     "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
@@ -844,7 +844,7 @@ impl CompileFilter {
                     ..
                 } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
             },
-            CompileMode::RunCustomBuild => panic!("Invalid mode"),
+            CompileMode::RunCustomBuild { .. } => panic!("Invalid mode"),
         }
     }
 
@@ -1047,7 +1047,6 @@ fn generate_targets(
                     target,
                     profile,
                     kind.for_target(target),
-                    target_mode,
                     target_mode,
                     features.clone(),
                     /*is_std*/ false,
@@ -1434,7 +1433,7 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
                 })
                 .collect()
         }
-        CompileMode::Doctest | CompileMode::Docscrape | CompileMode::RunCustomBuild => {
+        CompileMode::Doctest | CompileMode::Docscrape | CompileMode::RunCustomBuild { .. } => {
             panic!("Invalid mode {:?}", mode)
         }
     }
@@ -1610,7 +1609,6 @@ fn traverse_and_share(
         unit.profile,
         new_kind,
         unit.mode,
-        unit.root_mode,
         unit.features.clone(),
         unit.is_std,
         new_dep_hash,

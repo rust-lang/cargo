@@ -564,6 +564,21 @@ fn dep_build_script(
             // once because it would break a large number of scripts (they
             // would think they have the wrong set of features enabled).
             let script_unit_for = UnitFor::new_host(unit_for.is_for_host_features());
+            // Root mode is used to tell build script which cargo command invoked it
+            let root_mode = match &unit.mode {
+                CompileMode::Test => "test",
+                CompileMode::Build => "build",
+                CompileMode::Check { .. } => "check",
+                CompileMode::Bench => "bench",
+                CompileMode::Doc { .. } => "doc",
+
+                // FIXME: Are Doctest and Docscrape possible here, and if so, what should the values be?
+                CompileMode::Doctest => "doctest",
+                CompileMode::Docscrape => "docscrape",
+
+                CompileMode::RunCustomBuild { .. } => panic!("Nested {:?}", unit.mode),
+            };
+
             new_unit_dep_with_profile(
                 state,
                 unit,
@@ -571,7 +586,7 @@ fn dep_build_script(
                 t,
                 script_unit_for,
                 unit.kind,
-                CompileMode::RunCustomBuild,
+                CompileMode::RunCustomBuild { root_mode },
                 profile,
             )
         })
@@ -639,17 +654,9 @@ fn new_unit_dep_with_profile(
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
     let features_for = unit_for.map_to_features_for();
     let features = state.activated_features(pkg.package_id(), features_for);
-    let unit = state.interner.intern(
-        pkg,
-        target,
-        profile,
-        kind,
-        mode,
-        parent.mode,
-        features,
-        state.is_std,
-        0,
-    );
+    let unit = state
+        .interner
+        .intern(pkg, target, profile, kind, mode, features, state.is_std, 0);
     Ok(UnitDep {
         unit,
         unit_for,
@@ -682,7 +689,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
         let mut reverse_deps_map = HashMap::new();
         for (unit, deps) in state.unit_dependencies.iter() {
             for dep in deps {
-                if dep.unit.mode == CompileMode::RunCustomBuild {
+                if dep.unit.mode.is_run_custom_build() {
                     reverse_deps_map
                         .entry(dep.unit.clone())
                         .or_insert_with(HashSet::new)
@@ -703,7 +710,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
         for unit in state
             .unit_dependencies
             .keys()
-            .filter(|k| k.mode == CompileMode::RunCustomBuild)
+            .filter(|k| k.mode.is_run_custom_build())
         {
             // This list of dependencies all depend on `unit`, an execution of
             // the build script.
@@ -752,7 +759,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                 .filter_map(|other| {
                     state.unit_dependencies[&other.unit]
                         .iter()
-                        .find(|other_dep| other_dep.unit.mode == CompileMode::RunCustomBuild)
+                        .find(|other_dep| other_dep.unit.mode.is_run_custom_build())
                         .cloned()
                 })
                 .collect::<HashSet<_>>();
