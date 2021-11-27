@@ -139,10 +139,22 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         for (_, layout) in &layouts_with_host {
             // Clean fingerprints.
             rm_rf_glob(&layout.fingerprint().join(&pkg_dir), config)?;
-            // Clean target/doc/pkg.
-            rm_rf(&layout.doc().join(pkg.name()), config)?;
-            // Clean target/doc/src/pkg.
-            rm_rf(&layout.doc_src().join(pkg.name()), config)?;
+            
+            // Clean entries of workspace members under target/doc.
+            for doc_bin in pkg.targets().iter().filter(|t| t.documented()) {
+                if doc_bin.name() == pkg.name().as_str() {
+                    rm_rf(&layout.doc().join(pkg.name()), config)?;
+                    rm_rf(&layout.doc_src().join(pkg.name()), config)?;
+                }
+            }
+
+            // Clean lib of non-members under target/doc.
+            for doc_lib in pkg.targets().iter().find(|t| t.is_lib()) {
+                if doc_lib.name() == pkg.name().as_str() {
+                    rm_rf(&layout.doc().join(pkg.name()), config)?;
+                    rm_rf(&layout.doc_src().join(pkg.name()), config)?;
+                }
+            }
         }
 
         for target in pkg.targets() {
