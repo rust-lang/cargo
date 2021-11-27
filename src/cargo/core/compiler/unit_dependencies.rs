@@ -565,7 +565,7 @@ fn dep_build_script(
             // would think they have the wrong set of features enabled).
             let script_unit_for = UnitFor::new_host(unit_for.is_for_host_features());
             // Root mode is used to tell build script which cargo command invoked it
-            let root_mode = match &unit.mode {
+            let root_mode = match unit.mode {
                 CompileMode::Test => "test",
                 CompileMode::Build => "build",
                 CompileMode::Check { .. } => "check",
