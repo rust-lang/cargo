@@ -401,19 +401,8 @@ pub fn create_bcx<'a, 'cfg>(
     } = resolve;
 
     let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
-        }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
         let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+            standard_lib::resolve_std(ws, &target_data, &build_config, crates)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
@@ -554,19 +543,7 @@ pub fn create_bcx<'a, 'cfg>(
         None => Vec::new(),
     };
 
-    let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
-        // Only build libtest if it looks like it is needed.
-        let mut crates = crates.clone();
-        if !crates.iter().any(|c| c == "test")
-            && units
-                .iter()
-                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
-        {
-            // Only build libtest when libstd is built (libtest depends on libstd)
-            if crates.iter().any(|c| c == "std") {
-                crates.push("test".to_string());
-            }
-        }
+    let std_roots = if let Some(crates) = standard_lib::std_crates(config, Some(&units)) {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &crates,
