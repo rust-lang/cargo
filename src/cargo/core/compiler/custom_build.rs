@@ -1,8 +1,8 @@
 use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
-use crate::core::compiler::CompileMode;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
+use crate::core::compiler::CompileMode;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
@@ -207,9 +207,21 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             match unit.root_mode {
                 CompileMode::Test => "Test",
                 CompileMode::Build => "Build",
-                CompileMode::Check { test } => if test { "Check_test" } else { "Check" },
+                CompileMode::Check { test } => {
+                    if test {
+                        "Check_test"
+                    } else {
+                        "Check"
+                    }
+                }
                 CompileMode::Bench => "Bench",
-                CompileMode::Doc { deps }  => if deps { "Doc_with_deps" } else { "Doc" },
+                CompileMode::Doc { deps } => {
+                    if deps {
+                        "Doc_with_deps"
+                    } else {
+                        "Doc"
+                    }
+                }
                 CompileMode::Doctest => "Doctest",
                 CompileMode::Docscrape => "Docscrape",
                 CompileMode::RunCustomBuild => "RunCustomBuild",
