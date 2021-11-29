@@ -173,6 +173,16 @@ fn run_doc_tests(
                 CompileKind::Target(target) => {
                     if target.short_name() != compilation.host {
                         // Skip doctests, -Zdoctest-xcompile not enabled.
+                        config.shell().verbose(|shell| {
+                            shell.note(format!(
+                                "skipping doctests for {} ({}), \
+                                 cross-compilation doctests are not yet supported\n\
+                                 See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
+                                 for more information.",
+                                unit.pkg,
+                                unit.target.description_named()
+                            ))
+                        })?;
                         continue;
                     }
                 }
