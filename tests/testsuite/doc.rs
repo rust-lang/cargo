@@ -1242,8 +1242,24 @@ fn doc_all_member_dependency_same_name() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("doc --workspace")
-        .with_stderr_contains("[..] Updating `[..]` index")
-        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+warning: output filename collision.
+The lib target `bar` in package `bar v0.1.0` has the same output filename as \
+the lib target `bar` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Colliding filename is: [ROOT]/foo/target/doc/bar/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+[DOCUMENTING] bar v0.1.0
+[CHECKING] bar v0.1.0
+[DOCUMENTING] bar v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
         .run();
 }
 
