@@ -142,7 +142,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_release(self, release: &'static str) -> Self {
-        self._arg(opt("release", release))
+        self._arg(opt("release", release).short("r"))
     }
 
     fn arg_profile(self, profile: &'static str) -> Self {

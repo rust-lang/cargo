@@ -1776,6 +1776,25 @@ fn verbose_release_build() {
 }
 
 #[cargo_test]
+fn verbose_release_build_short() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v -r")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
+        -C metadata=[..] \
+        --out-dir [..] \
+        -L dependency=[CWD]/target/release/deps`
+[FINISHED] release [optimized] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn verbose_release_build_deps() {
     let p = project()
         .file(
