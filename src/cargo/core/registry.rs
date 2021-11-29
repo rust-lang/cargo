@@ -413,11 +413,12 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.patches_locked = true;
     }
 
-    pub fn patches(&self) -> Vec<Summary> {
-        self.patches
-            .values()
-            .flat_map(|v| v.iter().cloned())
-            .collect()
+    /// Gets all patches grouped by the source URLS they are going to patch.
+    ///
+    /// These patches are mainly collected from [`patch`](Self::patch).
+    /// They might not be the same as patches actually used during dependency resolving.
+    pub fn patches(&self) -> &HashMap<CanonicalUrl, Vec<Summary>> {
+        &self.patches
     }
 
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
