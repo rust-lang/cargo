@@ -1025,6 +1025,40 @@ fn git_crlf_preservation() {
 }
 
 #[cargo_test]
+fn path_deps() {
+    let p = project()
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+			"#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+    assert!(!p.root().join("vendor/bar").is_dir());
+
+    p.cargo("vendor --respect-source-config --include-path-deps")
+        .run();
+    assert!(p.root().join("vendor/bar").is_dir());
+}
+
+#[cargo_test]
 #[cfg(unix)]
 fn vendor_preserves_permissions() {
     use std::os::unix::fs::MetadataExt;

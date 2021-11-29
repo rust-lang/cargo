@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
     pub versioned_dirs: bool,
+    pub include_path_deps: bool,
     pub destination: &'a Path,
     pub extra: Vec<PathBuf>,
 }
@@ -62,6 +63,8 @@ struct VendorConfig {
 enum VendorSource {
     Directory {
         directory: String,
+        #[serde(rename = "replace-with", skip_serializing_if = "Option::is_none")]
+        replace_with: Option<String>,
     },
     Registry {
         registry: Option<String>,
@@ -153,12 +156,21 @@ fn sync(
             .get_many(resolve.iter())
             .with_context(|| "failed to download packages")?;
 
+        let current = ws
+            .current()
+            .with_context(|| "using virtual manifest in workspace")?
+            .package_id();
         for pkg in resolve.iter() {
-            // No need to vendor path crates since they're already in the
-            // repository
-            if pkg.source_id().is_path() {
+            // Since the target crate itself is also part of the packages,
+            // make sure we skip it.
+            if pkg == current {
                 continue;
             }
+
+            if pkg.source_id().is_path() && !opts.include_path_deps {
+                continue;
+            }
+
             ids.insert(
                 pkg,
                 packages
@@ -291,6 +303,11 @@ fn sync(
                 rev,
                 replace_with: merged_source_name.to_string(),
             }
+        } else if source_id.is_path() && opts.include_path_deps {
+            VendorSource::Directory {
+                directory: source_id.url().to_string(),
+                replace_with: Some(merged_source_name.to_string()),
+            }
         } else {
             panic!("Invalid source ID: {}", source_id)
         };
@@ -305,6 +322,7 @@ fn sync(
                 // This backslash normalization is for making output paths more
                 // cross-platform compatible.
                 directory: opts.destination.to_string_lossy().replace("\\", "/"),
+                replace_with: None,
             },
         );
     } else if !dest_dir_already_exists {

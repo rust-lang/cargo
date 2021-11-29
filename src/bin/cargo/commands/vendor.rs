@@ -32,6 +32,7 @@ pub fn cli() -> Command {
             "versioned-dirs",
             "Always include version in subdir name",
         ))
+        .arg(flag("include-path-deps", "Include path dependencies"))
         .arg(unsupported("no-merge-sources"))
         .arg(unsupported("relative-path"))
         .arg(unsupported("only-git-deps"))
@@ -75,6 +76,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             no_delete: args.flag("no-delete"),
             destination: &path,
             versioned_dirs: args.flag("versioned-dirs"),
+            include_path_deps: args.flag("include-path-deps"),
             extra: args
                 .get_many::<PathBuf>("tomls")
                 .unwrap_or_default()
