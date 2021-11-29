@@ -416,7 +416,7 @@ fn package_cleans_all_the_things() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib/some-main.rs", "fn main() {}")
         .file("src/bin/other-main.rs", "fn main() {}")
         .file("examples/foo-ex-rlib.rs", "")
         .file("examples/foo-ex-cdylib.rs", "")
