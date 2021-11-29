@@ -337,6 +337,13 @@ The profile used depends on the command, the command-line flags like
 * [`cargo bench`]: [`bench` profile](#bench)
 * [`cargo install`]: [`release` profile](#release)
 
+The selected profile applies to all Cargo targets, 
+including [library](./cargo-targets.md#library),
+[binary](./cargo-targets.md#binaries), 
+[example](./cargo-targets.md#examples), 
+[test](./cargo-targets.md#tests), 
+and [benchmark](./cargo-targets.md#benchmarks).
+
 The profile for specific packages can be specified with
 [overrides](#overrides), described below.
 
