@@ -32,6 +32,11 @@ pub fn cli() -> App {
                 .long("versioned-dirs")
                 .help("Always include version in subdir name"),
         )
+        .arg(
+            Arg::with_name("skip-path-deps")
+                .long("skip-path-deps")
+                .help("Skip path dependencies from vendoring"),
+        )
         // Not supported.
         .arg(
             Arg::with_name("no-merge-sources")
@@ -107,6 +112,7 @@ https://github.com/rust-lang/cargo/issues/new
             no_delete: args.is_present("no-delete"),
             destination: &path,
             versioned_dirs: args.is_present("versioned-dirs"),
+            skip_path_deps: args.is_present("skip-path-deps"),
             extra: args
                 .values_of_os("tomls")
                 .unwrap_or_default()

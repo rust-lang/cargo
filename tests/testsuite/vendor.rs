@@ -595,7 +595,8 @@ fn depend_on_vendor_dir_not_deleted() {
         "#,
     );
 
-    p.cargo("vendor --respect-source-config").run();
+    p.cargo("vendor --respect-source-config --skip-path-deps")
+        .run();
     assert!(p.root().join("vendor/libc").is_dir());
 }
 
@@ -719,6 +720,40 @@ fn git_crlf_preservation() {
     p.cargo("vendor --respect-source-config").run();
     let output = p.read_file("vendor/a/src/lib.rs");
     assert_eq!(input, output);
+}
+
+#[cargo_test]
+fn path_deps() {
+    let p = project()
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+			"#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+    assert!(p.root().join("vendor/bar").is_dir());
+
+    p.cargo("vendor --respect-source-config --skip-path-deps")
+        .run();
+    assert!(!p.root().join("vendor/bar").is_dir());
 }
 
 #[cargo_test]

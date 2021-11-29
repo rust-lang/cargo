@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
     pub versioned_dirs: bool,
+    pub skip_path_deps: bool,
     pub destination: &'a Path,
     pub extra: Vec<PathBuf>,
 }
@@ -52,6 +53,8 @@ struct VendorConfig {
 enum VendorSource {
     Directory {
         directory: PathBuf,
+        #[serde(rename = "replace-with", skip_serializing_if = "Option::is_none")]
+        replace_with: Option<String>,
     },
     Registry {
         registry: Option<String>,
@@ -142,12 +145,24 @@ fn sync(
             .get_many(resolve.iter())
             .with_context(|| "failed to download packages")?;
 
+        let current = ws
+            .current()
+            .with_context(|| "using virtual manifest in workspace")?
+            .package_id();
         for pkg in resolve.iter() {
-            // No need to vendor path crates since they're already in the
-            // repository
             if pkg.source_id().is_path() {
-                continue;
+                // Since the target crate itself is also part of the packages,
+                // make sure we skip it.
+                if pkg == current {
+                    continue;
+                }
+
+                // Otherwise only skip if configured to do so.
+                if opts.skip_path_deps {
+                    continue;
+                }
             }
+
             ids.insert(
                 pkg,
                 packages
@@ -243,6 +258,7 @@ fn sync(
         merged_source_name.to_string(),
         VendorSource::Directory {
             directory: opts.destination.to_path_buf(),
+            replace_with: None,
         },
     );
 
@@ -283,6 +299,11 @@ fn sync(
                 tag,
                 rev,
                 replace_with: merged_source_name.to_string(),
+            }
+        } else if source_id.is_path() {
+            VendorSource::Directory {
+                directory: source_id.url().to_file_path().unwrap(),
+                replace_with: Some(merged_source_name.to_string()),
             }
         } else {
             panic!("Invalid source ID: {}", source_id)
