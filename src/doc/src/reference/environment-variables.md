@@ -353,10 +353,10 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    changed by editing `.cargo/config.toml`; see the documentation
                    about [cargo configuration][cargo-config] for more
                    information.
-* `CARGO_ENCODED_RUSTFLAGS` — extra flags that Cargo invokes `rustc`
-			      with, separated by a `0x1f` character
-			      (ASCII Unit Separator). See
-			      [`build.rustflags`].
+* `CARGO_ENCODED_RUSTFLAGS` — extra flags that Cargo invokes `rustc` with,
+  separated by a `0x1f` character (ASCII Unit Separator). See
+  [`build.rustflags`]. Note that since Rust 1.55, `RUSTFLAGS` is removed from
+  the environment; scripts should use `CARGO_ENCODED_RUSTFLAGS` instead.
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
 
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
