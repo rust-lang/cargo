@@ -475,7 +475,7 @@ pub fn resolve_with_previous<'cfg>(
     resolved.register_used_patches(&patches[..]);
 
     if register_patches && !resolved.unused_patches().is_empty() {
-        emit_warnings_of_unused_patches(ws, &resolved, &registry)?;
+        emit_warnings_of_unused_patches(ws, &resolved, registry)?;
     }
 
     if let Some(previous) = previous {
