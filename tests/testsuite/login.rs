@@ -1,9 +1,7 @@
 //! Tests for the `cargo login` command.
 
-use cargo::core::Shell;
-use cargo::util::config::Config;
 use cargo_test_support::install::cargo_home;
-use cargo_test_support::registry::{self, registry_url};
+use cargo_test_support::registry;
 use cargo_test_support::{cargo_process, paths, t};
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
@@ -15,11 +13,6 @@ const ORIGINAL_TOKEN: &str = "api-token";
 
 fn setup_new_credentials() {
     let config = cargo_home().join("credentials");
-    setup_new_credentials_at(config);
-}
-
-fn setup_new_credentials_toml() {
-    let config = cargo_home().join("credentials.toml");
     setup_new_credentials_at(config);
 }
 

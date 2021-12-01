@@ -614,7 +614,7 @@ pub trait ArgMatchesExt {
     }
 
     fn index(&self) -> CargoResult<Option<String>> {
-        let index =  self._value_of("index").map(|s| s.to_string());
+        let index = self._value_of("index").map(|s| s.to_string());
         Ok(index)
     }
 
