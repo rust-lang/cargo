@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
+use std::fs;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -1384,11 +1385,40 @@ impl TomlManifest {
             .transpose()?
             .map(CompileKind::Target);
 
-        let natvis = if let Some(debug_visualizations) = me.debug_visualizations.clone() {
-            debug_visualizations.natvis.clone()
-        } else {
+        let mut natvis = HashSet::new();
+        if let Some(debug_visualizations) = me.debug_visualizations.clone() {
+            features.require(Feature::natvis())?;
+            if let Some(natvis_files) = debug_visualizations.natvis {
+                natvis_files.iter().for_each(|file| {
+                    let path = paths::normalize_path(&package_root.join(file));
+                    natvis.insert(path.display().to_string());
+                });
+            }
+        }
+
+        if features.require(Feature::natvis()).is_ok() {
+            let natvis_dir_path = package_root.join("dbgvis").join("natvis");
+            if let Ok(natvis_dir) = fs::read_dir(&natvis_dir_path) {
+                for entry in natvis_dir {
+                    match entry {
+                        Ok(entry) => {
+                            let path = entry.path();
+                            if path.extension() == Some("natvis".as_ref()) {
+                                natvis.insert(path.display().to_string());
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                }
+            }
+        }
+
+        let natvis = if natvis.is_empty() {
             None
+        } else {
+            Some(natvis.iter().map(|file| { file.clone() }).collect::<Vec<String>>())
         };
+
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,

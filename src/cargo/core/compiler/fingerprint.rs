@@ -1330,6 +1330,9 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     if let Some(allow_features) = &cx.bcx.config.cli_unstable().allow_features {
         allow_features.hash(&mut config);
     }
+    if let Some(natvis) = &unit.pkg.manifest().natvis() {
+        natvis.hash(&mut config);
+    }
     let compile_kind = unit.kind.fingerprint_hash();
     Ok(Fingerprint {
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),

@@ -30,6 +30,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{Context as _, Error};
+use itertools::Itertools;
 use lazycell::LazyCell;
 use log::debug;
 
@@ -593,6 +594,7 @@ fn prepare_rustc(
         .compilation
         .rustc_process(unit, is_primary, is_workspace)?;
 
+    let mut unstable_opts = false;
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
     }
@@ -611,8 +613,15 @@ fn prepare_rustc(
         base.inherit_jobserver(&cx.jobserver);
     }
     build_base_args(cx, &mut base, unit, crate_types)?;
-    build_natvis(&mut base, unit)?;
-    build_deps_args(&mut base, cx, unit)?;
+    build_natvis(&mut base, unit, &mut unstable_opts)?;
+    build_deps_args(&mut base, cx, unit, &mut unstable_opts)?;
+
+    // This will only be set if we're already using a feature
+    // requiring nightly rust
+    if unstable_opts {
+        base.arg("-Z").arg("unstable-options");
+    }
+
     Ok(base)
 }
 
@@ -690,7 +699,15 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         }
     }
 
-    build_deps_args(&mut rustdoc, cx, unit)?;
+    let mut unstable_opts = false;
+    build_deps_args(&mut rustdoc, cx, unit, &mut unstable_opts)?;
+
+    // This will only be set if we're already using a feature
+    // requiring nightly rust
+    if unstable_opts {
+        rustdoc.arg("-Z").arg("unstable-options");
+    }
+
     rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
 
     rustdoc.args(bcx.rustdocflags_args(unit));
@@ -1061,14 +1078,13 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 fn build_natvis(
     cmd: &mut ProcessBuilder,
     unit: &Unit,
+    unstable_opts: &mut bool
 ) -> CargoResult<()> {
     if let Some(natvis) = &unit.pkg.manifest().natvis() {
-        unit.pkg.manifest().unstable_features().require(Feature::natvis())?;
-        cmd.arg("-Z").arg(&{
+        *unstable_opts = true;
+        cmd.arg("-C").arg(&{
             let mut arg = OsString::from("natvis=");
-            arg.push(OsString::from(natvis.iter().map(|file| {
-                unit.pkg.root().join(file).display().to_string()
-            }).collect::<Vec<String>>().join(",")));
+            arg.push(OsString::from(natvis.iter().join(",")));
             arg
         });
     }
@@ -1080,6 +1096,7 @@ fn build_deps_args(
     cmd: &mut ProcessBuilder,
     cx: &mut Context<'_, '_>,
     unit: &Unit,
+    unstable_opts: &mut bool
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     cmd.arg("-L").arg(&{
@@ -1123,22 +1140,14 @@ fn build_deps_args(
         }
     }
 
-    let mut unstable_opts = false;
-
     for dep in deps {
         if dep.unit.mode.is_run_custom_build() {
             cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep.unit));
         }
     }
 
-    for arg in extern_args(cx, unit, &mut unstable_opts)? {
+    for arg in extern_args(cx, unit, unstable_opts)? {
         cmd.arg(arg);
-    }
-
-    // This will only be set if we're already using a feature
-    // requiring nightly rust
-    if unstable_opts {
-        cmd.arg("-Z").arg("unstable-options");
     }
 
     Ok(())
