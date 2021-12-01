@@ -1831,3 +1831,219 @@ foo v0.1.0 ([..]/foo)
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn cyclic_features() {
+    // Check for stack overflow with cyclic features (oops!).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [features]
+                a = ["b"]
+                b = ["a"]
+                default = ["a"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features")
+        .with_stdout("foo v1.0.0 ([ROOT]/foo)")
+        .run();
+
+    p.cargo("tree -e features -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\"
+│   ├── foo feature \"b\"
+│   │   └── foo feature \"a\" (*)
+│   └── foo feature \"default\" (command-line)
+├── foo feature \"b\" (*)
+└── foo feature \"default\" (command-line)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dev_dep_cycle_with_feature() {
+    // Cycle with features and a dev-dependency.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [dev-dependencies]
+                bar = { path = "bar" }
+
+                [features]
+                a = ["bar/feat1"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "1.0.0"
+
+                [dependencies]
+                foo = { path = ".." }
+
+                [features]
+                feat1 = ["foo/a"]
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features --features a")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+[dev-dependencies]
+└── bar feature \"default\"
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        └── foo feature \"default\" (command-line)
+            └── foo v1.0.0 ([ROOT]/foo) (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features a -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\" (command-line)
+│   └── bar feature \"feat1\"
+│       └── foo feature \"a\" (command-line) (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (*)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dev_dep_cycle_with_feature_nested() {
+    // Checks for an issue where a cyclic dev dependency tries to activate a
+    // feature on its parent that tries to activate the feature back on the
+    // dev-dependency.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [dev-dependencies]
+                bar = { path = "bar" }
+
+                [features]
+                a = ["bar/feat1"]
+                b = ["a"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "1.0.0"
+
+                [dependencies]
+                foo = { path = ".." }
+
+                [features]
+                feat1 = ["foo/b"]
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+[dev-dependencies]
+└── bar feature \"default\"
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        └── foo feature \"default\" (command-line)
+            └── foo v1.0.0 ([ROOT]/foo) (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features a -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\" (command-line)
+│   └── foo feature \"b\"
+│       └── bar feature \"feat1\"
+│           └── foo feature \"a\" (command-line) (*)
+├── foo feature \"b\" (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features b -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\"
+│   └── foo feature \"b\" (command-line)
+│       └── bar feature \"feat1\"
+│           └── foo feature \"a\" (*)
+├── foo feature \"b\" (command-line) (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features bar/feat1 -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\"
+│   └── foo feature \"b\"
+│       └── bar feature \"feat1\" (command-line)
+│           └── foo feature \"a\" (*)
+├── foo feature \"b\" (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (command-line) (*)
+",
+        )
+        .run();
+}

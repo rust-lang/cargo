@@ -41,6 +41,11 @@
 
 ### Changed
 
+- ❗ `RUSTFLAGS` is no longer set for build scripts. This change was made in
+  1.55, but the release notes did not highlight this change. Build scripts
+  should use `CARGO_ENCODED_RUSTFLAGS` instead. See the
+  [documentation](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts)
+  for more details.
 - The `cargo version` command now includes some extra information.
   [#9968](https://github.com/rust-lang/cargo/pull/9968)
 - Updated libgit2 to 1.3 which brings in a number of fixes and changes to git
@@ -186,8 +191,10 @@
 - The package definition in `cargo metadata` now includes the `"default_run"`
   field from the manifest.
   [#9550](https://github.com/rust-lang/cargo/pull/9550)
-- Build scripts now have access to the following environment variables:
+- ❗ Build scripts now have access to the following environment variables:
   `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, `CARGO_ENCODED_RUSTFLAGS`.
+  `RUSTFLAGS` is no longer set for build scripts; they should use
+  `CARGO_ENCODED_RUSTFLAGS` instead.
   [docs](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts)
   [#9601](https://github.com/rust-lang/cargo/pull/9601)
 - Added `cargo d` as an alias for `cargo doc`.

@@ -280,10 +280,12 @@ pub fn resolve_features<'b>(
     // dep_name/feat_name` where `dep_name` does not exist. All other
     // validation is done either in `build_requirements` or
     // `build_feature_map`.
-    for dep_name in reqs.deps.keys() {
-        if !valid_dep_names.contains(dep_name) {
-            let e = RequirementError::MissingDependency(*dep_name);
-            return Err(e.into_activate_error(parent, s));
+    if parent.is_none() {
+        for dep_name in reqs.deps.keys() {
+            if !valid_dep_names.contains(dep_name) {
+                let e = RequirementError::MissingDependency(*dep_name);
+                return Err(e.into_activate_error(parent, s));
+            }
         }
     }
 

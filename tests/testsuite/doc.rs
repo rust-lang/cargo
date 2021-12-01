@@ -803,7 +803,7 @@ fn output_not_captured() {
             "a/src/lib.rs",
             "
             /// ```
-            /// ☃
+            /// `
             /// ```
             pub fn foo() {}
         ",
@@ -811,9 +811,7 @@ fn output_not_captured() {
         .build();
 
     p.cargo("doc")
-        .without_status()
-        .with_stderr_contains("[..]☃")
-        .with_stderr_contains(r"[..]unknown start of token: \u{2603}")
+        .with_stderr_contains("[..]unknown start of token: `")
         .run();
 }
 
@@ -1244,8 +1242,24 @@ fn doc_all_member_dependency_same_name() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("doc --workspace")
-        .with_stderr_contains("[..] Updating `[..]` index")
-        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+warning: output filename collision.
+The lib target `bar` in package `bar v0.1.0` has the same output filename as \
+the lib target `bar` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Colliding filename is: [ROOT]/foo/target/doc/bar/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+[DOCUMENTING] bar v0.1.0
+[CHECKING] bar v0.1.0
+[DOCUMENTING] bar v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
         .run();
 }
 
@@ -2325,4 +2339,29 @@ fn scrape_examples_crate_with_dash() {
 
     let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
     assert!(doc_html.contains("Examples found in repository"));
+}
+
+#[cargo_test]
+fn scrape_examples_missing_flag() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "//! These are the docs!")
+        .build();
+    p.cargo("doc -Zrustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
+        .run();
 }
