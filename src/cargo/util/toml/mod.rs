@@ -1400,14 +1400,11 @@ impl TomlManifest {
             let natvis_dir_path = package_root.join("dbgvis").join("natvis");
             if let Ok(natvis_dir) = fs::read_dir(&natvis_dir_path) {
                 for entry in natvis_dir {
-                    match entry {
-                        Ok(entry) => {
-                            let path = entry.path();
-                            if path.extension() == Some("natvis".as_ref()) {
-                                natvis.insert(path.display().to_string());
-                            }
+                    if let Ok(entry) = entry {
+                        let path = entry.path();
+                        if path.extension() == Some("natvis".as_ref()) {
+                            natvis.insert(path.display().to_string());
                         }
-                        Err(_) => {}
                     }
                 }
             }

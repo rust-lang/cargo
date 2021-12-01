@@ -48,7 +48,7 @@ fn natvis_file_does_not_exist() {
         .build();
 
     let natvis_path = p.root().join("foo.natvis").display().to_string();
-    let expected_msg = format!("[..]incorrect value `{}` for debugging option `natvis`[..]", natvis_path);
+    let expected_msg = format!("[..]incorrect value `{}` for codegen option `natvis`[..]", natvis_path);
 
     // Run cargo build.
     p.cargo("build")
@@ -78,7 +78,7 @@ fn invalid_natvis_extension() {
         .build();
 
     let natvis_path = p.root().join("foo.rs").display().to_string();
-    let expected_msg = format!("[..]incorrect value `{}` for debugging option `natvis`[..]", natvis_path);
+    let expected_msg = format!("[..]incorrect value `{}` for codegen option `natvis`[..]", natvis_path);
 
     // Run cargo build.
     p.cargo("build")
@@ -203,7 +203,7 @@ fn direct_dependency_with_natvis() {
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .with_status(0)
-        .with_stderr_contains(format!("[..]-Z natvis={}[..]", natvis_path))
+        .with_stderr_contains(format!("[..]-C natvis={}[..]", natvis_path))
         .run();
 }
 
@@ -220,7 +220,7 @@ fn multiple_natvis_files() {
             version = "0.0.1"
 
             [debug-visualizations]
-            natvis = ["foo.natvis", "bar.natvis"]
+            natvis = ["bar.natvis", "foo.natvis"]
         "#,
     )
     .file(
@@ -274,14 +274,14 @@ fn multiple_natvis_files() {
         "#,
     ).build();
 
-    let foo_natvis_path = p.root().join("foo.natvis").display().to_string();
     let bar_natvis_path = p.root().join("bar.natvis").display().to_string();
+    let foo_natvis_path = p.root().join("foo.natvis").display().to_string();
     
     // Run cargo build.
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .with_status(0)
-        .with_stderr_contains(format!("[..]-Z natvis={},{}[..]", foo_natvis_path, bar_natvis_path))
+        .with_stderr_contains(format!("[..]-C natvis={},{}[..]", bar_natvis_path, foo_natvis_path))
         .run();
 }
 
@@ -391,13 +391,13 @@ fn indirect_dependency_with_natvis() {
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .with_status(0)
-        .with_stderr_contains(format!("[..]-Z natvis={}[..]", foo_natvis_path))
-        .with_stderr_contains(format!("[..]-Z natvis={}[..]", nested_dependency_natvis_path))
+        .with_stderr_contains(format!("[..]-C natvis={}[..]", foo_natvis_path))
+        .with_stderr_contains(format!("[..]-C natvis={}[..]", nested_dependency_natvis_path))
         .run();
 }
 
 #[cargo_test]
-fn testing() {
+fn registry_dependency_natvis() {
     Package::new("bar", "0.0.1")
         .file(
             "Cargo.toml",
@@ -448,6 +448,6 @@ fn testing() {
 
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains(format!("[..]-Z natvis=[..]/bar.natvis[..]"))
+        .with_stderr_contains(format!("[..]-C natvis=[..]/bar.natvis[..]"))
         .run();
 }
