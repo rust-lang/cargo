@@ -186,6 +186,32 @@ See [..]
 }
 
 #[cargo_test]
+fn simple_with_index() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit --index")
+        .arg(registry_url().to_string())
+        .run();
+
+    validate_upload_foo();
+}
+
+#[cargo_test]
 fn git_deps() {
     registry::init();
 
