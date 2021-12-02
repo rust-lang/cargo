@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, BTreeSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -32,7 +32,7 @@ pub enum EitherManifest {
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
-    natvis: Option<Vec<String>>,
+    natvis: Option<BTreeSet<String>>,
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
     links: Option<String>,
@@ -393,7 +393,7 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
-        natvis: Option<Vec<String>>,
+        natvis: Option<BTreeSet<String>>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -488,7 +488,7 @@ impl Manifest {
         self.links.as_deref()
     }
 
-    pub fn natvis(&self) -> &Option<Vec<String>> {
+    pub fn natvis(&self) -> &Option<BTreeSet<String>> {
         &self.natvis
     }
 

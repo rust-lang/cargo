@@ -1385,7 +1385,7 @@ impl TomlManifest {
             .transpose()?
             .map(CompileKind::Target);
 
-        let mut natvis = HashSet::new();
+        let mut natvis = BTreeSet::new();
         if let Some(debug_visualizations) = me.debug_visualizations.clone() {
             features.require(Feature::natvis())?;
             if let Some(natvis_files) = debug_visualizations.natvis {
@@ -1397,12 +1397,13 @@ impl TomlManifest {
         }
 
         if features.require(Feature::natvis()).is_ok() {
-            let natvis_dir_path = package_root.join("dbgvis").join("natvis");
+            let natvis_ext = "natvis";
+            let natvis_dir_path = package_root.join("dbgvis").join(natvis_ext);
             if let Ok(natvis_dir) = fs::read_dir(&natvis_dir_path) {
                 for entry in natvis_dir {
                     if let Ok(entry) = entry {
                         let path = entry.path();
-                        if path.extension() == Some("natvis".as_ref()) {
+                        if path.extension() == Some(natvis_ext.as_ref()) {
                             natvis.insert(path.display().to_string());
                         }
                     }
@@ -1413,9 +1414,8 @@ impl TomlManifest {
         let natvis = if natvis.is_empty() {
             None
         } else {
-            Some(natvis.iter().map(|file| { file.clone() }).collect::<Vec<String>>())
+            Some(natvis)
         };
-
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,
