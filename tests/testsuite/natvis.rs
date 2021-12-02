@@ -397,7 +397,7 @@ fn indirect_dependency_with_natvis() {
 }
 
 #[cargo_test]
-fn registry_dependency_natvis() {
+fn registry_dependency_with_natvis() {
     Package::new("bar", "0.0.1")
         .file(
             "Cargo.toml",
