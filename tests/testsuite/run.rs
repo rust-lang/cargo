@@ -22,30 +22,34 @@ fn simple() {
 }
 
 #[cargo_test]
-fn simple_quiet() {
+fn quiet_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q").with_stdout("hello").run();
+    p.cargo("build -q")
+        .with_stderr_does_not_contain("[FINISHED] [..]")
+        .run();
 
-    p.cargo("run --quiet").with_stdout("hello").run();
+    p.cargo("build --quiet")
+        .with_stderr_does_not_contain("[FINISHED] [..]")
+        .run();
 }
 
 #[cargo_test]
-fn simple_quiet_and_verbose() {
+fn quiet_arg_and_verbose_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q -v")
+    p.cargo("build -q -v")
         .with_status(101)
         .with_stderr("[ERROR] cannot set both --verbose and --quiet")
         .run();
 }
 
 #[cargo_test]
-fn quiet_and_verbose_config() {
+fn quiet_arg_and_verbose_config() {
     let p = project()
         .file(
             ".cargo/config",
@@ -57,7 +61,47 @@ fn quiet_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q").run();
+    p.cargo("build -q")
+        .with_stderr_does_not_contain("[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test]
+fn verbose_arg_and_quiet_config() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_contains("[RUNNING] `rustc [..]")
+        .run();
+}
+
+#[cargo_test]
+fn quiet_config_and_verbose_config() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                verbose = true
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr("[ERROR] cannot set both `term.verbose` and `term.quiet`")
+        .run();
 }
 
 #[cargo_test]

@@ -992,6 +992,16 @@ metadata_key2 = "value"
 
 The `[term]` table controls terminal output and interaction.
 
+##### `term.quiet`
+* Type: boolean
+* Default: false
+* Environment: `CARGO_TERM_QUIET`
+
+Controls whether or not log messages are displayed by Cargo.
+
+Specifying the `--quiet` flag will override and force quiet output.
+Specifying the `--verbose` flag will override and disable quiet output.
+
 ##### `term.verbose`
 * Type: boolean
 * Default: false
