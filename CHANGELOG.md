@@ -1,24 +1,61 @@
 # Changelog
 
-## Cargo 1.58 (2022-01-13)
-[b2e52d7c...HEAD](https://github.com/rust-lang/cargo/compare/b2e52d7c...HEAD)
+## Cargo 1.59 (2022-02-24)
+[7f08ace4...HEAD](https://github.com/rust-lang/cargo/compare/7f08ace4...HEAD)
 
 ### Added
-
-- Added `rust_version` field to package data in `cargo metadata`.
-  [#9967](https://github.com/rust-lang/cargo/pull/9967)
 
 ### Changed
 
 ### Fixed
 
+### Nightly only
+- Added the `--crate-type` flag to `cargo rustc`.
+  [#10093](https://github.com/rust-lang/cargo/pull/10093)
+
+
+## Cargo 1.58 (2022-01-13)
+[b2e52d7c...rust-1.58.0](https://github.com/rust-lang/cargo/compare/b2e52d7c...rust-1.58.0)
+
+### Added
+
+- Added `rust_version` field to package data in `cargo metadata`.
+  [#9967](https://github.com/rust-lang/cargo/pull/9967)
+- Added `--message-format` option to `cargo install`.
+  [#10107](https://github.com/rust-lang/cargo/pull/10107)
+
+### Changed
+
+- A warning is now shown when an alias shadows an external command.
+  [#10082](https://github.com/rust-lang/cargo/pull/10082)
+- Updated curl to 7.80.0.
+  [#10040](https://github.com/rust-lang/cargo/pull/10040)
+  [#10106](https://github.com/rust-lang/cargo/pull/10106)
+
+### Fixed
+
 - Doctests now include rustc-link-args from build scripts.
   [#9916](https://github.com/rust-lang/cargo/pull/9916)
+- Fixed `cargo tree` entering an infinite loop with cyclical dev-dependencies.
+  Fixed an edge case where the resolver would fail to handle a cyclical dev-dependency with a feature.
+  [#10103](https://github.com/rust-lang/cargo/pull/10103)
+- Fixed `cargo clean -p` when the directory path contains glob characters.
+  [#10072](https://github.com/rust-lang/cargo/pull/10072)
+- Fixed debug builds of `cargo` which could panic when downloading a crate
+  when the server has a redirect with a non-empty body.
+  [#10048](https://github.com/rust-lang/cargo/pull/10048)
 
 ### Nightly only
 
 - Make future-incompat-report output more user-friendly.
   [#9953](https://github.com/rust-lang/cargo/pull/9953)
+- Added support to scrape code examples from the `examples` directory to be included in the documentation.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#scrape-examples)
+  [#9525](https://github.com/rust-lang/cargo/pull/9525)
+  [#10037](https://github.com/rust-lang/cargo/pull/10037)
+  [#10017](https://github.com/rust-lang/cargo/pull/10017)
+- Fixed `cargo report future-incompatibilities` to check stdout if it supports color.
+  [#10024](https://github.com/rust-lang/cargo/pull/10024)
 
 ## Cargo 1.57 (2021-12-02)
 [18751dd3...rust-1.57.0](https://github.com/rust-lang/cargo/compare/18751dd3...rust-1.57.0)
