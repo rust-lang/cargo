@@ -1386,6 +1386,7 @@ impl TomlManifest {
             .map(CompileKind::Target);
 
         let mut natvis = BTreeSet::new();
+        // Collect the Natvis files specified via the toml file and normalize the absolute paths.
         if let Some(debug_visualizations) = me.debug_visualizations.clone() {
             features.require(Feature::natvis())?;
             if let Some(natvis_files) = debug_visualizations.natvis {
@@ -1396,6 +1397,7 @@ impl TomlManifest {
             }
         }
 
+        // Append all of the Natvis files in the pre-determined directory under the package root, `dbgvis/natvis`.
         if features.require(Feature::natvis()).is_ok() {
             let natvis_ext = "natvis";
             let natvis_dir_path = package_root.join("dbgvis").join(natvis_ext);

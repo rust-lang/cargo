@@ -32,7 +32,6 @@ pub enum EitherManifest {
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
-    natvis: Option<BTreeSet<String>>,
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
     links: Option<String>,
@@ -54,6 +53,7 @@ pub struct Manifest {
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    natvis: Option<BTreeSet<String>>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced

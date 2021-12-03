@@ -666,10 +666,11 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         Ok(output_dir.join(format!("{}.examples", unit.buildkey())))
     };
 
+    let mut unstable_opts = false;
     if unit.mode.is_doc_scrape() {
         debug_assert!(cx.bcx.scrape_units.contains(unit));
 
-        rustdoc.arg("-Zunstable-options");
+        *unstable_opts = true;
 
         rustdoc
             .arg("--scrape-examples-output-path")
@@ -690,7 +691,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         // We only pass scraped examples to packages in the workspace
         // since examples are only coming from reverse-dependencies of workspace packages
 
-        rustdoc.arg("-Zunstable-options");
+        *unstable_opts = true;
 
         for scrape_unit in &cx.bcx.scrape_units {
             rustdoc
@@ -699,7 +700,6 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         }
     }
 
-    let mut unstable_opts = false;
     build_deps_args(&mut rustdoc, cx, unit, &mut unstable_opts)?;
 
     // This will only be set if we're already using a feature
