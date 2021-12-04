@@ -48,9 +48,8 @@ versions before 1.0.0. While SemVer says there is no compatibility before
 1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
 and `x > 0`.
 
-It is possible to further tweak the logic for selecting compatible version,
-using several requirements operators, though it shouldn't be necessary most of
-the time. 
+It is possible to further tweak the logic for selecting compatible version using
+special operators, though it shouldn't be necessary most of the time.
 
 ### Caret requirements
 
