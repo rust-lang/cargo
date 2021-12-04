@@ -233,7 +233,7 @@ pub trait AppExt: Sized {
     fn arg_future_incompat_report(self) -> Self {
         self._arg(opt(
             "future-incompat-report",
-            "Outputs a future incompatibility report at the end of the build (unstable)",
+            "Outputs a future incompatibility report at the end of the build",
         ))
     }
 }
@@ -511,17 +511,6 @@ pub trait ArgMatchesExt {
             config
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
-        }
-        if build_config.future_incompat_report {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--future-incompat-report", 9241)?;
-
-            if !config.cli_unstable().future_incompat_report {
-                anyhow::bail!(
-                    "Usage of `--future-incompat-report` requires `-Z future-incompat-report`"
-                )
-            }
         }
 
         let opts = CompileOptions {

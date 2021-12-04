@@ -25,7 +25,7 @@ fn simple_project() -> Project {
 }
 
 #[cargo_test]
-fn no_output_on_stable() {
+fn output_on_stable() {
     if !is_nightly() {
         // -Zfuture-incompat-test requires nightly (permanently)
         return;
@@ -33,39 +33,23 @@ fn no_output_on_stable() {
     let p = simple_project();
 
     p.cargo("check")
-        // Even though rustc emits the report, cargo ignores it without -Z.
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(FUTURE_OUTPUT)
-        .with_stderr_does_not_contain("[..]cargo report[..]")
+        .with_stderr_contains("[..]cargo report[..]")
         .run();
 }
 
+// This feature is stable, and should not be gated
 #[cargo_test]
-fn gate_future_incompat_report() {
+fn no_gate_future_incompat_report() {
     let p = simple_project();
 
     p.cargo("build --future-incompat-report")
-        .with_stderr_contains("error: the `--future-incompat-report` flag is unstable[..]")
-        .with_status(101)
-        .run();
-
-    // Both `-Z future-incompat-report` and `-Z unstable-opts` are required
-    p.cargo("build --future-incompat-report -Z future-incompat-report")
-        .masquerade_as_nightly_cargo()
-        .with_stderr_contains("error: the `--future-incompat-report` flag is unstable[..]")
-        .with_status(101)
-        .run();
-
-    p.cargo("build --future-incompat-report -Z unstable-options")
-        .masquerade_as_nightly_cargo()
-        .with_stderr_contains(
-            "error: Usage of `--future-incompat-report` requires `-Z future-incompat-report`",
-        )
-        .with_status(101)
+        .with_status(0)
         .run();
 
     p.cargo("report future-incompatibilities --id foo")
-        .with_stderr_contains("error: `cargo report` can only be used on the nightly channel")
+        .with_stderr_contains("error: no reports are currently available")
         .with_status(101)
         .run();
 }
@@ -83,8 +67,7 @@ fn test_zero_future_incompat() {
         .build();
 
     // No note if --future-incompat-report is not specified.
-    p.cargo("build -Z future-incompat-report")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
@@ -94,8 +77,7 @@ fn test_zero_future_incompat() {
         )
         .run();
 
-    p.cargo("build --future-incompat-report -Z unstable-options -Z future-incompat-report")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
@@ -117,8 +99,7 @@ fn test_single_crate() {
 
     for command in &["build", "check", "rustc", "test"] {
         let check_has_future_compat = || {
-            p.cargo(command).arg("-Zfuture-incompat-report")
-                .masquerade_as_nightly_cargo()
+            p.cargo(command)
                 .env("RUSTFLAGS", "-Zfuture-incompat-test")
                 .with_stderr_contains(FUTURE_OUTPUT)
                 .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
@@ -147,8 +128,6 @@ frequency = 'never'
 ",
         );
         p.cargo(command)
-            .arg("-Zfuture-incompat-report")
-            .masquerade_as_nightly_cargo()
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_does_not_contain("[..]rejected[..]")
@@ -156,8 +135,7 @@ frequency = 'never'
             .run();
 
         // Check that passing `--future-incompat-report` overrides `frequency = 'never'`
-        p.cargo(command).arg("-Zfuture-incompat-report").arg("-Zunstable-options").arg("--future-incompat-report")
-            .masquerade_as_nightly_cargo()
+        p.cargo(command).arg("--future-incompat-report")
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
@@ -197,8 +175,7 @@ fn test_multi_crate() {
         .build();
 
     for command in &["build", "check", "rustc", "test"] {
-        p.cargo(command).arg("-Zfuture-incompat-report")
-            .masquerade_as_nightly_cargo()
+        p.cargo(command)
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_does_not_contain(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
@@ -209,23 +186,20 @@ fn test_multi_crate() {
             .with_stderr_does_not_contain("[..]-p[..]")
             .run();
 
-        p.cargo(command).arg("-Zunstable-options").arg("-Zfuture-incompat-report").arg("--future-incompat-report")
-            .masquerade_as_nightly_cargo()
+        p.cargo(command).arg("--future-incompat-report")
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
             .with_stderr_contains("  - first-dep:0.0.1")
             .with_stderr_contains("  - second-dep:0.0.2")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep:0.0.1").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
-            .masquerade_as_nightly_cargo()
+        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep:0.0.1")
             .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
             .with_stdout_does_not_contain("[..]second-dep-0.0.2/src[..]")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep:0.0.2").arg("-Zunstable-options").arg("-Zfuture-incompat-report")
-            .masquerade_as_nightly_cargo()
+        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep:0.0.2")
             .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
             .with_stdout_does_not_contain("[..]first-dep-0.0.1/src[..]")
@@ -234,9 +208,8 @@ fn test_multi_crate() {
 
     // Test that passing the correct id via '--id' doesn't generate a warning message
     let output = p
-        .cargo("build -Z future-incompat-report")
+        .cargo("build")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
         .exec_with_output()
         .unwrap();
 
@@ -256,16 +229,14 @@ fn test_multi_crate() {
     // Strip off the trailing '`' included in the output
     let id: String = id.chars().take_while(|c| *c != '`').collect();
 
-    p.cargo(&format!("report future-incompatibilities -Z future-incompat-report --id {}", id))
-        .masquerade_as_nightly_cargo()
+    p.cargo(&format!("report future-incompatibilities --id {}", id))
         .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
         .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
         .run();
 
     // Test without --id, and also the full output of the report.
     let output = p
-        .cargo("report future-incompat -Z future-incompat-report")
-        .masquerade_as_nightly_cargo()
+        .cargo("report future-incompat")
         .exec_with_output()
         .unwrap();
     let output = std::str::from_utf8(&output.stdout).unwrap();
@@ -305,17 +276,17 @@ fn color() {
 
     let p = simple_project();
 
-    p.cargo("check -Zfuture-incompat-report")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .masquerade_as_nightly_cargo()
         .run();
 
-    p.cargo("report future-incompatibilities -Z future-incompat-report")
+    p.cargo("report future-incompatibilities")
         .masquerade_as_nightly_cargo()
         .with_stdout_does_not_contain("[..]\x1b[[..]")
         .run();
 
-    p.cargo("report future-incompatibilities -Z future-incompat-report")
+    p.cargo("report future-incompatibilities")
         .masquerade_as_nightly_cargo()
         .env("CARGO_TERM_COLOR", "always")
         .with_stdout_contains("[..]\x1b[[..]")
@@ -331,24 +302,24 @@ fn bad_ids() {
 
     let p = simple_project();
 
-    p.cargo("report future-incompatibilities -Z future-incompat-report --id 1")
+    p.cargo("report future-incompatibilities --id 1")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("error: no reports are currently available")
         .run();
 
-    p.cargo("check -Zfuture-incompat-report")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .masquerade_as_nightly_cargo()
         .run();
 
-    p.cargo("report future-incompatibilities -Z future-incompat-report --id foo")
+    p.cargo("report future-incompatibilities --id foo")
         .masquerade_as_nightly_cargo()
         .with_status(1)
         .with_stderr("error: Invalid value: could not parse `foo` as a number")
         .run();
 
-    p.cargo("report future-incompatibilities -Z future-incompat-report --id 7")
+    p.cargo("report future-incompatibilities --id 7")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
@@ -426,7 +397,7 @@ big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 ";
 
-    p.cargo("check -Zfuture-incompat-report -Zunstable-options --future-incompat-report")
+    p.cargo("check --future-incompat-report")
         .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(update_message)

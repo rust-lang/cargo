@@ -321,9 +321,6 @@ pub fn save_and_display_report(
     bcx: &BuildContext<'_, '_>,
     per_package_future_incompat_reports: &[FutureIncompatReportPackage],
 ) {
-    if !bcx.config.cli_unstable().future_incompat_report {
-        return;
-    }
     let should_display_message = match bcx.config.future_incompat_config() {
         Ok(config) => config.should_display_message(),
         Err(e) => {

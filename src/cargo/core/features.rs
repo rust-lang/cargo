@@ -637,7 +637,6 @@ unstable_cli_options!(
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
-    future_incompat_report: bool = ("Enable creation of a future-incompat report for all dependencies"),
     features: Option<Vec<String>>  = (HIDDEN),
     jobserver_per_rustc: bool = (HIDDEN),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
@@ -704,6 +703,9 @@ const STABILIZED_PATCH_IN_CONFIG: &str = "The patch-in-config feature is now alw
 const STABILIZED_NAMED_PROFILES: &str = "The named-profiles feature is now always enabled.\n\
     See https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles \
     for more information";
+
+const STABILIZED_FUTURE_INCOMPAT_REPORT: &str =
+    "The future-incompat-report feature is now always enabled.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -894,7 +896,9 @@ impl CliUnstable {
             "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "configurable-env" => stabilized_warn(k, "1.56", STABILIZED_CONFIGURABLE_ENV),
             "patch-in-config" => stabilized_warn(k, "1.56", STABILIZED_PATCH_IN_CONFIG),
-            "future-incompat-report" => self.future_incompat_report = parse_empty(k, v)?,
+            "future-incompat-report" => {
+                stabilized_warn(k, "1.59.0", STABILIZED_FUTURE_INCOMPAT_REPORT)
+            }
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

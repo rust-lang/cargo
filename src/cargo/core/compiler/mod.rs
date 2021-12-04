@@ -798,6 +798,9 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pi
         // to emit a message that cargo will intercept.
         json.push_str(",artifacts");
     }
+    // Always emit a future-incompat report, so we can report
+    // future-incompat dependencies to the user
+    json.push_str(",future-incompat");
 
     match cx.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
@@ -1020,10 +1023,6 @@ fn build_base_args(
         cmd.arg("-Z")
             .arg("force-unstable-if-unmarked")
             .env("RUSTC_BOOTSTRAP", "1");
-    }
-
-    if bcx.config.cli_unstable().future_incompat_report {
-        cmd.arg("-Z").arg("emit-future-incompat-report");
     }
 
     // Add `CARGO_BIN_` environment variables for building tests.
