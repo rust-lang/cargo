@@ -10,7 +10,6 @@
 //! cargo test --test testsuite -- old_cargos --nocapture --ignored
 //! ```
 
-use cargo::CargoResult;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{self, Dependency, Package};
 use cargo_test_support::{cargo_exe, execs, paths, process, project, rustc_host};
@@ -345,7 +344,7 @@ fn new_features() {
         };
 
         // Runs `cargo build` and returns the versions selected in the lock.
-        let run_cargo = || -> CargoResult<ToolchainBehavior> {
+        let run_cargo = || -> Result<ToolchainBehavior, ProcessError> {
             match tc_process("cargo", toolchain)
                 .args(&["build", "--verbose"])
                 .cwd(p.root())
@@ -387,13 +386,13 @@ fn new_features() {
             };
         }
 
-        let check_err_contains = |tc_result: &mut Vec<_>, err: anyhow::Error, contents| {
-            if let Some(ProcessError {
+        let check_err_contains = |tc_result: &mut Vec<_>, err: ProcessError, contents| {
+            if let ProcessError {
                 stderr: Some(stderr),
                 ..
-            }) = err.downcast_ref::<ProcessError>()
+            } = err
             {
-                let stderr = std::str::from_utf8(stderr).unwrap();
+                let stderr = std::str::from_utf8(&stderr).unwrap();
                 if !stderr.contains(contents) {
                     tc_result.push(format!(
                         "{} expected to see error contents:\n{}\nbut saw:\n{}",

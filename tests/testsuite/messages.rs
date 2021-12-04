@@ -3,7 +3,6 @@
 //! Tests for message caching can be found in `cache_messages`.
 
 use cargo_test_support::{process, project, Project};
-use cargo_util::ProcessError;
 
 /// Captures the actual diagnostics displayed by rustc. This is done to avoid
 /// relying on the exact message formatting in rustc.
@@ -22,7 +21,7 @@ pub fn raw_rustc_output(project: &Project, path: &str, extra: &[&str]) -> String
         .exec_with_output()
     {
         Ok(output) => output.stderr,
-        Err(e) => e.downcast::<ProcessError>().unwrap().stderr.unwrap(),
+        Err(e) => e.stderr.unwrap(),
     };
     // Do a little dance to remove rustc's "warnings emitted" message and the subsequent newline.
     let stderr = std::str::from_utf8(&rustc_output).expect("utf8");

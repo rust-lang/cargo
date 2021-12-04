@@ -97,5 +97,5 @@ pub fn run(
 
     config.shell().status("Running", process.to_string())?;
 
-    process.exec_replace()
+    process.exec_replace().map_err(anyhow::Error::new)
 }

@@ -7,7 +7,7 @@ use cargo::core::shell::Shell;
 use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
-use cargo_util::{ProcessBuilder, ProcessError};
+use cargo_util::ProcessBuilder;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -177,12 +177,10 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
         Err(e) => e,
     };
 
-    if let Some(perr) = err.downcast_ref::<ProcessError>() {
-        if let Some(code) = perr.code {
-            return Err(CliError::code(code));
-        }
+    if let Some(code) = err.code {
+        return Err(CliError::code(code));
     }
-    Err(CliError::new(err, 101))
+    Err(CliError::new(anyhow::Error::new(err), 101))
 }
 
 #[cfg(unix)]

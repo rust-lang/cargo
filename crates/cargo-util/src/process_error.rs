@@ -27,6 +27,8 @@ pub struct ProcessError {
     /// This can be `None` if the process failed to launch, or the output was
     /// not captured.
     pub stderr: Option<Vec<u8>>,
+
+    pub source: Option<Box<dyn std::error::Error + Send + Sync>>,
 }
 
 impl fmt::Display for ProcessError {
@@ -35,7 +37,14 @@ impl fmt::Display for ProcessError {
     }
 }
 
-impl std::error::Error for ProcessError {}
+impl std::error::Error for ProcessError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self.source.as_ref() {
+            Some(s) => Some(&**s),
+            None => None,
+        }
+    }
+}
 
 impl ProcessError {
     /// Creates a new [`ProcessError`].
@@ -93,7 +102,16 @@ impl ProcessError {
             code,
             stdout: stdout.map(|s| s.to_vec()),
             stderr: stderr.map(|s| s.to_vec()),
+            source: None,
         }
+    }
+
+    pub(crate) fn with_source(
+        mut self,
+        source: impl Into<Box<dyn std::error::Error + Send + Sync>>,
+    ) -> Self {
+        self.source = Some(source.into());
+        self
     }
 }
 

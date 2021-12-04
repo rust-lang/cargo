@@ -763,7 +763,7 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> Result<Output> {
+    pub fn exec_with_output(&mut self) -> Result<Output, ProcessError> {
         self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
@@ -879,28 +879,27 @@ impl Execs {
         match res {
             Ok(out) => {
                 self.match_output(out.status.code(), &out.stdout, &out.stderr)?;
-                return Ok(RawOutput {
+                Ok(RawOutput {
                     stdout: out.stdout,
                     stderr: out.stderr,
                     code: out.status.code(),
-                });
+                })
+            }
+            Err(ProcessError {
+                stdout: Some(stdout),
+                stderr: Some(stderr),
+                code,
+                ..
+            }) => {
+                self.match_output(code, &stdout, &stderr)?;
+                Ok(RawOutput {
+                    stdout: stdout.to_vec(),
+                    stderr: stderr.to_vec(),
+                    code,
+                })
             }
             Err(e) => {
-                if let Some(ProcessError {
-                    stdout: Some(stdout),
-                    stderr: Some(stderr),
-                    code,
-                    ..
-                }) = e.downcast_ref::<ProcessError>()
-                {
-                    self.match_output(*code, stdout, stderr)?;
-                    return Ok(RawOutput {
-                        stdout: stdout.to_vec(),
-                        stderr: stderr.to_vec(),
-                        code: *code,
-                    });
-                }
-                bail!("could not exec process {}: {:?}", process, e)
+                bail!("could not exec process {}: {:?}", process, e);
             }
         }
     }

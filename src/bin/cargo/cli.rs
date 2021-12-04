@@ -110,7 +110,11 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
 
     if let Some(code) = expanded_args.value_of("explain") {
         let mut procss = config.load_global_rustc(None)?.process();
-        procss.arg("--explain").arg(code).exec()?;
+        procss
+            .arg("--explain")
+            .arg(code)
+            .exec()
+            .map_err(anyhow::Error::new)?;
         return Ok(());
     }
 

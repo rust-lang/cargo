@@ -1,6 +1,6 @@
 use crate::process_error::ProcessError;
 use crate::read2;
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
 use jobserver::Client;
 use shell_escape::escape;
 use std::collections::BTreeMap;
@@ -162,10 +162,11 @@ impl ProcessBuilder {
     }
 
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
-    pub fn exec(&self) -> Result<()> {
+    pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
-        let exit = command.status().with_context(|| {
+        let exit = command.status().map_err(|err| {
             ProcessError::new(&format!("could not execute process {}", self), None, None)
+                .with_source(err)
         })?;
 
         if exit.success() {
@@ -175,8 +176,7 @@ impl ProcessBuilder {
                 &format!("process didn't exit successfully: {}", self),
                 Some(exit),
                 None,
-            )
-            .into())
+            ))
         }
     }
 
@@ -195,16 +195,17 @@ impl ProcessBuilder {
     /// include our child process. If the child terminates then we'll reap them in Cargo
     /// pretty quickly, and if the child handles the signal then we won't terminate
     /// (and we shouldn't!) until the process itself later exits.
-    pub fn exec_replace(&self) -> Result<()> {
+    pub fn exec_replace(&self) -> Result<(), ProcessError> {
         imp::exec_replace(self)
     }
 
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
-    pub fn exec_with_output(&self) -> Result<Output> {
+    pub fn exec_with_output(&self) -> Result<Output, ProcessError> {
         let mut command = self.build_command();
 
-        let output = command.output().with_context(|| {
+        let output = command.output().map_err(|e| {
             ProcessError::new(&format!("could not execute process {}", self), None, None)
+                .with_source(e)
         })?;
 
         if output.status.success() {
@@ -214,8 +215,7 @@ impl ProcessBuilder {
                 &format!("process didn't exit successfully: {}", self),
                 Some(output.status),
                 Some(&output),
-            )
-            .into())
+            ))
         }
     }
 
@@ -233,7 +233,7 @@ impl ProcessBuilder {
         on_stdout_line: &mut dyn FnMut(&str) -> Result<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> Result<()>,
         capture_output: bool,
-    ) -> Result<Output> {
+    ) -> Result<Output, ProcessError> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
@@ -245,7 +245,7 @@ impl ProcessBuilder {
         let mut callback_error = None;
         let mut stdout_pos = 0;
         let mut stderr_pos = 0;
-        let status = (|| {
+        let res = (|| {
             let mut child = cmd.spawn()?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
@@ -293,9 +293,11 @@ impl ProcessBuilder {
                 *pos = 0;
             })?;
             child.wait()
-        })()
-        .with_context(|| {
+        })();
+
+        let status = res.map_err(|err| {
             ProcessError::new(&format!("could not execute process {}", self), None, None)
+                .with_source(err)
         })?;
         let output = Output {
             status,
@@ -306,14 +308,14 @@ impl ProcessBuilder {
         {
             let to_print = if capture_output { Some(&output) } else { None };
             if let Some(e) = callback_error {
-                let cx = ProcessError::new(
+                return Err(ProcessError::new(
                     &format!("failed to parse process output: {}", self),
                     Some(output.status),
                     to_print,
-                );
-                bail!(anyhow::Error::new(cx).context(e));
+                )
+                .with_source(e));
             } else if !output.status.success() {
-                bail!(ProcessError::new(
+                return Err(ProcessError::new(
                     &format!("process didn't exit successfully: {}", self),
                     Some(output.status),
                     to_print,
@@ -388,14 +390,15 @@ mod imp {
     use anyhow::Result;
     use std::os::unix::process::CommandExt;
 
-    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<(), ProcessError> {
         let mut command = process_builder.build_command();
         let error = command.exec();
-        Err(anyhow::Error::from(error).context(ProcessError::new(
+        Err(ProcessError::new(
             &format!("could not execute process {}", process_builder),
             None,
             None,
-        )))
+        )
+        .with_source(error))
     }
 }
 
@@ -411,10 +414,14 @@ mod imp {
         TRUE
     }
 
-    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<(), ProcessError> {
         unsafe {
             if SetConsoleCtrlHandler(Some(ctrlc_handler), TRUE) == FALSE {
-                return Err(ProcessError::new("Could not set Ctrl-C handler.", None, None).into());
+                return Err(ProcessError::new(
+                    "Could not set Ctrl-C handler.",
+                    None,
+                    None,
+                ));
             }
         }
 

@@ -116,7 +116,6 @@ fn run_unit_tests(
         let result = cmd.exec();
 
         if let Err(e) = result {
-            let e = e.downcast::<ProcessError>()?;
             errors.push((
                 unit.target.kind().clone(),
                 unit.target.name().to_string(),
@@ -255,7 +254,6 @@ fn run_doc_tests(
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
         if let Err(e) = p.exec() {
-            let e = e.downcast::<ProcessError>()?;
             errors.push(e);
             if !options.no_fail_fast {
                 return Ok((Test::Doc, errors));

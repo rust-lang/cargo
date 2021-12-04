@@ -107,7 +107,7 @@ pub trait Executor: Send + Sync + 'static {
         mode: CompileMode,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()>;
+    ) -> Result<(), ProcessError>;
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
@@ -130,7 +130,7 @@ impl Executor for DefaultExecutor {
         _mode: CompileMode,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()> {
+    ) -> Result<(), ProcessError> {
         cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
             .map(drop)
     }
@@ -298,16 +298,14 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
         }
 
-        fn verbose_if_simple_exit_code(err: Error) -> Error {
+        fn verbose_if_simple_exit_code(err: ProcessError) -> Error {
             // If a signal on unix (`code == None`) or an abnormal termination
             // on Windows (codes like `0xC0000409`), don't hide the error details.
-            match err
-                .downcast_ref::<ProcessError>()
-                .as_ref()
-                .and_then(|perr| perr.code)
-            {
-                Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
-                _ => err,
+            match err.code {
+                Some(n) if cargo_util::is_simple_exit_code(n) => {
+                    VerboseError::new(anyhow::Error::new(err)).into()
+                }
+                _ => anyhow::Error::new(err),
             }
         }
 

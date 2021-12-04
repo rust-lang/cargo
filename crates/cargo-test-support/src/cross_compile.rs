@@ -40,7 +40,7 @@ pub fn disabled() -> bool {
 
     let cross_target = alternate();
 
-    let run_cross_test = || -> anyhow::Result<Output> {
+    let run_cross_test = || -> Result<Output, ProcessError> {
         let p = project()
             .at("cross_test")
             .file("Cargo.toml", &basic_manifest("cross_test", "1.0.0"))
@@ -170,10 +170,7 @@ rustup does not appear to be installed. Make sure that the appropriate
     // Show the actual error message.
     match run_cross_test() {
         Ok(_) => message.push_str("\nUh oh, second run succeeded?\n"),
-        Err(err) => match err.downcast_ref::<ProcessError>() {
-            Some(proc_err) => write!(message, "\nTest error: {}\n", proc_err).unwrap(),
-            None => write!(message, "\nUnexpected non-process error: {}\n", err).unwrap(),
-        },
+        Err(proc_err) => write!(message, "\nTest error: {}\n", proc_err).unwrap(),
     }
 
     panic!("{}", message);
