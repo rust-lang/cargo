@@ -168,6 +168,7 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-rustc--r"><a class="option-anchor" href="#option-cargo-rustc--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-rustc---release"><a class="option-anchor" href="#option-cargo-rustc---release"></a><code>--release</code></dt>
 <dd class="option-desc">Build optimized artifacts with the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>

@@ -221,7 +221,7 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
+       -r, --release
            Fix optimized artifacts with the release profile. See also the
            --profile option for choosing a specific profile by name.
 
