@@ -21,13 +21,15 @@ time = "0.1.12"
 
 The string `"0.1.12"` is a version requirement. Although it looks like a
 specific *version* of the `time` crate, it actually specifies a *range* of
-versions and allows SemVer compatible updates. An update is allowed if the new
+versions and allows [SemVer] compatible updates. An update is allowed if the new
 version number does not modify the left-most non-zero digit in the major, minor,
 patch grouping. In this case, if we ran `cargo update -p time`, cargo should
 update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
 update us to `0.2.0`. If instead we had specified the version string as `1.0`,
 cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
 The version `0.0.x` is not considered compatible with any other version.
+
+[SemVer]: https://semver.org
 
 Here are some more examples of version requirements and the versions that would
 be allowed with them:
@@ -48,8 +50,8 @@ versions before 1.0.0. While SemVer says there is no compatibility before
 1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
 and `x > 0`.
 
-It is possible to further tweak the logic for selecting compatible version using
-special operators, though it shouldn't be necessary most of the time.
+It is possible to further tweak the logic for selecting compatible versions
+using special operators, though it shouldn't be necessary most of the time.
 
 ### Caret requirements
 

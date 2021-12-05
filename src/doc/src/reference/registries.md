@@ -222,9 +222,9 @@ explaining the format of the entry.
             // this is the new name. The original package name is stored in
             // the `package` field.
             "name": "rand",
-            // The semver requirement for this dependency.
+            // The SemVer requirement for this dependency.
             // This must be a valid version requirement defined at
-            // https://github.com/steveklabnik/semver#requirements.
+            // https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html.
             "req": "^0.6",
             // Array of features (as strings) enabled for this dependency.
             "features": ["i128_support"],

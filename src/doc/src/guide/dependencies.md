@@ -20,11 +20,11 @@ use. This example adds a dependency of the `time` crate:
 time = "0.1.12"
 ```
 
-The version string is a [semver] version requirement. The [specifying
+The version string is a [SemVer] version requirement. The [specifying
 dependencies](../reference/specifying-dependencies.md) docs have more information about
 the options you have here.
 
-[semver]: https://github.com/steveklabnik/semver#requirements
+[SemVer]: https://semver.org
 
 If we also wanted to add a dependency on the `regex` crate, we would not need
 to add `[dependencies]` for each crate listed. Here's what your whole
