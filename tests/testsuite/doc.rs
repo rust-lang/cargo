@@ -464,8 +464,17 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         .build();
 
     p.cargo("doc --bin foo")
-        .with_stderr(
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
             "\
+warning: output filename collision.
+The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` \
+has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -500,8 +509,17 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         .build();
 
     p.cargo("doc --bins")
-        .with_stderr(
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
             "\
+warning: output filename collision.
+The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` \
+has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -543,7 +561,9 @@ fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
         .build();
 
     p.cargo("doc --example ex1")
-        .with_stderr(
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
@@ -594,7 +614,9 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
         .build();
 
     p.cargo("doc --examples")
-        .with_stderr(
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
@@ -2364,4 +2386,47 @@ fn scrape_examples_missing_flag() {
         .with_status(101)
         .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
         .run();
+}
+
+#[cargo_test]
+fn lib_before_bin() {
+    // Checks that the library is documented before the binary.
+    // Previously they were built concurrently, which can cause issues
+    // if the bin has intra-doc links to the lib.
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                /// Hi
+                pub fn abc() {}
+            "#,
+        )
+        .file(
+            "src/bin/somebin.rs",
+            r#"
+                //! See [`foo::abc`]
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    // Run check first. This just helps ensure that the test clearly shows the
+    // order of the rustdoc commands.
+    p.cargo("check").run();
+
+    // The order of output here should be deterministic.
+    p.cargo("doc -v")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo [..]
+[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]
+[RUNNING] `rustdoc --crate-type bin --crate-name somebin src/bin/somebin.rs [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // And the link should exist.
+    let bin_html = p.read_file("target/doc/somebin/index.html");
+    assert!(bin_html.contains("../foo/fn.abc.html"));
 }
