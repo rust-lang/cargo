@@ -7,7 +7,7 @@
 //! tested 1.0 to 1.51. Run this with:
 //!
 //! ```console
-//! cargo test --test testsuite -- old_cargos --nocapture --ignored
+//! cargo test --test testsuite -- old_cargos --nocapture
 //! ```
 
 use cargo::CargoResult;
@@ -102,7 +102,6 @@ fn collect_all_toolchains() -> Vec<(Version, String)> {
 //   The optional dependency `new-baz-dep` should not be activated.
 // * `bar` 1.0.2 has a dependency on `baz` that *requires* the new feature
 //   syntax.
-#[ignore]
 #[cargo_test]
 fn new_features() {
     if std::process::Command::new("rustup").output().is_err() {
@@ -411,8 +410,7 @@ fn new_features() {
         p.build_dir().rm_rf();
         match run_cargo() {
             Ok(behavior) => {
-                // TODO: Switch to 51 after backport.
-                if version < &Version::new(1, 52, 0) && toolchain != "this" {
+                if version < &Version::new(1, 51, 0) && toolchain != "this" {
                     check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");
                     check_lock!(tc_result, "baz", which, behavior.baz, "1.0.1");
                     check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
@@ -449,12 +447,13 @@ fn new_features() {
                 check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
             }
             Err(e) => {
-                if toolchain == "this" {
+                if version >= &Version::new(1, 51, 0) || toolchain == "this" {
                     // 1.0.1 can't be used without -Znamespaced-features
                     // It gets filtered out of the index.
-                    check_err_contains(&mut tc_result, e,
-                        "error: failed to select a version for the requirement `bar = \"=1.0.1\"`\n\
-                        candidate versions found which didn't match: 1.0.2, 1.0.0"
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "candidate versions found which didn't match: 1.0.2, 1.0.0",
                     );
                 } else {
                     tc_result.push(format!("bar 1.0.1 locked build failed: {}", e));
@@ -471,11 +470,12 @@ fn new_features() {
                 check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
             }
             Err(e) => {
-                if toolchain == "this" {
+                if version >= &Version::new(1, 51, 0) || toolchain == "this" {
                     // baz can't lock to 1.0.1, it requires -Znamespaced-features
-                    check_err_contains(&mut tc_result, e,
-                        "error: failed to select a version for the requirement `baz = \"=1.0.1\"`\n\
-                        candidate versions found which didn't match: 1.0.0"
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "candidate versions found which didn't match: 1.0.0",
                     );
                 } else {
                     tc_result.push(format!("bar 1.0.2 locked build failed: {}", e));
@@ -504,7 +504,6 @@ fn new_features() {
 }
 
 #[cargo_test]
-#[ignore]
 fn index_cache_rebuild() {
     // Checks that the index cache gets rebuilt.
     //
@@ -588,7 +587,6 @@ foo v0.1.0 [..]
 }
 
 #[cargo_test]
-#[ignore]
 fn avoids_split_debuginfo_collision() {
     // Checks for a bug where .o files were being incorrectly shared between
     // different toolchains using incremental and split-debuginfo on macOS.
@@ -637,7 +635,6 @@ fn avoids_split_debuginfo_collision() {
         .cwd(p.root())
         .with_stderr(
             "\
-[COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 ",
         )
