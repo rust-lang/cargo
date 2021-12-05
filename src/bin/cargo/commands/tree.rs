@@ -12,7 +12,7 @@ use std::str::FromStr;
 pub fn cli() -> App {
     subcommand("tree")
         .about("Display a tree visualization of a dependency graph")
-        .arg(opt("quiet", "Suppress status messages").short("q"))
+        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
         .arg_manifest_path()
         .arg_package_spec_no_all(
             "Package to be used as the root of the tree",
