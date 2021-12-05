@@ -937,6 +937,29 @@ fn release_works() {
 }
 
 #[cargo_test]
+fn release_short_works() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() { if cfg!(debug_assertions) { panic!() } }
+            "#,
+        )
+        .build();
+
+    p.cargo("run -r")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] `target/release/foo[EXE]`
+",
+        )
+        .run();
+    assert!(p.release_bin("foo").is_file());
+}
+
+#[cargo_test]
 fn run_bin_different_name() {
     let p = project()
         .file(
