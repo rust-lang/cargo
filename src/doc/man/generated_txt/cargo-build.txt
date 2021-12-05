@@ -287,6 +287,12 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
+       --future-incompat-report
+           Displays a future-incompat report for any future-incompatible
+           warnings produced during execution of this command
+
+           See cargo-report(1)
+
 ENVIRONMENT
        See the reference
        <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
