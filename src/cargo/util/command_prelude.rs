@@ -66,6 +66,14 @@ pub trait AppExt: Sized {
         )
     }
 
+    fn arg_counts(self) -> Self {
+        self._arg(
+            opt("counts", "Number of repeated runs, default to 1")
+                .short("c")
+                .value_name("N"),
+        )
+    }
+
     fn arg_jobs(self) -> Self {
         self._arg(
             opt("jobs", "Number of parallel jobs, defaults to # of CPUs")

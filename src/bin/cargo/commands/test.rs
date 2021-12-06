@@ -40,6 +40,7 @@ pub fn cli() -> App {
         .arg(opt("doc", "Test only this library's documentation"))
         .arg(opt("no-run", "Compile, but don't run tests"))
         .arg(opt("no-fail-fast", "Run all tests regardless of failure"))
+        .arg_counts()
         .arg_package_spec(
             "Package to run tests for",
             "Test all packages in the workspace",
@@ -117,6 +118,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ops = ops::TestOptions {
         no_run,
         no_fail_fast: args.is_present("no-fail-fast"),
+        counts: args.value_of_u32("counts")?,
         compile_opts,
     };
 

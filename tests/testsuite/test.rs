@@ -4455,3 +4455,28 @@ fn test_workspaces_cwd() {
         .with_stdout_contains("test test_integration_deep_cwd ... ok")
         .run();
 }
+
+#[cargo_test]
+fn cargo_test_counts() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {}
+                #[test] fn test_hello() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("test -c 4")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+",
+        )
+        .with_stdout_contains_n("test test_hello ... ok", 4)
+        .run();
+}

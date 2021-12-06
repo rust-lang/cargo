@@ -11,6 +11,7 @@ pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
     pub no_run: bool,
     pub no_fail_fast: bool,
+    pub counts: Option<u32>,
 }
 
 pub fn run_tests(
@@ -113,18 +114,20 @@ fn run_unit_tests(
             .shell()
             .verbose(|shell| shell.status("Running", &cmd))?;
 
-        let result = cmd.exec();
+        for _ in 0..options.counts.unwrap_or(1) {
+            let result = cmd.exec();
 
-        if let Err(e) = result {
-            let e = e.downcast::<ProcessError>()?;
-            errors.push((
-                unit.target.kind().clone(),
-                unit.target.name().to_string(),
-                unit.pkg.name().to_string(),
-                e,
-            ));
-            if !options.no_fail_fast {
-                break;
+            if let Err(e) = result {
+                let e = e.downcast::<ProcessError>()?;
+                errors.push((
+                    unit.target.kind().clone(),
+                    unit.target.name().to_string(),
+                    unit.pkg.name().to_string(),
+                    e,
+                ));
+                if !options.no_fail_fast {
+                    break;
+                }
             }
         }
     }
