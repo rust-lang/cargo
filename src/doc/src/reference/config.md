@@ -507,6 +507,20 @@ TMPDIR = { value = "/home/tmp", force = true }
 OPENSSL_DIR = { value = "vendor/openssl", relative = true }
 ```
 
+### `[future-incompat-report]`
+
+The `[future-incompat-report]` table controls setting for [future incompat reporting](future-incompat-report.md)
+
+#### `future-incompat-report.frequency`
+* Type: string
+* Default: "always"
+* Environment: `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY`
+
+Controls how often we display a notification to the terminal when a future incompat report is available. Possible values:
+
+* `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
+* `never`: Never display a notification
+
 #### `[http]`
 
 The `[http]` table defines settings for HTTP behavior. This includes fetching
@@ -1061,16 +1075,3 @@ Sets the width for progress bar.
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
 [crates.io]: https://crates.io/
-
-### `[future-incompat-report]`
-
-The `[future-incompat-report]` table controls setting for [future incompat reporting](../reference/future-incompat-report.html)
-
-#### `future-incompat-report.frequency`
-* Type: string
-* Default: "always"
-
-Controls how often we display a notification to the terminal when a future incompat report is available. Possible values:
-
-* `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
-* `never`: Never display a notification
