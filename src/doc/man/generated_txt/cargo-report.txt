@@ -27,5 +27,8 @@ EXAMPLES
               cargo report future-incompat --package my-dep:0.0.1
 
 SEE ALSO
+       Future incompat report
+       <https://doc.rust-lang.org/cargo/reference/future-incompat-report.html>
+
        cargo(1)
 

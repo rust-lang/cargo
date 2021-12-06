@@ -87,6 +87,9 @@ ENV_VAR_NAME_2 = { value = "value", force = true }
 # Value is relative to .cargo directory containing `config.toml`, make absolute
 ENV_VAR_NAME_3 = { value = "relative/path", relative = true }
 
+[future-incompat-report]
+frequency = 'always' # when to display a notification about a future incompat report
+
 [cargo-new]
 vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
 
@@ -1058,3 +1061,16 @@ Sets the width for progress bar.
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
 [crates.io]: https://crates.io/
+
+### `[future-incompat-report]`
+
+The `[future-incompat-report]` table controls setting for [future incompat reporting](../reference/future-incompat-report.html)
+
+#### `future-incompat-report.frequency`
+* Type: string
+* Default: "always"
+
+Controls how often we display a notification to the terminal when a future incompat report is available. Possible values:
+
+* `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
+* `never`: Never display a notification

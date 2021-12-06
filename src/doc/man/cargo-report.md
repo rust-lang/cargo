@@ -37,4 +37,6 @@ Only display a report for the specified package
        cargo report future-incompat --package my-dep:0.0.1
 
 ## SEE ALSO
+[Future incompat report](../reference/future-incompat-report.html)
+
 {{man "cargo" 1}}
