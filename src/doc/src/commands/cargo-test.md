@@ -435,6 +435,12 @@ includes an option to control the number of threads used:
 the number of CPUs.</dd>
 
 
+<dt class="option-term" id="option-cargo-test---future-incompat-report"><a class="option-anchor" href="#option-cargo-test---future-incompat-report"></a><code>--future-incompat-report</code></dt>
+<dd class="option-desc">Displays a future-incompat report for any future-incompatible warnings
+produced during execution of this command</p>
+<p>See <a href="cargo-report.html">cargo-report(1)</a></dd>
+
+
 
 </dl>
 

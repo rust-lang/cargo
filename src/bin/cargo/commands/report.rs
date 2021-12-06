@@ -1,5 +1,4 @@
 use crate::command_prelude::*;
-use anyhow::anyhow;
 use cargo::core::compiler::future_incompat::{OnDiskReports, REPORT_PREAMBLE};
 use cargo::drop_println;
 
@@ -24,9 +23,6 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    if !config.nightly_features_allowed {
-        return Err(anyhow!("`cargo report` can only be used on the nightly channel").into());
-    }
     match args.subcommand() {
         ("future-incompatibilities", Some(args)) => report_future_incompatibilies(config, args),
         (cmd, _) => panic!("unexpected command `{}`", cmd),

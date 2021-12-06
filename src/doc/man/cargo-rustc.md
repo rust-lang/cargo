@@ -100,6 +100,7 @@ See the [the reference](../reference/profiles.html) for more details on profiles
 
 {{#options}}
 {{> options-jobs }}
+{{> options-future-incompat }}
 {{/options}}
 
 {{> section-environment }}
