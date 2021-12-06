@@ -183,7 +183,9 @@ impl TargetInfo {
 
         let supports_json_future_incompat = rustc
             .cached_output(
-                process.clone().arg("--json").arg("future-incompat"),
+                process
+                    .clone()
+                    .args(&["--error-format", "json", "--json", "future-incompat"]),
                 extra_fingerprint,
             )
             .is_ok();
