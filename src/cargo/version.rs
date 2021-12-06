@@ -22,7 +22,6 @@ pub struct VersionInfo {
     pub major: u8,
     pub minor: u8,
     pub patch: u8,
-    pub pre_release: Option<String>,
     /// Information that's only available when we were built with
     /// rustbuild, rather than Cargo itself.
     pub cfg_info: Option<CfgInfo>,
@@ -34,8 +33,6 @@ impl fmt::Display for VersionInfo {
         if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             if channel != "stable" {
                 write!(f, "-{}", channel)?;
-                let empty = String::new();
-                write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
             }
         };
 
@@ -86,7 +83,6 @@ pub fn version() -> VersionInfo {
                 major,
                 minor,
                 patch,
-                pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
                 cfg_info: Some(CfgInfo {
                     release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
                     commit_info,
@@ -98,7 +94,6 @@ pub fn version() -> VersionInfo {
             major,
             minor,
             patch,
-            pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
             cfg_info: None,
         },
     }
