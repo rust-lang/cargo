@@ -46,6 +46,7 @@ pub fn cli() -> App {
             "no-fail-fast",
             "Run all benchmarks regardless of failure",
         ))
+        .arg_counts()
         .arg_unit_graph()
         .after_help("Run `cargo help bench` for more detailed information.\n")
 }
@@ -65,7 +66,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ops = TestOptions {
         no_run: args.is_present("no-run"),
         no_fail_fast: args.is_present("no-fail-fast"),
-        counts: None,
+        counts: args.value_of_u32("counts")?,
         compile_opts,
     };
 

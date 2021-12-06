@@ -1756,3 +1756,34 @@ fn json_artifact_includes_executable_for_benchmark() {
         )
         .run();
 }
+
+#[cargo_test]
+fn cargo_bench_counts() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+                fn main() {}
+                #[bench] fn bench_hello(_b: &mut test::Bencher) {}
+            "#,
+        )
+        .build();
+
+    p.cargo("bench --counts 4")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] bench [optimized] target(s) in [..]
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
+        )
+        .with_stdout_contains_n("test bench_hello ... bench: [..]", 4)
+        .run();
+}
