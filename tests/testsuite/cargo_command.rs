@@ -57,8 +57,8 @@ fn list_custom_aliases_with_descriptions() {
         .build();
 
     p.cargo("--list")
-        .with_stdout_contains("    myaliasstr           foo --bar")
-        .with_stdout_contains("    myaliasvec           foo --bar")
+        .with_stdout_contains("    myaliasstr           alias: foo --bar")
+        .with_stdout_contains("    myaliasvec           alias: foo --bar")
         .run();
 }
 
