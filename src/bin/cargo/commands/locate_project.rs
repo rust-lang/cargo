@@ -6,7 +6,7 @@ use serde::Serialize;
 pub fn cli() -> App {
     subcommand("locate-project")
         .about("Print a JSON representation of a Cargo.toml file's location")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_manifest_path()
         .arg(
             opt(

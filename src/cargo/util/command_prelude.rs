@@ -236,6 +236,10 @@ pub trait AppExt: Sized {
             "Outputs a future incompatibility report at the end of the build",
         ))
     }
+
+    fn arg_quiet(self) -> Self {
+        self._arg(opt("quiet", "Do not print cargo log messages").short("q"))
+    }
 }
 
 impl AppExt for App {

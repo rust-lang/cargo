@@ -9,7 +9,7 @@ pub fn cli() -> App {
     subcommand("rustc")
         .setting(AppSettings::TrailingVarArg)
         .about("Compile a package, and pass extra options to the compiler")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(Arg::with_name("args").multiple(true).help("Rustc flags"))
         .arg_package("Package to build")
         .arg_jobs()

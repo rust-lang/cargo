@@ -8,7 +8,7 @@ pub fn cli() -> App {
             "Save an api token from the registry locally. \
              If token is not specified, it will be read from stdin.",
         )
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(Arg::with_name("token"))
         // --host is deprecated (use --registry instead)
         .arg(

@@ -7,7 +7,7 @@ pub fn cli() -> App {
         // subcommand aliases are handled in aliased_command()
         // .alias("d")
         .about("Build a package's documentation")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(opt(
             "open",
             "Opens the docs in a browser after the operation",
