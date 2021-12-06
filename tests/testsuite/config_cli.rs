@@ -3,7 +3,7 @@
 use super::config::{assert_error, assert_match, read_output, write_config, ConfigBuilder};
 use cargo::util::config::Definition;
 use cargo_test_support::{paths, project};
-use std::fs;
+use std::{collections::HashMap, fs};
 
 #[cargo_test]
 fn config_gated() {
@@ -224,11 +224,64 @@ fn merge_array_mixed_def_paths() {
 }
 
 #[cargo_test]
+fn enforces_format() {
+    // These dotted key expressions should all be fine.
+    let config = ConfigBuilder::new()
+        .config_arg("a=true")
+        .config_arg(" b.a = true ")
+        .config_arg("c.\"b\".'a'=true")
+        .config_arg("d.\"=\".'='=true")
+        .config_arg("e.\"'\".'\"'=true")
+        .build();
+    assert_eq!(config.get::<bool>("a").unwrap(), true);
+    assert_eq!(
+        config.get::<HashMap<String, bool>>("b").unwrap(),
+        HashMap::from([("a".to_string(), true)])
+    );
+    assert_eq!(
+        config
+            .get::<HashMap<String, HashMap<String, bool>>>("c")
+            .unwrap(),
+        HashMap::from([("b".to_string(), HashMap::from([("a".to_string(), true)]))])
+    );
+    assert_eq!(
+        config
+            .get::<HashMap<String, HashMap<String, bool>>>("d")
+            .unwrap(),
+        HashMap::from([("=".to_string(), HashMap::from([("=".to_string(), true)]))])
+    );
+    assert_eq!(
+        config
+            .get::<HashMap<String, HashMap<String, bool>>>("e")
+            .unwrap(),
+        HashMap::from([("'".to_string(), HashMap::from([("\"".to_string(), true)]))])
+    );
+
+    // But anything that's not a dotted key expression should be disallowed.
+    let _ = ConfigBuilder::new()
+        .config_arg("[a] foo=true")
+        .build_err()
+        .unwrap_err();
+    let _ = ConfigBuilder::new()
+        .config_arg("a = true\nb = true")
+        .build_err()
+        .unwrap_err();
+
+    // We also disallow overwriting with tables since it makes merging unclear.
+    let _ = ConfigBuilder::new()
+        .config_arg("a = { first = true, second = false }")
+        .build_err()
+        .unwrap_err();
+    let _ = ConfigBuilder::new()
+        .config_arg("a = { first = true }")
+        .build_err()
+        .unwrap_err();
+}
+
+#[cargo_test]
 fn unused_key() {
     // Unused key passed on command line.
-    let config = ConfigBuilder::new()
-        .config_arg("build={jobs=1, unused=2}")
-        .build();
+    let config = ConfigBuilder::new().config_arg("build.unused = 2").build();
 
     config.build_config().unwrap();
     let output = read_output(config);

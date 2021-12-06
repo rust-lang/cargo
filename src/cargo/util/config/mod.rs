@@ -1176,17 +1176,102 @@ impl Config {
                 map.insert("include".to_string(), value);
                 CV::Table(map, Definition::Cli)
             } else {
-                // TODO: This should probably use a more narrow parser, reject
-                // comments, blank lines, [headers], etc.
+                // We only want to allow "dotted keys" (see https://toml.io/en/v1.0.0#keys), which
+                // are defined as .-separated "simple" keys, where a simple key is either a quoted
+                // or unquoted key, as defined in the ANBF:
+                //
+                //     unquoted-key = 1*( ALPHA / DIGIT / %x2D / %x5F ) ; A-Z / a-z / 0-9 / - / _
+                //     quoted-key = basic-string / literal-string
+                //
+                // https://github.com/toml-lang/toml/blob/1.0.0/toml.abnf#L50-L51
+                //
+                // We don't want to bring in a full parser, but luckily since we're just verifying
+                // a subset of the format here, the code isn't too hairy. The big thing we need to
+                // deal with is quoted strings and escaped characters.
+                let mut in_quoted_string = false;
+                let mut in_literal_string = false;
+                let mut chars = arg.chars();
+                let mut depth = 1;
+                while let Some(c) = chars.next() {
+                    match c {
+                        '\'' if !in_quoted_string => {
+                            in_literal_string = !in_literal_string;
+                        }
+                        _ if in_literal_string => {
+                            // The spec only allows certain characters here, but it doesn't matter
+                            // for the purposes of checking if this is indeed a dotted key. If the
+                            // user gave an invalid expression, it'll be detected when we parse as
+                            // TOML later.
+                            //
+                            // Note that escapes are not permitted in literal strings.
+                        }
+                        '"' => {
+                            in_quoted_string = !in_quoted_string;
+                        }
+                        '\\' => {
+                            // Whatever the next char is, it's not a double quote or an escape.
+                            // Technically escape can capture more than one char, but that's only
+                            // possible if uXXXX and UXXXXXXXX Unicode specfiers, which are all hex
+                            // characters anyway, and therefore won't cause a problem.
+                            let _ = chars.next();
+                        }
+                        _ if in_quoted_string => {
+                            // Anything goes within quotes as far as we're concerned
+                        }
+                        'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' => {
+                            // These are fine as part of a dotted key
+                        }
+                        '.' => {
+                            // This is a dotted key separator -- dots are okay
+                            depth += 1;
+                        }
+                        ' ' | '\t' => {
+                            // This kind of whitespace is acceptable in dotted keys.
+                            // Technically it's only allowed around the dots and =,
+                            // but there's no need for us to be picky about that here.
+                        }
+                        '=' => {
+                            // We didn't hit anything questionable before hitting the first =
+                            // (that is not within a quoted string), so this is a dotted key
+                            // expression.
+                            break;
+                        }
+                        _ => {
+                            // We hit some character before the = that isn't permitted in a dotted
+                            // key expression, so the user is trying to pass something more
+                            // involved.
+                            bail!(
+                                "--config argument `{}` was not a TOML dotted key expression (a.b.c = _)",
+                                arg
+                            );
+                        }
+                    }
+                }
                 let toml_v: toml::Value = toml::de::from_str(arg)
                     .with_context(|| format!("failed to parse --config argument `{}`", arg))?;
-                let toml_table = toml_v.as_table().unwrap();
-                if toml_table.len() != 1 {
-                    bail!(
-                        "--config argument `{}` expected exactly one key=value pair, got {} keys",
-                        arg,
-                        toml_table.len()
-                    );
+
+                // To avoid questions around nested table merging, we disallow tables with more
+                // than one value -- such changes should instead take the form of multiple dotted
+                // key expressions passed as separate --config arguments.
+                {
+                    let mut table = toml_v.as_table();
+                    while let Some(t) = table {
+                        if t.len() != 1 {
+                            bail!(
+                                "--config argument `{}` expected exactly one key=value pair, got {} keys",
+                                arg,
+                                t.len()
+                            );
+                        }
+                        if depth == 0 {
+                            bail!(
+                                "--config argument `{}` uses inline table values, which are not accepted",
+                                arg,
+                            );
+                        }
+                        depth -= 1;
+                        table = t.values().next().unwrap().as_table();
+                    }
                 }
                 CV::from_toml(Definition::Cli, toml_v)
                     .with_context(|| format!("failed to convert --config argument `{}`", arg))?
