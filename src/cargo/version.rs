@@ -19,9 +19,8 @@ pub struct CfgInfo {
 
 /// Cargo's version.
 pub struct VersionInfo {
-    pub major: u8,
-    pub minor: u8,
-    pub patch: u8,
+    /// Cargo's version, such as "1.57.0", "1.58.0-beta.1", "1.59.0-nightly", etc.
+    pub version: String,
     /// Information that's only available when we were built with
     /// rustbuild, rather than Cargo itself.
     pub cfg_info: Option<CfgInfo>,
@@ -29,12 +28,7 @@ pub struct VersionInfo {
 
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
-        if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
-            if channel != "stable" {
-                write!(f, "-{}", channel)?;
-            }
-        };
+        write!(f, "{}", self.version)?;
 
         if let Some(ref cfg) = self.cfg_info {
             if let Some(ref ci) = cfg.commit_info {
@@ -53,23 +47,28 @@ pub fn version() -> VersionInfo {
         };
     }
 
-    // So this is pretty horrible...
-    // There are two versions at play here:
-    //   - version of cargo-the-binary, which you see when you type `cargo --version`
-    //   - version of cargo-the-library, which you download from crates.io for use
-    //     in your packages.
-    //
-    // We want to make the `binary` version the same as the corresponding Rust/rustc release.
-    // At the same time, we want to keep the library version at `0.x`, because Cargo as
-    // a library is (and probably will always be) unstable.
-    //
-    // Historically, Cargo used the same version number for both the binary and the library.
-    // Specifically, rustc 1.x.z was paired with cargo 0.x+1.w.
-    // We continue to use this scheme for the library, but transform it to 1.x.w for the purposes
-    // of `cargo --version`.
-    let major = 1;
-    let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
-    let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
+    // This is the version set in rustbuild, which we use to match rustc.
+    let version = option_env_str!("CFG_RELEASE").unwrap_or_else(|| {
+        // If cargo is not being built by rustbuild, then we just use the
+        // version from cargo's own `Cargo.toml`.
+        //
+        // There are two versions at play here:
+        //   - version of cargo-the-binary, which you see when you type `cargo --version`
+        //   - version of cargo-the-library, which you download from crates.io for use
+        //     in your packages.
+        //
+        // The library is permanently unstable, so it always has a 0 major
+        // version. However, the CLI now reports a stable 1.x version
+        // (starting in 1.26) which stays in sync with rustc's version.
+        //
+        // Coincidentally, the minor version for cargo-the-library is always
+        // +1 of rustc's minor version (that is, `rustc 1.11.0` corresponds to
+        // `cargo `0.12.0`). The versions always get bumped in lockstep, so
+        // this should continue to hold.
+        let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
+        let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
+        format!("1.{}.{}", minor, patch)
+    });
 
     match option_env!("CFG_RELEASE_CHANNEL") {
         // We have environment variables set up from configure/make.
@@ -80,9 +79,7 @@ pub fn version() -> VersionInfo {
                 commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
             });
             VersionInfo {
-                major,
-                minor,
-                patch,
+                version,
                 cfg_info: Some(CfgInfo {
                     release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
                     commit_info,
@@ -91,9 +88,7 @@ pub fn version() -> VersionInfo {
         }
         // We are being compiled by Cargo itself.
         None => VersionInfo {
-            major,
-            minor,
-            patch,
+            version,
             cfg_info: None,
         },
     }
