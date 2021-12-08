@@ -176,6 +176,7 @@ supported environment variables are:
 [`target.<triple>.linker`]: config.md#targettriplelinker
 [`target.<triple>.runner`]: config.md#targettriplerunner
 [`target.<triple>.rustflags`]: config.md#targettriplerustflags
+[`term.quiet`]: config.md#termquiet
 [`term.verbose`]: config.md#termverbose
 [`term.color`]: config.md#termcolor
 [`term.progress.when`]: config.md#termprogresswhen
