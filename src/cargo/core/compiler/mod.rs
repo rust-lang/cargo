@@ -670,7 +670,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     if unit.mode.is_doc_scrape() {
         debug_assert!(cx.bcx.scrape_units.contains(unit));
 
-        *unstable_opts = true;
+        unstable_opts = true;
 
         rustdoc
             .arg("--scrape-examples-output-path")
@@ -691,7 +691,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         // We only pass scraped examples to packages in the workspace
         // since examples are only coming from reverse-dependencies of workspace packages
 
-        *unstable_opts = true;
+        unstable_opts = true;
 
         for scrape_unit in &cx.bcx.scrape_units {
             rustdoc
@@ -1089,13 +1089,13 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 fn build_natvis(
     cmd: &mut ProcessBuilder,
     unit: &Unit,
-    unstable_opts: &mut bool
+    unstable_opts: &mut bool,
 ) -> CargoResult<()> {
     if let Some(natvis) = &unit.pkg.manifest().natvis() {
         *unstable_opts = true;
         cmd.arg("-C").arg(&{
             let mut arg = OsString::from("natvis=");
-            arg.push(OsString::from(natvis.iter().join(",")));
+            arg.push(OsString::from(natvis.iter().map(|f| f.display()).join(",")));
             arg
         });
     }
@@ -1107,7 +1107,7 @@ fn build_deps_args(
     cmd: &mut ProcessBuilder,
     cx: &mut Context<'_, '_>,
     unit: &Unit,
-    unstable_opts: &mut bool
+    unstable_opts: &mut bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     cmd.arg("-L").arg(&{

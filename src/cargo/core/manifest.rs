@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -53,7 +53,7 @@ pub struct Manifest {
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
-    natvis: Option<BTreeSet<String>>,
+    natvis: Option<BTreeSet<PathBuf>>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -393,7 +393,7 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
-        natvis: Option<BTreeSet<String>>,
+        natvis: Option<BTreeSet<PathBuf>>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -419,7 +419,7 @@ impl Manifest {
             default_run,
             metabuild,
             resolve_behavior,
-            natvis
+            natvis,
         }
     }
 
@@ -488,7 +488,7 @@ impl Manifest {
         self.links.as_deref()
     }
 
-    pub fn natvis(&self) -> &Option<BTreeSet<String>> {
+    pub fn natvis(&self) -> &Option<BTreeSet<PathBuf>> {
         &self.natvis
     }
 

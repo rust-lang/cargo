@@ -1390,10 +1390,10 @@ impl TomlManifest {
         if let Some(debug_visualizations) = me.debug_visualizations.clone() {
             features.require(Feature::natvis())?;
             if let Some(natvis_files) = debug_visualizations.natvis {
-                natvis_files.iter().for_each(|file| {
+                for file in &natvis_files {
                     let path = paths::normalize_path(&package_root.join(file));
-                    natvis.insert(path.display().to_string());
-                });
+                    natvis.insert(path);
+                }
             }
         }
 
@@ -1406,7 +1406,7 @@ impl TomlManifest {
                     if let Ok(entry) = entry {
                         let path = entry.path();
                         if path.extension() == Some(natvis_ext.as_ref()) {
-                            natvis.insert(path.display().to_string());
+                            natvis.insert(path);
                         }
                     }
                 }
