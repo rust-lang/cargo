@@ -235,7 +235,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-build--q"><a class="option-anchor" href="#option-cargo-build--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-build---quiet"><a class="option-anchor" href="#option-cargo-build---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-build---color"><a class="option-anchor" href="#option-cargo-build---color"></a><code>--color</code> <em>when</em></dt>
