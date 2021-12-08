@@ -27,12 +27,11 @@ fn quiet_arg() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("build -q")
-        .with_stderr_does_not_contain("[FINISHED] [..]")
-        .run();
+    p.cargo("run -q").with_stderr("").with_stdout("hello").run();
 
-    p.cargo("build --quiet")
-        .with_stderr_does_not_contain("[FINISHED] [..]")
+    p.cargo("run --quiet")
+        .with_stderr("")
+        .with_stdout("hello")
         .run();
 }
 
@@ -42,7 +41,7 @@ fn quiet_arg_and_verbose_arg() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("build -q -v")
+    p.cargo("run -q -v")
         .with_status(101)
         .with_stderr("[ERROR] cannot set both --verbose and --quiet")
         .run();
@@ -61,9 +60,7 @@ fn quiet_arg_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("build -q")
-        .with_stderr_does_not_contain("[FINISHED] [..]")
-        .run();
+    p.cargo("run -q").with_stderr("").with_stdout("hello").run();
 }
 
 #[cargo_test]
@@ -79,8 +76,15 @@ fn verbose_arg_and_quiet_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("build -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]")
+    p.cargo("run -v")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
         .run();
 }
 
@@ -98,7 +102,7 @@ fn quiet_config_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("run")
         .with_status(101)
         .with_stderr("[ERROR] cannot set both `term.verbose` and `term.quiet`")
         .run();

@@ -168,6 +168,7 @@ metadata_key1 = "value"
 metadata_key2 = "value"
 
 [term]
+quiet = false          # whether cargo output is quiet
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
 progress.when = 'auto' # whether cargo shows progress bar

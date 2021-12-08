@@ -114,6 +114,7 @@ supported environment variables are:
 * `CARGO_TARGET_<triple>_LINKER` — The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
 * `CARGO_TARGET_<triple>_RUNNER` — The executable runner, see [`target.<triple>.runner`].
 * `CARGO_TARGET_<triple>_RUSTFLAGS` — Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
+* `CARGO_TERM_QUIET` — Quiet mode, see [`term.quiet`].
 * `CARGO_TERM_VERBOSE` — The default terminal verbosity, see [`term.verbose`].
 * `CARGO_TERM_COLOR` — The default color mode, see [`term.color`].
 * `CARGO_TERM_PROGRESS_WHEN` — The default progress bar showing mode, see [`term.progress.when`].
