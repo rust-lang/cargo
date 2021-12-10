@@ -186,6 +186,7 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-check--r"><a class="option-anchor" href="#option-cargo-check--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-check---release"><a class="option-anchor" href="#option-cargo-check---release"></a><code>--release</code></dt>
 <dd class="option-desc">Check optimized artifacts with the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
@@ -343,6 +344,12 @@ for more information about how toolchain overrides work.</dd>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</dd>
+
+
+<dt class="option-term" id="option-cargo-check---future-incompat-report"><a class="option-anchor" href="#option-cargo-check---future-incompat-report"></a><code>--future-incompat-report</code></dt>
+<dd class="option-desc">Displays a future-incompat report for any future-incompatible warnings
+produced during execution of this command</p>
+<p>See <a href="cargo-report.html">cargo-report(1)</a></dd>
 
 
 </dl>

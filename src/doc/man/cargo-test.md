@@ -153,6 +153,7 @@ includes an option to control the number of threads used:
 {{#options}}
 
 {{> options-jobs }}
+{{> options-future-incompat }}
 
 {{/options}}
 

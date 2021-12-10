@@ -169,6 +169,7 @@ target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
+\fB\-r\fR, 
 \fB\-\-release\fR
 .RS 4
 Build optimized artifacts with the \fBrelease\fR profile.
@@ -358,6 +359,14 @@ Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
+.RE
+.sp
+\fB\-\-future\-incompat\-report\fR
+.RS 4
+Displays a future\-incompat report for any future\-incompatible warnings
+produced during execution of this command
+.sp
+See \fBcargo\-report\fR(1)
 .RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for

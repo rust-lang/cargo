@@ -95,7 +95,6 @@ Each new feature described below should explain how to use it.
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
-    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
     * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
     * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
@@ -1170,35 +1169,6 @@ cargo logout -Z credential-process
 [crates.io]: https://crates.io/
 [config file]: config.md
 
-### future incompat report
-* RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
-* rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
-
-The `-Z future-incompat-report` flag causes Cargo to check for
-future-incompatible warnings in all dependencies. These are warnings for
-changes that may become hard errors in the future, causing the dependency to
-stop building in a future version of rustc. If any warnings are found, a small
-notice is displayed indicating that the warnings were found, and provides
-instructions on how to display a full report.
-
-A full report can be displayed with the `cargo report future-incompatibilities
--Z future-incompat-report --id ID` command, or by running the build again with
-the `--future-incompat-report` flag. The developer should then update their
-dependencies to a version where the issue is fixed, or work with the
-developers of the dependencies to help resolve the issue.
-
-This feature can be configured through a `[future-incompat-report]`
-section in `.cargo/config`. Currently, the supported options are:
-
-```
-[future-incompat-report]
-frequency = FREQUENCY
-```
-
-The supported values for `FREQUENCY` are 'always` and 'never', which control
-whether or not a message is printed out at the end of `cargo build` / `cargo check`.
-
-
 ### `cargo config`
 
 * Original Issue: [#2362](https://github.com/rust-lang/cargo/issues/2362)
@@ -1430,6 +1400,11 @@ See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](..
 Custom named profiles have been stabilized in the 1.57 release. See the
 [profiles chapter](profiles.md#custom-profiles) for more information.
 
+### Future incompat report
+
+Support for generating a future-incompat report has been stabilized
+in the 1.59 release. See the [future incompat report chapter](future-incompat-report.md)
+for more information.
 
 ### scrape-examples
 

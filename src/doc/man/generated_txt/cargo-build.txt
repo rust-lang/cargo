@@ -142,7 +142,7 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
+       -r, --release
            Build optimized artifacts with the release profile. See also the
            --profile option for choosing a specific profile by name.
 
@@ -286,6 +286,12 @@ OPTIONS
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
+
+       --future-incompat-report
+           Displays a future-incompat report for any future-incompatible
+           warnings produced during execution of this command
+
+           See cargo-report(1)
 
 ENVIRONMENT
        See the reference
