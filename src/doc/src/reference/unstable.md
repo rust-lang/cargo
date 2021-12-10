@@ -974,7 +974,7 @@ the command line) target.
 * Original Issue: [#0000](https://github.com/rust-lang/cargo/pull/0000)
 
 The `natvis` feature adds a new section and key to the manifest:
-`[debug-visualizations]` and `debug-visualizations.natvis`. The `natvis`
+`[debugger-visualizations]` and `debugger-visualizations.natvis`. The `natvis`
 key takes a list of `.natvis` files which will be linked into the PDB
 generated if using the MSVC Linker.
 
@@ -987,7 +987,7 @@ cargo-features = ["natvis"]
 name = "foo"
 version = "0.0.1"
 
-[debug-visualizations]
+[debugger-visualizations]
 natvis = ["foo.natvis", "bar.natvis"]
 ```
 

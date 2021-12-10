@@ -13,7 +13,7 @@ fn gated() {
                 name =  "foo"
                 version = "0.0.1"
 
-                [debug-visualizations]
+                [debugger-visualizations]
                 natvis = ["foo.natvis"]
             "#,
         )
@@ -29,7 +29,8 @@ fn gated() {
 }
 
 #[cargo_test]
-fn natvis_file_does_not_exist() {
+#[cfg(target_env = "msvc")]
+fn file_does_not_exist() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -40,7 +41,7 @@ fn natvis_file_does_not_exist() {
                 name =  "foo"
                 version = "0.0.1"
 
-                [debug-visualizations]
+                [debugger-visualizations]
                 natvis = ["foo.natvis"]
             "#,
         )
@@ -49,7 +50,7 @@ fn natvis_file_does_not_exist() {
 
     let natvis_path = p.root().join("foo.natvis").display().to_string();
     let expected_msg = format!(
-        "[..]incorrect value `{}` for codegen option `natvis`[..]",
+        "[..]fatal error LNK1181: cannot open input file '{}'[..]",
         natvis_path
     );
 
@@ -73,23 +74,22 @@ fn invalid_natvis_extension() {
                 name =  "foo"
                 version = "0.0.1"
 
-                [debug-visualizations]
-                natvis = ["foo.rs"]
+                [debugger-visualizations]
+                natvis = ["src/main.rs"]
             "#,
         )
         .file("src/main.rs", "fn main() { assert!(true) }")
         .build();
 
-    let natvis_path = p.root().join("foo.rs").display().to_string();
+    let natvis_path = p.root().join("src").join("main.rs").display().to_string();
     let expected_msg = format!(
-        "[..]incorrect value `{}` for codegen option `natvis`[..]",
+        "warning: Natvis file `{}` does not have the expected `.natvis` extension.",
         natvis_path
     );
 
     // Run cargo build.
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .with_status(101)
         .with_stderr_contains(expected_msg)
         .run();
 }
@@ -106,7 +106,7 @@ fn simple_test() {
             name =  "foo"
             version = "0.0.1"
 
-            [debug-visualizations]
+            [debugger-visualizations]
             natvis = ["foo.natvis"]
         "#,
         )
@@ -183,7 +183,7 @@ fn direct_dependency_with_natvis() {
             name =  "test_dependency"
             version = "0.0.1"
 
-            [debug-visualizations]
+            [debugger-visualizations]
             natvis = ["test_dependency.natvis"]
         "#,
         )
@@ -231,7 +231,7 @@ fn multiple_natvis_files() {
             name =  "foo"
             version = "0.0.1"
 
-            [debug-visualizations]
+            [debugger-visualizations]
             natvis = ["bar.natvis", "foo.natvis"]
         "#,
         )
@@ -313,7 +313,7 @@ fn indirect_dependency_with_natvis() {
             name =  "foo"
             version = "0.0.1"
 
-            [debug-visualizations]
+            [debugger-visualizations]
             natvis = ["foo.natvis"]
 
             [dependencies]
@@ -369,7 +369,7 @@ fn indirect_dependency_with_natvis() {
             name =  "nested_dependency"
             version = "0.0.1"
 
-            [debug-visualizations]
+            [debugger-visualizations]
             natvis = ["nested_dependency.natvis"]
         "#,
         )
@@ -432,7 +432,7 @@ fn registry_dependency_with_natvis() {
                 name = "bar"
                 version = "0.0.1"
 
-                [debug-visualizations]
+                [debugger-visualizations]
                 natvis = ["bar.natvis"]
             "#,
         )

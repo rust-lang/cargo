@@ -303,7 +303,7 @@ pub struct TomlManifest {
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
-    debug_visualizations: Option<TomlDebugVisualizations>,
+    debugger_visualizations: Option<TomlDebuggerVisualizations>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
@@ -906,10 +906,10 @@ pub struct TomlWorkspace {
     metadata: Option<toml::Value>,
 }
 
-/// Represents the `debug-visualizations` section of a `Cargo.toml`.
+/// Represents the `debugger-visualizations` section of a `Cargo.toml`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct TomlDebugVisualizations {
-    natvis: Option<Vec<String>>,
+pub struct TomlDebuggerVisualizations {
+    natvis: Option<Vec<PathValue>>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
@@ -1031,7 +1031,7 @@ impl TomlManifest {
             replace: None,
             patch: None,
             workspace: None,
-            debug_visualizations: self.debug_visualizations.clone(),
+            debugger_visualizations: self.debugger_visualizations.clone(),
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
         });
@@ -1386,20 +1386,30 @@ impl TomlManifest {
             .map(CompileKind::Target);
 
         let mut natvis = BTreeSet::new();
-        // Collect the Natvis files specified via the toml file and normalize the absolute paths.
-        if let Some(debug_visualizations) = me.debug_visualizations.clone() {
+        let mut natvis_manifest_override = false;
+        let natvis_ext = "natvis";
+
+        // Collect the Natvis files specified via the toml file, if any exist, and normalize the absolute paths.
+        if let Some(debugger_visualizations) = me.debugger_visualizations.clone() {
             features.require(Feature::natvis())?;
-            if let Some(natvis_files) = debug_visualizations.natvis {
+            if let Some(natvis_files) = debugger_visualizations.natvis {
+                natvis_manifest_override = true;
                 for file in &natvis_files {
-                    let path = paths::normalize_path(&package_root.join(file));
+                    let path = paths::normalize_path(&package_root.join(file.clone().0));
+                    if path.extension() != Some(natvis_ext.as_ref()) {
+                        warnings.push(format!(
+                            "Natvis file `{}` does not have the expected `.natvis` extension.",
+                            path.display().to_string()
+                        ));
+                    }
                     natvis.insert(path);
                 }
             }
         }
 
-        // Append all of the Natvis files in the pre-determined directory under the package root, `dbgvis/natvis`.
-        if features.require(Feature::natvis()).is_ok() {
-            let natvis_ext = "natvis";
+        // If the `natvis` manifest key was not specified, append all of the Natvis files in the pre-determined
+        // directory under the package root, `dbgvis/natvis`.
+        if !natvis_manifest_override && features.require(Feature::natvis()).is_ok() {
             let natvis_dir_path = package_root.join("dbgvis").join(natvis_ext);
             if let Ok(natvis_dir) = fs::read_dir(&natvis_dir_path) {
                 for entry in natvis_dir {
