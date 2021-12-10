@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::core::source::MaybePackage;
@@ -13,6 +12,7 @@ use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use log::{trace, warn};
+use walkdir::WalkDir;
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,
@@ -392,37 +392,44 @@ impl<'cfg> PathSource<'cfg> {
         is_root: bool,
         filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> CargoResult<()> {
-        let is_dir = path.is_dir();
-        if !is_root && !(*filter)(path, is_dir)? {
-            return Ok(());
-        }
-        if !is_dir {
-            ret.push(path.to_path_buf());
-            return Ok(());
-        }
-        // Don't recurse into any sub-packages that we have.
-        if !is_root && path.join("Cargo.toml").exists() {
-            return Ok(());
+        let walkdir = WalkDir::new(path)
+            .follow_links(true)
+            .into_iter()
+            .filter_entry(|entry| {
+                let path = entry.path();
+                let at_root = is_root && entry.depth() == 0;
+                let is_dir = entry.file_type().is_dir();
+
+                if !at_root && !filter(path, is_dir).unwrap() {
+                    return false;
+                }
+
+                if !is_dir {
+                    return true;
+                }
+
+                // Don't recurse into any sub-packages that we have.
+                if !at_root && path.join("Cargo.toml").exists() {
+                    return false;
+                }
+
+                // Skip root Cargo artifacts.
+                if is_root
+                    && entry.depth() == 1
+                    && path.file_name().and_then(|s| s.to_str()) == Some("target")
+                {
+                    return false;
+                }
+
+                true
+            });
+        for entry in walkdir {
+            let entry = entry?;
+            if !entry.file_type().is_dir() {
+                ret.push(entry.path().to_path_buf());
+            }
         }
 
-        // For package integration tests, we need to sort the paths in a deterministic order to
-        // be able to match stdout warnings in the same order.
-        //
-        // TODO: drop `collect` and sort after transition period and dropping warning tests.
-        // See rust-lang/cargo#4268 and rust-lang/cargo#4270.
-        let mut entries: Vec<PathBuf> = fs::read_dir(path)
-            .with_context(|| format!("cannot read {:?}", path))?
-            .map(|e| e.unwrap().path())
-            .collect();
-        entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-        for path in entries {
-            let name = path.file_name().and_then(|s| s.to_str());
-            if is_root && name == Some("target") {
-                // Skip Cargo artifacts.
-                continue;
-            }
-            PathSource::walk(&path, ret, false, filter)?;
-        }
         Ok(())
     }
 
