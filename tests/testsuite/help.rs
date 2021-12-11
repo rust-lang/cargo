@@ -110,6 +110,20 @@ fn help_with_man_and_path(
     assert_eq!(stdout, contents);
 }
 
+fn help_with_stdout_and_path(subcommand: &str, path: &Path) -> String {
+    let output = process(&cargo_exe())
+        .arg("help")
+        .arg(subcommand)
+        .env("PATH", path)
+        .exec_with_output()
+        .unwrap();
+    assert!(output.status.success());
+    let stderr = from_utf8(&output.stderr).unwrap();
+    assert_eq!(stderr, "");
+    let stdout = from_utf8(&output.stdout).unwrap();
+    stdout.to_string()
+}
+
 #[cargo_test]
 fn help_man() {
     // Checks that `help command` displays the man page using the given command.
@@ -124,7 +138,8 @@ fn help_man() {
 #[cargo_test]
 fn help_alias() {
     // Check that `help some_alias` will resolve.
-    help_with_man_and_path("", "b", "build", Path::new(""));
+    let out = help_with_stdout_and_path("b", Path::new(""));
+    assert_eq!(out, "'b' is aliased to 'build'\n");
 
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
@@ -136,7 +151,8 @@ fn help_alias() {
         "#,
     )
     .unwrap();
-    help_with_man_and_path("", "my-alias", "build", Path::new(""));
+    let out = help_with_stdout_and_path("my-alias", Path::new(""));
+    assert_eq!(out, "'my-alias' is aliased to 'build --release'\n");
 }
 
 #[cargo_test]
