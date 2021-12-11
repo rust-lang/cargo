@@ -1,6 +1,6 @@
 use crate::aliased_command;
 use cargo::util::errors::CargoResult;
-use cargo::Config;
+use cargo::{drop_println, Config};
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
 use std::ffi::OsString;
@@ -46,8 +46,16 @@ fn try_help(config: &Config) -> CargoResult<bool> {
         Some(s) => s,
         None => return Ok(false),
     };
-    // Check if this is a built-in command (or alias);
-    let subcommand = match check_alias(config, subcommand) {
+
+    // Check if this is an alias. If so, just display the alias information.
+    if let Some(argv) = check_alias(config, subcommand) {
+        let alias = argv.join(" ");
+        drop_println!(config, "'{}' is aliased to '{}'", subcommand, alias);
+        return Ok(true);
+    }
+
+    // If not an alias, this should be a built-in subcommand.
+    let subcommand = match check_builtin(subcommand) {
         Some(s) => s,
         None => return Ok(false),
     };
@@ -73,23 +81,23 @@ fn try_help(config: &Config) -> CargoResult<bool> {
     Ok(true)
 }
 
-/// Checks if the given subcommand is a built-in command (possibly via an alias).
+/// Checks if the given subcommand is an alias.
+///
+/// Returns None if it is not an alias.
+fn check_alias(config: &Config, subcommand: &str) -> Option<Vec<String>> {
+    match aliased_command(config, subcommand) {
+        Ok(Some(alias)) => Some(alias),
+        _ => None,
+    }
+}
+
+/// Checks if the given subcommand is a built-in command (not via an alias).
 ///
 /// Returns None if it is not a built-in command.
-fn check_alias(config: &Config, subcommand: &str) -> Option<String> {
-    if super::builtin_exec(subcommand).is_some() {
-        return Some(subcommand.to_string());
-    }
-    match aliased_command(config, subcommand) {
-        Ok(Some(alias)) => {
-            let alias = alias.into_iter().next()?;
-            if super::builtin_exec(&alias).is_some() {
-                Some(alias)
-            } else {
-                None
-            }
-        }
-        _ => None,
+fn check_builtin(subcommand: &str) -> Option<String> {
+    match super::builtin_exec(subcommand) {
+        Some(_) => Some(subcommand.to_string()),
+        None => None,
     }
 }
 
