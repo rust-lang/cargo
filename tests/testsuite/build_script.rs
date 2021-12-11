@@ -4639,6 +4639,12 @@ fn build_script_scan_eacces() {
         .with_stderr(
             "\
 [ERROR] failed to determine package fingerprint for build script for foo v0.0.1 ([..]/foo)
+An I/O error happened[..]
+
+By default[..]
+it to[..]
+file[..]
+See[..]
 
 Caused by:
   failed to determine the most recently modified file in [..]/foo
