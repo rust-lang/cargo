@@ -85,10 +85,7 @@ fn try_help(config: &Config) -> CargoResult<bool> {
 ///
 /// Returns None if it is not an alias.
 fn check_alias(config: &Config, subcommand: &str) -> Option<Vec<String>> {
-    match aliased_command(config, subcommand) {
-        Ok(Some(alias)) => Some(alias),
-        _ => None,
-    }
+    aliased_command(config, subcommand).ok().flatten()
 }
 
 /// Checks if the given subcommand is a built-in command (not via an alias).
