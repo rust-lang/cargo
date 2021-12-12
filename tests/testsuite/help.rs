@@ -138,8 +138,7 @@ fn help_man() {
 #[cargo_test]
 fn help_alias() {
     // Check that `help some_alias` will resolve.
-    let out = help_with_stdout_and_path("b", Path::new(""));
-    assert_eq!(out, "'b' is aliased to 'build'\n");
+    help_with_man_and_path("", "b", "build", Path::new(""));
 
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
@@ -147,12 +146,18 @@ fn help_alias() {
         config,
         r#"
             [alias]
-            my-alias = ["build", "--release"]
+            simple-alias  = ["build"]
+            complex-alias = ["build", "--release"]
         "#,
     )
     .unwrap();
-    let out = help_with_stdout_and_path("my-alias", Path::new(""));
-    assert_eq!(out, "'my-alias' is aliased to 'build --release'\n");
+
+    // Because `simple-alias` aliases a subcommand with no arguments, help shows the manpage.
+    help_with_man_and_path("", "simple-alias", "build", Path::new(""));
+
+    // Help for `complex-alias` displays the full alias command.
+    let out = help_with_stdout_and_path("complex-alias", Path::new(""));
+    assert_eq!(out, "`complex-alias` is aliased to `build --release`\n");
 }
 
 #[cargo_test]

@@ -15,14 +15,14 @@ const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"
 /// This runs before clap processing, because it needs to intercept the `help`
 /// command if a man page is available.
 ///
-/// Returns `true` if a man page was displayed. In this case, Cargo should
-/// exit.
+/// Returns `true` if help information was successfully displayed to the user.
+/// In this case, Cargo should exit.
 pub fn handle_embedded_help(config: &Config) -> bool {
     match try_help(config) {
         Ok(true) => true,
         Ok(false) => false,
         Err(e) => {
-            log::warn!("man failed: {:?}", e);
+            log::warn!("help failed: {:?}", e);
             false
         }
     }
@@ -47,18 +47,23 @@ fn try_help(config: &Config) -> CargoResult<bool> {
         None => return Ok(false),
     };
 
-    // Check if this is an alias. If so, just display the alias information.
-    if let Some(argv) = check_alias(config, subcommand) {
-        let alias = argv.join(" ");
-        drop_println!(config, "'{}' is aliased to '{}'", subcommand, alias);
-        return Ok(true);
-    }
+    let subcommand = match check_alias(config, subcommand) {
+        // If this alias is more than a simple subcommand pass-through, show the alias.
+        Some(argv) if argv.len() > 1 => {
+            let alias = argv.join(" ");
+            drop_println!(config, "`{}` is aliased to `{}`", subcommand, alias);
+            return Ok(true);
+        }
+        // Otherwise, resolve the alias into its subcommand.
+        Some(argv) => argv[0].clone(),
+        None => subcommand.to_string(),
+    };
 
-    // If not an alias, this should be a built-in subcommand.
-    let subcommand = match check_builtin(subcommand) {
+    let subcommand = match check_builtin(&subcommand) {
         Some(s) => s,
         None => return Ok(false),
     };
+
     if resolve_executable(Path::new("man")).is_ok() {
         let man = match extract_man(&subcommand, "1") {
             Some(man) => man,
