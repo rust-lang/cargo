@@ -94,11 +94,8 @@ fn check_alias(config: &Config, subcommand: &str) -> Option<Vec<String>> {
 /// Checks if the given subcommand is a built-in command (not via an alias).
 ///
 /// Returns None if it is not a built-in command.
-fn check_builtin(subcommand: &str) -> Option<String> {
-    match super::builtin_exec(subcommand) {
-        Some(_) => Some(subcommand.to_string()),
-        None => None,
-    }
+fn check_builtin(subcommand: &str) -> Option<&str> {
+    super::builtin_exec(subcommand).map(|_| subcommand)
 }
 
 /// Extracts the given man page from the compressed archive.
