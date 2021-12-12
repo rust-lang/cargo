@@ -146,11 +146,18 @@ fn help_alias() {
         config,
         r#"
             [alias]
-            simple-alias  = ["build"]
+            empty-alias   = ""
+            simple-alias  = "build"
             complex-alias = ["build", "--release"]
         "#,
     )
     .unwrap();
+
+    // The `empty-alias` returns an error.
+    cargo_process("help empty-alias")
+        .env("PATH", Path::new(""))
+        .with_stderr_contains("[..]The subcommand 'empty-alias' wasn't recognized[..]")
+        .run_expect_error();
 
     // Because `simple-alias` aliases a subcommand with no arguments, help shows the manpage.
     help_with_man_and_path("", "simple-alias", "build", Path::new(""));

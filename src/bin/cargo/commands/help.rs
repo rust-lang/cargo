@@ -55,7 +55,11 @@ fn try_help(config: &Config) -> CargoResult<bool> {
             return Ok(true);
         }
         // Otherwise, resolve the alias into its subcommand.
-        Some(argv) => argv[0].clone(),
+        Some(argv) => {
+            // An alias with an empty argv can be created via `"empty-alias" = ""`.
+            let first = argv.get(0).map(String::as_str).unwrap_or(subcommand);
+            first.to_string()
+        }
         None => subcommand.to_string(),
     };
 
