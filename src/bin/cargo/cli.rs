@@ -164,10 +164,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
     let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
-        version_string.push_str(&format!(
-            "release: {}.{}.{}\n",
-            version.major, version.minor, version.patch
-        ));
+        version_string.push_str(&format!("release: {}\n", version.version,));
         if let Some(ref cfg) = version.cfg_info {
             if let Some(ref ci) = cfg.commit_info {
                 version_string.push_str(&format!("commit-hash: {}\n", ci.commit_hash));
