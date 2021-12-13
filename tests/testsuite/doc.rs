@@ -1661,6 +1661,89 @@ fn doc_message_format() {
 }
 
 #[cargo_test]
+fn doc_json_artifacts() {
+    // Checks the output of json artifact messages.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("src/bin/somebin.rs", "fn main() {}")
+        .build();
+
+    p.cargo("doc --message-format=json")
+        .with_json_contains_unordered(
+            r#"
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/debug/deps/libfoo-[..].rmeta"],
+    "executable": null,
+    "fresh": false
+}
+
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/foo/index.html"],
+    "executable": null,
+    "fresh": false
+}
+
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["bin"],
+        "crate_types": ["bin"],
+        "name": "somebin",
+        "src_path": "[ROOT]/foo/src/bin/somebin.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": false,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/somebin/index.html"],
+    "executable": null,
+    "fresh": false
+}
+
+{"reason":"build-finished","success":true}
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn short_message_format() {
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
     p.cargo("doc --message-format=short")

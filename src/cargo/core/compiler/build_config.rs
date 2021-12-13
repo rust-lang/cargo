@@ -219,4 +219,15 @@ impl CompileMode {
     pub fn is_run_custom_build(self) -> bool {
         self == CompileMode::RunCustomBuild
     }
+
+    /// Returns `true` if this mode may generate an executable.
+    ///
+    /// Note that this also returns `true` for building libraries, so you also
+    /// have to check the target.
+    pub fn generates_executable(self) -> bool {
+        matches!(
+            self,
+            CompileMode::Test | CompileMode::Bench | CompileMode::Build
+        )
+    }
 }
