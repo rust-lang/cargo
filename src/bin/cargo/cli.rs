@@ -139,7 +139,12 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
                     }
                 }
                 CommandInfo::Alias { target } => {
-                    drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
+                    drop_println!(
+                        config,
+                        "    {:<20} alias: {}",
+                        name,
+                        target.iter().join(" ")
+                    );
                 }
             }
         }
