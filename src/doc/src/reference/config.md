@@ -171,6 +171,7 @@ metadata_key1 = "value"
 metadata_key2 = "value"
 
 [term]
+quiet = false          # whether cargo output is quiet
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
 progress.when = 'auto' # whether cargo shows progress bar
@@ -1008,6 +1009,16 @@ metadata_key2 = "value"
 #### `[term]`
 
 The `[term]` table controls terminal output and interaction.
+
+##### `term.quiet`
+* Type: boolean
+* Default: false
+* Environment: `CARGO_TERM_QUIET`
+
+Controls whether or not log messages are displayed by Cargo.
+
+Specifying the `--quiet` flag will override and force quiet output.
+Specifying the `--verbose` flag will override and disable quiet output.
 
 ##### `term.verbose`
 * Type: boolean

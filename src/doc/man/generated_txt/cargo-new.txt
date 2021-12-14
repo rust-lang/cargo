@@ -57,7 +57,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           Do not print cargo log messages.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:

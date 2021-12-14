@@ -909,20 +909,19 @@ impl Config {
 
         let color = color.or_else(|| term.color.as_deref());
 
-        let verbosity = match (verbose, term.verbose, quiet) {
-            (true, _, false) | (_, Some(true), false) => Verbosity::Verbose,
-
-            // Command line takes precedence over configuration, so ignore the
-            // configuration..
-            (false, _, true) => Verbosity::Quiet,
-
-            // Can't pass both at the same time on the command line regardless
-            // of configuration.
-            (true, _, true) => {
-                bail!("cannot set both --verbose and --quiet");
-            }
-
-            (false, _, false) => Verbosity::Normal,
+        // The command line takes precedence over configuration.
+        let verbosity = match (verbose, quiet) {
+            (true, true) => bail!("cannot set both --verbose and --quiet"),
+            (true, false) => Verbosity::Verbose,
+            (false, true) => Verbosity::Quiet,
+            (false, false) => match (term.verbose, term.quiet) {
+                (Some(true), Some(true)) => {
+                    bail!("cannot set both `term.verbose` and `term.quiet`")
+                }
+                (Some(true), Some(false)) => Verbosity::Verbose,
+                (Some(false), Some(true)) => Verbosity::Quiet,
+                _ => Verbosity::Normal,
+            },
         };
 
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
@@ -2127,6 +2126,7 @@ pub struct CargoBuildConfig {
 #[derive(Deserialize, Default)]
 struct TermConfig {
     verbose: Option<bool>,
+    quiet: Option<bool>,
     color: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]

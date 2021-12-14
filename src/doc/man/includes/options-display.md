@@ -7,6 +7,8 @@ May also be specified with the `term.verbose`
 
 {{#option "`-q`" "`--quiet`"}}
 Do not print cargo log messages.
+May also be specified with the `term.quiet`
+[config value](../reference/config.html).
 {{/option}}
 
 {{#option "`--color` _when_"}}

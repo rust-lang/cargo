@@ -46,7 +46,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-locate-project--q"><a class="option-anchor" href="#option-cargo-locate-project--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-locate-project---quiet"><a class="option-anchor" href="#option-cargo-locate-project---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-locate-project---color"><a class="option-anchor" href="#option-cargo-locate-project---color"></a><code>--color</code> <em>when</em></dt>
