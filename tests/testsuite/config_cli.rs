@@ -337,10 +337,21 @@ fn bad_parse() {
     assert_error(
         config.unwrap_err(),
         "\
-failed to parse --config argument `abc`
+failed to parse value from --config argument `abc` as a dotted key expression
 
 Caused by:
-  expected an equals, found eof at line 1 column 4",
+  TOML parse error at line 1, column 4
+  |
+1 | abc
+  |    ^
+Unexpected `end of input`
+Expected `.` or `=`",
+    );
+
+    let config = ConfigBuilder::new().config_arg("").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "--config argument `` was not a TOML dotted key expression (a.b.c = _)",
     );
 }
 
@@ -352,14 +363,33 @@ fn too_many_values() {
         config.unwrap_err(),
         "\
 --config argument `a=1
-b=2` expected exactly one key=value pair, got 2 keys",
+b=2` was not a TOML dotted key expression (a.b.c = _)",
     );
+}
 
-    let config = ConfigBuilder::new().config_arg("").build_err();
+#[cargo_test]
+fn no_inline_table_value() {
+    // Disallow inline tables
+    let config = ConfigBuilder::new()
+        .config_arg("a.b={c = \"d\"}")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "--config argument `a.b={c = \"d\"}` sets a value to an inline table, which is not accepted"
+    );
+}
+
+#[cargo_test]
+fn no_array_of_tables_values() {
+    // Disallow array-of-tables when not in dotted form
+    let config = ConfigBuilder::new()
+        .config_arg("[[a.b]]\nc = \"d\"")
+        .build_err();
     assert_error(
         config.unwrap_err(),
         "\
-         --config argument `` expected exactly one key=value pair, got 0 keys",
+--config argument `[[a.b]]
+c = \"d\"` was not a TOML dotted key expression (a.b.c = _)",
     );
 }
 
