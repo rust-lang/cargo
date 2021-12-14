@@ -1218,6 +1218,20 @@ filename = "007bar"
 path = "src/main.rs"
 ```
 
+### scrape-examples
+
+* RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
+* Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
+
+The `-Z rustdoc-scrape-examples` argument tells Rustdoc to search crates in the current workspace
+for calls to functions. Those call-sites are then included as documentation. The flag can take an
+argument of `all` or `examples` which configures which crate in the workspace to analyze for examples.
+For instance:
+
+```
+cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
+```
+
 ## Stabilized and removed features
 
 ### Compile progress
@@ -1378,17 +1392,3 @@ Custom named profiles have been stabilized in the 1.57 release. See the
 Support for generating a future-incompat report has been stabilized
 in the 1.59 release. See the [future incompat report chapter](future-incompat-report.md)
 for more information.
-
-### scrape-examples
-
-* RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
-* Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
-
-The `-Z rustdoc-scrape-examples` argument tells Rustdoc to search crates in the current workspace
-for calls to functions. Those call-sites are then included as documentation. The flag can take an
-argument of `all` or `examples` which configures which crate in the workspace to analyze for examples.
-For instance:
-
-```
-cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
-```

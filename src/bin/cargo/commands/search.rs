@@ -7,7 +7,7 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("search")
         .about("Search packages in crates.io")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(Arg::with_name("query").multiple(true))
         .arg_index()
         .arg(
@@ -23,7 +23,7 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
-    let index = args.index(config)?;
+    let index = args.index()?;
     let limit = args.value_of_u32("limit")?;
     let limit = min(100, limit.unwrap_or(10));
     let query: Vec<&str> = args.values_of("query").unwrap_or_default().collect();

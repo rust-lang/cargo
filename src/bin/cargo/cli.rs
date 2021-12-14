@@ -139,7 +139,12 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
                     }
                 }
                 CommandInfo::Alias { target } => {
-                    drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
+                    drop_println!(
+                        config,
+                        "    {:<20} alias: {}",
+                        name,
+                        target.iter().join(" ")
+                    );
                 }
             }
         }
@@ -164,10 +169,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
     let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
-        version_string.push_str(&format!(
-            "release: {}.{}.{}\n",
-            version.major, version.minor, version.patch
-        ));
+        version_string.push_str(&format!("release: {}\n", version.version,));
         if let Some(ref cfg) = version.cfg_info {
             if let Some(ref ci) = cfg.commit_info {
                 version_string.push_str(&format!("commit-hash: {}\n", ci.commit_hash));
@@ -453,7 +455,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .multiple(true)
             .global(true),
         )
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")

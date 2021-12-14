@@ -439,7 +439,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         drop(bcx.config.shell().note(&suggestion_message));
         drop(bcx.config.shell().note(&format!(
             "this report can be shown with `cargo report \
-             future-incompatibilities -Z future-incompat-report --id {}`",
+             future-incompatibilities --id {}`",
             report_id
         )));
     } else if should_display_message {

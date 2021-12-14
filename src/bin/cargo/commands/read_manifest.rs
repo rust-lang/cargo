@@ -9,7 +9,7 @@ Print a JSON representation of a Cargo.toml manifest.
 Deprecated, use `cargo metadata --no-deps` instead.\
 ",
         )
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_manifest_path()
 }
 

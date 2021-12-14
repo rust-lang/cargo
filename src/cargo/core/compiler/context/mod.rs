@@ -294,19 +294,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the executable for the specified unit (if any).
     pub fn get_executable(&mut self, unit: &Unit) -> CargoResult<Option<PathBuf>> {
-        for output in self.outputs(unit)?.iter() {
-            if output.flavor != FileFlavor::Normal {
-                continue;
-            }
-
-            let is_binary = unit.target.is_executable();
-            let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
-
-            if is_binary || is_test {
-                return Ok(Option::Some(output.bin_dst().clone()));
-            }
+        let is_binary = unit.target.is_executable();
+        let is_test = unit.mode.is_any_test();
+        if !unit.mode.generates_executable() || !(is_binary || is_test) {
+            return Ok(None);
         }
-        Ok(None)
+        Ok(self
+            .outputs(unit)?
+            .iter()
+            .find(|o| o.flavor == FileFlavor::Normal)
+            .map(|output| output.bin_dst().clone()))
     }
 
     pub fn prepare_units(&mut self) -> CargoResult<()> {

@@ -39,12 +39,14 @@ fn cli_priority() {
         jobs = 3
         rustc = 'file'
         [term]
+        quiet = false
         verbose = false
         ",
     );
     let config = ConfigBuilder::new().build();
     assert_eq!(config.get::<i32>("build.jobs").unwrap(), 3);
     assert_eq!(config.get::<String>("build.rustc").unwrap(), "file");
+    assert_eq!(config.get::<bool>("term.quiet").unwrap(), false);
     assert_eq!(config.get::<bool>("term.verbose").unwrap(), false);
 
     let config = ConfigBuilder::new()
@@ -58,6 +60,14 @@ fn cli_priority() {
     assert_eq!(config.get::<i32>("build.jobs").unwrap(), 1);
     assert_eq!(config.get::<String>("build.rustc").unwrap(), "cli");
     assert_eq!(config.get::<bool>("term.verbose").unwrap(), true);
+
+    // Setting both term.verbose and term.quiet is invalid and is tested
+    // in the run test suite.
+    let config = ConfigBuilder::new()
+        .env("CARGO_TERM_QUIET", "false")
+        .config_arg("term.quiet=true")
+        .build();
+    assert_eq!(config.get::<bool>("term.quiet").unwrap(), true);
 }
 
 #[cargo_test]
