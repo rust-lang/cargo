@@ -620,27 +620,8 @@ pub trait ArgMatchesExt {
         }
     }
 
-    fn index(&self, config: &Config) -> CargoResult<Option<String>> {
-        // TODO: deprecated. Remove once it has been decided `--host` can be removed
-        // We may instead want to repurpose the host flag, as mentioned in issue
-        // rust-lang/cargo#4208.
-        let msg = "The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.";
-
-        let index = match self._value_of("host") {
-            Some(host) => {
-                config.shell().warn(&msg)?;
-                Some(host.to_string())
-            }
-            None => self._value_of("index").map(|s| s.to_string()),
-        };
+    fn index(&self) -> CargoResult<Option<String>> {
+        let index = self._value_of("index").map(|s| s.to_string());
         Ok(index)
     }
 
