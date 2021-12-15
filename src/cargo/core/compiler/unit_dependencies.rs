@@ -326,7 +326,7 @@ fn compute_deps(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(unit, state, unit_for, None)?);
+    ret.extend(maybe_lib(unit, state, unit_for)?);
 
     // If any integration tests/benches are being run, make sure that
     // binaries are built as well.
@@ -431,7 +431,7 @@ fn compute_deps_doc(
     let mut ret = Vec::new();
     for (id, _deps) in deps {
         let dep = state.get(id);
-        let lib = match dep.targets().iter().find(|t| t.is_lib()) {
+        let lib = match dep.targets().iter().find(|t| t.is_lib() && t.documented()) {
             Some(lib) => lib,
             None => continue,
         };
@@ -470,9 +470,26 @@ fn compute_deps_doc(
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
         // build the lib
-        ret.extend(maybe_lib(unit, state, unit_for, None)?);
+        ret.extend(maybe_lib(unit, state, unit_for)?);
         // and also the lib docs for intra-doc links
-        ret.extend(maybe_lib(unit, state, unit_for, Some(unit.mode))?);
+        if let Some(lib) = unit
+            .pkg
+            .targets()
+            .iter()
+            .find(|t| t.is_linkable() && t.documented())
+        {
+            let dep_unit_for = unit_for.with_dependency(unit, lib);
+            let lib_doc_unit = new_unit_dep(
+                state,
+                unit,
+                &unit.pkg,
+                lib,
+                dep_unit_for,
+                unit.kind.for_target(lib),
+                unit.mode,
+            )?;
+            ret.push(lib_doc_unit);
+        }
     }
 
     // Add all units being scraped for examples as a dependency of Doc units.
@@ -500,14 +517,13 @@ fn maybe_lib(
     unit: &Unit,
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
-    force_mode: Option<CompileMode>,
 ) -> CargoResult<Option<UnitDep>> {
     unit.pkg
         .targets()
         .iter()
         .find(|t| t.is_linkable())
         .map(|t| {
-            let mode = force_mode.unwrap_or_else(|| check_or_build_mode(unit.mode, t));
+            let mode = check_or_build_mode(unit.mode, t);
             let dep_unit_for = unit_for.with_dependency(unit, t);
             new_unit_dep(
                 state,
