@@ -10,7 +10,6 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
-use ignore::Match;
 use log::{trace, warn};
 use walkdir::WalkDir;
 
@@ -131,39 +130,36 @@ impl<'cfg> PathSource<'cfg> {
         }
         let ignore_include = include_builder.build()?;
 
-        let ignore_should_package = |relative_path: &Path, is_dir: bool| -> CargoResult<bool> {
+        let ignore_should_package = |relative_path: &Path, is_dir: bool| {
             // "Include" and "exclude" options are mutually exclusive.
             if no_include_option {
-                match ignore_exclude.matched_path_or_any_parents(relative_path, is_dir) {
-                    Match::None => Ok(true),
-                    Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(_) => Ok(true),
-                }
+                !ignore_exclude
+                    .matched_path_or_any_parents(relative_path, is_dir)
+                    .is_ignore()
             } else {
                 if is_dir {
                     // Generally, include directives don't list every
                     // directory (nor should they!). Just skip all directory
                     // checks, and only check files.
-                    return Ok(true);
+                    return true;
                 }
-                match ignore_include
+                ignore_include
                     .matched_path_or_any_parents(relative_path, /* is_dir */ false)
-                {
-                    Match::None => Ok(false),
-                    Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(_) => Ok(false),
-                }
+                    .is_ignore()
             }
         };
 
-        let mut filter = |path: &Path, is_dir: bool| -> CargoResult<bool> {
-            let relative_path = path.strip_prefix(root)?;
+        let mut filter = |path: &Path, is_dir: bool| {
+            let relative_path = match path.strip_prefix(root) {
+                Ok(p) => p,
+                Err(_) => return false,
+            };
 
             let rel = relative_path.as_os_str();
             if rel == "Cargo.lock" {
-                return Ok(pkg.include_lockfile());
+                return pkg.include_lockfile();
             } else if rel == "Cargo.toml" {
-                return Ok(true);
+                return true;
             }
 
             ignore_should_package(relative_path, is_dir)
@@ -225,7 +221,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         repo: &git2::Repository,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
@@ -347,7 +343,7 @@ impl<'cfg> PathSource<'cfg> {
                         PathSource::walk(&file_path, &mut ret, false, filter)?;
                     }
                 }
-            } else if (*filter)(&file_path, is_dir)? {
+            } else if filter(&file_path, is_dir) {
                 assert!(!is_dir);
                 // We found a file!
                 warn!("  found {}", file_path.display());
@@ -379,7 +375,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(
         &self,
         pkg: &Package,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         PathSource::walk(pkg.root(), &mut ret, true, filter)?;
@@ -390,7 +386,7 @@ impl<'cfg> PathSource<'cfg> {
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> bool,
     ) -> CargoResult<()> {
         let walkdir = WalkDir::new(path)
             .follow_links(true)
@@ -400,7 +396,7 @@ impl<'cfg> PathSource<'cfg> {
                 let at_root = is_root && entry.depth() == 0;
                 let is_dir = entry.file_type().is_dir();
 
-                if !at_root && !filter(path, is_dir).unwrap() {
+                if !at_root && !filter(path, is_dir) {
                     return false;
                 }
 
