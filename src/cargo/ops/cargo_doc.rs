@@ -20,7 +20,10 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
-        let name = &compilation.root_crate_names[0];
+        let name = &compilation
+            .root_crate_names
+            .get(0)
+            .ok_or_else(|| anyhow::anyhow!("no crates with documentation"))?;
         let kind = options.compile_opts.build_config.single_requested_kind()?;
         let path = compilation.root_output[&kind]
             .with_file_name("doc")
