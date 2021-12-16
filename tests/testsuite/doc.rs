@@ -2513,3 +2513,53 @@ fn lib_before_bin() {
     let bin_html = p.read_file("target/doc/somebin/index.html");
     assert!(bin_html.contains("../foo/fn.abc.html"));
 }
+
+#[cargo_test]
+fn doc_lib_false() {
+    // doc = false for a library
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+
+                [dependencies]
+                bar = {path = "bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/some-bin.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 [..]
+[CHECKING] foo v0.1.0 [..]
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert!(!p.build_dir().join("doc/foo").exists());
+    assert!(!p.build_dir().join("doc/bar").exists());
+    assert!(p.build_dir().join("doc/some_bin").exists());
+}
