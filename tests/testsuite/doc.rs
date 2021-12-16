@@ -1345,6 +1345,31 @@ fn doc_extern_map_local() {
 }
 
 #[cargo_test]
+fn open_no_doc_crate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            doc = false
+        "#,
+        )
+        .file("src/lib.rs", "#[cfg(feature)] pub fn f();")
+        .build();
+
+    p.cargo("doc --open")
+        .env("BROWSER", "do_not_run_me")
+        .with_status(101)
+        .with_stderr_contains("error: no crates with documentation")
+        .run();
+}
+
+#[cargo_test]
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
