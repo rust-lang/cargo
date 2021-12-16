@@ -36,7 +36,10 @@ it, named `/projects/foo/bar/baz/mylib` and `/projects/foo/bar/baz/mybin`, and
 there are Cargo configs at `/projects/foo/bar/baz/mylib/.cargo/config.toml`
 and `/projects/foo/bar/baz/mybin/.cargo/config.toml`, Cargo does not read
 those configuration files if it is invoked from the workspace root
-(`/projects/foo/bar/baz/`).
+(`/projects/foo/bar/baz/`), or anyways if it is asked to compile a crate from 
+that workspace, even if from outside the workspace root (e.g. via the 
+[`--manifest-path`](https://doc.rust-lang.org/cargo/commands/cargo-build.html#manifest-options)
+flag).
 
 > **Note:** Cargo also reads config files without the `.toml` extension, such as
 > `.cargo/config`. Support for the `.toml` extension was added in version 1.39
