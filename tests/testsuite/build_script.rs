@@ -4653,7 +4653,7 @@ Caused by:
   failed to determine list of files in [..]/foo
 
 Caused by:
-  cannot read \"[..]/foo/secrets\"
+  IO error for operation on [..]/foo/secrets: [..]
 
 Caused by:
   [..]
