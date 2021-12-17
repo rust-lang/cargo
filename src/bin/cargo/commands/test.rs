@@ -56,7 +56,10 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_unit_graph()
         .arg_future_incompat_report()
-        .after_help("Run `cargo help test` for more detailed information.\n")
+        .after_help(
+            "Run `cargo help test` for more detailed information.\n\
+             Run `cargo test -- --help` for test binary options.\n",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
