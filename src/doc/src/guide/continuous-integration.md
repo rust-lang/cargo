@@ -21,6 +21,41 @@ will not fail your overall build. Please see the [Travis CI Rust
 documentation](https://docs.travis-ci.com/user/languages/rust/) for more
 information.
 
+### GitHub Actions
+
+To test your package on GitHub Actions, here is a sample `.github/workflows/ci.yml` file:
+
+```yaml
+name: Cargo Build & Test
+
+on:
+  push:
+
+jobs:
+  build_and_test:
+    name: Rust project - latest
+    runs-on: ${{ matrix.operating-system }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
+        operating-system:
+          - "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - run: cargo build --verbose
+      - run: cargo test --verbose
+```
+
+This will test all three release channels, see [actions-rs documentation](https://github.com/actions-rs/cargo) and [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.
+
 ### GitLab CI
 
 To test your package on GitLab CI, here is a sample `.gitlab-ci.yml` file:
