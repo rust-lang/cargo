@@ -7,10 +7,8 @@ It's possible to temporarily change the version or path of a dependency, this
 can be useful for checking the new features or bug fixes after some major
 release.
 
-You can specify different dependencies for:
-- Development and release profiles.
-- Different platforms, architectures and operating systems.
-- Crate "features" that can be enabled and disabled.
+Dependencies can be specified for [crate features](features.md) and for
+different [architectures and operating systems](#platform-specific-dependencies).
 
 ### Specifying dependencies from crates.io
 
@@ -24,41 +22,43 @@ time = "0.1.12"
 Cargo looks for dependencies on [crates.io] by default. For this case, it only
 requires the name and a version string.
 
-The strings `"0.1.12"` is a [semver] version requirement, and since it does not
+The string `"0.1.12"` is a [SemVer] version requirement, and since it does not
 contain any extra operators, it is interpreted as the caret requirement
 `"^0.1.12"`, so that line will download the crate `time` with a version that is
-compatible with `0.1.12` following the Caret requirement rules.
+compatible with `"0.1.12"` following the Caret requirement rules.
 
 There are five types of version requirements:
 
-Type | Operators | Examples
--------|-------|-------
-Caret | None or `^` | `"1.2.3"` and `"^1.2.3"`
-Tilde | `~` | `"~1.2.3"`
-Wildcard | `*` | `"1.2.*"`
-Comparison | `>`, `<` and `>=` | `">1.2.3"`, `"<1.2.3"` and `">=1.2.3"`
-Strict | `=` | `"= 1.2.3"`
+| Type | Operators | Examples|
+|-------|-------|-------|
+| Caret | None or `^` | `"1.2.3"` and `"^1.2.3"`|
+| Tilde | `~` | `"~1.2.3"`|
+| Wildcard | `*` | `"1.2.*"`|
+| Comparison | `>`, `<` and `>=` | `">1.2.3"`, `"<1.2.3"` and `">=1.2.3"`|
+| Strict | `=` | `"= 1.2.3"`|
 
-[semver]: https://github.com/dtolnay/semver
+[SemVer]: https://doc.rust-lang.org/cargo/reference/resolver.html#semver-compatibility
 
 ### Caret requirements
 
-**Caret requirements** allow SemVer compatible updates, it's the only
-requirement type that uses specific rules for versions with and without the zero
-digits.
+**Caret requirements** allow SemVer compatible updates.
 
 Updates are only allowed if the new version number does not modify the left-most
-non-zero digit, so the version `0.0.x` is not considered compatible with any
-other version.
+non-zero digit.
 
-If we specify the version string as `"1.0.4"`, compatible versions are, `1.0.x`
-where `x` is greater than 4.
+This compatibility convention is different from [SemVer] in the way it treats
+versions before `"1.0.0"`. While SemVer says there is no compatibility before
+1.0.0, Cargo considers `"0.x.y"` to be compatible with `"0.x.z"`, where `y ≥ z`
+and `x` is not zero.
 
-If we specify the version string as `"1.4"`, compatible versions are, `1.x.y`
-where `x` is greater than 4 and `y` is anything.
+#### Examples:
 
-Here are some more examples of caret requirements and the versions that would
-be allowed with them:
+If we specify the version string as `"1.4.8"`, compatible versions are:
+- `"1.4.x"` with `x ≥ 8`.
+- `"1.x.y"` with `x > 2`, `y` can be anything.
+
+This table shows all possible ways to specify a caret requirements, and the
+ranges that are considered compatible for each:
 
 ```notrust
 ^1      :=  >=1.0.0, <2.0.0
@@ -71,10 +71,9 @@ be allowed with them:
 ^0.2.3  :=  >=0.2.3, <0.3.0
 ```
 
-This compatibility convention is different from SemVer in the way it treats
-versions before 1.0.0. While SemVer says there is no compatibility before
-1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
-and `x` is not zero.
+> **Note**: This is the only type of version requirement that has different
+> rules for versions that start with `0`, and the version `"0.x.y"` is not
+> compatible with any other versions.
 
 ### Tilde requirements
 
@@ -83,7 +82,7 @@ If you specify a string with minor or patch version, only patch-level changes
 are allowed. If you only specify a major version, then minor-level changes are
 also allowed.
 
-Examples:
+#### Examples:
 
 ```notrust
 ~1      :=  >=1.0.0, <2.0.0
@@ -96,7 +95,7 @@ Examples:
 **Wildcard requirements** allow for any version where the wildcard is
 positioned.
 
-Examples:
+#### Examples:
 
 ```notrust
 *      :=  >=0.0.0
@@ -111,7 +110,10 @@ Examples:
 **Comparison requirements** allow manually specifying a version range or an
 exact version to depend on.
 
-Examples:
+Comparison requirements are recommended to be used with
+[multiple requirements](#multiple-requirements).
+
+#### Examples:
 
 ```notrust
  >1.2
@@ -123,25 +125,36 @@ Examples:
 
 ### Multiple requirements
 
-As shown in the examples above, it is possible to combine any requirements to
-restrict the version even further, however, this is only necessary with
-[comparison requirements](#Comparison-requirements).
+As shown in the examples above, it is possible to combine any requirement to
+restrict the versions even further.
 
-Examples (all of them are equivalent):
+The list of requirements should be separated by commas, spaces are optional.
+
+A version is considered to be compatible with the list only if it is compatible
+with all elements of the list.
+
+#### Examples:
+
+All of the lines below are equivalent:
 
 ```notrust
+>=1.0.0, < 1.0.5
   1.0.0, < 1.0.5
  ^1.0.0, < 1.0.5
  ~1.0.0, < 1.0.5
->=1.0.0, < 1.0.5
  =1.0  , < 1.0.5
 ```
 
 Example using the `time` crate:
+
 ```toml
 [dependencies]
 time = ">=0.2.7, <0.2.15"
 ```
+
+> **Note**: It is possible to specify more than two requirements, but that's not
+> necessary, any long list of requirements can be simplified to one with two
+> [comparison requriements], using `>=` and `<`.
 
 ### Strict version requirements
 
@@ -149,7 +162,7 @@ time = ">=0.2.7, <0.2.15"
 and patch versions. You can specify the exact version if the patch part is
 given.
 
-Here are some examples:
+#### Examples:
 
 ```notrust
 =0      :=  >=0.0.0, <1.0.0
@@ -160,9 +173,8 @@ Here are some examples:
 =1.2.3  :=  >=1.2.3, <1.2.4 (exact)
 ```
 
-> **Note**: Using strict requirements with exact versions are a bad practice and
-> should be avoided, as it disables the ability of receiving important patches
-> of security, soundness and bugfixes.
+> **Note**: When using strict requirements with exact versions, no updates can
+> be applied, including bugfixes and security updates.
 
 ### Specifying dependencies from other registries
 
