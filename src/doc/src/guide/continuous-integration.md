@@ -50,6 +50,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.toolchain }}
+          override: true
       - run: cargo build --verbose
       - run: cargo test --verbose
 ```
