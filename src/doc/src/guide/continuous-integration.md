@@ -34,28 +34,21 @@ on:
 jobs:
   build_and_test:
     name: Rust project - latest
-    runs-on: ${{ matrix.operating-system }}
-    continue-on-error: true
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
         toolchain:
           - stable
           - beta
           - nightly
-        operating-system:
-          - "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          override: true
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
 ```
 
-This will test all three release channels, see [actions-rs documentation](https://github.com/actions-rs/cargo) and [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.
+This will test all three release channels, see [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.
 
 ### GitLab CI
 
