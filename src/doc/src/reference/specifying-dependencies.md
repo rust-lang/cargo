@@ -29,13 +29,13 @@ compatible with `"0.1.12"` following the Caret requirement rules.
 
 There are five types of version requirements:
 
-| Type | Operators | Examples|
-|-------|-------|-------|
-| Caret | None or `^` | `"1.2.3"` and `"^1.2.3"`|
-| Tilde | `~` | `"~1.2.3"`|
-| Wildcard | `*` | `"1.2.*"`|
-| Comparison | `>`, `<` and `>=` | `">1.2.3"`, `"<1.2.3"` and `">=1.2.3"`|
-| Strict | `=` | `"= 1.2.3"`|
+| Type       | Operators         | Examples                               |
+|------------|-------------------|----------------------------------------|
+| Caret      | None or `^`       | `"1.2.3"` and `"^1.2.3"`               |
+| Tilde      | `~`               | `"~1.2.3"`                             |
+| Wildcard   | `*`               | `"1.2.*"`                              |
+| Comparison | `>`, `<` and `>=` | `">1.2.3"`, `"<1.2.3"` and `">=1.2.3"` |
+| Strict     | `=`               | `"= 1.2.3"`                            |
 
 [SemVer]: https://doc.rust-lang.org/cargo/reference/resolver.html#semver-compatibility
 
