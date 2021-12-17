@@ -164,9 +164,9 @@ time = ">=0.2.7, <0.2.15"
 > necessary, any long list of requirements can be simplified to one with two
 > [comparison requriements], using `>=` and `<`.
 
-### Strict version requirements
+### Strict requirements
 
-**Strict version requirements** allow you to lock the numbers for major, minor
+**Strict requirements** allow you to lock the numbers for major, minor
 and patch versions. You can specify the exact version if the patch part is
 given.
 
