@@ -6,7 +6,9 @@ May also be specified with the `term.verbose`
 {{/option}}
 
 {{#option "`-q`" "`--quiet`"}}
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the `term.quiet`
+[config value](../reference/config.html).
 {{/option}}
 
 {{#option "`--color` _when_"}}

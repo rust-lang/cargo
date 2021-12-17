@@ -22,10 +22,18 @@ time = "0.1.12"
 Cargo looks for dependencies on [crates.io] by default. For this case, it only
 requires the name and a version string.
 
-The string `"0.1.12"` is a [SemVer] version requirement, and since it does not
-contain any extra operators, it is interpreted as the caret requirement
-`"^0.1.12"`, so that line will download the crate `time` with a version that is
-compatible with `"0.1.12"` following the Caret requirement rules.
+The string `"0.1.12"` is a version requirement. Although it looks like a
+specific *version* of the `time` crate, it actually specifies a *range* of
+versions and allows [SemVer] compatible updates.
+
+Since it does not contain any extra operators, it is interpreted as the caret
+requirement `"^0.1.12"`, `cargo` will download a version of the crate `time`
+that is compatible with `"0.1.12"` following the
+[Caret requirement](#caret-requirements) rules.
+
+In this case, if we ran `cargo update -p time`, cargo could update the crate to
+version `0.1.13` if it is the latest `0.1.z` release, but would not update us
+to `0.2.0`.
 
 There are five types of version requirements:
 

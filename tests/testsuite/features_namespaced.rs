@@ -715,6 +715,7 @@ fn json_exposed() {
                       "keywords": [],
                       "readme": null,
                       "repository": null,
+                      "rust_version": null,
                       "edition": "2015",
                       "links": null
                     }

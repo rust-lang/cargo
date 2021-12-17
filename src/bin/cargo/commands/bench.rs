@@ -5,7 +5,7 @@ pub fn cli() -> App {
     subcommand("bench")
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all benchmarks of a local package")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_quiet()
         .arg(
             Arg::with_name("BENCHNAME")
                 .help("If specified, only run benches containing this string in their names"),

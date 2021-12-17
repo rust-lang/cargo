@@ -4,7 +4,7 @@ use crate::command_prelude::*;
 pub fn cli() -> App {
     subcommand("version")
         .about("Show version information")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_quiet()
         .after_help("Run `cargo help version` for more detailed information.\n")
 }
 

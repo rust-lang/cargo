@@ -40,7 +40,11 @@ the target directory.
 {{/option}}
 
 {{#option "`--release`" }}
-Clean all artifacts that were built with the `release` or `bench` profiles.
+Remove all artifacts in the `release` directory.
+{{/option}}
+
+{{#option "`--profile` _name_" }}
+Remove all artifacts in the directory with the given profile name.
 {{/option}}
 
 {{> options-target-dir }}

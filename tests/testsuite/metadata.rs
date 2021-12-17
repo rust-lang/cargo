@@ -37,6 +37,7 @@ fn cargo_metadata_simple() {
                 "description": null,
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "homepage": null,
@@ -128,6 +129,7 @@ crate-type = ["lib", "staticlib"]
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
+                "rust_version": null,
                 "id": "foo[..]",
                 "keywords": [],
                 "source": null,
@@ -213,6 +215,7 @@ optional_feat = []
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -342,6 +345,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "bar",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -382,6 +386,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "baz",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -447,6 +452,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": null,
@@ -487,6 +493,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "foobar",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -617,6 +624,7 @@ name = "ex"
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
@@ -711,6 +719,7 @@ crate-type = ["rlib", "dylib"]
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
@@ -814,6 +823,7 @@ fn workspace_metadata() {
                 "id": "bar[..]",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "keywords": [],
@@ -850,6 +860,7 @@ fn workspace_metadata() {
                 "name": "baz",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -943,6 +954,7 @@ fn workspace_metadata_no_deps() {
                 "name": "bar",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -981,6 +993,7 @@ fn workspace_metadata_no_deps() {
                 "name": "baz",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -1073,6 +1086,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "publish": null,
         "readme": null,
         "repository": null,
+        "rust_version": null,
         "homepage": null,
         "documentation": null
     }],
@@ -1235,6 +1249,7 @@ fn package_metadata() {
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
+                "rust_version": null,
                 "homepage": "https://rust-lang.org",
                 "documentation": "https://doc.rust-lang.org/stable/std/",
                 "version": "0.1.0",
@@ -1313,6 +1328,7 @@ fn package_publish() {
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
@@ -1400,6 +1416,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                     "name": "bar",
                     "readme": null,
                     "repository": null,
+                    "rust_version": null,
                     "homepage": null,
                     "documentation": null,
                     "source": null,
@@ -1487,6 +1504,7 @@ fn package_edition_2018() {
                         "name": "foo",
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "source": null,
@@ -1556,6 +1574,26 @@ fn package_default_run() {
 }
 
 #[cargo_test]
+fn package_rust_version() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+                rust-version = "1.56"
+            "#,
+        )
+        .build();
+    let json = p.cargo("metadata").run_json();
+    assert_eq!(json["packages"][0]["rust_version"], json!("1.56"));
+}
+
+#[cargo_test]
 fn target_edition_2018() {
     let p = project()
         .file("src/lib.rs", "")
@@ -1600,6 +1638,7 @@ fn target_edition_2018() {
                         "name": "foo",
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "source": null,
@@ -1706,6 +1745,7 @@ fn rename_dependency() {
             "name": "bar",
             "readme": null,
             "repository": null,
+            "rust_version": null,
             "homepage": null,
             "documentation": null,
             "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -1746,6 +1786,7 @@ fn rename_dependency() {
             "name": "bar",
             "readme": null,
             "repository": null,
+            "rust_version": null,
             "homepage": null,
             "documentation": null,
             "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -1811,6 +1852,7 @@ fn rename_dependency() {
             "name": "foo",
             "readme": null,
             "repository": null,
+            "rust_version": null,
             "homepage": null,
             "documentation": null,
             "source": null,
@@ -1932,6 +1974,7 @@ fn metadata_links() {
                   "name": "foo",
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "source": null,
@@ -2064,6 +2107,7 @@ fn deps_with_bin_only() {
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -2168,6 +2212,7 @@ fn filter_platform() {
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2211,6 +2256,7 @@ fn filter_platform() {
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2254,6 +2300,7 @@ fn filter_platform() {
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2297,6 +2344,7 @@ fn filter_platform() {
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2403,6 +2451,7 @@ fn filter_platform() {
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",

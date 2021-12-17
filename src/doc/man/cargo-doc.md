@@ -74,6 +74,8 @@ and supports common Unix glob patterns.
 
 {{> options-release }}
 
+{{> options-profile }}
+
 {{> options-ignore-rust-version }}
 
 {{/options}}
@@ -107,8 +109,6 @@ and supports common Unix glob patterns.
 {{#options}}
 {{> options-jobs }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

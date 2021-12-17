@@ -753,3 +753,34 @@ fn vendor_preserves_permissions() {
     let metadata = fs::metadata(p.root().join("vendor/bar/example.sh")).unwrap();
     assert_eq!(metadata.mode() & 0o777, 0o755);
 }
+
+#[cargo_test]
+fn no_remote_dependency_no_vendor() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor")
+        .with_stderr("There is no dependency to vendor in this project.")
+        .run();
+    assert!(!p.root().join("vendor").exists());
+}

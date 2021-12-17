@@ -55,6 +55,83 @@ fn simple() {
 }
 
 #[cargo_test]
+fn simple_with_message_format() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --message-format=json")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .with_json(
+            r#"
+            {
+                "reason": "compiler-artifact",
+                "package_id": "foo 0.0.1 ([..])",
+                "manifest_path": "[..]",
+                "target": {
+                    "kind": [
+                        "lib"
+                    ],
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "name": "foo",
+                    "src_path": "[..]/foo-0.0.1/src/lib.rs",
+                    "edition": "2015",
+                    "doc": true,
+                    "doctest": true,
+                    "test": true
+                },
+                "profile": "{...}",
+                "features": [],
+                "filenames": "{...}",
+                "executable": null,
+                "fresh": false
+            }
+
+            {
+                "reason": "compiler-artifact",
+                "package_id": "foo 0.0.1 ([..])",
+                "manifest_path": "[..]",
+                "target": {
+                    "kind": [
+                        "bin"
+                    ],
+                    "crate_types": [
+                        "bin"
+                    ],
+                    "name": "foo",
+                    "src_path": "[..]/foo-0.0.1/src/main.rs",
+                    "edition": "2015",
+                    "doc": true,
+                    "doctest": false,
+                    "test": true
+                },
+                "profile": "{...}",
+                "features": [],
+                "filenames": "{...}",
+                "executable": "[..]",
+                "fresh": false
+            }
+
+            {"reason":"build-finished","success":true}
+            "#,
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
 fn with_index() {
     pkg("foo", "0.0.1");
 

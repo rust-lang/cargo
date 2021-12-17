@@ -3,12 +3,13 @@ use cargo::ops;
 use cargo::util::interning::InternedString;
 
 const PRINT_ARG_NAME: &str = "print";
+const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 
 pub fn cli() -> App {
     subcommand("rustc")
         .setting(AppSettings::TrailingVarArg)
         .about("Compile a package, and pass extra options to the compiler")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_quiet()
         .arg(Arg::with_name("args").multiple(true).help("Rustc flags"))
         .arg_package("Package to build")
         .arg_jobs()
@@ -35,6 +36,11 @@ pub fn cli() -> App {
             )
             .value_name("INFO"),
         )
+        .arg(multi_opt(
+            CRATE_TYPE_ARG_NAME,
+            "CRATE-TYPE",
+            "Comma separated list of types of crates for the compiler to emit (unstable)",
+        ))
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
@@ -75,8 +81,18 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             .cli_unstable()
             .fail_if_stable_opt(PRINT_ARG_NAME, 9357)?;
         ops::print(&ws, &compile_opts, opt_value)?;
-    } else {
-        ops::compile(&ws, &compile_opts)?;
+        return Ok(());
     }
+    let crate_types = values(args, CRATE_TYPE_ARG_NAME);
+    compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
+        None
+    } else {
+        config
+            .cli_unstable()
+            .fail_if_stable_opt(CRATE_TYPE_ARG_NAME, 10083)?;
+        Some(crate_types)
+    };
+    ops::compile(&ws, &compile_opts)?;
+
     Ok(())
 }

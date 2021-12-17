@@ -4,6 +4,7 @@ use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use super::commands;
 use super::list_commands;
@@ -14,10 +15,10 @@ lazy_static::lazy_static! {
     // Maps from commonly known external commands (not builtin to cargo) to their
     // description, for the help page. Reserved for external subcommands that are
     // core within the rust ecosystem (esp ones that might become internal in the future).
-    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = vec![
+    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = HashMap::from([
         ("clippy", "Checks a package to catch common mistakes and improve your Rust code."),
         ("fmt", "Formats all bin and lib files of the current crate using rustfmt."),
-    ].into_iter().collect();
+    ]);
 }
 
 pub fn main(config: &mut Config) -> CliResult {
@@ -138,7 +139,12 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
                     }
                 }
                 CommandInfo::Alias { target } => {
-                    drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
+                    drop_println!(
+                        config,
+                        "    {:<20} alias: {}",
+                        name,
+                        target.iter().join(" ")
+                    );
                 }
             }
         }
@@ -163,18 +169,69 @@ pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
     let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
-        version_string.push_str(&format!(
-            "release: {}.{}.{}\n",
-            version.major, version.minor, version.patch
-        ));
+        version_string.push_str(&format!("release: {}\n", version.version,));
         if let Some(ref cfg) = version.cfg_info {
             if let Some(ref ci) = cfg.commit_info {
                 version_string.push_str(&format!("commit-hash: {}\n", ci.commit_hash));
                 version_string.push_str(&format!("commit-date: {}\n", ci.commit_date));
             }
         }
+        writeln!(version_string, "host: {}", env!("RUST_HOST_TARGET")).unwrap();
+        add_libgit2(&mut version_string);
+        add_curl(&mut version_string);
+        add_ssl(&mut version_string);
+        writeln!(version_string, "os: {}", os_info::get()).unwrap();
     }
     version_string
+}
+
+fn add_libgit2(version_string: &mut String) {
+    let git2_v = git2::Version::get();
+    let lib_v = git2_v.libgit2_version();
+    let vendored = if git2_v.vendored() {
+        format!("vendored")
+    } else {
+        format!("system")
+    };
+    writeln!(
+        version_string,
+        "libgit2: {}.{}.{} (sys:{} {})",
+        lib_v.0,
+        lib_v.1,
+        lib_v.2,
+        git2_v.crate_version(),
+        vendored
+    )
+    .unwrap();
+}
+
+fn add_curl(version_string: &mut String) {
+    let curl_v = curl::Version::get();
+    let vendored = if curl_v.vendored() {
+        format!("vendored")
+    } else {
+        format!("system")
+    };
+    writeln!(
+        version_string,
+        "libcurl: {} (sys:{} {} ssl:{})",
+        curl_v.version(),
+        curl_sys::rust_crate_version(),
+        vendored,
+        curl_v.ssl_version().unwrap_or("none")
+    )
+    .unwrap();
+}
+
+fn add_ssl(version_string: &mut String) {
+    #[cfg(feature = "openssl")]
+    {
+        writeln!(version_string, "ssl: {}", openssl::version::version()).unwrap();
+    }
+    #[cfg(not(feature = "openssl"))]
+    {
+        let _ = version_string; // Silence unused warning.
+    }
 }
 
 fn expand_aliases(
@@ -206,6 +263,21 @@ fn expand_aliases(
             }
             (None, None) => {}
             (_, Some(mut alias)) => {
+                // Check if this alias is shadowing an external subcommand
+                // (binary of the form `cargo-<subcommand>`)
+                // Currently this is only a warning, but after a transition period this will become
+                // a hard error.
+                if let Some(path) = super::find_external_subcommand(config, cmd) {
+                    config.shell().warn(format!(
+                        "\
+user-defined alias `{}` is shadowing an external subcommand found at: `{}`
+This was previously accepted but is being phased out; it will become a hard error in a future release.
+For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.",
+                        cmd,
+                        path.display(),
+                    ))?;
+                }
+
                 alias.extend(
                     args.values_of("")
                         .unwrap_or_default()
@@ -383,7 +455,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .multiple(true)
             .global(true),
         )
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_quiet()
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")

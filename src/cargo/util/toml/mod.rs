@@ -602,6 +602,7 @@ impl TomlProfile {
                 | "rust"
                 | "rustc"
                 | "rustdoc"
+                | "target"
                 | "tmp"
                 | "uninstall"
         ) || lower_name.starts_with("cargo")
@@ -1247,7 +1248,7 @@ impl TomlManifest {
             for (name, platform) in me.target.iter().flatten() {
                 cx.platform = {
                     let platform: Platform = name.parse()?;
-                    platform.check_cfg_attributes(&mut cx.warnings);
+                    platform.check_cfg_attributes(cx.warnings);
                     Some(platform)
                 };
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
@@ -1553,16 +1554,15 @@ impl TomlManifest {
             }
 
             let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
-            {
-                let version = spec.version().ok_or_else(|| {
-                    anyhow!(
-                        "replacements must specify a version \
-                         to replace, but `{}` does not",
-                        spec
-                    )
-                })?;
-                dep.set_version_req(VersionReq::exact(version));
-            }
+            let version = spec.version().ok_or_else(|| {
+                anyhow!(
+                    "replacements must specify a version \
+                     to replace, but `{}` does not",
+                    spec
+                )
+            })?;
+            dep.set_version_req(VersionReq::exact(version))
+                .lock_version(version);
             replace.push((spec, dep));
         }
         Ok(replace)

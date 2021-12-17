@@ -191,7 +191,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the directory where the artifacts for the given unit are
     /// initially created.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
-        if unit.mode.is_doc() {
+        // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
+        // will be put into doc/ and not into deps/ where the *.examples files are stored.
+        if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
             self.layout(unit.kind).doc().to_path_buf()
         } else if unit.mode.is_doc_test() {
             panic!("doc tests do not have an out dir");
@@ -416,6 +418,17 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 // deleted. There is the `--persist-doctests` unstable flag,
                 // but Cargo does not know about that.
                 vec![]
+            }
+            CompileMode::Docscrape => {
+                let path = self
+                    .deps_dir(unit)
+                    .join(format!("{}.examples", unit.buildkey()));
+                vec![OutputFile {
+                    path,
+                    hardlink: None,
+                    export_path: None,
+                    flavor: FileFlavor::Normal,
+                }]
             }
             CompileMode::Test
             | CompileMode::Build

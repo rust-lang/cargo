@@ -102,6 +102,8 @@ target options.
 
 {{> options-release }}
 
+{{> options-profile }}
+
 {{> options-ignore-rust-version }}
 
 {{/options}}
@@ -151,18 +153,9 @@ includes an option to control the number of threads used:
 {{#options}}
 
 {{> options-jobs }}
+{{> options-future-incompat }}
 
 {{/options}}
-
-{{> section-profiles }}
-
-Unit tests are separate executable artifacts which use the `test`/`bench`
-profiles. Example targets are built the same as with `cargo build` (using the
-`dev`/`release` profiles) unless you are building them with the test harness
-(by setting `test = true` in the manifest or using the `--example` flag) in
-which case they use the `test`/`bench` profiles. Library targets are built
-with the `dev`/`release` profiles when linked to an integration test, binary,
-or doctest.
 
 {{> section-environment }}
 

@@ -5,10 +5,9 @@ use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{profile, CanonicalUrl, Config, VersionReqExt};
+use crate::util::{profile, CanonicalUrl, Config};
 use anyhow::{bail, Context as _};
 use log::{debug, trace};
-use semver::VersionReq;
 use url::Url;
 
 /// Source of information about a group of packages.
@@ -414,11 +413,12 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.patches_locked = true;
     }
 
-    pub fn patches(&self) -> Vec<Summary> {
-        self.patches
-            .values()
-            .flat_map(|v| v.iter().cloned())
-            .collect()
+    /// Gets all patches grouped by the source URLS they are going to patch.
+    ///
+    /// These patches are mainly collected from [`patch`](Self::patch).
+    /// They might not be the same as patches actually used during dependency resolving.
+    pub fn patches(&self) -> &HashMap<CanonicalUrl, Vec<Summary>> {
+        &self.patches
     }
 
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
@@ -765,8 +765,7 @@ fn lock(
                 if locked.source_id() == dep.source_id() {
                     dep.lock_to(locked);
                 } else {
-                    let req = VersionReq::exact(locked.version());
-                    dep.set_version_req(req);
+                    dep.lock_version(locked.version());
                 }
                 return dep;
             }
