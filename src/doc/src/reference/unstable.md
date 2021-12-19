@@ -89,6 +89,7 @@ Each new feature described below should explain how to use it.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
+    * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
@@ -818,6 +819,24 @@ The following is a description of the JSON structure:
   */
   "roots": [0],
 }
+```
+
+### Profile `rustflags` option
+* Original Issue: [rust-lang/cargo#7878](https://github.com/rust-lang/cargo/issues/7878)
+* Tracking Issue: [rust-lang/cargo#10271](https://github.com/rust-lang/cargo/issues/10271)
+
+This feature provides a new option in the `[profile]` section to specify flags
+that are passed directly to rustc.
+This can be enabled like so:
+
+```toml
+cargo-features = ["profile-rustflags"]
+
+[package]
+# ...
+
+[profile.release]
+rustflags = [ "-C", "..." ]
 ```
 
 ### rustdoc-map

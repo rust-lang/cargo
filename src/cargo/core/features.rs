@@ -409,6 +409,9 @@ features! {
 
     // Allow specifying different binary name apart from the crate name
     (unstable, different_binary_name, "", "reference/unstable.html#different-binary-name"),
+
+    // Allow specifying rustflags directly in a profile
+    (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
 }
 
 pub struct Feature {

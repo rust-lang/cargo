@@ -413,6 +413,8 @@ pub struct TomlProfile {
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
     pub strip: Option<StringOrBool>,
+    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
+    pub rustflags: Option<Vec<InternedString>>,
     // These two fields must be last because they are sub-tables, and TOML
     // requires all non-tables to be listed first.
     pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
@@ -528,6 +530,10 @@ impl TomlProfile {
                     panic
                 );
             }
+        }
+
+        if self.rustflags.is_some() {
+            features.require(Feature::profile_rustflags())?;
         }
 
         if let Some(codegen_backend) = &self.codegen_backend {
@@ -689,6 +695,10 @@ impl TomlProfile {
 
         if let Some(v) = profile.incremental {
             self.incremental = Some(v);
+        }
+
+        if let Some(v) = &profile.rustflags {
+            self.rustflags = Some(v.clone());
         }
 
         if let Some(other_package) = &profile.package {
