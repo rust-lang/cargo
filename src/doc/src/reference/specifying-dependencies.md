@@ -63,7 +63,7 @@ and `x` is not zero.
 
 If we specify the version string as `"1.4.8"`, compatible versions are:
 - `"1.4.x"` with `x ≥ 8`.
-- `"1.x.y"` with `x > 2`, `y` can be anything.
+- `"1.x.y"` with `x > 4`, `y` can be anything.
 
 This table shows all possible ways to specify a caret requirements, and the
 ranges that are considered compatible for each:
