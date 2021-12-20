@@ -59,7 +59,6 @@ pub struct PublishOpts<'cfg> {
 
 struct MessageInfo {
     name: String,
-    space: String,
     desc: String,
 }
 
@@ -976,9 +975,13 @@ pub fn search(
                 desc: String::new(),
             },
         };
+
+        // The query part is displayed in green in the output result.
+        let name_vec: Vec<&str> = message.name.split(query).collect();
+        let desc_vec: Vec<&str> = message.desc.split(query).collect();
         let _ = config
             .shell()
-            .status_stdout(&message.name, message.space + "# " + &message.desc);
+            .status_stdout_part_green(name_vec, desc_vec, &query);
     }
 
     let search_max_limit = 100;

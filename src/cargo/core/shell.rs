@@ -143,12 +143,12 @@ impl Shell {
         }
     }
 
-    /// Prints a message to stdout, where the status will have `color` color, and can be justified. The
-    /// messages follows without color.
-    pub fn print_stdout(
+    /// Print the message to standard output, where the query will have the color `color`.
+    pub fn print_stdout_with_part_color(
         &mut self,
-        status: &dyn fmt::Display,
-        message: Option<&dyn fmt::Display>,
+        name_no_query: Vec<&str>,
+        desc_no_query: Vec<&str>,
+        query: &str,
         color: Color,
         justified: bool,
     ) -> CargoResult<()> {
@@ -159,7 +159,7 @@ impl Shell {
                     self.err_erase_line();
                 }
                 self.output
-                    .message_stdout(status, message, color, justified)
+                    .message_stdout(name_no_query, desc_no_query, query, color, justified)
             }
         }
     }
@@ -225,13 +225,14 @@ impl Shell {
         self.print(&status, Some(&message), Green, true)
     }
 
-    /// Shortcut to right-align and color green a status message in stdout.
-    pub fn status_stdout<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
-    where
-        T: fmt::Display,
-        U: fmt::Display,
-    {
-        self.print_stdout(&status, Some(&message), Green, true)
+    /// Shortcut to right-align and paint the query part of the output message as a green in stdout.
+    pub fn status_stdout_part_green(
+        &mut self,
+        name_no_query: Vec<&str>,
+        desc_no_query: Vec<&str>,
+        query: &str,
+    ) -> CargoResult<()> {
+        self.print_stdout_with_part_color(name_no_query, desc_no_query, query, Green, true)
     }
 
     pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
@@ -453,42 +454,57 @@ impl ShellOut {
         Ok(())
     }
 
-    /// Prints out a message with a status to stdout. The status comes first, and is bold plus the given
-    /// color. The status can be justified, in which case the max width that will right align is
-    /// 12 chars.
+    /// Prints out a message with a status to stdout. Output the specified color and bold for the query content.
     fn message_stdout(
         &mut self,
-        status: &dyn fmt::Display,
-        message: Option<&dyn fmt::Display>,
+        name_no_query: Vec<&str>,
+        desc_no_query: Vec<&str>,
+        query: &str,
         color: Color,
         justified: bool,
     ) -> CargoResult<()> {
         match *self {
             ShellOut::Stream { ref mut stdout, .. } => {
-                stdout.reset()?;
-                stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
-                if justified {
-                    write!(stdout, "{:>12}", status)?;
+                let mut count_name = 0;
+                for message in name_no_query.iter() {
+                    count_name += 1;
+                    stdout.reset()?;
+                    write!(stdout, "{}", message)?;
+                    stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
+                    if count_name != name_no_query.len() {
+                        write!(stdout, "{}", query)?;
+                    }
+                }
+
+                if !desc_no_query.is_empty() {
+                    let mut count_desc = 0;
+                    for message in desc_no_query.iter() {
+                        count_desc += 1;
+                        stdout.reset()?;
+                        write!(stdout, "{}", message)?;
+                        stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
+                        if count_desc != desc_no_query.len() {
+                            write!(stdout, "{}", query)?;
+                        }
+                    }
                 } else {
-                    write!(stdout, "{}", status)?;
-                    stdout.set_color(ColorSpec::new().set_bold(true))?;
-                    write!(stdout, ":")?;
+                    write!(stdout, " ")?;
                 }
+
                 stdout.reset()?;
-                match message {
-                    Some(message) => writeln!(stdout, " {}", message)?,
-                    None => write!(stdout, " ")?,
-                }
+                write!(stdout, "{}", "\n")?;
             }
+
             ShellOut::Write(ref mut w) => {
                 if justified {
-                    write!(w, "{:>12}", status)?;
+                    write!(w, "{:>12}", name_no_query.join(query))?;
                 } else {
-                    write!(w, "{}:", status)?;
+                    write!(w, "{}:", name_no_query.join(query))?;
                 }
-                match message {
-                    Some(message) => writeln!(w, " {}", message)?,
-                    None => write!(w, " ")?,
+                if !desc_no_query.is_empty() {
+                    writeln!(w, " {}", desc_no_query.join(query))?
+                } else {
+                    writeln!(w, " ")?;
                 }
             }
         }
