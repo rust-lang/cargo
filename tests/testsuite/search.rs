@@ -93,8 +93,8 @@ fn write_crates(dest: &Path) {
 }
 
 const SEARCH_RESULTS: &str = "\
-hoare = \"0.1.1\"         # Design by contract style assertions for Rust
-postgres = \"0.17.3\"     # A native, synchronous PostgreSQL client
+hoare = \"0.1.1\"        # Design by contract style assertions for Rust
+postgres = \"0.17.3\"    # A native, synchronous PostgreSQL client
 ";
 
 fn setup() {

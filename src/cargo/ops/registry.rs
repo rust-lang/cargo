@@ -965,13 +965,11 @@ pub fn search(
                     .collect::<String>();
                 MessageInfo {
                     name: name,
-                    space: space,
-                    desc: desc,
+                    desc: space + "# " + &desc,
                 }
             }
             None => MessageInfo {
                 name: name,
-                space: String::new(),
                 desc: String::new(),
             },
         };
