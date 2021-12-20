@@ -48,7 +48,7 @@ jobs:
       - run: cargo test --verbose
 ```
 
-This will test all three release channels, see [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.
+This will test all three release channels. You can also click `"Actions" > "new workflow"` in the GitHub UI and select Rust to add the [default configuration](https://github.com/actions/starter-workflows/blob/main/ci/rust.yml) to your repo. See [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.
 
 ### GitLab CI
 
