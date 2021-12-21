@@ -138,16 +138,16 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
         for (_, layout) in &layouts_with_host {
             // Clean entries of workspace members under target/doc.
-            for doc_member_entry in pkg.targets().iter().filter(|t| t.documented()) {
-                if doc_member_entry.name() == pkg.name().as_str() {
+            for _ in pkg.targets().iter().filter(|t| t.documented()) {
+                if ws.is_member(pkg) {
                     rm_rf(&layout.doc().join(pkg.name()), config)?;
                     rm_rf(&layout.doc_src().join(pkg.name()), config)?;
                 }
             }
 
             // Clean lib of non-members under target/doc.
-            for doc_non_member_lib in pkg.targets().iter().find(|t| t.is_lib()) {
-                if doc_non_member_lib.name() == pkg.name().as_str() {
+            for _ in pkg.targets().iter().find(|t| t.is_lib()) {
+                if ws.is_member(pkg) {
                     rm_rf(&layout.doc().join(pkg.name()), config)?;
                     rm_rf(&layout.doc_src().join(pkg.name()), config)?;
                 }
