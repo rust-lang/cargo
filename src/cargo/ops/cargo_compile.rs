@@ -32,6 +32,7 @@ use crate::core::compiler::{standard_lib, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::manifest::Manifest;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -329,7 +330,7 @@ pub fn create_bcx<'a, 'cfg>(
     interner: &'a UnitInterner,
 ) -> CargoResult<BuildContext<'a, 'cfg>> {
     let CompileOptions {
-        ref build_config,
+        ref mut build_config,
         ref spec,
         ref cli_features,
         ref filter,
@@ -398,26 +399,6 @@ pub fn create_bcx<'a, 'cfg>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
-        }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
-        pkg_set.add_set(std_package_set);
-        Some((std_resolve, std_features))
-    } else {
-        None
-    };
-
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
@@ -437,7 +418,12 @@ pub fn create_bcx<'a, 'cfg>(
     // there's an error.
     to_builds.sort_by_key(|p| p.package_id());
 
+    //Capture the manifests in a Vec for later use
+    let mut to_build_manifests: Vec<Manifest>;
+
     for pkg in to_builds.iter() {
+        to_build_manifests.push(pkg.manifest());
+
         pkg.manifest().print_teapot(config);
 
         if build_config.mode.is_any_test()
@@ -451,6 +437,36 @@ pub fn create_bcx<'a, 'cfg>(
             );
         }
     }
+
+    for i in 0..to_build_manifests.len() {
+        if to_build_manifests[i].forced_kind.is_some() {
+            build_config.requested_kinds[i] =
+                CompileKind::Target(to_build_manifests[i].forced_kind.unwrap());
+        } else if to_build_manifests[i].default_kind.is_some() {
+            build_config.requested_kinds[i] =
+                CompileKind::Target(to_build_manifests[i].default_kind.unwrap());
+        }
+    }
+
+    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
+        if build_config.build_plan {
+            config
+                .shell()
+                .warn("-Zbuild-std does not currently fully support --build-plan")?;
+        }
+        if build_config.requested_kinds[0].is_host() {
+            // TODO: This should eventually be fixed. Unfortunately it is not
+            // easy to get the host triple in BuildConfig. Consider changing
+            // requested_target to an enum, or some other approach.
+            anyhow::bail!("-Zbuild-std requires --target");
+        }
+        let (std_package_set, std_resolve, std_features) =
+            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+        pkg_set.add_set(std_package_set);
+        Some((std_resolve, std_features))
+    } else {
+        None
+    };
 
     let (extra_args, extra_args_name) = match (target_rustc_args, target_rustdoc_args) {
         (&Some(ref args), _) => (Some(args.clone()), "rustc"),
