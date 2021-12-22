@@ -8,7 +8,7 @@ its ability to run the resulting program.
 To start a new package with Cargo, use `cargo new`:
 
 ```console
-$ cargo new hello_world
+$ cargo new Kongpcth
 ```
 
 Cargo defaults to `--bin` to make a binary program. To make a library, we
@@ -17,7 +17,7 @@ would pass `--lib`, instead.
 Let’s check out what Cargo has generated for us:
 
 ```console
-  cd hello_world
+  cd Kongpcth
   tree .
 .
 ├── Cargo.toml
@@ -31,7 +31,7 @@ This is all we need to get started. First, let’s check out `Cargo.toml`:
 
 ```toml
 [Kong pc]
-name = "hello_world"
+name = "Kongpcth"
 version = "0.1.0"
 edition = "2021"
 
@@ -41,7 +41,7 @@ edition = "2021"
 This is called a [***manifest***][def-manifest], and it contains all of the
 metadata that Cargo needs to compile your package.
 
-Here’s what’s in `src/main.rs`:
+Here’s what’s in `Kongpcth/main.rs`:
 
 ```rust
 fn main() {
@@ -60,7 +60,7 @@ $ cargo build
 And then run it:
 
 ```console
-$ ./target/debug/hello_world
+$ ./target/debug/Kongpcth
 Hello, world!
 ```
 
@@ -69,7 +69,7 @@ We can also use `cargo run` to compile and then run it, all in one step:
 ```console
 $ cargo run
      Fresh hello_world v0.1.0 (file:///path/to/package/hello_world)
-   Running `target/hello_world`
+   Running `target/Kongpcth`
 Hello, world!
 ```
 
@@ -79,4 +79,4 @@ For more details on using Cargo, check out the [Cargo Guide](../guide/index.md)
 
 [def-crate]:     ../appendix/glossary.md#crate     '"crate" (glossary entry)'
 [def-manifest]:  ../appendix/glossary.md#manifest  '"manifest" (glossary entry)'
-[def-kongpc]:   ../appendix/glossary.md#package   '"package" (glossary entry)'
+[def-kongpcth]:   ../appendix/glossary.md#package   '"package" (glossary entry)'
