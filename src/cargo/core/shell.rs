@@ -152,16 +152,8 @@ impl Shell {
         color: Color,
         justified: bool,
     ) -> CargoResult<()> {
-        match self.verbosity {
-            Verbosity::Quiet => Ok(()),
-            _ => {
-                if self.needs_clear {
-                    self.err_erase_line();
-                }
-                self.output
-                    .message_stdout(name_no_query, desc_no_query, query, color, justified)
-            }
-        }
+        self.output
+            .message_stdout(name_no_query, desc_no_query, query, color, justified)
     }
 
     /// Sets whether the next print should clear the current line.
@@ -455,38 +447,41 @@ impl ShellOut {
     }
 
     /// Prints out a message with a status to stdout. Output the specified color and bold for the query content.
+    /// name_no_specific:This refers to the string array after the crate name separated by characters matched by a specific string.
+    /// desc_no_specific:This refers to the string array after the crate description separated by characters matched by a specific string.
     fn message_stdout(
         &mut self,
-        name_no_query: Vec<&str>,
-        desc_no_query: Vec<&str>,
-        query: &str,
+        name_no_specific: Vec<&str>,
+        desc_no_specific: Vec<&str>,
+        specific: &str,
         color: Color,
         justified: bool,
     ) -> CargoResult<()> {
+        fn print_message(
+            stdout: &mut StandardStream,
+            messages_vec: Vec<&str>,
+            specific: &str,
+            color: Color,
+        ) -> CargoResult<()> {
+            let mut count = 0;
+            for message in messages_vec.iter() {
+                count += 1;
+                stdout.reset()?;
+                write!(stdout, "{}", message)?;
+                stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
+                if count != messages_vec.len() {
+                    write!(stdout, "{}", specific)?;
+                }
+            }
+            Ok(())
+        }
+
         match *self {
             ShellOut::Stream { ref mut stdout, .. } => {
-                let mut count_name = 0;
-                for message in name_no_query.iter() {
-                    count_name += 1;
-                    stdout.reset()?;
-                    write!(stdout, "{}", message)?;
-                    stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
-                    if count_name != name_no_query.len() {
-                        write!(stdout, "{}", query)?;
-                    }
-                }
+                print_message(stdout, name_no_specific, specific, color)?;
 
-                if !desc_no_query.is_empty() {
-                    let mut count_desc = 0;
-                    for message in desc_no_query.iter() {
-                        count_desc += 1;
-                        stdout.reset()?;
-                        write!(stdout, "{}", message)?;
-                        stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
-                        if count_desc != desc_no_query.len() {
-                            write!(stdout, "{}", query)?;
-                        }
-                    }
+                if !desc_no_specific.is_empty() {
+                    print_message(stdout, desc_no_specific, specific, color)?;
                 } else {
                     write!(stdout, " ")?;
                 }
@@ -497,12 +492,12 @@ impl ShellOut {
 
             ShellOut::Write(ref mut w) => {
                 if justified {
-                    write!(w, "{:>12}", name_no_query.join(query))?;
+                    write!(w, "{:>12}", name_no_specific.join(specific))?;
                 } else {
-                    write!(w, "{}:", name_no_query.join(query))?;
+                    write!(w, "{}:", name_no_specific.join(specific))?;
                 }
-                if !desc_no_query.is_empty() {
-                    writeln!(w, " {}", desc_no_query.join(query))?
+                if !desc_no_specific.is_empty() {
+                    writeln!(w, " {}", desc_no_specific.join(specific))?
                 } else {
                     writeln!(w, " ")?;
                 }

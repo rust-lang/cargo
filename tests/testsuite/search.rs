@@ -244,3 +244,13 @@ fn multiple_query_params() {
         .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
+
+#[cargo_test]
+fn search_quiet() {
+    setup();
+    set_cargo_config();
+
+    cargo_process("search -q postgres")
+        .with_stdout_contains(SEARCH_RESULTS)
+        .run();
+}

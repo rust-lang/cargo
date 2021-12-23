@@ -13,6 +13,7 @@ use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use termcolor::Color::Green;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -977,9 +978,10 @@ pub fn search(
         // The query part is displayed in green in the output result.
         let name_vec: Vec<&str> = message.name.split(query).collect();
         let desc_vec: Vec<&str> = message.desc.split(query).collect();
-        let _ = config
+
+        config
             .shell()
-            .status_stdout_part_green(name_vec, desc_vec, &query);
+            .print_stdout_with_part_color(name_vec, desc_vec, query, Green, true)?;
     }
 
     let search_max_limit = 100;
