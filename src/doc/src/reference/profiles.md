@@ -95,7 +95,7 @@ once more testing has been performed, and support for DWARF is stabilized.
 
 #### strip
 
-The `strip` option controls the rustc `-C strip` option, which directs rustc to
+The `strip` option controls the [`-C strip` flag], which directs rustc to
 strip either symbols or debuginfo from a binary. This can be enabled like so:
 
 ```toml
@@ -113,6 +113,7 @@ You can also configure this option with the two absolute boolean values
 `true` and `false`. The former enables `strip` at its higher level, `symbols`,
 while the latter disables `strip` completely.
 
+[`-C strip` flag]: ../../rustc/codegen-options/index.html#strip
 
 #### debug-assertions
 
