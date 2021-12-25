@@ -629,12 +629,17 @@ fn env_args(
 
     // Then try RUSTFLAGS from the environment
     if let Ok(a) = env::var(name) {
-        let args = a
+        let mut args = a
             .split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
-            .map(str::to_string);
-        return Ok(args.collect());
+            .map(str::to_string)
+            .collect();
+
+        // File paths with spaces would be split by a " " here.
+        join_paths_with_spaces_in_rustflags(&mut args);
+
+        return Ok(args);
     }
 
     let mut rustflags = Vec::new();
@@ -684,6 +689,78 @@ fn env_args(
     }
 
     Ok(Vec::new())
+}
+
+// Joins RUSTFLAGS arguments if two arguments have
+// been erronously separated due to spaces in file paths
+//
+// NOTE: only works with absolute file paths, but that's good
+// enough for the common case.
+fn join_paths_with_spaces_in_rustflags(rustflags: &mut Vec<String>) {
+    // Distinguish between regular arguments and file paths
+    // by looking if a root component exists (unix: "/", windows: "c:/")
+    let args_starting_with_path = rustflags
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| (i, arg.replace("'", "")))
+        .filter(|(_, arg)| Path::new(arg).has_root())
+        .filter(|(_, arg)| {
+            Path::new(arg)
+                .ancestors()
+                .skip(1) // skip testing the last component,
+                // since it may not exist
+                .all(|p| p.exists())
+        })
+        .map(|(i, _)| i)
+        .collect::<Vec<_>>();
+
+    // Now try joining the next n filtered args onto the starting argument
+    // with a space until the Path doesn't make sense anymore: e.g.:
+    //
+    // if RUSTFLAGS="--sysroot C:\Users\John Doe\Test Path\folder -Ztimings"
+    //
+    // then variations = [
+    //    "C:\Users\John Doe\Test Path\folder -Ztimings"
+    //    "C:\Users\John Doe\Test Path\folder" <- first valid path, break here
+    //    "C:\Users\John Doe\Test"
+    //    "C:\Users\John"
+    // ]
+    for start_idx in args_starting_with_path {
+        let num_paths_to_test = rustflags.len().saturating_sub(start_idx);
+        if num_paths_to_test == 0 {
+            continue;
+        }
+
+        let variations = (0..num_paths_to_test)
+            .map(|i| {
+                rustflags
+                    .iter()
+                    .skip(start_idx)
+                    .take(i + 1)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .collect::<Vec<_>>();
+
+        let number_of_invalid_paths = variations
+            .iter()
+            // iterate in reverse so that we can early break
+            // once a valid file path has been found
+            .rev()
+            .map(|p| p.replace("'", ""))
+            .take_while(|p| !Path::new(p).exists())
+            .count();
+
+        for i in (start_idx..(rustflags.len() - number_of_invalid_paths)).skip(1) {
+            let path_element_to_join = rustflags[i].clone();
+            rustflags[start_idx].push(' ');
+            rustflags[start_idx].push_str(&path_element_to_join);
+            rustflags[i].clear();
+        }
+    }
+
+    rustflags.retain(|r| !r.is_empty());
 }
 
 /// Collection of information about `rustc` and the host and target.
