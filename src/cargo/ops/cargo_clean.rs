@@ -5,7 +5,7 @@ use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
-use crate::util::Config;
+use crate::util::{Config, Progress, ProgressStyle};
 
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -33,8 +33,9 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
     // If the doc option is set, we just want to delete the doc directory.
     if opts.doc {
+        let mut progress = Progress::with_style("Cleaning", ProgressStyle::Percentage, config);
         target_dir = target_dir.join("doc");
-        return rm_rf(&target_dir.into_path_unlocked(), config);
+        return rm_rf_with_progress(&target_dir.into_path_unlocked(), &mut progress);
     }
 
     let profiles = Profiles::new(ws, opts.requested_profile)?;
@@ -53,7 +54,8 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
     if opts.spec.is_empty() {
-        return rm_rf(&target_dir.into_path_unlocked(), config);
+        let mut progress = Progress::with_style("Cleaning", ProgressStyle::Percentage, config);
+        return rm_rf_with_progress(&target_dir.into_path_unlocked(), &mut progress);
     }
 
     // Clean specific packages.
@@ -133,8 +135,10 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
     let packages = pkg_set.get_many(pkg_ids)?;
 
-    for pkg in packages {
+    let mut progress = Progress::with_style("Cleaning", ProgressStyle::Ratio, config);
+    for (pkg_idx, pkg) in packages.iter().enumerate() {
         let pkg_dir = format!("{}-*", pkg.name());
+        progress.tick_now(pkg_idx + 1, packages.len(), &format!(": {}", pkg.name()))?;
 
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
@@ -227,6 +231,25 @@ fn rm_rf_glob(pattern: &Path, config: &Config) -> CargoResult<()> {
         .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
     for path in glob::glob(pattern)? {
         rm_rf(&path?, config)?;
+    }
+    Ok(())
+}
+
+fn rm_rf_with_progress(path: &Path, progress: &mut Progress<'_>) -> CargoResult<()> {
+    let num_paths = walkdir::WalkDir::new(path).into_iter().count();
+    for (idx, entry) in walkdir::WalkDir::new(path)
+        .contents_first(true)
+        .into_iter()
+        .enumerate()
+    {
+        progress.tick(std::cmp::min(idx + 1, num_paths), num_paths, "")?;
+        if let Ok(entry) = entry {
+            if entry.file_type().is_dir() {
+                paths::remove_dir(entry.path())?;
+            } else {
+                paths::remove_file(entry.path())?;
+            }
+        }
     }
     Ok(())
 }
