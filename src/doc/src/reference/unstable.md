@@ -1367,7 +1367,7 @@ Custom named profiles have been stabilized in the 1.57 release. See the
 
 ### Profile `strip` option
 
-The profile `strip` option has been stabilized in the 1.58 release. See the
+The profile `strip` option has been stabilized in the 1.59 release. See the
 [profiles chapter](profiles.md#strip) for more information.
 
 ### Future incompat report
