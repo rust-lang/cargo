@@ -83,7 +83,7 @@ pub struct CompileOptions {
     pub honor_rust_version: bool,
 }
 
-impl<'a> CompileOptions {
+impl CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
         Ok(CompileOptions {
             build_config: BuildConfig::new(config, None, &[], mode)?,
