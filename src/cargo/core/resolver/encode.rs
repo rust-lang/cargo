@@ -554,7 +554,7 @@ impl<'de> de::Deserialize<'de> for EncodablePackageId {
     }
 }
 
-impl<'a> ser::Serialize for Resolve {
+impl ser::Serialize for Resolve {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
