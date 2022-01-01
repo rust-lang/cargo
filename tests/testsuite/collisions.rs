@@ -206,6 +206,48 @@ fn collision_doc_multiple_versions() {
 }
 
 #[cargo_test]
+fn collision_doc_semver_trick() {
+    // A larger version of a crate
+    Package::new("rand", "0.4.0").publish();
+    // A smaller version of a crate that depends on the larger version to do the semver trick
+    // https://github.com/dtolnay/semver-trick
+    Package::new("rand", "0.3.23").dep("rand", "0.4").publish();
+
+    // A crate that depends on the older version
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                rand = "0.3"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Should document rand at least once
+    p.cargo("doc")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] rand v0.4.0 [..]
+[DOWNLOADED] rand v0.3.23 [..]
+[CHECKING] rand v0.4.0
+[CHECKING] rand v0.3.23
+[DOCUMENTING] rand v0.3.23
+[FINISHED] [..]
+[DOCUMENTING] foo v0.1.0 [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn collision_doc_host_target_feature_split() {
     // Same dependency built twice due to different features.
     //
