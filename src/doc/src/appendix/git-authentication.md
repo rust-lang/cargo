@@ -41,7 +41,14 @@ username/password.
 SSH authentication requires `ssh-agent` to be running to acquire the SSH key.
 Make sure the appropriate environment variables are set up (`SSH_AUTH_SOCK` on
 most Unix-like systems), and that the correct keys are added (with `ssh-add`).
-Windows uses Pageant for SSH authentication.
+
+Windows can use Pageant (part of [PuTTY]) or `ssh-agent`.
+To use `ssh-agent`, Cargo needs to use the OpenSSH that is distributed as part
+of Windows, as Cargo does not support the simulated Unix-domain sockets used
+by MinGW or Cygwin.
+More information about installing with Windows can be found at the [Microsoft
+installation documentation] and the page on [key management] has instructions
+on how to start `ssh-agent` and to add keys.
 
 > **Note:** Cargo does not support git's shorthand SSH URLs like
 > `git@example.com:user/repo.git`. Use a full SSH URL like
@@ -54,3 +61,6 @@ Windows uses Pageant for SSH authentication.
 [`credential.helper`]: https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
 [`net.git-fetch-with-cli`]: ../reference/config.md#netgit-fetch-with-cli
 [GCM]: https://github.com/microsoft/Git-Credential-Manager-Core/
+[PuTTY]: https://www.chiark.greenend.org.uk/~sgtatham/putty/
+[Microsoft installation documentation]: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse
+[key management]: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement
