@@ -95,6 +95,8 @@ target.
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options

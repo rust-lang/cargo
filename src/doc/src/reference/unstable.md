@@ -35,9 +35,9 @@ how the feature works:
 * `-Z` command-line flags are used to enable new functionality that may not
   have an interface, or the interface has not yet been designed, or for more
   complex features that affect multiple parts of Cargo. For example, the
-  [timings](#timings) feature can be enabled with:
+  [mtime-on-use](#mtime-on-use) feature can be enabled with:
 
-  ```cargo +nightly build -Z timings```
+  ```cargo +nightly build -Z mtime-on-use```
 
   Run `cargo -Z help` to see a list of flags available.
 
@@ -49,7 +49,6 @@ how the feature works:
   [unstable]
   mtime-on-use = true
   multitarget = true
-  timings = ["html"]
   ```
 
 Each new feature described below should explain how to use it.
@@ -91,7 +90,6 @@ Each new feature described below should explain how to use it.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
-    * [timings](#timings) — Generates a report on how long individual dependencies took to run.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
@@ -402,26 +400,6 @@ the features enabled for the standard library itself when building the standard
 library. The default enabled features, at this time, are `backtrace` and
 `panic_unwind`. This flag expects a comma-separated list and, if provided, will
 override the default list of features enabled.
-
-### timings
-* Tracking Issue: [#7405](https://github.com/rust-lang/cargo/issues/7405)
-
-The `timings` feature gives some information about how long each compilation
-takes, and tracks concurrency information over time.
-
-```sh
-cargo +nightly build -Z timings
-```
-
-The `-Ztimings` flag can optionally take a comma-separated list of the
-following values:
-
-- `html` — Saves a file called `cargo-timing.html` to the current directory
-  with a report of the compilation. Files are also saved with a timestamp in
-  the filename if you want to look at older runs.
-- `json` — Emits some JSON information about timing information.
-
-The default if none are specified is `html`.
 
 #### Reading the graphs
 
@@ -1315,3 +1293,9 @@ See the [Features chapter](features.md#optional-dependencies) for more informati
 
 Weak dependency features has been stabilized in the 1.60 release.
 See the [Features chapter](features.md#dependency-features) for more information.
+
+### timings
+
+The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
+(The machine-readable `--timings=json` output remains unstable and requires
+`-Zunstable-options`.)

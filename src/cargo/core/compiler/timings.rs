@@ -4,7 +4,7 @@
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
 use crate::core::compiler::job_queue::JobId;
-use crate::core::compiler::BuildContext;
+use crate::core::compiler::{BuildContext, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
@@ -92,15 +92,9 @@ struct Concurrency {
 
 impl<'cfg> Timings<'cfg> {
     pub fn new(bcx: &BuildContext<'_, 'cfg>, root_units: &[Unit]) -> Timings<'cfg> {
-        let has_report = |what| {
-            bcx.config
-                .cli_unstable()
-                .timings
-                .as_ref()
-                .map_or(false, |t| t.iter().any(|opt| opt == what))
-        };
-        let report_html = has_report("html");
-        let report_json = has_report("json");
+        let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
+        let report_html = has_report(TimingOutput::Html);
+        let report_json = has_report(TimingOutput::Json);
         let enabled = report_html | report_json;
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();

@@ -124,6 +124,8 @@ When no target selection options are given, `cargo fix` will fix all targets
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options

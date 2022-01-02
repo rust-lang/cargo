@@ -652,7 +652,6 @@ unstable_cli_options!(
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
-    timings: Option<Vec<String>>  = ("Display concurrency information"),
     unstable_options: bool = ("Allow the usage of unstable options"),
     // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
     // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
@@ -712,6 +711,8 @@ const STABILIZED_WEAK_DEP_FEATURES: &str = "Weak dependency features are now alw
 
 const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always available.";
 
+const STABILIZED_TIMINGS: &str = "The -Ztimings option has been stabilized as --timings.";
+
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -765,13 +766,6 @@ impl CliUnstable {
                 None | Some("yes") => Ok(true),
                 Some("no") => Ok(false),
                 Some(s) => bail!("flag -Z{} expected `no` or `yes`, found: `{}`", key, s),
-            }
-        }
-
-        fn parse_timings(value: Option<&str>) -> Vec<String> {
-            match value {
-                None => vec!["html".to_string()],
-                Some(v) => v.split(',').map(|s| s.to_string()).collect(),
             }
         }
 
@@ -849,7 +843,6 @@ impl CliUnstable {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
             "build-std-features" => self.build_std_features = Some(parse_features(v)),
-            "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
@@ -904,6 +897,7 @@ impl CliUnstable {
             "future-incompat-report" => {
                 stabilized_warn(k, "1.59.0", STABILIZED_FUTURE_INCOMPAT_REPORT)
             }
+            "timings" => stabilized_warn(k, "1.60", STABILIZED_TIMINGS),
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

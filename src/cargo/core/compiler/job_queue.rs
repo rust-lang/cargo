@@ -906,7 +906,7 @@ impl<'cfg> DrainState<'cfg> {
     // this as often as we spin on the events receiver (at least every 500ms or
     // so).
     fn tick_progress(&mut self) {
-        // Record some timing information if `-Ztimings` is enabled, and
+        // Record some timing information if `--timings` is enabled, and
         // this'll end up being a noop if we're not recording this
         // information.
         self.timings.mark_concurrency(

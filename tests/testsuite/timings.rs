@@ -1,4 +1,4 @@
-//! Tests for -Ztimings.
+//! Tests for --timings.
 
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
@@ -25,8 +25,7 @@ fn timings_works() {
         .file("examples/ex1.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --all-targets -Ztimings")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --all-targets --timings")
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
@@ -42,17 +41,13 @@ fn timings_works() {
 
     p.cargo("clean").run();
 
-    p.cargo("test -Ztimings")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("test --timings").run();
 
     p.cargo("clean").run();
 
-    p.cargo("check -Ztimings")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("check --timings").run();
 
     p.cargo("clean").run();
 
-    p.cargo("doc -Ztimings").masquerade_as_nightly_cargo().run();
+    p.cargo("doc --timings").run();
 }

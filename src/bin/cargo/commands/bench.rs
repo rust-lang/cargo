@@ -47,6 +47,7 @@ pub fn cli() -> App {
             "Run all benchmarks regardless of failure",
         ))
         .arg_unit_graph()
+        .arg_timings()
         .after_help("Run `cargo help bench` for more detailed information.\n")
 }
 
