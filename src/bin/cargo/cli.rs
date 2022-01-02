@@ -65,7 +65,7 @@ pub fn main(config: &mut Config) -> CliResult {
             .iter()
             .map(|(option_name, option_help_message)| {
                 let option_name_kebab_case = option_name.replace("_", "-");
-                let padding = " ".repeat(longest_option - option_name.len()); // safe to substract
+                let padding = " ".repeat(longest_option - option_name.len()); // safe to subtract
                 format!(
                     "    -Z {}{} -- {}",
                     option_name_kebab_case, padding, option_help_message
