@@ -93,6 +93,28 @@ once more testing has been performed, and support for DWARF is stabilized.
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo
 
+#### strip
+
+The `strip` option controls the [`-C strip` flag], which directs rustc to
+strip either symbols or debuginfo from a binary. This can be enabled like so:
+
+```toml
+[package]
+# ...
+
+[profile.release]
+strip = "debuginfo"
+```
+
+Other possible string values of `strip` are `none`, `symbols`, and `off`. The
+default is `none`.
+
+You can also configure this option with the two absolute boolean values
+`true` and `false`. The former enables `strip` at its higher level, `symbols`,
+while the latter disables `strip` completely.
+
+[`-C strip` flag]: ../../rustc/codegen-options/index.html#strip
+
 #### debug-assertions
 
 The `debug-assertions` setting controls the [`-C debug-assertions` flag] which

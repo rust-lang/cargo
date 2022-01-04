@@ -1023,7 +1023,7 @@ fn build_base_args(
     }
 
     if strip != Strip::None {
-        cmd.arg("-Z").arg(format!("strip={}", strip));
+        cmd.arg("-C").arg(format!("strip={}", strip));
     }
 
     if unit.is_std {

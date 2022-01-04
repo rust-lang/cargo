@@ -820,28 +820,6 @@ The following is a description of the JSON structure:
 }
 ```
 
-### Profile `strip` option
-* Tracking Issue: [rust-lang/rust#72110](https://github.com/rust-lang/rust/issues/72110)
-
-This feature provides a new option in the `[profile]` section to strip either
-symbols or debuginfo from a binary. This can be enabled like so:
-
-```toml
-cargo-features = ["strip"]
-
-[package]
-# ...
-
-[profile.release]
-strip = "debuginfo"
-```
-
-Other possible string values of `strip` are `none`, `symbols`, and `off`. The default is `none`.
-
-You can also configure this option with the two absolute boolean values
-`true` and `false`. The former enables `strip` at its higher level, `symbols`,
-while the latter disables `strip` completely.
-
 ### rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
@@ -1386,6 +1364,11 @@ See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](..
 
 Custom named profiles have been stabilized in the 1.57 release. See the
 [profiles chapter](profiles.md#custom-profiles) for more information.
+
+### Profile `strip` option
+
+The profile `strip` option has been stabilized in the 1.59 release. See the
+[profiles chapter](profiles.md#strip) for more information.
 
 ### Future incompat report
 

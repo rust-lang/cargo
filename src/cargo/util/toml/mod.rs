@@ -530,10 +530,6 @@ impl TomlProfile {
             }
         }
 
-        if self.strip.is_some() {
-            features.require(Feature::strip())?;
-        }
-
         if let Some(codegen_backend) = &self.codegen_backend {
             features.require(Feature::codegen_backend())?;
             if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
