@@ -116,7 +116,7 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
         commands.insert(
             cmd.get_name().to_string(),
             CommandInfo::BuiltIn {
-                about: cmd.p.meta.about.map(|s| s.to_string()),
+                about: cmd.get_about().map(|s| s.to_string()),
             },
         );
     }

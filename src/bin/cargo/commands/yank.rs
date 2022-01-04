@@ -22,7 +22,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help yank` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     config.load_credentials()?;
 
     let registry = args.registry(config)?;

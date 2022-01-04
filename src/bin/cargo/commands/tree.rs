@@ -20,7 +20,7 @@ pub fn cli() -> App {
             "Exclude specific workspace members",
         )
         // Deprecated, use --no-dedupe instead.
-        .arg(Arg::with_name("all").long("all").short("a").hidden(true))
+        .arg(Arg::with_name("all").long("all").short('a').hidden(true))
         // Deprecated, use --target=all instead.
         .arg(
             Arg::with_name("all-targets")
@@ -46,7 +46,7 @@ pub fn cli() -> App {
                  (features, normal, build, dev, all, \
                  no-normal, no-build, no-dev, no-proc-macro)",
             )
-            .short("e"),
+            .short('e'),
         )
         .arg(
             optional_multi_opt(
@@ -54,7 +54,7 @@ pub fn cli() -> App {
                 "SPEC",
                 "Invert the tree direction and focus on the given package",
             )
-            .short("i"),
+            .short('i'),
         )
         .arg(multi_opt(
             "prune",
@@ -88,7 +88,7 @@ pub fn cli() -> App {
                 "duplicates",
                 "Show only dependencies which come in multiple versions (implies -i)",
             )
-            .short("d")
+            .short('d')
             .alias("duplicate"),
         )
         .arg(
@@ -100,20 +100,20 @@ pub fn cli() -> App {
         .arg(
             opt("format", "Format string used for printing dependencies")
                 .value_name("FORMAT")
-                .short("f")
+                .short('f')
                 .default_value("{p}"),
         )
         .arg(
             // Backwards compatibility with old cargo-tree.
             Arg::with_name("version")
                 .long("version")
-                .short("V")
+                .short('V')
                 .hidden(true),
         )
         .after_help("Run `cargo help tree` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if args.is_present("version") {
         let verbose = args.occurrences_of("verbose") > 0;
         let version = cli::get_version_string(verbose);
@@ -226,10 +226,7 @@ subtree of the package given to -p.\n\
 /// Parses `--edges` option.
 ///
 /// Returns a tuple of `EdgeKind` map and `no_proc_marco` flag.
-fn parse_edge_kinds(
-    config: &Config,
-    args: &ArgMatches<'_>,
-) -> CargoResult<(HashSet<EdgeKind>, bool)> {
+fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<EdgeKind>, bool)> {
     let (kinds, no_proc_macro) = {
         let mut no_proc_macro = false;
         let mut kinds = args.values_of("edges").map_or_else(

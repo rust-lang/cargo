@@ -45,7 +45,7 @@ pub fn cli() -> App {
             "list all installed packages and their versions",
         ))
         .arg_jobs()
-        .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
+        .arg(opt("force", "Force overwriting existing crates or binaries").short('f'))
         .arg(opt("no-track", "Do not save tracking information"))
         .arg_features()
         .arg_profile("Install artifacts with the specified profile")
@@ -75,7 +75,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help install` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if let Some(path) = args.value_of_path("path", config) {
         config.reload_rooted_at(path)?;
     } else {

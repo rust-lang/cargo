@@ -9,6 +9,6 @@ pub fn cli() -> App {
         .help(REMOVED)
 }
 
-pub fn exec(_config: &mut Config, _args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(_config: &mut Config, _args: &ArgMatches) -> CliResult {
     Err(anyhow::format_err!(REMOVED).into())
 }

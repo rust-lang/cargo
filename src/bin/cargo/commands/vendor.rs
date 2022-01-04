@@ -7,7 +7,11 @@ pub fn cli() -> App {
         .about("Vendor all dependencies for a project locally")
         .arg_quiet()
         .arg_manifest_path()
-        .arg(Arg::with_name("path").help("Where to vendor crates (`vendor` by default)"))
+        .arg(
+            Arg::with_name("path")
+                .allow_invalid_utf8(true)
+                .help("Where to vendor crates (`vendor` by default)"),
+        )
         .arg(
             Arg::with_name("no-delete")
                 .long("no-delete")
@@ -15,17 +19,18 @@ pub fn cli() -> App {
         )
         .arg(
             Arg::with_name("tomls")
-                .short("s")
+                .short('s')
                 .long("sync")
                 .help("Additional `Cargo.toml` to sync and vendor")
                 .value_name("TOML")
+                .allow_invalid_utf8(true)
                 .multiple(true),
         )
         .arg(
             Arg::with_name("respect-source-config")
                 .long("respect-source-config")
                 .help("Respect `[source]` config in `.cargo/config`")
-                .multiple(true),
+                .multiple_occurrences(true),
         )
         .arg(
             Arg::with_name("versioned-dirs")
@@ -59,7 +64,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help vendor` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // We're doing the vendoring operation ourselves, so we don't actually want
     // to respect any of the `source` configuration in Cargo itself. That's
     // intended for other consumers of Cargo, but we want to go straight to the

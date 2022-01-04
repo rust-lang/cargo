@@ -23,7 +23,7 @@ pub fn cli() -> App {
                 "quiet",
                 "Display one character per test instead of one line",
             )
-            .short("q"),
+            .short('q'),
         )
         .arg_targets_all(
             "Test only this package's library unit tests",
@@ -62,7 +62,7 @@ pub fn cli() -> App {
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(

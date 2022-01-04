@@ -65,7 +65,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help fix` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     // This is a legacy behavior that causes `cargo fix` to pass `--test`.
     let test = matches!(args.value_of("profile"), Some("test"));

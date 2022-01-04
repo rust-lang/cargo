@@ -13,7 +13,7 @@ pub fn cli() -> App {
                 "LOGIN",
                 "Name of a user or team to invite as an owner",
             )
-            .short("a"),
+            .short('a'),
         )
         .arg(
             multi_opt(
@@ -21,16 +21,16 @@ pub fn cli() -> App {
                 "LOGIN",
                 "Name of a user or team to remove as an owner",
             )
-            .short("r"),
+            .short('r'),
         )
-        .arg(opt("list", "List owners of a crate").short("l"))
+        .arg(opt("list", "List owners of a crate").short('l'))
         .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .after_help("Run `cargo help owner` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     config.load_credentials()?;
 
     let registry = args.registry(config)?;
