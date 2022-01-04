@@ -413,7 +413,7 @@ impl<'cfg> JobQueue<'cfg> {
 
         // This is somewhat tricky, but we may need to synthesize some
         // dependencies for this target if it requires full upstream
-        // compilations to have completed. If we're in pipelining mode then some
+        // compilations to have completed. Because of pipelining, some
         // dependency edges may be `Metadata` due to the above clause (as
         // opposed to everything being `All`). For example consider:
         //
