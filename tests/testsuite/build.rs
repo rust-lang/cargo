@@ -1668,7 +1668,7 @@ package `test v0.0.0 ([CWD])`
 }
 
 #[cargo_test]
-/// Make sure broken symlinks don't break the build
+/// Make sure broken and loop symlinks don't break the build
 ///
 /// This test requires you to be able to make symlinks.
 /// For windows, this may require you to enable developer mode.
@@ -1681,9 +1681,17 @@ fn ignore_broken_symlinks() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar")
+        // To hit the symlink directory, we need a build script
+        // to trigger a full scan of package files.
+        .file("build.rs", &main_file(r#""build script""#, &[]))
+        .symlink_dir("a/b", "a/b/c/d/foo")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr_contains(
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+        )
+        .run();
     assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();

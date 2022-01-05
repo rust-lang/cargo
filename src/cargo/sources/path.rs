@@ -340,7 +340,7 @@ impl<'cfg> PathSource<'cfg> {
                         ret.extend(files.into_iter());
                     }
                     Err(..) => {
-                        PathSource::walk(&file_path, &mut ret, false, filter)?;
+                        self.walk(&file_path, &mut ret, false, filter)?;
                     }
                 }
             } else if filter(&file_path, is_dir) {
@@ -378,11 +378,12 @@ impl<'cfg> PathSource<'cfg> {
         filter: &mut dyn FnMut(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
-        PathSource::walk(pkg.root(), &mut ret, true, filter)?;
+        self.walk(pkg.root(), &mut ret, true, filter)?;
         Ok(ret)
     }
 
     fn walk(
+        &self,
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
@@ -420,9 +421,22 @@ impl<'cfg> PathSource<'cfg> {
                 true
             });
         for entry in walkdir {
-            let entry = entry?;
-            if !entry.file_type().is_dir() {
-                ret.push(entry.path().to_path_buf());
+            match entry {
+                Ok(entry) => {
+                    if !entry.file_type().is_dir() {
+                        ret.push(entry.into_path());
+                    }
+                }
+                Err(err) if err.loop_ancestor().is_some() => {
+                    self.config.shell().warn(err)?;
+                }
+                Err(err) => match err.path() {
+                    // If the error occurs with a path, simply recover from it.
+                    // Don't worry about error skipping here, the callers would
+                    // still hit the IO error if they do access it thereafter.
+                    Some(path) => ret.push(path.to_path_buf()),
+                    None => return Err(err.into()),
+                },
             }
         }
 
