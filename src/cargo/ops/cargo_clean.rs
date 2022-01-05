@@ -225,7 +225,7 @@ fn escape_glob_path(pattern: &Path) -> CargoResult<String> {
 fn rm_rf_glob(
     pattern: &Path,
     config: &Config,
-    progress: &mut impl CleaningProgressBar,
+    progress: &mut dyn CleaningProgressBar,
 ) -> CargoResult<()> {
     // TODO: Display utf8 warning to user?  Or switch to globset?
     let pattern = pattern
@@ -237,7 +237,7 @@ fn rm_rf_glob(
     Ok(())
 }
 
-fn rm_rf(path: &Path, config: &Config, progress: &mut impl CleaningProgressBar) -> CargoResult<()> {
+fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -> CargoResult<()> {
     if fs::symlink_metadata(path).is_err() {
         return Ok(());
     }
