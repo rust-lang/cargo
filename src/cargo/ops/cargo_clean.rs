@@ -34,7 +34,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // If the doc option is set, we just want to delete the doc directory.
     if opts.doc {
         target_dir = target_dir.join("doc");
-        return clean_entire_folder(&target_dir.into_path_unlocked(), &config);
+        return clean_entire_folder(&target_dir.into_path_unlocked(), config);
     }
 
     let profiles = Profiles::new(ws, opts.requested_profile)?;
