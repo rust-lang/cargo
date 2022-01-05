@@ -249,6 +249,7 @@ pub enum CompileFilter {
     },
     Only {
         all_targets: bool,
+        /// Flag whether to warn when there are unmatched target filters, defaulting to true.
         warn_unmatched: bool,
         lib: LibRule,
         bins: FilterRule,
@@ -741,6 +742,19 @@ impl CompileFilter {
         }
     }
 
+    /// Construct a CompileFilter with default options for use by `cargo install`
+    pub fn new_bare_install() -> CompileFilter {
+        CompileFilter::Only {
+            all_targets: false,
+            warn_unmatched: false,
+            lib: LibRule::False,
+            bins: FilterRule::All,
+            examples: FilterRule::none(),
+            benches: FilterRule::none(),
+            tests: FilterRule::none(),
+        }
+    }
+
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
@@ -796,6 +810,21 @@ impl CompileFilter {
         match *self {
             CompileFilter::Default { .. } => false,
             CompileFilter::Only { .. } => true,
+        }
+    }
+
+    pub fn is_bare_install(&self) -> bool {
+        match *self {
+            CompileFilter::Default { .. } => false,
+            CompileFilter::Only {
+                bins: FilterRule::All,
+                ref examples,
+                ..
+            } => match examples {
+                FilterRule::All => false,
+                FilterRule::Just(ref targets) => targets.is_empty(),
+            },
+            _ => !self.is_specific(),
         }
     }
 

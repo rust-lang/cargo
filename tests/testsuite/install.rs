@@ -586,9 +586,9 @@ fn no_binaries() {
         .with_status(101)
         .with_stderr(
             "\
+[ERROR] there is nothing to install in `foo v0.0.1 ([..])`, because it has no binaries[..]
 [..]
-[..]
-[ERROR] no binaries are available for install using the selected features",
+[..]",
         )
         .run();
 }

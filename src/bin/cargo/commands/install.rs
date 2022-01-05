@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
-use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
+use cargo::ops::{self, CompileFilter};
 use cargo::util::IntoUrl;
 
 pub fn cli() -> App {
@@ -138,15 +138,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         args.get_profile_name(config, "release", ProfileChecking::Custom)?;
 
     if !compile_opts.filter.is_specific() {
-        compile_opts.filter = CompileFilter::Only {
-            all_targets: false,
-            warn_unmatched: false,
-            lib: LibRule::False,
-            bins: FilterRule::All,
-            examples: FilterRule::none(),
-            benches: FilterRule::none(),
-            tests: FilterRule::none(),
-        }
+        compile_opts.filter = CompileFilter::new_bare_install();
     }
 
     if args.is_present("list") {
