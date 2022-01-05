@@ -61,7 +61,7 @@ toml = "0.5.7"
 unicode-xid = "0.2.0"
 url = "2.2.2"
 walkdir = "2.2"
-clap = "2.34.0"
+clap = "3.0.4"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
 im-rc = "15.0.0"
