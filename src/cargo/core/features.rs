@@ -393,7 +393,7 @@ features! {
     (stable, resolver, "1.51", "reference/resolver.html#resolver-versions"),
 
     // Allow to specify whether binaries should be stripped.
-    (unstable, strip, "", "reference/unstable.html#profile-strip-option"),
+    (stable, strip, "1.58", "reference/profiles.html#strip-option"),
 
     // Specifying a minimal 'rust-version' attribute for crates
     (stable, rust_version, "1.56", "reference/manifest.html#the-rust-version-field"),

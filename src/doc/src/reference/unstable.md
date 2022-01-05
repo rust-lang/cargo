@@ -821,28 +821,6 @@ The following is a description of the JSON structure:
 }
 ```
 
-### Profile `strip` option
-* Tracking Issue: [rust-lang/rust#72110](https://github.com/rust-lang/rust/issues/72110)
-
-This feature provides a new option in the `[profile]` section to strip either
-symbols or debuginfo from a binary. This can be enabled like so:
-
-```toml
-cargo-features = ["strip"]
-
-[package]
-# ...
-
-[profile.release]
-strip = "debuginfo"
-```
-
-Other possible string values of `strip` are `none`, `symbols`, and `off`. The default is `none`.
-
-You can also configure this option with the two absolute boolean values
-`true` and `false`. The former enables `strip` at its higher level, `symbols`,
-while the latter disables `strip` completely.
-
 ### rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
@@ -1245,6 +1223,20 @@ filename = "007bar"
 path = "src/main.rs"
 ```
 
+### scrape-examples
+
+* RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
+* Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
+
+The `-Z rustdoc-scrape-examples` argument tells Rustdoc to search crates in the current workspace
+for calls to functions. Those call-sites are then included as documentation. The flag can take an
+argument of `all` or `examples` which configures which crate in the workspace to analyze for examples.
+For instance:
+
+```
+cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
+```
+
 ## Stabilized and removed features
 
 ### Compile progress
@@ -1400,22 +1392,13 @@ See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](..
 Custom named profiles have been stabilized in the 1.57 release. See the
 [profiles chapter](profiles.md#custom-profiles) for more information.
 
+### Profile `strip` option
+
+The profile `strip` option has been stabilized in the 1.59 release. See the
+[profiles chapter](profiles.md#strip) for more information.
+
 ### Future incompat report
 
 Support for generating a future-incompat report has been stabilized
 in the 1.59 release. See the [future incompat report chapter](future-incompat-report.md)
 for more information.
-
-### scrape-examples
-
-* RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
-* Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
-
-The `-Z rustdoc-scrape-examples` argument tells Rustdoc to search crates in the current workspace
-for calls to functions. Those call-sites are then included as documentation. The flag can take an
-argument of `all` or `examples` which configures which crate in the workspace to analyze for examples.
-For instance:
-
-```
-cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
-```

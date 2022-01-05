@@ -81,7 +81,6 @@ supported environment variables are:
 * `CARGO_BUILD_RUSTDOCFLAGS` — Extra `rustdoc` flags, see [`build.rustdocflags`].
 * `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
-* `CARGO_BUILD_PIPELINING` — Whether or not to use `rustc` pipelining, see [`build.pipelining`].
 * `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
 * `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notifcation, see [`future-incompat-report.frequency`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
@@ -115,6 +114,7 @@ supported environment variables are:
 * `CARGO_TARGET_<triple>_LINKER` — The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
 * `CARGO_TARGET_<triple>_RUNNER` — The executable runner, see [`target.<triple>.runner`].
 * `CARGO_TARGET_<triple>_RUSTFLAGS` — Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
+* `CARGO_TERM_QUIET` — Quiet mode, see [`term.quiet`].
 * `CARGO_TERM_VERBOSE` — The default terminal verbosity, see [`term.verbose`].
 * `CARGO_TERM_COLOR` — The default color mode, see [`term.color`].
 * `CARGO_TERM_PROGRESS_WHEN` — The default progress bar showing mode, see [`term.progress.when`].
@@ -140,7 +140,6 @@ supported environment variables are:
 [`build.rustdocflags`]: config.md#buildrustdocflags
 [`build.incremental`]: config.md#buildincremental
 [`build.dep-info-basedir`]: config.md#builddep-info-basedir
-[`build.pipelining`]: config.md#buildpipelining
 [`doc.browser`]: config.md#docbrowser
 [`cargo-new.name`]: config.md#cargo-newname
 [`cargo-new.email`]: config.md#cargo-newemail
@@ -177,6 +176,7 @@ supported environment variables are:
 [`target.<triple>.linker`]: config.md#targettriplelinker
 [`target.<triple>.runner`]: config.md#targettriplerunner
 [`target.<triple>.rustflags`]: config.md#targettriplerustflags
+[`term.quiet`]: config.md#termquiet
 [`term.verbose`]: config.md#termverbose
 [`term.color`]: config.md#termcolor
 [`term.progress.when`]: config.md#termprogresswhen

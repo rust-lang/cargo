@@ -65,7 +65,7 @@ pub fn main(config: &mut Config) -> CliResult {
             .iter()
             .map(|(option_name, option_help_message)| {
                 let option_name_kebab_case = option_name.replace("_", "-");
-                let padding = " ".repeat(longest_option - option_name.len()); // safe to substract
+                let padding = " ".repeat(longest_option - option_name.len()); // safe to subtract
                 format!(
                     "    -Z {}{} -- {}",
                     option_name_kebab_case, padding, option_help_message
@@ -139,7 +139,12 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
                     }
                 }
                 CommandInfo::Alias { target } => {
-                    drop_println!(config, "    {:<20} {}", name, target.iter().join(" "));
+                    drop_println!(
+                        config,
+                        "    {:<20} alias: {}",
+                        name,
+                        target.iter().join(" ")
+                    );
                 }
             }
         }
@@ -164,10 +169,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
     let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
-        version_string.push_str(&format!(
-            "release: {}.{}.{}\n",
-            version.major, version.minor, version.patch
-        ));
+        version_string.push_str(&format!("release: {}\n", version.version,));
         if let Some(ref cfg) = version.cfg_info {
             if let Some(ref ci) = cfg.commit_info {
                 version_string.push_str(&format!("commit-hash: {}\n", ci.commit_hash));

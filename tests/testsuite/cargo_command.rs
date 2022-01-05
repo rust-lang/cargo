@@ -57,8 +57,8 @@ fn list_custom_aliases_with_descriptions() {
         .build();
 
     p.cargo("--list")
-        .with_stdout_contains("    myaliasstr           foo --bar")
-        .with_stdout_contains("    myaliasvec           foo --bar")
+        .with_stdout_contains("    myaliasstr           alias: foo --bar")
+        .with_stdout_contains("    myaliasvec           alias: foo --bar")
         .run();
 }
 
@@ -145,6 +145,34 @@ fn list_command_resolves_symlinks() {
         "missing 2: {}",
         output
     );
+}
+
+#[cargo_test]
+fn find_closest_capital_c_to_c() {
+    cargo_process("C")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no such subcommand: `C`
+
+<tab>Did you mean `c`?
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn find_closest_captial_b_to_b() {
+    cargo_process("B")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no such subcommand: `B`
+
+<tab>Did you mean `b`?
+",
+        )
+        .run();
 }
 
 #[cargo_test]

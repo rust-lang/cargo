@@ -60,15 +60,8 @@ pub struct Context<'a, 'cfg> {
     /// been computed.
     files: Option<CompilationFiles<'a, 'cfg>>,
 
-    /// A flag indicating whether pipelining is enabled for this compilation
-    /// session. Pipelining largely only affects the edges of the dependency
-    /// graph that we generate at the end, and otherwise it's pretty
-    /// straightforward.
-    pipelining: bool,
-
     /// A set of units which are compiling rlibs and are expected to produce
-    /// metadata files in addition to the rlib itself. This is only filled in
-    /// when `pipelining` above is enabled.
+    /// metadata files in addition to the rlib itself.
     rmeta_required: HashSet<Unit>,
 
     /// When we're in jobserver-per-rustc process mode, this keeps those
@@ -106,8 +99,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         };
 
-        let pipelining = bcx.config.build_config()?.pipelining.unwrap_or(true);
-
         Ok(Self {
             bcx,
             compilation: Compilation::new(bcx)?,
@@ -122,7 +113,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             files: None,
             rmeta_required: HashSet::new(),
             rustc_clients: HashMap::new(),
-            pipelining,
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
         })
@@ -294,19 +284,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the executable for the specified unit (if any).
     pub fn get_executable(&mut self, unit: &Unit) -> CargoResult<Option<PathBuf>> {
-        for output in self.outputs(unit)?.iter() {
-            if output.flavor != FileFlavor::Normal {
-                continue;
-            }
-
-            let is_binary = unit.target.is_executable();
-            let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
-
-            if is_binary || is_test {
-                return Ok(Option::Some(output.bin_dst().clone()));
-            }
+        let is_binary = unit.target.is_executable();
+        let is_test = unit.mode.is_any_test();
+        if !unit.mode.generates_executable() || !(is_binary || is_test) {
+            return Ok(None);
         }
-        Ok(None)
+        Ok(self
+            .outputs(unit)?
+            .iter()
+            .find(|o| o.flavor == FileFlavor::Normal)
+            .map(|output| output.bin_dst().clone()))
     }
 
     pub fn prepare_units(&mut self) -> CargoResult<()> {
@@ -592,11 +579,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns whether when `parent` depends on `dep` if it only requires the
     /// metadata file from `dep`.
     pub fn only_requires_rmeta(&self, parent: &Unit, dep: &Unit) -> bool {
-        // this is only enabled when pipelining is enabled
-        self.pipelining
-            // We're only a candidate for requiring an `rmeta` file if we
-            // ourselves are building an rlib,
-            && !parent.requires_upstream_objects()
+        // We're only a candidate for requiring an `rmeta` file if we
+        // ourselves are building an rlib,
+        !parent.requires_upstream_objects()
             && parent.mode == CompileMode::Build
             // Our dependency must also be built as an rlib, otherwise the
             // object code must be useful in some fashion
@@ -607,7 +592,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns whether when `unit` is built whether it should emit metadata as
     /// well because some compilations rely on that.
     pub fn rmeta_required(&self, unit: &Unit) -> bool {
-        self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
+        self.rmeta_required.contains(unit)
     }
 
     pub fn new_jobserver(&mut self) -> CargoResult<Client> {

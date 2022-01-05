@@ -1,6 +1,14 @@
 use std::cmp;
 
 pub fn lev_distance(me: &str, t: &str) -> usize {
+    // Comparing the strings lowercased will result in a difference in capitalization being less distance away
+    // than being a completely different letter. Otherwise `CHECK` is as far away from `check` as it
+    // is from `build` (both with a distance of 5). For a single letter shortcut (e.g. `b` or `c`), they will
+    // all be as far away from any capital single letter entry (all with a distance of 1).
+    // By first lowercasing the strings, `C` and `c` are closer than `C` and `b`, for example.
+    let me = me.to_lowercase();
+    let t = t.to_lowercase();
+
     let t_len = t.chars().count();
     if me.is_empty() {
         return t_len;

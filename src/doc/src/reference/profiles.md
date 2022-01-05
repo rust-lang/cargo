@@ -93,6 +93,28 @@ once more testing has been performed, and support for DWARF is stabilized.
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo
 
+#### strip
+
+The `strip` option controls the [`-C strip` flag], which directs rustc to
+strip either symbols or debuginfo from a binary. This can be enabled like so:
+
+```toml
+[package]
+# ...
+
+[profile.release]
+strip = "debuginfo"
+```
+
+Other possible string values of `strip` are `none`, `symbols`, and `off`. The
+default is `none`.
+
+You can also configure this option with the two absolute boolean values
+`true` and `false`. The former enables `strip` at its higher level, `symbols`,
+while the latter disables `strip` completely.
+
+[`-C strip` flag]: ../../rustc/codegen-options/index.html#strip
+
 #### debug-assertions
 
 The `debug-assertions` setting controls the [`-C debug-assertions` flag] which
@@ -266,15 +288,13 @@ rpath = false
 
 #### test
 
-The `test` profile is used for building tests, or when benchmarks are built in
-debug mode with `cargo build`. By default, the `test` profile inherits the
-settings from the [`dev`](#dev) profile.
+The `test` profile is the default profile used by [`cargo test`].
+The `test` profile inherits the settings from the [`dev`](#dev) profile.
 
 #### bench
 
-The `bench` profile is used for building benchmarks, or when tests are built
-with the `--release` flag. By default, the `bench` profile inherits the
-settings from the [`release`](#release) profile.
+The `bench` profile is the default profile used by [`cargo bench`].
+The `bench` profile inherits the settings from the [`release`](#release) profile.
 
 #### Build Dependencies
 
@@ -293,7 +313,7 @@ codegen-units = 256
 ```
 
 Build dependencies otherwise inherit settings from the active profile in use, as
-described below.
+described in [Profile selection](#profile-selection).
 
 ### Custom profiles
 
@@ -331,11 +351,15 @@ The profile used depends on the command, the command-line flags like
 `--release` or `--profile`, and the package (in the case of
 [overrides](#overrides)). The default profile if none is specified is:
 
-* Build commands like [`cargo build`], [`cargo rustc`], [`cargo check`], and
-[`cargo run`]: [`dev` profile](#dev)
-* [`cargo test`]: [`test` profile](#test)
-* [`cargo bench`]: [`bench` profile](#bench)
-* [`cargo install`]: [`release` profile](#release)
+| Command | Default Profile |
+|---------|-----------------|
+| [`cargo run`], [`cargo build`],<br>[`cargo check`], [`cargo rustc`] | [`dev` profile](#dev) |
+| [`cargo test`] | [`test` profile](#test)
+| [`cargo bench`] | [`bench` profile](#bench)
+| [`cargo install`] | [`release` profile](#release)
+
+You can switch to a different profile using the `--profile=NAME` option which will used the given profile.
+The `--release` flag is equivalent to `--profile=release`.
 
 The selected profile applies to all Cargo targets, 
 including [library](./cargo-targets.md#library),
