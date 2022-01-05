@@ -5274,12 +5274,8 @@ fn tricky_pipelining() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    foo.cargo("build -p bar")
-        .env("CARGO_BUILD_PIPELINING", "true")
-        .run();
-    foo.cargo("build -p foo")
-        .env("CARGO_BUILD_PIPELINING", "true")
-        .run();
+    foo.cargo("build -p bar").run();
+    foo.cargo("build -p foo").run();
 }
 
 #[cargo_test]
@@ -5301,7 +5297,6 @@ fn pipelining_works() {
         .build();
 
     foo.cargo("build")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_stdout("")
         .with_stderr(
             "\
@@ -5364,7 +5359,6 @@ fn pipelining_big_graph() {
         .file("b30/src/lib.rs", "")
         .build();
     foo.cargo("build -p foo")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_status(101)
         .with_stderr_contains("[ERROR] could not compile `a30`[..]")
         .run();
