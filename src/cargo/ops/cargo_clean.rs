@@ -53,7 +53,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
     if opts.spec.is_empty() {
-        return clean_entire_folder(&target_dir.into_path_unlocked(), &config);
+        return clean_entire_folder(&target_dir.into_path_unlocked(), config);
     }
 
     // Clean specific packages.
