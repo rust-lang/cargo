@@ -416,7 +416,7 @@ fn cli() -> App {
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
         .global_setting(AppSettings::DisableColoredHelp)
-        .usage(usage)
+        .override_usage(usage)
         .template(
             "\
 Rust's package manager
