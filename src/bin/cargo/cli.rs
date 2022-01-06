@@ -417,7 +417,7 @@ fn cli() -> App {
         // opening clap up to allow us to style our help template
         .global_setting(AppSettings::DisableColoredHelp)
         .override_usage(usage)
-        .template(
+        .help_template(
             "\
 Rust's package manager
 
