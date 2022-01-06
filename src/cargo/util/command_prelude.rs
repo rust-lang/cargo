@@ -17,7 +17,6 @@ use crate::util::{
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
-use clap::{self, SubCommand};
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
@@ -282,8 +281,7 @@ pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static st
 }
 
 pub fn subcommand(name: &'static str) -> App {
-    SubCommand::with_name(name)
-        .setting(AppSettings::DeriveDisplayOrder | AppSettings::DontCollapseArgsInUsage)
+    App::new(name).setting(AppSettings::DeriveDisplayOrder | AppSettings::DontCollapseArgsInUsage)
 }
 
 /// Determines whether or not to gate `--profile` as unstable when resolving it.
