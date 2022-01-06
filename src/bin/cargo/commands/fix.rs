@@ -32,32 +32,32 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg(
-            Arg::with_name("broken-code")
+            Arg::new("broken-code")
                 .long("broken-code")
                 .help("Fix code even if it already has compiler errors"),
         )
         .arg(
-            Arg::with_name("edition")
+            Arg::new("edition")
                 .long("edition")
                 .help("Fix in preparation for the next edition"),
         )
         .arg(
-            Arg::with_name("idioms")
+            Arg::new("idioms")
                 .long("edition-idioms")
                 .help("Fix warnings to migrate to the idioms of an edition"),
         )
         .arg(
-            Arg::with_name("allow-no-vcs")
+            Arg::new("allow-no-vcs")
                 .long("allow-no-vcs")
                 .help("Fix code even if a VCS was not detected"),
         )
         .arg(
-            Arg::with_name("allow-dirty")
+            Arg::new("allow-dirty")
                 .long("allow-dirty")
                 .help("Fix code even if the working directory is dirty"),
         )
         .arg(
-            Arg::with_name("allow-staged")
+            Arg::new("allow-staged")
                 .long("allow-staged")
                 .help("Fix code even if the working directory has staged changes"),
         )

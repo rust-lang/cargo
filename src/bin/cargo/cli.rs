@@ -476,7 +476,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .global(true),
         )
         .arg(
-            Arg::with_name("unstable-features")
+            Arg::new("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
                 .short('Z')
                 .value_name("FLAG")

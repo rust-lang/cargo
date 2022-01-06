@@ -20,13 +20,9 @@ pub fn cli() -> App {
             "Exclude specific workspace members",
         )
         // Deprecated, use --no-dedupe instead.
-        .arg(Arg::with_name("all").long("all").short('a').hidden(true))
+        .arg(Arg::new("all").long("all").short('a').hidden(true))
         // Deprecated, use --target=all instead.
-        .arg(
-            Arg::with_name("all-targets")
-                .long("all-targets")
-                .hidden(true),
-        )
+        .arg(Arg::new("all-targets").long("all-targets").hidden(true))
         .arg_features()
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform). \
@@ -34,7 +30,7 @@ pub fn cli() -> App {
         )
         // Deprecated, use -e=no-dev instead.
         .arg(
-            Arg::with_name("no-dev-dependencies")
+            Arg::new("no-dev-dependencies")
                 .long("no-dev-dependencies")
                 .hidden(true),
         )
@@ -63,13 +59,9 @@ pub fn cli() -> App {
         ))
         .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         // Deprecated, use --prefix=none instead.
-        .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
+        .arg(Arg::new("no-indent").long("no-indent").hidden(true))
         // Deprecated, use --prefix=depth instead.
-        .arg(
-            Arg::with_name("prefix-depth")
-                .long("prefix-depth")
-                .hidden(true),
-        )
+        .arg(Arg::new("prefix-depth").long("prefix-depth").hidden(true))
         .arg(
             opt(
                 "prefix",
@@ -105,10 +97,7 @@ pub fn cli() -> App {
         )
         .arg(
             // Backwards compatibility with old cargo-tree.
-            Arg::with_name("version")
-                .long("version")
-                .short('V')
-                .hidden(true),
+            Arg::new("version").long("version").short('V').hidden(true),
         )
         .after_help("Run `cargo help tree` for more detailed information.\n")
 }

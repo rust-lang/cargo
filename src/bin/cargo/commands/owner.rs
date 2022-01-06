@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
         .arg_quiet()
-        .arg(Arg::with_name("crate"))
+        .arg(Arg::new("crate"))
         .arg(
             multi_opt(
                 "add",

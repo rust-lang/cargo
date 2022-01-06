@@ -9,7 +9,7 @@ pub fn cli() -> App {
              If token is not specified, it will be read from stdin.",
         )
         .arg_quiet()
-        .arg(Arg::with_name("token"))
+        .arg(Arg::new("token"))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .after_help("Run `cargo help login` for more detailed information.\n")
 }

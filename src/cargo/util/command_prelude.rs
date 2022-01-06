@@ -251,7 +251,7 @@ impl AppExt for App {
 }
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static> {
-    Arg::with_name(name).long(name).help(help)
+    Arg::new(name).long(name).help(help)
 }
 
 pub fn optional_opt(name: &'static str, help: &'static str) -> Arg<'static> {

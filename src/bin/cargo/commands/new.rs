@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("new")
         .about("Create a new cargo package at <path>")
         .arg_quiet()
-        .arg(Arg::with_name("path").required(true))
+        .arg(Arg::new("path").required(true))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg_new_opts()
         .after_help("Run `cargo help new` for more detailed information.\n")

@@ -8,7 +8,7 @@ pub fn cli() -> App {
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             subcommand("get")
-                .arg(Arg::with_name("key").help("The config key to display"))
+                .arg(Arg::new("key").help("The config key to display"))
                 .arg(
                     opt("format", "Display format")
                         .possible_values(cargo_config::ConfigFormat::POSSIBLE_VALUES)

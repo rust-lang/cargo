@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("uninstall")
         .about("Remove a Rust binary")
         .arg_quiet()
-        .arg(Arg::with_name("spec").multiple(true))
+        .arg(Arg::new("spec").multiple(true))
         .arg_package_spec_simple("Package to uninstall")
         .arg(multi_opt("bin", "NAME", "Only uninstall the binary NAME"))
         .arg(opt("root", "Directory to uninstall packages from").value_name("DIR"))

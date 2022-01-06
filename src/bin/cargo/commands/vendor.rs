@@ -8,17 +8,17 @@ pub fn cli() -> App {
         .arg_quiet()
         .arg_manifest_path()
         .arg(
-            Arg::with_name("path")
+            Arg::new("path")
                 .allow_invalid_utf8(true)
                 .help("Where to vendor crates (`vendor` by default)"),
         )
         .arg(
-            Arg::with_name("no-delete")
+            Arg::new("no-delete")
                 .long("no-delete")
                 .help("Don't delete older crates in the vendor directory"),
         )
         .arg(
-            Arg::with_name("tomls")
+            Arg::new("tomls")
                 .short('s')
                 .long("sync")
                 .help("Additional `Cargo.toml` to sync and vendor")
@@ -27,37 +27,29 @@ pub fn cli() -> App {
                 .multiple(true),
         )
         .arg(
-            Arg::with_name("respect-source-config")
+            Arg::new("respect-source-config")
                 .long("respect-source-config")
                 .help("Respect `[source]` config in `.cargo/config`")
                 .multiple_occurrences(true),
         )
         .arg(
-            Arg::with_name("versioned-dirs")
+            Arg::new("versioned-dirs")
                 .long("versioned-dirs")
                 .help("Always include version in subdir name"),
         )
         // Not supported.
         .arg(
-            Arg::with_name("no-merge-sources")
+            Arg::new("no-merge-sources")
                 .long("no-merge-sources")
                 .hidden(true),
         )
         // Not supported.
-        .arg(
-            Arg::with_name("relative-path")
-                .long("relative-path")
-                .hidden(true),
-        )
+        .arg(Arg::new("relative-path").long("relative-path").hidden(true))
+        // Not supported.
+        .arg(Arg::new("only-git-deps").long("only-git-deps").hidden(true))
         // Not supported.
         .arg(
-            Arg::with_name("only-git-deps")
-                .long("only-git-deps")
-                .hidden(true),
-        )
-        // Not supported.
-        .arg(
-            Arg::with_name("disallow-duplicates")
+            Arg::new("disallow-duplicates")
                 .long("disallow-duplicates")
                 .hidden(true),
         )

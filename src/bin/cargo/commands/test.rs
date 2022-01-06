@@ -9,11 +9,11 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
-            Arg::with_name("TESTNAME")
+            Arg::new("TESTNAME")
                 .help("If specified, only run tests containing this string in their names"),
         )
         .arg(
-            Arg::with_name("args")
+            Arg::new("args")
                 .help("Arguments for the test binary")
                 .multiple(true)
                 .last(true),

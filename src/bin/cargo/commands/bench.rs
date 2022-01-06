@@ -7,11 +7,11 @@ pub fn cli() -> App {
         .about("Execute all benchmarks of a local package")
         .arg_quiet()
         .arg(
-            Arg::with_name("BENCHNAME")
+            Arg::new("BENCHNAME")
                 .help("If specified, only run benches containing this string in their names"),
         )
         .arg(
-            Arg::with_name("args")
+            Arg::new("args")
                 .help("Arguments for the bench binary")
                 .multiple(true)
                 .last(true),
