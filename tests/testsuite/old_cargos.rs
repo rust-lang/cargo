@@ -558,8 +558,7 @@ fn index_cache_rebuild() {
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
     // This should rebuild the cache and use 1.0.1.
-    p.cargo("check -Znamespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]

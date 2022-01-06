@@ -116,21 +116,33 @@ an external package to handle GIF images. This can be expressed like this:
 gif = { version = "0.11.1", optional = true }
 ```
 
-Optional dependencies implicitly define a feature of the same name as the
-dependency. This means that the same `cfg(feature = "gif")` syntax can be used
-in the code, and the dependency can be enabled just like a feature such as
-`--features gif` (see [Command-line feature
-options](#command-line-feature-options) below).
+By default, this optional dependency implicitly defines a feature that looks
+like this:
 
-> **Note**: A feature in the `[feature]` table cannot use the same name as a
-> dependency. Experimental support for enabling this and other extensions is
-> available on the nightly channel via [namespaced
-> features](unstable.md#namespaced-features).
+```toml
+[features]
+gif = ["dep:gif"]
+```
 
-Explicitly defined features can enable optional dependencies, too. Just
-include the name of the optional dependency in the feature list. For example,
-let's say in order to support the AVIF image format, our library needs two
-other dependencies to be enabled:
+This means that this dependency will only be included if the `gif`
+feature is enabled.
+The same `cfg(feature = "gif")` syntax can be used in the code, and the
+dependency can be enabled just like any feature such as `--features gif` (see
+[Command-line feature options](#command-line-feature-options) below).
+
+In some cases, you may not want to expose a feature that has the same name
+as the optional dependency.
+For example, perhaps the optional dependency is an internal detail, or you
+want to group multiple optional dependencies together, or you just want to use
+a better name.
+If you specify the optional dependency with the `dep:` prefix anywhere
+in the `[features]` table, that disables the implicit feature.
+
+> **Note**: The `dep:` syntax is only available starting with Rust 1.60.
+> Previous versions can only use the implicit feature name.
+
+For example, let's say in order to support the AVIF image format, our library
+needs two other dependencies to be enabled:
 
 ```toml
 [dependencies]
@@ -138,10 +150,13 @@ ravif = { version = "0.6.3", optional = true }
 rgb = { version = "0.8.25", optional = true }
 
 [features]
-avif = ["ravif", "rgb"]
+avif = ["dep:ravif", "dep:rgb"]
 ```
 
 In this example, the `avif` feature will enable the two listed dependencies.
+This also avoids creating the implicit `ravif` and `rgb` features, since we
+don't want users to enable those individually as they are internal details to
+our crate.
 
 > **Note**: Another way to optionally include a dependency is to use
 > [platform-specific dependencies]. Instead of using features, these are
@@ -185,10 +200,31 @@ jpeg-decoder = { version = "0.1.20", default-features = false }
 parallel = ["jpeg-decoder/rayon"]
 ```
 
-> **Note**: The `"package-name/feature-name"` syntax will also enable
-> `package-name` if it is an optional dependency. Experimental support for
-> disabling that behavior is available on the nightly channel via [weak
-> dependency features](unstable.md#weak-dependency-features).
+The `"package-name/feature-name"` syntax will also enable `package-name`
+if it is an optional dependency. Often this is not what you want.
+You can add a `?` as in `"package-name?/feature-name"` which will only enable
+the given feature if something else enables the optional dependency.
+
+> **Note**: The `?` syntax is only available starting with Rust 1.60.
+
+For example, let's say we have added some serialization support to our
+library, and it requires enabling a corresponding feature in some optional
+dependencies.
+That can be done like this:
+
+```toml
+[dependencies]
+serde = { version = "1.0.133", optional = true }
+rgb = { version = "0.8.25", optional = true }
+
+[features]
+serde = ["dep:serde", "rgb?/serde"]
+```
+
+In this example, enabling the `serde` feature will enable the serde
+dependency.
+It will also enable the `serde` feature for the `rgb` dependency, but only if
+something else has enabled the `rgb` dependency.
 
 ### Command-line feature options
 
