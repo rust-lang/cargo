@@ -633,6 +633,7 @@ unstable_cli_options!(
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     bindeps: bool = ("Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates"),
+    multidep: bool = ("Allow Cargo packages to depend on the same crate multiple times with different dependency names, to support artifact dependencies for multiple targets."),
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
@@ -843,6 +844,7 @@ impl CliUnstable {
             "named-profiles" => stabilized_warn(k, "1.57", STABILIZED_NAMED_PROFILES),
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "bindeps" => self.bindeps = parse_empty(k, v)?,
+            "multidep" => self.multidep = parse_empty(k, v)?,
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }

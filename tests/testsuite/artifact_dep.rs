@@ -1,6 +1,7 @@
 //! Tests specific to artifact dependencies, designated using
 //! the new `dep = { artifact = "bin", … }` syntax in manifests.
 
+use cargo_test_support::basic_lib_manifest;
 use cargo_test_support::compare::match_exact;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
@@ -1075,7 +1076,7 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
 
 /// inverse RFC-3176
 #[cargo_test]
-fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_and_same_version() {
+fn build_script_deps_do_not_allow_multiple_targets_under_different_name_and_same_version() {
     if cross_compile::disabled() {
         return;
     }
@@ -1363,6 +1364,63 @@ fn profile_override_basic() {
         .build();
 
     p.cargo("build -v -Z bindeps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name build_script_build [..] -C opt-level=1 [..]`",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar bar/src/main.rs [..] -C opt-level=3 [..]`",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar bar/src/main.rs [..] -C opt-level=1 [..]`",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..] -C opt-level=1 [..]`",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..] -C opt-level=3 [..]`",
+        )
+        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..] -C opt-level=3 [..]`")
+        .run();
+}
+
+// TODO: replace profile_override_basic() with this test if it fixes msvc issues.
+//       Answer: it doesn't as it's a race of the same dep being built twice, in parallel.
+//       This needs a fix on scheduler level or maybe fixes itself once we uplift binaries.
+//       But probably not as the scheduling problem and similar file paths still remains an issue.
+#[cargo_test]
+fn profile_override_basic_multidep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [build-dependencies]
+                bar = { path = "bar", artifact = "bin" }
+                
+                [dependencies]
+                # renamed just to avoid collisions on MSVC
+                bardep = { package = "bar", path = "bar", artifact = "bin" }
+                
+                [profile.dev.build-override]
+                opt-level = 1
+
+                [profile.dev]
+                opt-level = 3
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build -v -Z unstable-options -Z bindeps -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name build_script_build [..] -C opt-level=1 [..]`",
@@ -2152,6 +2210,337 @@ fn build_script_output_string(p: &Project, package_name: &str) -> String {
         .unwrap();
     assert_eq!(paths.len(), 1);
     std::fs::read_to_string(&paths[0]).unwrap()
+}
+
+#[cargo_test]
+fn lib_artifacts_do_not_leak_when_same_package_gets_renamed() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+
+                [dependencies.bar-alternate]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                lib = false
+
+                [dependencies.bar]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                lib = true
+            "#,
+        )
+        // Lib artifacts are always available in the required arch
+        .file(
+            "src/lib.rs",
+            "extern crate bar; extern crate bar_alternate;",
+        )
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/src/lib.rs", "pub fn doit() {}")
+        .build();
+
+    p.cargo("check -v -Z unstable-options -Z bindeps -Z multidep")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("error[E0463]: can't find crate for `bar_alternate`")
+        .run();
+}
+
+// A variant on build_script_deps_do_not_allow_multiple_targets_under_different_name_and_same_version()
+// which works only with multidep
+#[cargo_test]
+fn multiple_bin_artifacts_with_different_names_and_different_targets() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+    let native = cross_compile::native();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+                
+                [build-dependencies.bar-alternate]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                features = ["f1"]
+                target = "{alternate}"
+                
+                [build-dependencies.bar]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                features = ["f2"]
+                target = "{native}"
+                
+                [build-dependencies.bar-f1]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                features = ["f1"]
+                target = "{native}"
+                
+                [dependencies.bar-alternate]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                lib = true
+                target = "{alternate}"
+                
+                [dependencies.bar]
+                path = "bar/"
+                package = "bar"
+                artifact = "bin"
+                lib = true
+                target = "{native}"
+            "#,
+                alternate = target,
+                native = native
+            ),
+        )
+        // Lib artifacts are always available in the required arch
+        .file("src/lib.rs", "extern crate bar; extern crate bar_alternate;")
+        .file("build.rs", &r#"
+                fn main() {
+                    let file = std::env::var("CARGO_BIN_FILE_BAR").expect("BAR present");
+                    println!("running {}", file);
+                    assert!(std::process::Command::new(file).status().unwrap().success());
+                    
+                    let file = std::env::var("CARGO_BIN_FILE_BAR_F1_bar").expect("BAR f1 present");
+                    println!("running {}", file);
+                    assert!(std::process::Command::new(file).status().unwrap().success());
+                    
+                    if $CAN_RUN_ON_HOST { 
+                        let file = std::env::var("CARGO_BIN_FILE_BAR_ALTERNATE_bar").expect("BAR_ALTERNATE present");
+                        println!("running {}", file);
+                        assert!(std::process::Command::new(file).status().unwrap().success());
+                    }
+                }"#.replace("$CAN_RUN_ON_HOST", &cross_compile::can_run_on_host().to_string()))
+        .file("bar/Cargo.toml", r#"
+              [package]
+
+              name = "bar"
+              version = "0.5.0"
+              authors = []
+              
+              [features]
+              f1 = []
+              f2 = []
+            "#)
+        .file("bar/src/main.rs", r#"fn main() {
+            #[cfg(feature = "f1")]
+            println!("f1");
+            #[cfg(feature = "f2")]
+            println!("f2");
+        }"#)
+        .file("bar/src/lib.rs", "pub fn doit() {}")
+        .build();
+
+    p.cargo("check -v -Z unstable-options -Z bindeps -Z multidep")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_does_not_contain(format!(
+            "[RUNNING] `rustc --crate-name build_script_build build.rs [..]--target {} [..]",
+            target
+        ))
+        .with_stderr_contains("[RUNNING] `rustc --crate-name build_script_build build.rs [..]")
+        .with_stderr_contains(format!(
+            "[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--target {} [..]",
+            target
+        ))
+        .with_stderr_contains(format!(
+            "[RUNNING] `rustc --crate-name bar bar/src/main.rs [..]--target {} [..]",
+            target
+        ))
+        // native targets aren't specifying a target, and it's easiest to recognize them by their outdir which doesn't contain the target triple.
+        .with_stderr_contains("[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--out-dir [..]/debug/deps [..]")
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar bar/src/main.rs [..]--out-dir [..]/debug/deps/artifact/[..]",
+        )
+        .with_stderr_does_not_contain(format!(
+            "[RUNNING] `rustc --crate-name foo [..]--target {} [..]",
+            target
+        ))
+        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
+        .run();
+
+    let build_script_output = build_script_output_string(&p, "foo");
+    // unification happens across the same target, so 'native' should see both features.
+    // The non-native one should only see one though.
+    if cross_compile::can_run_on_host() {
+        match_exact(
+            &format!(
+                r#"running [..]/debug/deps/artifact/bar-[..]
+f1
+f2
+running [..]/debug/deps/artifact/bar-[..]
+f1
+f2
+running [..]/{triple}/debug/deps/artifact/bar-[..]
+f1"#, // there should only be one feature active here to prove lack of unification
+                triple = target
+            ),
+            &build_script_output,
+            "build script output",
+            "",
+            None,
+        )
+    } else {
+        match_exact(
+            r#"running [..]/debug/deps/artifact/bar-[..]
+f1
+f2
+running [..]/debug/deps/artifact/bar-[..]
+f1
+f2
+"#,
+            &build_script_output,
+            "build script output",
+            "",
+            None,
+        )
+    }
+    .unwrap();
+}
+
+#[cargo_test]
+fn deps_do_not_allow_same_resolved_versions_under_different_name_without_multidep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar-renamed = { package = "bar", path = "bar/" }
+                bar = { path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr("[ERROR] the crate `foo v0.0.0 ([CWD])` depends on crate `bar v0.5.0 ([CWD]/bar)` multiple times with different names")
+        .run();
+}
+
+#[cargo_test]
+fn different_names_to_the_same_crate_in_different_dep_kinds_with_multidep_toggle() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar/" }
+                
+                [dev-dependencies]
+                bar-again = { package = "bar", path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file("tests/test.rs", "extern crate bar; extern crate bar_again;")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("test -Z unstable-options -Z multidep")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn different_dep_names_to_the_same_crate_in_different_categories_do_not_leak_with_multidep_toggle()
+{
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar/" }
+                
+                [dev-dependencies]
+                bar-again = { package = "bar", path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar_again;")
+        .file("tests/test.rs", "extern crate bar_again; extern crate bar;")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("test -Z unstable-options -Z multidep")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..] can't find crate for `bar_again`")
+        .with_stderr_contains(" --> src/lib.rs:1:1")
+        .run();
+}
+
+#[cargo_test]
+fn deps_allow_renaming_the_same_resolved_version_with_multidep_toggle() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar-renamed = { package = "bar", path = "bar/" }
+                bar = { path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar; extern crate bar_renamed;")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Z unstable-options -Z multidep")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] bar [..]
+[CHECKING] foo [..]
+[FINISHED] dev [..]",
+        )
+        .run();
 }
 
 #[cargo_test]

@@ -3983,3 +3983,558 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
         )
         .run();
 }
+
+// TODO: Consider using this test instead of the version without the 'multidep' suffix or merge them because they should be pretty much the same.
+// TODO(ST): Fix the logic of how renamed deps are displayed. The 'name' is a problem is this that the name is supposed to be the renamed dep name,
+//           causes duplication
+#[cargo_test]
+fn workspace_metadata_with_dependencies_and_resolve_multidep() {
+    let alt_target = "wasm32-unknown-unknown";
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "artifact", "non-artifact", "bin-only-artifact"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            &r#"
+                [package]
+
+                name = "bar"
+                version = "0.5.0"
+                authors = []
+                
+                [build-dependencies]
+                artifact = { path = "../artifact/", artifact = "bin", target = "target" }
+                bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin", target = "$ALT_TARGET" }
+                non-artifact = { path = "../non-artifact" }
+                
+                [dependencies]
+                artifact = { path = "../artifact/", artifact = ["cdylib", "staticlib", "bin:baz-name"], lib = true, target = "$ALT_TARGET" }
+                bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin:a-name" }
+                non-artifact = { path = "../non-artifact" }
+                non-artifact-renamed = { package = "non-artifact", path = "../non-artifact" }
+                
+                [dev-dependencies]
+                artifact = { path = "../artifact/" }
+                non-artifact = { path = "../non-artifact" }
+                bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin:b-name" }
+           "#.replace("$ALT_TARGET", alt_target),
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main() {}")
+        .file(
+            "artifact/Cargo.toml",
+            r#"
+                [package]
+                name = "artifact"
+                version = "0.5.0"
+                authors = []
+                
+                [lib]
+                crate-type = ["staticlib", "cdylib", "rlib"]
+                
+                [[bin]]
+                name = "bar-name"
+                
+                [[bin]]
+                name = "baz-name"
+            "#,
+        )
+        .file("artifact/src/main.rs", "fn main() {}")
+        .file("artifact/src/lib.rs", "")
+        .file(
+            "bin-only-artifact/Cargo.toml",
+            r#"
+                [package]
+                name = "bin-only-artifact"
+                version = "0.5.0"
+                authors = []
+                
+                [[bin]]
+                name = "a-name"
+                
+                [[bin]]
+                name = "b-name"
+            "#,
+        )
+        .file("bin-only-artifact/src/main.rs", "fn main() {}")
+        .file("non-artifact/Cargo.toml",
+              r#"
+                [package]
+
+                name = "non-artifact"
+                version = "0.5.0"
+                authors = []
+            "#,
+        )
+        .file("non-artifact/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata -Z unstable-options -Z bindeps -Z multidep")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+            {
+              "metadata": null,
+              "packages": [
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "staticlib",
+                        "cdylib",
+                        "rlib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "staticlib",
+                        "cdylib",
+                        "rlib"
+                      ],
+                      "name": "artifact",
+                      "src_path": "[..]/foo/artifact/src/lib.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "bar-name",
+                      "src_path": "[..]/foo/artifact/src/main.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "baz-name",
+                      "src_path": "[..]/foo/artifact/src/main.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "cdylib",
+                          "staticlib",
+                          "bin:baz-name"
+                        ],
+                        "lib": true,
+                        "target": "wasm32-unknown-unknown"
+                      },
+                      "features": [],
+                      "kind": null,
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin:a-name"
+                        ],
+                        "lib": false,
+                        "target": null
+                      },
+                      "features": [],
+                      "kind": null,
+                      "name": "bin-only-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/bin-only-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": "non-artifact-renamed",
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": "dev",
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin:b-name"
+                        ],
+                        "lib": false,
+                        "target": null
+                      },
+                      "features": [],
+                      "kind": "dev",
+                      "name": "bin-only-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/bin-only-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": "dev",
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin"
+                        ],
+                        "lib": false,
+                        "target": "target"
+                      },
+                      "features": [],
+                      "kind": "build",
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin"
+                        ],
+                        "lib": false,
+                        "target": "wasm32-unknown-unknown"
+                      },
+                      "features": [],
+                      "kind": "build",
+                      "name": "bin-only-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/bin-only-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": "build",
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    }
+                  ],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "bar 0.5.0 (path+file://[..]/foo/bar)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/bar/Cargo.toml",
+                  "metadata": null,
+                  "name": "bar",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "bar",
+                      "src_path": "[..]/foo/bar/src/lib.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": false,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "custom-build"
+                      ],
+                      "name": "build-script-build",
+                      "src_path": "[..]/foo/bar/build.rs",
+                      "test": false
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/bin-only-artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "bin-only-artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "a-name",
+                      "src_path": "[..]/foo/bin-only-artifact/src/main.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "b-name",
+                      "src_path": "[..]/foo/bin-only-artifact/src/main.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/non-artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "non-artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "non-artifact",
+                      "src_path": "[..]/foo/non-artifact/src/lib.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                }
+              ],
+              "resolve": {
+                "nodes": [
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                  },
+                  {
+                    "dependencies": [
+                      "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                    ],
+                    "deps": [
+                      {
+                        "dep_kinds": [
+                          {
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "kind": "dev",
+                            "target": null
+                          },
+                          {
+                            "kind": "build",
+                            "target": null
+                          }
+                        ],
+                        "name": "artifact",
+                        "pkg": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                      }
+                    ],
+                    "features": [],
+                    "id": "bar 0.5.0 (path+file://[..]/foo/bar)"
+                  },
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)"
+                  },
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                  }
+                ],
+                "root": null
+              },
+              "target_directory": "[..]/foo/target",
+              "version": 1,
+              "workspace_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+              ],
+              "workspace_root": "[..]/foo"
+            }
+    "#,
+        )
+        .run();
+}

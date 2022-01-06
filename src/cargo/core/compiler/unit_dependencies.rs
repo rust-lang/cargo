@@ -273,13 +273,17 @@ fn compute_deps(
         let dep_pkg = state.get(dep_pkg_id);
         let mode = check_or_build_mode(unit.mode, dep_lib);
         let dep_unit_for = unit_for.with_dependency(unit, dep_lib, unit_for.root_compile_kind());
+        let dep_filter = &|unit: &Unit, dep: &Dependency| {
+            non_custom_and_non_transitive_deps(unit, dep)
+                && dep.artifact().map(|a| a.is_lib()).unwrap_or(true)
+        };
 
         let start = ret.len();
         if state.config.cli_unstable().dual_proc_macros
             && dep_lib.proc_macro()
             && !unit.kind.is_host()
         {
-            let unit_dep = new_unit_dep(
+            let unit_deps = new_unit_deps(
                 state,
                 unit,
                 dep_pkg,
@@ -288,9 +292,10 @@ fn compute_deps(
                 unit.kind,
                 mode,
                 IS_NO_ARTIFACT_DEP,
+                dep_filter,
             )?;
-            ret.push(unit_dep);
-            let unit_dep = new_unit_dep(
+            ret.extend(unit_deps);
+            let unit_deps = new_unit_deps(
                 state,
                 unit,
                 dep_pkg,
@@ -299,10 +304,11 @@ fn compute_deps(
                 CompileKind::Host,
                 mode,
                 IS_NO_ARTIFACT_DEP,
+                dep_filter,
             )?;
-            ret.push(unit_dep);
+            ret.extend(unit_deps);
         } else {
-            let unit_dep = new_unit_dep(
+            let unit_deps = new_unit_deps(
                 state,
                 unit,
                 dep_pkg,
@@ -311,8 +317,9 @@ fn compute_deps(
                 unit.kind.for_target(dep_lib),
                 mode,
                 IS_NO_ARTIFACT_DEP,
+                dep_filter,
             )?;
-            ret.push(unit_dep);
+            ret.extend(unit_deps);
         }
 
         // If the unit added was a dev-dependency unit, then record that in the
@@ -342,7 +349,8 @@ fn compute_deps(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(unit, state, unit_for)?);
+    let dep_filter = &|unit: &Unit, dep: &Dependency| non_custom_and_non_transitive_deps(unit, dep);
+    ret.extend(maybe_lib(unit, state, unit_for, dep_filter)?);
 
     // If any integration tests/benches are being run, make sure that
     // binaries are built as well.
@@ -351,40 +359,42 @@ fn compute_deps(
         && (unit.target.is_test() || unit.target.is_bench())
     {
         let id = unit.pkg.package_id();
-        ret.extend(
-            unit.pkg
-                .targets()
-                .iter()
-                .filter(|t| {
-                    // Skip binaries with required features that have not been selected.
-                    match t.required_features() {
-                        Some(rf) if t.is_bin() => {
-                            let features = resolve_all_features(
-                                state.resolve(),
-                                state.features(),
-                                state.package_set,
-                                id,
-                            );
-                            rf.iter().all(|f| features.contains(f))
-                        }
-                        None if t.is_bin() => true,
-                        _ => false,
+        for unit_deps_for_target in unit
+            .pkg
+            .targets()
+            .iter()
+            .filter(|t| {
+                // Skip binaries with required features that have not been selected.
+                match t.required_features() {
+                    Some(rf) if t.is_bin() => {
+                        let features = resolve_all_features(
+                            state.resolve(),
+                            state.features(),
+                            state.package_set,
+                            id,
+                        );
+                        rf.iter().all(|f| features.contains(f))
                     }
-                })
-                .map(|t| {
-                    new_unit_dep(
-                        state,
-                        unit,
-                        &unit.pkg,
-                        t,
-                        UnitFor::new_normal(unit_for.root_compile_kind()),
-                        unit.kind.for_target(t),
-                        CompileMode::Build,
-                        IS_NO_ARTIFACT_DEP,
-                    )
-                })
-                .collect::<CargoResult<Vec<UnitDep>>>()?,
-        );
+                    None if t.is_bin() => true,
+                    _ => false,
+                }
+            })
+            .map(|t| {
+                new_unit_deps(
+                    state,
+                    unit,
+                    &unit.pkg,
+                    t,
+                    UnitFor::new_normal(unit_for.root_compile_kind()),
+                    unit.kind.for_target(t),
+                    CompileMode::Build,
+                    IS_NO_ARTIFACT_DEP,
+                    dep_filter,
+                )
+            })
+        {
+            ret.extend(unit_deps_for_target?);
+        }
     }
 
     Ok(ret)
@@ -474,7 +484,7 @@ fn compute_deps_custom_build(
     // We don't have a great way of handling (2) here right now so this is
     // deferred until after the graph of all unit dependencies has been
     // constructed.
-    let compile_script_unit = new_unit_dep(
+    let compile_script_unit = new_unit_deps(
         state,
         unit,
         &unit.pkg,
@@ -484,9 +494,15 @@ fn compute_deps_custom_build(
         CompileKind::Host,
         CompileMode::Build,
         IS_NO_ARTIFACT_DEP,
+        &|_, _| true,
     )?;
+    assert_eq!(
+        compile_script_unit.len(),
+        1,
+        "BUG: build scripts can only return a single name, these are not derived from dependency names."
+    );
 
-    let mut result = vec![compile_script_unit];
+    let mut result = compile_script_unit;
 
     // Include any artifact dependencies.
     //
@@ -547,47 +563,51 @@ fn artifact_targets_to_unit_deps(
     artifact_pkg: &Package,
     dep: &Dependency,
 ) -> CargoResult<Vec<UnitDep>> {
-    let ret =
+    let mut ret = Vec::new();
+    for target in
         match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
-            .into_iter()
-            .flat_map(|target| {
-                // We split target libraries into individual units, even though rustc is able
-                // to produce multiple kinds in an single invocation for the sole reason that
-                // each artifact kind has its own output directory, something we can't easily
-                // teach rustc for now.
-                match target.kind() {
-                    TargetKind::Lib(kinds) => Box::new(
-                        kinds
-                            .iter()
-                            .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
-                            .map(|target_kind| {
-                                new_unit_dep(
-                                    state,
-                                    parent,
-                                    artifact_pkg,
-                                    target
-                                        .clone()
-                                        .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
-                                    parent_unit_for,
-                                    compile_kind,
-                                    CompileMode::Build,
-                                    dep.artifact(),
-                                )
-                            }),
-                    ) as Box<dyn Iterator<Item = _>>,
-                    _ => Box::new(std::iter::once(new_unit_dep(
-                        state,
-                        parent,
-                        artifact_pkg,
-                        target,
-                        parent_unit_for,
-                        compile_kind,
-                        CompileMode::Build,
-                        dep.artifact(),
-                    ))),
+    {
+        // We split target libraries into individual units, even though rustc is able
+        // to produce multiple kinds in an single invocation for the sole reason that
+        // each artifact kind has its own output directory, something we can't easily
+        // teach rustc for now.
+        match target.kind() {
+            TargetKind::Lib(kinds) => {
+                for unit_deps_for_kind in kinds
+                    .iter()
+                    .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
+                    .map(|target_kind| {
+                        new_unit_deps(
+                            state,
+                            parent,
+                            artifact_pkg,
+                            target
+                                .clone()
+                                .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
+                            parent_unit_for,
+                            compile_kind,
+                            CompileMode::Build,
+                            dep.artifact(),
+                            &|_u, d| dep == d,
+                        )
+                    })
+                {
+                    ret.extend(unit_deps_for_kind?);
                 }
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            }
+            _ => ret.extend(new_unit_deps(
+                state,
+                parent,
+                artifact_pkg,
+                target,
+                parent_unit_for,
+                compile_kind,
+                CompileMode::Build,
+                dep.artifact(),
+                &|_u, d| dep == d,
+            )?),
+        }
+    }
     Ok(ret)
 }
 
@@ -640,6 +660,7 @@ fn compute_deps_doc(
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
+    let dep_filter = &|unit: &Unit, dep: &Dependency| non_custom_and_non_transitive_deps(unit, dep);
     for (id, deps) in state.deps(unit, unit_for) {
         let dep_lib = match calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? {
             Some(lib) => lib,
@@ -650,7 +671,7 @@ fn compute_deps_doc(
         // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, dep_lib);
         let dep_unit_for = unit_for.with_dependency(unit, dep_lib, unit_for.root_compile_kind());
-        let lib_unit_dep = new_unit_dep(
+        let lib_unit_deps = new_unit_deps(
             state,
             unit,
             dep_pkg,
@@ -659,12 +680,13 @@ fn compute_deps_doc(
             unit.kind.for_target(dep_lib),
             mode,
             IS_NO_ARTIFACT_DEP,
+            dep_filter,
         )?;
-        ret.push(lib_unit_dep);
+        ret.extend(lib_unit_deps);
         if dep_lib.documented() {
             if let CompileMode::Doc { deps: true } = unit.mode {
                 // Document this lib as well.
-                let doc_unit_dep = new_unit_dep(
+                let doc_unit_deps = new_unit_deps(
                     state,
                     unit,
                     dep_pkg,
@@ -673,8 +695,9 @@ fn compute_deps_doc(
                     unit.kind.for_target(dep_lib),
                     unit.mode,
                     IS_NO_ARTIFACT_DEP,
+                    dep_filter,
                 )?;
-                ret.push(doc_unit_dep);
+                ret.extend(doc_unit_deps);
             }
         }
     }
@@ -685,7 +708,7 @@ fn compute_deps_doc(
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
         // build the lib
-        ret.extend(maybe_lib(unit, state, unit_for)?);
+        ret.extend(maybe_lib(unit, state, unit_for, dep_filter)?);
         // and also the lib docs for intra-doc links
         if let Some(lib) = unit
             .pkg
@@ -694,7 +717,7 @@ fn compute_deps_doc(
             .find(|t| t.is_linkable() && t.documented())
         {
             let dep_unit_for = unit_for.with_dependency(unit, lib, unit_for.root_compile_kind());
-            let lib_doc_unit = new_unit_dep(
+            let lib_doc_units = new_unit_deps(
                 state,
                 unit,
                 &unit.pkg,
@@ -703,8 +726,9 @@ fn compute_deps_doc(
                 unit.kind.for_target(lib),
                 unit.mode,
                 IS_NO_ARTIFACT_DEP,
+                dep_filter,
             )?;
-            ret.push(lib_doc_unit);
+            ret.extend(lib_doc_units);
         }
     }
 
@@ -717,7 +741,7 @@ fn compute_deps_doc(
                 unit_for.root_compile_kind(),
             );
             deps_of(scrape_unit, state, unit_for)?;
-            ret.push(new_unit_dep(
+            ret.extend(new_unit_deps(
                 state,
                 scrape_unit,
                 &scrape_unit.pkg,
@@ -726,6 +750,7 @@ fn compute_deps_doc(
                 scrape_unit.kind,
                 scrape_unit.mode,
                 IS_NO_ARTIFACT_DEP,
+                dep_filter,
             )?);
         }
     }
@@ -737,7 +762,8 @@ fn maybe_lib(
     unit: &Unit,
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
-) -> CargoResult<Option<UnitDep>> {
+    dep_filter: &dyn Fn(&Unit, &Dependency) -> bool,
+) -> CargoResult<Vec<UnitDep>> {
     unit.pkg
         .targets()
         .iter()
@@ -745,7 +771,7 @@ fn maybe_lib(
         .map(|t| {
             let mode = check_or_build_mode(unit.mode, t);
             let dep_unit_for = unit_for.with_dependency(unit, t, unit_for.root_compile_kind());
-            new_unit_dep(
+            new_unit_deps(
                 state,
                 unit,
                 &unit.pkg,
@@ -754,9 +780,10 @@ fn maybe_lib(
                 unit.kind.for_target(t),
                 mode,
                 IS_NO_ARTIFACT_DEP,
+                dep_filter,
             )
         })
-        .transpose()
+        .unwrap_or_else(|| Ok(Vec::new()))
 }
 
 /// If a build script is scheduled to be run for the package specified by
@@ -770,7 +797,7 @@ fn dep_build_script(
     unit: &Unit,
     unit_for: UnitFor,
     state: &State<'_, '_>,
-) -> CargoResult<Option<UnitDep>> {
+) -> CargoResult<Vec<UnitDep>> {
     unit.pkg
         .targets()
         .iter()
@@ -805,7 +832,7 @@ fn dep_build_script(
             // once because it would break a large number of scripts (they
             // would think they have the wrong set of features enabled).
             let script_unit_for = unit_for.for_custom_build();
-            new_unit_dep_with_profile(
+            new_unit_deps_with_profile(
                 state,
                 unit,
                 &unit.pkg,
@@ -815,9 +842,10 @@ fn dep_build_script(
                 CompileMode::RunCustomBuild,
                 profile,
                 IS_NO_ARTIFACT_DEP,
+                &|_, _| true,
             )
         })
-        .transpose()
+        .unwrap_or_else(|| Ok(Vec::new()))
 }
 
 /// Choose the correct mode for dependencies.
@@ -839,7 +867,10 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 }
 
 /// Create a new Unit for a dependency from `parent` to `pkg` and `target`.
-fn new_unit_dep(
+/// There may be multiple (to the same crate) with different extern names.
+/// Use `dep_filter` to assure only the desired dependencies for a crate will
+/// cause a unit to be created, otherwise extern-crate names may leak.
+fn new_unit_deps(
     state: &State<'_, '_>,
     parent: &Unit,
     pkg: &Package,
@@ -848,7 +879,8 @@ fn new_unit_dep(
     kind: CompileKind,
     mode: CompileMode,
     artifact: Option<&Artifact>,
-) -> CargoResult<UnitDep> {
+    dep_filter: &dyn Fn(&Unit, &Dependency) -> bool,
+) -> CargoResult<Vec<UnitDep>> {
     let is_local = pkg.package_id().source_id().is_path() && !state.is_std;
     let profile = state.profiles.get_profile(
         pkg.package_id(),
@@ -857,51 +889,61 @@ fn new_unit_dep(
         unit_for,
         kind,
     );
-    new_unit_dep_with_profile(
-        state, parent, pkg, target, unit_for, kind, mode, profile, artifact,
+    new_unit_deps_with_profile(
+        state, parent, pkg, target, unit_for, kind, mode, profile, artifact, dep_filter,
     )
 }
 
-fn new_unit_dep_with_profile(
+fn new_unit_deps_with_profile(
     state: &State<'_, '_>,
     parent: &Unit,
-    pkg: &Package,
+    target_pkg: &Package,
     target: &Target,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
     profile: Profile,
     artifact: Option<&Artifact>,
-) -> CargoResult<UnitDep> {
-    let (extern_crate_name, dep_name) = state.resolve().extern_crate_name_and_dep_name(
-        parent.pkg.package_id(),
-        pkg.package_id(),
-        target,
-    )?;
-    let public = state
+    dep_filter: &dyn Fn(&Unit, &Dependency) -> bool,
+) -> CargoResult<Vec<UnitDep>> {
+    let ret = state
         .resolve()
-        .is_public_dep(parent.pkg.package_id(), pkg.package_id());
-    let features_for = unit_for.map_to_features_for(artifact);
-    let features = state.activated_features(pkg.package_id(), features_for);
-    let unit = state.interner.intern(
-        pkg,
-        target,
-        profile,
-        kind,
-        mode,
-        features,
-        state.is_std,
-        /*dep_hash*/ 0,
-        artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),
-    );
-    Ok(UnitDep {
-        unit,
-        unit_for,
-        extern_crate_name,
-        dep_name,
-        public,
-        noprelude: false,
-    })
+        .extern_crate_names_and_dep_names(
+            parent.pkg.package_id(),
+            target_pkg.package_id(),
+            target,
+            &|dep| dep_filter(parent, dep),
+            state.config.cli_unstable().multidep,
+        )?
+        .into_iter()
+        .fold(Vec::new(), |mut acc, (extern_crate_name, dep_name)| {
+            let public = state
+                .resolve()
+                .is_public_dep(parent.pkg.package_id(), target_pkg.package_id());
+            let features_for = unit_for.map_to_features_for(artifact);
+            let features = state.activated_features(target_pkg.package_id(), features_for);
+            let unit = state.interner.intern(
+                target_pkg,
+                target,
+                profile.clone(),
+                kind,
+                mode,
+                features,
+                state.is_std,
+                /*dep_hash*/ 0,
+                artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),
+            );
+            acc.push(UnitDep {
+                unit,
+                unit_for,
+                extern_crate_name,
+                dep_name,
+                public,
+                noprelude: false,
+            });
+            acc
+        });
+    Ok(ret)
 }
 
 /// Fill in missing dependencies for units of the `RunCustomBuild`
@@ -1118,4 +1160,28 @@ impl<'a, 'cfg> State<'a, 'cfg> {
             })
             .collect()
     }
+}
+
+fn non_custom_and_non_transitive_deps(unit: &Unit, dep: &Dependency) -> bool {
+    // If this target is a build command, then we only want build
+    // dependencies, otherwise we want everything *other than* build
+    // dependencies.
+    if unit.target.is_custom_build() != dep.is_build() {
+        return false;
+    }
+
+    // If this dependency is **not** a transitive dependency, then it
+    // only applies to test/example targets.
+    if !dep.is_transitive()
+        && !unit.target.is_test()
+        && !unit.target.is_example()
+        && !unit.mode.is_doc_scrape()
+        && !unit.mode.is_any_test()
+    {
+        return false;
+    }
+
+    // If we've gotten past all that, then this dependency is
+    // actually used!
+    true
 }

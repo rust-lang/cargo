@@ -213,9 +213,15 @@ fn build_resolve_graph_r(
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
                 .and_then(|lib_target| {
                     resolve
-                        .extern_crate_name_and_dep_name(pkg_id, dep_id, lib_target)
-                        .map(|(ext_crate_name, _)| ext_crate_name)
+                        .extern_crate_names_and_dep_names(
+                            pkg_id,
+                            dep_id,
+                            lib_target,
+                            &|_dep| true,
+                            /* multidep-support */ false,
+                        )
                         .ok()
+                        .and_then(|v| v.get(0).map(|(ext_crate_name, _)| *ext_crate_name))
                 })
                 .map(|name| Dep {
                     name,

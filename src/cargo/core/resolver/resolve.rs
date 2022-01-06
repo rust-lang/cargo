@@ -295,12 +295,17 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.metadata
     }
 
-    pub fn extern_crate_name_and_dep_name(
+    /// Based on the dependencies between `from -> to.to_target`, return a list of one or more unique extern_crate_name/dependency-name pairs.
+    /// Note that the `dependency-name` is used to derive the `extern_crate_name`.
+    /// If `to == from` or if there is no dependency, the targets crate name is used.
+    pub fn extern_crate_names_and_dep_names(
         &self,
         from: PackageId,
         to: PackageId,
         to_target: &Target,
-    ) -> CargoResult<(InternedString, Option<InternedString>)> {
+        dep_filter: &dyn Fn(&Dependency) -> bool,
+        multidep_support: bool, /*unstable cli feature toggle*/
+    ) -> CargoResult<Vec<(InternedString, Option<InternedString>)>> {
         let empty_set: HashSet<Dependency> = HashSet::new();
         let deps = if from == to {
             &empty_set
@@ -308,22 +313,43 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             self.dependencies_listed(from, to)
         };
 
-        let target_crate_name = || (to_target.crate_name(), None);
-        let mut name_pairs = deps.iter().map(|d| {
-            d.explicit_name_in_toml()
-                .map(|s| (s.as_str().replace("-", "_"), Some(s)))
-                .unwrap_or_else(target_crate_name)
-        });
-        let (extern_crate_name, dep_name) = name_pairs.next().unwrap_or_else(target_crate_name);
-        for (n, _) in name_pairs {
-            anyhow::ensure!(
-                n == extern_crate_name,
-                "the crate `{}` depends on crate `{}` multiple times with different names",
-                from,
-                to,
-            );
+        let target_crate_name = || (to_target.crate_name().into(), None);
+        let mut name_pairs = deps
+            .iter()
+            .filter(|dep| {
+                if multidep_support {
+                    dep_filter(dep)
+                } else {
+                    return true;
+                }
+            })
+            .map(|d| {
+                d.explicit_name_in_toml()
+                    .map(|s| (s.as_str().replace("-", "_").into(), Some(s)))
+                    .unwrap_or_else(target_crate_name)
+            })
+            .peekable();
+        if multidep_support {
+            Ok(if name_pairs.peek().is_none() {
+                vec![target_crate_name()]
+            } else {
+                let mut ret = name_pairs.collect::<Vec<_>>();
+                ret.sort();
+                ret.dedup();
+                ret
+            })
+        } else {
+            let (extern_crate_name, dep_name) = name_pairs.next().unwrap_or_else(target_crate_name);
+            for (n, _) in name_pairs {
+                anyhow::ensure!(
+                    n == extern_crate_name,
+                    "the crate `{}` depends on crate `{}` multiple times with different names",
+                    from,
+                    to,
+                );
+            }
+            Ok(vec![(extern_crate_name, dep_name)])
         }
-        Ok((extern_crate_name.into(), dep_name))
     }
 
     fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &HashSet<Dependency> {
