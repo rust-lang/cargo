@@ -5,7 +5,7 @@ const REMOVED: &str = "The `git-checkout` subcommand has been removed.";
 pub fn cli() -> App {
     subcommand("git-checkout")
         .about("This subcommand has been removed")
-        .settings(&[AppSettings::Hidden])
+        .setting(AppSettings::Hidden)
         .override_help(REMOVED)
 }
 

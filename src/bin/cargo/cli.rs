@@ -408,11 +408,11 @@ fn cli() -> App {
         "cargo [OPTIONS] [SUBCOMMAND]"
     };
     App::new("cargo")
-        .settings(&[
-            AppSettings::DeriveDisplayOrder,
-            AppSettings::AllowExternalSubcommands,
-            AppSettings::NoAutoVersion,
-        ])
+        .setting(
+            AppSettings::DeriveDisplayOrder
+                | AppSettings::AllowExternalSubcommands
+                | AppSettings::NoAutoVersion,
+        )
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
         .global_setting(AppSettings::DisableColoredHelp)

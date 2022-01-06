@@ -282,10 +282,8 @@ pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static st
 }
 
 pub fn subcommand(name: &'static str) -> App {
-    SubCommand::with_name(name).settings(&[
-        AppSettings::DeriveDisplayOrder,
-        AppSettings::DontCollapseArgsInUsage,
-    ])
+    SubCommand::with_name(name)
+        .setting(AppSettings::DeriveDisplayOrder | AppSettings::DontCollapseArgsInUsage)
 }
 
 /// Determines whether or not to gate `--profile` as unstable when resolving it.
