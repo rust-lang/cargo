@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("git-checkout")
         .about("This subcommand has been removed")
         .settings(&[AppSettings::Hidden])
-        .help(REMOVED)
+        .override_help(REMOVED)
 }
 
 pub fn exec(_config: &mut Config, _args: &ArgMatches) -> CliResult {
