@@ -283,7 +283,6 @@ pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static st
 
 pub fn subcommand(name: &'static str) -> App {
     SubCommand::with_name(name).settings(&[
-        AppSettings::UnifiedHelpMessage,
         AppSettings::DeriveDisplayOrder,
         AppSettings::DontCollapseArgsInUsage,
     ])

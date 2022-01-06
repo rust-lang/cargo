@@ -409,7 +409,6 @@ fn cli() -> App {
     };
     App::new("cargo")
         .settings(&[
-            AppSettings::UnifiedHelpMessage,
             AppSettings::DeriveDisplayOrder,
             AppSettings::AllowExternalSubcommands,
             AppSettings::NoAutoVersion,
