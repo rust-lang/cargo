@@ -13,7 +13,7 @@ pub fn cli() -> App {
         .arg(
             Arg::new("args")
                 .help("Arguments for the bench binary")
-                .multiple(true)
+                .multiple_values(true)
                 .last(true),
         )
         .arg_targets_all(

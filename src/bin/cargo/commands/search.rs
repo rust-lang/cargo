@@ -8,7 +8,7 @@ pub fn cli() -> App {
     subcommand("search")
         .about("Search packages in crates.io")
         .arg_quiet()
-        .arg(Arg::new("query").multiple(true))
+        .arg(Arg::new("query").multiple_values(true))
         .arg_index()
         .arg(
             opt(

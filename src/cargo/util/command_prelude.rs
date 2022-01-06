@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 use crate::core::compiler::{BuildConfig, MessageFormat};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
@@ -264,20 +262,16 @@ pub fn optional_multi_opt(
 ) -> Arg<'static> {
     opt(name, help)
         .value_name(value_name)
-        .multiple(true)
+        .multiple_occurrences(true)
+        .multiple_values(true)
         .min_values(0)
         .number_of_values(1)
 }
 
 pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg<'static> {
-    // Note that all `.multiple(true)` arguments in Cargo should specify
-    // `.number_of_values(1)` as well, so that `--foo val1 val2` is
-    // *not* parsed as `foo` with values ["val1", "val2"].
-    // `number_of_values` should become the default in clap 3.
     opt(name, help)
         .value_name(value_name)
-        .multiple(true)
-        .number_of_values(1)
+        .multiple_occurrences(true)
 }
 
 pub fn subcommand(name: &'static str) -> App {

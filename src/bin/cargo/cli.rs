@@ -479,8 +479,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
                 .short('Z')
                 .value_name("FLAG")
-                .multiple(true)
-                .number_of_values(1)
+                .multiple_occurrences(true)
                 .global(true),
         )
         .subcommands(commands::builtin())

@@ -24,7 +24,8 @@ pub fn cli() -> App {
                 .help("Additional `Cargo.toml` to sync and vendor")
                 .value_name("TOML")
                 .allow_invalid_utf8(true)
-                .multiple(true),
+                .multiple_occurrences(true)
+                .multiple_values(true),
         )
         .arg(
             Arg::new("respect-source-config")

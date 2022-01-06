@@ -7,7 +7,7 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Build a package's documentation, using specified custom flags.")
         .arg_quiet()
-        .arg(Arg::new("args").multiple(true))
+        .arg(Arg::new("args").multiple_values(true))
         .arg(opt(
             "open",
             "Opens the docs in a browser after the operation",

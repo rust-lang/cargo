@@ -8,7 +8,11 @@ pub fn cli() -> App {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
         .arg_quiet()
-        .arg(Arg::new("crate").forbid_empty_values(true).multiple(true))
+        .arg(
+            Arg::new("crate")
+                .forbid_empty_values(true)
+                .multiple_values(true),
+        )
         .arg(
             opt("version", "Specify a version to install")
                 .alias("vers")

@@ -15,7 +15,7 @@ pub fn cli() -> App {
         .arg(
             Arg::new("args")
                 .help("Arguments for the test binary")
-                .multiple(true)
+                .multiple_values(true)
                 .last(true),
         )
         .arg(

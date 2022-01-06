@@ -11,7 +11,11 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Run a binary or example of the local package")
         .arg_quiet()
-        .arg(Arg::new("args").allow_invalid_utf8(true).multiple(true))
+        .arg(
+            Arg::new("args")
+                .allow_invalid_utf8(true)
+                .multiple_values(true),
+        )
         .arg_targets_bin_example(
             "Name of the bin target to run",
             "Name of the example target to run",
