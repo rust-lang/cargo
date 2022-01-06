@@ -20,9 +20,9 @@ pub fn cli() -> App {
             "Exclude specific workspace members",
         )
         // Deprecated, use --no-dedupe instead.
-        .arg(Arg::new("all").long("all").short('a').hidden(true))
+        .arg(Arg::new("all").long("all").short('a').hide(true))
         // Deprecated, use --target=all instead.
-        .arg(Arg::new("all-targets").long("all-targets").hidden(true))
+        .arg(Arg::new("all-targets").long("all-targets").hide(true))
         .arg_features()
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform). \
@@ -32,7 +32,7 @@ pub fn cli() -> App {
         .arg(
             Arg::new("no-dev-dependencies")
                 .long("no-dev-dependencies")
-                .hidden(true),
+                .hide(true),
         )
         .arg(
             multi_opt(
@@ -59,9 +59,9 @@ pub fn cli() -> App {
         ))
         .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         // Deprecated, use --prefix=none instead.
-        .arg(Arg::new("no-indent").long("no-indent").hidden(true))
+        .arg(Arg::new("no-indent").long("no-indent").hide(true))
         // Deprecated, use --prefix=depth instead.
-        .arg(Arg::new("prefix-depth").long("prefix-depth").hidden(true))
+        .arg(Arg::new("prefix-depth").long("prefix-depth").hide(true))
         .arg(
             opt(
                 "prefix",
@@ -97,7 +97,7 @@ pub fn cli() -> App {
         )
         .arg(
             // Backwards compatibility with old cargo-tree.
-            Arg::new("version").long("version").short('V').hidden(true),
+            Arg::new("version").long("version").short('V').hide(true),
         )
         .after_help("Run `cargo help tree` for more detailed information.\n")
 }

@@ -217,7 +217,7 @@ pub trait AppExt: Sized {
             ._arg(
                 opt("host", "DEPRECATED, renamed to '--index'")
                     .value_name("HOST")
-                    .hidden(true),
+                    .hide(true),
             )
     }
 

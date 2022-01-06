@@ -41,17 +41,17 @@ pub fn cli() -> App {
         .arg(
             Arg::new("no-merge-sources")
                 .long("no-merge-sources")
-                .hidden(true),
+                .hide(true),
         )
         // Not supported.
-        .arg(Arg::new("relative-path").long("relative-path").hidden(true))
+        .arg(Arg::new("relative-path").long("relative-path").hide(true))
         // Not supported.
-        .arg(Arg::new("only-git-deps").long("only-git-deps").hidden(true))
+        .arg(Arg::new("only-git-deps").long("only-git-deps").hide(true))
         // Not supported.
         .arg(
             Arg::new("disallow-duplicates")
                 .long("disallow-duplicates")
-                .hidden(true),
+                .hide(true),
         )
         .after_help("Run `cargo help vendor` for more detailed information.\n")
 }
