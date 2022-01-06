@@ -30,7 +30,7 @@ pub fn main(config: &mut Config) -> CliResult {
         return Ok(());
     }
 
-    let args = match cli().get_matches_safe() {
+    let args = match cli().try_get_matches() {
         Ok(args) => args,
         Err(e) => {
             if e.kind == clap::ErrorKind::UnrecognizedSubcommand {
@@ -290,7 +290,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                 let global_args = GlobalArgs::new(args);
                 let new_args = cli()
                     .setting(AppSettings::NoBinaryName)
-                    .get_matches_from_safe(alias)?;
+                    .try_get_matches_from(alias)?;
 
                 let new_cmd = new_args.subcommand_name().expect("subcommand is required");
                 already_expanded.push(cmd.to_string());
