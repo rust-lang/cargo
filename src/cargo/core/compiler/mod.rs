@@ -613,7 +613,7 @@ fn prepare_rustc(
         base.inherit_jobserver(&cx.jobserver);
     }
     build_base_args(cx, &mut base, unit, crate_types)?;
-    build_natvis(&mut base, unit, &mut unstable_opts)?;
+    build_natvis(&mut base, cx, unit, &mut unstable_opts)?;
     build_deps_args(&mut base, cx, unit, &mut unstable_opts)?;
 
     // This will only be set if we're already using a feature
@@ -1089,16 +1089,32 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 
 fn build_natvis(
     cmd: &mut ProcessBuilder,
+    cx: &mut Context<'_, '_>,
     unit: &Unit,
     unstable_opts: &mut bool,
 ) -> CargoResult<()> {
     if let Some(natvis) = &unit.pkg.manifest().natvis() {
-        *unstable_opts = true;
-        cmd.arg("-C").arg(&{
-            let mut arg = OsString::from("natvis=");
-            arg.push(OsString::from(natvis.iter().map(|f| f.display()).join(",")));
-            arg
-        });
+        // Only add natvis for the primary unit of each package.
+        // This will ensure units that depend on the primary
+        // unit, i.e. bins, integration tests or examples, will not
+        // have a duplicate set of natvis files.
+        let mut add_natvis = true;
+        let deps = cx.unit_deps(unit);
+        for dep in deps {
+            if cx.is_primary_package(&dep.unit) {
+                add_natvis = false;
+                break;
+            }
+        }
+
+        if add_natvis {
+            *unstable_opts = true;
+            cmd.arg("-C").arg(&{
+                let mut arg = OsString::from("natvis=");
+                arg.push(OsString::from(natvis.iter().map(|f| f.display()).join(",")));
+                arg
+            });
+        }
     }
 
     Ok(())
