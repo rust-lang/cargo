@@ -794,10 +794,10 @@ fn broken_symlink() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to determine list of files [..]/foo
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
-  IO error for operation on [..]/foo/src/foo.rs: [..]
+  failed to open for archiving: `[..]foo.rs`
 
 Caused by:
   [..]
@@ -841,9 +841,8 @@ fn filesystem_loop() {
         .symlink_dir("a/b", "a/b/c/d/foo")
         .build()
         .cargo("package -v")
-        .with_status(101)
         .with_stderr_contains(
-            "  File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
         )
         .run();
 }
