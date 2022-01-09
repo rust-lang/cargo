@@ -62,11 +62,13 @@ considered incompatible.
     * Structs
         * [Major: adding a private struct field when all current fields are public](#struct-add-private-field-when-public)
         * [Major: adding a public field when no private field exists](#struct-add-public-field-when-no-private)
+        * [Major: change a from well-defined repr to another when all fields are public](#struct-change-repr-when-public)
         * [Minor: adding or removing private fields when at least one already exists](#struct-private-fields-with-private)
         * [Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa](#struct-tuple-normal-with-private)
     * Enums
         * [Major: adding new enum variants (without `non_exhaustive`)](#enum-variant-new)
         * [Major: adding new fields to an enum variant](#enum-fields-new)
+        * [Major: removing an integer repr](#enum-remove-integer-repr)
     * Traits
         * [Major: adding a non-defaulted trait item](#trait-new-item-no-default)
         * [Major: any change to trait item signatures](#trait-item-signature)
@@ -273,6 +275,56 @@ Mitigation strategies:
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
+<a id="struct-change-repr-when-public"></a>
+### Major: change a from well-defined repr to another when all fields are public
+
+When a struct has a well-defined repr (`transparent`, `C`) and only public fields, this will break unsafe code relying on 
+that repr.
+
+Adding a well-defined repr to a `repr(Rust)` struct is *not* a breaking change.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+pub struct Foo {
+    pub f1: u8,
+    pub f2: u16,
+    pub f3: u8,
+}
+
+///////////////////////////////////////////////////////////
+// After
+pub struct Foo {
+    pub f1: u8,
+    pub f2: u16,
+    pub f3: u8,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let foo = Foo {
+        f1: 1,
+        f2: 1000,
+        f3: 5,
+    };
+    
+    let foo_ptr = &foo as *const Foo as *const u8;
+    
+    // this is now unsound because of the change
+    // SAFETY: Foo is repr(C), so we are guaranteed that there will be `3` at this offset (u8, 8 pad, u16)
+    let f2 = unsafe { foo_ptr.offset(4).read() };
+    
+    println!("{}", f2);
+}
+```
+
+Mitigation strategies:
+* Only add a `repr` to structs with public fields if you don't plan to change it again.
+
 <a id="struct-private-fields-with-private"></a>
 ### Minor: adding or removing private fields when at least one already exists
 
@@ -453,6 +505,46 @@ Mitigation strategies:
       Variant1(Foo)
   }
   ```
+  
+<a id="enum-remove-integer-repr"></a>
+### Major: removing an integer repr
+
+It is a breaking change to remove an integer repr (like `#[repr(u8)]`) from an enum.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(i32)]
+pub enum Number {
+    One = 1,
+    Two = 2,
+    Three = 3,
+}
+
+///////////////////////////////////////////////////////////
+// After
+pub enum Number {
+    One = 1,
+    Two = 2,
+    Three = 3,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let num_three = Number::Three;
+    
+    // SAFETY: `Number` is `#[repr(i32)]`
+    let three: i32 = unsafe { std::mem::transmute(num_three) }; // Error: cannot transmute between types of different sizes
+    
+    println!("{}", three)
+}
+```
+
+Mitigation strategies:
+* Only add `repr` to an enum if you are sure you'll never need to remove it
 
 <a id="trait-new-item-no-default"></a>
 ### Major: adding a non-defaulted trait item
