@@ -305,20 +305,22 @@ pub struct Foo {
 
 ///////////////////////////////////////////////////////////
 // Example usage that will break.
+use updated_crate::Foo;
+
 fn main() {
     let foo = Foo {
         f1: 1,
         f2: 1000,
         f3: 5,
     };
-    
+
     let foo_ptr = &foo as *const Foo as *const u8;
-    
+
     // this is now unsound because of the change
     // SAFETY: Foo is repr(C), so we are guaranteed that there will be `3` at this offset (u8, 8 pad, u16)
-    let f2 = unsafe { foo_ptr.offset(4).read() };
-    
-    println!("{}", f2);
+    let f3 = unsafe { foo_ptr.offset(4).read() };
+
+    assert_eq!(5, f3);
 }
 ```
 
@@ -534,12 +536,12 @@ pub enum Number {
 ///////////////////////////////////////////////////////////
 // Example usage that will break.
 fn main() {
-    let num_three = Number::Three;
-    
+    let num_three = updated_crate::Number::Three;
+
     // SAFETY: `Number` is `#[repr(i32)]`
     let three: i32 = unsafe { std::mem::transmute(num_three) }; // Error: cannot transmute between types of different sizes
-    
-    println!("{}", three)
+
+    assert_eq!(3, three)
 }
 ```
 
