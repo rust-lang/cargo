@@ -3366,7 +3366,13 @@ fn cyclic_dev() {
         .file("tests/foo.rs", "extern crate foo;")
         .build();
 
-    p.cargo("test --workspace").run();
+    p.cargo("test --workspace")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] cyclic package dependency: package `foo v0.1.0 ([CWD])` depends on itself.",
+        )
+        .run();
 }
 
 #[cargo_test]

@@ -1009,6 +1009,15 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     for id in resolve.iter() {
         let map = graph.entry(id).or_insert_with(BTreeMap::new);
         for (dep_id, listings) in resolve.deps_not_replaced(id) {
+            // We don't want to allow a package to depend on itself as a path.
+            // See https://github.com/rust-lang/cargo/issues/9518 for more details.
+            if id == dep_id && dep_id.source_id().is_path() {
+                anyhow::bail!(
+                    "cyclic package dependency: package `{}` depends on itself.",
+                    id,
+                );
+            }
+
             let transitive_dep = listings.iter().find(|d| d.is_transitive());
 
             if let Some(transitive_dep) = transitive_dep.cloned() {

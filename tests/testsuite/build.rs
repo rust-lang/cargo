@@ -1660,9 +1660,34 @@ fn self_dependency() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] cyclic package dependency: package `test v0.0.0 ([CWD])` depends on itself. Cycle:
-package `test v0.0.0 ([CWD])`
-    ... which satisfies path dependency `test` of package `test v0.0.0 ([..])`",
+[ERROR] cyclic package dependency: package `test v0.0.0 ([CWD])` depends on itself.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dev_self_dependency() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [dev-dependencies]
+                foo = { path = "." }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] cyclic package dependency: package `foo v0.1.0 ([CWD])` depends on itself.",
         )
         .run();
 }
