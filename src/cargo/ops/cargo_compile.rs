@@ -1606,7 +1606,7 @@ fn traverse_and_share(
     let new_unit = interner.intern(
         &unit.pkg,
         &unit.target,
-        unit.profile,
+        unit.profile.clone(),
         new_kind,
         unit.mode,
         unit.features.clone(),

@@ -1484,6 +1484,7 @@ fn all_profile_options() {
         strip: Some(toml::StringOrBool::String("symbols".to_string())),
         package: None,
         build_override: None,
+        rustflags: None,
     };
     let mut overrides = BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
