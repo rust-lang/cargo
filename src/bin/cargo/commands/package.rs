@@ -11,7 +11,7 @@ pub fn cli() -> App {
                 "list",
                 "Print files included in a package without making one",
             )
-            .short("l"),
+            .short('l'),
         )
         .arg(opt(
             "no-verify",
@@ -38,7 +38,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help package` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let specs = args.packages_from_flags()?;
 

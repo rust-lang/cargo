@@ -30,9 +30,12 @@ mod version;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
+
     if let Some(ref err) = err.error {
         if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
-            clap_err.exit()
+            let exit_code = if clap_err.use_stderr() { 1 } else { 0 };
+            let _ = clap_err.print();
+            std::process::exit(exit_code)
         }
     }
 

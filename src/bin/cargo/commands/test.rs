@@ -9,13 +9,13 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
-            Arg::with_name("TESTNAME")
+            Arg::new("TESTNAME")
                 .help("If specified, only run tests containing this string in their names"),
         )
         .arg(
-            Arg::with_name("args")
+            Arg::new("args")
                 .help("Arguments for the test binary")
-                .multiple(true)
+                .multiple_values(true)
                 .last(true),
         )
         .arg(
@@ -23,7 +23,7 @@ pub fn cli() -> App {
                 "quiet",
                 "Display one character per test instead of one line",
             )
-            .short("q"),
+            .short('q'),
         )
         .arg_targets_all(
             "Test only this package's library unit tests",
@@ -62,7 +62,7 @@ pub fn cli() -> App {
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(

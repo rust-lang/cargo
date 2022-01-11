@@ -300,6 +300,12 @@ impl From<clap::Error> for CliError {
     }
 }
 
+impl From<std::io::Error> for CliError {
+    fn from(err: std::io::Error) -> CliError {
+        CliError::new(err.into(), 1)
+    }
+}
+
 // =============================================================================
 // Construction helpers
 

@@ -13,7 +13,7 @@ Deprecated, use `cargo metadata --no-deps` instead.\
         .arg_manifest_path()
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     config
         .shell()

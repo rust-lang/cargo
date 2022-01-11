@@ -39,7 +39,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help doc` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = CompileMode::Doc {
         deps: !args.is_present("no-deps"),
