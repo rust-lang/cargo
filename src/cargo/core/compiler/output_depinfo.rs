@@ -22,6 +22,7 @@
 //! dependencies are not included under the assumption that changes to them can
 //! be detected via changes to `Cargo.lock`.
 
+use cargo_util::paths::normalize_path;
 use std::collections::{BTreeSet, HashSet};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -33,16 +34,21 @@ use log::debug;
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
-    let relpath = match basedir {
-        None => path,
-        Some(base) => match path.strip_prefix(base) {
-            Ok(relpath) => relpath,
-            _ => path,
-        },
-    };
-    relpath
-        .to_str()
-        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", relpath)))
+    if let Some(basedir) = basedir {
+        let norm_path = normalize_path(path);
+        let norm_basedir = normalize_path(basedir.as_ref());
+        match norm_path.strip_prefix(norm_basedir) {
+            Ok(relpath) => wrap_path(relpath),
+            _ => wrap_path(path),
+        }
+    } else {
+        wrap_path(path)
+    }
+}
+
+fn wrap_path(path: &Path) -> CargoResult<String> {
+    path.to_str()
+        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
         .map(|f| f.replace(" ", "\\ "))
 }
 
