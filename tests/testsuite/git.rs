@@ -1287,7 +1287,8 @@ fn dep_with_changed_submodule() {
     println!("last run");
     p.cargo("run")
         .with_stderr(
-            "[COMPILING] dep1 v0.5.0 ([..])\n\
+            "[UPDATING] git submodule `file://[..]/dep3`\n\
+             [COMPILING] dep1 v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\

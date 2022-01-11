@@ -344,18 +344,32 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config);
+        // `location` looks like `target/git/checkouts/crate-name-checksum/shorthash`
+        // `submodule_root` looks like `target/git/checkouts/submodules`
+        let checkout_root = self.location.parent().unwrap().parent().unwrap();
+        // Share the same submodules between all checkouts. Without a shared path,
+        // cargo would reclone the submodule for each commit that's checked out,
+        // even if the submodule itself hasn't changed.
+        let submodule_root = checkout_root.join("submodules");
 
-        fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
+        return update_submodules(&self.repo, cargo_config, &submodule_root);
+
+        fn update_submodules(
+            repo: &git2::Repository,
+            cargo_config: &Config,
+            submodule_root: &Path,
+        ) -> CargoResult<()> {
             debug!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
-                update_submodule(repo, &mut child, cargo_config).with_context(|| {
-                    format!(
-                        "failed to update submodule `{}`",
-                        child.name().unwrap_or("")
-                    )
-                })?;
+                update_submodule(repo, &mut child, cargo_config, submodule_root).with_context(
+                    || {
+                        format!(
+                            "failed to update submodule `{}`",
+                            child.name().unwrap_or("")
+                        )
+                    },
+                )?;
             }
             Ok(())
         }
@@ -364,6 +378,7 @@ impl<'a> GitCheckout<'a> {
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
+            submodule_root: &Path,
         ) -> CargoResult<()> {
             child.init(false)?;
             let url = child.url().ok_or_else(|| {
@@ -388,14 +403,28 @@ impl<'a> GitCheckout<'a> {
             let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, cargo_config);
+                        debug!(
+                            "saw up-to-date oid={:?} for submodule {}; skipping update",
+                            head, url
+                        );
+                        return update_submodules(&repo, cargo_config, submodule_root);
                     }
                     repo
                 }
                 Err(..) => {
-                    let path = parent.workdir().unwrap().join(child.path());
-                    let _ = paths::remove_dir_all(&path);
-                    init(&path, false)?
+                    // NOTE: most URLs are invalid file paths on Windows.
+                    // Base64-encode them to avoid FS errors.
+                    let config = base64::Config::new(base64::CharacterSet::UrlSafe, true);
+                    let encoded = base64::encode_config(url, config);
+                    let shared_submodule_path = submodule_root.join(encoded);
+                    std::fs::create_dir_all(&shared_submodule_path)?;
+                    let submodule = init(&shared_submodule_path, true)?;
+
+                    let checkout_path = parent.workdir().unwrap().join(child.path());
+                    let _ = paths::remove_dir_all(&checkout_path);
+                    std::fs::create_dir_all(&checkout_path)?;
+                    submodule.set_workdir(&checkout_path, false)?;
+                    submodule
                 }
             };
             // Fetch data from origin and reset to the head commit
@@ -413,7 +442,7 @@ impl<'a> GitCheckout<'a> {
 
             let obj = repo.find_object(head, None)?;
             reset(&repo, &obj, cargo_config)?;
-            update_submodules(&repo, cargo_config)
+            update_submodules(&repo, cargo_config, submodule_root)
         }
     }
 }
