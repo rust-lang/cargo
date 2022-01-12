@@ -293,8 +293,6 @@ impl<'cfg> RegistryIndex<'cfg> {
     {
         let source_id = self.source_id;
         let config = self.config;
-        let namespaced_features = self.config.cli_unstable().namespaced_features;
-        let weak_dep_features = self.config.cli_unstable().weak_dep_features;
 
         // First up actually parse what summaries we have available. If Cargo
         // has run previously this will parse a Cargo-specific cache file rather
@@ -309,11 +307,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         // minimize the amount of work being done here and parse as little as
         // necessary.
         let raw_data = &summaries.raw_data;
-        let max_version = if namespaced_features || weak_dep_features {
-            INDEX_V_MAX
-        } else {
-            1
-        };
         Ok(summaries
             .versions
             .iter_mut()
@@ -328,7 +321,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 },
             )
             .filter(move |is| {
-                if is.v > max_version {
+                if is.v > INDEX_V_MAX {
                     debug!(
                         "unsupported schema version {} ({} {})",
                         is.v,
@@ -339,11 +332,6 @@ impl<'cfg> RegistryIndex<'cfg> {
                 } else {
                     true
                 }
-            })
-            .filter(move |is| {
-                is.summary
-                    .unstable_gate(namespaced_features, weak_dep_features)
-                    .is_ok()
             }))
     }
 
