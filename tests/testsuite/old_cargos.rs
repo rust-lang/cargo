@@ -7,7 +7,7 @@
 //! tested 1.0 to 1.51. Run this with:
 //!
 //! ```console
-//! cargo test --test testsuite -- old_cargos --nocapture
+//! cargo test --test testsuite -- old_cargos --nocapture --ignored
 //! ```
 
 use cargo::CargoResult;
@@ -92,6 +92,16 @@ fn collect_all_toolchains() -> Vec<(Version, String)> {
     toolchains
 }
 
+/// Returns whether the default toolchain is the stable version.
+fn default_toolchain_is_stable() -> bool {
+    let default = tc_process("rustc", "this").arg("-V").exec_with_output();
+    let stable = tc_process("rustc", "stable").arg("-V").exec_with_output();
+    match (default, stable) {
+        (Ok(d), Ok(s)) => d.stdout == s.stdout,
+        _ => false,
+    }
+}
+
 // This is a test for exercising the behavior of older versions of cargo with
 // the new feature syntax.
 //
@@ -102,6 +112,7 @@ fn collect_all_toolchains() -> Vec<(Version, String)> {
 //   The optional dependency `new-baz-dep` should not be activated.
 // * `bar` 1.0.2 has a dependency on `baz` that *requires* the new feature
 //   syntax.
+#[ignore]
 #[cargo_test]
 fn new_features() {
     if std::process::Command::new("rustup").output().is_err() {
@@ -504,6 +515,7 @@ fn new_features() {
 }
 
 #[cargo_test]
+#[ignore]
 fn index_cache_rebuild() {
     // Checks that the index cache gets rebuilt.
     //
@@ -587,7 +599,13 @@ foo v0.1.0 [..]
 }
 
 #[cargo_test]
+#[ignore]
 fn avoids_split_debuginfo_collision() {
+    // Test needs two different toolchains.
+    // If the default toolchain is stable, then it won't work.
+    if default_toolchain_is_stable() {
+        return;
+    }
     // Checks for a bug where .o files were being incorrectly shared between
     // different toolchains using incremental and split-debuginfo on macOS.
     let p = project()
