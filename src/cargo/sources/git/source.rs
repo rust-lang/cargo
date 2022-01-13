@@ -7,9 +7,13 @@ use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::Config;
 use anyhow::Context;
+use git2::Oid;
 use log::trace;
 use std::fmt::{self, Debug, Formatter};
+use std::path::Path;
 use url::Url;
+
+use super::GitDatabase;
 
 pub struct GitSource<'cfg> {
     remote: GitRemote,
@@ -112,54 +116,56 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn update(&mut self) -> CargoResult<()> {
+        fn get_rev(source: &GitSource<'_>, db_path: &Path) -> CargoResult<(GitDatabase, Oid)> {
+            let maybe_db = source.remote.db_at(&db_path).ok();
+
+            if let (Some(rev), Some(db)) = (source.locked_rev, &maybe_db) {
+                // If we have a locked revision, and we have a preexisting database
+                // which has that revision, then no update needs to happen.
+                if db.contains(rev) {
+                    return Ok((maybe_db.unwrap(), rev));
+                }
+            }
+            if let (None, Some(db)) = (source.locked_rev, &maybe_db) {
+                // If we have a locked revision, we don't need to update.
+                // Alternatively, if passed `--offline`, we avoid updating branches even if there could be a more recent version available.
+                if source.config.offline()
+                    || matches!(source.manifest_reference, GitReference::Rev(_))
+                {
+                    if let Ok(rev) = db.resolve(&source.manifest_reference) {
+                        return Ok((maybe_db.unwrap(), rev));
+                    }
+                }
+            }
+
+            if source.config.offline() {
+                anyhow::bail!(
+                    "can't checkout from '{}': you are in the offline mode (--offline)",
+                    source.remote.url()
+                );
+            }
+
+            source.config.shell().status(
+                "Updating",
+                format!("git repository `{}`", source.remote.url()),
+            )?;
+
+            trace!("updating git source `{:?}`", source.remote);
+
+            source.remote.checkout(
+                db_path,
+                maybe_db,
+                &source.manifest_reference,
+                source.locked_rev,
+                source.config,
+            )
+        }
+
         let git_path = self.config.git_path();
         let git_path = self.config.assert_package_cache_locked(&git_path);
         let db_path = git_path.join("db").join(&self.ident);
 
-        let db = self.remote.db_at(&db_path).ok();
-        let (db, actual_rev) = match (self.locked_rev, db) {
-            // If we have a locked revision, and we have a preexisting database
-            // which has that revision, then no update needs to happen.
-            (Some(rev), Some(db)) if db.contains(rev) => (db, rev),
-
-            // If we're in offline mode, we're not locked, and we have a
-            // database, then try to resolve our reference with the preexisting
-            // repository.
-            (None, Some(db)) if self.config.offline() => {
-                let rev = db.resolve(&self.manifest_reference).with_context(|| {
-                    "failed to lookup reference in preexisting repository, and \
-                         can't check for updates in offline mode (--offline)"
-                })?;
-                (db, rev)
-            }
-
-            // ... otherwise we use this state to update the git database. Note
-            // that we still check for being offline here, for example in the
-            // situation that we have a locked revision but the database
-            // doesn't have it.
-            (locked_rev, db) => {
-                if self.config.offline() {
-                    anyhow::bail!(
-                        "can't checkout from '{}': you are in the offline mode (--offline)",
-                        self.remote.url()
-                    );
-                }
-                self.config.shell().status(
-                    "Updating",
-                    format!("git repository `{}`", self.remote.url()),
-                )?;
-
-                trace!("updating git source `{:?}`", self.remote);
-
-                self.remote.checkout(
-                    &db_path,
-                    db,
-                    &self.manifest_reference,
-                    locked_rev,
-                    self.config,
-                )?
-            }
-        };
+        let (db, actual_rev) = get_rev(self, &db_path)?;
 
         // Don’t use the full hash, in order to contribute less to reaching the
         // path length limit on Windows. See
