@@ -12,8 +12,8 @@ pub fn cli() -> App {
                 .arg(Arg::new("key").help("The config key to display"))
                 .arg(
                     opt("format", "Display format")
-                        .possible_values(cargo_config::ConfigFormat::POSSIBLE_VALUES)
-                        .default_value("toml"),
+                        .possible_values(cargo_config::ConfigFormat::possible_values())
+                        .default_value(cargo_config::ConfigFormat::Toml.as_ref()),
                 )
                 .arg(opt(
                     "show-origin",
@@ -35,7 +35,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some(("get", args)) => {
             let opts = cargo_config::GetOptions {
                 key: args.value_of("key"),
-                format: args.value_of("format").unwrap().parse()?,
+                format: args.value_of_t_or_exit("format"),
                 show_origin: args.is_present("show-origin"),
                 merged: args.value_of("merged") == Some("yes"),
             };

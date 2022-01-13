@@ -4,11 +4,13 @@ use crate::util::config::{Config, ConfigKey, ConfigValue as CV, Definition};
 use crate::util::errors::CargoResult;
 use crate::{drop_eprintln, drop_println};
 use anyhow::{bail, format_err, Error};
+use clap::{ArgEnum, PossibleValue};
 use serde_json::json;
 use std::borrow::Cow;
 use std::fmt;
 use std::str::FromStr;
 
+#[derive(clap::ArgEnum, Clone)]
 pub enum ConfigFormat {
     Toml,
     Json,
@@ -16,8 +18,21 @@ pub enum ConfigFormat {
 }
 
 impl ConfigFormat {
-    /// For clap.
-    pub const POSSIBLE_VALUES: &'static [&'static str] = &["toml", "json", "json-value"];
+    pub fn possible_values() -> impl Iterator<Item = PossibleValue<'static>> {
+        ConfigFormat::value_variants()
+            .iter()
+            .filter_map(ArgEnum::to_possible_value)
+    }
+}
+
+impl AsRef<str> for ConfigFormat {
+    fn as_ref(&self) -> &str {
+        match self {
+            ConfigFormat::Toml => "toml",
+            ConfigFormat::Json => "json",
+            ConfigFormat::JsonValue => "json-value",
+        }
+    }
 }
 
 impl FromStr for ConfigFormat {
