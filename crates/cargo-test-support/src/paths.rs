@@ -198,14 +198,6 @@ impl CargoPathExt for Path {
     }
 }
 
-// Replace with std implementation when stabilized, see
-// https://github.com/rust-lang/rust/issues/85748
-pub fn is_symlink(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false)
-}
-
 fn do_op<F>(path: &Path, desc: &str, mut f: F)
 where
     F: FnMut(&Path) -> io::Result<()>,
