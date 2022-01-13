@@ -420,7 +420,6 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
 fn _remove_dir_all(p: &Path) -> Result<()> {
     if p.symlink_metadata()
         .with_context(|| format!("could not get metadata for `{}` to remove", p.display()))?
-        .file_type()
         .is_symlink()
     {
         return remove_file(p);
