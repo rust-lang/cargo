@@ -2,7 +2,7 @@
 
 use std::env;
 
-use cargo_test_support::{is_nightly, project};
+use cargo_test_support::project;
 
 #[cargo_test]
 fn profile_overrides() {
@@ -471,11 +471,6 @@ fn thin_lto_works() {
 
 #[cargo_test]
 fn strip_works() {
-    if !is_nightly() {
-        // rustc 1.58 stabilized -C strip; disable the test until that ships.
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -504,11 +499,6 @@ fn strip_works() {
 
 #[cargo_test]
 fn strip_passes_unknown_option_to_rustc() {
-    if !is_nightly() {
-        // rustc 1.58 stabilized -C strip; disable the test until that ships.
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -538,11 +528,6 @@ error: incorrect value `unknown` for [..] `strip` [..] was expected
 
 #[cargo_test]
 fn strip_accepts_true_to_strip_symbols() {
-    if !is_nightly() {
-        // rustc 1.58 stabilized -C strip; disable the test until that ships.
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -571,11 +556,6 @@ fn strip_accepts_true_to_strip_symbols() {
 
 #[cargo_test]
 fn strip_accepts_false_to_disable_strip() {
-    if !is_nightly() {
-        // rustc 1.58 stabilized -C strip; disable the test until that ships.
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
