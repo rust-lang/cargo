@@ -21,8 +21,6 @@ pub struct Timings<'cfg> {
     enabled: bool,
     /// If true, saves an HTML report to disk.
     report_html: bool,
-    /// If true, reports unit completion to stderr.
-    report_info: bool,
     /// If true, emits JSON information with timing information.
     report_json: bool,
     /// When Cargo started.
@@ -102,9 +100,8 @@ impl<'cfg> Timings<'cfg> {
                 .map_or(false, |t| t.iter().any(|opt| opt == what))
         };
         let report_html = has_report("html");
-        let report_info = has_report("info");
         let report_json = has_report("json");
-        let enabled = report_html | report_info | report_json;
+        let enabled = report_html | report_json;
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
@@ -139,7 +136,6 @@ impl<'cfg> Timings<'cfg> {
             config: bcx.config,
             enabled,
             report_html,
-            report_info,
             report_json,
             start: bcx.config.creation_time(),
             start_str,
@@ -227,18 +223,6 @@ impl<'cfg> Timings<'cfg> {
         unit_time
             .unlocked_units
             .extend(unlocked.iter().cloned().cloned());
-        if self.report_info {
-            let msg = format!(
-                "{}{} in {:.1}s",
-                unit_time.name_ver(),
-                unit_time.target,
-                unit_time.duration
-            );
-            let _ = self
-                .config
-                .shell()
-                .status_with_color("Completed", msg, termcolor::Color::Cyan);
-        }
         if self.report_json {
             let msg = machine_message::TimingInfo {
                 package_id: unit_time.unit.pkg.package_id(),

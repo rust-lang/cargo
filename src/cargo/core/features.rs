@@ -770,7 +770,7 @@ impl CliUnstable {
 
         fn parse_timings(value: Option<&str>) -> Vec<String> {
             match value {
-                None => vec!["html".to_string(), "info".to_string()],
+                None => vec!["html".to_string()],
                 Some(v) => v.split(',').map(|s| s.to_string()).collect(),
             }
         }

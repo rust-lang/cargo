@@ -419,11 +419,9 @@ following values:
 - `html` — Saves a file called `cargo-timing.html` to the current directory
   with a report of the compilation. Files are also saved with a timestamp in
   the filename if you want to look at older runs.
-- `info` — Displays a message to stdout after each compilation finishes with
-  how long it took.
 - `json` — Emits some JSON information about timing information.
 
-The default if none are specified is `html,info`.
+The default if none are specified is `html`.
 
 #### Reading the graphs
 

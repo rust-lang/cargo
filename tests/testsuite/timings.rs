@@ -34,13 +34,6 @@ fn timings_works() {
 [DOWNLOADED] dep v0.1.0 [..]
 [COMPILING] dep v0.1.0
 [COMPILING] foo v0.1.0 [..]
-[COMPLETED] dep v0.1.0 in [..]s
-[COMPLETED] foo v0.1.0 in [..]s
-[COMPLETED] foo v0.1.0 bin \"foo\" in [..]s
-[COMPLETED] foo v0.1.0 example \"ex1\" in [..]s
-[COMPLETED] foo v0.1.0 lib (test) in [..]s
-[COMPLETED] foo v0.1.0 bin \"foo\" (test) in [..]s
-[COMPLETED] foo v0.1.0 test \"t1\" (test) in [..]s
 [FINISHED] [..]
       Timing report saved to [..]/foo/cargo-timing-[..].html
 ",
