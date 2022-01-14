@@ -283,7 +283,7 @@ that repr.
 
 Adding a well-defined repr to a `repr(Rust)` struct is *not* a breaking change.
 
-```rust,ignore
+```rust,ignore,run-fail
 // MAJOR CHANGE
 
 ///////////////////////////////////////////////////////////
