@@ -287,11 +287,11 @@ information over time. Accepts an optional comma-separated list of output
 formats; <code>--timing</code> without an argument will default to <code>--timing=html</code>. Valid
 output formats:</p>
 <ul>
-<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the current
-directory with a report of the compilation. Also write a report with a
-timestamp in the filename if you want to look at older runs. HTML output is
-suitable for human consumption only, and does not provide machine-readable
-timing data.</li>
+<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
 <li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
 information about timing information.</li>
 </ul></dd>

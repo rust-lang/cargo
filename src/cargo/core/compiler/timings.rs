@@ -4,7 +4,7 @@
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
 use crate::core::compiler::job_queue::JobId;
-use crate::core::compiler::{BuildContext, TimingOutput};
+use crate::core::compiler::{BuildContext, Context, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
@@ -293,7 +293,7 @@ impl<'cfg> Timings<'cfg> {
     /// Call this when all units are finished.
     pub fn finished(
         &mut self,
-        bcx: &BuildContext<'_, '_>,
+        cx: &Context<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         if !self.enabled {
@@ -303,21 +303,19 @@ impl<'cfg> Timings<'cfg> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(bcx, error)
+            self.report_html(cx, error)
                 .with_context(|| "failed to save timing report")?;
         }
         Ok(())
     }
 
     /// Save HTML report to disk.
-    fn report_html(
-        &self,
-        bcx: &BuildContext<'_, '_>,
-        error: &Option<anyhow::Error>,
-    ) -> CargoResult<()> {
+    fn report_html(&self, cx: &Context<'_, '_>, error: &Option<anyhow::Error>) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let filename = format!("cargo-timing-{}.html", timestamp);
+        let timings_path = cx.files().host_root().join("cargo-timings");
+        paths::create_dir_all(&timings_path)?;
+        let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
         let roots: Vec<&str> = self
             .root_targets
@@ -325,7 +323,7 @@ impl<'cfg> Timings<'cfg> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, bcx, error)?;
+        self.write_summary_table(&mut f, duration, cx.bcx, error)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         // It helps with pixel alignment to use whole numbers.
@@ -353,7 +351,8 @@ impl<'cfg> Timings<'cfg> {
                 .join(&filename)
                 .display()
         );
-        paths::link_or_copy(&filename, "cargo-timing.html")?;
+        let unstamped_filename = timings_path.join("cargo-timing.html");
+        paths::link_or_copy(&filename, &unstamped_filename)?;
         self.config
             .shell()
             .status_with_color("Timing", msg, termcolor::Color::Cyan)?;

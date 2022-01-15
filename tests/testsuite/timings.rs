@@ -34,7 +34,7 @@ fn timings_works() {
 [COMPILING] dep v0.1.0
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
-      Timing report saved to [..]/foo/cargo-timing-[..].html
+      Timing report saved to [..]/foo/target/cargo-timings/cargo-timing-[..].html
 ",
         )
         .run();

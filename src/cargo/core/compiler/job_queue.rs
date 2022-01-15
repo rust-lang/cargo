@@ -839,7 +839,7 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
-        if let Err(e) = self.timings.finished(cx.bcx, &error) {
+        if let Err(e) = self.timings.finished(cx, &error) {
             if error.is_some() {
                 crate::display_error(&e, &mut cx.bcx.config.shell());
             } else {
