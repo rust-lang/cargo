@@ -1634,6 +1634,39 @@ fn many_crate_types_correct() {
 }
 
 #[cargo_test]
+fn set_both_dylib_and_cdylib_crate_types() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [lib]
+
+                name = "foo"
+                crate_type = ["cdylib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  library `foo` cannot set the crate type of both `dylib` and `cdylib`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn self_dependency() {
     let p = project()
         .file(
