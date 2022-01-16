@@ -1604,7 +1604,7 @@ impl Config {
                     }
 
                     #[cfg(unix)]
-                    return io.raw_os_error() == Some(libc::EROFS);
+                    return io.raw_os_error() == Some(rustix::io::Error::ROFS.raw_os_error());
                 }
 
                 false

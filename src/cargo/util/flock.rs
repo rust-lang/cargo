@@ -278,8 +278,8 @@ fn acquire(
     config: &Config,
     msg: &str,
     path: &Path,
-    lock_try: &dyn Fn() -> io::Result<()>,
-    lock_block: &dyn Fn() -> io::Result<()>,
+    lock_try: &dyn Fn() -> rustix::io::Result<()>,
+    lock_block: &dyn Fn() -> rustix::io::Result<()>,
 ) -> CargoResult<()> {
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
@@ -317,10 +317,9 @@ fn acquire(
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;
     return Ok(());
 
-    #[cfg(all(target_os = "linux", not(target_env = "musl")))]
+    #[cfg(target_os = "linux")]
     fn is_on_nfs_mount(path: &Path) -> bool {
         use std::ffi::CString;
-        use std::mem;
         use std::os::unix::prelude::*;
 
         let path = match CString::new(path.as_os_str().as_bytes()) {
@@ -328,15 +327,14 @@ fn acquire(
             Err(_) => return false,
         };
 
-        unsafe {
-            let mut buf: libc::statfs = mem::zeroed();
-            let r = libc::statfs(path.as_ptr(), &mut buf);
-
-            r == 0 && buf.f_type as u32 == libc::NFS_SUPER_MAGIC as u32
+        if let Ok(buf) = rustix::fs::statfs(path) {
+            buf.f_type as u32 == rustix::fs::NFS_SUPER_MAGIC as u32
+        } else {
+            false
         }
     }
 
-    #[cfg(any(not(target_os = "linux"), target_env = "musl"))]
+    #[cfg(not(target_os = "linux"))]
     fn is_on_nfs_mount(_path: &Path) -> bool {
         false
     }
@@ -344,58 +342,53 @@ fn acquire(
 
 #[cfg(unix)]
 mod sys {
+    use rustix::fs::FlockOperation;
+    use rustix::io::{Error, Result};
     use std::fs::File;
-    use std::io::{Error, Result};
-    use std::os::unix::io::AsRawFd;
 
     pub(super) fn lock_shared(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_SH)
+        flock(file, FlockOperation::LockShared)
     }
 
     pub(super) fn lock_exclusive(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_EX)
+        flock(file, FlockOperation::LockExclusive)
     }
 
     pub(super) fn try_lock_shared(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_SH | libc::LOCK_NB)
+        flock(file, FlockOperation::NonBlockingLockShared)
     }
 
     pub(super) fn try_lock_exclusive(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_EX | libc::LOCK_NB)
+        flock(file, FlockOperation::NonBlockingLockExclusive)
     }
 
     pub(super) fn unlock(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_UN)
+        flock(file, FlockOperation::Unlock)
     }
 
     pub(super) fn error_contended(err: &Error) -> bool {
-        err.raw_os_error().map_or(false, |x| x == libc::EWOULDBLOCK)
+        *err == rustix::io::Error::WOULDBLOCK
     }
 
     pub(super) fn error_unsupported(err: &Error) -> bool {
-        match err.raw_os_error() {
+        match *err {
             // Unfortunately, depending on the target, these may or may not be the same.
             // For targets in which they are the same, the duplicate pattern causes a warning.
             #[allow(unreachable_patterns)]
-            Some(libc::ENOTSUP | libc::EOPNOTSUPP) => true,
+            rustix::io::Error::NOTSUP | rustix::io::Error::OPNOTSUPP => true,
             #[cfg(target_os = "linux")]
-            Some(libc::ENOSYS) => true,
+            rustix::io::Error::NOSYS => true,
             _ => false,
         }
     }
 
     #[cfg(not(target_os = "solaris"))]
-    fn flock(file: &File, flag: libc::c_int) -> Result<()> {
-        let ret = unsafe { libc::flock(file.as_raw_fd(), flag) };
-        if ret < 0 {
-            Err(Error::last_os_error())
-        } else {
-            Ok(())
-        }
+    fn flock(file: &File, flag: FlockOperation) -> Result<()> {
+        rustix::fs::flock(file, flag)
     }
 
     #[cfg(target_os = "solaris")]
-    fn flock(file: &File, flag: libc::c_int) -> Result<()> {
+    fn flock(file: &File, flag: FlockOperation) -> Result<()> {
         // Solaris lacks flock(), so simply succeed with a no-op
         Ok(())
     }

@@ -460,16 +460,10 @@ impl ColorChoice {
 #[cfg(unix)]
 mod imp {
     use super::{Shell, TtyWidth};
-    use std::mem;
 
     pub fn stderr_width() -> TtyWidth {
         unsafe {
-            let mut winsize: libc::winsize = mem::zeroed();
-            // The .into() here is needed for FreeBSD which defines TIOCGWINSZ
-            // as c_uint but ioctl wants c_ulong.
-            if libc::ioctl(libc::STDERR_FILENO, libc::TIOCGWINSZ.into(), &mut winsize) < 0 {
-                return TtyWidth::NoTty;
-            }
+            let winsize = rustix::io::ioctl_tiocgwinsz(&rustix::io::stderr()).unwrap();
             if winsize.ws_col > 0 {
                 TtyWidth::Known(winsize.ws_col as usize)
             } else {

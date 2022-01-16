@@ -104,25 +104,26 @@ pub fn exit_status_to_string(status: ExitStatus) -> String {
 
     #[cfg(unix)]
     fn status_to_string(status: ExitStatus) -> String {
+        use rustix::process::Signal;
         use std::os::unix::process::*;
 
         if let Some(signal) = status.signal() {
-            let name = match signal as libc::c_int {
-                libc::SIGABRT => ", SIGABRT: process abort signal",
-                libc::SIGALRM => ", SIGALRM: alarm clock",
-                libc::SIGFPE => ", SIGFPE: erroneous arithmetic operation",
-                libc::SIGHUP => ", SIGHUP: hangup",
-                libc::SIGILL => ", SIGILL: illegal instruction",
-                libc::SIGINT => ", SIGINT: terminal interrupt signal",
-                libc::SIGKILL => ", SIGKILL: kill",
-                libc::SIGPIPE => ", SIGPIPE: write on a pipe with no one to read",
-                libc::SIGQUIT => ", SIGQUIT: terminal quit signal",
-                libc::SIGSEGV => ", SIGSEGV: invalid memory reference",
-                libc::SIGTERM => ", SIGTERM: termination signal",
-                libc::SIGBUS => ", SIGBUS: access to undefined memory",
+            let name = match Signal::from_raw(signal) {
+                Some(Signal::Abort) => ", SIGABRT: process abort signal",
+                Some(Signal::Alarm) => ", SIGALRM: alarm clock",
+                Some(Signal::Fpe) => ", SIGFPE: erroneous arithmetic operation",
+                Some(Signal::Hup) => ", SIGHUP: hangup",
+                Some(Signal::Ill) => ", SIGILL: illegal instruction",
+                Some(Signal::Int) => ", SIGINT: terminal interrupt signal",
+                Some(Signal::Kill) => ", SIGKILL: kill",
+                Some(Signal::Pipe) => ", SIGPIPE: write on a pipe with no one to read",
+                Some(Signal::Quit) => ", SIGQUIT: terminal quit signal",
+                Some(Signal::Segv) => ", SIGSEGV: invalid memory reference",
+                Some(Signal::Term) => ", SIGTERM: termination signal",
+                Some(Signal::Bus) => ", SIGBUS: access to undefined memory",
                 #[cfg(not(target_os = "haiku"))]
-                libc::SIGSYS => ", SIGSYS: bad system call",
-                libc::SIGTRAP => ", SIGTRAP: trace/breakpoint trap",
+                Some(Signal::Sys) => ", SIGSYS: bad system call",
+                Some(Signal::Trap) => ", SIGTRAP: trace/breakpoint trap",
                 _ => "",
             };
             format!("signal: {}{}", signal, name)

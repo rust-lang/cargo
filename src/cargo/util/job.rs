@@ -33,7 +33,7 @@ mod imp {
         // one cargo spawned to become its own session leader, so we do that
         // here.
         if env::var("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE").is_ok() {
-            libc::setsid();
+            rustix::process::setsid().unwrap();
         }
         Some(())
     }
