@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use lazycell::LazyCell;
-use log::info;
+use log::debug;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
@@ -435,7 +435,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             | CompileMode::Bench
             | CompileMode::Check { .. } => self.calc_outputs_rustc(unit, bcx)?,
         };
-        info!("Target filenames: {:?}", ret);
+        debug!("Target filenames: {:?}", ret);
 
         Ok(Arc::new(ret))
     }
