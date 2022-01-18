@@ -1650,12 +1650,6 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 
 running 1 test
-test test_in_bin ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-
-
-running 1 test
 test test_in_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
@@ -1668,15 +1662,14 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..] --crate-type lib [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]`
 [RUNNING] `rustc --crate-name mybin src/bin/mybin.rs [..] --crate-type bin [..]`
-[RUNNING] `rustc --crate-name mybin src/bin/mybin.rs [..] --test [..]`
 [RUNNING] `rustc --crate-name mytest tests/mytest.rs [..] --test [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/debug/deps/foo-[..] test_in_`
-[RUNNING] `[CWD]/target/debug/deps/mybin-[..] test_in_`
 [RUNNING] `[CWD]/target/debug/deps/mytest-[..] test_in_`
 ",
         )
         .with_stderr_does_not_contain("[RUNNING][..]rustc[..]myexm1[..]")
+        .with_stderr_does_not_contain("[RUNNING][..]deps/mybin-[..] test_in_")
         .run();
 }
 
