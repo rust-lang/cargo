@@ -472,6 +472,19 @@ or change the name in Cargo.toml with:
 fn git_default_branch() {
     // Check for init.defaultBranch support.
     create_empty_gitconfig();
+
+    // If we're running this under a user account that has a different default branch set up
+    // this test will fail. We avoid that setting the defaultBranch and then ensuring that
+    // the changed setting is respected.
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+        [init]
+            defaultBranch = master
+        "#,
+    )
+    .unwrap();
+
     cargo_process("new foo").run();
     let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
