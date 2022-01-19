@@ -28,10 +28,10 @@ fn basic() {
         .file(
             "Cargo.toml",
             r#"
-            unstable-features = ["build-std"]
+            cargo-features = ["build-std"]
             [package]
             name = "foo"
-            version = "0.1.0"
+            version = "0.0.1"
             edition = "2018"
             build-std = ["std"]
             "#,
@@ -78,8 +78,9 @@ fn basic() {
         )
         .build();
 
-    p.cargo("check").run();
+    p.cargo("check").masquerade_as_nightly_cargo().run();
     p.cargo("build")
+        .masquerade_as_nightly_cargo()
         // Importantly, this should not say [UPDATING]
         // There have been multiple bugs where every build triggers and update.
         .with_stderr(
@@ -87,12 +88,11 @@ fn basic() {
              [FINISHED] dev [..]",
         )
         .run();
-    p.cargo("run").run();
-    p.cargo("test").run();
+    p.cargo("run").masquerade_as_nightly_cargo().run();
+    p.cargo("test").masquerade_as_nightly_cargo().run();
 
     // Check for hack that removes dylibs.
     let deps_dir = Path::new("target")
-        .join(rustc_host())
         .join("debug")
         .join("deps");
     assert!(p.glob(deps_dir.join("*.rlib")).count() > 0);
@@ -105,7 +105,7 @@ fn cross_custom() {
         .file(
             "Cargo.toml",
             r#"
-                unstable-features = ["build-std"]
+                cargo-features = ["build-std"]
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -139,7 +139,9 @@ fn cross_custom() {
         )
         .build();
 
-    p.cargo("build --target custom-target.json -v").run();
+    p.cargo("build --target custom-target.json -v")
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
 #[cargo_test(build_std)]
@@ -148,7 +150,7 @@ fn custom_test_framework() {
         .file(
             "Cargo.toml",
             r#"
-                unstable-features = ["build-std"]
+                cargo-features = ["build-std"]
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -206,6 +208,7 @@ fn custom_test_framework() {
     let new_path = env::join_paths(paths).unwrap();
 
     p.cargo("test --target target.json --no-run -v")
+        .masquerade_as_nightly_cargo()
         .env("PATH", new_path)
         .run();
 }
