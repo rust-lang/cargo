@@ -398,24 +398,49 @@ pub fn create_bcx<'a, 'cfg>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
+    let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
+    let std_resolve_features = {
+        let mut build_std_crates: HashMap<CompileKind, (HashSet<&str>, HashSet<&str>)> =
+            HashMap::new();
+        for pkg in pkg_set.packages() {
+            if let Some(crates) = pkg.manifest().build_std() {
+                let mut kinds =
+                    pkg.explicit_compile_kinds(explicit_host_kind, &build_config.requested_kinds);
+
+                if kinds.len() != 1 {
+                    anyhow::bail!("more than one target used while enabling build-std");
+                }
+
+                let kind = kinds.pop().unwrap();
+
+                let (requested_crates, requested_features) =
+                    build_std_crates.entry(kind).or_default();
+                requested_crates.extend(crates.iter().map(|s| &**s));
+                match pkg.manifest().build_std_features() {
+                    Some(features) => requested_features.extend(features.iter().map(|s| &**s)),
+                    None => requested_features.extend(["panic-unwind", "backtrace", "default"]),
+                }
+            }
         }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
+
+        if !build_std_crates.is_empty() {
+            if build_config.build_plan {
+                config
+                    .shell()
+                    .warn("build-std does not currently fully support --build-plan")?;
+            }
+
+            let (std_package_set, std_resolves) = standard_lib::resolve_std(
+                ws,
+                &target_data,
+                &build_config.requested_kinds,
+                build_std_crates,
+            )?;
+            pkg_set.add_set(std_package_set);
+            Some(std_resolves)
+        } else {
+            None
         }
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
-        pkg_set.add_set(std_package_set);
-        Some((std_resolve, std_features))
-    } else {
-        None
     };
 
     // Find the packages in the resolver that the user wants to build (those
@@ -471,19 +496,6 @@ pub fn create_bcx<'a, 'cfg>(
         &mut config.shell(),
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
-
-    // If `--target` has not been specified, then the unit graph is built
-    // assuming `--target $HOST` was specified. See
-    // `rebuild_unit_graph_shared` for more on why this is done.
-    let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
-    let explicit_host_kinds: Vec<_> = build_config
-        .requested_kinds
-        .iter()
-        .map(|kind| match kind {
-            CompileKind::Host => explicit_host_kind,
-            CompileKind::Target(t) => CompileKind::Target(*t),
-        })
-        .collect();
 
     // Passing `build_config.requested_kinds` instead of
     // `explicit_host_kinds` here so that `generate_targets` can do
@@ -544,33 +556,6 @@ pub fn create_bcx<'a, 'cfg>(
         None => Vec::new(),
     };
 
-    let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
-        // Only build libtest if it looks like it is needed.
-        let mut crates = crates.clone();
-        if !crates.iter().any(|c| c == "test")
-            && units
-                .iter()
-                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
-        {
-            // Only build libtest when libstd is built (libtest depends on libstd)
-            if crates.iter().any(|c| c == "std") {
-                crates.push("test".to_string());
-            }
-        }
-        let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
-        standard_lib::generate_std_roots(
-            &crates,
-            std_resolve,
-            std_features,
-            &explicit_host_kinds,
-            &pkg_set,
-            interner,
-            &profiles,
-        )?
-    } else {
-        Default::default()
-    };
-
     let mut unit_graph = build_unit_dependencies(
         ws,
         &pkg_set,
@@ -579,7 +564,6 @@ pub fn create_bcx<'a, 'cfg>(
         std_resolve_features.as_ref(),
         &units,
         &scrape_units,
-        &std_roots,
         build_config.mode,
         &target_data,
         &profiles,
@@ -1019,19 +1003,7 @@ fn generate_targets(
             // why this is done. However, if the package has its own
             // `package.target` key, then this gets used instead of
             // `$HOST`
-            let explicit_kinds = if let Some(k) = pkg.manifest().forced_kind() {
-                vec![k]
-            } else {
-                requested_kinds
-                    .iter()
-                    .map(|kind| match kind {
-                        CompileKind::Host => {
-                            pkg.manifest().default_kind().unwrap_or(explicit_host_kind)
-                        }
-                        CompileKind::Target(t) => CompileKind::Target(*t),
-                    })
-                    .collect()
-            };
+            let explicit_kinds = pkg.explicit_compile_kinds(explicit_host_kind, requested_kinds);
 
             for kind in explicit_kinds.iter() {
                 let profile = profiles.get_profile(

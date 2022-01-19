@@ -855,6 +855,20 @@ where
     deserializer.deserialize_str(Visitor)
 }
 
+fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
+        Some(list) => list,
+        None => return Ok(None),
+    };
+    let v = crates.join(",");
+    Ok(Some(
+        crate::core::compiler::standard_lib::parse_unstable_flag(Some(&v)),
+    ))
+}
+
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
 ///
 /// Note that the order of the fields matters, since this is the order they
@@ -887,6 +901,10 @@ pub struct TomlProject {
     autotests: Option<bool>,
     autobenches: Option<bool>,
     default_run: Option<String>,
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_build_std")]
+    build_std: Option<Vec<String>>,
+    build_std_features: Option<Vec<String>>,
 
     // Package metadata.
     description: Option<String>,
@@ -1408,6 +1426,8 @@ impl TomlManifest {
             Rc::clone(me),
             project.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            project.build_std.clone(),
+            project.build_std_features.clone(),
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(

@@ -161,20 +161,12 @@ fn enable_build_std(e: &mut Execs, setup: &Setup) {
 // Helper methods used in the tests below
 trait BuildStd: Sized {
     fn build_std(&mut self, setup: &Setup) -> &mut Self;
-    fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self;
     fn target_host(&mut self) -> &mut Self;
 }
 
 impl BuildStd for Execs {
     fn build_std(&mut self, setup: &Setup) -> &mut Self {
         enable_build_std(self, setup);
-        self.arg("-Zbuild-std");
-        self
-    }
-
-    fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
-        enable_build_std(self, setup);
-        self.arg(format!("-Zbuild-std={}", arg));
         self
     }
 
@@ -192,6 +184,17 @@ fn basic() {
     };
 
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
         .file(
             "src/main.rs",
             "
@@ -254,7 +257,20 @@ fn simple_lib_std() {
         Some(s) => s,
         None => return,
     };
-    let p = project().file("src/lib.rs", "").build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        cargo-features = ["build-std"]
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        edition = "2018"
+        build-std = ["std"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
     p.cargo("build -v")
         .build_std(&setup)
         .target_host()
@@ -275,7 +291,20 @@ fn simple_bin_std() {
         Some(s) => s,
         None => return,
     };
-    let p = project().file("src/main.rs", "fn main() {}").build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        cargo-features = ["build-std"]
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        edition = "2018"
+        build-std = ["std"]
+    "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
     p.cargo("run -v").build_std(&setup).target_host().run();
 }
 
@@ -287,6 +316,17 @@ fn lib_nostd() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["core"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             r#"
                 #![no_std]
@@ -297,7 +337,7 @@ fn lib_nostd() {
         )
         .build();
     p.cargo("build -v --lib")
-        .build_std_arg(&setup, "core")
+        .build_std(&setup)
         .target_host()
         .with_stderr_does_not_contain("[..]libstd[..]")
         .run();
@@ -310,11 +350,22 @@ fn check_core() {
         None => return,
     };
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["core"]
+        "#,
+        )
         .file("src/lib.rs", "#![no_std] fn unused_fn() {}")
         .build();
 
     p.cargo("check -v")
-        .build_std_arg(&setup, "core")
+        .build_std(&setup)
         .target_host()
         .with_stderr_contains("[WARNING] [..]unused_fn[..]`")
         .run();
@@ -341,10 +392,12 @@ fn depend_same_as_std() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["build-std"]
                 [package]
                 name = "foo"
                 version = "0.1.0"
                 edition = "2018"
+                build-std = ["std"]
 
                 [dependencies]
                 registry-dep-using-core = "1.0"
@@ -364,6 +417,17 @@ fn test() {
         None => return,
     };
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
         .file(
             "src/lib.rs",
             r#"
@@ -393,6 +457,17 @@ fn target_proc_macro() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             r#"
                 extern crate proc_macro;
@@ -413,6 +488,17 @@ fn bench() {
         None => return,
     };
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
         .file(
             "src/lib.rs",
             r#"
@@ -438,6 +524,17 @@ fn doc() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             r#"
                 /// Doc
@@ -456,6 +553,17 @@ fn check_std() {
         None => return,
     };
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
         .file(
             "src/lib.rs",
             "
@@ -495,6 +603,17 @@ fn doctest() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             r#"
                 /// Doc
@@ -521,6 +640,17 @@ fn no_implicit_alloc() {
         None => return,
     };
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
         .file(
             "src/lib.rs",
             r#"
@@ -552,6 +682,17 @@ fn macro_expanded_shadow() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             r#"
                 macro_rules! a {
@@ -574,7 +715,20 @@ fn ignores_incremental() {
         Some(s) => s,
         None => return,
     };
-    let p = project().file("src/lib.rs", "").build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        cargo-features = ["build-std"]
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        edition = "2018"
+        build-std = ["std"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
     p.cargo("build")
         .env("CARGO_INCREMENTAL", "1")
         .build_std(&setup)
@@ -601,19 +755,23 @@ fn cargo_config_injects_compiler_builtins() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["core"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             r#"
                 #![no_std]
                 pub fn foo() {
                     assert_eq!(u8::MIN, 0);
                 }
-            "#,
-        )
-        .file(
-            ".cargo/config.toml",
-            r#"
-                [unstable]
-                build-std = ['core']
             "#,
         )
         .build();
@@ -633,6 +791,18 @@ fn different_features() {
     };
     let p = project()
         .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+            build-std-features = ["feature1"]
+        "#,
+        )
+        .file(
             "src/lib.rs",
             "
                 pub fn foo() {
@@ -641,11 +811,7 @@ fn different_features() {
             ",
         )
         .build();
-    p.cargo("build")
-        .build_std(&setup)
-        .arg("-Zbuild-std-features=feature1")
-        .target_host()
-        .run();
+    p.cargo("build").build_std(&setup).target_host().run();
 }
 
 #[cargo_test]
@@ -671,6 +837,17 @@ fn proc_macro_only() {
         None => return,
     };
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+        "#,
+        )
         .file(
             "Cargo.toml",
             r#"

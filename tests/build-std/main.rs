@@ -22,46 +22,20 @@ use cargo_test_support::*;
 use std::env;
 use std::path::Path;
 
-fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
-    e.env_remove("CARGO_HOME");
-    e.env_remove("HOME");
-
-    // And finally actually enable `build-std` for now
-    let arg = match arg {
-        Some(s) => format!("-Zbuild-std={}", s),
-        None => "-Zbuild-std".to_string(),
-    };
-    e.arg(arg);
-    e.masquerade_as_nightly_cargo();
-}
-
-// Helper methods used in the tests below
-trait BuildStd: Sized {
-    fn build_std(&mut self) -> &mut Self;
-    fn build_std_arg(&mut self, arg: &str) -> &mut Self;
-    fn target_host(&mut self) -> &mut Self;
-}
-
-impl BuildStd for Execs {
-    fn build_std(&mut self) -> &mut Self {
-        enable_build_std(self, None);
-        self
-    }
-
-    fn build_std_arg(&mut self, arg: &str) -> &mut Self {
-        enable_build_std(self, Some(arg));
-        self
-    }
-
-    fn target_host(&mut self) -> &mut Self {
-        self.arg("--target").arg(rustc_host());
-        self
-    }
-}
-
 #[cargo_test(build_std)]
 fn basic() {
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            unstable-features = ["build-std"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            build-std = ["std"]
+            "#,
+        )
         .file(
             "src/main.rs",
             "
@@ -104,10 +78,8 @@ fn basic() {
         )
         .build();
 
-    p.cargo("check").build_std().target_host().run();
+    p.cargo("check").run();
     p.cargo("build")
-        .build_std()
-        .target_host()
         // Importantly, this should not say [UPDATING]
         // There have been multiple bugs where every build triggers and update.
         .with_stderr(
@@ -115,8 +87,8 @@ fn basic() {
              [FINISHED] dev [..]",
         )
         .run();
-    p.cargo("run").build_std().target_host().run();
-    p.cargo("test").build_std().target_host().run();
+    p.cargo("run").run();
+    p.cargo("test").run();
 
     // Check for hack that removes dylibs.
     let deps_dir = Path::new("target")
@@ -133,10 +105,12 @@ fn cross_custom() {
         .file(
             "Cargo.toml",
             r#"
+                unstable-features = ["build-std"]
                 [package]
                 name = "foo"
                 version = "0.1.0"
                 edition = "2018"
+                build-std = ["core"]
 
                 [target.custom-target.dependencies]
                 dep = { path = "dep" }
@@ -165,14 +139,23 @@ fn cross_custom() {
         )
         .build();
 
-    p.cargo("build --target custom-target.json -v")
-        .build_std_arg("core")
-        .run();
+    p.cargo("build --target custom-target.json -v").run();
 }
 
 #[cargo_test(build_std)]
 fn custom_test_framework() {
     let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                unstable-features = ["build-std"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+                build-std = ["core"]
+            "#,
+        )
         .file(
             "src/lib.rs",
             r#"
@@ -224,6 +207,5 @@ fn custom_test_framework() {
 
     p.cargo("test --target target.json --no-run -v")
         .env("PATH", new_path)
-        .build_std_arg("core")
         .run();
 }

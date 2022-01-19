@@ -28,7 +28,10 @@ use crate::util::interning::InternedString;
 use crate::util::Config;
 use crate::CargoResult;
 use log::trace;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+
+use super::CompileTarget;
 
 /// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'cfg> {
@@ -38,11 +41,10 @@ struct State<'a, 'cfg> {
     package_set: &'a PackageSet<'cfg>,
     usr_resolve: &'a Resolve,
     usr_features: &'a ResolvedFeatures,
-    std_resolve: Option<&'a Resolve>,
-    std_features: Option<&'a ResolvedFeatures>,
-    /// This flag is `true` while generating the dependencies for the standard
+    std_resolve: Option<&'a HashMap<CompileKind, (Resolve, ResolvedFeatures)>>,
+    /// This is `Some` while generating the dependencies for the standard
     /// library.
-    is_std: bool,
+    std: Option<CompileKind>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
@@ -60,10 +62,9 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     package_set: &'a PackageSet<'cfg>,
     resolve: &'a Resolve,
     features: &'a ResolvedFeatures,
-    std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
+    std_resolve: Option<&'a HashMap<CompileKind, (Resolve, ResolvedFeatures)>>,
     roots: &[Unit],
     scrape_units: &[Unit],
-    std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
@@ -75,10 +76,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         // in the dep graph without a root.
         return Ok(HashMap::new());
     }
-    let (std_resolve, std_features) = match std_resolve {
-        Some((r, f)) => (Some(r), Some(f)),
-        None => (None, None),
-    };
+
     let mut state = State {
         ws,
         config: ws.config(),
@@ -87,8 +85,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         usr_resolve: resolve,
         usr_features: features,
         std_resolve,
-        std_features,
-        is_std: false,
+        std: None,
         global_mode,
         target_data,
         profiles,
@@ -97,16 +94,8 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         dev_dependency_edges: HashSet::new(),
     };
 
-    let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
-
     deps_of_roots(roots, &mut state)?;
     super::links::validate_links(state.resolve(), &state.unit_dependencies)?;
-    // Hopefully there aren't any links conflicts with the standard library?
-
-    if let Some(std_unit_deps) = std_unit_deps {
-        attach_std_deps(&mut state, std_roots, std_unit_deps);
-    }
-
     connect_run_custom_build_deps(&mut state);
 
     // Dependencies are used in tons of places throughout the backend, many of
@@ -124,55 +113,41 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 /// Compute all the dependencies for the standard library.
 fn calc_deps_of_std(
     mut state: &mut State<'_, '_>,
-    std_roots: &HashMap<CompileKind, Vec<Unit>>,
-) -> CargoResult<Option<UnitGraph>> {
-    if std_roots.is_empty() {
-        return Ok(None);
-    }
-    // Compute dependencies for the standard library.
-    state.is_std = true;
-    for roots in std_roots.values() {
-        deps_of_roots(roots, state)?;
-    }
-    state.is_std = false;
-    Ok(Some(std::mem::take(&mut state.unit_dependencies)))
-}
+    crates: &[String],
+    kind: CompileKind,
+) -> CargoResult<(Vec<Unit>, UnitGraph)> {
+    let prev_graph = std::mem::take(&mut state.unit_dependencies);
 
-/// Add the standard library units to the `unit_dependencies`.
-fn attach_std_deps(
-    state: &mut State<'_, '_>,
-    std_roots: &HashMap<CompileKind, Vec<Unit>>,
-    std_unit_deps: UnitGraph,
-) {
-    // Attach the standard library as a dependency of every target unit.
-    let mut found = false;
-    for (unit, deps) in state.unit_dependencies.iter_mut() {
-        if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
-                unit: unit.clone(),
-                unit_for: UnitFor::new_normal(),
-                extern_crate_name: unit.pkg.name(),
-                // TODO: Does this `public` make sense?
-                public: true,
-                noprelude: true,
-            }));
-            found = true;
-        }
-    }
-    // And also include the dependencies of the standard library itself. Don't
-    // include these if no units actually needed the standard library.
-    if found {
-        for (unit, deps) in std_unit_deps.into_iter() {
-            if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
-                panic!("std unit collision with existing unit: {:?}", other_unit);
-            }
-        }
-    }
+    // Compute dependencies for the standard library.
+
+    state.std = Some(kind);
+
+    let units = crate::core::compiler::standard_lib::generate_std_units(
+        crates,
+        state.std_resolve.as_ref().unwrap(),
+        kind,
+        state.package_set,
+        state.interner,
+        state.profiles,
+    )?;
+
+    deps_of_roots(&units, state)?;
+
+    state.std = None;
+
+    Ok((
+        units,
+        std::mem::replace(&mut state.unit_dependencies, prev_graph),
+    ))
 }
 
 /// Compute all the dependencies of the given root units.
 /// The result is stored in state.unit_dependencies.
 fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
+    let has_test = roots
+        .iter()
+        .any(|unit| unit.mode.is_rustc_test() && unit.target.harness());
+
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
         // We check the global test mode to see if we are running in `cargo
@@ -200,14 +175,20 @@ fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
         } else {
             UnitFor::new_normal()
         };
-        deps_of(unit, state, unit_for)?;
+        deps_of(unit, state, unit_for, None, has_test)?;
     }
 
     Ok(())
 }
 
 /// Compute the dependencies of a single unit.
-fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoResult<()> {
+fn deps_of(
+    unit: &Unit,
+    state: &mut State<'_, '_>,
+    unit_for: UnitFor,
+    prev_std_root_units: Option<&Vec<Unit>>,
+    has_test: bool,
+) -> CargoResult<()> {
     // Currently the `unit_dependencies` map does not include `unit_for`. This should
     // be safe for now. `TestDependency` only exists to clear the `panic`
     // flag, and you'll never ask for a `unit` with `panic` set as a
@@ -215,12 +196,45 @@ fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoRe
     // requested unit's settings are the same as `Any`, `CustomBuild` can't
     // affect anything else in the hierarchy.
     if !state.unit_dependencies.contains_key(unit) {
-        let unit_deps = compute_deps(unit, state, unit_for)?;
+        let (mut unit_deps, std_root_units) = compute_deps(unit, state, unit_for, has_test)?;
+
+        match (prev_std_root_units, &std_root_units) {
+            (None, None) => {}
+            (Some(units), None) | (None, Some(units)) => {
+                unit_deps.extend(units.iter().map(|unit| UnitDep {
+                    unit: unit.clone(),
+                    unit_for: UnitFor::new_normal(),
+                    extern_crate_name: unit.pkg.name(),
+                    public: true,
+                    noprelude: true,
+                }));
+            }
+            (Some(units), Some(units1)) if units == units1 => {
+                unit_deps.extend(units.iter().map(|unit| UnitDep {
+                    unit: unit.clone(),
+                    unit_for: UnitFor::new_normal(),
+                    extern_crate_name: unit.pkg.name(),
+                    public: true,
+                    noprelude: true,
+                }));
+            }
+            (Some(_), Some(_)) => {
+                anyhow::bail!("encountered build-std crate as a dependency of a build-std crate")
+            }
+        }
+
         state
             .unit_dependencies
             .insert(unit.clone(), unit_deps.clone());
+
         for unit_dep in unit_deps {
-            deps_of(&unit_dep.unit, state, unit_dep.unit_for)?;
+            deps_of(
+                &unit_dep.unit,
+                state,
+                unit_dep.unit_for,
+                std_root_units.as_ref(),
+                has_test,
+            )?;
         }
     }
     Ok(())
@@ -228,18 +242,18 @@ fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoRe
 
 /// For a package, returns all targets that are registered as dependencies
 /// for that package.
-/// This returns a `Vec` of `(Unit, UnitFor)` pairs. The `UnitFor`
-/// is the profile type that should be used for dependencies of the unit.
+/// This returns a `Vec` of `UnitDep`s, as well as the root `Unit`s of libstd from build-std.
 fn compute_deps(
     unit: &Unit,
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
-) -> CargoResult<Vec<UnitDep>> {
+    has_test: bool,
+) -> CargoResult<(Vec<UnitDep>, Option<Vec<Unit>>)> {
     if unit.mode.is_run_custom_build() {
-        return compute_deps_custom_build(unit, unit_for, state);
+        return compute_deps_custom_build(unit, unit_for, state).map(|x| (x, None));
     } else if unit.mode.is_doc() {
         // Note: this does not include doc test.
-        return compute_deps_doc(unit, state, unit_for);
+        return compute_deps_doc(unit, state, unit_for).map(|x| (x, None));
     }
 
     let id = unit.pkg.package_id();
@@ -315,16 +329,65 @@ fn compute_deps(
     // all we need. If this isn't a build script, then it depends on the
     // build script if there is one.
     if unit.target.is_custom_build() {
-        return Ok(ret);
+        return Ok((ret, None));
     }
     ret.extend(dep_build_script(unit, unit_for, state)?);
+
+    let mut std_root_units = None;
+
+    if let Some(crates) = unit.pkg.manifest().build_std() {
+        let explicit_host_kind =
+            CompileKind::Target(CompileTarget::new(&state.target_data.rustc.host)?);
+
+        let mut crates = crates.to_vec();
+
+        // Only build libtest when libstd is built (libtest depends on libstd)
+        if has_test && crates.iter().any(|c| c == "std") {
+            crates.push("test".into());
+        }
+
+        // If this target uses build_std, we need to attach libstd's units
+        // to this.
+        let mut explicit_kinds = unit
+            .pkg
+            .explicit_compile_kinds(explicit_host_kind, state.target_data.requested_kinds());
+
+        if explicit_kinds.len() != 1 {
+            anyhow::bail!("build-std with more than one target");
+        }
+
+        let kind = explicit_kinds.pop().unwrap();
+
+        let (root_units, graph) = calc_deps_of_std(state, &crates, kind)?;
+
+        if !root_units.is_empty() {
+            for (unit, deps) in graph {
+                match state.unit_dependencies.entry(unit) {
+                    Entry::Occupied(occ) => {
+                        if &deps != occ.get() {
+                            panic!(
+                                "std unit collision with existing unit:\nprev = {:?}\ncurr = {:?}",
+                                deps,
+                                occ.get()
+                            );
+                        }
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(deps);
+                    }
+                }
+            }
+        }
+
+        std_root_units = Some(root_units);
+    }
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
     // didn't include `pkg` in the return values, so we need to special case
     // it here and see if we need to push `(pkg, pkg_lib_target)`.
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
-        return Ok(ret);
+        return Ok((ret, std_root_units));
     }
     ret.extend(maybe_lib(unit, state, unit_for)?);
 
@@ -369,7 +432,7 @@ fn compute_deps(
         );
     }
 
-    Ok(ret)
+    Ok((ret, std_root_units))
 }
 
 /// Returns the dependencies needed to run a build script.
@@ -497,7 +560,7 @@ fn compute_deps_doc(
         for scrape_unit in state.scrape_units.iter() {
             // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
             let unit_for = UnitFor::new_host(scrape_unit.target.proc_macro());
-            deps_of(scrape_unit, state, unit_for)?;
+            deps_of(scrape_unit, state, unit_for, None, false)?;
             ret.push(new_unit_dep(
                 state,
                 scrape_unit,
@@ -626,7 +689,7 @@ fn new_unit_dep(
     kind: CompileKind,
     mode: CompileMode,
 ) -> CargoResult<UnitDep> {
-    let is_local = pkg.package_id().source_id().is_path() && !state.is_std;
+    let is_local = pkg.package_id().source_id().is_path() && state.std.is_none();
     let profile = state.profiles.get_profile(
         pkg.package_id(),
         state.ws.is_member(pkg),
@@ -659,9 +722,16 @@ fn new_unit_dep_with_profile(
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
     let features_for = unit_for.map_to_features_for();
     let features = state.activated_features(pkg.package_id(), features_for);
-    let unit = state
-        .interner
-        .intern(pkg, target, profile, kind, mode, features, state.is_std, 0);
+    let unit = state.interner.intern(
+        pkg,
+        target,
+        profile,
+        kind,
+        mode,
+        features,
+        state.std.is_some(),
+        0,
+    );
     Ok(UnitDep {
         unit,
         unit_for,
@@ -788,16 +858,16 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
 
 impl<'a, 'cfg> State<'a, 'cfg> {
     fn resolve(&self) -> &'a Resolve {
-        if self.is_std {
-            self.std_resolve.unwrap()
+        if let Some(kind) = self.std {
+            &self.std_resolve.as_ref().unwrap()[&kind].0
         } else {
             self.usr_resolve
         }
     }
 
     fn features(&self) -> &'a ResolvedFeatures {
-        if self.is_std {
-            self.std_features.unwrap()
+        if let Some(kind) = self.std {
+            &self.std_resolve.as_ref().unwrap()[&kind].1
         } else {
             self.usr_features
         }

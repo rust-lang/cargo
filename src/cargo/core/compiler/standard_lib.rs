@@ -35,8 +35,12 @@ pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData<'cfg>,
     requested_targets: &[CompileKind],
-    crates: &[String],
-) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
+    crates_and_features: HashMap<CompileKind, (HashSet<&str>, HashSet<&str>)>,
+) -> CargoResult<(
+    PackageSet<'cfg>,
+    HashMap<CompileKind, (Resolve, ResolvedFeatures)>,
+)> {
+    let mut pkg_set: Option<PackageSet<'cfg>> = None;
     let src_path = detect_sysroot_src_path(target_data)?;
     let to_patch = [
         "rustc-std-workspace-core",
@@ -93,60 +97,68 @@ pub fn resolve_std<'cfg>(
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
     std_ws.set_require_optional_deps(false);
-    // `test` is not in the default set because it is optional, but it needs
-    // to be part of the resolve in case we do need it.
-    let mut spec_pkgs = Vec::from(crates);
-    spec_pkgs.push("test".to_string());
-    let spec = Packages::Packages(spec_pkgs);
-    let specs = spec.to_package_id_specs(&std_ws)?;
-    let features = match &config.cli_unstable().build_std_features {
-        Some(list) => list.clone(),
-        None => vec![
-            "panic-unwind".to_string(),
-            "backtrace".to_string(),
-            "default".to_string(),
-        ],
-    };
-    let cli_features = CliFeatures::from_command_line(
-        &features, /*all_features*/ false, /*uses_default_features*/ false,
-    )?;
-    let resolve = ops::resolve_ws_with_opts(
-        &std_ws,
-        target_data,
-        requested_targets,
-        &cli_features,
-        &specs,
-        HasDevUnits::No,
-        crate::core::resolver::features::ForceAllTargets::No,
-    )?;
-    Ok((
-        resolve.pkg_set,
-        resolve.targeted_resolve,
-        resolve.resolved_features,
-    ))
+
+    let ret: CargoResult<_> = crates_and_features
+        .into_iter()
+        .map(|(kind, (crates, features))| {
+            // `test` is not in the default set because it is optional, but it needs
+            // to be part of the resolve in case we do need it.
+            let spec_pkgs: Vec<_> = crates
+                .into_iter()
+                .chain(Some("test"))
+                .map(ToOwned::to_owned)
+                .collect();
+            let spec = Packages::Packages(spec_pkgs);
+            let specs = spec.to_package_id_specs(&std_ws)?;
+            let features: Vec<_> = features.into_iter().map(ToOwned::to_owned).collect();
+            let cli_features = CliFeatures::from_command_line(
+                &features, /*all_features*/ false, /*uses_default_features*/ false,
+            )?;
+            let resolve = ops::resolve_ws_with_opts(
+                &std_ws,
+                target_data,
+                requested_targets,
+                &cli_features,
+                &specs,
+                HasDevUnits::No,
+                crate::core::resolver::features::ForceAllTargets::No,
+            )?;
+
+            match &mut pkg_set {
+                Some(pkg_set) => pkg_set.add_set(resolve.pkg_set),
+                pkg_set => *pkg_set = Some(resolve.pkg_set),
+            }
+
+            Ok((kind, (resolve.targeted_resolve, resolve.resolved_features)))
+        })
+        .collect();
+
+    Ok((pkg_set.unwrap(), ret?))
 }
 
 /// Generate a list of root `Unit`s for the standard library.
 ///
 /// The given slice of crate names is the root set.
-pub fn generate_std_roots(
+pub fn generate_std_units(
     crates: &[String],
-    std_resolve: &Resolve,
-    std_features: &ResolvedFeatures,
-    kinds: &[CompileKind],
+    std_resolve: &HashMap<CompileKind, (Resolve, ResolvedFeatures)>,
+    kind: CompileKind,
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
-) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
+) -> CargoResult<Vec<Unit>> {
+    let (std_resolve, std_features) = &std_resolve[&kind];
     // Generate the root Units for the standard library.
     let std_ids = crates
         .iter()
         .map(|crate_name| std_resolve.query(crate_name))
         .collect::<CargoResult<Vec<PackageId>>>()?;
+
     // Convert PackageId to Package.
     let std_pkgs = package_set.get_many(std_ids)?;
-    // Generate a map of Units for each kind requested.
-    let mut ret = HashMap::new();
+
+    let mut list = Vec::new();
+
     for pkg in std_pkgs {
         let lib = pkg
             .targets()
@@ -160,29 +172,27 @@ pub fn generate_std_roots(
         let mode = CompileMode::Build;
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
 
-        for kind in kinds {
-            let list = ret.entry(*kind).or_insert_with(Vec::new);
-            let profile = profiles.get_profile(
-                pkg.package_id(),
-                /*is_member*/ false,
-                /*is_local*/ false,
-                unit_for,
-                mode,
-                *kind,
-            );
-            list.push(interner.intern(
-                pkg,
-                lib,
-                profile,
-                *kind,
-                mode,
-                features.clone(),
-                /*is_std*/ true,
-                /*dep_hash*/ 0,
-            ));
-        }
+        let profile = profiles.get_profile(
+            pkg.package_id(),
+            /*is_member*/ false,
+            /*is_local*/ false,
+            unit_for,
+            mode,
+            kind,
+        );
+        list.push(interner.intern(
+            pkg,
+            lib,
+            profile,
+            kind,
+            mode,
+            features.clone(),
+            /*is_std*/ true,
+            /*dep_hash*/ 0,
+        ));
     }
-    Ok(ret)
+
+    Ok(list)
 }
 
 fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {

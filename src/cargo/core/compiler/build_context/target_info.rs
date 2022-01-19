@@ -823,6 +823,10 @@ impl<'cfg> RustcTargetData<'cfg> {
         }
     }
 
+    pub fn requested_kinds(&self) -> &[CompileKind] {
+        &self.requested_kinds
+    }
+
     /// If a build script is overridden, this returns the `BuildOutput` to use.
     ///
     /// `lib_name` is the `links` library name and `kind` is whether it is for

@@ -53,6 +53,8 @@ pub struct Manifest {
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    build_std: Option<Vec<String>>,
+    build_std_features: Option<Vec<String>>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -392,6 +394,8 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        build_std: Option<Vec<String>>,
+        build_std_features: Option<Vec<String>>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -417,6 +421,8 @@ impl Manifest {
             default_run,
             metabuild,
             resolve_behavior,
+            build_std,
+            build_std_features,
         }
     }
 
@@ -527,6 +533,15 @@ impl Manifest {
                 })?;
         }
 
+        if self.build_std.is_some() || self.build_std_features.is_some() {
+            self.unstable_features
+                .require(Feature::build_std())
+                .with_context(|| {
+                    "the `package.build-std` and `package.build-std-features` \
+                     manifest keys are unstable and may not work properly"
+                })?;
+        }
+
         Ok(())
     }
 
@@ -565,6 +580,16 @@ impl Manifest {
             .into_path_unlocked()
             .join(".metabuild")
             .join(format!("metabuild-{}-{}.rs", self.name(), hash))
+    }
+
+    #[inline]
+    pub fn build_std(&self) -> Option<&Vec<String>> {
+        self.build_std.as_ref()
+    }
+
+    #[inline]
+    pub fn build_std_features(&self) -> Option<&Vec<String>> {
+        self.build_std_features.as_ref()
     }
 }
 

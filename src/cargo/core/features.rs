@@ -412,6 +412,9 @@ features! {
 
     // Allow specifying rustflags directly in a profile
     (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
+
+    // Allow building the standard library
+    (unstable, build_std, "", "reference/unstable.html#build-std"),
 }
 
 pub struct Feature {
@@ -632,9 +635,6 @@ unstable_cli_options!(
     advanced_env: bool = (HIDDEN),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
-    #[serde(deserialize_with = "deserialize_build_std")]
-    build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
-    build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
@@ -711,20 +711,6 @@ const STABILIZED_FUTURE_INCOMPAT_REPORT: &str =
 const STABILIZED_WEAK_DEP_FEATURES: &str = "Weak dependency features are now always available.";
 
 const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always available.";
-
-fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
-        Some(list) => list,
-        None => return Ok(None),
-    };
-    let v = crates.join(",");
-    Ok(Some(
-        crate::core::compiler::standard_lib::parse_unstable_flag(Some(&v)),
-    ))
-}
 
 impl CliUnstable {
     pub fn parse(
@@ -845,10 +831,6 @@ impl CliUnstable {
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
             "named-profiles" => stabilized_warn(k, "1.57", STABILIZED_NAMED_PROFILES),
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
-            "build-std" => {
-                self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
-            }
-            "build-std-features" => self.build_std_features = Some(parse_features(v)),
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,

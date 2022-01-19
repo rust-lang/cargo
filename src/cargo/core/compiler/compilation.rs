@@ -277,7 +277,7 @@ impl<'cfg> Compilation<'cfg> {
             // libs from the sysroot that ships with rustc. This may not be
             // required (at least I cannot craft a situation where it
             // matters), but is here to be safe.
-            if self.config.cli_unstable().build_std.is_none() {
+            if pkg.manifest().build_std().is_none() {
                 search_path.push(self.sysroot_target_libdir[&kind].clone());
             }
         }

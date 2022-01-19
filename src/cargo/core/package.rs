@@ -208,6 +208,26 @@ impl Package {
         self.targets().iter().any(|t| t.is_example() || t.is_bin())
     }
 
+    pub fn explicit_compile_kinds(
+        &self,
+        fallback_host_kind: CompileKind,
+        requested_kinds: &[CompileKind],
+    ) -> Vec<CompileKind> {
+        if let Some(k) = self.manifest().forced_kind() {
+            vec![k]
+        } else {
+            requested_kinds
+                .iter()
+                .map(|kind| match kind {
+                    CompileKind::Host => {
+                        self.manifest().default_kind().unwrap_or(fallback_host_kind)
+                    }
+                    CompileKind::Target(t) => CompileKind::Target(*t),
+                })
+                .collect()
+        }
+    }
+
     pub fn serialized(&self) -> SerializedPackage {
         let summary = self.manifest().summary();
         let package_id = summary.package_id();
