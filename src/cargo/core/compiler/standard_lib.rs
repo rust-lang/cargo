@@ -133,7 +133,9 @@ pub fn resolve_std<'cfg>(
         })
         .collect();
 
-    Ok((pkg_set.unwrap(), ret?))
+    let ret = ret?;
+
+    Ok((pkg_set.unwrap(), ret))
 }
 
 /// Generate a list of root `Unit`s for the standard library.

@@ -92,9 +92,7 @@ fn basic() {
     p.cargo("test").masquerade_as_nightly_cargo().run();
 
     // Check for hack that removes dylibs.
-    let deps_dir = Path::new("target")
-        .join("debug")
-        .join("deps");
+    let deps_dir = Path::new("target").join("debug").join("deps");
     assert!(p.glob(deps_dir.join("*.rlib")).count() > 0);
     assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
 }
@@ -211,4 +209,60 @@ fn custom_test_framework() {
         .masquerade_as_nightly_cargo()
         .env("PATH", new_path)
         .run();
+}
+
+#[cargo_test(build_std)]
+fn forced_custom_target() {
+    // Checks how per-package-targets interct with build-std.
+
+    let p = project()
+        .file(
+            "src/main.rs",
+            "
+        #![no_std]
+        #![no_main]
+
+        #[panic_handler]
+        fn panic(_info: &core::panic::PanicInfo) -> ! {
+            loop {}
+        }
+
+        pub fn foo() -> u8 { 42 }
+        ",
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["build-std", "per-package-target"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+                build-std = ["core"]
+                forced-target = "custom-target.json"
+            "#,
+        )
+        .file(
+            "custom-target.json",
+            r#"
+            {
+                "llvm-target": "x86_64-unknown-none-gnu",
+                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                "arch": "x86_64",
+                "target-endian": "little",
+                "target-pointer-width": "64",
+                "target-c-int-width": "32",
+                "os": "none",
+                "linker-flavor": "ld.lld",
+                "linker": "rust-lld",
+                "executables": true,
+                "panic-strategy": "abort"
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").masquerade_as_nightly_cargo().run();
+
+    assert!(p.target_bin("custom-target", "foo").exists());
 }
