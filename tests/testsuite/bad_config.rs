@@ -196,7 +196,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1 column 2
+  TOML parse error at line 1, column 2
+    |
+  1 | 4
+    |  ^
+  Unexpected end of input
+  Expected `.` or `=`
 ",
         )
         .run();
@@ -442,7 +447,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected a table key, found a newline at line 8 column 27
+  TOML parse error at line 8, column 27
+    |
+  8 |                 native = {
+    |                           ^
+  Unexpected `
+  `
+  Expected key
 ",
         )
         .run();
@@ -781,7 +792,26 @@ fn invalid_toml_historically_allowed_fails() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("  expected newline, found an identifier at line 1 column 7")
+        .with_stderr(
+            "\
+error: could not load Cargo configuration
+
+Caused by:
+  could not parse TOML configuration in `[..]`
+
+Caused by:
+  could not parse input as TOML
+
+Caused by:
+  TOML parse error at line 1, column 7
+    |
+  1 | [bar] baz = 2
+    |       ^
+  Unexpected `b`
+  Expected newline or end of input
+  While parsing a Table Header
+",
+        )
         .run();
 }
 

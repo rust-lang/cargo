@@ -410,6 +410,9 @@ features! {
     // Allow specifying different binary name apart from the crate name
     (unstable, different_binary_name, "", "reference/unstable.html#different-binary-name"),
 
+    // Allow specifying rustflags directly in a profile
+    (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
+
     // Allow specifying natvis files to embed in the PDB when using the MSVC Linker.
     (unstable, natvis, "", "reference/unstable.html#natvis"),
 }
@@ -645,7 +648,6 @@ unstable_cli_options!(
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
-    namespaced_features: bool = ("Allow features with `dep:` prefix"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
@@ -655,7 +657,6 @@ unstable_cli_options!(
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
     timings: Option<Vec<String>>  = ("Display concurrency information"),
     unstable_options: bool = ("Allow the usage of unstable options"),
-    weak_dep_features: bool = ("Allow `dep_name?/feature` feature syntax"),
     // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
     // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
     rustdoc_scrape_examples: Option<String> = ("Allow rustdoc to scrape examples from reverse-dependencies for documentation"),
@@ -709,6 +710,10 @@ const STABILIZED_NAMED_PROFILES: &str = "The named-profiles feature is now alway
 
 const STABILIZED_FUTURE_INCOMPAT_REPORT: &str =
     "The future-incompat-report feature is now always enabled.";
+
+const STABILIZED_WEAK_DEP_FEATURES: &str = "Weak dependency features are now always available.";
+
+const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always available.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -876,8 +881,8 @@ impl CliUnstable {
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
-            "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
-            "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
+            "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),
+            "weak-dep-features" => stabilized_warn(k, "1.60", STABILIZED_WEAK_DEP_FEATURES),
             "credential-process" => self.credential_process = parse_empty(k, v)?,
             "rustdoc-scrape-examples" => {
                 if let Some(s) = v {

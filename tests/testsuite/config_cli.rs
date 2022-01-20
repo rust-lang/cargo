@@ -287,7 +287,13 @@ fn bad_parse() {
 failed to parse --config argument `abc`
 
 Caused by:
-  expected an equals, found eof at line 1 column 4",
+  TOML parse error at line 1, column 4
+  |
+1 | abc
+  |    ^
+Unexpected end of input
+Expected `.` or `=`
+",
     );
 }
 

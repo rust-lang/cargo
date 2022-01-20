@@ -709,7 +709,7 @@ impl Package {
         if !self.cargo_features.is_empty() {
             manifest.push_str(&format!(
                 "cargo-features = {}\n\n",
-                toml::to_string(&self.cargo_features).unwrap()
+                toml_edit::ser::to_item(&self.cargo_features).unwrap()
             ));
         }
 

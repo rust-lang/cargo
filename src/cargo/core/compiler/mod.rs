@@ -31,7 +31,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
-use log::debug;
+use log::{debug, trace};
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{
@@ -448,7 +448,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
     let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
-    let profile = unit.profile;
+    let profile = unit.profile.clone();
     let unit_mode = unit.mode;
     let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
@@ -737,7 +737,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         if crate_dir.exists() {
             // Remove output from a previous build. This ensures that stale
             // files for removed items are removed.
-            log::debug!("removing pre-existing doc directory {:?}", crate_dir);
+            debug!("removing pre-existing doc directory {:?}", crate_dir);
             paths::remove_dir_all(crate_dir)?;
         }
         state.running(&rustdoc);
@@ -870,8 +870,9 @@ fn build_base_args(
         ref panic,
         incremental,
         strip,
+        rustflags,
         ..
-    } = unit.profile;
+    } = unit.profile.clone();
     let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
@@ -919,6 +920,10 @@ fn build_base_args(
 
     if opt_level.as_str() != "0" {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
+    }
+
+    if !rustflags.is_empty() {
+        cmd.args(&rustflags);
     }
 
     if *panic != PanicStrategy::Unwind {
@@ -1470,9 +1475,9 @@ fn on_stderr_line_inner(
     }
 
     if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
-        log::trace!("found directive from rustc: `{}`", artifact.artifact);
+        trace!("found directive from rustc: `{}`", artifact.artifact);
         if artifact.artifact.ends_with(".rmeta") {
-            log::debug!("looks like metadata finished early!");
+            debug!("looks like metadata finished early!");
             state.rmeta_produced();
         }
         return Ok(false);
@@ -1492,7 +1497,7 @@ fn on_stderr_line_inner(
     if let Ok(JobserverNotification { jobserver_event }) =
         serde_json::from_str::<JobserverNotification>(compiler_message.get())
     {
-        log::info!(
+        trace!(
             "found jobserver directive from rustc: `{:?}`",
             jobserver_event
         );

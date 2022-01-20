@@ -24,7 +24,7 @@ pub struct ProjectLocation<'a> {
     root: &'a str,
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let root_manifest;
     let workspace;
     let root = match WhatToFind::parse(args) {
@@ -64,7 +64,7 @@ enum WhatToFind {
 }
 
 impl WhatToFind {
-    fn parse(args: &ArgMatches<'_>) -> Self {
+    fn parse(args: &ArgMatches) -> Self {
         if args.is_present("workspace") {
             WhatToFind::Workspace
         } else {
@@ -79,7 +79,7 @@ enum MessageFormat {
 }
 
 impl MessageFormat {
-    fn parse(args: &ArgMatches<'_>) -> CargoResult<Self> {
+    fn parse(args: &ArgMatches) -> CargoResult<Self> {
         let fmt = match args.value_of("message-format") {
             Some(fmt) => fmt,
             None => return Ok(MessageFormat::Json),

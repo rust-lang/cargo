@@ -9,6 +9,7 @@ use anyhow::Context as _;
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
+use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CrateType};

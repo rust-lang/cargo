@@ -10,3 +10,6 @@ Thanks! <3
 [instructions]: https://rustc-dev-guide.rust-lang.org/notification-groups/windows.html
 """
 label = "O-windows"
+
+[shortcut]
+

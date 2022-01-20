@@ -17,7 +17,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help clean` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     if args.is_present_with_zero_values("package") {

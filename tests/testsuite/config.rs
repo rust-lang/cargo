@@ -700,7 +700,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1 column 5",
+  TOML parse error at line 1, column 5
+  |
+1 | asdf
+  |     ^
+Unexpected end of input
+Expected `.` or `=`",
     );
 }
 
@@ -769,8 +774,14 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     // "invalid number" here isn't the best error, but I think it's just toml.rs.
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
-        "error in environment variable `CARGO_BAD_ENV`: \
-         could not parse TOML list: invalid TOML value, did you mean to use a quoted string? at line 1 column 8",
+        "\
+error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 8
+  |
+1 | value=[zzz]
+  |        ^
+Unexpected `z`
+Expected newline or `#`
+",
     );
 
     // Try some other sequence-like types.
@@ -1059,7 +1070,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  dotted key attempted to extend non-table type at line 2 column 15",
+  TOML parse error at line 3, column 1
+  |
+3 | ssl-version.min = 'tlsv1.2'
+  | ^
+Dotted key `ssl-version` attempted to extend non-table type (string)
+
+",
     );
     assert!(config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -1484,6 +1501,7 @@ fn all_profile_options() {
         strip: Some(toml::StringOrBool::String("symbols".to_string())),
         package: None,
         build_override: None,
+        rustflags: None,
     };
     let mut overrides = BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
@@ -1493,8 +1511,8 @@ fn all_profile_options() {
         package: Some(overrides),
         ..base_settings
     };
-    let profile_toml = ::toml::to_string(&profile).unwrap();
-    let roundtrip: toml::TomlProfile = ::toml::from_str(&profile_toml).unwrap();
-    let roundtrip_toml = ::toml::to_string(&roundtrip).unwrap();
+    let profile_toml = toml_edit::easy::to_string(&profile).unwrap();
+    let roundtrip: toml::TomlProfile = toml_edit::easy::from_str(&profile_toml).unwrap();
+    let roundtrip_toml = toml_edit::easy::to_string(&roundtrip).unwrap();
     compare::assert_match_exact(&profile_toml, &roundtrip_toml);
 }

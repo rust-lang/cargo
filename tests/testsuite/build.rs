@@ -198,7 +198,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 3 column 23
+  TOML parse error at line 3, column 23
+    |
+  3 |                 foo = bar
+    |                       ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -218,7 +223,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 1 column 5
+  TOML parse error at line 1, column 5
+    |
+  1 | a = bar
+    |     ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -1634,6 +1644,39 @@ fn many_crate_types_correct() {
 }
 
 #[cargo_test]
+fn set_both_dylib_and_cdylib_crate_types() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [lib]
+
+                name = "foo"
+                crate_type = ["cdylib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  library `foo` cannot set the crate type of both `dylib` and `cdylib`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn self_dependency() {
     let p = project()
         .file(
@@ -2740,7 +2783,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 1 column 6
+  TOML parse error at line 1, column 6
+    |
+  1 | this is not valid toml
+    |      ^
+  Unexpected `i`
+  Expected `.` or `=`
 ",
         )
         .run();
@@ -4805,7 +4853,6 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 #[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac() {
-    use cargo_test_support::paths::is_symlink;
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .file("src/bin/b.rs", "fn main() { panic!(); }")
@@ -4818,7 +4865,7 @@ fn uplift_dsym_of_bin_on_mac() {
         .run();
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
-    assert!(is_symlink(&p.target_debug_dir().join("b.dSYM")));
+    assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
     assert!(p.target_debug_dir().join("examples/c.dSYM").is_dir());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
@@ -4827,7 +4874,6 @@ fn uplift_dsym_of_bin_on_mac() {
 #[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
-    use cargo_test_support::paths::is_symlink;
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .build();
@@ -4846,7 +4892,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
             .join("foo-baaaaaadbaaaaaad.dSYM"),
         &dsym,
     );
-    assert!(is_symlink(&dsym));
+    assert!(dsym.is_symlink());
     assert!(!dsym.exists());
 
     p.cargo("build").enable_mac_dsym().run();
