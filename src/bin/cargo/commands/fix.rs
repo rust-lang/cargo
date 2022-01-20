@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
+use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("fix")
@@ -76,15 +76,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mut opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
-    if let CompileFilter::Default { .. } = opts.filter {
-        opts.filter = CompileFilter::Only {
-            all_targets: true,
-            lib: LibRule::Default,
-            bins: FilterRule::All,
-            examples: FilterRule::All,
-            benches: FilterRule::All,
-            tests: FilterRule::All,
-        }
+    if !opts.filter.is_specific() {
+        // cargo fix with no target selection implies `--all-targets`.
+        opts.filter = ops::CompileFilter::new_all_targets();
     }
 
     ops::fix(
