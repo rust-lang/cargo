@@ -30,7 +30,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{Context as _, Error};
-use itertools::Itertools;
 use lazycell::LazyCell;
 use log::debug;
 
@@ -1109,11 +1108,13 @@ fn build_natvis(
 
         if add_natvis {
             *unstable_opts = true;
-            cmd.arg("-C").arg(&{
-                let mut arg = OsString::from("natvis=");
-                arg.push(OsString::from(natvis.iter().map(|f| f.display()).join(",")));
-                arg
-            });
+            for file in natvis {
+                cmd.arg("-C").arg(&{
+                    let mut arg = OsString::from("natvis=");
+                    arg.push(file);
+                    arg
+                });
+            }
         }
     }
 
