@@ -16,6 +16,7 @@ use lazycell::LazyCell;
 use log::{debug, warn};
 use semver::Version;
 use serde::Serialize;
+use toml_edit::easy as toml;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
@@ -199,7 +200,7 @@ impl Package {
             .manifest()
             .original()
             .prepare_for_publish(ws, self.root())?;
-        let toml = toml::to_string(&manifest)?;
+        let toml = toml::to_string_pretty(&manifest)?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
 
@@ -208,7 +209,7 @@ impl Package {
         self.targets().iter().any(|t| t.is_example() || t.is_bin())
     }
 
-    pub fn serialized(&self, config: &Config) -> SerializedPackage {
+    pub fn serialized(&self) -> SerializedPackage {
         let summary = self.manifest().summary();
         let package_id = summary.package_id();
         let manmeta = self.manifest().metadata();
@@ -222,27 +223,19 @@ impl Package {
             .filter(|t| t.src_path().is_path())
             .cloned()
             .collect();
-        let features = if config.cli_unstable().namespaced_features {
-            // Convert Vec<FeatureValue> to Vec<InternedString>
-            summary
-                .features()
-                .iter()
-                .map(|(k, v)| {
-                    (
-                        *k,
-                        v.iter()
-                            .map(|fv| InternedString::new(&fv.to_string()))
-                            .collect(),
-                    )
-                })
-                .collect()
-        } else {
-            self.manifest()
-                .original()
-                .features()
-                .cloned()
-                .unwrap_or_default()
-        };
+        // Convert Vec<FeatureValue> to Vec<InternedString>
+        let features = summary
+            .features()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    *k,
+                    v.iter()
+                        .map(|fv| InternedString::new(&fv.to_string()))
+                        .collect(),
+                )
+            })
+            .collect();
 
         SerializedPackage {
             name: package_id.name(),

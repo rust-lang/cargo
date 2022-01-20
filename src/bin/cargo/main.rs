@@ -116,7 +116,7 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
         commands.insert(
             cmd.get_name().to_string(),
             CommandInfo::BuiltIn {
-                about: cmd.p.meta.about.map(|s| s.to_string()),
+                about: cmd.get_about().map(|s| s.to_string()),
             },
         );
     }
@@ -143,6 +143,14 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
             );
         }
     }
+
+    // `help` is special, so it needs to be inserted separately.
+    commands.insert(
+        "help".to_string(),
+        CommandInfo::BuiltIn {
+            about: Some("Displays help for a cargo subcommand".to_string()),
+        },
+    );
 
     commands
 }

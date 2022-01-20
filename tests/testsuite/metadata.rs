@@ -1183,7 +1183,7 @@ fn cargo_metadata_bad_version() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: '2' isn't a valid value for '--format-version <VERSION>'
+error: \"2\" isn't a valid value for '--format-version <VERSION>'
 <tab>[possible values: 1]
 ",
         )

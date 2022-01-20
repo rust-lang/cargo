@@ -31,7 +31,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
-use log::debug;
+use log::{debug, trace};
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{
@@ -448,7 +448,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
     let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
-    let profile = unit.profile;
+    let profile = unit.profile.clone();
     let unit_mode = unit.mode;
     let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
@@ -641,7 +641,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format_and_color(cx, &mut rustdoc, unit, false);
+    add_error_format_and_color(cx, &mut rustdoc, unit);
     add_allow_features(cx, &mut rustdoc);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
@@ -720,7 +720,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         if crate_dir.exists() {
             // Remove output from a previous build. This ensures that stale
             // files for removed items are removed.
-            log::debug!("removing pre-existing doc directory {:?}", crate_dir);
+            debug!("removing pre-existing doc directory {:?}", crate_dir);
             paths::remove_dir_all(crate_dir)?;
         }
         state.running(&rustdoc);
@@ -790,19 +790,9 @@ fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
-fn add_error_format_and_color(
-    cx: &Context<'_, '_>,
-    cmd: &mut ProcessBuilder,
-    unit: &Unit,
-    pipelined: bool,
-) {
+fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) {
     cmd.arg("--error-format=json");
-    let mut json = String::from("--json=diagnostic-rendered-ansi");
-    if pipelined {
-        // Pipelining needs to know when rmeta files are finished. Tell rustc
-        // to emit a message that cargo will intercept.
-        json.push_str(",artifacts");
-    }
+    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts");
     if cx
         .bcx
         .target_data
@@ -863,8 +853,9 @@ fn build_base_args(
         ref panic,
         incremental,
         strip,
+        rustflags,
         ..
-    } = unit.profile;
+    } = unit.profile.clone();
     let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
@@ -873,7 +864,7 @@ fn build_base_args(
     edition.cmd_edition_arg(cmd);
 
     add_path_args(bcx.ws, unit, cmd);
-    add_error_format_and_color(cx, cmd, unit, cx.rmeta_required(unit));
+    add_error_format_and_color(cx, cmd, unit);
     add_allow_features(cx, cmd);
 
     let mut contains_dy_lib = false;
@@ -912,6 +903,10 @@ fn build_base_args(
 
     if opt_level.as_str() != "0" {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
+    }
+
+    if !rustflags.is_empty() {
+        cmd.args(&rustflags);
     }
 
     if *panic != PanicStrategy::Unwind {
@@ -1023,7 +1018,7 @@ fn build_base_args(
     }
 
     if strip != Strip::None {
-        cmd.arg("-Z").arg(format!("strip={}", strip));
+        cmd.arg("-C").arg(format!("strip={}", strip));
     }
 
     if unit.is_std {
@@ -1234,9 +1229,6 @@ fn envify(s: &str) -> String {
 struct OutputOptions {
     /// What format we're emitting from Cargo itself.
     format: MessageFormat,
-    /// Look for JSON message that indicates .rmeta file is available for
-    /// pipelined compilation.
-    look_for_metadata_directive: bool,
     /// Whether or not to display messages in color.
     color: bool,
     /// Where to write the JSON messages to support playback later if the unit
@@ -1258,7 +1250,6 @@ struct OutputOptions {
 
 impl OutputOptions {
     fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
-        let look_for_metadata_directive = cx.rmeta_required(unit);
         let color = cx.bcx.config.shell().err_supports_color();
         let path = cx.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
@@ -1266,7 +1257,6 @@ impl OutputOptions {
         let cache_cell = Some((path, LazyCell::new()));
         OutputOptions {
             format: cx.bcx.build_config.message_format,
-            look_for_metadata_directive,
             color,
             cache_cell,
             show_diagnostics: true,
@@ -1428,27 +1418,24 @@ fn on_stderr_line_inner(
         MessageFormat::Json { ansi: true, .. } => {}
     }
 
-    // In some modes of execution we will execute rustc with `-Z
-    // emit-artifact-notifications` to look for metadata files being produced. When this
-    // happens we may be able to start subsequent compilations more quickly than
-    // waiting for an entire compile to finish, possibly using more parallelism
-    // available to complete a compilation session more quickly.
+    // We always tell rustc to emit messages about artifacts being produced.
+    // These messages feed into pipelined compilation, as well as timing
+    // information.
     //
-    // In these cases look for a matching directive and inform Cargo internally
-    // that a metadata file has been produced.
-    if options.look_for_metadata_directive {
-        #[derive(serde::Deserialize)]
-        struct ArtifactNotification {
-            artifact: String,
+    // Look for a matching directive and inform Cargo internally that a
+    // metadata file has been produced.
+    #[derive(serde::Deserialize)]
+    struct ArtifactNotification {
+        artifact: String,
+    }
+
+    if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
+        trace!("found directive from rustc: `{}`", artifact.artifact);
+        if artifact.artifact.ends_with(".rmeta") {
+            debug!("looks like metadata finished early!");
+            state.rmeta_produced();
         }
-        if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
-            log::trace!("found directive from rustc: `{}`", artifact.artifact);
-            if artifact.artifact.ends_with(".rmeta") {
-                log::debug!("looks like metadata finished early!");
-                state.rmeta_produced();
-            }
-            return Ok(false);
-        }
+        return Ok(false);
     }
 
     #[derive(serde::Deserialize)]
@@ -1465,7 +1452,7 @@ fn on_stderr_line_inner(
     if let Ok(JobserverNotification { jobserver_event }) =
         serde_json::from_str::<JobserverNotification>(compiler_message.get())
     {
-        log::info!(
+        trace!(
             "found jobserver directive from rustc: `{:?}`",
             jobserver_event
         );
@@ -1519,7 +1506,6 @@ fn replay_output_cache(
     let target = target.clone();
     let mut options = OutputOptions {
         format,
-        look_for_metadata_directive: true,
         color,
         cache_cell: None,
         show_diagnostics,

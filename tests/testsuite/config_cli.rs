@@ -344,8 +344,9 @@ Caused by:
   |
 1 | abc
   |    ^
-Unexpected `end of input`
-Expected `.` or `=`",
+Unexpected end of input
+Expected `.` or `=`
+",
     );
 
     let config = ConfigBuilder::new().config_arg("").build_err();

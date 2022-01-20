@@ -30,13 +30,13 @@ pub fn main(config: &mut Config) -> CliResult {
         return Ok(());
     }
 
-    let args = match cli().get_matches_safe() {
+    let args = match cli().try_get_matches() {
         Ok(args) => args,
         Err(e) => {
             if e.kind == clap::ErrorKind::UnrecognizedSubcommand {
                 // An unrecognized subcommand might be an external subcommand.
-                let cmd = &e.info.as_ref().unwrap()[0].to_owned();
-                return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
+                let cmd = e.info[0].clone();
+                return super::execute_external_subcommand(config, &cmd, &[&cmd, "--help"])
                     .map_err(|_| e.into());
             } else {
                 return Err(e.into());
@@ -65,7 +65,7 @@ pub fn main(config: &mut Config) -> CliResult {
             .iter()
             .map(|(option_name, option_help_message)| {
                 let option_name_kebab_case = option_name.replace("_", "-");
-                let padding = " ".repeat(longest_option - option_name.len()); // safe to substract
+                let padding = " ".repeat(longest_option - option_name.len()); // safe to subtract
                 format!(
                     "    -Z {}{} -- {}",
                     option_name_kebab_case, padding, option_help_message
@@ -152,7 +152,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
     }
 
     let (cmd, subcommand_args) = match expanded_args.subcommand() {
-        (cmd, Some(args)) => (cmd, args),
+        Some((cmd, args)) => (cmd, args),
         _ => {
             // No subcommand provided.
             cli().print_help()?;
@@ -236,10 +236,10 @@ fn add_ssl(version_string: &mut String) {
 
 fn expand_aliases(
     config: &mut Config,
-    args: ArgMatches<'static>,
+    args: ArgMatches,
     mut already_expanded: Vec<String>,
-) -> Result<(ArgMatches<'static>, GlobalArgs), CliError> {
-    if let (cmd, Some(args)) = args.subcommand() {
+) -> Result<(ArgMatches, GlobalArgs), CliError> {
+    if let Some((cmd, args)) = args.subcommand() {
         match (
             commands::builtin_exec(cmd),
             super::aliased_command(config, cmd)?,
@@ -290,9 +290,9 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                 let global_args = GlobalArgs::new(args);
                 let new_args = cli()
                     .setting(AppSettings::NoBinaryName)
-                    .get_matches_from_safe(alias)?;
+                    .try_get_matches_from(alias)?;
 
-                let (new_cmd, _) = new_args.subcommand();
+                let new_cmd = new_args.subcommand_name().expect("subcommand is required");
                 already_expanded.push(cmd.to_string());
                 if already_expanded.contains(&new_cmd.to_string()) {
                     // Crash if the aliases are corecursive / unresolvable
@@ -316,16 +316,20 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
 
 fn config_configure(
     config: &mut Config,
-    args: &ArgMatches<'_>,
-    subcommand_args: &ArgMatches<'_>,
+    args: &ArgMatches,
+    subcommand_args: &ArgMatches,
     global_args: GlobalArgs,
 ) -> CliResult {
-    let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
+    let arg_target_dir = &subcommand_args
+        ._is_valid_arg("target-dir")
+        .then(|| subcommand_args.value_of_path("target-dir", config))
+        .flatten();
     let verbose = global_args.verbose + args.occurrences_of("verbose") as u32;
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
-    let quiet =
-        args.is_present("quiet") || subcommand_args.is_present("quiet") || global_args.quiet;
+    let quiet = args.is_present("quiet")
+        || subcommand_args.is_valid_and_present("quiet")
+        || global_args.quiet;
     let global_color = global_args.color; // Extract so it can take reference.
     let color = args.value_of("color").or_else(|| global_color.as_deref());
     let frozen = args.is_present("frozen") || global_args.frozen;
@@ -353,11 +357,7 @@ fn config_configure(
     Ok(())
 }
 
-fn execute_subcommand(
-    config: &mut Config,
-    cmd: &str,
-    subcommand_args: &ArgMatches<'_>,
-) -> CliResult {
+fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatches) -> CliResult {
     if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
@@ -380,7 +380,7 @@ struct GlobalArgs {
 }
 
 impl GlobalArgs {
-    fn new(args: &ArgMatches<'_>) -> GlobalArgs {
+    fn new(args: &ArgMatches) -> GlobalArgs {
         GlobalArgs {
             verbose: args.occurrences_of("verbose") as u32,
             quiet: args.is_present("quiet"),
@@ -408,14 +408,16 @@ fn cli() -> App {
         "cargo [OPTIONS] [SUBCOMMAND]"
     };
     App::new("cargo")
-        .settings(&[
-            AppSettings::UnifiedHelpMessage,
-            AppSettings::DeriveDisplayOrder,
-            AppSettings::VersionlessSubcommands,
-            AppSettings::AllowExternalSubcommands,
-        ])
-        .usage(usage)
-        .template(
+        .setting(
+            AppSettings::DeriveDisplayOrder
+                | AppSettings::AllowExternalSubcommands
+                | AppSettings::NoAutoVersion,
+        )
+        // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
+        // opening clap up to allow us to style our help template
+        .global_setting(AppSettings::DisableColoredHelp)
+        .override_usage(usage)
+        .help_template(
             "\
 Rust's package manager
 
@@ -423,7 +425,7 @@ USAGE:
     {usage}
 
 OPTIONS:
-{unified}
+{options}
 
 Some common cargo commands are (see all commands with --list):
     build, b    Compile the current package
@@ -443,7 +445,7 @@ Some common cargo commands are (see all commands with --list):
 
 See 'cargo help <command>' for more information on a specific command.\n",
         )
-        .arg(opt("version", "Print version info and exit").short("V"))
+        .arg(opt("version", "Print version info and exit").short('V'))
         .arg(opt("list", "List installed commands"))
         .arg(opt("explain", "Run `rustc --explain CODE`").value_name("CODE"))
         .arg(
@@ -451,8 +453,8 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 "verbose",
                 "Use verbose output (-vv very verbose/build.rs output)",
             )
-            .short("v")
-            .multiple(true)
+            .short('v')
+            .multiple_occurrences(true)
             .global(true),
         )
         .arg_quiet()
@@ -473,13 +475,17 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .global(true),
         )
         .arg(
-            Arg::with_name("unstable-features")
+            Arg::new("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
-                .short("Z")
+                .short('Z')
                 .value_name("FLAG")
-                .multiple(true)
-                .number_of_values(1)
+                .multiple_occurrences(true)
                 .global(true),
         )
         .subcommands(commands::builtin())
+}
+
+#[test]
+fn verify_cli() {
+    cli().debug_assert();
 }

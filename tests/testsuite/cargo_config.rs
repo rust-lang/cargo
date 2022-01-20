@@ -473,22 +473,20 @@ fn includes() {
         .with_stderr("")
         .run();
 
-    cargo_process(
-        "config get build.rustflags --show-origin=yes -Zunstable-options -Zconfig-include",
-    )
-    .cwd(&sub_folder.parent().unwrap())
-    .masquerade_as_nightly_cargo()
-    .with_stdout(
-        "\
+    cargo_process("config get build.rustflags --show-origin -Zunstable-options -Zconfig-include")
+        .cwd(&sub_folder.parent().unwrap())
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
 build.rustflags = [
     \"--flag-other\", # [ROOT]/foo/.cargo/other.toml
     \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
     \"--flag-global\", # [ROOT]/home/.cargo/config.toml
 ]
 ",
-    )
-    .with_stderr("")
-    .run();
+        )
+        .with_stderr("")
+        .run();
 
     cargo_process("config get --merged=no -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())

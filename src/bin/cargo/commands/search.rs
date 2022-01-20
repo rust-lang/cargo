@@ -8,7 +8,7 @@ pub fn cli() -> App {
     subcommand("search")
         .about("Search packages in crates.io")
         .arg_quiet()
-        .arg(Arg::with_name("query").multiple(true))
+        .arg(Arg::new("query").multiple_values(true))
         .arg_index()
         .arg(
             opt(
@@ -21,7 +21,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help search` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let registry = args.registry(config)?;
     let index = args.index()?;
     let limit = args.value_of_u32("limit")?;

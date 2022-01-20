@@ -281,7 +281,8 @@ Caused by:
   |
 1 | missing.toml
   |             ^
-Unexpected `end of input`
-Expected `.` or `=`",
+Unexpected end of input
+Expected `.` or `=`
+",
     );
 }

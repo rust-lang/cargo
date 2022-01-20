@@ -1345,6 +1345,31 @@ fn doc_extern_map_local() {
 }
 
 #[cargo_test]
+fn open_no_doc_crate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            doc = false
+        "#,
+        )
+        .file("src/lib.rs", "#[cfg(feature)] pub fn f();")
+        .build();
+
+    p.cargo("doc --open")
+        .env("BROWSER", "do_not_run_me")
+        .with_status(101)
+        .with_stderr_contains("error: no crates with documentation")
+        .run();
+}
+
+#[cargo_test]
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
@@ -2512,4 +2537,54 @@ fn lib_before_bin() {
     // And the link should exist.
     let bin_html = p.read_file("target/doc/somebin/index.html");
     assert!(bin_html.contains("../foo/fn.abc.html"));
+}
+
+#[cargo_test]
+fn doc_lib_false() {
+    // doc = false for a library
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+
+                [dependencies]
+                bar = {path = "bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/some-bin.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 [..]
+[CHECKING] foo v0.1.0 [..]
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert!(!p.build_dir().join("doc/foo").exists());
+    assert!(!p.build_dir().join("doc/bar").exists());
+    assert!(p.build_dir().join("doc/some_bin").exists());
 }

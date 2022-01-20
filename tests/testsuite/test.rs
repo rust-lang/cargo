@@ -1607,31 +1607,69 @@ fn test_run_implicit_example_target() {
 fn test_filtered_excludes_compiling_examples() {
     let p = project()
         .file(
-            "src/lib.rs",
-            "#[cfg(test)] mod tests { #[test] fn foo() { assert!(true); } }",
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "mybin"
+                test = false
+            "#,
         )
-        .file("examples/ex1.rs", "fn main() {}")
+        .file(
+            "src/lib.rs",
+            "#[cfg(test)] mod tests { #[test] fn test_in_lib() { } }",
+        )
+        .file(
+            "src/bin/mybin.rs",
+            "#[test] fn test_in_bin() { }
+               fn main() { panic!(\"Don't execute me!\"); }",
+        )
+        .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
+        .file(
+            "benches/mybench.rs",
+            "#[test] fn test_in_bench() { assert!(false) }",
+        )
+        .file(
+            "examples/myexm1.rs",
+            "#[test] fn test_in_exm() { assert!(false) }
+               fn main() { panic!(\"Don't execute me!\"); }",
+        )
         .build();
 
-    p.cargo("test -v foo")
+    p.cargo("test -v test_in_")
         .with_stdout(
             "
 running 1 test
-test tests::foo ... ok
+test tests::test_in_lib ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+
+
+running 1 test
+test test_in_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 ",
         )
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..] --crate-type lib [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]`
+[RUNNING] `rustc --crate-name mybin src/bin/mybin.rs [..] --crate-type bin [..]`
+[RUNNING] `rustc --crate-name mytest tests/mytest.rs [..] --test [..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/debug/deps/foo-[..] foo`
+[RUNNING] `[CWD]/target/debug/deps/foo-[..] test_in_`
+[RUNNING] `[CWD]/target/debug/deps/mytest-[..] test_in_`
 ",
         )
-        .with_stderr_does_not_contain("[RUNNING][..]rustc[..]ex1[..]")
+        .with_stderr_does_not_contain("[RUNNING][..]rustc[..]myexm1[..]")
+        .with_stderr_does_not_contain("[RUNNING][..]deps/mybin-[..] test_in_")
         .run();
 }
 

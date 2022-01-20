@@ -215,6 +215,15 @@ fn clean_lib(
     // A plugin requires exporting plugin_registrar so a crate cannot be
     // both at once.
     let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
+        (Some(kinds), _, _)
+            if kinds.contains(&CrateType::Dylib.as_str().to_owned())
+                && kinds.contains(&CrateType::Cdylib.as_str().to_owned()) =>
+        {
+            anyhow::bail!(format!(
+                "library `{}` cannot set the crate type of both `dylib` and `cdylib`",
+                lib.name()
+            ));
+        }
         (Some(kinds), _, _) if kinds.contains(&"proc-macro".to_string()) => {
             if let Some(true) = lib.plugin {
                 // This is a warning to retain backwards compatibility.

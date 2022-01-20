@@ -1178,6 +1178,7 @@ fn publish_git_with_version() {
                      authors = []\n\
                      description = \"foo\"\n\
                      license = \"MIT\"\n\
+                     \n\
                      [dependencies.dep1]\n\
                      version = \"1.0\"\n\
                     ",
@@ -1283,8 +1284,6 @@ homepage = "foo"
 documentation = "foo"
 license = "MIT"
 repository = "foo"
-
-[dev-dependencies]
 "#,
                 cargo::core::package::MANIFEST_PREAMBLE
             ),

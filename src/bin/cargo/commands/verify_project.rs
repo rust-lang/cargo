@@ -11,7 +11,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help verify-project` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if let Err(e) = args.workspace(config) {
         let mut h = HashMap::new();
         h.insert("invalid".to_string(), e.to_string());

@@ -500,7 +500,7 @@ impl ProfileMaker {
         is_member: bool,
         unit_for: UnitFor,
     ) -> Profile {
-        let mut profile = self.default;
+        let mut profile = self.default.clone();
 
         // First apply profile-specific settings, things like
         // `[profile.release]`
@@ -626,6 +626,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
+    if let Some(flags) = &toml.rustflags {
+        profile.rustflags = flags.clone();
+    }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
         None | Some(StringOrBool::Bool(false)) => Strip::None,
@@ -647,7 +650,7 @@ pub enum ProfileRoot {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Copy, Eq, PartialOrd, Ord, serde::Serialize)]
+#[derive(Clone, Eq, PartialOrd, Ord, serde::Serialize)]
 pub struct Profile {
     pub name: InternedString,
     pub opt_level: InternedString,
@@ -666,6 +669,9 @@ pub struct Profile {
     pub incremental: bool,
     pub panic: PanicStrategy,
     pub strip: Strip,
+    #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stablized
+    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
+    pub rustflags: Vec<InternedString>,
 }
 
 impl Default for Profile {
@@ -685,6 +691,7 @@ impl Default for Profile {
             incremental: false,
             panic: PanicStrategy::Unwind,
             strip: Strip::None,
+            rustflags: vec![],
         }
     }
 }
@@ -712,6 +719,7 @@ compact_debug! {
                 incremental
                 panic
                 strip
+                rustflags
             )]
         }
     }

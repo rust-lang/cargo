@@ -69,20 +69,20 @@ fn try_help(config: &Config) -> CargoResult<bool> {
     };
 
     if resolve_executable(Path::new("man")).is_ok() {
-        let man = match extract_man(&subcommand, "1") {
+        let man = match extract_man(subcommand, "1") {
             Some(man) => man,
             None => return Ok(false),
         };
-        write_and_spawn(&subcommand, &man, "man")?;
+        write_and_spawn(subcommand, &man, "man")?;
     } else {
-        let txt = match extract_man(&subcommand, "txt") {
+        let txt = match extract_man(subcommand, "txt") {
             Some(txt) => txt,
             None => return Ok(false),
         };
         if resolve_executable(Path::new("less")).is_ok() {
-            write_and_spawn(&subcommand, &txt, "less")?;
+            write_and_spawn(subcommand, &txt, "less")?;
         } else if resolve_executable(Path::new("more")).is_ok() {
-            write_and_spawn(&subcommand, &txt, "more")?;
+            write_and_spawn(subcommand, &txt, "more")?;
         } else {
             drop(std::io::stdout().write_all(&txt));
         }

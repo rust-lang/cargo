@@ -61,7 +61,7 @@ use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
-use log::{debug, info, trace};
+use log::{debug, trace};
 use semver::Version;
 
 use super::context::OutputFile;
@@ -413,7 +413,7 @@ impl<'cfg> JobQueue<'cfg> {
 
         // This is somewhat tricky, but we may need to synthesize some
         // dependencies for this target if it requires full upstream
-        // compilations to have completed. If we're in pipelining mode then some
+        // compilations to have completed. Because of pipelining, some
         // dependency edges may be `Metadata` due to the above clause (as
         // opposed to everything being `All`). For example consider:
         //
@@ -649,7 +649,7 @@ impl<'cfg> DrainState<'cfg> {
                     // If `id` has completely finished we remove it
                     // from the `active` map ...
                     Artifact::All => {
-                        info!("end: {:?}", id);
+                        trace!("end: {:?}", id);
                         self.finished += 1;
                         if let Some(rustc_tokens) = self.rustc_tokens.remove(&id) {
                             // This puts back the tokens that this rustc
@@ -670,11 +670,11 @@ impl<'cfg> DrainState<'cfg> {
                     // ... otherwise if it hasn't finished we leave it
                     // in there as we'll get another `Finish` later on.
                     Artifact::Metadata => {
-                        info!("end (meta): {:?}", id);
+                        trace!("end (meta): {:?}", id);
                         self.active[&id].clone()
                     }
                 };
-                info!("end ({:?}): {:?}", unit, result);
+                debug!("end ({:?}): {:?}", unit, result);
                 match result {
                     Ok(()) => self.finish(id, &unit, artifact, cx)?,
                     Err(e) => {
@@ -695,7 +695,7 @@ impl<'cfg> DrainState<'cfg> {
                 self.tokens.push(token);
             }
             Message::NeedsToken(id) => {
-                log::info!("queue token request");
+                trace!("queue token request");
                 jobserver_helper.request_token();
                 let client = cx.rustc_clients[&self.active[&id]].clone();
                 self.to_send_clients
@@ -733,7 +733,7 @@ impl<'cfg> DrainState<'cfg> {
         // listen for a message with a timeout, and on timeout we run the
         // previous parts of the loop again.
         let mut events = self.messages.try_pop_all();
-        info!(
+        trace!(
             "tokens in use: {}, rustc_tokens: {:?}, waiting_rustcs: {:?} (events this tick: {})",
             self.tokens.len(),
             self.rustc_tokens
@@ -966,7 +966,7 @@ impl<'cfg> DrainState<'cfg> {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
-        info!("start {}: {:?}", id, unit);
+        debug!("start {}: {:?}", id, unit);
 
         assert!(self.active.insert(id, unit.clone()).is_none());
 

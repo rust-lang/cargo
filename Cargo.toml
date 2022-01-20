@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.60.0"
+version = "0.61.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://crates.io"
@@ -20,7 +20,7 @@ atty = "0.2"
 bytesize = "1.0"
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.2" }
 cargo-util = { path = "crates/cargo-util", version = "0.1.2" }
-crates-io = { path = "crates/crates-io", version = "0.33.1" }
+crates-io = { path = "crates/crates-io", version = "0.34.0" }
 crossbeam-utils = "0.8"
 curl = { version = "0.4.41", features = ["http2"] }
 curl-sys = "0.4.50"
@@ -54,15 +54,14 @@ serde_ignored = "0.1.0"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
 shell-escape = "0.1.4"
 strip-ansi-escapes = "0.1.0"
-tar = { version = "0.4.35", default-features = false }
+tar = { version = "0.4.36", default-features = false }
 tempfile = "3.0"
 termcolor = "1.1"
-toml = "0.5.7"
-toml_edit = "0.10.1"
+toml_edit =  { version = "0.13", features = ["serde", "easy"] }
 unicode-xid = "0.2.0"
 url = "2.2.2"
 walkdir = "2.2"
-clap = "2.34.0"
+clap = "3.0.5"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
 im-rc = "15.0.0"

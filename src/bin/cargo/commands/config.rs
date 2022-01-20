@@ -8,7 +8,7 @@ pub fn cli() -> App {
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             subcommand("get")
-                .arg(Arg::with_name("key").help("The config key to display"))
+                .arg(Arg::new("key").help("The config key to display"))
                 .arg(
                     opt("format", "Display format")
                         .possible_values(cargo_config::ConfigFormat::POSSIBLE_VALUES)
@@ -26,12 +26,12 @@ pub fn cli() -> App {
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     config
         .cli_unstable()
         .fail_if_stable_command(config, "config", 9301)?;
     match args.subcommand() {
-        ("get", Some(args)) => {
+        Some(("get", args)) => {
             let opts = cargo_config::GetOptions {
                 key: args.value_of("key"),
                 format: args.value_of("format").unwrap().parse()?,
@@ -40,8 +40,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             };
             cargo_config::get(config, &opts)?;
         }
-        (cmd, _) => {
-            panic!("unexpected command `{}`", cmd)
+        Some((cmd, _)) => {
+            unreachable!("unexpected command {}", cmd)
+        }
+        None => {
+            unreachable!("unexpected command")
         }
     }
     Ok(())

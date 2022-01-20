@@ -1,0 +1,10 @@
+contact_links:
+  - name: Question
+    url: https://users.rust-lang.org
+    about: >
+      Got a question about Cargo? Ask the community on the user forum.
+  - name: Inspiring Idea
+    url: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo
+    about: >
+      Need more discussions with your next big idea?
+      Reach out the coummunity on the internals forum.

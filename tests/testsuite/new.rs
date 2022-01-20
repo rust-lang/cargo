@@ -5,11 +5,23 @@ use cargo_test_support::paths;
 use std::env;
 use std::fs::{self, File};
 
-fn create_empty_gitconfig() {
+fn create_default_gitconfig() {
     // This helps on Windows where libgit2 is very aggressive in attempting to
     // find a git config file.
     let gitconfig = paths::home().join(".gitconfig");
     File::create(gitconfig).unwrap();
+
+    // If we're running this under a user account that has a different default branch set up
+    // then tests that assume the default branch is master will fail. We set the default branch
+    // to master explicitly so that tests that rely on this behavior still pass.
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+        [init]
+            defaultBranch = master
+        "#,
+    )
+    .unwrap();
 }
 
 #[cargo_test]
@@ -362,7 +374,7 @@ fn new_default_edition() {
 #[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
-        .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
+        .with_stderr_contains("error: \"something_else\" isn't a valid value[..]")
         .with_status(1)
         .run();
 }
@@ -471,7 +483,8 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn git_default_branch() {
     // Check for init.defaultBranch support.
-    create_empty_gitconfig();
+    create_default_gitconfig();
+
     cargo_process("new foo").run();
     let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();

@@ -69,8 +69,6 @@ Each new feature described below should explain how to use it.
     * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
     * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
-    * [Namespaced features](#namespaced-features) — Separates optional dependencies into a separate namespace from regular features, and allows feature names to be the same as some dependency name.
-    * [Weak dependency features](#weak-dependency-features) — Allows setting features for dependencies without enabling optional dependencies.
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
@@ -89,6 +87,7 @@ Each new feature described below should explain how to use it.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
+    * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
@@ -251,68 +250,6 @@ inherits = "release"
 dir-name = "lto"  # Emits to target/lto instead of target/release-lto
 lto = true
 ```
-
-
-### Namespaced features
-* Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
-* Tracking Issue: [#5565](https://github.com/rust-lang/cargo/issues/5565)
-
-The `namespaced-features` option makes two changes to how features can be
-specified:
-
-* Features may now be defined with the same name as a dependency.
-* Optional dependencies can be explicitly enabled in the `[features]` table
-  with the `dep:` prefix, which enables the dependency without enabling a
-  feature of the same name.
-
-By default, an optional dependency `foo` will define a feature `foo =
-["dep:foo"]` *unless* `dep:foo` is mentioned in any other feature, or the
-`foo` feature is already defined. This helps prevent unnecessary boilerplate
-of listing every optional dependency, but still allows you to override the
-implicit feature.
-
-This allows two use cases that were previously not possible:
-
-* You can "hide" an optional dependency, so that external users cannot
-  explicitly enable that optional dependency.
-* There is no longer a need to create "funky" feature names to work around the
-  restriction that features cannot shadow dependency names.
-
-To enable namespaced-features, use the `-Z namespaced-features` command-line
-flag.
-
-An example of hiding an optional dependency:
-
-```toml
-[dependencies]
-regex = { version = "1.4.1", optional = true }
-lazy_static = { version = "1.4.0", optional = true }
-
-[features]
-regex = ["dep:regex", "dep:lazy_static"]
-```
-
-In this example, the "regex" feature enables both `regex` and `lazy_static`.
-The `lazy_static` feature does not exist, and a user cannot explicitly enable
-it. This helps hide internal details of how your package is implemented.
-
-An example of avoiding "funky" names:
-
-```toml
-[dependencies]
-bigdecimal = "0.1"
-chrono = "0.4"
-num-bigint = "0.2"
-serde = {version = "1.0", optional = true }
-
-[features]
-serde = ["dep:serde", "bigdecimal/serde", "chrono/serde", "num-bigint/serde"]
-```
-
-In this case, `serde` is a natural name to use for a feature, because it is
-relevant to your exported API. However, previously you would need to use a
-name like `serde1` to work around the naming limitation if you wanted to also
-enable other features.
 
 ### Build-plan
 * Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
@@ -820,27 +757,23 @@ The following is a description of the JSON structure:
 }
 ```
 
-### Profile `strip` option
-* Tracking Issue: [rust-lang/rust#72110](https://github.com/rust-lang/rust/issues/72110)
+### Profile `rustflags` option
+* Original Issue: [rust-lang/cargo#7878](https://github.com/rust-lang/cargo/issues/7878)
+* Tracking Issue: [rust-lang/cargo#10271](https://github.com/rust-lang/cargo/issues/10271)
 
-This feature provides a new option in the `[profile]` section to strip either
-symbols or debuginfo from a binary. This can be enabled like so:
+This feature provides a new option in the `[profile]` section to specify flags
+that are passed directly to rustc.
+This can be enabled like so:
 
 ```toml
-cargo-features = ["strip"]
+cargo-features = ["profile-rustflags"]
 
 [package]
 # ...
 
 [profile.release]
-strip = "debuginfo"
+rustflags = [ "-C", "..." ]
 ```
-
-Other possible string values of `strip` are `none`, `symbols`, and `off`. The default is `none`.
-
-You can also configure this option with the two absolute boolean values
-`true` and `false`. The former enables `strip` at its higher level, `symbols`,
-while the latter disables `strip` completely.
 
 ### rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
@@ -919,29 +852,6 @@ error[E0308]: mismatched types
 
 error: aborting due to previous error
 ```
-
-### Weak dependency features
-* Tracking Issue: [#8832](https://github.com/rust-lang/cargo/issues/8832)
-
-The `-Z weak-dep-features` command-line options enables the ability to use
-`dep_name?/feat_name` syntax in the `[features]` table. The `?` indicates that
-the optional dependency `dep_name` will not be automatically enabled. The
-feature `feat_name` will only be added if something else enables the
-`dep_name` dependency.
-
-Example:
-
-```toml
-[dependencies]
-serde = { version = "1.0.117", optional = true, default-features = false }
-
-[features]
-std = ["serde?/std"]
-```
-
-In this example, the `std` feature enables the `std` feature on the `serde`
-dependency. However, unlike the normal `serde/std` syntax, it will not enable
-the optional dependency `serde` unless something else has included it.
 
 ### per-package-target
 * Tracking Issue: [#9406](https://github.com/rust-lang/cargo/pull/9406)
@@ -1387,8 +1297,23 @@ See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](..
 Custom named profiles have been stabilized in the 1.57 release. See the
 [profiles chapter](profiles.md#custom-profiles) for more information.
 
+### Profile `strip` option
+
+The profile `strip` option has been stabilized in the 1.59 release. See the
+[profiles chapter](profiles.md#strip) for more information.
+
 ### Future incompat report
 
 Support for generating a future-incompat report has been stabilized
 in the 1.59 release. See the [future incompat report chapter](future-incompat-report.md)
 for more information.
+
+### Namespaced features
+
+Namespaced features has been stabilized in the 1.60 release.
+See the [Features chapter](features.md#optional-dependencies) for more information.
+
+### Weak dependency features
+
+Weak dependency features has been stabilized in the 1.60 release.
+See the [Features chapter](features.md#dependency-features) for more information.

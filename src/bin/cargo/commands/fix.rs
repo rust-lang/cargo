@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
+use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("fix")
@@ -32,32 +32,32 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg(
-            Arg::with_name("broken-code")
+            Arg::new("broken-code")
                 .long("broken-code")
                 .help("Fix code even if it already has compiler errors"),
         )
         .arg(
-            Arg::with_name("edition")
+            Arg::new("edition")
                 .long("edition")
                 .help("Fix in preparation for the next edition"),
         )
         .arg(
-            Arg::with_name("idioms")
+            Arg::new("idioms")
                 .long("edition-idioms")
                 .help("Fix warnings to migrate to the idioms of an edition"),
         )
         .arg(
-            Arg::with_name("allow-no-vcs")
+            Arg::new("allow-no-vcs")
                 .long("allow-no-vcs")
                 .help("Fix code even if a VCS was not detected"),
         )
         .arg(
-            Arg::with_name("allow-dirty")
+            Arg::new("allow-dirty")
                 .long("allow-dirty")
                 .help("Fix code even if the working directory is dirty"),
         )
         .arg(
-            Arg::with_name("allow-staged")
+            Arg::new("allow-staged")
                 .long("allow-staged")
                 .help("Fix code even if the working directory has staged changes"),
         )
@@ -65,7 +65,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help fix` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     // This is a legacy behavior that causes `cargo fix` to pass `--test`.
     let test = matches!(args.value_of("profile"), Some("test"));
@@ -76,15 +76,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
-    if let CompileFilter::Default { .. } = opts.filter {
-        opts.filter = CompileFilter::Only {
-            all_targets: true,
-            lib: LibRule::Default,
-            bins: FilterRule::All,
-            examples: FilterRule::All,
-            benches: FilterRule::All,
-            tests: FilterRule::All,
-        }
+    if !opts.filter.is_specific() {
+        // cargo fix with no target selection implies `--all-targets`.
+        opts.filter = ops::CompileFilter::new_all_targets();
     }
 
     ops::fix(

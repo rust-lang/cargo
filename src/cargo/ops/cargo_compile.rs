@@ -83,7 +83,7 @@ pub struct CompileOptions {
     pub honor_rust_version: bool,
 }
 
-impl<'a> CompileOptions {
+impl CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
         Ok(CompileOptions {
             build_config: BuildConfig::new(config, None, &[], mode)?,
@@ -759,7 +759,7 @@ impl FilterRule {
 }
 
 impl CompileFilter {
-    /// Construct a CompileFilter from raw command line arguments.
+    /// Constructs a filter from raw command line arguments.
     pub fn from_raw_arguments(
         lib_only: bool,
         bins: Vec<String>,
@@ -788,7 +788,7 @@ impl CompileFilter {
         CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
     }
 
-    /// Construct a CompileFilter from underlying primitives.
+    /// Constructs a filter from underlying primitives.
     pub fn new(
         rule_lib: LibRule,
         rule_bins: FilterRule,
@@ -817,6 +817,7 @@ impl CompileFilter {
         }
     }
 
+    /// Constructs a filter that includes all targets.
     pub fn new_all_targets() -> CompileFilter {
         CompileFilter::Only {
             all_targets: true,
@@ -828,6 +829,51 @@ impl CompileFilter {
         }
     }
 
+    /// Constructs a filter that includes all test targets.
+    ///
+    /// Being different from the behavior of [`CompileFilter::Default`], this
+    /// function only recongnizes test targets, which means cargo might compile
+    /// all targets with `tested` flag on, whereas [`CompileFilter::Default`]
+    /// may include additional example targets to ensure they can be compiled.
+    ///
+    /// Note that the actual behavior is subject to `filter_default_targets`
+    /// and `generate_targets` though.
+    pub fn all_test_targets() -> Self {
+        Self::Only {
+            all_targets: false,
+            lib: LibRule::Default,
+            bins: FilterRule::none(),
+            examples: FilterRule::none(),
+            tests: FilterRule::All,
+            benches: FilterRule::none(),
+        }
+    }
+
+    /// Constructs a filter that includes lib target only.
+    pub fn lib_only() -> Self {
+        Self::Only {
+            all_targets: false,
+            lib: LibRule::True,
+            bins: FilterRule::none(),
+            examples: FilterRule::none(),
+            tests: FilterRule::none(),
+            benches: FilterRule::none(),
+        }
+    }
+
+    /// Constructs a filter that includes the given binary. No more. No less.
+    pub fn single_bin(bin: String) -> Self {
+        Self::Only {
+            all_targets: false,
+            lib: LibRule::False,
+            bins: FilterRule::new(vec![bin], false),
+            examples: FilterRule::none(),
+            tests: FilterRule::none(),
+            benches: FilterRule::none(),
+        }
+    }
+
+    /// Indicates if Cargo needs to build any dev dependency.
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
@@ -848,8 +894,8 @@ impl CompileFilter {
         }
     }
 
-    // this selects targets for "cargo run". for logic to select targets for
-    // other subcommands, see generate_targets and filter_default_targets
+    /// Selects targets for "cargo run". for logic to select targets for other
+    /// subcommands, see `generate_targets` and `filter_default_targets`.
     pub fn target_run(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
@@ -1606,7 +1652,7 @@ fn traverse_and_share(
     let new_unit = interner.intern(
         &unit.pkg,
         &unit.target,
-        unit.profile,
+        unit.profile.clone(),
         new_kind,
         unit.mode,
         unit.features.clone(),

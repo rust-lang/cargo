@@ -13,6 +13,7 @@ use semver::{self, VersionReq};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -52,12 +53,20 @@ pub fn read_manifest(
     );
     let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
 
-    do_read_manifest(&contents, path, source_id, config)
+    read_manifest_from_str(&contents, path, source_id, config)
         .with_context(|| format!("failed to parse manifest at `{}`", path.display()))
         .map_err(|err| ManifestError::new(err, path.into()))
 }
 
-fn do_read_manifest(
+/// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
+///
+/// This could result in a real or virtual manifest being returned.
+///
+/// A list of nested paths is also returned, one for each path dependency
+/// within the manifest. For virtual manifests, these paths can only
+/// come from patched or replaced dependencies. These paths are not
+/// canonicalized.
+pub fn read_manifest_from_str(
     contents: &str,
     manifest_file: &Path,
     source_id: SourceId,
@@ -69,16 +78,21 @@ fn do_read_manifest(
         let pretty_filename = manifest_file
             .strip_prefix(config.cwd())
             .unwrap_or(manifest_file);
-        parse(contents, pretty_filename, config)?
+        parse_document(contents, pretty_filename, config)?
     };
 
     // Provide a helpful error message for a common user error.
     if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
         if let Some(feats) = package.get("cargo-features") {
+            let mut feats = feats.clone();
+            if let Some(value) = feats.as_value_mut() {
+                // Only keep formatting inside of the `[]` and not formatting around it
+                value.decor_mut().clear();
+            }
             bail!(
                 "cargo-features = {} was found in the wrong location: it \
                  should be set at the top of Cargo.toml before any tables",
-                toml::to_string(feats).unwrap()
+                feats.to_string()
             );
         }
     }
@@ -151,6 +165,16 @@ fn do_read_manifest(
 /// accepted and display a warning to the user in that case. The `file` and `config`
 /// parameters are only used by this fallback path.
 pub fn parse(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Value> {
+    // At the moment, no compatibility checks are needed.
+    toml.parse()
+        .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
+}
+
+pub fn parse_document(
+    toml: &str,
+    _file: &Path,
+    _config: &Config,
+) -> CargoResult<toml_edit::Document> {
     // At the moment, no compatibility checks are needed.
     toml.parse()
         .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
@@ -405,6 +429,8 @@ pub struct TomlProfile {
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
     pub strip: Option<StringOrBool>,
+    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
+    pub rustflags: Option<Vec<InternedString>>,
     // These two fields must be last because they are sub-tables, and TOML
     // requires all non-tables to be listed first.
     pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
@@ -522,8 +548,8 @@ impl TomlProfile {
             }
         }
 
-        if self.strip.is_some() {
-            features.require(Feature::strip())?;
+        if self.rustflags.is_some() {
+            features.require(Feature::profile_rustflags())?;
         }
 
         if let Some(codegen_backend) = &self.codegen_backend {
@@ -685,6 +711,10 @@ impl TomlProfile {
 
         if let Some(v) = profile.incremental {
             self.incremental = Some(v);
+        }
+
+        if let Some(v) = &profile.rustflags {
+            self.rustflags = Some(v.clone());
         }
 
         if let Some(other_package) = &profile.package {
@@ -1295,8 +1325,6 @@ impl TomlManifest {
             me.features.as_ref().unwrap_or(&empty_features),
             project.links.as_deref(),
         )?;
-        let unstable = config.cli_unstable();
-        summary.unstable_gate(unstable.namespaced_features, unstable.weak_dep_features)?;
 
         let metadata = ManifestMetadata {
             description: project.description.clone(),

@@ -148,6 +148,34 @@ fn list_command_resolves_symlinks() {
 }
 
 #[cargo_test]
+fn find_closest_capital_c_to_c() {
+    cargo_process("C")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no such subcommand: `C`
+
+<tab>Did you mean `c`?
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn find_closest_captial_b_to_b() {
+    cargo_process("B")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no such subcommand: `B`
+
+<tab>Did you mean `b`?
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn find_closest_biuld_to_build() {
     cargo_process("biuld")
         .with_status(101)

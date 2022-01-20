@@ -73,7 +73,6 @@ rustflags = ["…", "…"]        # custom flags to pass to all compiler invocat
 rustdocflags = ["…", "…"]     # custom flags to pass to rustdoc
 incremental = true            # whether or not to enable incremental compilation
 dep-info-basedir = "…"        # path for the base directory for targets in depfiles
-pipelining = true             # rustc pipelining
 
 [doc]
 browser = "chromium"          # browser to use with `cargo doc --open`,
@@ -441,12 +440,8 @@ The setting itself is a config-relative path. So, for example, a value of
 directory.
 
 ##### `build.pipelining`
-* Type: boolean
-* Default: true
-* Environment: `CARGO_BUILD_PIPELINING`
 
-Controls whether or not build pipelining is used. This allows Cargo to
-schedule overlapping invocations of `rustc` in parallel when possible.
+This option is deprecated and unused. Cargo always has pipelining enabled.
 
 #### `[doc]`
 

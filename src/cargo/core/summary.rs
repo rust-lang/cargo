@@ -23,8 +23,6 @@ struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
     features: Rc<FeatureMap>,
-    has_namespaced_features: bool,
-    has_overlapping_features: Option<InternedString>,
     checksum: Option<String>,
     links: Option<InternedString>,
 }
@@ -37,15 +35,11 @@ impl Summary {
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
     ) -> CargoResult<Summary> {
-        // ****CAUTION**** If you change anything here than may raise a new
+        // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
         // schema field or the SummariesCache version.
-        let mut has_overlapping_features = None;
         for dep in dependencies.iter() {
             let dep_name = dep.name_in_toml();
-            if features.contains_key(&dep_name) {
-                has_overlapping_features = Some(dep_name);
-            }
             if dep.is_optional() && !dep.is_transitive() {
                 bail!(
                     "dev-dependencies are not allowed to be optional: `{}`",
@@ -53,8 +47,7 @@ impl Summary {
                 )
             }
         }
-        let (feature_map, has_namespaced_features) =
-            build_feature_map(config, pkg_id, features, &dependencies)?;
+        let feature_map = build_feature_map(config, pkg_id, features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -62,8 +55,6 @@ impl Summary {
                 features: Rc::new(feature_map),
                 checksum: None,
                 links: links.map(|l| l.into()),
-                has_namespaced_features,
-                has_overlapping_features,
             }),
         })
     }
@@ -85,46 +76,6 @@ impl Summary {
     }
     pub fn features(&self) -> &FeatureMap {
         &self.inner.features
-    }
-
-    /// Returns an error if this Summary is using an unstable feature that is
-    /// not enabled.
-    pub fn unstable_gate(
-        &self,
-        namespaced_features: bool,
-        weak_dep_features: bool,
-    ) -> CargoResult<()> {
-        if !namespaced_features {
-            if self.inner.has_namespaced_features {
-                bail!(
-                    "namespaced features with the `dep:` prefix are only allowed on \
-                     the nightly channel and requires the `-Z namespaced-features` flag on the command-line"
-                );
-            }
-            if let Some(dep_name) = self.inner.has_overlapping_features {
-                bail!(
-                    "features and dependencies cannot have the same name: `{}`",
-                    dep_name
-                )
-            }
-        }
-        if !weak_dep_features {
-            for (feat_name, features) in self.features() {
-                for fv in features {
-                    if matches!(fv, FeatureValue::DepFeature { weak: true, .. }) {
-                        bail!(
-                            "optional dependency features with `?` syntax are only \
-                             allowed on the nightly channel and requires the \
-                             `-Z weak-dep-features` flag on the command line\n\
-                             Feature `{}` had feature value `{}`.",
-                            feat_name,
-                            fv
-                        );
-                    }
-                }
-            }
-        }
-        Ok(())
     }
 
     pub fn checksum(&self) -> Option<&str> {
@@ -181,16 +132,12 @@ impl Hash for Summary {
 
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
 /// and creates FeatureValues for each feature.
-///
-/// The returned `bool` indicates whether or not the `[features]` table
-/// included a `dep:` prefixed namespaced feature (used for gating on
-/// nightly).
 fn build_feature_map(
     config: &Config,
     pkg_id: PackageId,
     features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
-) -> CargoResult<(FeatureMap, bool)> {
+) -> CargoResult<FeatureMap> {
     use self::FeatureValue::*;
     let mut dep_map = HashMap::new();
     for dep in dependencies.iter() {
@@ -210,7 +157,6 @@ fn build_feature_map(
             (*feature, fvs)
         })
         .collect();
-    let has_namespaced_features = map.values().flatten().any(|fv| fv.has_dep_prefix());
 
     // Add implicit features for optional dependencies if they weren't
     // explicitly listed anywhere.
@@ -372,7 +318,7 @@ fn build_feature_map(
         );
     }
 
-    Ok((map, has_namespaced_features))
+    Ok(map)
 }
 
 /// FeatureValue represents the types of dependencies a feature can have.

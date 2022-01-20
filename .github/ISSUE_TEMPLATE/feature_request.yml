@@ -4,7 +4,15 @@ labels: ["C-feature-request"]
 body:
   - type: markdown
     attributes:
-      value: Thanks for filing a 🙋 feature request 😄!
+      value: |
+        Thanks for filing a 🙋 feature request 😄!
+
+        If the feature request is relatively small and already with a possible solution, this might be the place for you.
+
+        If you are brewing a big feature that needs feedback from the community, [the internal forum] is the best fit, especially for pre-RFC. You can also talk the idea over with other developers in [#t-cargo Zulip stream].
+
+        [the internal forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo/15
+        [#t-cargo Zulip stream]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
   - type: textarea
     id: problem
     attributes:
