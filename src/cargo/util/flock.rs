@@ -278,8 +278,8 @@ fn acquire(
     config: &Config,
     msg: &str,
     path: &Path,
-    lock_try: &dyn Fn() -> rustix::io::Result<()>,
-    lock_block: &dyn Fn() -> rustix::io::Result<()>,
+    lock_try: &dyn Fn() -> std::io::Result<()>,
+    lock_block: &dyn Fn() -> std::io::Result<()>,
 ) -> CargoResult<()> {
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
@@ -343,8 +343,8 @@ fn acquire(
 #[cfg(unix)]
 mod sys {
     use rustix::fs::FlockOperation;
-    use rustix::io::{Error, Result};
     use std::fs::File;
+    use std::io::{Error, Result};
 
     pub(super) fn lock_shared(file: &File) -> Result<()> {
         flock(file, FlockOperation::LockShared)
@@ -367,24 +367,25 @@ mod sys {
     }
 
     pub(super) fn error_contended(err: &Error) -> bool {
-        *err == rustix::io::Error::WOULDBLOCK
+        rustix::io::Error::from_io_error(err).map_or(false, |x| x == rustix::io::Error::WOULDBLOCK)
     }
 
     pub(super) fn error_unsupported(err: &Error) -> bool {
-        match *err {
+        match rustix::io::Error::from_io_error(err) {
             // Unfortunately, depending on the target, these may or may not be the same.
             // For targets in which they are the same, the duplicate pattern causes a warning.
             #[allow(unreachable_patterns)]
-            rustix::io::Error::NOTSUP | rustix::io::Error::OPNOTSUPP => true,
+            Some(rustix::io::Error::NOTSUP) | Some(rustix::io::Error::OPNOTSUPP) => true,
             #[cfg(target_os = "linux")]
-            rustix::io::Error::NOSYS => true,
+            Some(rustix::io::Error::NOSYS) => true,
             _ => false,
         }
     }
 
     #[cfg(not(target_os = "solaris"))]
     fn flock(file: &File, flag: FlockOperation) -> Result<()> {
-        rustix::fs::flock(file, flag)
+        rustix::fs::flock(file, flag)?;
+        Ok(())
     }
 
     #[cfg(target_os = "solaris")]
