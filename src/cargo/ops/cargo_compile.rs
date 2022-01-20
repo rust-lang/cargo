@@ -828,6 +828,25 @@ impl CompileFilter {
         }
     }
 
+    /// Constructs a filter that includes all test targets.
+    ///
+    /// Being different from the behavior of [`CompileFilter::Default`], this
+    /// function only recongnizes test targets, which means cargo might compile
+    /// all targets with `tested` flag on, whereas [`CompileFilter::Default`]
+    /// may include additional example targets to ensure they can be compiled.
+    ///
+    /// Note that the actual behavior is subject to `filter_default_targets`
+    /// and `generate_targets` though.
+    pub fn all_test_targets() -> Self {
+        Self::Only {
+            all_targets: false,
+            lib: LibRule::Default,
+            bins: FilterRule::none(),
+            examples: FilterRule::none(),
+            tests: FilterRule::All,
+            benches: FilterRule::none(),
+        }
+    }
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,

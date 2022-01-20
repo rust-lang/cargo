@@ -105,16 +105,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             FilterRule::none(),
             FilterRule::none(),
         );
-    } else if test_name.is_some() {
-        if let CompileFilter::Default { .. } = compile_opts.filter {
-            compile_opts.filter = ops::CompileFilter::new(
-                LibRule::Default,   // compile the library, so the unit tests can be run filtered
-                FilterRule::none(), // binaries without `test = false` are included by default
-                FilterRule::All, // compile the tests, so the integration tests can be run filtered
-                FilterRule::none(), // specify --examples to unit test binaries filtered
-                FilterRule::none(), // specify --benches to unit test benchmarks filtered
-            ); // also, specify --doc to run doc tests filtered
-        }
+    } else if test_name.is_some() && !compile_opts.filter.is_specific() {
+        // If arg `TESTNAME` is provided, assumed that the user knows what
+        // exactly they wants to test, so we use `all_test_targets` to
+        // avoid compiling unnecessary targets such as examples, which are
+        // included by the logic of default target filter.
+        compile_opts.filter = ops::CompileFilter::all_test_targets();
     }
 
     let ops = ops::TestOptions {
