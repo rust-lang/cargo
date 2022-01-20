@@ -1215,9 +1215,7 @@ impl Config {
                     );
                 }
 
-                // Rather than trying to bridge between toml_edit::Document and toml::Value, we
-                // just parse the whole argument again now that we know it has the right format.
-                let toml_v = toml::from_str(arg).with_context(|| {
+                let toml_v = toml::from_document(doc).with_context(|| {
                     format!("failed to parse value from --config argument `{}`", arg)
                 })?;
 
