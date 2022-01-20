@@ -62,19 +62,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .iter()
             .filter_map(|pkg| pkg.manifest().default_run())
             .collect();
-        if default_runs.len() == 1 {
-            compile_opts.filter = CompileFilter::from_raw_arguments(
-                false,
-                vec![default_runs[0].to_owned()],
-                false,
-                vec![],
-                false,
-                vec![],
-                false,
-                vec![],
-                false,
-                false,
-            );
+        if let [bin] = &default_runs[..] {
+            compile_opts.filter = CompileFilter::single_bin(bin.to_string());
         } else {
             // ops::run will take care of errors if len pkgs != 1.
             compile_opts.filter = CompileFilter::Default {

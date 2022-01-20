@@ -860,6 +860,18 @@ impl CompileFilter {
         }
     }
 
+    /// Constructs a filter that includes the given binary. No more. No less.
+    pub fn single_bin(bin: String) -> Self {
+        Self::Only {
+            all_targets: false,
+            lib: LibRule::False,
+            bins: FilterRule::new(vec![bin], false),
+            examples: FilterRule::none(),
+            tests: FilterRule::none(),
+            benches: FilterRule::none(),
+        }
+    }
+
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
