@@ -5,6 +5,7 @@ use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
+use toml_edit::easy as toml;
 
 #[cargo_test]
 fn replace() {

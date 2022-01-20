@@ -2439,7 +2439,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  duplicate key: `categories` for key `project` at line 10 column 21",
+  TOML parse error at line 8, column 21
+    |
+  8 |                     categories = [\"algorithms\"]
+    |                     ^
+  Duplicate key `categories` in table `project`
+
+",
             path2url(&git_root),
             path2url(&git_root),
         ))

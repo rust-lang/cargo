@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use toml_edit::easy as toml;
 
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
