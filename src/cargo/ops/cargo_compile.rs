@@ -759,7 +759,7 @@ impl FilterRule {
 }
 
 impl CompileFilter {
-    /// Construct a CompileFilter from raw command line arguments.
+    /// Constructs a filter from raw command line arguments.
     pub fn from_raw_arguments(
         lib_only: bool,
         bins: Vec<String>,
@@ -788,7 +788,7 @@ impl CompileFilter {
         CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
     }
 
-    /// Construct a CompileFilter from underlying primitives.
+    /// Constructs a filter from underlying primitives.
     pub fn new(
         rule_lib: LibRule,
         rule_bins: FilterRule,
@@ -817,6 +817,7 @@ impl CompileFilter {
         }
     }
 
+    /// Constructs a filter that includes all targets.
     pub fn new_all_targets() -> CompileFilter {
         CompileFilter::Only {
             all_targets: true,
@@ -872,6 +873,7 @@ impl CompileFilter {
         }
     }
 
+    /// Indicates if Cargo needs to build any dev dependency.
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
@@ -892,8 +894,8 @@ impl CompileFilter {
         }
     }
 
-    // this selects targets for "cargo run". for logic to select targets for
-    // other subcommands, see generate_targets and filter_default_targets
+    /// Selects targets for "cargo run". for logic to select targets for other
+    /// subcommands, see `generate_targets` and `filter_default_targets`.
     pub fn target_run(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
