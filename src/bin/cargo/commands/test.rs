@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 use anyhow::Error;
-use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
+use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("test")
@@ -77,7 +77,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
-    let test_name: Option<&str> = args.value_of("TESTNAME");
+    let test_name = args.value_of("TESTNAME");
     let test_args = args.value_of("TESTNAME").into_iter();
     let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
     let test_args = test_args.collect::<Vec<_>>();
@@ -85,26 +85,16 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
     if doc {
-        if let CompileFilter::Only { .. } = compile_opts.filter {
-            return Err(CliError::new(
-                anyhow::format_err!("Can't mix --doc with other target selecting options"),
-                101,
-            ));
+        if compile_opts.filter.is_specific() {
+            return Err(
+                anyhow::format_err!("Can't mix --doc with other target selecting options").into(),
+            );
         }
         if no_run {
-            return Err(CliError::new(
-                anyhow::format_err!("Can't skip running doc tests with --no-run"),
-                101,
-            ));
+            return Err(anyhow::format_err!("Can't skip running doc tests with --no-run").into());
         }
         compile_opts.build_config.mode = CompileMode::Doctest;
-        compile_opts.filter = ops::CompileFilter::new(
-            LibRule::True,
-            FilterRule::none(),
-            FilterRule::none(),
-            FilterRule::none(),
-            FilterRule::none(),
-        );
+        compile_opts.filter = ops::CompileFilter::lib_only();
     } else if test_name.is_some() && !compile_opts.filter.is_specific() {
         // If arg `TESTNAME` is provided, assumed that the user knows what
         // exactly they wants to test, so we use `all_test_targets` to

@@ -847,6 +847,19 @@ impl CompileFilter {
             benches: FilterRule::none(),
         }
     }
+
+    /// Constructs a filter that includes lib target only.
+    pub fn lib_only() -> Self {
+        Self::Only {
+            all_targets: false,
+            lib: LibRule::True,
+            bins: FilterRule::none(),
+            examples: FilterRule::none(),
+            tests: FilterRule::none(),
+            benches: FilterRule::none(),
+        }
+    }
+
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
