@@ -31,7 +31,7 @@ mod imp {
 
         while nfds > 0 {
             // wait for either pipe to become readable using `poll`
-            match rustix::io::poll(&mut fds, -1) {
+            match rustix::io::poll(&mut fds[..nfds], -1) {
                 Ok(_num) => (),
                 Err(rustix::io::Error::INTR) => continue,
                 Err(err) => return Err(err.into()),
