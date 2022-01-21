@@ -105,15 +105,13 @@ impl<'cfg> PathSource<'cfg> {
         })
     }
 
-    fn _list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
-        let root = pkg.root();
-        let no_include_option = pkg.manifest().include().is_empty();
-        let git_repo = if no_include_option {
-            self.discover_git_repo(root)?
-        } else {
-            None
-        };
-
+    fn _list_files_with_repo(
+        &self,
+        root: &Path,
+        no_include_option: bool,
+        git_repo: Option<&git2::Repository>,
+        pkg: &Package,
+    ) -> CargoResult<Vec<PathBuf>> {
         let mut exclude_builder = GitignoreBuilder::new(root);
         if no_include_option && git_repo.is_none() {
             // no include option and not git repo discovered (see rust-lang/cargo#7183).
@@ -172,6 +170,28 @@ impl<'cfg> PathSource<'cfg> {
             }
         }
         self.list_files_walk(pkg, &mut filter)
+    }
+
+    fn _list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+        let root = pkg.root();
+        let no_include_option = pkg.manifest().include().is_empty();
+        let git_repo = if no_include_option {
+            self.discover_git_repo(root)?
+        } else {
+            None
+        };
+
+        match self._list_files_with_repo(root, no_include_option, git_repo.as_ref(), pkg) {
+            // If we tried using the git repo and it failed, retry without the git repo because
+            // the git repo might be invalid in some way.
+            //
+            // NOTE: this may cause occasional retries that are related to failures that aren't
+            // due to invalid git repos.
+            Err(_e) if git_repo.is_some() => {
+                self._list_files_with_repo(root, no_include_option, None, pkg)
+            }
+            res => res,
+        }
     }
 
     /// Returns `Some(git2::Repository)` if found sibling `Cargo.toml` and `.git`
