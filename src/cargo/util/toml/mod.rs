@@ -2057,6 +2057,16 @@ impl TomlTarget {
         }
     }
 
+    fn validate_proc_macro(&self, warnings: &mut Vec<String>) {
+        if self.proc_macro_raw.is_some() && self.proc_macro_raw2.is_some() {
+            warnings.push(format!(
+                "found both `proc-macro` and `proc_macro` are set \
+                 in the `{}` library",
+                self.name()
+            ));
+        }
+    }
+
     fn proc_macro(&self) -> Option<bool> {
         self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
             if let Some(types) = self.crate_types() {

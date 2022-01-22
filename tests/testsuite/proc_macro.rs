@@ -388,6 +388,30 @@ fn proc_macro_crate_type_warning() {
 }
 
 #[cargo_test]
+fn proc_macro_conflicting_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [lib]
+                proc-macro = false
+                proc_macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr_contains(
+            "[WARNING] found both `proc-macro` and `proc_macro` are set in the `foo` library",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn proc_macro_crate_type_warning_plugin() {
     let foo = project()
         .file(

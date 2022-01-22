@@ -174,6 +174,7 @@ fn clean_lib(
         Some(ref lib) => lib,
         None => return Ok(None),
     };
+    lib.validate_proc_macro(warnings);
 
     validate_target_name(lib, "library", "lib", warnings)?;
 
