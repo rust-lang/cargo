@@ -2061,7 +2061,7 @@ impl TomlTarget {
         if self.proc_macro_raw.is_some() && self.proc_macro_raw2.is_some() {
             warnings.push(format!(
                 "found both `proc-macro` and `proc_macro` are set \
-                 in the `{}` library",
+                 in the `{}` library target",
                 self.name()
             ));
         }
@@ -2076,6 +2076,17 @@ impl TomlTarget {
             }
             None
         })
+    }
+
+    fn validate_crate_types(&self, target_kind_human: &str, warnings: &mut Vec<String>) {
+        if self.crate_type.is_some() && self.crate_type2.is_some() {
+            warnings.push(format!(
+                "found both `crate-type` and `crate_type` are set \
+                 in the `{}` {} target",
+                self.name(),
+                target_kind_human
+            ));
+        }
     }
 
     fn crate_types(&self) -> Option<&Vec<String>> {

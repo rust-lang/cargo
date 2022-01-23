@@ -1677,6 +1677,78 @@ Caused by:
 }
 
 #[cargo_test]
+fn lib_crate_types_conflicting_warning() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [lib]
+                name = "foo"
+                crate-type = ["rlib", "dylib"]
+                crate_type = ["staticlib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    p.cargo("build")
+    .with_stderr_contains(
+        "[WARNING] found both `crate-type` and `crate_type` are set in the `foo` library target",
+    )
+        .run();
+}
+
+#[cargo_test]
+fn examples_crate_types_conflicting_warning() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [[example]]
+                name = "ex"
+                path = "examples/ex.rs"
+                crate-type = ["rlib", "dylib"]
+                crate_type = ["proc_macro"]
+                [[example]]
+                name = "goodbye"
+                path = "examples/ex-goodbye.rs"
+                crate-type = ["rlib", "dylib"]
+                crate_type = ["rlib", "staticlib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "examples/ex.rs",
+            r#"
+                fn main() { println!("ex"); }
+            "#,
+        )
+        .file(
+            "examples/ex-goodbye.rs",
+            r#"
+                fn main() { println!("goodbye"); }
+            "#,
+        )
+        .build();
+    p.cargo("build")
+        .with_stderr_contains(
+            "\
+[WARNING] found both `crate-type` and `crate_type` are set in the `ex` example target
+[WARNING] found both `crate-type` and `crate_type` are set in the `goodbye` example target",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn self_dependency() {
     let p = project()
         .file(

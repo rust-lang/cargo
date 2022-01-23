@@ -175,6 +175,7 @@ fn clean_lib(
         None => return Ok(None),
     };
     lib.validate_proc_macro(warnings);
+    lib.validate_crate_types("library", warnings);
 
     validate_target_name(lib, "library", "lib", warnings)?;
 
@@ -399,6 +400,7 @@ fn clean_examples(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
+        toml.validate_crate_types("example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
