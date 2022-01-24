@@ -352,7 +352,7 @@ Expected `.` or `=`
     let config = ConfigBuilder::new().config_arg("").build_err();
     assert_error(
         config.unwrap_err(),
-        "--config argument `` was not a TOML dotted key expression (a.b.c = _)",
+        "--config argument `` was not a TOML dotted key expression (such as `build.jobs = 2`)",
     );
 }
 
@@ -364,7 +364,7 @@ fn too_many_values() {
         config.unwrap_err(),
         "\
 --config argument `a=1
-b=2` was not a TOML dotted key expression (a.b.c = _)",
+b=2` was not a TOML dotted key expression (such as `build.jobs = 2`)",
     );
 }
 
@@ -390,7 +390,29 @@ fn no_array_of_tables_values() {
         config.unwrap_err(),
         "\
 --config argument `[[a.b]]
-c = \"d\"` was not a TOML dotted key expression (a.b.c = _)",
+c = \"d\"` was not a TOML dotted key expression (such as `build.jobs = 2`)",
+    );
+}
+
+#[cargo_test]
+fn no_comments() {
+    // Disallow comments in dotted form.
+    let config = ConfigBuilder::new()
+        .config_arg("a.b = \"c\" # exactly")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+--config argument `a.b = \"c\" # exactly` includes non-whitespace decoration",
+    );
+
+    let config = ConfigBuilder::new()
+        .config_arg("# exactly\na.b = \"c\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+--config argument `# exactly\na.b = \"c\"` includes non-whitespace decoration",
     );
 }
 

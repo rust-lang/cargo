@@ -79,7 +79,7 @@ use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
-use toml_edit::easy as toml;
+use toml_edit::{easy as toml, Item};
 use url::Url;
 
 mod de;
@@ -1184,6 +1184,10 @@ impl Config {
                 let doc: toml_edit::Document = arg.parse().with_context(|| {
                     format!("failed to parse value from --config argument `{}` as a dotted key expression", arg)
                 })?;
+                fn non_empty_decor(d: &toml_edit::Decor) -> bool {
+                    d.prefix().map_or(false, |p| !p.trim().is_empty())
+                        || d.suffix().map_or(false, |s| !s.trim().is_empty())
+                }
                 let ok = {
                     let mut got_to_value = false;
                     let mut table = doc.as_table();
@@ -1193,17 +1197,49 @@ impl Config {
                         if table.len() != 1 {
                             break;
                         }
-                        let (_, n) = table.iter().next().expect("len() == 1 above");
-                        if let Some(nt) = n.as_table() {
-                            table = nt;
-                        } else if n.is_inline_table() {
-                            bail!(
-                                "--config argument `{}` sets a value to an inline table, which is not accepted",
-                                arg,
-                            );
-                        } else {
-                            got_to_value = true;
-                            break;
+                        let (k, n) = table.iter().next().expect("len() == 1 above");
+                        match n {
+                            Item::Table(nt) => {
+                                if table.key_decor(k).map_or(false, non_empty_decor)
+                                    || non_empty_decor(nt.decor())
+                                {
+                                    bail!(
+                                        "--config argument `{}` \
+                                            includes non-whitespace decoration",
+                                        arg
+                                    )
+                                }
+                                table = nt;
+                            }
+                            Item::Value(v) if v.is_inline_table() => {
+                                bail!(
+                                    "--config argument `{}` \
+                                    sets a value to an inline table, which is not accepted",
+                                    arg,
+                                );
+                            }
+                            Item::Value(v) => {
+                                if non_empty_decor(v.decor()) {
+                                    bail!(
+                                        "--config argument `{}` \
+                                            includes non-whitespace decoration",
+                                        arg
+                                    )
+                                }
+                                got_to_value = true;
+                                break;
+                            }
+                            Item::ArrayOfTables(_) => {
+                                bail!(
+                                    "--config argument `{}` \
+                                    sets a value to an array of tables, which is not accepted",
+                                    arg,
+                                );
+                            }
+
+                            Item::None => {
+                                bail!("--config argument `{}` doesn't provide a value", arg)
+                            }
                         }
                     }
                     got_to_value
