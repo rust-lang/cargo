@@ -1210,7 +1210,7 @@ impl Config {
                 };
                 if !ok {
                     bail!(
-                        "--config argument `{}` was not a TOML dotted key expression (a.b.c = _)",
+                        "--config argument `{}` was not a TOML dotted key expression (such as `build.jobs = 2`)",
                         arg
                     );
                 }
