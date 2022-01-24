@@ -9,31 +9,26 @@ pub struct CommitInfo {
     pub commit_date: String,
 }
 
-/// Information provided by the outer build system (rustbuild aka bootstrap).
-pub struct CfgInfo {
-    /// Information about the Git repository we may have been built from.
-    pub commit_info: Option<CommitInfo>,
-    /// The release channel we were built for (stable/beta/nightly/dev).
-    pub release_channel: String,
-}
-
 /// Cargo's version.
 pub struct VersionInfo {
     /// Cargo's version, such as "1.57.0", "1.58.0-beta.1", "1.59.0-nightly", etc.
     pub version: String,
-    /// Information that's only available when we were built with
-    /// rustbuild, rather than Cargo itself.
-    pub cfg_info: Option<CfgInfo>,
+    /// The release channel we were built for (stable/beta/nightly/dev).
+    ///
+    /// `None` if not built via rustuild.
+    pub release_channel: Option<String>,
+    /// Information about the Git repository we may have been built from.
+    ///
+    /// `None` if not built from a git repo.
+    pub commit_info: Option<CommitInfo>,
 }
 
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.version)?;
 
-        if let Some(ref cfg) = self.cfg_info {
-            if let Some(ref ci) = cfg.commit_info {
-                write!(f, " ({} {})", ci.short_commit_hash, ci.commit_date)?;
-            }
+        if let Some(ref ci) = self.commit_info {
+            write!(f, " ({} {})", ci.short_commit_hash, ci.commit_date)?;
         };
         Ok(())
     }
@@ -70,26 +65,16 @@ pub fn version() -> VersionInfo {
         format!("1.{}.{}", minor, patch)
     });
 
-    match option_env!("CFG_RELEASE_CHANNEL") {
-        // We have environment variables set up from configure/make.
-        Some(_) => {
-            let commit_info = option_env!("CFG_COMMIT_HASH").map(|s| CommitInfo {
-                commit_hash: s.to_string(),
-                short_commit_hash: option_env_str!("CFG_SHORT_COMMIT_HASH").unwrap(),
-                commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
-            });
-            VersionInfo {
-                version,
-                cfg_info: Some(CfgInfo {
-                    release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
-                    commit_info,
-                }),
-            }
-        }
-        // We are being compiled by Cargo itself.
-        None => VersionInfo {
-            version,
-            cfg_info: None,
-        },
+    let release_channel = option_env_str!("CFG_RELEASE_CHANNEL");
+    let commit_info = option_env_str!("CARGO_COMMIT_HASH").map(|commit_hash| CommitInfo {
+        short_commit_hash: option_env_str!("CARGO_COMMIT_SHORT_HASH").unwrap(),
+        commit_hash,
+        commit_date: option_env_str!("CARGO_COMMIT_DATE").unwrap(),
+    });
+
+    VersionInfo {
+        version,
+        release_channel,
+        commit_info,
     }
 }
