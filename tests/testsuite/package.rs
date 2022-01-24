@@ -2006,24 +2006,12 @@ src/lib.rs
         .run();
 }
 
-/// Certain versions of Windows 11 have removed the restriction on filenames. To detect whether
-/// this is the case, we try to create a file with a reserved name.
-#[cfg(windows)]
-fn windows_reserved_names_are_allowed() -> bool {
-    let test_file = paths::home().join("aux.rs");
-    if File::create(&test_file).is_err() {
-        return false;
-    }
-    let _ = fs::remove_file(test_file);
-    true
-}
-
 #[cargo_test]
 #[cfg(windows)]
 fn reserved_windows_name() {
     // If we are running on a version of Windows that allows these reserved filenames,
     // skip this test.
-    if windows_reserved_names_are_allowed() {
+    if cargo::util::restricted_names::windows_reserved_names_are_allowed() {
         return;
     }
 
