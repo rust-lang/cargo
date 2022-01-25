@@ -212,11 +212,6 @@ pub trait AppExt: Sized {
 
     fn arg_index(self) -> Self {
         self._arg(opt("index", "Registry index URL to upload the package to").value_name("INDEX"))
-            ._arg(
-                opt("host", "DEPRECATED, renamed to '--index'")
-                    .value_name("HOST")
-                    .hidden(true),
-            )
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
