@@ -431,7 +431,7 @@ fn compute_deps_doc(
     let mut ret = Vec::new();
     for (id, _deps) in deps {
         let dep = state.get(id);
-        let lib = match dep.targets().iter().find(|t| t.is_lib() && t.documented()) {
+        let lib = match dep.targets().iter().find(|t| t.is_lib()) {
             Some(lib) => lib,
             None => continue,
         };
@@ -449,18 +449,20 @@ fn compute_deps_doc(
             mode,
         )?;
         ret.push(lib_unit_dep);
-        if let CompileMode::Doc { deps: true } = unit.mode {
-            // Document this lib as well.
-            let doc_unit_dep = new_unit_dep(
-                state,
-                unit,
-                dep,
-                lib,
-                dep_unit_for,
-                unit.kind.for_target(lib),
-                unit.mode,
-            )?;
-            ret.push(doc_unit_dep);
+        if lib.documented() {
+            if let CompileMode::Doc { deps: true } = unit.mode {
+                // Document this lib as well.
+                let doc_unit_dep = new_unit_dep(
+                    state,
+                    unit,
+                    dep,
+                    lib,
+                    dep_unit_for,
+                    unit.kind.for_target(lib),
+                    unit.mode,
+                )?;
+                ret.push(doc_unit_dep);
+            }
         }
     }
 
