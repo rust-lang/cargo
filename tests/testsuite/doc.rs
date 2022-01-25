@@ -2557,7 +2557,7 @@ fn doc_lib_false() {
                 bar = {path = "bar"}
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/lib.rs", "extern crate bar;")
         .file("src/bin/some-bin.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
@@ -2587,4 +2587,49 @@ fn doc_lib_false() {
     assert!(!p.build_dir().join("doc/foo").exists());
     assert!(!p.build_dir().join("doc/bar").exists());
     assert!(p.build_dir().join("doc/some_bin").exists());
+}
+
+#[cargo_test]
+fn doc_lib_false_dep() {
+    // doc = false for a dependency
+    // Ensures that the rmeta gets produced
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 [..]
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert!(p.build_dir().join("doc/foo").exists());
+    assert!(!p.build_dir().join("doc/bar").exists());
 }
