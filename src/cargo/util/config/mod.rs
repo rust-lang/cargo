@@ -79,7 +79,7 @@ use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
-use toml_edit::easy as toml;
+use toml_edit::{easy as toml, Item};
 use url::Url;
 
 mod de;
@@ -1176,20 +1176,82 @@ impl Config {
                 map.insert("include".to_string(), value);
                 CV::Table(map, Definition::Cli)
             } else {
-                // TODO: This should probably use a more narrow parser, reject
-                // comments, blank lines, [headers], etc.
-                let toml_v: toml::Value = toml::de::from_str(arg)
-                    .with_context(|| format!("failed to parse --config argument `{}`", arg))?;
-                let toml_table = toml_v.as_table().unwrap();
-                if toml_table.len() != 1 {
+                // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
+                // expressions followed by a value that's not an "inline table"
+                // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
+                // parse the value as a toml_edit::Document, and check that the (single)
+                // inner-most table is set via dotted keys.
+                let doc: toml_edit::Document = arg.parse().with_context(|| {
+                    format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
+                })?;
+                fn non_empty_decor(d: &toml_edit::Decor) -> bool {
+                    d.prefix().map_or(false, |p| !p.trim().is_empty())
+                        || d.suffix().map_or(false, |s| !s.trim().is_empty())
+                }
+                let ok = {
+                    let mut got_to_value = false;
+                    let mut table = doc.as_table();
+                    let mut is_root = true;
+                    while table.is_dotted() || is_root {
+                        is_root = false;
+                        if table.len() != 1 {
+                            break;
+                        }
+                        let (k, n) = table.iter().next().expect("len() == 1 above");
+                        match n {
+                            Item::Table(nt) => {
+                                if table.key_decor(k).map_or(false, non_empty_decor)
+                                    || non_empty_decor(nt.decor())
+                                {
+                                    bail!(
+                                        "--config argument `{arg}` \
+                                            includes non-whitespace decoration"
+                                    )
+                                }
+                                table = nt;
+                            }
+                            Item::Value(v) if v.is_inline_table() => {
+                                bail!(
+                                    "--config argument `{arg}` \
+                                    sets a value to an inline table, which is not accepted"
+                                );
+                            }
+                            Item::Value(v) => {
+                                if non_empty_decor(v.decor()) {
+                                    bail!(
+                                        "--config argument `{arg}` \
+                                            includes non-whitespace decoration"
+                                    )
+                                }
+                                got_to_value = true;
+                                break;
+                            }
+                            Item::ArrayOfTables(_) => {
+                                bail!(
+                                    "--config argument `{arg}` \
+                                    sets a value to an array of tables, which is not accepted"
+                                );
+                            }
+
+                            Item::None => {
+                                bail!("--config argument `{arg}` doesn't provide a value")
+                            }
+                        }
+                    }
+                    got_to_value
+                };
+                if !ok {
                     bail!(
-                        "--config argument `{}` expected exactly one key=value pair, got {} keys",
-                        arg,
-                        toml_table.len()
+                        "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
                     );
                 }
+
+                let toml_v = toml::from_document(doc).with_context(|| {
+                    format!("failed to parse value from --config argument `{arg}`")
+                })?;
+
                 CV::from_toml(Definition::Cli, toml_v)
-                    .with_context(|| format!("failed to convert --config argument `{}`", arg))?
+                    .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
             let mut seen = HashSet::new();
             let tmp_table = self
@@ -1197,7 +1259,7 @@ impl Config {
                 .with_context(|| "failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
-                .with_context(|| format!("failed to merge --config argument `{}`", arg))?;
+                .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)
     }

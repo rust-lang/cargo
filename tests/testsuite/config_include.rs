@@ -274,7 +274,7 @@ fn cli_path() {
     assert_error(
         config.unwrap_err(),
         "\
-failed to parse --config argument `missing.toml`
+failed to parse value from --config argument `missing.toml` as a dotted key expression
 
 Caused by:
   TOML parse error at line 1, column 13
