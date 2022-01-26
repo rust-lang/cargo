@@ -10,6 +10,7 @@ use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspac
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use crate::Config;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::PathBuf;
@@ -169,7 +170,8 @@ pub fn generate_std_roots(
     crates: &[String],
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
-    kinds: &[CompileKind],
+    requested_kinds: &[CompileKind],
+    explicit_host_kind: CompileKind,
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
@@ -183,43 +185,56 @@ pub fn generate_std_roots(
     let std_pkgs = package_set.get_many(std_ids)?;
     // Generate a map of Units for each kind requested.
     let mut ret = HashMap::new();
-    for pkg in std_pkgs {
+
+    let std_pkg_infos: Vec<_> = std_pkgs.iter().map(|pkg| {
         let lib = pkg
             .targets()
             .iter()
             .find(|t| t.is_lib())
             .expect("std has a lib");
-        // I don't think we need to bother with Check here, the difference
-        // in time is minimal, and the difference in caching is
-        // significant.
-        let mode = CompileMode::Build;
-        let features = std_features.activated_features(
-            pkg.package_id(),
-            FeaturesFor::NormalOrDevOrArtifactTarget(None),
-        );
-        for kind in kinds {
-            let list = ret.entry(*kind).or_insert_with(Vec::new);
-            let unit_for = UnitFor::new_normal(*kind);
+        // std does not have artifact dependencies at the moment
+        let unit_for = UnitFor::new_normal(explicit_host_kind);
+        let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDevOrArtifactTarget(None));
+        (pkg, lib, unit_for, features)
+    }).collect();
+
+
+    for kind in package_set
+        .packages()
+        .flat_map(|pkg| pkg.explicit_kinds(requested_kinds, explicit_host_kind))
+    {
+        let e = match ret.entry(kind) {
+            Entry::Vacant(e) => e,
+            Entry::Occupied(_) => continue,
+        };
+        let units = std_pkg_infos.iter().map(|(pkg, lib, unit_for, features)| {
+            // I don't think we need to bother with Check here, the difference
+            // in time is minimal, and the difference in caching is
+            // significant.
+            let mode = CompileMode::Build;
             let profile = profiles.get_profile(
                 pkg.package_id(),
                 /*is_member*/ false,
                 /*is_local*/ false,
-                unit_for,
-                *kind,
+                *unit_for,
+                kind,
             );
-            list.push(interner.intern(
+            interner.intern(
                 pkg,
                 lib,
                 profile,
-                *kind,
+                kind,
                 mode,
                 features.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
-            ));
-        }
+            )
+        });
+
+        e.insert(units.collect());
     }
+
     Ok(ret)
 }
 
