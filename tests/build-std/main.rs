@@ -170,6 +170,52 @@ fn cross_custom() {
         .run();
 }
 
+/// like cross-custom but uses per-package-target instead
+#[cargo_test(build_std)]
+fn per_package_target() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+                default-target = "custom-target.json"
+
+                [target.custom-target.dependencies]
+                dep = { path = "dep" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "#![no_std] pub fn f() -> u32 { dep::answer() }",
+        )
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.1.0"))
+        .file("dep/src/lib.rs", "#![no_std] pub fn answer() -> u32 { 42 }")
+        .file(
+            "custom-target.json",
+            r#"
+            {
+                "llvm-target": "x86_64-unknown-none-gnu",
+                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                "arch": "x86_64",
+                "target-endian": "little",
+                "target-pointer-width": "64",
+                "target-c-int-width": "32",
+                "os": "none",
+                "linker-flavor": "ld.lld"
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .build_std_arg("core")
+        .run();
+}
+
 #[cargo_test(build_std)]
 fn custom_test_framework() {
     let p = project()
