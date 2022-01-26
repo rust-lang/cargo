@@ -404,12 +404,7 @@ pub fn create_bcx<'a, 'cfg>(
                 .shell()
                 .warn("-Zbuild-std does not currently fully support --build-plan")?;
         }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
+
         let (std_package_set, std_resolve, std_features) =
             standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
         pkg_set.add_set(std_package_set);
@@ -476,14 +471,6 @@ pub fn create_bcx<'a, 'cfg>(
     // assuming `--target $HOST` was specified. See
     // `rebuild_unit_graph_shared` for more on why this is done.
     let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
-    let explicit_host_kinds: Vec<_> = build_config
-        .requested_kinds
-        .iter()
-        .map(|kind| match kind {
-            CompileKind::Host => explicit_host_kind,
-            CompileKind::Target(t) => CompileKind::Target(*t),
-        })
-        .collect();
 
     // Passing `build_config.requested_kinds` instead of
     // `explicit_host_kinds` here so that `generate_targets` can do
