@@ -150,18 +150,25 @@ pub fn generate_std_roots(
     // Generate a map of Units for each kind requested.
     let mut ret = HashMap::new();
 
-    let std_pkg_infos: Vec<_> = std_pkgs.iter().map(|pkg| {
-        let lib = pkg
-            .targets()
-            .iter()
-            .find(|t| t.is_lib())
-            .expect("std has a lib");
-        let unit_for = UnitFor::new_normal();
-        let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
-        (pkg, lib, unit_for, features)
-    }).collect();
+    let std_pkg_infos: Vec<_> = std_pkgs
+        .iter()
+        .map(|pkg| {
+            let lib = pkg
+                .targets()
+                .iter()
+                .find(|t| t.is_lib())
+                .expect("std has a lib");
+            let unit_for = UnitFor::new_normal();
+            let features =
+                std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
+            (pkg, lib, unit_for, features)
+        })
+        .collect();
 
-    for kinds in package_set.packages().map(|pkg| pkg.explicit_kinds(requested_kinds, explicit_host_kind)) {
+    for kinds in package_set
+        .packages()
+        .map(|pkg| pkg.explicit_kinds(requested_kinds, explicit_host_kind))
+    {
         for kind in kinds {
             if let Entry::Vacant(e) = ret.entry(kind) {
                 let units = std_pkg_infos.iter().map(|(pkg, lib, unit_for, features)| {
