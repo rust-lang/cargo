@@ -188,7 +188,11 @@ impl Package {
 
     /// Returns explicit kinds either forced by `forced-target` in `Cargo.toml`,
     /// fallback to `default-target`, or specified in cli parameters.
-    pub fn explicit_kinds(&self, requested_kinds: &[CompileKind], explicit_host_kind: CompileKind) -> Vec<CompileKind> {
+    pub fn explicit_kinds(
+        &self,
+        requested_kinds: &[CompileKind],
+        explicit_host_kind: CompileKind,
+    ) -> Vec<CompileKind> {
         if let Some(k) = self.manifest().forced_kind() {
             vec![k]
         } else {

@@ -211,9 +211,7 @@ fn per_package_target() {
         )
         .build();
 
-    p.cargo("build -v")
-        .build_std_arg("core")
-        .run();
+    p.cargo("build -v").build_std_arg("core").run();
 }
 
 #[cargo_test(build_std)]
