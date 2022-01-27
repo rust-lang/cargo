@@ -530,15 +530,28 @@ fn install_relative_path_outside_current_ws() {
         .build();
 
     p.cargo("install --path ../bar/foo")
+        .with_stderr(&format!(
+            "\
+[INSTALLING] foo v0.0.1 ([..]/bar/foo)
+[COMPILING] foo v0.0.1 ([..]/bar/foo)
+[FINISHED] release [..]
+[INSTALLING] {home}/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([..]/bar/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+            home = cargo_home().display(),
+        ))
+        .run();
+
+    // Validate the workspace error message to display available targets.
+    p.cargo("install --path ../bar/foo --bin")
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] current package believes it's in a workspace when it's not:
-current:   [CWD]/../bar/foo/Cargo.toml
-workspace: [CWD]/Cargo.toml
+[ERROR] \"--bin\" takes one argument.
+Available binaries:
+    foo
 
-this may be fixable by adding `../bar/foo` to the `workspace.members` [..]
-Alternatively, [..]
 ",
         )
         .run();
