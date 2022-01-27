@@ -7,7 +7,7 @@ use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, registry_path, registry_url, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
+    basic_manifest, cargo_process, no_such_file_err_msg, project, project_in, symlink_supported, t,
 };
 
 use cargo_test_support::install::{
@@ -488,6 +488,57 @@ fn install_path_with_lowercase_cargo_toml() {
             "\
 [ERROR] `[CWD]` does not contain a Cargo.toml file, \
 but found cargo.toml please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn install_relative_path_outside_current_ws() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                authors = []
+                edition = "2021"
+
+                [dependencies]
+                foo = "1"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    let _bin_project = project_in("bar")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install --path ../bar/foo")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] current package believes it's in a workspace when it's not:
+current:   [CWD]/../bar/foo/Cargo.toml
+workspace: [CWD]/Cargo.toml
+
+this may be fixable by adding `../bar/foo` to the `workspace.members` [..]
+Alternatively, [..]
 ",
         )
         .run();
