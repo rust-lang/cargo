@@ -100,7 +100,7 @@ pub fn is_glob_pattern<T: AsRef<str>>(name: T) -> bool {
 
 /// Returns true if names such as aux.* are allowed.
 ///
-/// Traditionally, Windows did not allow a set of file names (see `is_windows_reserved_name`
+/// Traditionally, Windows did not allow a set of file names (see `is_windows_reserved`
 /// for a list). More recent versions of Windows have relaxed this restriction. This test
 /// determines whether we are running in a mode that allows Windows reserved names.
 pub fn windows_reserved_names_are_allowed() -> bool {
