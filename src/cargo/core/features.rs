@@ -996,7 +996,6 @@ pub fn channel() -> String {
         }
     }
     crate::version()
-        .cfg_info
-        .map(|c| c.release_channel)
+        .release_channel
         .unwrap_or_else(|| String::from("dev"))
 }

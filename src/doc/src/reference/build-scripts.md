@@ -69,9 +69,9 @@ the source directory of the build script’s package.
 
 ### Outputs of the Build Script
 
-Build scripts may save any output files in the directory specified in the
-[`OUT_DIR` environment variable][build-env]. Scripts should not modify any
-files outside of that directory.
+Build scripts may save any output files or intermediate artifacts in the
+directory specified in the [`OUT_DIR` environment variable][build-env]. Scripts
+should not modify any files outside of that directory.
 
 Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo:` as an instruction that will

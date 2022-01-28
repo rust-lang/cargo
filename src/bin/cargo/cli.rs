@@ -169,12 +169,10 @@ pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
     let mut version_string = format!("cargo {}\n", version);
     if is_verbose {
-        version_string.push_str(&format!("release: {}\n", version.version,));
-        if let Some(ref cfg) = version.cfg_info {
-            if let Some(ref ci) = cfg.commit_info {
-                version_string.push_str(&format!("commit-hash: {}\n", ci.commit_hash));
-                version_string.push_str(&format!("commit-date: {}\n", ci.commit_date));
-            }
+        version_string.push_str(&format!("release: {}\n", version.version));
+        if let Some(ref ci) = version.commit_info {
+            version_string.push_str(&format!("commit-hash: {}\n", ci.commit_hash));
+            version_string.push_str(&format!("commit-date: {}\n", ci.commit_date));
         }
         writeln!(version_string, "host: {}", env!("RUST_HOST_TARGET")).unwrap();
         add_libgit2(&mut version_string);
