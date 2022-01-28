@@ -1436,19 +1436,28 @@ impl TomlManifest {
         }
 
         // If the `natvis` manifest key was not specified, append all of the Natvis files in the pre-determined
-        // directory under the package root, `dbgvis/natvis`.
-        if !natvis_manifest_override && features.require(Feature::natvis()).is_ok() {
-            let natvis_dir_path = package_root.join("dbgvis").join(natvis_ext);
-            if let Ok(natvis_dir) = fs::read_dir(&natvis_dir_path) {
-                for entry in natvis_dir {
-                    if let Ok(entry) = entry {
-                        let path = entry.path();
-                        if path.extension() == Some(natvis_ext.as_ref()) {
-                            natvis.insert(path);
+        // directory under the package root, `dbgvis/natvis/**/`.
+        fn find_natvis_files(path: &PathBuf, natvis: &mut BTreeSet<PathBuf>) {
+            if let Ok(path) = fs::read_dir(&path) {
+                for entry in path {
+                    match entry {
+                        Ok(entry) => {
+                            let path = entry.path();
+                            if path.is_dir() {
+                                find_natvis_files(&path, natvis);
+                            } else if path.is_file() && path.extension() == Some("natvis".as_ref()) {
+                                natvis.insert(path);
+                            }
                         }
+                        Err(_) => { }
                     }
                 }
             }
+        }
+
+        if !natvis_manifest_override && features.require(Feature::natvis()).is_ok() {
+            let natvis_dir_path = package_root.join("dbgvis").join(natvis_ext);
+            find_natvis_files(&natvis_dir_path, &mut natvis);
         }
 
         let natvis = if natvis.is_empty() {
