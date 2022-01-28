@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
@@ -528,6 +528,84 @@ impl Manifest {
                 })?;
         }
 
+        Ok(())
+    }
+
+    pub fn check_rust_version(&self) -> CargoResult<()> {
+        let rust_version = match &self.rust_version {
+            Some(v) => v,
+            None => return Ok(()),
+        };
+        let req = match semver::VersionReq::parse(rust_version) {
+            // Exclude semver operators like `^` and pre-release identifiers
+            Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
+            _ => bail!("`rust-version` must be a value like \"1.32\""),
+        };
+
+        let check = |major, minor, message| {
+            let unsupported = Version::new(major, minor - 1, 9999);
+            if req.matches(&unsupported) {
+                bail!(
+                    "rust-version `{}` is older than the first version required for {}\n\
+                     This requires a version of at least `{}.{}`.",
+                    rust_version,
+                    message,
+                    major,
+                    minor
+                );
+            }
+            Ok(())
+        };
+
+        if let Some(first_version) = self.edition.first_version() {
+            check(
+                first_version.major,
+                first_version.minor,
+                format!("the specified edition `{}`", self.edition),
+            )?;
+        }
+
+        if let Some(profiles) = &self.profiles {
+            for (name, profile) in profiles.get_all() {
+                if profile.inherits.is_some()
+                    || !matches!(name.as_str(), "dev" | "release" | "bench" | "test" | "doc")
+                {
+                    check(1, 57, format!("custom named profiles (profile `{name}`)"))?;
+                }
+                if profile.strip.is_some() {
+                    check(
+                        1,
+                        59,
+                        format!("the `strip` profile option (in profile `{name}`)"),
+                    )?;
+                }
+            }
+        }
+
+        if let Some(feature_map) = self.original.features() {
+            for (name, features) in feature_map {
+                for feature in features {
+                    if feature.starts_with("dep:") {
+                        check(
+                            1,
+                            60,
+                            format!(
+                                "namespaced features (feature `{name}` with value `{feature}`)"
+                            ),
+                        )?;
+                    }
+                    if feature.contains("?/") {
+                        check(
+                            1,
+                            60,
+                            format!(
+                            "weak dependency features (feature `{name}` with value `{feature}`)"
+                        ),
+                        )?;
+                    }
+                }
+            }
+        }
         Ok(())
     }
 

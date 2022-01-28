@@ -88,8 +88,11 @@
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
 //!    `cargo-features` from `Cargo.toml` test files if any.
 //! 3. Update the docs in unstable.md to move the section to the bottom
-//!    and summarize it similar to the other entries. Update the rest of the
-//!    documentation to add the new feature.
+//!    and summarize it similar to the other entries.
+//!    Also remove it from the list at the top of the file.
+//!    Update the rest of the documentation to add the new feature.
+//! 4. Update `Manifest::check_rust_version` if applicable to check that the
+//!    `rust-version` field is valid.
 
 use std::collections::BTreeSet;
 use std::env;

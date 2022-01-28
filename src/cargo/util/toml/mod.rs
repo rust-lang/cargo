@@ -1143,30 +1143,6 @@ impl TomlManifest {
             )));
         }
 
-        let rust_version = if let Some(rust_version) = &project.rust_version {
-            let req = match semver::VersionReq::parse(rust_version) {
-                // Exclude semver operators like `^` and pre-release identifiers
-                Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
-                _ => bail!("`rust-version` must be a value like \"1.32\""),
-            };
-            if let Some(first_version) = edition.first_version() {
-                let unsupported =
-                    semver::Version::new(first_version.major, first_version.minor - 1, 9999);
-                if req.matches(&unsupported) {
-                    bail!(
-                        "rust-version {} is older than first version ({}) required by \
-                            the specified edition ({})",
-                        rust_version,
-                        first_version,
-                        edition,
-                    )
-                }
-            }
-            Some(rust_version.clone())
-        } else {
-            None
-        };
-
         if project.metabuild.is_some() {
             features.require(Feature::metabuild())?;
         }
@@ -1418,7 +1394,7 @@ impl TomlManifest {
             workspace_config,
             features,
             edition,
-            rust_version,
+            project.rust_version.clone(),
             project.im_a_teapot,
             project.default_run.clone(),
             Rc::clone(me),
@@ -1444,6 +1420,7 @@ impl TomlManifest {
         }
 
         manifest.feature_gate()?;
+        manifest.check_rust_version()?;
 
         Ok((manifest, nested_paths))
     }
