@@ -29,7 +29,6 @@ fn gated() {
 }
 
 #[cargo_test]
-#[cfg(target_env = "msvc")]
 fn file_does_not_exist() {
     let p = project()
         .file(
@@ -48,17 +47,11 @@ fn file_does_not_exist() {
         .file("src/main.rs", "fn main() { assert!(true) }")
         .build();
 
-    let natvis_path = p.root().join("foo.natvis").display().to_string();
-    let expected_msg = format!(
-        "[..]fatal error LNK1181: cannot open input file '{}'[..]",
-        natvis_path
-    );
-
+    let foo = p.root().join("foo.natvis");
     // Run cargo build.
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr_contains(expected_msg)
+        .with_stderr_contains(format!("[..]Natvis file `{}` does not exist. Skipping file.[..]", foo.display().to_string()))
         .run();
 }
 

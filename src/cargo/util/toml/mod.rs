@@ -1424,13 +1424,20 @@ impl TomlManifest {
                 natvis_manifest_override = true;
                 for file in &natvis_files {
                     let path = paths::normalize_path(&package_root.join(file.clone().0));
-                    if path.extension() != Some(natvis_ext.as_ref()) {
+                    if !path.exists() {
                         warnings.push(format!(
-                            "Natvis file `{}` does not have the expected `.natvis` extension.",
+                            "Natvis file `{}` does not exist. Skipping file.",
                             path.display().to_string()
                         ));
+                    } else {
+                        if path.extension() != Some(natvis_ext.as_ref()) {
+                            warnings.push(format!(
+                                "Natvis file `{}` does not have the expected `.natvis` extension.",
+                                path.display().to_string()
+                            ));
+                        }
+                        natvis.insert(path);
                     }
-                    natvis.insert(path);
                 }
             }
         }
