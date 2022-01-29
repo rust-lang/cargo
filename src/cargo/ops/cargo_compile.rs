@@ -1010,19 +1010,7 @@ fn generate_targets(
         // why this is done. However, if the package has its own
         // `package.target` key, then this gets used instead of
         // `$HOST`
-        let explicit_kinds = if let Some(k) = pkg.manifest().forced_kind() {
-            vec![k]
-        } else {
-            requested_kinds
-                .iter()
-                .map(|kind| match kind {
-                    CompileKind::Host => {
-                        pkg.manifest().default_kind().unwrap_or(explicit_host_kind)
-                    }
-                    CompileKind::Target(t) => CompileKind::Target(*t),
-                })
-                .collect()
-        };
+        let explicit_kinds = pkg.explicit_kinds(requested_kinds, explicit_host_kind);
 
         for kind in explicit_kinds.iter() {
             let unit_for = if initial_target_mode.is_any_test() {
