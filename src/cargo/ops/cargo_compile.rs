@@ -1047,12 +1047,6 @@ fn generate_targets(
             let features_for = FeaturesFor::from_for_host(target.proc_macro());
             let features = resolved_features.activated_features(pkg.package_id(), features_for);
 
-            // If `--target` has not been specified, then the unit
-            // graph is built almost like if `--target $HOST` was
-            // specified. See `rebuild_unit_graph_shared` for more on
-            // why this is done. However, if the package has its own
-            // `package.target` key, then this gets used instead of
-            // `$HOST`
             let explicit_kinds = pkg.explicit_kinds(requested_kinds, explicit_host_kind);
 
             for kind in explicit_kinds.iter() {
