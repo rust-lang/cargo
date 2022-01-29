@@ -188,6 +188,12 @@ impl Package {
 
     /// Returns explicit kinds either forced by `forced-target` in `Cargo.toml`,
     /// fallback to `default-target`, or specified in cli parameters.
+    ///
+    /// If `--target` has not been specified, then the return value
+    /// is the same as if `--target $HOST` was specified. See
+    /// `rebuild_unit_graph_shared` for why callers want to do this.
+    ///  However, if the package has its own `package.default-target`
+    ///  key, then that gets used instead of `$HOST`
     pub fn explicit_kinds(
         &self,
         requested_kinds: &[CompileKind],
