@@ -165,40 +165,40 @@ pub fn generate_std_roots(
         })
         .collect();
 
-    for kinds in package_set
+    for kind in package_set
         .packages()
-        .map(|pkg| pkg.explicit_kinds(requested_kinds, explicit_host_kind))
+        .flat_map(|pkg| pkg.explicit_kinds(requested_kinds, explicit_host_kind))
     {
-        for kind in kinds {
-            if let Entry::Vacant(e) = ret.entry(kind) {
-                let units = std_pkg_infos.iter().map(|(pkg, lib, unit_for, features)| {
-                    // I don't think we need to bother with Check here, the difference
-                    // in time is minimal, and the difference in caching is
-                    // significant.
-                    let mode = CompileMode::Build;
-                    let profile = profiles.get_profile(
-                        pkg.package_id(),
-                        /*is_member*/ false,
-                        /*is_local*/ false,
-                        *unit_for,
-                        mode,
-                        kind,
-                    );
-                    interner.intern(
-                        pkg,
-                        lib,
-                        profile,
-                        kind,
-                        mode,
-                        features.clone(),
-                        /*is_std*/ true,
-                        /*dep_hash*/ 0,
-                    )
-                });
+        let e = match ret.entry(kind) {
+            Entry::Vacant(e) => e,
+            Entry::Occupied(_) => continue,
+        };
+        let units = std_pkg_infos.iter().map(|(pkg, lib, unit_for, features)| {
+            // I don't think we need to bother with Check here, the difference
+            // in time is minimal, and the difference in caching is
+            // significant.
+            let mode = CompileMode::Build;
+            let profile = profiles.get_profile(
+                pkg.package_id(),
+                /*is_member*/ false,
+                /*is_local*/ false,
+                *unit_for,
+                mode,
+                kind,
+            );
+            interner.intern(
+                pkg,
+                lib,
+                profile,
+                kind,
+                mode,
+                features.clone(),
+                /*is_std*/ true,
+                /*dep_hash*/ 0,
+            )
+        });
 
-                e.insert(units.collect());
-            }
-        }
+        e.insert(units.collect());
     }
 
     Ok(ret)
