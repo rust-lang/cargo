@@ -116,7 +116,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         };
         SourceId::for_git(&url, gitref)?
     } else if let Some(path) = &path {
-        SourceId::for_path(&path)?
+        SourceId::for_path(path)?
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
