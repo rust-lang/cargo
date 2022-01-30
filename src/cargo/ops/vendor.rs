@@ -1,15 +1,16 @@
 use crate::core::shell::Verbosity;
-use crate::core::{GitReference, Workspace};
+use crate::core::{GitReference, SourceId, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::{CargoResult, Config};
-use anyhow::{bail, Context as _};
+use crate::util::{self, CargoResult, Config};
+use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs::{self, File, OpenOptions};
+use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use toml_edit::easy as toml;
@@ -88,15 +89,27 @@ fn sync(
 
     paths::create_dir_all(&canonical_destination)?;
     let mut to_remove = HashSet::new();
+    let mut separate_source_paths = Vec::new();
     if !opts.no_delete {
         for entry in canonical_destination.read_dir()? {
             let entry = entry?;
-            if !entry
-                .file_name()
-                .to_str()
-                .map_or(false, |s| s.starts_with('.'))
-            {
-                to_remove.insert(entry.path());
+            let filename = entry.file_name();
+            let filename = filename.to_str();
+            // Skip hidden files. See rust-lang/cargo#7109
+            if filename.map_or(false, |s| s.starts_with('.')) {
+                continue;
+            }
+            let path = entry.path();
+            if filename.map_or(false, |s| s.starts_with('@')) {
+                // Remove crates from separate source directories.
+                for entry in path.read_dir()? {
+                    let entry = entry?;
+                    to_remove.insert(entry.path());
+                }
+                separate_source_paths.push(path);
+            } else {
+                // Remove crates from top level source directory.
+                to_remove.insert(path);
             }
         }
     }
@@ -170,27 +183,41 @@ fn sync(
         }
     }
 
-    let mut versions = HashMap::new();
-    for id in ids.keys() {
-        let map = versions.entry(id.name()).or_insert_with(BTreeMap::default);
-        if let Some(prev) = map.get(&id.version()) {
-            bail!(
-                "found duplicate version of package `{} v{}` \
-                 vendored from two sources:\n\
-                 \n\
-                 \tsource 1: {}\n\
-                 \tsource 2: {}",
-                id.name(),
-                id.version(),
-                prev,
-                id.source_id()
-            );
+    let (versions, major_source) = {
+        let mut contains_duplicates = false;
+        let mut versions = HashMap::new();
+        for id in ids.keys() {
+            let map = versions.entry(id.name()).or_insert_with(BTreeMap::default);
+            use std::collections::btree_map::Entry;
+            match map.entry(id.version()) {
+                Entry::Vacant(entry) => {
+                    entry.insert(id.source_id());
+                }
+                Entry::Occupied(_) => {
+                    contains_duplicates |= true;
+                }
+            }
         }
-        map.insert(id.version(), id.source_id());
-    }
+        let major_source = contains_duplicates.then(|| {
+            let mut counter = BTreeMap::new();
+            for id in ids.keys() {
+                counter
+                    .entry(id.source_id())
+                    .and_modify(|e| *e += 1)
+                    .or_insert(1);
+            }
+            counter
+                .into_iter()
+                .max_by_key(|(_, v)| *v)
+                .map(|(src, _)| src)
+                .expect("no source")
+        });
+        (versions, major_source)
+    };
 
     let mut sources = BTreeSet::new();
     let mut tmp_buf = [0; 64 * 1024];
+    let mut source_paths = HashMap::new();
     for (id, pkg) in ids.iter() {
         // Next up, copy it to the vendor directory
         let src = pkg
@@ -208,8 +235,16 @@ fn sync(
         };
 
         sources.insert(id.source_id());
-        let dst = canonical_destination.join(&dst_name);
+
+        let dst = source_paths
+            .entry(src)
+            .or_insert_with(|| {
+                vendor_path_for_source(canonical_destination, &id.source_id(), &major_source)
+            })
+            .join(&dst_name);
+
         to_remove.remove(&dst);
+
         let cksum = dst.join(".cargo-checksum.json");
         if dir_has_version_suffix && cksum.exists() {
             // Always re-copy directory without version suffix in case the version changed
@@ -244,6 +279,12 @@ fn sync(
             paths::remove_file(&path)?;
         }
     }
+    for path in separate_source_paths {
+        // Cleanup empty source directory.
+        if path.read_dir()?.next().is_none() {
+            paths::remove_dir(path)?;
+        }
+    }
 
     // add our vendored source
     let mut config = BTreeMap::new();
@@ -257,17 +298,27 @@ fn sync(
         } else {
             source_id.url().to_string()
         };
+        let replace_with = if should_merge_into_top(&source_id, &major_source) {
+            merged_source_name.to_string()
+        } else {
+            format!("vendor+{name}")
+        };
+
+        config.entry(replace_with.clone()).or_insert_with(|| {
+            let directory = vendor_path_for_source(opts.destination, &source_id, &major_source);
+            VendorSource::Directory { directory }
+        });
 
         let source = if source_id.is_default_registry() {
             VendorSource::Registry {
                 registry: None,
-                replace_with: merged_source_name.to_string(),
+                replace_with,
             }
         } else if source_id.is_remote_registry() {
             let registry = source_id.url().to_string();
             VendorSource::Registry {
                 registry: Some(registry),
-                replace_with: merged_source_name.to_string(),
+                replace_with,
             }
         } else if source_id.is_git() {
             let mut branch = None;
@@ -286,7 +337,7 @@ fn sync(
                 branch,
                 tag,
                 rev,
-                replace_with: merged_source_name.to_string(),
+                replace_with,
             }
         } else {
             panic!("Invalid source ID: {}", source_id)
@@ -294,14 +345,7 @@ fn sync(
         config.insert(name, source);
     }
 
-    if !config.is_empty() {
-        config.insert(
-            merged_source_name.to_string(),
-            VendorSource::Directory {
-                directory: opts.destination.to_path_buf(),
-            },
-        );
-    } else if !dest_dir_already_exists {
+    if config.is_empty() && !dest_dir_already_exists {
         // Nothing to vendor. Remove the destination dir we've just created.
         paths::remove_dir(canonical_destination)?;
     }
@@ -386,4 +430,59 @@ fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoR
         dst.write_all(data)
             .with_context(|| format!("failed to write to {:?}", dst_path))?;
     }
+}
+
+/// The absent of major source implies there is no duplicate versions from
+/// different sources, so cargo are happy to merge all sources into top level
+/// vendor directory.
+fn should_merge_into_top(source: &SourceId, major: &Option<SourceId>) -> bool {
+    major.as_ref().map_or(true, |major| source == major)
+}
+
+/// Determines where should the vendor crates from the source go.
+///
+/// The layout of vendor directory depends on whether there is any crate with
+/// duplicate versions from different sources:
+///
+/// - If no, cargo simply merges crates from all sources into the top level of
+///   vendor directory.
+/// - If duplicates exist, the source of majority remains at the top, but the
+///   others are relevated to separate directories prefixed with `@`. The
+///   reason to prefix is to avoid name conflicts with valid crate names.
+///
+/// ```text
+/// vendor/
+/// ├── log/ # Crates at the top are from the source of majority
+/// ├── serde/
+/// ├── cfg-if/
+/// └── @git-1936cea8af2a1111/ # git source
+/// │  └── serde/
+/// └── @registry-1ecc6299db9ec823/ # registry source
+///    └── cfg-if/
+/// ```
+fn vendor_path_for_source(path: &Path, source: &SourceId, major: &Option<SourceId>) -> PathBuf {
+    fn source_id_to_dir_name(src_id: SourceId) -> String {
+        let src_type = if src_id.is_registry() {
+            "registry"
+        } else if src_id.is_git() {
+            "git"
+        } else {
+            panic!("Invalid source ID: {src_id}")
+        };
+        struct SourceIdShortHash(SourceId);
+        impl Hash for SourceIdShortHash {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                self.0.stable_hash(Path::new(""), state);
+            }
+        }
+        let hash = util::short_hash(&SourceIdShortHash(src_id));
+        format!("@{src_type}-{hash}")
+    }
+
+    let mut path = path.to_path_buf();
+    if !should_merge_into_top(source, major) {
+        // Sources other than the majority source go into their own directories.
+        path.push(source_id_to_dir_name(*source));
+    }
+    path
 }
