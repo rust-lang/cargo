@@ -1,8 +1,9 @@
 {{#option "`--timings=`_fmts_"}}
 Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
-formats; `--timing` without an argument will default to `--timing=html`. Valid
-output formats:
+formats; `--timing` without an argument will default to `--timing=html`.
+Specifying an output format (rather than the default) is unstable and requires
+`-Zunstable-options`. Valid output formats:
 
 - `html`: Write a human-readable file `cargo-timing.html` to the
   `target/cargo-timings` directory with a report of the compilation. Also write

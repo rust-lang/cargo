@@ -1297,5 +1297,5 @@ See the [Features chapter](features.md#dependency-features) for more information
 ### timings
 
 The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
-(The machine-readable `--timings=json` output remains unstable and requires
-`-Zunstable-options`.)
+(`--timings=html` and the machine-readable `--timings=json` output remain
+unstable and require `-Zunstable-options`.)

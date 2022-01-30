@@ -121,8 +121,9 @@ required Rust version as configured in the project's <code>rust-version</code> f
 <dt class="option-term" id="option-cargo-run---timings=fmts"><a class="option-anchor" href="#option-cargo-run---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
 <dd class="option-desc">Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
-formats; <code>--timing</code> without an argument will default to <code>--timing=html</code>. Valid
-output formats:</p>
+formats; <code>--timing</code> without an argument will default to <code>--timing=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
 <ul>
 <li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
 <code>target/cargo-timings</code> directory with a report of the compilation. Also write

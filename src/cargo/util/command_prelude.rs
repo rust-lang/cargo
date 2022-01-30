@@ -239,7 +239,7 @@ pub trait AppExt: Sized {
         self._arg(
             optional_opt(
                 "timings",
-                "Timing output formats (comma separated): html, json (unstable)",
+                "Timing output formats (unstable) (comma separated): html, json",
             )
             .value_name("FMTS")
             .require_equals(true),
@@ -516,7 +516,12 @@ pub trait ArgMatchesExt {
                 for timing_output in timing_output.split(',') {
                     let timing_output = timing_output.to_ascii_lowercase();
                     let timing_output = match timing_output.as_str() {
-                        "html" => TimingOutput::Html,
+                        "html" => {
+                            config
+                                .cli_unstable()
+                                .fail_if_stable_opt("--timings=html", 7405)?;
+                            TimingOutput::Html
+                        }
                         "json" => {
                             config
                                 .cli_unstable()
