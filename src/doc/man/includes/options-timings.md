@@ -1,7 +1,7 @@
 {{#option "`--timings=`_fmts_"}}
 Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
-formats; `--timing` without an argument will default to `--timing=html`.
+formats; `--timings` without an argument will default to `--timings=html`.
 Specifying an output format (rather than the default) is unstable and requires
 `-Zunstable-options`. Valid output formats:
 
