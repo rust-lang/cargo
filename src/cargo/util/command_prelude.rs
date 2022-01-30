@@ -236,11 +236,14 @@ pub trait AppExt: Sized {
     }
 
     fn arg_timings(self) -> Self {
-        self._arg(optional_multi_opt(
-            "timings",
-            "FMTS",
-            "Timing output formats (comma separated): html, json (unstable)",
-        ))
+        self._arg(
+            optional_opt(
+                "timings",
+                "Timing output formats (comma separated): html, json (unstable)",
+            )
+            .value_name("FMTS")
+            .require_equals(true),
+        )
     }
 }
 

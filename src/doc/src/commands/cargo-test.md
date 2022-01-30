@@ -281,7 +281,7 @@ required Rust version as configured in the project's <code>rust-version</code> f
 
 
 
-<dt class="option-term" id="option-cargo-test---timings"><a class="option-anchor" href="#option-cargo-test---timings"></a><code>--timings</code> <em>fmts</em></dt>
+<dt class="option-term" id="option-cargo-test---timings=fmts"><a class="option-anchor" href="#option-cargo-test---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
 <dd class="option-desc">Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
 formats; <code>--timing</code> without an argument will default to <code>--timing=html</code>. Valid

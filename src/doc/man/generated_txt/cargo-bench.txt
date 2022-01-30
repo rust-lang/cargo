@@ -219,7 +219,7 @@ OPTIONS
            than the required Rust version as configured in the project's
            rust-version field.
 
-       --timings fmts
+       --timings=fmts
            Output information how long each compilation takes, and track
            concurrency information over time. Accepts an optional
            comma-separated list of output formats; --timing without an argument
