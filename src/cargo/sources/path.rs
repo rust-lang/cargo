@@ -23,10 +23,10 @@ pub struct PathSource<'cfg> {
 }
 
 impl<'cfg> PathSource<'cfg> {
-    /// Invoked with an absolute path to a directory that contains a `Cargo.toml`.
-    ///
-    /// This source will only return the package at precisely the `path`
-    /// specified, and it will be an error if there's not a package at `path`.
+    // Invoked with an absolute path to a directory that contains a `Cargo.toml`.
+    //
+    // This source will only return the package at precisely the `path`
+    // specified, and it will be an error if there's not a package at `path`.
     pub fn new(path: &Path, source_id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
             source_id,
@@ -38,14 +38,14 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
-    /// Creates a new source which is walked recursively to discover packages.
-    ///
-    /// This is similar to the `new` method except that instead of requiring a
-    /// valid package to be present at `root` the folder is walked entirely to
-    /// crawl for packages.
-    ///
-    /// Note that this should be used with care and likely shouldn't be chosen
-    /// by default!
+    // Creates a new source which is walked recursively to discover packages.
+    //
+    // This is similar to the `new` method except that instead of requiring a
+    // valid package to be present at `root` the folder is walked entirely to
+    // crawl for packages.
+    //
+    // Note that this should be used with care and likely shouldn't be chosen
+    // by default!
     pub fn new_recursive(root: &Path, id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
             recursive: true,
@@ -87,15 +87,15 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
-    /// List all files relevant to building this package inside this source.
-    ///
-    /// This function will use the appropriate methods to determine the
-    /// set of files underneath this source's directory which are relevant for
-    /// building `pkg`.
-    ///
-    /// The basic assumption of this method is that all files in the directory
-    /// are relevant for building this package, but it also contains logic to
-    /// use other methods like .gitignore to filter the list of files.
+     List all files relevant to building this package inside this source.
+    //
+    // This function will use the appropriate methods to determine the
+    // set of files underneath this source's directory which are relevant for
+    // building `pkg`.
+    //
+    // The basic assumption of this method is that all files in the directory
+    // are relevant for building this package, but it also contains logic to
+    // use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         self._list_files(pkg).with_context(|| {
             format!(
@@ -174,8 +174,8 @@ impl<'cfg> PathSource<'cfg> {
         self.list_files_walk(pkg, &mut filter)
     }
 
-    /// Returns `Some(git2::Repository)` if found sibling `Cargo.toml` and `.git`
-    /// directory; otherwise, caller should fall back on full file list.
+    // Returns `Some(git2::Repository)` if found sibling `Cargo.toml` and `.git`
+    // directory; otherwise, caller should fall back on full file list.
     fn discover_git_repo(&self, root: &Path) -> CargoResult<Option<git2::Repository>> {
         let repo = match git2::Repository::discover(root) {
             Ok(repo) => repo,
