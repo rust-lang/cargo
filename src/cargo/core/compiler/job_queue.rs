@@ -134,6 +134,7 @@ struct DrainState<'cfg> {
     active: HashMap<JobId, Unit>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
+    scraped: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
     progress: Progress<'cfg>,
     next_id: u32,
@@ -353,6 +354,12 @@ enum Message {
         diag: String,
         fixable: bool,
     },
+    // This is distinct from Diagnostic because it gets emitted through
+    // a different Shell pathway
+    Warning {
+        id: JobId,
+        warning: String,
+    },
     WarningCount {
         id: JobId,
         emitted: bool,
@@ -426,6 +433,14 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
         Ok(())
     }
 
+    pub fn warning(&self, warning: String) -> CargoResult<()> {
+        self.messages.push_bounded(Message::Warning {
+            id: self.id,
+            warning,
+        });
+        Ok(())
+    }
+
     /// A method used to signal to the coordinator thread that the rmeta file
     /// for an rlib has been produced. This is only called for some rmeta
     /// builds when required, and can be called at any time before a job ends.
@@ -475,8 +490,10 @@ impl<'cfg> JobQueue<'cfg> {
             .filter(|dep| {
                 // Binaries aren't actually needed to *compile* tests, just to run
                 // them, so we don't include this dependency edge in the job graph.
+                // But we shouldn't filter out dependencies being scraped for Rustdoc.
                 (!dep.unit.target.is_test() && !dep.unit.target.is_bin())
                     || dep.unit.artifact.is_true()
+                    || dep.unit.mode.is_doc_scrape()
             })
             .map(|dep| {
                 // Handle the case here where our `unit -> dep` dependency may
@@ -563,6 +580,7 @@ impl<'cfg> JobQueue<'cfg> {
             active: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
+            scraped: HashSet::new(),
             counts: self.counts,
             progress,
             next_id: 0,
@@ -739,6 +757,10 @@ impl<'cfg> DrainState<'cfg> {
                     cnts.disallow_fixable();
                 }
             }
+            Message::Warning { id, warning } => {
+                cx.bcx.config.shell().warn(warning)?;
+                self.bump_warning_count(id, true, false);
+            }
             Message::WarningCount {
                 id,
                 emitted,
@@ -782,6 +804,16 @@ impl<'cfg> DrainState<'cfg> {
                 debug!("end ({:?}): {:?}", unit, result);
                 match result {
                     Ok(()) => self.finish(id, &unit, artifact, cx)?,
+                    Err(_)
+                        if unit.mode.is_doc_scrape()
+                            && unit.target.doc_scrape_examples().is_unset() =>
+                    {
+                        cx.failed_scrape_units
+                            .lock()
+                            .unwrap()
+                            .insert(cx.files().metadata(&unit));
+                        self.queue.finish(&unit, &artifact);
+                    }
                     Err(error) => {
                         let msg = "The following warnings were emitted during compilation:";
                         self.emit_warnings(Some(msg), &unit, cx)?;
@@ -1303,8 +1335,11 @@ impl<'cfg> DrainState<'cfg> {
         unit: &Unit,
         fresh: Freshness,
     ) -> CargoResult<()> {
-        if (self.compiled.contains(&unit.pkg.package_id()) && !unit.mode.is_doc())
+        if (self.compiled.contains(&unit.pkg.package_id())
+            && !unit.mode.is_doc()
+            && !unit.mode.is_doc_scrape())
             || (self.documented.contains(&unit.pkg.package_id()) && unit.mode.is_doc())
+            || (self.scraped.contains(&unit.pkg.package_id()) && unit.mode.is_doc_scrape())
         {
             return Ok(());
         }
@@ -1318,6 +1353,9 @@ impl<'cfg> DrainState<'cfg> {
                     config.shell().status("Documenting", &unit.pkg)?;
                 } else if unit.mode.is_doc_test() {
                     // Skip doc test.
+                } else if unit.mode.is_doc_scrape() {
+                    self.scraped.insert(unit.pkg.package_id());
+                    config.shell().status("Scraping", &unit.pkg)?;
                 } else {
                     self.compiled.insert(unit.pkg.package_id());
                     if unit.mode.is_check() {

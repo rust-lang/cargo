@@ -2880,6 +2880,8 @@ struct TomlTarget {
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
+    #[serde(rename = "doc-scrape-examples")]
+    doc_scrape_examples: Option<bool>,
     #[serde(rename = "proc-macro")]
     proc_macro_raw: Option<bool>,
     #[serde(rename = "proc_macro")]

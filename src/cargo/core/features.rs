@@ -688,10 +688,8 @@ unstable_cli_options!(
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
     publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
     unstable_options: bool = ("Allow the usage of unstable options"),
-    // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
-    // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
-    rustdoc_scrape_examples: Option<String> = ("Allow rustdoc to scrape examples from reverse-dependencies for documentation"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
+    rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -961,15 +959,7 @@ impl CliUnstable {
             "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),
             "weak-dep-features" => stabilized_warn(k, "1.60", STABILIZED_WEAK_DEP_FEATURES),
             "credential-process" => self.credential_process = parse_empty(k, v)?,
-            "rustdoc-scrape-examples" => {
-                if let Some(s) = v {
-                    self.rustdoc_scrape_examples = Some(s.to_string())
-                } else {
-                    bail!(
-                        r#"-Z rustdoc-scrape-examples must take "all" or "examples" as an argument"#
-                    )
-                }
-            }
+            "rustdoc-scrape-examples" => self.rustdoc_scrape_examples = parse_empty(k, v)?,
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
             "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
             "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,

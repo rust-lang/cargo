@@ -77,6 +77,8 @@ pub struct Context<'a, 'cfg> {
     /// Map of Doc/Docscrape units to metadata for their -Cmetadata flag.
     /// See Context::find_metadata_units for more details.
     pub metadata_for_doc_units: HashMap<Unit, Metadata>,
+
+    pub failed_scrape_units: Arc<Mutex<HashSet<Metadata>>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -115,6 +117,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             rustc_clients: HashMap::new(),
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
+            failed_scrape_units: Arc::new(Mutex::new(HashSet::new())),
         })
     }
 

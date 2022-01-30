@@ -4,7 +4,7 @@ use crate::core::compiler::CompileMode;
 use crate::core::{Target, TargetKind};
 use crate::util::restricted_names::is_glob_pattern;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 /// Indicates whether or not the library target gets included.
 pub enum LibRule {
     /// Include the library, fail if not present
@@ -15,7 +15,7 @@ pub enum LibRule {
     False,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Indicates which Cargo targets will be selected to be built.
 pub enum FilterRule {
     /// All included.

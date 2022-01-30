@@ -718,13 +718,14 @@ fn compute_deps_doc(
     // Add all units being scraped for examples as a dependency of top-level Doc units.
     if state.ws.unit_needs_doc_scrape(unit) {
         for scrape_unit in state.scrape_units.iter() {
-            deps_of(scrape_unit, state, unit_for)?;
+            let scrape_unit_for = UnitFor::new_normal(scrape_unit.kind);
+            deps_of(scrape_unit, state, scrape_unit_for)?;
             ret.push(new_unit_dep(
                 state,
                 scrape_unit,
                 &scrape_unit.pkg,
                 &scrape_unit.target,
-                unit_for,
+                scrape_unit_for,
                 scrape_unit.kind,
                 scrape_unit.mode,
                 IS_NO_ARTIFACT_DEP,
@@ -1088,7 +1089,6 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         if !dep.is_transitive()
                             && !unit.target.is_test()
                             && !unit.target.is_example()
-                            && !unit.mode.is_doc_scrape()
                             && !unit.mode.is_any_test()
                         {
                             return false;

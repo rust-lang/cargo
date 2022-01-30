@@ -168,6 +168,7 @@ fn substitute_macros(input: &str) -> String {
         ("[NOTE]", "note:"),
         ("[HELP]", "help:"),
         ("[DOCUMENTING]", " Documenting"),
+        ("[SCRAPING]", "    Scraping"),
         ("[FRESH]", "       Fresh"),
         ("[UPDATING]", "    Updating"),
         ("[ADDING]", "      Adding"),

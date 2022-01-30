@@ -21,6 +21,8 @@ use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
 
+use super::compiler::rustdoc::RustdocScrapeExamples;
+
 pub enum EitherManifest {
     Real(Manifest),
     Virtual(VirtualManifest),
@@ -220,6 +222,7 @@ struct TargetInner {
     for_host: bool,
     proc_macro: bool,
     edition: Edition,
+    doc_scrape_examples: RustdocScrapeExamples,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -373,6 +376,7 @@ compact_debug! {
                 for_host
                 proc_macro
                 edition
+                doc_scrape_examples
             )]
         }
     }
@@ -648,6 +652,7 @@ impl Target {
                 harness: true,
                 for_host: false,
                 proc_macro: false,
+                doc_scrape_examples: RustdocScrapeExamples::Unset,
                 edition,
                 tested: true,
                 benched: true,
@@ -699,7 +704,8 @@ impl Target {
             .set_name(name)
             .set_for_host(true)
             .set_benched(false)
-            .set_tested(false);
+            .set_tested(false)
+            .set_doc_scrape_examples(RustdocScrapeExamples::Disabled);
         target
     }
 
@@ -710,7 +716,8 @@ impl Target {
             .set_name(name)
             .set_for_host(true)
             .set_benched(false)
-            .set_tested(false);
+            .set_tested(false)
+            .set_doc_scrape_examples(RustdocScrapeExamples::Disabled);
         target
     }
 
@@ -803,6 +810,9 @@ impl Target {
     }
     pub fn edition(&self) -> Edition {
         self.inner.edition
+    }
+    pub fn doc_scrape_examples(&self) -> RustdocScrapeExamples {
+        self.inner.doc_scrape_examples
     }
     pub fn benched(&self) -> bool {
         self.inner.benched
@@ -916,6 +926,13 @@ impl Target {
     }
     pub fn set_edition(&mut self, edition: Edition) -> &mut Target {
         Arc::make_mut(&mut self.inner).edition = edition;
+        self
+    }
+    pub fn set_doc_scrape_examples(
+        &mut self,
+        doc_scrape_examples: RustdocScrapeExamples,
+    ) -> &mut Target {
+        Arc::make_mut(&mut self.inner).doc_scrape_examples = doc_scrape_examples;
         self
     }
     pub fn set_harness(&mut self, harness: bool) -> &mut Target {

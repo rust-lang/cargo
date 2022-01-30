@@ -45,6 +45,7 @@ mod death;
 mod dep_info;
 mod directory;
 mod doc;
+mod docscrape;
 mod edition;
 mod error;
 mod features;

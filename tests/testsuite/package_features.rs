@@ -468,9 +468,7 @@ fn non_member() {
 
     p.cargo("build -p dep --features f1")
         .with_status(101)
-        .with_stderr(
-            "[UPDATING][..]\n[ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
     p.cargo("build -p dep --all-features")
@@ -486,6 +484,7 @@ fn non_member() {
     p.cargo("build -p dep")
         .with_stderr(
             "\
+[UPDATING] [..]
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] dep [..]

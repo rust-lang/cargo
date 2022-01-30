@@ -190,3 +190,20 @@ pub fn add_root_urls(
     }
     Ok(())
 }
+
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
+pub enum RustdocScrapeExamples {
+    Enabled,
+    Disabled,
+    Unset,
+}
+
+impl RustdocScrapeExamples {
+    pub fn is_enabled(&self) -> bool {
+        matches!(self, RustdocScrapeExamples::Enabled)
+    }
+
+    pub fn is_unset(&self) -> bool {
+        matches!(self, RustdocScrapeExamples::Unset)
+    }
+}
