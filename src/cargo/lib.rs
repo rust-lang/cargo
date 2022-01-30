@@ -47,7 +47,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     std::process::exit(exit_code)
 }
 
-/// Displays an error, and all its causes, to stderr.
+// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
     debug!("display_error; err={:?}", err);
     _display_error(err, shell, true);
@@ -67,8 +67,8 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
     }
 }
 
-/// Displays a warning, with an error object providing detailed information
-/// and context.
+// Displays a warning, with an error object providing detailed information
+// and context.
 pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
     drop(shell.warn(warning));
     drop(writeln!(shell.err()));
