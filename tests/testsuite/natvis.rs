@@ -333,6 +333,22 @@ fn natvis_from_dbgvis_directory() {
             </AutoVisualizer>
         "#,
         )
+        .file(
+            "dbgvis/natvis/foo/bar.natvis",
+            r#"
+            <?xml version="1.0" encoding="utf-8"?>
+            <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+            <Type Name="foo::Bar">
+                <DisplayString>x:{x}, y:{y}, z:{z}</DisplayString>
+                <Expand>
+                    <Item Name="[x]">x</Item>
+                    <Item Name="[y]">y</Item>
+                    <Item Name="[z]">z</Item>
+                </Expand>
+            </Type>
+            </AutoVisualizer>
+        "#,
+        )
         .build();
 
     let foo_natvis_path = p
@@ -341,10 +357,17 @@ fn natvis_from_dbgvis_directory() {
         .display()
         .to_string();
 
+    let bar_natvis_path = p
+        .root()
+        .join("dbgvis/natvis/natvis/bar.natvis")
+        .display()
+        .to_string();
+
     // Run cargo build.
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(format!("[..]-C natvis={}[..]", foo_natvis_path))
+        .with_stderr_contains(format!("[..]-C natvis={}[..]", bar_natvis_path))
         .run();
 }
 

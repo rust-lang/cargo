@@ -883,9 +883,13 @@ the command line) target.
 * Original Issue: [#0000](https://github.com/rust-lang/cargo/pull/0000)
 
 The `natvis` feature adds a new section and key to the manifest:
-`[debugger-visualizations]` and `debugger-visualizations.natvis`. The `natvis`
-key takes a list of `.natvis` files which will be linked into the PDB
-generated if using the MSVC Linker.
+`[debugger-visualizations]` and `debugger-visualizations.natvis` which
+takes a list of `.natvis` files. The `natvis` feature also allows Cargo
+to automatically find Natvis files that live in a predetermined
+directory relative to the root of the package, `dbgvis/natvis`, including
+its subdirectories. This will be the default for including Natvis files in
+a package and will be overridden if the manifest key is specified. The Natvis
+files will then be linked into the PDB generated if using the MSVC Linker.
 
 Example:
 
