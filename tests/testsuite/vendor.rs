@@ -117,7 +117,7 @@ fn package_exclude() {
         .publish();
 
     p.cargo("vendor --respect-source-config").run();
-    let csum = dbg!(p.read_file("vendor/bar/.cargo-checksum.json"));
+    let csum = p.read_file("vendor/bar/.cargo-checksum.json");
     assert!(csum.contains(".include"));
     assert!(!csum.contains(".exclude"));
     assert!(!csum.contains(".dotdir/exclude"));
@@ -531,63 +531,154 @@ fn git_simple() {
 }
 
 #[cargo_test]
-fn git_duplicate() {
-    let git = git::new("a", |p| {
+fn duplicate_version_from_multiple_sources() {
+    registry::alt_init();
+    Package::new("b", "0.5.0").publish();
+    Package::new("bar", "0.1.0").publish();
+
+    // Start with merged source (no duplicate versions).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = '0.1.0'
+                b = '0.5.0'
+
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+
+    let assert_top_level_vendor_crates_exists = || {
+        let manifest = p.read_file("vendor/b/Cargo.toml");
+        assert!(manifest.contains(r#"version = "0.5.0""#));
+        let manifest = p.read_file("vendor/bar/Cargo.toml");
+        assert!(manifest.contains(r#"version = "0.1.0""#));
+    };
+    assert_top_level_vendor_crates_exists();
+
+    add_vendor_config(&p);
+    p.cargo("check -v").run();
+
+    // Add conflict versions
+    Package::new("b", "0.5.0").alternative(true).publish();
+    let git_dep = git::new("b", |p| {
+        p.file("Cargo.toml", &basic_lib_manifest("b"))
+            .file("src/lib.rs", "")
+    });
+
+    // Switch to duplicate versions.
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = '0.1.0'
+                b = '0.5.0'
+                git_b = {{ git = '{}', package = "b" }}
+                alt_b = {{ version = "0.5.0", registry = "alternative", package = "b" }}
+            "#,
+            git_dep.url(),
+        ),
+    );
+
+    // Remove previous added source configs.
+    p.change_file(".cargo/config", "");
+    p.cargo("clean").run();
+
+    // Sources separate due to duplicate versions.
+    let output = p
+        .cargo("vendor --respect-source-config")
+        .exec_with_output()
+        .unwrap();
+    // The vendored crates in the top level won't be delete.
+    assert_top_level_vendor_crates_exists();
+
+    let output = String::from_utf8(output.stdout).unwrap();
+    p.change_file(".cargo/config", &output);
+
+    p.cargo("check -v")
+        .with_stderr_contains("[..]foo/vendor/b/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/bar/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/@git-[..]/b/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/@registry-[..]/b/src/lib.rs[..]")
+        .run();
+
+    // Switch to duplicate-free versions.
+    // Source should be merged again.
+    Package::new("b", "0.4.0").alternative(true).publish();
+    let git_dep = git::new("b-0.3.0", |p| {
         p.file(
             "Cargo.toml",
             r#"
                 [package]
-                name = "a"
-                version = "0.1.0"
-
-                [dependencies]
-                b = { path = 'b' }
+                name = "b"
+                version = "0.3.0"
             "#,
         )
         .file("src/lib.rs", "")
-        .file("b/Cargo.toml", &basic_lib_manifest("b"))
-        .file("b/src/lib.rs", "")
     });
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.1.0"
+                [dependencies]
+                bar = '0.1.0'
+                b = '0.5.0'
+                git_b = {{ git = '{}', package = "b" }}
+                alt_b = {{ version = "0.4.0", registry = "alternative", package = "b" }}
+            "#,
+            git_dep.url(),
+        ),
+    );
 
-                    [dependencies]
-                    a = {{ git = '{}' }}
-                    b = '0.5.0'
+    // Remove previous added source configs.
+    p.change_file(".cargo/config", "");
+    p.cargo("clean").run();
 
-                "#,
-                git.url()
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-    Package::new("b", "0.5.0").publish();
+    let output = p
+        .cargo("vendor --respect-source-config")
+        .exec_with_output()
+        .unwrap();
+    p.cargo("vendor --respect-source-config").run();
+    // The vendored crates in the top level won't be delete.
+    assert_top_level_vendor_crates_exists();
+    let manifest = p.read_file("vendor/b-0.4.0/Cargo.toml");
+    assert!(manifest.contains(r#"version = "0.4.0""#));
+    let manifest = p.read_file("vendor/b-0.3.0/Cargo.toml");
+    assert!(manifest.contains(r#"version = "0.3.0""#));
 
-    p.cargo("vendor --respect-source-config")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[UPDATING] [..]
-[DOWNLOADING] [..]
-[DOWNLOADED] [..]
-error: failed to sync
-
-Caused by:
-  found duplicate version of package `b v0.5.0` vendored from two sources:
-
-  <tab>source 1: [..]
-  <tab>source 2: [..]
-",
-        )
-        .with_status(101)
+    let output = String::from_utf8(output.stdout).unwrap();
+    p.change_file(".cargo/config", &output);
+    p.cargo("check -v")
+        .with_stderr_contains("[..]foo/vendor/bar/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/b/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/b-0.4.0/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/b-0.3.0/src/lib.rs[..]")
         .run();
+    for entry in p.root().join("vendor").read_dir().unwrap() {
+        let entry = entry.unwrap();
+        assert!(
+            !entry.file_name().into_string().unwrap().starts_with('@'),
+            "unused source should be deleted: {}",
+            entry.path().display(),
+        );
+    }
 }
 
 #[cargo_test]
