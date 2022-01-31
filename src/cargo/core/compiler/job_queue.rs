@@ -50,7 +50,7 @@
 //! improved.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
 use std::marker;
@@ -72,7 +72,7 @@ use super::job::{
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::compiler::future_incompat::{
-    FutureBreakageItem, FutureIncompatReportPackage, OnDiskReports,
+    self, FutureBreakageItem, FutureIncompatReportPackage,
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, Shell, TargetKind};
@@ -871,83 +871,16 @@ impl<'cfg> DrainState<'cfg> {
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
                 drop(cx.bcx.config.shell().status("Finished", message));
-                self.emit_future_incompat(cx.bcx);
+                future_incompat::save_and_display_report(
+                    cx.bcx,
+                    &self.per_package_future_incompat_reports,
+                );
             }
 
             None
         } else {
             debug!("queue: {:#?}", self.queue);
             Some(internal("finished with jobs still left in the queue"))
-        }
-    }
-
-    fn emit_future_incompat(&mut self, bcx: &BuildContext<'_, '_>) {
-        if !bcx.config.cli_unstable().future_incompat_report {
-            return;
-        }
-        let should_display_message = match bcx.config.future_incompat_config() {
-            Ok(config) => config.should_display_message(),
-            Err(e) => {
-                crate::display_warning_with_error(
-                    "failed to read future-incompat config from disk",
-                    &e,
-                    &mut bcx.config.shell(),
-                );
-                true
-            }
-        };
-
-        if self.per_package_future_incompat_reports.is_empty() {
-            // Explicitly passing a command-line flag overrides
-            // `should_display_message` from the config file
-            if bcx.build_config.future_incompat_report {
-                drop(
-                    bcx.config
-                        .shell()
-                        .note("0 dependencies had future-incompatible warnings"),
-                );
-            }
-            return;
-        }
-
-        // Get a list of unique and sorted package name/versions.
-        let package_vers: BTreeSet<_> = self
-            .per_package_future_incompat_reports
-            .iter()
-            .map(|r| r.package_id)
-            .collect();
-        let package_vers: Vec<_> = package_vers
-            .into_iter()
-            .map(|pid| pid.to_string())
-            .collect();
-
-        if should_display_message || bcx.build_config.future_incompat_report {
-            drop(bcx.config.shell().warn(&format!(
-                "the following packages contain code that will be rejected by a future \
-                 version of Rust: {}",
-                package_vers.join(", ")
-            )));
-        }
-
-        let on_disk_reports =
-            OnDiskReports::save_report(bcx.ws, &self.per_package_future_incompat_reports);
-        let report_id = on_disk_reports.last_id();
-
-        if bcx.build_config.future_incompat_report {
-            let rendered = on_disk_reports.get_report(report_id, bcx.config).unwrap();
-            drop(bcx.config.shell().print_ansi_stderr(rendered.as_bytes()));
-            drop(bcx.config.shell().note(&format!(
-                "this report can be shown with `cargo report \
-                 future-incompatibilities -Z future-incompat-report --id {}`",
-                report_id
-            )));
-        } else if should_display_message {
-            drop(bcx.config.shell().note(&format!(
-                "to see what the problems were, use the option \
-                 `--future-incompat-report`, or run `cargo report \
-                 future-incompatibilities --id {}`",
-                report_id
-            )));
         }
     }
 

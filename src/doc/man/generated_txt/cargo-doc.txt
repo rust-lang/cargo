@@ -126,9 +126,14 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
-           Document optimized artifacts with the release profile. See the
-           PROFILES section for details on how this affects profile selection.
+       -r, --release
+           Document optimized artifacts with the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Document with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
 
        --ignore-rust-version
            Document the target even if the selected Rust compiler is older than
@@ -151,7 +156,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -246,28 +253,6 @@ OPTIONS
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
-
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
-
-       Profile selection depends on the target and crate being built. By
-       default the dev or test profiles are used. If the --release flag is
-       given, then the release or bench profiles are used.
-
-       +----------------------------------------+-------------+--------------+
-       | Target                                 | Default     | --release    |
-       |                                        | Profile     | Profile      |
-       +----------------------------------------+-------------+--------------+
-       | lib, bin, example                      | dev         | release      |
-       +----------------------------------------+-------------+--------------+
-       | test, bench, or any target in "test"   | test        | bench        |
-       | or "bench" mode                        |             |              |
-       +----------------------------------------+-------------+--------------+
-
-       Dependencies use the dev/release profiles.
 
 ENVIRONMENT
        See the reference

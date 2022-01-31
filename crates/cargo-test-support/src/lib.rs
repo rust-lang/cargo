@@ -5,6 +5,7 @@
 #![allow(clippy::all)]
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
+#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 use std::env;
 use std::ffi::OsStr;
@@ -445,6 +446,11 @@ pub fn project() -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join("foo"))
 }
 
+// Generates a project layout in given directory
+pub fn project_in(dir: &str) -> ProjectBuilder {
+    ProjectBuilder::new(paths::root().join(dir).join("foo"))
+}
+
 // Generates a project layout inside our fake home dir
 pub fn project_in_home(name: &str) -> ProjectBuilder {
     ProjectBuilder::new(paths::home().join(name))
@@ -794,6 +800,15 @@ impl Execs {
         let p = (&self.process_builder).clone().unwrap();
         if let Err(e) = self.match_process(&p) {
             panic_error(&format!("test failed running {}", p), e);
+        }
+    }
+
+    #[track_caller]
+    pub fn run_expect_error(&mut self) {
+        self.ran = true;
+        let p = (&self.process_builder).clone().unwrap();
+        if self.match_process(&p).is_ok() {
+            panic!("test was expected to fail, but succeeded running {}", p);
         }
     }
 

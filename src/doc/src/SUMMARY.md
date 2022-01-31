@@ -38,6 +38,7 @@
     * [Registries](reference/registries.md)
     * [Dependency Resolution](reference/resolver.md)
     * [SemVer Compatibility](reference/semver.md)
+    * [Future incompat report](reference/future-incompat-report.md)
     * [Unstable Features](reference/unstable.md)
 
 * [Cargo Commands](commands/index.md)
@@ -57,6 +58,7 @@
         * [cargo rustc](commands/cargo-rustc.md)
         * [cargo rustdoc](commands/cargo-rustdoc.md)
         * [cargo test](commands/cargo-test.md)
+        * [cargo report](commands/cargo-report.md)
     * [Manifest Commands](commands/manifest-commands.md)
         * [cargo generate-lockfile](commands/cargo-generate-lockfile.md)
         * [cargo locate-project](commands/cargo-locate-project.md)

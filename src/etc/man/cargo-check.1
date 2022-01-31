@@ -174,20 +174,23 @@ target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
+\fB\-r\fR, 
 \fB\-\-release\fR
 .RS 4
-Check optimized artifacts with the \fBrelease\fR profile. See the
-PROFILES section for details on how this affects profile
-selection.
+Check optimized artifacts with the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
 .RE
 .sp
 \fB\-\-profile\fR \fIname\fR
 .RS 4
-Changes check behavior. Currently only \fBtest\fR is supported,
-which will check with the \fB#[cfg(test)]\fR attribute enabled.
-This is useful to have it check unit tests which are usually
-excluded via the \fBcfg\fR attribute. This does not change the actual profile
-used.
+Check with the given profile.
+.sp
+As a special case, specifying the \fBtest\fR profile will also enable checking in
+test mode which will enable checking tests and enable the \fBtest\fR cfg option.
+See \fIrustc tests\fR <https://doc.rust\-lang.org/rustc/tests/index.html> for more
+detail.
+.sp
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .sp
 \fB\-\-ignore\-rust\-version\fR
@@ -218,7 +221,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -347,43 +352,14 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more
-details.
 .sp
-Profile selection depends on the target and crate being built. By default the
-\fBdev\fR or \fBtest\fR profiles are used. If the \fB\-\-release\fR flag is given, then the
-\fBrelease\fR or \fBbench\fR profiles are used.
-
-.TS
-allbox tab(:);
-lt lt lt.
-T{
-Target
-T}:T{
-Default Profile
-T}:T{
-\fB\-\-release\fR Profile
-T}
-T{
-lib, bin, example
-T}:T{
-\fBdev\fR
-T}:T{
-\fBrelease\fR
-T}
-T{
-test, bench, or any target in "test" or "bench" mode
-T}:T{
-\fBtest\fR
-T}:T{
-\fBbench\fR
-T}
-.TE
+\fB\-\-future\-incompat\-report\fR
+.RS 4
+Displays a future\-incompat report for any future\-incompatible warnings
+produced during execution of this command
 .sp
-.sp
-Dependencies use the \fBdev\fR/\fBrelease\fR profiles.
+See \fBcargo\-report\fR(1)
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

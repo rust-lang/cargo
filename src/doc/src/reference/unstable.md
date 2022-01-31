@@ -83,18 +83,17 @@ Each new feature described below should explain how to use it.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
+    * [crate-type](#crate-type) - Supports passing crate types to the compiler.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Custom named profiles](#custom-named-profiles) — Adds custom named profiles in addition to the standard names.
     * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
 * Information and metadata
     * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
     * [timings](#timings) — Generates a report on how long individual dependencies took to run.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
-    * [future incompat report](#future-incompat-report) — Displays a report for future incompatibilities that may error in the future.
     * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
     * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
@@ -237,49 +236,6 @@ or running tests for both targets:
 ```
 cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
 ```
-
-### Custom named profiles
-
-* Tracking Issue: [rust-lang/cargo#6988](https://github.com/rust-lang/cargo/issues/6988)
-* RFC: [#2678](https://github.com/rust-lang/rfcs/pull/2678)
-
-With this feature you can define custom profiles having new names. With the
-custom profile enabled, build artifacts can be emitted by default to
-directories other than `release` or `debug`, based on the custom profile's
-name.
-
-For example:
-
-```toml
-cargo-features = ["named-profiles"]
-
-[profile.release-lto]
-inherits = "release"
-lto = true
-````
-
-An `inherits` key is used in order to receive attributes from other profiles,
-so that a new custom profile can be based on the standard `dev` or `release`
-profile presets. Cargo emits errors in case `inherits` loops are detected. When
-considering inheritance hierarchy, all profiles directly or indirectly inherit
-from either from `release` or from `dev`.
-
-Valid profile names are: must not be empty, use only alphanumeric characters or
-`-` or `_`.
-
-Passing `--profile` with the profile's name to various Cargo commands, directs
-operations to use the profile's attributes. Overrides that are specified in the
-profiles from which the custom profile inherits are inherited too.
-
-For example, using `cargo build` with `--profile` and the manifest from above:
-
-```sh
-cargo +nightly build --profile release-lto -Z unstable-options
-```
-
-When a custom profile is used, build artifacts go to a different target by
-default. In the example above, you can expect to see the outputs under
-`target/release-lto`.
 
 
 #### New `dir-name` attribute
@@ -550,7 +506,8 @@ units do not show when code generation starts).
 The "custom build" units are `build.rs` scripts, which when run are
 highlighted in orange.
 
-The second graph shows Cargo's concurrency over time. The three lines are:
+The second graph shows Cargo's concurrency over time. The background
+indicates CPU usage. The three lines are:
 - "Waiting" (red) — This is the number of units waiting for a CPU slot to
   open.
 - "Inactive" (blue) — This is the number of units that are waiting for their
@@ -597,6 +554,23 @@ It's currently unclear how this feature will be stabilized in Cargo, but we'd
 like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
+
+### crate-type
+* Tracking Issue: [#10083](https://github.com/rust-lang/cargo/issues/10083)
+* RFC: [#3180](https://github.com/rust-lang/rfcs/pull/3180)
+* Original Pull Request: [#10093](https://github.com/rust-lang/cargo/pull/10093)
+
+`cargo rustc --crate-type=lib,cdylib` forwards the `--crate-type` flag to `rustc`.
+This runs `rustc` with the corresponding
+[`--crate-type`](https://doc.rust-lang.org/rustc/command-line-arguments.html#--crate-type-a-list-of-types-of-crates-for-the-compiler-to-emit)
+flag, and compiling.
+
+When using it, it requires the `-Z unstable-options`
+command-line option:
+
+```console
+cargo rustc --crate-type lib,cdylib -Z unstable-options
+```
 
 ### config-cli
 * Tracking Issue: [#7722](https://github.com/rust-lang/cargo/issues/7722)
@@ -1168,35 +1142,6 @@ cargo logout -Z credential-process
 [crates.io]: https://crates.io/
 [config file]: config.md
 
-### future incompat report
-* RFC: [#2834](https://github.com/rust-lang/rfcs/blob/master/text/2834-cargo-report-future-incompat.md)
-* rustc Tracking Issue: [#71249](https://github.com/rust-lang/rust/issues/71249)
-
-The `-Z future-incompat-report` flag causes Cargo to check for
-future-incompatible warnings in all dependencies. These are warnings for
-changes that may become hard errors in the future, causing the dependency to
-stop building in a future version of rustc. If any warnings are found, a small
-notice is displayed indicating that the warnings were found, and provides
-instructions on how to display a full report.
-
-A full report can be displayed with the `cargo report future-incompatibilities
--Z future-incompat-report --id ID` command, or by running the build again with
-the `--future-incompat-report` flag. The developer should then update their
-dependencies to a version where the issue is fixed, or work with the
-developers of the dependencies to help resolve the issue.
-
-This feature can be configured through a `[future-incompat-report]`
-section in `.cargo/config`. Currently, the supported options are:
-
-```
-[future-incompat-report]
-frequency = FREQUENCY
-```
-
-The supported values for `FREQUENCY` are 'always` and 'never', which control
-whether or not a message is printed out at the end of `cargo build` / `cargo check`.
-
-
 ### `cargo config`
 
 * Original Issue: [#2362](https://github.com/rust-lang/cargo/issues/2362)
@@ -1251,7 +1196,7 @@ for the appropriate target and influenced by any other RUSTFLAGS.
 * Tracking Issue: [#9778](https://github.com/rust-lang/cargo/issues/9778)
 * PR: [#9627](https://github.com/rust-lang/cargo/pull/9627)
 
-The `different-binary-name` feature allows setting the filename of the binary without having to obey the 
+The `different-binary-name` feature allows setting the filename of the binary without having to obey the
 restrictions placed on crate names. For example, the crate name must use only `alphanumeric` characters
 or `-` or `_`, and cannot be empty.
 
@@ -1271,6 +1216,20 @@ version = "0.0.1"
 name = "foo"
 filename = "007bar"
 path = "src/main.rs"
+```
+
+### scrape-examples
+
+* RFC: [#3123](https://github.com/rust-lang/rfcs/pull/3123)
+* Tracking Issue: [#9910](https://github.com/rust-lang/cargo/issues/9910)
+
+The `-Z rustdoc-scrape-examples` argument tells Rustdoc to search crates in the current workspace
+for calls to functions. Those call-sites are then included as documentation. The flag can take an
+argument of `all` or `examples` which configures which crate in the workspace to analyze for examples.
+For instance:
+
+```
+cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
 ```
 
 ## Stabilized and removed features
@@ -1421,3 +1380,15 @@ information.
 The 2021 edition has been stabilized in the 1.56 release.
 See the [`edition` field](manifest.md#the-edition-field) for more information on setting the edition.
 See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](../../edition-guide/index.html) for more information on migrating existing projects.
+
+
+### Custom named profiles
+
+Custom named profiles have been stabilized in the 1.57 release. See the
+[profiles chapter](profiles.md#custom-profiles) for more information.
+
+### Future incompat report
+
+Support for generating a future-incompat report has been stabilized
+in the 1.59 release. See the [future incompat report chapter](future-incompat-report.md)
+for more information.

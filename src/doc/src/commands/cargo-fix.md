@@ -266,19 +266,20 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-fix--r"><a class="option-anchor" href="#option-cargo-fix--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-fix---release"><a class="option-anchor" href="#option-cargo-fix---release"></a><code>--release</code></dt>
-<dd class="option-desc">Fix optimized artifacts with the <code>release</code> profile. See the
-<a href="#profiles">PROFILES</a> section for details on how this affects profile
-selection.</dd>
+<dd class="option-desc">Fix optimized artifacts with the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
 
 
 
 <dt class="option-term" id="option-cargo-fix---profile"><a class="option-anchor" href="#option-cargo-fix---profile"></a><code>--profile</code> <em>name</em></dt>
-<dd class="option-desc">Changes fix behavior. Currently only <code>test</code> is supported,
-which will fix with the <code>#[cfg(test)]</code> attribute enabled.
-This is useful to have it fix unit tests which are usually
-excluded via the <code>cfg</code> attribute. This does not change the actual profile
-used.</dd>
+<dd class="option-desc">Fix with the given profile.</p>
+<p>As a special case, specifying the <code>test</code> profile will also enable checking in
+test mode which will enable checking tests and enable the <code>test</code> cfg option.
+See <a href="https://doc.rust-lang.org/rustc/tests/index.html">rustc tests</a> for more
+detail.</p>
+<p>See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 
@@ -315,7 +316,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-fix--q"><a class="option-anchor" href="#option-cargo-fix--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-fix---quiet"><a class="option-anchor" href="#option-cargo-fix---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---color"><a class="option-anchor" href="#option-cargo-fix---color"></a><code>--color</code> <em>when</em></dt>
@@ -426,24 +429,6 @@ the number of CPUs.</dd>
 
 
 </dl>
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See [the reference](../reference/profiles.html) for more
-details.
-
-Profile selection depends on the target and crate being built. By default the
-`dev` or `test` profiles are used. If the `--release` flag is given, then the
-`release` or `bench` profiles are used.
-
-Target | Default Profile | `--release` Profile
--------|-----------------|---------------------
-lib, bin, example | `dev` | `release`
-test, bench, or any target in "test" or "bench" mode | `test` | `bench`
-
-Dependencies use the `dev`/`release` profiles.
-
 
 ## ENVIRONMENT
 

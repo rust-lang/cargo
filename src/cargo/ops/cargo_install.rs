@@ -681,7 +681,7 @@ fn installed_exact_package<T>(
 where
     T: Source,
 {
-    if !dep.is_locked() {
+    if !dep.version_req().is_exact() {
         // If the version isn't exact, we may need to update the registry and look for a newer
         // version - we can't know if the package is installed without doing so.
         return Ok(None);

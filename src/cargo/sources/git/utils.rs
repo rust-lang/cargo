@@ -785,29 +785,32 @@ pub fn fetch(
     // which need to get fetched. Additionally record if we're fetching tags.
     let mut refspecs = Vec::new();
     let mut tags = false;
+    // The `+` symbol on the refspec means to allow a forced (fast-forward)
+    // update which is needed if there is ever a force push that requires a
+    // fast-forward.
     match reference {
         // For branches and tags we can fetch simply one reference and copy it
         // locally, no need to fetch other branches/tags.
         GitReference::Branch(b) => {
-            refspecs.push(format!("refs/heads/{0}:refs/remotes/origin/{0}", b));
+            refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
         }
         GitReference::Tag(t) => {
-            refspecs.push(format!("refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
+            refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
         }
 
         GitReference::DefaultBranch => {
-            refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
+            refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
         }
 
         GitReference::Rev(rev) => {
             if rev.starts_with("refs/") {
-                refspecs.push(format!("{0}:{0}", rev));
+                refspecs.push(format!("+{0}:{0}", rev));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
                 // it's somewhere in there.
-                refspecs.push(String::from("refs/heads/*:refs/remotes/origin/*"));
-                refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
+                refspecs.push(String::from("+refs/heads/*:refs/remotes/origin/*"));
+                refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
                 tags = true;
             }
         }

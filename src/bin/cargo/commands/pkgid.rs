@@ -6,7 +6,7 @@ use cargo::util::print_available_packages;
 pub fn cli() -> App {
     subcommand("pkgid")
         .about("Print a fully qualified package specification")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_quiet()
         .arg(Arg::with_name("spec"))
         .arg_package("Argument to get the package ID specifier for")
         .arg_manifest_path()

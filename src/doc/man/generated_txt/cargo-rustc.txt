@@ -133,9 +133,31 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
-           Build optimized artifacts with the release profile. See the PROFILES
-           section for details on how this affects profile selection.
+       -r, --release
+           Build optimized artifacts with the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Build with the given profile.
+
+           The rustc subcommand will treat the following named profiles with
+           special behaviors:
+
+           o  check — Builds in the same way as the cargo-check(1) command
+              with the dev profile.
+
+           o  test — Builds in the same way as the cargo-test(1) command,
+              enabling building in test mode which will enable tests and enable
+              the test cfg option. See rustc tests
+              <https://doc.rust-lang.org/rustc/tests/index.html> for more
+              detail.
+
+           o  bench — Builds in the same was as the cargo-bench(1) command,
+              similar to the test profile.
+
+           See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
 
        --ignore-rust-version
            Build the target even if the selected Rust compiler is older than
@@ -158,7 +180,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -254,27 +278,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
+       --future-incompat-report
+           Displays a future-incompat report for any future-incompatible
+           warnings produced during execution of this command
 
-       Profile selection depends on the target and crate being built. By
-       default the dev or test profiles are used. If the --release flag is
-       given, then the release or bench profiles are used.
-
-       +----------------------------------------+-------------+--------------+
-       | Target                                 | Default     | --release    |
-       |                                        | Profile     | Profile      |
-       +----------------------------------------+-------------+--------------+
-       | lib, bin, example                      | dev         | release      |
-       +----------------------------------------+-------------+--------------+
-       | test, bench, or any target in "test"   | test        | bench        |
-       | or "bench" mode                        |             |              |
-       +----------------------------------------+-------------+--------------+
-
-       Dependencies use the dev/release profiles.
+           See cargo-report(1)
 
 ENVIRONMENT
        See the reference

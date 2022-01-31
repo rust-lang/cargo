@@ -52,12 +52,20 @@ pub fn read_manifest(
     );
     let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
 
-    do_read_manifest(&contents, path, source_id, config)
+    read_manifest_from_str(&contents, path, source_id, config)
         .with_context(|| format!("failed to parse manifest at `{}`", path.display()))
         .map_err(|err| ManifestError::new(err, path.into()))
 }
 
-fn do_read_manifest(
+/// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
+///
+/// This could result in a real or virtual manifest being returned.
+///
+/// A list of nested paths is also returned, one for each path dependency
+/// within the manifest. For virtual manifests, these paths can only
+/// come from patched or replaced dependencies. These paths are not
+/// canonicalized.
+pub fn read_manifest_from_str(
     contents: &str,
     manifest_file: &Path,
     source_id: SourceId,
@@ -602,6 +610,7 @@ impl TomlProfile {
                 | "rust"
                 | "rustc"
                 | "rustdoc"
+                | "target"
                 | "tmp"
                 | "uninstall"
         ) || lower_name.starts_with("cargo")
@@ -1247,7 +1256,7 @@ impl TomlManifest {
             for (name, platform) in me.target.iter().flatten() {
                 cx.platform = {
                     let platform: Platform = name.parse()?;
-                    platform.check_cfg_attributes(&mut cx.warnings);
+                    platform.check_cfg_attributes(cx.warnings);
                     Some(platform)
                 };
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
@@ -1553,16 +1562,15 @@ impl TomlManifest {
             }
 
             let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
-            {
-                let version = spec.version().ok_or_else(|| {
-                    anyhow!(
-                        "replacements must specify a version \
-                         to replace, but `{}` does not",
-                        spec
-                    )
-                })?;
-                dep.set_version_req(VersionReq::exact(version));
-            }
+            let version = spec.version().ok_or_else(|| {
+                anyhow!(
+                    "replacements must specify a version \
+                     to replace, but `{}` does not",
+                    spec
+                )
+            })?;
+            dep.set_version_req(VersionReq::exact(version))
+                .lock_version(version);
             replace.push((spec, dep));
         }
         Ok(replace)

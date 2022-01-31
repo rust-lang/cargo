@@ -221,15 +221,21 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
-           Fix optimized artifacts with the release profile. See the PROFILES
-           section for details on how this affects profile selection.
+       -r, --release
+           Fix optimized artifacts with the release profile. See also the
+           --profile option for choosing a specific profile by name.
 
        --profile name
-           Changes fix behavior. Currently only test is supported, which will
-           fix with the #[cfg(test)] attribute enabled. This is useful to have
-           it fix unit tests which are usually excluded via the cfg attribute.
-           This does not change the actual profile used.
+           Fix with the given profile.
+
+           As a special case, specifying the test profile will also enable
+           checking in test mode which will enable checking tests and enable
+           the test cfg option. See rustc tests
+           <https://doc.rust-lang.org/rustc/tests/index.html> for more detail.
+
+           See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
 
        --ignore-rust-version
            Fix the target even if the selected Rust compiler is older than the
@@ -252,7 +258,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -347,28 +355,6 @@ OPTIONS
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
-
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
-
-       Profile selection depends on the target and crate being built. By
-       default the dev or test profiles are used. If the --release flag is
-       given, then the release or bench profiles are used.
-
-       +----------------------------------------+-------------+--------------+
-       | Target                                 | Default     | --release    |
-       |                                        | Profile     | Profile      |
-       +----------------------------------------+-------------+--------------+
-       | lib, bin, example                      | dev         | release      |
-       +----------------------------------------+-------------+--------------+
-       | test, bench, or any target in "test"   | test        | bench        |
-       | or "bench" mode                        |             |              |
-       +----------------------------------------+-------------+--------------+
-
-       Dependencies use the dev/release profiles.
 
 ENVIRONMENT
        See the reference

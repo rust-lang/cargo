@@ -176,6 +176,7 @@ impl<'cfg> Timings<'cfg> {
             CompileMode::Bench => target.push_str(" (bench)"),
             CompileMode::Doc { .. } => target.push_str(" (doc)"),
             CompileMode::Doctest => target.push_str(" (doc test)"),
+            CompileMode::Docscrape => target.push_str(" (doc scrape)"),
             CompileMode::RunCustomBuild => target.push_str(" (run)"),
         }
         let unit_time = UnitTime {

@@ -2,9 +2,12 @@
 
 use cargo_test_support::paths::is_symlink;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, git, main_file, project, rustc_host};
+use cargo_test_support::{
+    basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
+};
+use glob::GlobError;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[cargo_test]
 fn cargo_clean_simple() {
@@ -84,6 +87,41 @@ fn clean_multiple_packages() {
     assert!(p.bin("foo").is_file());
     assert!(!d1_path.is_file());
     assert!(!d2_path.is_file());
+}
+
+#[cargo_test]
+fn clean_multiple_packages_in_glob_char_path() {
+    let p = project_in("[d1]")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+    let foo_path = &p.build_dir().join("debug").join("deps");
+
+    // Assert that build artifacts are produced
+    p.cargo("build").run();
+    assert_ne!(get_build_artifacts(foo_path).len(), 0);
+
+    // Assert that build artifacts are destroyed
+    p.cargo("clean -p foo").run();
+    assert_eq!(get_build_artifacts(foo_path).len(), 0);
+}
+
+fn get_build_artifacts(path: &PathBuf) -> Vec<Result<PathBuf, GlobError>> {
+    let pattern = path.to_str().expect("expected utf-8 path");
+    let pattern = glob::Pattern::escape(pattern);
+
+    #[cfg(not(target_env = "msvc"))]
+    const FILE: &str = "foo-*";
+
+    #[cfg(target_env = "msvc")]
+    const FILE: &str = "foo.pdb";
+
+    let path = PathBuf::from(pattern).join(FILE);
+    let path = path.to_str().expect("expected utf-8 path");
+    glob::glob(path)
+        .expect("expected glob to run")
+        .into_iter()
+        .collect::<Vec<Result<PathBuf, GlobError>>>()
 }
 
 #[cargo_test]
@@ -378,7 +416,7 @@ fn package_cleans_all_the_things() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib/some-main.rs", "fn main() {}")
         .file("src/bin/other-main.rs", "fn main() {}")
         .file("examples/foo-ex-rlib.rs", "")
         .file("examples/foo-ex-cdylib.rs", "")

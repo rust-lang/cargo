@@ -5,41 +5,6 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]
-fn named_profile_gated() {
-    // Named profile in config requires enabling in Cargo.toml.
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [profile.foo]
-            inherits = 'dev'
-            opt-level = 1
-            "#,
-        )
-        .build();
-    p.cargo("build --profile foo -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[ERROR] config profile `foo` is not valid (defined in `[..]/foo/.cargo/config`)
-
-Caused by:
-  feature `named-profiles` is required
-
-  The package requires the Cargo feature called `named-profiles`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
-  Consider adding `cargo-features = [\"named-profiles\"]` to the top of Cargo.toml \
-  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#custom-named-profiles \
-  for more information about the status of this feature.
-",
-        )
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn profile_config_validate_warnings() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -378,8 +343,6 @@ fn named_config_profile() {
     fs::write(
         paths::root().join("Cargo.toml"),
         r#"
-            cargo-features = ['named-profiles']
-
             [workspace]
 
             [profile.middle]
@@ -397,7 +360,7 @@ fn named_config_profile() {
         "#,
     )
     .unwrap();
-    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
+    let config = ConfigBuilder::new().build();
     let profile_name = InternedString::new("foo");
     let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();
@@ -443,7 +406,6 @@ fn named_env_profile() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
             [package]
             name = "foo"
             version = "0.1.0"
@@ -452,8 +414,7 @@ fn named_env_profile() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v -Zunstable-options --profile=other")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -v --profile=other")
         .env("CARGO_PROFILE_OTHER_CODEGEN_UNITS", "1")
         .env("CARGO_PROFILE_OTHER_INHERITS", "dev")
         .with_stderr_contains("[..]-C codegen-units=1 [..]")
@@ -462,7 +423,8 @@ fn named_env_profile() {
 
 #[cargo_test]
 fn test_with_dev_profile() {
-    // `cargo test` uses "dev" profile for dependencies.
+    // The `test` profile inherits from `dev` for both local crates and
+    // dependencies.
     Package::new("somedep", "1.0.0").publish();
     let p = project()
         .file(
@@ -488,7 +450,7 @@ fn test_with_dev_profile() {
 [COMPILING] somedep v1.0.0
 [RUNNING] `rustc --crate-name somedep [..]-C debuginfo=0[..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..]-C debuginfo=2[..]
+[RUNNING] `rustc --crate-name foo [..]-C debuginfo=0[..]
 [FINISHED] [..]
 [EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",

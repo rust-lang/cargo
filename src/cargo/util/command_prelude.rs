@@ -142,7 +142,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_release(self, release: &'static str) -> Self {
-        self._arg(opt("release", release))
+        self._arg(opt("release", release).short("r"))
     }
 
     fn arg_profile(self, profile: &'static str) -> Self {
@@ -233,8 +233,12 @@ pub trait AppExt: Sized {
     fn arg_future_incompat_report(self) -> Self {
         self._arg(opt(
             "future-incompat-report",
-            "Outputs a future incompatibility report at the end of the build (unstable)",
+            "Outputs a future incompatibility report at the end of the build",
         ))
+    }
+
+    fn arg_quiet(self) -> Self {
+        self._arg(opt("quiet", "Do not print cargo log messages").short("q"))
     }
 }
 
@@ -287,15 +291,15 @@ pub fn subcommand(name: &'static str) -> App {
     ])
 }
 
-// Determines whether or not to gate `--profile` as unstable when resolving it.
+/// Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
-    // `cargo rustc` historically has allowed "test", "bench", and "check". This
-    // variant explicitly allows those.
+    /// `cargo rustc` historically has allowed "test", "bench", and "check". This
+    /// variant explicitly allows those.
     LegacyRustc,
-    // `cargo check` and `cargo fix` historically has allowed "test". This variant
-    // explicitly allows that on stable.
+    /// `cargo check` and `cargo fix` historically has allowed "test". This variant
+    /// explicitly allows that on stable.
     LegacyTestOnly,
-    // All other commands, which allow any valid custom named profile.
+    /// All other commands, which allow any valid custom named profile.
     Custom,
 }
 
@@ -363,14 +367,20 @@ pub trait ArgMatchesExt {
         // This is an early exit, since it allows combination with `--release`.
         match (specified_profile, profile_checking) {
             // `cargo rustc` has legacy handling of these names
-            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc) |
+            (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
-            (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => return Ok(InternedString::new(name)),
+            | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
+                if self._is_present("release") {
+                    config.shell().warn(
+                        "the `--release` flag should not be specified with the `--profile` flag\n\
+                         The `--release` flag will be ignored.\n\
+                         This was historically accepted, but will become an error \
+                         in a future release."
+                    )?;
+                }
+                return Ok(InternedString::new(name));
+            }
             _ => {}
-        }
-
-        if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-            bail!("usage of `--profile` requires `-Z unstable-options`");
         }
 
         let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
@@ -506,17 +516,6 @@ pub trait ArgMatchesExt {
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
-        if build_config.future_incompat_report {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--future-incompat-report", 9241)?;
-
-            if !config.cli_unstable().future_incompat_report {
-                anyhow::bail!(
-                    "Usage of `--future-incompat-report` requires `-Z future-incompat-report`"
-                )
-            }
-        }
 
         let opts = CompileOptions {
             build_config,
@@ -536,6 +535,7 @@ pub trait ArgMatchesExt {
             ),
             target_rustdoc_args: None,
             target_rustc_args: None,
+            target_rustc_crate_types: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: !self._is_present("ignore-rust-version"),
@@ -620,27 +620,8 @@ pub trait ArgMatchesExt {
         }
     }
 
-    fn index(&self, config: &Config) -> CargoResult<Option<String>> {
-        // TODO: deprecated. Remove once it has been decided `--host` can be removed
-        // We may instead want to repurpose the host flag, as mentioned in issue
-        // rust-lang/cargo#4208.
-        let msg = "The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.";
-
-        let index = match self._value_of("host") {
-            Some(host) => {
-                config.shell().warn(&msg)?;
-                Some(host.to_string())
-            }
-            None => self._value_of("index").map(|s| s.to_string()),
-        };
+    fn index(&self) -> CargoResult<Option<String>> {
+        let index = self._value_of("index").map(|s| s.to_string());
         Ok(index)
     }
 

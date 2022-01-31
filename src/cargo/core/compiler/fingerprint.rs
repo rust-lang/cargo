@@ -316,6 +316,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
 use std::env;
 use std::hash::{self, Hash, Hasher};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -1366,11 +1367,19 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
     let local = (gen_local)(
         deps,
         Some(&|| {
-            pkg_fingerprint(cx.bcx, &unit.pkg).with_context(|| {
-                format!(
-                    "failed to determine package fingerprint for build script for {}",
-                    unit.pkg
-                )
+            const IO_ERR_MESSAGE: &str = "\
+An I/O error happened. Please make sure you can access the file.
+
+By default, if your project contains a build script, cargo scans all files in
+it to determine whether a rebuild is needed. If you don't expect to access the 
+file, specify `rerun-if-changed` in your build script.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed for more information.";
+            pkg_fingerprint(cx.bcx, &unit.pkg).map_err(|err| {
+                let mut message = format!("failed to determine package fingerprint for build script for {}", unit.pkg);
+                if err.root_cause().is::<io::Error>() {
+                    message = format!("{}\n{}", message, IO_ERR_MESSAGE)
+                }
+                err.context(message)
             })
         }),
     )?
