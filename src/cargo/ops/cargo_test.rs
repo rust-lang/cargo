@@ -291,18 +291,21 @@ fn cmd_builds(
     compilation: &Compilation<'_>,
 ) -> CargoResult<(String, ProcessBuilder)> {
     let test_path = unit.target.src_path().path().unwrap();
+    let short_test_path = test_path
+        .strip_prefix(unit.pkg.root())
+        .unwrap_or(test_path)
+        .display();
+
     let exe_display = if let TargetKind::Test = unit.target.kind() {
         format!(
             "{} ({})",
-            test_path
-                .strip_prefix(unit.pkg.root())
-                .unwrap_or(test_path)
-                .display(),
+            short_test_path,
             path.strip_prefix(cwd).unwrap_or(path).display()
         )
     } else {
         format!(
-            "unittests ({})",
+            "unittests {} ({})",
+            short_test_path,
             path.strip_prefix(cwd).unwrap_or(path).display()
         )
     };

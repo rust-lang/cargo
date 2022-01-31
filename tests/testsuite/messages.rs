@@ -63,7 +63,7 @@ fn deduplicate_messages_basic() {
 warning: `foo` (lib) generated 1 warning
 warning: `foo` (lib test) generated 1 warning (1 duplicate)
 [FINISHED] [..]
-[EXECUTABLE] unittests (target/debug/deps/foo-[..][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 ",
         rustc_message
     );
@@ -107,7 +107,7 @@ warning: `foo` (lib) generated 1 warning
 {}\
 warning: `foo` (lib test) generated 2 warnings (1 duplicate)
 [FINISHED] [..]
-[EXECUTABLE] unittests (target/debug/deps/foo-[..][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 ",
         lib_output, lib_test_output
     );

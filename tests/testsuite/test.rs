@@ -1346,7 +1346,7 @@ fn test_no_run() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] unittests (target/debug/deps/foo-[..][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 ",
         )
         .run();

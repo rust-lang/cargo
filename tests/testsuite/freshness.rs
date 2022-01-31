@@ -596,7 +596,7 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] unittests (target/debug/deps/foo-[..][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 [EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[..][EXE])
 ",
         )
