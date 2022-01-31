@@ -54,6 +54,7 @@ _cargo()
 	local opt__check="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --profile --target-dir"
 	local opt__c="$opt__check"
 	local opt__clean="$opt_common $opt_pkg $opt_mani $opt_lock --target --release --doc --target-dir --profile"
+	local opt__clippy="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --profile --target-dir --no-deps --fix"
 	local opt__doc="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs --message-format --bin --bins --lib --target --open --no-deps --release --document-private-items --target-dir --profile"
 	local opt__d="$opt__doc"
 	local opt__fetch="$opt_common $opt_mani $opt_lock --target"
