@@ -29,33 +29,6 @@ fn vendor_simple() {
 
     Package::new("log", "0.3.5").publish();
 
-    p.cargo("vendor --respect-source-config").run();
-    let lock = p.read_file("vendor/log/Cargo.toml");
-    assert!(lock.contains("version = \"0.3.5\""));
-
-    add_vendor_config(&p);
-    p.cargo("build").run();
-}
-
-#[cargo_test]
-fn vendor_sample_config() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                log = "0.3.5"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    Package::new("log", "0.3.5").publish();
-
     p.cargo("vendor --respect-source-config")
         .with_stdout(
             r#"
@@ -67,6 +40,11 @@ directory = "vendor"
 "#,
         )
         .run();
+    let lock = p.read_file("vendor/log/Cargo.toml");
+    assert!(lock.contains("version = \"0.3.5\""));
+
+    add_vendor_config(&p);
+    p.cargo("build").run();
 }
 
 fn add_vendor_config(p: &Project) {
