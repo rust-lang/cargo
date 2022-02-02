@@ -22,7 +22,7 @@ pub fn run_tests(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        display_no_run_information(ws, test_args, &compilation)?;
+        display_no_run_information(ws, test_args, &compilation, "unittests")?;
         return Ok(None);
     }
     let (test, mut errors) = run_unit_tests(ws.config(), options, test_args, &compilation)?;
@@ -50,7 +50,7 @@ pub fn run_benches(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        display_no_run_information(ws, args, &compilation)?;
+        display_no_run_information(ws, args, &compilation, "benches")?;
         return Ok(None);
     }
 
@@ -87,8 +87,16 @@ fn run_unit_tests(
         script_meta,
     } in compilation.tests.iter()
     {
-        let (exe_display, cmd) =
-            cmd_builds(config, cwd, unit, path, script_meta, test_args, compilation)?;
+        let (exe_display, cmd) = cmd_builds(
+            config,
+            cwd,
+            unit,
+            path,
+            script_meta,
+            test_args,
+            compilation,
+            "unittests",
+        )?;
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;
@@ -252,6 +260,7 @@ fn display_no_run_information(
     ws: &Workspace<'_>,
     test_args: &[&str],
     compilation: &Compilation<'_>,
+    exec_type: &str,
 ) -> CargoResult<()> {
     let config = ws.config();
     let cwd = config.cwd();
@@ -269,6 +278,7 @@ fn display_no_run_information(
             script_meta,
             test_args,
             &compilation,
+            exec_type,
         )?;
         config
             .shell()
@@ -289,6 +299,7 @@ fn cmd_builds(
     script_meta: &Option<Metadata>,
     test_args: &[&str],
     compilation: &Compilation<'_>,
+    exec_type: &str,
 ) -> CargoResult<(String, ProcessBuilder)> {
     let test_path = unit.target.src_path().path().unwrap();
     let short_test_path = test_path
@@ -296,18 +307,18 @@ fn cmd_builds(
         .unwrap_or(test_path)
         .display();
 
-    let exe_display = if let TargetKind::Test = unit.target.kind() {
-        format!(
+    let exe_display = match unit.target.kind() {
+        TargetKind::Test | TargetKind::Bench => format!(
             "{} ({})",
             short_test_path,
             path.strip_prefix(cwd).unwrap_or(path).display()
-        )
-    } else {
-        format!(
-            "unittests {} ({})",
+        ),
+        _ => format!(
+            "{} {} ({})",
+            exec_type,
             short_test_path,
             path.strip_prefix(cwd).unwrap_or(path).display()
-        )
+        ),
     };
 
     let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
