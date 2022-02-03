@@ -242,7 +242,7 @@ fn compute_deps(
     }
 
     let id = unit.pkg.package_id();
-    let filtered_deps = non_custom_build_and_non_transitive_deps(unit, state, unit_for);
+    let filtered_deps = state.deps(unit, unit_for);
 
     let mut ret = Vec::new();
     let mut dev_deps = Vec::new();
@@ -349,37 +349,6 @@ fn compute_deps(
     Ok(ret)
 }
 
-/// Returns non-custom and non-transitive dependencies.
-fn non_custom_build_and_non_transitive_deps<'a>(
-    unit: &Unit,
-    state: &'a State<'_, '_>,
-    unit_for: UnitFor,
-) -> Vec<(PackageId, &'a HashSet<Dependency>)> {
-    state.deps(unit, unit_for, &|dep| {
-        // If this target is a build command, then we only want build
-        // dependencies, otherwise we want everything *other than* build
-        // dependencies.
-        if unit.target.is_custom_build() != dep.is_build() {
-            return false;
-        }
-
-        // If this dependency is **not** a transitive dependency, then it
-        // only applies to test/example targets.
-        if !dep.is_transitive()
-            && !unit.target.is_test()
-            && !unit.target.is_example()
-            && !unit.mode.is_doc_scrape()
-            && !unit.mode.is_any_test()
-        {
-            return false;
-        }
-
-        // If we've gotten past all that, then this dependency is
-        // actually used!
-        true
-    })
-}
-
 /// Returns the dependencies needed to run a build script.
 ///
 /// The `unit` provided must represent an execution of a build script, and
@@ -431,7 +400,7 @@ fn compute_deps_doc(
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep>> {
-    let deps = non_custom_build_and_non_transitive_deps(unit, state, unit_for);
+    let deps = state.deps(unit, unit_for);
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
@@ -839,12 +808,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
     }
 
     /// Returns a filtered set of dependencies for the given unit.
-    fn deps(
-        &self,
-        unit: &Unit,
-        unit_for: UnitFor,
-        filter: &dyn Fn(&Dependency) -> bool,
-    ) -> Vec<(PackageId, &HashSet<Dependency>)> {
+    fn deps(&self, unit: &Unit, unit_for: UnitFor) -> Vec<(PackageId, &HashSet<Dependency>)> {
         let pkg_id = unit.pkg.package_id();
         let kind = unit.kind;
         self.resolve()
@@ -852,9 +816,24 @@ impl<'a, 'cfg> State<'a, 'cfg> {
             .filter(|&(_id, deps)| {
                 assert!(!deps.is_empty());
                 deps.iter().any(|dep| {
-                    if !filter(dep) {
+                    // If this target is a build command, then we only want build
+                    // dependencies, otherwise we want everything *other than* build
+                    // dependencies.
+                    if unit.target.is_custom_build() != dep.is_build() {
                         return false;
                     }
+
+                    // If this dependency is **not** a transitive dependency, then it
+                    // only applies to test/example targets.
+                    if !dep.is_transitive()
+                        && !unit.target.is_test()
+                        && !unit.target.is_example()
+                        && !unit.mode.is_doc_scrape()
+                        && !unit.mode.is_any_test()
+                    {
+                        return false;
+                    }
+
                     // If this dependency is only available for certain platforms,
                     // make sure we're only enabling it for that platform.
                     if !self.target_data.dep_platform_activated(dep, kind) {
@@ -870,6 +849,8 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         }
                     }
 
+                    // If we've gotten past all that, then this dependency is
+                    // actually used!
                     true
                 })
             })
