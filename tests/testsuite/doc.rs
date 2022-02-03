@@ -1816,6 +1816,70 @@ fn doc_example() {
 }
 
 #[cargo_test]
+fn doc_example_with_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [[example]]
+            crate-type = ["lib"]
+            name = "ex"
+            doc = true
+
+            [dev-dependencies]
+            a = {path = "a"}
+            b = {path = "b"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "examples/ex.rs",
+            r#"
+            use a::fun;
+
+            /// Example
+            pub fn x() { fun(); }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+
+            [dependencies]
+            b = {path = "../b"}
+            "#,
+        )
+        .file("a/src/fun.rs", "pub fn fun() {}")
+        .file("a/src/lib.rs", "pub mod fun;")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc --examples").run();
+    assert!(p
+        .build_dir()
+        .join("doc")
+        .join("ex")
+        .join("fn.x.html")
+        .exists());
+}
+
+#[cargo_test]
 fn bin_private_items() {
     let p = project()
         .file(
