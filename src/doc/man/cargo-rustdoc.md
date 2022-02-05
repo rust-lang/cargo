@@ -66,6 +66,8 @@ if its name is the same as the lib target. Binaries are skipped if they have
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options

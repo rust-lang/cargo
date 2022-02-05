@@ -39,6 +39,8 @@ they have `required-features` that are missing.
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options

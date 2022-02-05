@@ -839,7 +839,7 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
-        if let Err(e) = self.timings.finished(cx.bcx, &error) {
+        if let Err(e) = self.timings.finished(cx, &error) {
             if error.is_some() {
                 crate::display_error(&e, &mut cx.bcx.config.shell());
             } else {
@@ -906,7 +906,7 @@ impl<'cfg> DrainState<'cfg> {
     // this as often as we spin on the events receiver (at least every 500ms or
     // so).
     fn tick_progress(&mut self) {
-        // Record some timing information if `-Ztimings` is enabled, and
+        // Record some timing information if `--timings` is enabled, and
         // this'll end up being a noop if we're not recording this
         // information.
         self.timings.mark_concurrency(

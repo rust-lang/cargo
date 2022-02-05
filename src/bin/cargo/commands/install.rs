@@ -78,6 +78,7 @@ pub fn cli() -> App {
                 .conflicts_with_all(&["git", "path", "index"]),
         )
         .arg_message_format()
+        .arg_timings()
         .after_help("Run `cargo help install` for more detailed information.\n")
 }
 

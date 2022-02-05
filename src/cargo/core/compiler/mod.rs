@@ -33,7 +33,7 @@ use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
 use log::{debug, trace};
 
-pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, TimingOutput};
 pub use self::build_context::{
     BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
