@@ -105,7 +105,8 @@ _cargo()
 		elif [[ "$cur" == +* ]]; then
 			COMPREPLY=( $( compgen -W "$(_toolchains)" -- "$cur" ) )
 		else
-			COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
+			_ensure_cargo_commands_cache_filled
+			COMPREPLY=( $( compgen -W "$__cargo_commands_cache" -- "$cur" ) )
 		fi
 	else
 		case "${prev}" in
@@ -140,7 +141,8 @@ _cargo()
 				_filedir -d
 				;;
 			help)
-				COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
+				_ensure_cargo_commands_cache_filled
+				COMPREPLY=( $( compgen -W "$__cargo_commands_cache" -- "$cur" ) )
 				;;
 			*)
 				if [[ "$cmd" == "report" && "$prev" == future-incompat* ]]; then
@@ -164,7 +166,12 @@ _cargo()
 } &&
 complete -F _cargo cargo
 
-__cargo_commands=$(cargo --list 2>/dev/null | awk 'NR>1 {print $1}')
+__cargo_commands_cache=
+_ensure_cargo_commands_cache_filled(){
+	if [[ -z $__cargo_commands_cache ]]; then
+		__cargo_commands_cache="$(cargo --list 2>/dev/null | awk 'NR>1 {print $1}')"
+	fi
+}
 
 _locate_manifest(){
 	cargo locate-project --message-format plain 2>/dev/null
