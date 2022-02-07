@@ -68,8 +68,8 @@ pub fn cli() -> App {
                 "Change the prefix (indentation) of how each entry is displayed",
             )
             .value_name("PREFIX")
-            .possible_values(&["depth", "indent", "none"])
-            .default_value("indent"),
+            .possible_values(tree::Prefix::possible_values())
+            .default_value(tree::Prefix::Indent.as_ref()),
         )
         .arg(opt(
             "no-dedupe",
@@ -113,16 +113,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         config
             .shell()
             .warn("the --no-indent flag has been changed to --prefix=none")?;
-        "none"
+        tree::Prefix::None
     } else if args.is_present("prefix-depth") {
         config
             .shell()
             .warn("the --prefix-depth flag has been changed to --prefix=depth")?;
-        "depth"
+        tree::Prefix::Depth
     } else {
-        args.value_of("prefix").unwrap()
+        args.value_of_t_or_exit("prefix")
     };
-    let prefix = tree::Prefix::from_str(prefix).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let no_dedupe = args.is_present("no-dedupe") || args.is_present("all");
     if args.is_present("all") {

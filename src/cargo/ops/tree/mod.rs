@@ -9,6 +9,7 @@ use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
 use crate::{drop_print, drop_println};
 use anyhow::Context;
+use clap::{ArgEnum, PossibleValue};
 use graph::Graph;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -85,11 +86,19 @@ impl FromStr for Charset {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(clap::ArgEnum, Clone, Copy)]
 pub enum Prefix {
     None,
     Indent,
     Depth,
+}
+
+impl Prefix {
+    pub fn possible_values() -> impl Iterator<Item = PossibleValue<'static>> {
+        Prefix::value_variants()
+            .iter()
+            .filter_map(ArgEnum::to_possible_value)
+    }
 }
 
 impl FromStr for Prefix {
@@ -101,6 +110,16 @@ impl FromStr for Prefix {
             "indent" => Ok(Prefix::Indent),
             "depth" => Ok(Prefix::Depth),
             _ => Err("invalid prefix"),
+        }
+    }
+}
+
+impl AsRef<str> for Prefix {
+    fn as_ref(&self) -> &str {
+        match self {
+            Prefix::None => "none",
+            Prefix::Indent => "indent",
+            Prefix::Depth => "depth",
         }
     }
 }
