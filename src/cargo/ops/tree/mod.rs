@@ -86,7 +86,7 @@ impl FromStr for Charset {
     }
 }
 
-#[derive(clap::ArgEnum, Clone, Copy)]
+#[derive(clap::ArgEnum, Copy, Clone)]
 pub enum Prefix {
     None,
     Indent,

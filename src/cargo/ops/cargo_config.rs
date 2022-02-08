@@ -10,7 +10,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(clap::ArgEnum, Clone)]
+#[derive(clap::ArgEnum, Copy, Clone)]
 pub enum ConfigFormat {
     Toml,
     Json,
