@@ -116,11 +116,9 @@ impl FromStr for Prefix {
 
 impl AsRef<str> for Prefix {
     fn as_ref(&self) -> &str {
-        match self {
-            Prefix::None => "none",
-            Prefix::Indent => "indent",
-            Prefix::Depth => "depth",
-        }
+        self.to_possible_value()
+            .expect("No value is skipped")
+            .get_name()
     }
 }
 

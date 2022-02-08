@@ -25,16 +25,6 @@ impl ConfigFormat {
     }
 }
 
-impl AsRef<str> for ConfigFormat {
-    fn as_ref(&self) -> &str {
-        match self {
-            ConfigFormat::Toml => "toml",
-            ConfigFormat::Json => "json",
-            ConfigFormat::JsonValue => "json-value",
-        }
-    }
-}
-
 impl FromStr for ConfigFormat {
     type Err = Error;
     fn from_str(s: &str) -> CargoResult<Self> {
@@ -49,11 +39,21 @@ impl FromStr for ConfigFormat {
 
 impl fmt::Display for ConfigFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            ConfigFormat::Toml => write!(f, "toml"),
-            ConfigFormat::Json => write!(f, "json"),
-            ConfigFormat::JsonValue => write!(f, "json-value"),
-        }
+        write!(
+            f,
+            "{}",
+            self.to_possible_value()
+                .expect("No value is skipped")
+                .get_name()
+        )
+    }
+}
+
+impl AsRef<str> for ConfigFormat {
+    fn as_ref(&self) -> &str {
+        self.to_possible_value()
+            .expect("No value is skipped")
+            .get_name()
     }
 }
 
