@@ -4542,6 +4542,54 @@ fn cdylib_final_outputs() {
 }
 
 #[cargo_test]
+// NOTE: Windows MSVC and wasm32-unknown-emscripten do not use metadata. Skip them.
+// See <https://github.com/rust-lang/cargo/issues/9325#issuecomment-1030662699>
+#[cfg(not(all(target_os = "windows", target_env = "msvc")))]
+fn no_dep_info_collision_when_cdylib_and_bin_coexist() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+
+            [lib]
+            crate-type = ["cdylib"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v1.0.0 ([CWD])
+[RUNNING] `rustc [..] --crate-type bin [..] -C metadata=[..]`
+[RUNNING] `rustc [..] --crate-type cdylib [..] -C metadata=[..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let deps_dir = p.target_debug_dir().join("deps");
+    assert!(deps_dir.join("foo.d").exists());
+    let dep_info_count = deps_dir
+        .read_dir()
+        .unwrap()
+        .filter(|e| {
+            let filename = e.as_ref().unwrap().file_name();
+            let filename = filename.to_str().unwrap();
+            filename.starts_with("foo") && filename.ends_with(".d")
+        })
+        .count();
+    // cdylib -> foo.d
+    // bin -> foo-<meta>.d
+    assert_eq!(dep_info_count, 2);
+}
+
+#[cargo_test]
 fn deterministic_cfg_flags() {
     // This bug is non-deterministic.
 
