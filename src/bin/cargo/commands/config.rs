@@ -35,7 +35,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some(("get", args)) => {
             let opts = cargo_config::GetOptions {
                 key: args.value_of("key"),
-                format: args.value_of_t_or_exit("format"),
+                format: args.value_of_t("format")?,
                 show_origin: args.is_present("show-origin"),
                 merged: args.value_of("merged") == Some("yes"),
             };

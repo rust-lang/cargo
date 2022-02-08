@@ -120,7 +120,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .warn("the --prefix-depth flag has been changed to --prefix=depth")?;
         tree::Prefix::Depth
     } else {
-        args.value_of_t_or_exit("prefix")
+        args.value_of_t("prefix")?
     };
 
     let no_dedupe = args.is_present("no-dedupe") || args.is_present("all");
