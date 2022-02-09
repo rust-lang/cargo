@@ -1308,6 +1308,13 @@ impl TomlManifest {
                     .as_ref()
                     .or_else(|| platform.build_dependencies2.as_ref());
                 process_dependencies(&mut cx, build_deps, Some(DepKind::Build))?;
+                if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
+                    cx.warnings.push(format!(
+                        "found both `dev-dependencies` and `dev_dependencies` are set \
+                         in the `{}` platform target",
+                        name
+                    ));
+                }
                 let dev_deps = platform
                     .dev_dependencies
                     .as_ref()
