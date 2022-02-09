@@ -106,12 +106,12 @@ strip either symbols or debuginfo from a binary. This can be enabled like so:
 strip = "debuginfo"
 ```
 
-Other possible string values of `strip` are `none`, `symbols`, and `off`. The
-default is `none`.
+Possible string values of `strip` are `"none"`, `"debuginfo"`, and `"symbols"`.
+The default is `"none"`.
 
-You can also configure this option with the two absolute boolean values
-`true` and `false`. The former enables `strip` at its higher level, `symbols`,
-while the latter disables `strip` completely.
+You can also configure this option with the boolean values `true` or `false`.
+`strip = true` is equivalent to `strip = "symbols"`. `strip = false` is
+equivalent to `strip = "none"` and disables `strip` completely.
 
 [`-C strip` flag]: ../../rustc/codegen-options/index.html#strip
 
