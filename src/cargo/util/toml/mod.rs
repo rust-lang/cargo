@@ -1922,6 +1922,13 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
 
         let version = self.version.as_deref();
         let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
+        if self.default_features.is_some() && self.default_features2.is_some() {
+            cx.warnings.push(format!(
+                "found both `default-features` and `default_features` are set \
+                 in the `{}` dependency",
+                name_in_toml
+            ));
+        }
         dep.set_features(self.features.iter().flatten())
             .set_default_features(
                 self.default_features
