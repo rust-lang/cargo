@@ -2984,6 +2984,46 @@ fn cargo_platform_specific_dependency() {
 }
 
 #[cargo_test]
+fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
+    let host = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+                    build = "build.rs"
+
+                    [target.{host}.build-dependencies]
+                    build = {{ path = "build" }}
+                    [target.{host}.build_dependencies]
+                    build = {{ path = "build" }}
+                "#,
+                host = host
+            ),
+        )
+        .file("src/main.rs", "fn main() { }")
+        .file(
+            "build.rs",
+            "extern crate build; fn main() { build::build(); }",
+        )
+        .file("build/Cargo.toml", &basic_manifest("build", "0.5.0"))
+        .file("build/src/lib.rs", "pub fn build() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr_contains(
+            format!("[WARNING] found both `build-dependencies` and `build_dependencies` are set in the `{}` platform target", host),
+        )
+            .run();
+
+    assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn bad_platform_specific_dependency() {
     let p = project()
         .file(
