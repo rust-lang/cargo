@@ -20,5 +20,5 @@ section in `.cargo/config`. Currently, the supported options are:
 frequency = FREQUENCY
 ```
 
-The supported values for `FREQUENCY` are 'always` and 'never', which control
+The supported values for `FREQUENCY` are `always` and `never`, which control
 whether or not a message is printed out at the end of `cargo build` / `cargo check`.
