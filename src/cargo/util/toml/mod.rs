@@ -1276,6 +1276,13 @@ impl TomlManifest {
                 .as_ref()
                 .or_else(|| me.dev_dependencies2.as_ref());
             process_dependencies(&mut cx, dev_deps, Some(DepKind::Development))?;
+            if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
+                cx.warnings.push(format!(
+                    "found both `build-dependencies` and `build_dependencies` are set \
+                     in the `{}` package",
+                    package_name
+                ));
+            }
             let build_deps = me
                 .build_dependencies
                 .as_ref()

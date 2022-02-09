@@ -1712,6 +1712,41 @@ fn dev_dependencies_conflicting_warning() {
 }
 
 #[cargo_test]
+fn build_dependencies_conflicting_warning() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [build-dependencies]
+                a = {path = "a"}
+                [build_dependencies]
+                a = {path = "a"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+    p.cargo("build")
+    .with_stderr_contains(
+        "[WARNING] found both `build-dependencies` and `build_dependencies` are set in the `foo` package",
+    )
+        .run();
+}
+
+#[cargo_test]
 fn lib_crate_types_conflicting_warning() {
     let p = project()
         .file(
