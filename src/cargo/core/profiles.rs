@@ -629,7 +629,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
         None | Some(StringOrBool::Bool(false)) => Strip::None,
-        Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => Strip::None,
+        Some(StringOrBool::String(ref n)) if n.as_str() == "none" => Strip::None,
         Some(StringOrBool::String(ref n)) => Strip::Named(InternedString::new(n)),
     };
 }
