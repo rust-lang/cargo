@@ -6,8 +6,6 @@ Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
-[![Build Status](https://dev.azure.com/rust-lang/cargo/_apis/build/status/rust-lang.cargo?branchName=auto-cargo)](https://dev.azure.com/rust-lang/cargo/_build?definitionId=18)
-
 Code documentation: https://docs.rs/cargo/
 
 ## Installing Cargo
