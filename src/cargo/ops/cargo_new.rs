@@ -716,7 +716,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/", "target");
     if !opts.bin {
-        ignore.push("Cargo.lock", "glob:Cargo.lock", "Cargo.lock,*/Cargo.lock");
+        ignore.push("/Cargo.lock", "^Cargo.lock$", "Cargo.lock");
     }
 
     let vcs = opts.version_control.unwrap_or_else(|| {
