@@ -83,7 +83,7 @@ fn simple_git_ignore_exists() {
          # already existing elements were commented out\n\
          \n\
          #/target\n\
-         Cargo.lock\n",
+         /Cargo.lock\n",
     );
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
@@ -105,7 +105,7 @@ fn git_ignore_exists_no_conflicting_entries() {
          # Added by cargo\n\
          \n\
          /target\n\
-         Cargo.lock\n",
+         /Cargo.lock\n",
     );
 }
 
@@ -337,7 +337,9 @@ fn git_autodetect() {
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
     assert!(paths::root().join(".git").is_dir());
-    assert!(paths::root().join(".gitignore").is_file());
+    let path = paths::root().join(".gitignore");
+    assert!(paths::root().join(&path).is_file());
+    assert_eq!(fs::read_to_string(&path).unwrap(), "/target\n/Cargo.lock\n",);
 }
 
 #[cargo_test]
@@ -349,7 +351,45 @@ fn mercurial_autodetect() {
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
     assert!(!paths::root().join(".git").is_dir());
-    assert!(paths::root().join(".hgignore").is_file());
+    let path = paths::root().join(".hgignore");
+    assert!(paths::root().join(&path).is_file());
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "^target/\n^Cargo.lock$\n",
+    );
+}
+
+#[cargo_test]
+fn fossil_autodetect() {
+    fs::create_dir(&paths::root().join(".fossil")).unwrap();
+
+    cargo_process("init --lib").run();
+
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
+    assert!(!paths::root().join(".git").is_dir());
+    for path in [
+        ".fossil-settings/ignore-glob",
+        ".fossil-settings/clean-glob",
+    ] {
+        let path = paths::root().join(path);
+        assert!(paths::root().join(&path).is_file());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "target\nCargo.lock\n",);
+    }
+}
+
+#[cargo_test]
+fn pijul_autodetect() {
+    fs::create_dir(&paths::root().join(".pijul")).unwrap();
+
+    cargo_process("init --lib").run();
+
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
+    assert!(!paths::root().join(".git").is_dir());
+    let path = paths::root().join(".ignore");
+    assert!(paths::root().join(&path).is_file());
+    assert_eq!(fs::read_to_string(&path).unwrap(), "/target\n/Cargo.lock\n",);
 }
 
 #[cargo_test]
