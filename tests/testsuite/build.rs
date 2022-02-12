@@ -1340,6 +1340,8 @@ fn crate_env_vars() {
                 static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
                 static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
                 static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
+                static PROFILE_NAME: &'static str = env!("CARGO_PROFILE_NAME");
+                static FOR_HOST: &'static str = env!("CARGO_FOR_HOST");
 
 
                 fn main() {
@@ -1362,6 +1364,9 @@ fn crate_env_vars() {
 
                     // Verify CARGO_TARGET_TMPDIR isn't set for bins
                     assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
+
+                    assert_eq!("dev", PROFILE_NAME);
+                    assert_eq!("false", FOR_HOST);
                 }
             "#,
         )

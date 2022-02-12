@@ -214,6 +214,8 @@ corresponding environment variable is set to the empty string, `""`.
 * `CARGO_PKG_LICENSE_FILE` — The license file from the manifest of your package.
 * `CARGO_CRATE_NAME` — The name of the crate that is currently being compiled.
 * `CARGO_BIN_NAME` — The name of the binary that is currently being compiled (if it is a binary). This name does not include any file extension, such as `.exe`.
+* `CARGO_PROFILE_NAME` - The name of the [cargo profile](profiles.md) used. Can be one of the built-in profiles `dev`, `release`, `test`, `bench` or a custom profile's name. Is not set for `proc-macro` crates.
+* `CARGO_FOR_HOST` - Is `true` when building `build.rs` files, `false` for normal compilations and not set for `proc-macro` crates.
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)

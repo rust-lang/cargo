@@ -373,6 +373,8 @@ fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
         cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
+    cmd.env("CARGO_PROFILE_NAME", unit.profile.name);
+    cmd.env("CARGO_FOR_HOST", (unit.target.for_host()).to_string());
     cmd
 }
 
