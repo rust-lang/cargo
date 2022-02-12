@@ -6,6 +6,8 @@ Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
+[![CI](https://github.com/rust-lang/cargo/actions/workflows/main.yml/badge.svg?branch=auto-cargo)](https://github.com/rust-lang/cargo/actions/workflows/main.yml)
+
 Code documentation: https://docs.rs/cargo/
 
 ## Installing Cargo
