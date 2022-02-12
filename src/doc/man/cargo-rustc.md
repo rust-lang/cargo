@@ -66,6 +66,8 @@ See the [the reference](../reference/profiles.html) for more details on profiles
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options

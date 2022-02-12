@@ -78,6 +78,8 @@ and supports common Unix glob patterns.
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options

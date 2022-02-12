@@ -797,14 +797,14 @@ fn emit_warnings_of_unused_patches(
             {
                 use std::fmt::Write;
                 let mut msg = String::new();
-                writeln!(&mut msg, "Patch `{}` {}", unused, MESSAGE)?;
+                writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
                 write!(
-                    &mut msg,
+                    msg,
                     "Perhaps you misspell the source URL being patched.\n\
                     Possible URLs for `[patch.<URL>]`:",
                 )?;
                 for id in ids.iter() {
-                    write!(&mut msg, "\n    {}", id.display_registry_name())?;
+                    write!(msg, "\n    {}", id.display_registry_name())?;
                 }
                 ws.config().shell().warn(msg)?;
             }

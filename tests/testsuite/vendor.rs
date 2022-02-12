@@ -37,6 +37,38 @@ fn vendor_simple() {
     p.cargo("build").run();
 }
 
+#[cargo_test]
+fn vendor_sample_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stdout(
+            r#"
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+"#,
+        )
+        .run();
+}
+
 fn add_vendor_config(p: &Project) {
     p.change_file(
         ".cargo/config",

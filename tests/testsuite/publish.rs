@@ -1284,6 +1284,8 @@ homepage = "foo"
 documentation = "foo"
 license = "MIT"
 repository = "foo"
+
+[dev-dependencies]
 "#,
                 cargo::core::package::MANIFEST_PREAMBLE
             ),

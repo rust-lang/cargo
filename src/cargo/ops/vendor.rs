@@ -40,7 +40,11 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
                 config,
                 "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
             );
-            crate::drop_print!(config, "{}", &toml::to_string(&vendor_config).unwrap());
+            crate::drop_print!(
+                config,
+                "{}",
+                &toml::to_string_pretty(&vendor_config).unwrap()
+            );
         }
     }
 

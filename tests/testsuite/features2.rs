@@ -2398,3 +2398,77 @@ foo v0.1.0 [..]
         )
         .run();
 }
+
+#[cargo_test]
+fn all_features_merges_with_features() {
+    Package::new("dep", "0.1.0")
+        .feature("feat1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+                #[cfg(feature="feat1")]
+                pub fn work() {
+                    println!("it works");
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [features]
+                a = []
+
+                [dependencies]
+                dep = "0.1"
+
+                [[example]]
+                name = "ex"
+                required-features = ["a", "dep/feat1"]
+            "#,
+        )
+        .file(
+            "examples/ex.rs",
+            r#"
+            fn main() {
+                dep::work();
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("run --example ex --all-features --features dep/feat1")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+[COMPILING] dep v0.1.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/examples/ex[EXE]`
+",
+        )
+        .with_stdout("it works")
+        .run();
+
+    switch_to_resolver_2(&p);
+
+    p.cargo("run --example ex --all-features --features dep/feat1")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+[RUNNING] `target/debug/examples/ex[EXE]`
+",
+        )
+        .with_stdout("it works")
+        .run();
+}

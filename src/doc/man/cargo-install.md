@@ -167,6 +167,8 @@ See also the `--profile` option for choosing a specific profile by name.
 
 {{> options-profile }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Manifest Options

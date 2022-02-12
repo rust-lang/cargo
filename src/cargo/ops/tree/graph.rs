@@ -473,12 +473,12 @@ fn add_cli_features(
     let mut to_add: HashSet<FeatureValue> = HashSet::new();
     if cli_features.all_features {
         to_add.extend(feature_map.keys().map(|feat| FeatureValue::Feature(*feat)));
-    } else {
-        if cli_features.uses_default_features {
-            to_add.insert(FeatureValue::Feature(InternedString::new("default")));
-        }
-        to_add.extend(cli_features.features.iter().cloned());
-    };
+    }
+
+    if cli_features.uses_default_features {
+        to_add.insert(FeatureValue::Feature(InternedString::new("default")));
+    }
+    to_add.extend(cli_features.features.iter().cloned());
 
     // Add each feature as a node, and mark as "from command-line" in graph.cli_features.
     for fv in to_add {

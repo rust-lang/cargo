@@ -680,19 +680,18 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> Vec<FeatureValue> {
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
-        if cli_features.all_features {
-            feature_map
-                .keys()
-                .map(|k| FeatureValue::Feature(*k))
-                .collect()
-        } else {
-            let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
-            let default = InternedString::new("default");
-            if cli_features.uses_default_features && feature_map.contains_key(&default) {
-                result.push(FeatureValue::Feature(default));
-            }
-            result
+
+        let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
+        let default = InternedString::new("default");
+        if cli_features.uses_default_features && feature_map.contains_key(&default) {
+            result.push(FeatureValue::Feature(default));
         }
+
+        if cli_features.all_features {
+            result.extend(feature_map.keys().map(|k| FeatureValue::Feature(*k)))
+        }
+
+        result
     }
 
     /// Returns the dependencies for a package, filtering out inactive targets.

@@ -1,4 +1,4 @@
-use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -233,6 +233,17 @@ pub trait AppExt: Sized {
 
     fn arg_quiet(self) -> Self {
         self._arg(opt("quiet", "Do not print cargo log messages").short('q'))
+    }
+
+    fn arg_timings(self) -> Self {
+        self._arg(
+            optional_opt(
+                "timings",
+                "Timing output formats (unstable) (comma separated): html, json",
+            )
+            .value_name("FMTS")
+            .require_equals(true),
+        )
     }
 }
 
@@ -499,6 +510,34 @@ pub trait ArgMatchesExt {
         build_config.build_plan = self.is_valid_and_present("build-plan");
         build_config.unit_graph = self.is_valid_and_present("unit-graph");
         build_config.future_incompat_report = self.is_valid_and_present("future-incompat-report");
+
+        if self.is_valid_and_present("timings") {
+            for timing_output in self._values_of("timings") {
+                for timing_output in timing_output.split(',') {
+                    let timing_output = timing_output.to_ascii_lowercase();
+                    let timing_output = match timing_output.as_str() {
+                        "html" => {
+                            config
+                                .cli_unstable()
+                                .fail_if_stable_opt("--timings=html", 7405)?;
+                            TimingOutput::Html
+                        }
+                        "json" => {
+                            config
+                                .cli_unstable()
+                                .fail_if_stable_opt("--timings=json", 7405)?;
+                            TimingOutput::Json
+                        }
+                        s => bail!("invalid timings output specifier: `{}`", s),
+                    };
+                    build_config.timing_outputs.push(timing_output);
+                }
+            }
+            if build_config.timing_outputs.is_empty() {
+                build_config.timing_outputs.push(TimingOutput::Html);
+            }
+        }
+
         if build_config.build_plan {
             config
                 .cli_unstable()

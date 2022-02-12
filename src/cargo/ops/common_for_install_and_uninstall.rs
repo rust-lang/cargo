@@ -356,7 +356,7 @@ impl CrateListingV1 {
         let mut file = lock.file();
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
-        let data = toml::to_string(self)?;
+        let data = toml::to_string_pretty(self)?;
         file.write_all(data.as_bytes())?;
         Ok(())
     }

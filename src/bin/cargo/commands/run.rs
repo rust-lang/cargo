@@ -31,6 +31,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_unit_graph()
         .arg_ignore_rust_version()
+        .arg_timings()
         .after_help("Run `cargo help run` for more detailed information.\n")
 }
 
