@@ -71,6 +71,10 @@ pub trait AppExt: Sized {
                 .short('j')
                 .value_name("N"),
         )
+        ._arg(opt(
+            "keep-going",
+            "Do not abort the build as soon as there is an error (unstable)",
+        ))
     }
 
     fn arg_targets_all(
@@ -353,6 +357,10 @@ pub trait ArgMatchesExt {
         self.value_of_u32("jobs")
     }
 
+    fn keep_going(&self) -> bool {
+        self._is_present("keep-going")
+    }
+
     fn targets(&self) -> Vec<String> {
         self._values_of("target")
     }
@@ -506,7 +514,13 @@ pub trait ArgMatchesExt {
             }
         }
 
-        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.targets(), mode)?;
+        let mut build_config = BuildConfig::new(
+            config,
+            self.jobs()?,
+            self.keep_going(),
+            &self.targets(),
+            mode,
+        )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self.is_valid_and_present("build-plan");
@@ -540,6 +554,11 @@ pub trait ArgMatchesExt {
             }
         }
 
+        if build_config.keep_going {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--keep-going", 10496)?;
+        }
         if build_config.build_plan {
             config
                 .cli_unstable()

@@ -369,6 +369,13 @@ Number of parallel jobs to run. May also be specified with the
 the number of CPUs.
 .RE
 .sp
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+\fB\-Zunstable\-options\fR\&.
+.RE
+.sp
 \fB\-\-future\-incompat\-report\fR
 .RS 4
 Displays a future\-incompat report for any future\-incompatible warnings

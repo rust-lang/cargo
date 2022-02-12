@@ -15,6 +15,8 @@ pub struct BuildConfig {
     pub requested_kinds: Vec<CompileKind>,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
+    /// Do not abort the build as soon as there is an error.
+    pub keep_going: bool,
     /// Build profile
     pub requested_profile: InternedString,
     /// The mode we are compiling in.
@@ -56,6 +58,7 @@ impl BuildConfig {
     pub fn new(
         config: &Config,
         jobs: Option<u32>,
+        keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
@@ -84,6 +87,7 @@ impl BuildConfig {
         Ok(BuildConfig {
             requested_kinds,
             jobs,
+            keep_going,
             requested_profile: InternedString::new("dev"),
             mode,
             message_format: MessageFormat::Human,

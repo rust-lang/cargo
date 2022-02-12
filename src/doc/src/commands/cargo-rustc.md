@@ -358,6 +358,12 @@ for more information about how toolchain overrides work.</dd>
 the number of CPUs.</dd>
 
 
+<dt class="option-term" id="option-cargo-rustc---keep-going"><a class="option-anchor" href="#option-cargo-rustc---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+<code>-Zunstable-options</code>.</dd>
+
+
 <dt class="option-term" id="option-cargo-rustc---future-incompat-report"><a class="option-anchor" href="#option-cargo-rustc---future-incompat-report"></a><code>--future-incompat-report</code></dt>
 <dd class="option-desc">Displays a future-incompat report for any future-incompatible warnings
 produced during execution of this command</p>

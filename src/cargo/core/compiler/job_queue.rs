@@ -825,13 +825,14 @@ impl<'cfg> DrainState<'cfg> {
         //
         // After a job has finished we update our internal state if it was
         // successful and otherwise wait for pending work to finish if it failed
-        // and then immediately return.
+        // and then immediately return (or keep going, if requested by the build
+        // config).
         let mut errors = ErrorsDuringDrain { count: 0 };
         // CAUTION! Do not use `?` or break out of the loop early. Every error
         // must be handled in such a way that the loop is still allowed to
         // drain event messages.
         loop {
-            if errors.count == 0 {
+            if errors.count == 0 || cx.bcx.build_config.keep_going {
                 if let Err(e) = self.spawn_work_if_possible(cx, jobserver_helper, scope) {
                     self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
                 }

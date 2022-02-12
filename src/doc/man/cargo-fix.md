@@ -156,6 +156,7 @@ When no target selection options are given, `cargo fix` will fix all targets
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 {{> section-environment }}

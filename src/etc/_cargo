@@ -47,6 +47,7 @@ _cargo() {
 
     parallel=(
         '(-j --jobs)'{-j+,--jobs=}'[specify number of parallel jobs]:jobs [# of CPUs]'
+        '--keep-going[do not abort build on first error]'
     )
 
     features=(

@@ -45,6 +45,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             to_publish: args.packages_from_flags()?,
             targets: args.targets(),
             jobs: args.jobs()?,
+            keep_going: args.keep_going(),
             dry_run: args.is_present("dry-run"),
             registry,
             cli_features: args.cli_features()?,

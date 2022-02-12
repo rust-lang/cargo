@@ -80,6 +80,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
+    pub keep_going: bool,
     pub to_publish: ops::Packages,
     pub targets: Vec<String>,
     pub dry_run: bool,
@@ -147,6 +148,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             to_package: ops::Packages::Default,
             targets: opts.targets.clone(),
             jobs: opts.jobs,
+            keep_going: opts.keep_going,
             cli_features: cli_features,
         },
     )?
