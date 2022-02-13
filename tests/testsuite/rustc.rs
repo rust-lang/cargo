@@ -217,17 +217,14 @@ Binaries, tests, and benchmarks are always the `bin` crate type",
 
 #[cargo_test]
 fn build_with_crate_type_for_foo() {
-    let p = project()
-        .file("src/main.rs", "fn main() {}")
-        .file("src/lib.rs", r#" "#)
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustc -v --lib --crate-type lib -Zunstable-options")
+    p.cargo("rustc -v --crate-type cdylib -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type cdylib [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -236,12 +233,9 @@ fn build_with_crate_type_for_foo() {
 
 #[cargo_test]
 fn build_with_crate_types_for_foo() {
-    let p = project()
-        .file("src/main.rs", "fn main() {}")
-        .file("src/lib.rs", r#" "#)
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustc -v --lib --crate-type lib,cdylib -Zunstable-options")
+    p.cargo("rustc -v --crate-type lib,cdylib -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
