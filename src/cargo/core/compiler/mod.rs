@@ -890,18 +890,9 @@ fn build_base_args(
 
     let mut contains_dy_lib = false;
     if !test {
-        let mut crate_types = &crate_types
-            .iter()
-            .map(|t| t.as_str().to_string())
-            .collect::<Vec<String>>();
-        if let Some(types) = cx.bcx.rustc_crate_types_args_for(unit) {
-            crate_types = types;
-        }
-        for crate_type in crate_types.iter() {
-            cmd.arg("--crate-type").arg(crate_type);
-            if crate_type == CrateType::Dylib.as_str() {
-                contains_dy_lib = true;
-            }
+        for crate_type in crate_types {
+            cmd.arg("--crate-type").arg(crate_type.as_str());
+            contains_dy_lib |= crate_type == &CrateType::Dylib;
         }
     }
 
