@@ -9,7 +9,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
@@ -24,7 +24,7 @@ mod settings {
 }
 
 fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
-    let tmp = TempDir::new("rustfix-tests")?;
+    let tmp = tempdir()?;
 
     let mut args: Vec<OsString> = vec![
         file.into(),
