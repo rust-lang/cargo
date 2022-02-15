@@ -365,10 +365,10 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
-  failed to update replaced source registry `https://[..]`
+  failed to update replaced source registry `crates-io`
 
 Caused by:
   local registry path is not a directory: [..]path[..]to[..]nowhere

@@ -12,7 +12,7 @@ use std::str::FromStr;
 pub fn cli() -> App {
     subcommand("tree")
         .about("Display a tree visualization of a dependency graph")
-        .arg(opt("quiet", "Suppress status messages").short("q"))
+        .arg_quiet()
         .arg_manifest_path()
         .arg_package_spec_no_all(
             "Package to be used as the root of the tree",
@@ -20,13 +20,9 @@ pub fn cli() -> App {
             "Exclude specific workspace members",
         )
         // Deprecated, use --no-dedupe instead.
-        .arg(Arg::with_name("all").long("all").short("a").hidden(true))
+        .arg(Arg::new("all").long("all").short('a').hide(true))
         // Deprecated, use --target=all instead.
-        .arg(
-            Arg::with_name("all-targets")
-                .long("all-targets")
-                .hidden(true),
-        )
+        .arg(Arg::new("all-targets").long("all-targets").hide(true))
         .arg_features()
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform). \
@@ -34,18 +30,19 @@ pub fn cli() -> App {
         )
         // Deprecated, use -e=no-dev instead.
         .arg(
-            Arg::with_name("no-dev-dependencies")
+            Arg::new("no-dev-dependencies")
                 .long("no-dev-dependencies")
-                .hidden(true),
+                .hide(true),
         )
         .arg(
             multi_opt(
                 "edges",
                 "KINDS",
                 "The kinds of dependencies to display \
-                 (features, normal, build, dev, all, no-dev, no-build, no-normal)",
+                 (features, normal, build, dev, all, \
+                 no-normal, no-build, no-dev, no-proc-macro)",
             )
-            .short("e"),
+            .short('e'),
         )
         .arg(
             optional_multi_opt(
@@ -53,16 +50,18 @@ pub fn cli() -> App {
                 "SPEC",
                 "Invert the tree direction and focus on the given package",
             )
-            .short("i"),
+            .short('i'),
         )
+        .arg(multi_opt(
+            "prune",
+            "SPEC",
+            "Prune the given package from the display of the dependency tree",
+        ))
+        .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         // Deprecated, use --prefix=none instead.
-        .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
+        .arg(Arg::new("no-indent").long("no-indent").hide(true))
         // Deprecated, use --prefix=depth instead.
-        .arg(
-            Arg::with_name("prefix-depth")
-                .long("prefix-depth")
-                .hidden(true),
-        )
+        .arg(Arg::new("prefix-depth").long("prefix-depth").hide(true))
         .arg(
             opt(
                 "prefix",
@@ -81,7 +80,7 @@ pub fn cli() -> App {
                 "duplicates",
                 "Show only dependencies which come in multiple versions (implies -i)",
             )
-            .short("d")
+            .short('d')
             .alias("duplicate"),
         )
         .arg(
@@ -93,20 +92,17 @@ pub fn cli() -> App {
         .arg(
             opt("format", "Format string used for printing dependencies")
                 .value_name("FORMAT")
-                .short("f")
+                .short('f')
                 .default_value("{p}"),
         )
         .arg(
             // Backwards compatibility with old cargo-tree.
-            Arg::with_name("version")
-                .long("version")
-                .short("V")
-                .hidden(true),
+            Arg::new("version").long("version").short('V').hide(true),
         )
         .after_help("Run `cargo help tree` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if args.is_present("version") {
         let verbose = args.occurrences_of("verbose") > 0;
         let version = cli::get_version_string(verbose);
@@ -147,8 +143,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     let target = tree::Target::from_cli(targets);
 
-    let edge_kinds = parse_edge_kinds(config, args)?;
+    let (edge_kinds, no_proc_macro) = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
+
+    let pkgs_to_prune = args._values_of("prune");
 
     let packages = args.packages_from_flags()?;
     let mut invert = args
@@ -195,31 +193,56 @@ subtree of the package given to -p.\n\
         target,
         edge_kinds,
         invert,
+        pkgs_to_prune,
         prefix,
         no_dedupe,
         duplicates: args.is_present("duplicates"),
         charset,
         format: args.value_of("format").unwrap().to_string(),
         graph_features,
+        max_display_depth: args.value_of_u32("depth")?.unwrap_or(u32::MAX),
+        no_proc_macro,
     };
+
+    if opts.graph_features && opts.duplicates {
+        return Err(format_err!("the `-e features` flag does not support `--duplicates`").into());
+    }
 
     tree::build_and_print(&ws, &opts)?;
     Ok(())
 }
 
-fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashSet<EdgeKind>> {
-    let mut kinds: Vec<&str> = args
-        .values_of("edges")
-        .map_or_else(|| Vec::new(), |es| es.flat_map(|e| e.split(',')).collect());
-    if args.is_present("no-dev-dependencies") {
-        config
-            .shell()
-            .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
-        kinds.push("no-dev");
-    }
-    if kinds.is_empty() {
-        kinds.extend(&["normal", "build", "dev"]);
-    }
+/// Parses `--edges` option.
+///
+/// Returns a tuple of `EdgeKind` map and `no_proc_marco` flag.
+fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<EdgeKind>, bool)> {
+    let (kinds, no_proc_macro) = {
+        let mut no_proc_macro = false;
+        let mut kinds = args.values_of("edges").map_or_else(
+            || Vec::new(),
+            |es| {
+                es.flat_map(|e| e.split(','))
+                    .filter(|e| {
+                        no_proc_macro = *e == "no-proc-macro";
+                        !no_proc_macro
+                    })
+                    .collect()
+            },
+        );
+
+        if args.is_present("no-dev-dependencies") {
+            config
+                .shell()
+                .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
+            kinds.push("no-dev");
+        }
+
+        if kinds.is_empty() {
+            kinds.extend(&["normal", "build", "dev"]);
+        }
+
+        (kinds, no_proc_macro)
+    };
 
     let mut result = HashSet::new();
     let insert_defaults = |result: &mut HashSet<EdgeKind>| {
@@ -231,7 +254,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
         bail!(
             "unknown edge kind `{}`, valid values are \
                 \"normal\", \"build\", \"dev\", \
-                \"no-normal\", \"no-build\", \"no-dev\", \
+                \"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
                 \"features\", or \"all\"",
             k
         )
@@ -245,12 +268,17 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
                 "no-dev" => result.remove(&EdgeKind::Dep(DepKind::Development)),
                 "features" => result.insert(EdgeKind::Feature),
                 "normal" | "build" | "dev" | "all" => {
-                    bail!("`no-` dependency kinds cannot be mixed with other dependency kinds")
+                    bail!(
+                        "`{}` dependency kind cannot be mixed with \
+                            \"no-normal\", \"no-build\", or \"no-dev\" \
+                            dependency kinds",
+                        kind
+                    )
                 }
                 k => return unknown(k),
             };
         }
-        return Ok(result);
+        return Ok((result, no_proc_macro));
     }
     for kind in &kinds {
         match *kind {
@@ -276,5 +304,5 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
     if kinds.len() == 1 && kinds[0] == "features" {
         insert_defaults(&mut result);
     }
-    Ok(result)
+    Ok((result, no_proc_macro))
 }

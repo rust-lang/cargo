@@ -69,6 +69,17 @@ flag can be used to display the package's reverse dependencies only with the
 subtree of the package given to \fB\-p\fR\&.
 .RE
 .sp
+\fB\-\-prune\fR \fIspec\fR
+.RS 4
+Prune the given package from the display of the dependency tree.
+.RE
+.sp
+\fB\-\-depth\fR \fIdepth\fR
+.RS 4
+Maximum display depth of the dependency tree. A depth of 1 displays the direct
+dependencies, for example.
+.RE
+.sp
 \fB\-\-no\-dedupe\fR
 .RS 4
 Do not de\-duplicate repeated dependencies. Usually, when a package has already
@@ -129,7 +140,12 @@ kind given, then it will automatically include the other dependency kinds.
 \h'-04'\(bu\h'+02'\fBno\-dev\fR \[em] Do not include development dependencies.
 .RE
 .sp
-The \fBno\-\fR prefixed options cannot be mixed with the other dependency kinds.
+.RS 4
+\h'-04'\(bu\h'+02'\fBno\-proc\-macro\fR \[em] Do not include procedural macro dependencies.
+.RE
+.sp
+The \fBnormal\fR, \fBbuild\fR, \fBdev\fR, and \fBall\fR dependency kinds cannot be mixed with
+\fBno\-normal\fR, \fBno\-build\fR, or \fBno\-dev\fR dependency kinds.
 .sp
 The default is \fBnormal,build,dev\fR\&.
 .RE
@@ -169,6 +185,10 @@ strings will be replaced with the corresponding value:
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fB{f}\fR \[em] Comma\-separated list of package features that are enabled.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fB{lib}\fR \[em] The name, as used in a \fBuse\fR statement, of the package's library.
 .RE
 .RE
 .sp
@@ -297,7 +317,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR

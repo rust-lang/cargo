@@ -36,7 +36,8 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid2() {
+fn same_name() {
+    // Feature with the same name as a dependency.
     let p = project()
         .file(
             "Cargo.toml",
@@ -59,14 +60,24 @@ fn invalid2() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .with_status(101)
-        .with_stderr(
+    p.cargo("tree -f")
+        .arg("{p} [{f}]")
+        .with_stderr("")
+        .with_stdout(
             "\
-[ERROR] failed to parse manifest at `[..]`
+foo v0.0.1 ([..]) []
+└── bar v1.0.0 ([..]) []
+",
+        )
+        .run();
 
-Caused by:
-  features and dependencies cannot have the same name: `bar`
+    p.cargo("tree --features bar -f")
+        .arg("{p} [{f}]")
+        .with_stderr("")
+        .with_stdout(
+            "\
+foo v0.0.1 ([..]) [bar,baz]
+└── bar v1.0.0 ([..]) []
 ",
         )
         .run();

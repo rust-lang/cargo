@@ -35,6 +35,12 @@ they have `required-features` that are missing.
 
 {{> options-release }}
 
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options
@@ -85,9 +91,8 @@ See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-future-incompat }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

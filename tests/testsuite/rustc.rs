@@ -135,6 +135,228 @@ fn fails_with_args_to_all_binaries() {
 }
 
 #[cargo_test]
+fn fails_with_crate_type_and_without_unstable_options() {
+    let p = project().file("src/lib.rs", r#" "#).build();
+
+    p.cargo("rustc --crate-type lib")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] the `crate-type` flag is unstable, pass `-Z unstable-options` to enable it
+See https://github.com/rust-lang/cargo/issues/10083 for more information about the `crate-type` flag.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn fails_with_crate_type_to_multi_binaries() {
+    let p = project()
+        .file("src/bin/foo.rs", "fn main() {}")
+        .file("src/bin/bar.rs", "fn main() {}")
+        .file("src/bin/baz.rs", "fn main() {}")
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    p.cargo("rustc --crate-type lib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] crate types to rustc can only be passed to one target, consider filtering
+the package by passing, e.g., `--lib` or `--example` to specify a single target",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn fails_with_crate_type_to_multi_examples() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex1"
+            crate-type = ["rlib"]
+            [[example]]
+            name = "ex2"
+            crate-type = ["rlib"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex1.rs", "")
+        .file("examples/ex2.rs", "")
+        .build();
+
+    p.cargo("rustc -v --example ex1 --example ex2 --crate-type lib,cdylib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] crate types to rustc can only be passed to one target, consider filtering
+the package by passing, e.g., `--lib` or `--example` to specify a single target",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn fails_with_crate_type_to_binary() {
+    let p = project().file("src/bin/foo.rs", "fn main() {}").build();
+
+    p.cargo("rustc --crate-type lib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] crate types can only be specified for libraries and example libraries.
+Binaries, tests, and benchmarks are always the `bin` crate type",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_with_crate_type_for_foo() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    p.cargo("rustc -v --lib --crate-type lib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_with_crate_types_for_foo() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    p.cargo("rustc -v --lib --crate-type lib,cdylib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib,cdylib [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_with_crate_type_to_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex"
+            crate-type = ["rlib"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "")
+        .build();
+
+    p.cargo("rustc -v --example ex --crate-type cdylib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name ex examples/ex.rs [..]--crate-type cdylib [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_with_crate_types_to_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex"
+            crate-type = ["rlib"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "")
+        .build();
+
+    p.cargo("rustc -v --example ex --crate-type lib,cdylib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name ex examples/ex.rs [..]--crate-type lib,cdylib [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_with_crate_types_to_one_of_multi_examples() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex1"
+            crate-type = ["rlib"]
+            [[example]]
+            name = "ex2"
+            crate-type = ["rlib"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex1.rs", "")
+        .file("examples/ex2.rs", "")
+        .build();
+
+    p.cargo("rustc -v --example ex1 --crate-type lib,cdylib -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name ex1 examples/ex1.rs [..]--crate-type lib,cdylib [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn build_with_args_to_one_of_multiple_tests() {
     let p = project()
         .file("tests/foo.rs", r#" "#)
@@ -318,7 +540,7 @@ fn fail_with_multiple_packages() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: The argument '--package <SPEC>' was provided more than once, \
+error: The argument '--package [<SPEC>...]' was provided more than once, \
        but cannot be used multiple times
 ",
         )

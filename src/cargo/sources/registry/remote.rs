@@ -2,14 +2,14 @@ use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
-    RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
-    VERSION_TEMPLATE,
+    RegistryConfig, RegistryData, CHECKSUM_TEMPLATE, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE,
+    PREFIX_TEMPLATE, VERSION_TEMPLATE,
 };
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, Filesystem};
 use anyhow::Context as _;
-use cargo_util::{paths, Sha256};
+use cargo_util::{paths, registry::make_dep_path, Sha256};
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
@@ -20,15 +20,6 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
-
-fn make_dep_prefix(name: &str) -> String {
-    match name.len() {
-        1 => String::from("1"),
-        2 => String::from("2"),
-        3 => format!("3/{}", &name[..1]),
-        _ => format!("{}/{}", &name[0..2], &name[2..4]),
-    }
-}
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are
@@ -99,8 +90,9 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     // things that we don't want.
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
-                    Ok(git2::Repository::init_opts(&path, &opts)
-                        .with_context(|| "failed to initialize index git repository")?)
+                    Ok(git2::Repository::init_opts(&path, &opts).with_context(|| {
+                        format!("failed to initialize index git repository (in {:?})", path)
+                    })?)
                 }
             }
         })
@@ -254,7 +246,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let filename = self.filename(pkg);
 
         // Attempt to open an read-only copy first to avoid an exclusive write
@@ -278,15 +270,17 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             && !url.contains(VERSION_TEMPLATE)
             && !url.contains(PREFIX_TEMPLATE)
             && !url.contains(LOWER_PREFIX_TEMPLATE)
+            && !url.contains(CHECKSUM_TEMPLATE)
         {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
-        let prefix = make_dep_prefix(&*pkg.name());
+        let prefix = make_dep_path(&*pkg.name(), true);
         let url = url
             .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
             .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase());
+            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
+            .replace(CHECKSUM_TEMPLATE, checksum);
 
         Ok(MaybeLock::Download {
             url,
@@ -343,20 +337,5 @@ impl<'cfg> Drop for RemoteRegistry<'cfg> {
     fn drop(&mut self) {
         // Just be sure to drop this before our other fields
         self.tree.borrow_mut().take();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::make_dep_prefix;
-
-    #[test]
-    fn dep_prefix() {
-        assert_eq!(make_dep_prefix("a"), "1");
-        assert_eq!(make_dep_prefix("ab"), "2");
-        assert_eq!(make_dep_prefix("abc"), "3/a");
-        assert_eq!(make_dep_prefix("Abc"), "3/A");
-        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
-        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
     }
 }

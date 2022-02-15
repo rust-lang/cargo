@@ -8,7 +8,6 @@ use crate::util::interning::InternedString;
 use crate::util::{profile, CanonicalUrl, Config};
 use anyhow::{bail, Context as _};
 use log::{debug, trace};
-use semver::VersionReq;
 use url::Url;
 
 /// Source of information about a group of packages.
@@ -292,6 +291,14 @@ impl<'cfg> PackageRegistry<'cfg> {
                     dep.package_name()
                 );
 
+                if dep.features().len() != 0 || !dep.uses_default_features() {
+                    self.source_config.config().shell().warn(format!(
+                        "patch for `{}` uses the features mechanism. \
+                        default-features and features will not take effect because the patch dependency does not support this mechanism",
+                        dep.package_name()
+                    ))?;
+                }
+
                 // Go straight to the source for resolving `dep`. Load it as we
                 // normally would and then ask it directly for the list of summaries
                 // corresponding to this `dep`.
@@ -406,11 +413,12 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.patches_locked = true;
     }
 
-    pub fn patches(&self) -> Vec<Summary> {
-        self.patches
-            .values()
-            .flat_map(|v| v.iter().cloned())
-            .collect()
+    /// Gets all patches grouped by the source URLS they are going to patch.
+    ///
+    /// These patches are mainly collected from [`patch`](Self::patch).
+    /// They might not be the same as patches actually used during dependency resolving.
+    pub fn patches(&self) -> &HashMap<CanonicalUrl, Vec<Summary>> {
+        &self.patches
     }
 
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
@@ -480,7 +488,7 @@ never intended to support this feature, so for now this message is just a
 warning. In the future, however, this message will become a hard error.
 
 To change the dependency graph via an override it's recommended to use the
-`[replace]` feature of Cargo instead of the path override feature. This is
+`[patch]` feature of Cargo instead of the path override feature. This is
 documented online at the url below for more information.
 
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
@@ -757,8 +765,7 @@ fn lock(
                 if locked.source_id() == dep.source_id() {
                     dep.lock_to(locked);
                 } else {
-                    let req = VersionReq::exact(locked.version());
-                    dep.set_version_req(req);
+                    dep.lock_version(locked.version());
                 }
                 return dep;
             }

@@ -65,15 +65,53 @@ fn virtual_no_default_features() {
         .run();
 
     p.cargo("check --features foo")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] none of the selected packages contains these features: foo")
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: foo, did you mean: f1?",
+        )
         .run();
 
     p.cargo("check --features a/dep1,b/f1,b/f2,f2")
+        .with_status(101)
+        .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2, did you mean: f1?")
+        .run();
+
+    p.cargo("check --features a/dep,b/f1,b/f2,f2")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2")
+        .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, b/f2, f2, did you mean: a/dep1, f1?")
+        .run();
+
+    p.cargo("check --features a/dep,a/dep1")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, did you mean: b/f1?")
+        .run();
+}
+
+#[cargo_test]
+fn virtual_typo_member_feature() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            resolver = "2"
+
+            [features]
+            deny-warnings = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build()
+        .cargo("check --features a/deny-warning")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: a/deny-warning, did you mean: a/deny-warnings?",
+        )
         .run();
 }
 
@@ -273,6 +311,48 @@ fn other_member_from_current() {
 }
 
 #[cargo_test]
+fn feature_default_resolver() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+
+            [features]
+            test = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    if cfg!(feature = "test") {
+                        println!("feature set");
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check --features testt")
+        .with_status(101)
+        .with_stderr("[ERROR] Package `a[..]` does not have the feature `testt`")
+        .run();
+
+    p.cargo("run --features test")
+        .with_status(0)
+        .with_stdout("feature set")
+        .run();
+
+    p.cargo("run --features a/test")
+        .with_status(101)
+        .with_stderr("[ERROR] package `a[..]` does not have a dependency named `a`")
+        .run();
+}
+
+#[cargo_test]
 fn virtual_member_slash() {
     // member slash feature syntax
     let p = project()
@@ -457,6 +537,12 @@ fn resolver1_member_features() {
     p.cargo("run -p member1 --features member1/m1-feature")
         .cwd("member2")
         .with_stdout("m1-feature set")
+        .run();
+
+    p.cargo("check -p member1 --features member1/m2-feature")
+        .cwd("member2")
+        .with_status(101)
+        .with_stderr("[ERROR] Package `member1[..]` does not have the feature `m2-feature`")
         .run();
 }
 

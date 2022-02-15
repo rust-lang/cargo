@@ -49,7 +49,7 @@ change, then Cargo will reinstall the package:
 - The package version and source.
 - The set of binary names installed.
 - The chosen features.
-- The release mode (`--debug`).
+- The profile (`--profile`).
 - The target (`--target`).
 
 Installing with `--path` will always build and install, unless there are
@@ -226,7 +226,33 @@ is specified.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---debug"><a class="option-anchor" href="#option-cargo-install---debug"></a><code>--debug</code></dt>
-<dd class="option-desc">Build with the <code>dev</code> profile instead the <code>release</code> profile.</dd>
+<dd class="option-desc">Build with the <code>dev</code> profile instead the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
+
+
+<dt class="option-term" id="option-cargo-install---profile"><a class="option-anchor" href="#option-cargo-install---profile"></a><code>--profile</code> <em>name</em></dt>
+<dd class="option-desc">Install with the given profile.
+See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-install---timings=fmts"><a class="option-anchor" href="#option-cargo-install---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma-separated list of output
+formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about timing information.</li>
+</ul></dd>
+
+
 
 
 </dl>
@@ -285,7 +311,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-install--q"><a class="option-anchor" href="#option-cargo-install--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-install---quiet"><a class="option-anchor" href="#option-cargo-install---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---color"><a class="option-anchor" href="#option-cargo-install---color"></a><code>--color</code> <em>when</em></dt>
@@ -298,6 +326,31 @@ terminal.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-install---message-format"><a class="option-anchor" href="#option-cargo-install---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
+and consists of comma-separated values. Valid values:</p>
+<ul>
+<li><code>human</code> (default): Display in a human-readable text format. Conflicts with
+<code>short</code> and <code>json</code>.</li>
+<li><code>short</code>: Emit shorter, human-readable text messages. Conflicts with <code>human</code>
+and <code>json</code>.</li>
+<li><code>json</code>: Emit JSON messages to stdout. See
+<a href="../reference/external-tools.html#json-messages">the reference</a>
+for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
+<li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
+the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
+<li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
+contains embedded ANSI color codes for respecting rustc's default color
+scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
+</ul></dd>
+
 
 
 </dl>

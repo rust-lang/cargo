@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
 use cargo_util::{paths, ProcessBuilder};
-use semver::Version;
 
 use super::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
@@ -51,6 +50,9 @@ pub struct Compilation<'cfg> {
 
     /// An array of all cdylibs created.
     pub cdylibs: Vec<UnitOutput>,
+
+    /// The crate names of the root units specified on the command-line.
+    pub root_crate_names: Vec<String>,
 
     /// All directories for the output of native build commands.
     ///
@@ -137,6 +139,7 @@ impl<'cfg> Compilation<'cfg> {
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
+            root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
             config: bcx.config,
@@ -316,10 +319,7 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
-            .env(
-                "CARGO_PKG_VERSION_PRE",
-                &pre_version_component(pkg.version()),
-            )
+            .env("CARGO_PKG_VERSION_PRE", pkg.version().pre.as_str())
             .env("CARGO_PKG_VERSION", &pkg.version().to_string())
             .env("CARGO_PKG_NAME", &*pkg.name())
             .env(
@@ -345,12 +345,15 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
 
-        if self.config.cli_unstable().configurable_env {
-            // Apply any environment variables from the config
-            for (key, value) in self.config.env_config()?.iter() {
-                if value.is_force() || cmd.get_env(key).is_none() {
-                    cmd.env(key, value.resolve(self.config));
-                }
+        // Apply any environment variables from the config
+        for (key, value) in self.config.env_config()?.iter() {
+            // never override a value that has already been set by cargo
+            if cmd.get_envs().contains_key(key) {
+                continue;
+            }
+
+            if value.is_force() || env::var_os(key).is_none() {
+                cmd.env(key, value.resolve(self.config));
             }
         }
 
@@ -362,27 +365,15 @@ impl<'cfg> Compilation<'cfg> {
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     if unit.target.is_bin() {
-        cmd.env("CARGO_BIN_NAME", unit.target.name());
+        let name = unit
+            .target
+            .binary_filename()
+            .unwrap_or(unit.target.name().to_string());
+
+        cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd
-}
-
-fn pre_version_component(v: &Version) -> String {
-    if v.pre.is_empty() {
-        return String::new();
-    }
-
-    let mut ret = String::new();
-
-    for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 {
-            ret.push('.')
-        };
-        ret.push_str(&x.to_string());
-    }
-
-    ret
 }
 
 fn target_runner(

@@ -27,8 +27,10 @@ OPTIONS
            in the target directory.
 
        --release
-           Clean all artifacts that were built with the release or bench
-           profiles.
+           Remove all artifacts in the release directory.
+
+       --profile name
+           Remove all artifacts in the directory with the given profile name.
 
        --target-dir directory
            Directory for all generated artifacts and intermediate files. May
@@ -60,7 +62,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:

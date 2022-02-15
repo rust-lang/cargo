@@ -18,7 +18,6 @@
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
-use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -47,6 +46,7 @@ struct State<'a, 'cfg> {
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+    scrape_units: &'a [Unit],
 
     /// A set of edges in `unit_dependencies` where (a, b) means that the
     /// dependency from a to b was added purely because it was a dev-dependency.
@@ -61,6 +61,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit],
+    scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
@@ -91,6 +92,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         target_data,
         profiles,
         interner,
+        scrape_units,
         dev_dependency_edges: HashSet::new(),
     };
 
@@ -129,7 +131,7 @@ fn calc_deps_of_std(
     // Compute dependencies for the standard library.
     state.is_std = true;
     for roots in std_roots.values() {
-        deps_of_roots(roots, &mut state)?;
+        deps_of_roots(roots, state)?;
     }
     state.is_std = false;
     Ok(Some(std::mem::take(&mut state.unit_dependencies)))
@@ -142,6 +144,7 @@ fn attach_std_deps(
     std_unit_deps: UnitGraph,
 ) {
     // Attach the standard library as a dependency of every target unit.
+    let mut found = false;
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
             deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
@@ -152,19 +155,23 @@ fn attach_std_deps(
                 public: true,
                 noprelude: true,
             }));
+            found = true;
         }
     }
-    // And also include the dependencies of the standard library itself.
-    for (unit, deps) in std_unit_deps.into_iter() {
-        if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
-            panic!("std unit collision with existing unit: {:?}", other_unit);
+    // And also include the dependencies of the standard library itself. Don't
+    // include these if no units actually needed the standard library.
+    if found {
+        for (unit, deps) in std_unit_deps.into_iter() {
+            if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
+                panic!("std unit collision with existing unit: {:?}", other_unit);
+            }
         }
     }
 }
 
 /// Compute all the dependencies of the given root units.
 /// The result is stored in state.unit_dependencies.
-fn deps_of_roots(roots: &[Unit], mut state: &mut State<'_, '_>) -> CargoResult<()> {
+fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
         // We check the global test mode to see if we are running in `cargo
@@ -192,7 +199,7 @@ fn deps_of_roots(roots: &[Unit], mut state: &mut State<'_, '_>) -> CargoResult<(
         } else {
             UnitFor::new_normal()
         };
-        deps_of(unit, &mut state, unit_for)?;
+        deps_of(unit, state, unit_for)?;
     }
 
     Ok(())
@@ -235,28 +242,7 @@ fn compute_deps(
     }
 
     let id = unit.pkg.package_id();
-    let filtered_deps = state.deps(unit, unit_for, &|dep| {
-        // If this target is a build command, then we only want build
-        // dependencies, otherwise we want everything *other than* build
-        // dependencies.
-        if unit.target.is_custom_build() != dep.is_build() {
-            return false;
-        }
-
-        // If this dependency is **not** a transitive dependency, then it
-        // only applies to test/example targets.
-        if !dep.is_transitive()
-            && !unit.target.is_test()
-            && !unit.target.is_example()
-            && !unit.mode.is_any_test()
-        {
-            return false;
-        }
-
-        // If we've gotten past all that, then this dependency is
-        // actually used!
-        true
-    });
+    let filtered_deps = state.deps(unit, unit_for);
 
     let mut ret = Vec::new();
     let mut dev_deps = Vec::new();
@@ -414,7 +400,7 @@ fn compute_deps_doc(
     state: &mut State<'_, '_>,
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep>> {
-    let deps = state.deps(unit, unit_for, &|dep| dep.kind() == DepKind::Normal);
+    let deps = state.deps(unit, unit_for);
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
@@ -440,18 +426,20 @@ fn compute_deps_doc(
             mode,
         )?;
         ret.push(lib_unit_dep);
-        if let CompileMode::Doc { deps: true } = unit.mode {
-            // Document this lib as well.
-            let doc_unit_dep = new_unit_dep(
-                state,
-                unit,
-                dep,
-                lib,
-                dep_unit_for,
-                unit.kind.for_target(lib),
-                unit.mode,
-            )?;
-            ret.push(doc_unit_dep);
+        if lib.documented() {
+            if let CompileMode::Doc { deps: true } = unit.mode {
+                // Document this lib as well.
+                let doc_unit_dep = new_unit_dep(
+                    state,
+                    unit,
+                    dep,
+                    lib,
+                    dep_unit_for,
+                    unit.kind.for_target(lib),
+                    unit.mode,
+                )?;
+                ret.push(doc_unit_dep);
+            }
         }
     }
 
@@ -460,8 +448,47 @@ fn compute_deps_doc(
 
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
+        // build the lib
         ret.extend(maybe_lib(unit, state, unit_for)?);
+        // and also the lib docs for intra-doc links
+        if let Some(lib) = unit
+            .pkg
+            .targets()
+            .iter()
+            .find(|t| t.is_linkable() && t.documented())
+        {
+            let dep_unit_for = unit_for.with_dependency(unit, lib);
+            let lib_doc_unit = new_unit_dep(
+                state,
+                unit,
+                &unit.pkg,
+                lib,
+                dep_unit_for,
+                unit.kind.for_target(lib),
+                unit.mode,
+            )?;
+            ret.push(lib_doc_unit);
+        }
     }
+
+    // Add all units being scraped for examples as a dependency of Doc units.
+    if state.ws.is_member(&unit.pkg) {
+        for scrape_unit in state.scrape_units.iter() {
+            // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
+            let unit_for = UnitFor::new_host(scrape_unit.target.proc_macro());
+            deps_of(scrape_unit, state, unit_for)?;
+            ret.push(new_unit_dep(
+                state,
+                scrape_unit,
+                &scrape_unit.pkg,
+                &scrape_unit.target,
+                unit_for,
+                scrape_unit.kind,
+                scrape_unit.mode,
+            )?);
+        }
+    }
+
     Ok(ret)
 }
 
@@ -553,7 +580,7 @@ fn dep_build_script(
 /// Choose the correct mode for dependencies.
 fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
     match mode {
-        CompileMode::Check { .. } | CompileMode::Doc { .. } => {
+        CompileMode::Check { .. } | CompileMode::Doc { .. } | CompileMode::Docscrape => {
             if target.for_host() {
                 // Plugin and proc macro targets should be compiled like
                 // normal.
@@ -690,6 +717,14 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                         && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
+                // Avoid cycles when using the doc --scrape-examples feature:
+                // Say a workspace has crates A and B where A has a build-dependency on B.
+                // The Doc units for A and B will have a dependency on the Docscrape for both A and B.
+                // So this would add a dependency from B-build to A-build, causing a cycle:
+                //   B (build) -> A (build) -> B(build)
+                // See the test scrape_examples_avoid_build_script_cycle for a concrete example.
+                // To avoid this cycle, we filter out the B -> A (docscrape) dependency.
+                .filter(|(_parent, other)| !other.unit.mode.is_doc_scrape())
                 // Skip dependencies induced via dev-dependencies since
                 // connections between `links` and build scripts only happens
                 // via normal dependencies. Otherwise since dev-dependencies can
@@ -773,12 +808,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
     }
 
     /// Returns a filtered set of dependencies for the given unit.
-    fn deps(
-        &self,
-        unit: &Unit,
-        unit_for: UnitFor,
-        filter: &dyn Fn(&Dependency) -> bool,
-    ) -> Vec<(PackageId, &HashSet<Dependency>)> {
+    fn deps(&self, unit: &Unit, unit_for: UnitFor) -> Vec<(PackageId, &HashSet<Dependency>)> {
         let pkg_id = unit.pkg.package_id();
         let kind = unit.kind;
         self.resolve()
@@ -786,9 +816,24 @@ impl<'a, 'cfg> State<'a, 'cfg> {
             .filter(|&(_id, deps)| {
                 assert!(!deps.is_empty());
                 deps.iter().any(|dep| {
-                    if !filter(dep) {
+                    // If this target is a build command, then we only want build
+                    // dependencies, otherwise we want everything *other than* build
+                    // dependencies.
+                    if unit.target.is_custom_build() != dep.is_build() {
                         return false;
                     }
+
+                    // If this dependency is **not** a transitive dependency, then it
+                    // only applies to test/example targets.
+                    if !dep.is_transitive()
+                        && !unit.target.is_test()
+                        && !unit.target.is_example()
+                        && !unit.mode.is_doc_scrape()
+                        && !unit.mode.is_any_test()
+                    {
+                        return false;
+                    }
+
                     // If this dependency is only available for certain platforms,
                     // make sure we're only enabling it for that platform.
                     if !self.target_data.dep_platform_activated(dep, kind) {
@@ -804,6 +849,8 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         }
                     }
 
+                    // If we've gotten past all that, then this dependency is
+                    // actually used!
                     true
                 })
             })

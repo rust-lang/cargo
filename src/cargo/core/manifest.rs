@@ -9,6 +9,7 @@ use anyhow::Context as _;
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
+use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CrateType};
@@ -194,6 +195,8 @@ pub struct Target {
 struct TargetInner {
     kind: TargetKind,
     name: String,
+    // Note that `bin_name` is used for the cargo-feature `different_binary_name`
+    bin_name: Option<String>,
     // Note that the `src_path` here is excluded from the `Hash` implementation
     // as it's absolute currently and is otherwise a little too brittle for
     // causing rebuilds. Instead the hash for the path that we send to the
@@ -257,7 +260,7 @@ struct SerializedTarget<'a> {
     /// Serialized as a list of strings for historical reasons.
     kind: &'a TargetKind,
     /// Corresponds to `--crate-type` compiler attribute.
-    /// See https://doc.rust-lang.org/reference/linkage.html
+    /// See <https://doc.rust-lang.org/reference/linkage.html>
     crate_types: Vec<CrateType>,
     name: &'a str,
     src_path: Option<&'a PathBuf>,
@@ -265,7 +268,7 @@ struct SerializedTarget<'a> {
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
     /// Whether docs should be built for the target via `cargo doc`
-    /// See https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection
+    /// See <https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection>
     doc: bool,
     doctest: bool,
     /// Whether tests should be run for the target (`test` field in `Cargo.toml`)
@@ -350,6 +353,7 @@ compact_debug! {
             [debug_the_fields(
                 kind
                 name
+                bin_name
                 src_path
                 required_features
                 tested
@@ -627,6 +631,7 @@ impl Target {
             inner: Arc::new(TargetInner {
                 kind: TargetKind::Bin,
                 name: String::new(),
+                bin_name: None,
                 src_path,
                 required_features: None,
                 doc: false,
@@ -662,6 +667,7 @@ impl Target {
 
     pub fn bin_target(
         name: &str,
+        bin_name: Option<String>,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
         edition: Edition,
@@ -670,6 +676,7 @@ impl Target {
         target
             .set_kind(TargetKind::Bin)
             .set_name(name)
+            .set_binary_name(bin_name)
             .set_required_features(required_features)
             .set_doc(true);
         target
@@ -911,11 +918,17 @@ impl Target {
         Arc::make_mut(&mut self.inner).name = name.to_string();
         self
     }
+    pub fn set_binary_name(&mut self, bin_name: Option<String>) -> &mut Target {
+        Arc::make_mut(&mut self.inner).bin_name = bin_name;
+        self
+    }
     pub fn set_required_features(&mut self, required_features: Option<Vec<String>>) -> &mut Target {
         Arc::make_mut(&mut self.inner).required_features = required_features;
         self
     }
-
+    pub fn binary_filename(&self) -> Option<String> {
+        self.inner.bin_name.clone()
+    }
     pub fn description_named(&self) -> String {
         match self.kind() {
             TargetKind::Lib(..) => "lib".to_string(),
@@ -925,7 +938,7 @@ impl Target {
             TargetKind::ExampleLib(..) | TargetKind::ExampleBin => {
                 format!("example \"{}\"", self.name())
             }
-            TargetKind::CustomBuild => "custom-build".to_string(),
+            TargetKind::CustomBuild => "build script".to_string(),
         }
     }
 }

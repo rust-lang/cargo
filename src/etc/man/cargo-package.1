@@ -67,6 +67,22 @@ fields in the manifest.
 .sp
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/publishing.html> for more details about
 packaging and publishing.
+.SS ".cargo_vcs_info.json format"
+Will generate a \fB\&.cargo_vcs_info.json\fR in the following format
+.sp
+.RS 4
+.nf
+{
+ "git": {
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+ },
+ "path_in_vcs": ""
+}
+.fi
+.RE
+.sp
+\fBpath_in_vcs\fR will be set to a repo\-relative path for packages
+in subdirectories of the version control repository.
 .SH "OPTIONS"
 .SS "Package Options"
 .sp
@@ -90,6 +106,41 @@ or the license).
 \fB\-\-allow\-dirty\fR
 .RS 4
 Allow working directories with uncommitted VCS changes to be packaged.
+.RE
+.SS "Package Selection"
+By default, when no package selection options are given, the packages selected
+depend on the selected manifest file (based on the current working directory if
+\fB\-\-manifest\-path\fR is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.
+.sp
+The default members of a workspace can be set explicitly with the
+\fBworkspace.default\-members\fR key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+\fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
+.sp
+\fB\-p\fR \fIspec\fR\&..., 
+\fB\-\-package\fR \fIspec\fR\&...
+.RS 4
+Package only the specified packages. See \fBcargo\-pkgid\fR(1) for the
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.
+.RE
+.sp
+\fB\-\-workspace\fR
+.RS 4
+Package all members in the workspace.
+.RE
+.sp
+\fB\-\-exclude\fR \fISPEC\fR\&...
+.RS 4
+Exclude the specified packages. Must be used in conjunction with the
+\fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
+common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.
 .RE
 .SS "Compilation Options"
 .sp
@@ -198,7 +249,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR

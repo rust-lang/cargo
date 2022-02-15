@@ -222,7 +222,7 @@ Note that this will actually resolve to two versions of the `uuid` crate. The
 `my-binary` crate will continue to use the 1.x.y series of the `uuid` crate but
 the `my-library` crate will use the `2.0.0` version of `uuid`. This will allow you
 to gradually roll out breaking changes to a crate through a dependency graph
-without being force to update everything all at once.
+without being forced to update everything all at once.
 
 ### Using `[patch]` with multiple versions
 

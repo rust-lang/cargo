@@ -47,7 +47,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -72,15 +72,17 @@ pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
+pub use self::version_prefs::{VersionOrdering, VersionPreferences};
 
 mod conflict_cache;
 mod context;
 mod dep_cache;
 mod encode;
-mod errors;
+pub(crate) mod errors;
 pub mod features;
 mod resolve;
 mod types;
+mod version_prefs;
 
 /// Builds the list of all packages required to build the first argument.
 ///
@@ -101,10 +103,8 @@ mod types;
 ///   for the same query every time). Typically this is an instance of a
 ///   `PackageRegistry`.
 ///
-/// * `try_to_use` - this is a list of package IDs which were previously found
-///   in the lock file. We heuristically prefer the ids listed in `try_to_use`
-///   when sorting candidates to activate, but otherwise this isn't used
-///   anywhere else.
+/// * `version_prefs` - this represents a preference for some versions over others,
+///   based on the lock file or other reasons such as `[patch]`es.
 ///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
@@ -123,7 +123,7 @@ pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
-    try_to_use: &HashSet<PackageId>,
+    version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
@@ -133,7 +133,8 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, version_prefs, minimal_versions);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
@@ -608,7 +609,7 @@ fn activate(
     cx.age += 1;
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        // add a edge from candidate to parent in the parents graph
+        // add an edge from candidate to parent in the parents graph
         cx.parents
             .link(candidate_pid, parent_pid)
             // and associate dep with that edge
@@ -699,7 +700,7 @@ struct BacktrackFrame {
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Summary>,
-    // This is a inlined peekable generator
+    // This is an inlined peekable generator
     has_another: Option<Summary>,
 }
 
@@ -1006,13 +1007,15 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     // dev-dependency since that doesn't count for cycles.
     let mut graph = BTreeMap::new();
     for id in resolve.iter() {
-        let set = graph.entry(id).or_insert_with(BTreeSet::new);
-        for (dep, listings) in resolve.deps_not_replaced(id) {
-            let is_transitive = listings.iter().any(|d| d.is_transitive());
+        let map = graph.entry(id).or_insert_with(BTreeMap::new);
+        for (dep_id, listings) in resolve.deps_not_replaced(id) {
+            let transitive_dep = listings.iter().find(|d| d.is_transitive());
 
-            if is_transitive {
-                set.insert(dep);
-                set.extend(resolve.replacement(dep));
+            if let Some(transitive_dep) = transitive_dep.cloned() {
+                map.insert(dep_id, transitive_dep.clone());
+                resolve
+                    .replacement(dep_id)
+                    .map(|p| map.insert(p, transitive_dep));
             }
         }
     }
@@ -1032,7 +1035,7 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     return Ok(());
 
     fn visit(
-        graph: &BTreeMap<PackageId, BTreeSet<PackageId>>,
+        graph: &BTreeMap<PackageId, BTreeMap<PackageId, Dependency>>,
         id: PackageId,
         visited: &mut HashSet<PackageId>,
         path: &mut Vec<PackageId>,
@@ -1040,15 +1043,21 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     ) -> CargoResult<()> {
         path.push(id);
         if !visited.insert(id) {
+            let iter = path.iter().rev().skip(1).scan(id, |child, parent| {
+                let dep = graph.get(parent).and_then(|adjacent| adjacent.get(child));
+                *child = *parent;
+                Some((parent, dep))
+            });
+            let iter = std::iter::once((&id, None)).chain(iter);
             anyhow::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                errors::describe_path(&path.iter().rev().collect::<Vec<_>>()),
+                errors::describe_path(iter),
             );
         }
 
         if checked.insert(id) {
-            for dep in graph[&id].iter() {
+            for dep in graph[&id].keys() {
                 visit(graph, *dep, visited, path, checked)?;
             }
         }

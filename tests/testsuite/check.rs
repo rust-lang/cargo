@@ -5,6 +5,7 @@ use std::fmt::{self, Write};
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
+use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
@@ -802,8 +803,7 @@ fn short_message_format() {
         .with_stderr_contains(
             "\
 src/lib.rs:1:27: error[E0308]: mismatched types
-error: aborting due to previous error
-error: could not compile `foo`
+error: could not compile `foo` due to previous error
 ",
         )
         .run();
@@ -887,7 +887,6 @@ fn error_from_deep_recursion() -> Result<(), fmt::Error> {
 
 #[cargo_test]
 fn rustc_workspace_wrapper_affects_all_workspace_members() {
-    use cargo_test_support::paths;
     let p = project()
         .file(
             "Cargo.toml",
@@ -903,7 +902,7 @@ fn rustc_workspace_wrapper_affects_all_workspace_members() {
         .build();
 
     p.cargo("check")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
@@ -911,7 +910,6 @@ fn rustc_workspace_wrapper_affects_all_workspace_members() {
 
 #[cargo_test]
 fn rustc_workspace_wrapper_includes_path_deps() {
-    use cargo_test_support::paths;
     let p = project()
         .file(
             "Cargo.toml",
@@ -936,7 +934,7 @@ fn rustc_workspace_wrapper_includes_path_deps() {
         .build();
 
     p.cargo("check --workspace")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
@@ -945,7 +943,6 @@ fn rustc_workspace_wrapper_includes_path_deps() {
 
 #[cargo_test]
 fn rustc_workspace_wrapper_respects_primary_units() {
-    use cargo_test_support::paths;
     let p = project()
         .file(
             "Cargo.toml",
@@ -961,7 +958,7 @@ fn rustc_workspace_wrapper_respects_primary_units() {
         .build();
 
     p.cargo("check -p bar")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
@@ -969,7 +966,6 @@ fn rustc_workspace_wrapper_respects_primary_units() {
 
 #[cargo_test]
 fn rustc_workspace_wrapper_excludes_published_deps() {
-    use cargo_test_support::paths;
     let p = project()
         .file(
             "Cargo.toml",
@@ -994,7 +990,7 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
     Package::new("baz", "1.0.0").publish();
 
     p.cargo("check --workspace -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
         .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
         .with_stderr_contains("[CHECKING] baz [..]")

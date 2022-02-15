@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use anyhow::{bail, format_err, Context as _};
 use serde::{Deserialize, Serialize};
+use toml_edit::easy as toml;
 
 use crate::core::compiler::Freshness;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
@@ -355,7 +356,7 @@ impl CrateListingV1 {
         let mut file = lock.file();
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
-        let data = toml::to_string(self)?;
+        let data = toml::to_string_pretty(self)?;
         file.write_all(data.as_bytes())?;
         Ok(())
     }
@@ -612,7 +613,9 @@ where
     fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
         pkgs.sort_unstable_by_key(|a| a.name());
         format!(
-            "multiple packages with {} found: {}",
+            "multiple packages with {} found: {}. When installing a git repository, \
+            cargo will always search the entire repo for any Cargo.toml. \
+            Please specify which to install.",
             kind,
             pkgs.iter()
                 .map(|p| p.name().as_str())

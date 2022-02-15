@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
-use crate::util::Config;
+use crate::util::{Config, VersionExt};
 use anyhow::Error;
 
 use super::context::Context;
@@ -82,6 +82,7 @@ pub(super) fn activation_error(
             cx.parents
                 .path_to_bottom(&parent.package_id())
                 .into_iter()
+                .map(|(node, _)| node)
                 .cloned()
                 .collect(),
         )
@@ -90,9 +91,7 @@ pub(super) fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(
-            &cx.parents.path_to_bottom(&parent.package_id()),
-        ));
+        msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -128,7 +127,11 @@ pub(super) fn activation_error(
                     msg.push_str("`, but it conflicts with a previous package which links to `");
                     msg.push_str(link);
                     msg.push_str("` as well:\n");
-                    msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
+                    msg.push_str(&describe_path_in_context(cx, p));
+                    msg.push_str("\nOnly one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. ");
+                    msg.push_str("Try to adjust your dependencies so that only one package uses the links ='");
+                    msg.push_str(&*dep.package_name());
+                    msg.push_str("' value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.");
                 }
                 ConflictReason::MissingFeatures(features) => {
                     msg.push_str("\n\nthe package `");
@@ -193,7 +196,7 @@ pub(super) fn activation_error(
             for (p, r) in &conflicting_activations {
                 if let ConflictReason::Semver = r {
                     msg.push_str("\n\n  previously selected ");
-                    msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
+                    msg.push_str(&describe_path_in_context(cx, p));
                 }
             }
         }
@@ -246,9 +249,7 @@ pub(super) fn activation_error(
                 registry.describe_source(dep.source_id()),
             );
             msg.push_str("required by ");
-            msg.push_str(&describe_path(
-                &cx.parents.path_to_bottom(&parent.package_id()),
-            ));
+            msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
 
             // If we have a path dependency with a locked version, then this may
             // indicate that we updated a sub-package and forgot to run `cargo
@@ -280,13 +281,15 @@ pub(super) fn activation_error(
                 .filter(|&(d, _)| d < 4)
                 .collect();
             candidates.sort_by_key(|o| o.0);
-            let mut msg = format!(
-                "no matching package named `{}` found\n\
-                 location searched: {}\n",
-                dep.package_name(),
-                dep.source_id()
-            );
-            if !candidates.is_empty() {
+            let mut msg: String;
+            if candidates.is_empty() {
+                msg = format!("no matching package named `{}` found\n", dep.package_name());
+            } else {
+                msg = format!(
+                    "no matching package found\nsearched package name: `{}`\n",
+                    dep.package_name()
+                );
+
                 // If dependency package name is equal to the name of the candidate here
                 // it may be a prerelease package which hasn't been specified correctly
                 if dep.package_name() == candidates[0].1.name()
@@ -308,8 +311,9 @@ pub(super) fn activation_error(
                     if candidates.len() > 3 {
                         names.push("...");
                     }
-
-                    msg.push_str("perhaps you meant: ");
+                    // Vertically align first suggestion with missing crate name
+                    // so a typo jumps out at you.
+                    msg.push_str("perhaps you meant:      ");
                     msg.push_str(&names.iter().enumerate().fold(
                         String::default(),
                         |acc, (i, el)| match i {
@@ -319,13 +323,11 @@ pub(super) fn activation_error(
                         },
                     ));
                 }
-
                 msg.push('\n');
             }
+            msg.push_str(&format!("location searched: {}\n", dep.source_id()));
             msg.push_str("required by ");
-            msg.push_str(&describe_path(
-                &cx.parents.path_to_bottom(&parent.package_id()),
-            ));
+            msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
 
             msg
         };
@@ -344,12 +346,63 @@ pub(super) fn activation_error(
     to_resolve_err(anyhow::format_err!("{}", msg))
 }
 
+/// Returns String representation of dependency chain for a particular `pkgid`
+/// within given context.
+pub(super) fn describe_path_in_context(cx: &Context, id: &PackageId) -> String {
+    let iter = cx
+        .parents
+        .path_to_bottom(id)
+        .into_iter()
+        .map(|(p, d)| (p, d.and_then(|d| d.iter().next())));
+    describe_path(iter)
+}
+
 /// Returns String representation of dependency chain for a particular `pkgid`.
-pub(super) fn describe_path(path: &[&PackageId]) -> String {
+///
+/// Note that all elements of `path` iterator should have `Some` dependency
+/// except the first one. It would look like:
+///
+/// (pkg0, None)
+/// -> (pkg1, dep from pkg1 satisfied by pkg0)
+/// -> (pkg2, dep from pkg2 satisfied by pkg1)
+/// -> ...
+pub(crate) fn describe_path<'a>(
+    mut path: impl Iterator<Item = (&'a PackageId, Option<&'a Dependency>)>,
+) -> String {
     use std::fmt::Write;
-    let mut dep_path_desc = format!("package `{}`", path[0]);
-    for dep in path[1..].iter() {
-        write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
+
+    if let Some(p) = path.next() {
+        let mut dep_path_desc = format!("package `{}`", p.0);
+        for (pkg, dep) in path {
+            let dep = dep.unwrap();
+            let source_kind = if dep.source_id().is_path() {
+                "path "
+            } else if dep.source_id().is_git() {
+                "git "
+            } else {
+                ""
+            };
+            let requirement = if source_kind.is_empty() {
+                format!("{} = \"{}\"", dep.name_in_toml(), dep.version_req())
+            } else {
+                dep.name_in_toml().to_string()
+            };
+            let locked_version = dep
+                .version_req()
+                .locked_version()
+                .map(|v| format!("(locked to {}) ", v))
+                .unwrap_or_default();
+
+            write!(
+                dep_path_desc,
+                "\n    ... which satisfies {}dependency `{}` {}of package `{}`",
+                source_kind, requirement, locked_version, pkg
+            )
+            .unwrap();
+        }
+
+        return dep_path_desc;
     }
-    dep_path_desc
+
+    String::new()
 }

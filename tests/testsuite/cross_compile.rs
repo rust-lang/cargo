@@ -463,15 +463,15 @@ fn plugin_with_extra_dylib_dep() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
 
                 extern crate baz;
                 extern crate rustc_driver;
 
                 use rustc_driver::plugin::Registry;
 
-                #[plugin_registrar]
-                pub fn foo(reg: &mut Registry) {
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(reg: &mut Registry) {
                     println!("{}", baz::baz());
                 }
             "#,
@@ -617,6 +617,10 @@ fn no_cross_doctests() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), \
+cross-compilation doctests are not yet supported
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
+for more information.
 ",
         )
         .run();
@@ -634,6 +638,10 @@ fn no_cross_doctests() {
 [RUNNING] `rustc --crate-name foo [..]--test[..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`
+[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), \
+cross-compilation doctests are not yet supported
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
+for more information.
 ",
             triple = target
         ))

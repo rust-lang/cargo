@@ -30,6 +30,14 @@ together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the
 home directory is the lowest priority. Arrays will be joined together.
 
+At present, when being invoked from a workspace, Cargo does not read config
+files from crates within the workspace. i.e. if a workspace has two crates in
+it, named `/projects/foo/bar/baz/mylib` and `/projects/foo/bar/baz/mybin`, and
+there are Cargo configs at `/projects/foo/bar/baz/mylib/.cargo/config.toml`
+and `/projects/foo/bar/baz/mybin/.cargo/config.toml`, Cargo does not read
+those configuration files if it is invoked from the workspace root
+(`/projects/foo/bar/baz/`).
+
 > **Note:** Cargo also reads config files without the `.toml` extension, such as
 > `.cargo/config`. Support for the `.toml` extension was added in version 1.39
 > and is the preferred form. If both files exist, Cargo will use the file
@@ -65,7 +73,21 @@ rustflags = ["…", "…"]        # custom flags to pass to all compiler invocat
 rustdocflags = ["…", "…"]     # custom flags to pass to rustdoc
 incremental = true            # whether or not to enable incremental compilation
 dep-info-basedir = "…"        # path for the base directory for targets in depfiles
-pipelining = true             # rustc pipelining
+
+[doc]
+browser = "chromium"          # browser to use with `cargo doc --open`,
+                              # overrides the `BROWSER` environment variable
+
+[env]
+# Set ENV_VAR_NAME=value for any process run by Cargo
+ENV_VAR_NAME = "value"
+# Set even if already present in environment
+ENV_VAR_NAME_2 = { value = "value", force = true }
+# Value is relative to .cargo directory containing `config.toml`, make absolute
+ENV_VAR_NAME_3 = { value = "relative/path", relative = true }
+
+[future-incompat-report]
+frequency = 'always' # when to display a notification about a future incompat report
 
 [cargo-new]
 vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
@@ -89,7 +111,10 @@ root = "/some/path"         # `cargo install` destination directory
 [net]
 retry = 2                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
-offline = false             # do not access the network
+offline = true              # do not access the network
+
+[patch.<registry>]
+# Same keys as for [patch] in Cargo.toml
 
 [profile.<name>]         # Modify profile settings via config.
 opt-level = 0            # Optimization level.
@@ -145,6 +170,7 @@ metadata_key1 = "value"
 metadata_key2 = "value"
 
 [term]
+quiet = false          # whether cargo output is quiet
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
 progress.when = 'auto' # whether cargo shows progress bar
@@ -190,6 +216,20 @@ runner = "foo"  # Searches `PATH` for `foo`.
 # For example, `/my/project/.cargo/config.toml` would result in `/my/project/vendor`.
 directory = "vendor"
 ```
+
+### Executable paths with arguments
+
+Some Cargo commands invoke external programs, which can be configured as a path
+and some number of arguments.
+
+The value may be an array of strings like `['/path/to/program', 'somearg']` or
+a space-separated string like `'/path/to/program somearg'`. If the path to the
+executable contains a space, the list form must be used.
+
+If Cargo is passing other arguments to the program such as a path to open or
+run, they will be passed after the last specified argument in the value of an
+option of this format. If the specified program does not have path separators,
+Cargo will search `PATH` for its executable.
 
 ### Credentials
 
@@ -248,6 +288,7 @@ subcommand and arguments. The following aliases are built-in to Cargo:
 [alias]
 b = "build"
 c = "check"
+d = "doc"
 t = "test"
 r = "run"
 ```
@@ -345,6 +386,16 @@ Without `--target`, the flags will be passed to all compiler invocations
 you have args that you do not want to pass to build scripts or proc macros and
 are building for the host, pass `--target` with the host triple.
 
+It is not recommended to pass in flags that Cargo itself usually manages. For
+example, the flags driven by [profiles] are best handled by setting the
+appropriate profile setting.
+
+> **Caution**: Due to the low-level nature of passing flags directly to the
+> compiler, this may cause a conflict with future versions of Cargo which may
+> issue the same or similar flags on its own which may interfere with the
+> flags you specify. This is an area where Cargo may not always be backwards
+> compatible.
+
 ##### `build.rustdocflags`
 * Type: string or array of strings
 * Default: none
@@ -389,12 +440,22 @@ The setting itself is a config-relative path. So, for example, a value of
 directory.
 
 ##### `build.pipelining`
-* Type: boolean
-* Default: true
-* Environment: `CARGO_BUILD_PIPELINING`
 
-Controls whether or not build pipelining is used. This allows Cargo to
-schedule overlapping invocations of `rustc` in parallel when possible.
+This option is deprecated and unused. Cargo always has pipelining enabled.
+
+#### `[doc]`
+
+The `[doc]` table defines options for the [`cargo doc`] command.
+
+##### `doc.browser`
+
+* Type: string or array of strings ([program path and args])
+* Default: `BROWSER` environment variable, or, if that is missing,
+  opening the link in a system specific way
+
+This option sets the browser to be used by [`cargo doc`], overriding the
+`BROWSER` environment variable when opening documentation with the `--open`
+option.
 
 #### `[cargo-new]`
 
@@ -417,6 +478,44 @@ Specifies the source control system to use for initializing a new repository.
 Valid values are `git`, `hg` (for Mercurial), `pijul`, `fossil` or `none` to
 disable this behavior. Defaults to `git`, or `none` if already inside a VCS
 repository. Can be overridden with the `--vcs` CLI option.
+
+### `[env]`
+
+The `[env]` section allows you to set additional environment variables for
+build scripts, rustc invocations, `cargo run` and `cargo build`.
+
+```toml
+[env]
+OPENSSL_DIR = "/opt/openssl"
+```
+
+By default, the variables specified will not override values that already exist
+in the environment. This behavior can be changed by setting the `force` flag.
+
+Setting the `relative` flag evaluates the value as a config-relative path that
+is relative to the parent directory of the `.cargo` directory that contains the
+`config.toml` file. The value of the environment variable will be the full
+absolute path.
+
+```toml
+[env]
+TMPDIR = { value = "/home/tmp", force = true }
+OPENSSL_DIR = { value = "vendor/openssl", relative = true }
+```
+
+### `[future-incompat-report]`
+
+The `[future-incompat-report]` table controls setting for [future incompat reporting](future-incompat-report.md)
+
+#### `future-incompat-report.frequency`
+* Type: string
+* Default: "always"
+* Environment: `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY`
+
+Controls how often we display a notification to the terminal when a future incompat report is available. Possible values:
+
+* `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
+* `never`: Never display a notification
 
 #### `[http]`
 
@@ -526,6 +625,9 @@ The `[install]` table defines defaults for the [`cargo install`] command.
 Sets the path to the root directory for installing executables for [`cargo
 install`]. Executables go into a `bin` directory underneath the root.
 
+To track information of installed executables, some extra files, such as
+`.crates.toml` and `.crates2.json`, are also created under this root.
+
 The default if not specified is Cargo's home directory (default `.cargo` in
 your home directory).
 
@@ -566,6 +668,31 @@ proceed with locally cached data. If `false`, Cargo will access the network as
 needed, and generate an error if it encounters a network error.
 
 Can be overridden with the `--offline` command-line option.
+
+#### `[patch]`
+
+Just as you can override dependencies using [`[patch]` in
+`Cargo.toml`](overriding-dependencies.md#the-patch-section), you can
+override them in the cargo configuration file to apply those patches to
+any affected build. The format is identical to the one used in
+`Cargo.toml`.
+
+Since `.cargo/config.toml` files are not usually checked into source
+control, you should prefer patching using `Cargo.toml` where possible to
+ensure that other developers can compile your crate in their own
+environments. Patching through cargo configuration files is generally
+only appropriate when the patch section is automatically generated by an
+external build tool.
+
+If a given dependency is patched both in a cargo configuration file and
+a `Cargo.toml` file, the patch in the configuration file is used. If
+multiple configuration files patch the same dependency, standard cargo
+configuration merging is used, which prefers the value defined closest
+to the current directory, with `$HOME/.cargo/config.toml` taking the
+lowest precedence.
+
+Relative `path` dependencies in such a `[patch]` section are resolved
+relative to the configuration file they appear in.
 
 #### `[profile]`
 
@@ -823,7 +950,7 @@ Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
 `<triple>` is being compiled for. By default, the linker is not overridden.
 
 ##### `target.<triple>.runner`
-* Type: string or array of strings (program path and args)
+* Type: string or array of strings ([program path and args])
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUNNER`
 
@@ -831,12 +958,6 @@ If a runner is provided, executables for the target `<triple>` will be
 executed by invoking the specified runner with the actual executable passed as
 an argument. This applies to [`cargo run`], [`cargo test`] and [`cargo bench`]
 commands. By default, compiled executables are executed directly.
-
-The value may be an array of strings like `['/path/to/program', 'somearg']` or
-a space-separated string like `'/path/to/program somearg'`. The arguments will
-be passed to the runner with the executable to run as the last argument. If
-the runner program does not have path separators, it will search `PATH` for
-the runner executable.
 
 ##### `target.<cfg>.runner`
 
@@ -884,6 +1005,16 @@ metadata_key2 = "value"
 
 The `[term]` table controls terminal output and interaction.
 
+##### `term.quiet`
+* Type: boolean
+* Default: false
+* Environment: `CARGO_TERM_QUIET`
+
+Controls whether or not log messages are displayed by Cargo.
+
+Specifying the `--quiet` flag will override and force quiet output.
+Specifying the `--verbose` flag will override and disable quiet output.
+
 ##### `term.verbose`
 * Type: boolean
 * Default: false
@@ -928,6 +1059,7 @@ Sets the width for progress bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo doc`]: ../commands/cargo-doc.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`cargo run`]: ../commands/cargo-run.md
@@ -943,6 +1075,7 @@ Sets the width for progress bar.
 [toml]: https://toml.io/
 [incremental compilation]: profiles.md#incremental
 [profile]: profiles.md
+[program path with args]: #executable-paths-with-arguments
 [libcurl format]: https://ec.haxx.se/usingcurl-proxies.html
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions

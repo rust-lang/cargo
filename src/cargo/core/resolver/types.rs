@@ -205,7 +205,7 @@ impl Ord for DepsFrame {
     }
 }
 
-/// Note that a `OrdSet` is used for the remaining dependencies that need
+/// Note that an `OrdSet` is used for the remaining dependencies that need
 /// activation. This set is sorted by how many candidates each dependency has.
 ///
 /// This helps us get through super constrained portions of the dependency
@@ -299,34 +299,22 @@ pub enum ConflictReason {
 
 impl ConflictReason {
     pub fn is_links(&self) -> bool {
-        if let ConflictReason::Links(_) = *self {
-            return true;
-        }
-        false
+        matches!(self, ConflictReason::Links(_))
     }
 
     pub fn is_missing_features(&self) -> bool {
-        if let ConflictReason::MissingFeatures(_) = *self {
-            return true;
-        }
-        false
+        matches!(self, ConflictReason::MissingFeatures(_))
     }
 
     pub fn is_required_dependency_as_features(&self) -> bool {
-        if let ConflictReason::RequiredDependencyAsFeature(_) = *self {
-            return true;
-        }
-        false
+        matches!(self, ConflictReason::RequiredDependencyAsFeature(_))
     }
 
     pub fn is_public_dependency(&self) -> bool {
-        if let ConflictReason::PublicDependency(_) = *self {
-            return true;
-        }
-        if let ConflictReason::PubliclyExports(_) = *self {
-            return true;
-        }
-        false
+        matches!(
+            self,
+            ConflictReason::PublicDependency(_) | ConflictReason::PubliclyExports(_)
+        )
     }
 }
 

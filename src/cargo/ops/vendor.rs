@@ -2,6 +2,7 @@ use crate::core::shell::Verbosity;
 use crate::core::{GitReference, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::{CargoResult, Config};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
@@ -11,6 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use toml_edit::easy as toml;
 
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
@@ -31,11 +33,19 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
     let vendor_config = sync(config, &workspaces, opts).with_context(|| "failed to sync")?;
 
     if config.shell().verbosity() != Verbosity::Quiet {
-        crate::drop_eprint!(
-            config,
-            "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
-        );
-        crate::drop_print!(config, "{}", &toml::to_string(&vendor_config).unwrap());
+        if vendor_config.source.is_empty() {
+            crate::drop_eprintln!(config, "There is no dependency to vendor in this project.");
+        } else {
+            crate::drop_eprint!(
+                config,
+                "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
+            );
+            crate::drop_print!(
+                config,
+                "{}",
+                &toml::to_string_pretty(&vendor_config).unwrap()
+            );
+        }
     }
 
     Ok(())
@@ -74,6 +84,7 @@ fn sync(
 ) -> CargoResult<VendorConfig> {
     let canonical_destination = opts.destination.canonicalize();
     let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
+    let dest_dir_already_exists = canonical_destination.exists();
 
     paths::create_dir_all(&canonical_destination)?;
     let mut to_remove = HashSet::new();
@@ -238,17 +249,11 @@ fn sync(
     let mut config = BTreeMap::new();
 
     let merged_source_name = "vendored-sources";
-    config.insert(
-        merged_source_name.to_string(),
-        VendorSource::Directory {
-            directory: opts.destination.to_path_buf(),
-        },
-    );
 
     // replace original sources with vendor
     for source_id in sources {
         let name = if source_id.is_default_registry() {
-            "crates-io".to_string()
+            CRATES_IO_REGISTRY.to_string()
         } else {
             source_id.url().to_string()
         };
@@ -287,6 +292,18 @@ fn sync(
             panic!("Invalid source ID: {}", source_id)
         };
         config.insert(name, source);
+    }
+
+    if !config.is_empty() {
+        config.insert(
+            merged_source_name.to_string(),
+            VendorSource::Directory {
+                directory: opts.destination.to_path_buf(),
+            },
+        );
+    } else if !dest_dir_already_exists {
+        // Nothing to vendor. Remove the destination dir we've just created.
+        paths::remove_dir(canonical_destination)?;
     }
 
     Ok(VendorConfig { source: config })

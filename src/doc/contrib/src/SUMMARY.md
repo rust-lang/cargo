@@ -16,5 +16,5 @@
 - [Tests](./tests/index.md)
     - [Running Tests](./tests/running.md)
     - [Writing Tests](./tests/writing.md)
-    - [Profiling](./tests/profiling.md)
+    - [Benchmarking and Profiling](./tests/profiling.md)
 - [Design Principles](./design.md)

@@ -5,7 +5,7 @@ use cargo::ops::{self, PublishOpts};
 pub fn cli() -> App {
     subcommand("publish")
         .about("Upload a package to the registry")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_quiet()
         .arg_index()
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
         .arg(opt(
@@ -18,6 +18,7 @@ pub fn cli() -> App {
         ))
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
+        .arg_package("Package to publish")
         .arg_manifest_path()
         .arg_features()
         .arg_jobs()
@@ -26,12 +27,12 @@ pub fn cli() -> App {
         .after_help("Run `cargo help publish` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     config.load_credentials()?;
 
     let registry = args.registry(config)?;
     let ws = args.workspace(config)?;
-    let index = args.index(config)?;
+    let index = args.index()?;
 
     ops::publish(
         &ws,
@@ -41,6 +42,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             index,
             verify: !args.is_present("no-verify"),
             allow_dirty: args.is_present("allow-dirty"),
+            to_publish: args.packages_from_flags()?,
             targets: args.targets(),
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),

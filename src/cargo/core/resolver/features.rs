@@ -1,19 +1,14 @@
 //! Feature resolver.
 //!
 //! This is a new feature resolver that runs independently of the main
-//! dependency resolver. It is enabled when the user specifies `resolver =
-//! "2"` in `Cargo.toml`.
+//! dependency resolver. It has several options which can enable new feature
+//! resolution behavior.
 //!
 //! One of its key characteristics is that it can avoid unifying features for
 //! shared dependencies in some situations. See `FeatureOpts` for the
 //! different behaviors that can be enabled. If no extra options are enabled,
 //! then it should behave exactly the same as the dependency resolver's
-//! feature resolution. This can be verified by setting the
-//! `__CARGO_FORCE_NEW_FEATURES=compare` environment variable and running
-//! Cargo's test suite (or building other projects), and checking if it
-//! panics. Note: the `features2` tests will fail because they intentionally
-//! compare the old vs new behavior, so forcing the old behavior will
-//! naturally fail the tests.
+//! feature resolution.
 //!
 //! The preferred way to engage this new resolver is via
 //! `resolve_ws_with_opts`.
@@ -59,22 +54,12 @@ pub struct ResolvedFeatures {
     ///
     /// The value is the `name_in_toml` of the dependencies.
     activated_dependencies: ActivateMap,
-    /// This is only here for legacy support when the new resolver is not enabled.
-    ///
-    /// This is the set of features enabled for each package.
-    legacy_features: Option<HashMap<PackageId, Vec<InternedString>>>,
-    /// This is only here for legacy support when the new resolver is not enabled.
-    ///
-    /// This is the set of optional dependencies enabled for each package.
-    legacy_dependencies: Option<HashMap<PackageId, HashSet<InternedString>>>,
     opts: FeatureOpts,
 }
 
 /// Options for how the feature resolver works.
 #[derive(Default)]
 pub struct FeatureOpts {
-    /// Use the new resolver instead of the old one.
-    new_resolver: bool,
     /// Build deps and proc-macros will not share share features with other dep kinds.
     decouple_host_deps: bool,
     /// Dev dep features will not be activated unless needed.
@@ -132,7 +117,6 @@ impl FeatureOpts {
         let mut opts = FeatureOpts::default();
         let unstable_flags = ws.config().cli_unstable();
         let mut enable = |feat_opts: &Vec<String>| {
-            opts.new_resolver = true;
             for opt in feat_opts {
                 match opt.as_ref() {
                     "build_dep" | "host_dep" => opts.decouple_host_deps = true,
@@ -159,25 +143,12 @@ impl FeatureOpts {
                 enable(&vec!["all".to_string()]).unwrap();
             }
         }
-        // This env var is intended for testing only.
-        if let Ok(env_opts) = std::env::var("__CARGO_FORCE_NEW_FEATURES") {
-            if env_opts == "1" {
-                opts.new_resolver = true;
-            } else {
-                let env_opts = env_opts.split(',').map(|s| s.to_string()).collect();
-                enable(&env_opts)?;
-            }
-        }
         if let HasDevUnits::Yes = has_dev_units {
             // Dev deps cannot be decoupled when they are in use.
             opts.decouple_dev_deps = false;
         }
         if let ForceAllTargets::Yes = force_all_targets {
             opts.ignore_inactive_targets = false;
-        }
-        if unstable_flags.weak_dep_features {
-            // Force this ON because it only works with the new resolver.
-            opts.new_resolver = true;
         }
         Ok(opts)
     }
@@ -187,7 +158,6 @@ impl FeatureOpts {
         match behavior {
             ResolveBehavior::V1 => FeatureOpts::default(),
             ResolveBehavior::V2 => FeatureOpts {
-                new_resolver: true,
                 decouple_host_deps: true,
                 decouple_dev_deps: has_dev_units == HasDevUnits::No,
                 ignore_inactive_targets: true,
@@ -244,10 +214,7 @@ impl CliFeatures {
             match feature {
                 // Maybe call validate_feature_name here once it is an error?
                 FeatureValue::Feature(_) => {}
-                FeatureValue::Dep { .. }
-                | FeatureValue::DepFeature {
-                    dep_prefix: true, ..
-                } => {
+                FeatureValue::Dep { .. } => {
                     bail!(
                         "feature `{}` is not allowed to use explicit `dep:` syntax",
                         feature
@@ -309,18 +276,11 @@ impl ResolvedFeatures {
         features_for: FeaturesFor,
         dep_name: InternedString,
     ) -> bool {
-        if let Some(legacy) = &self.legacy_dependencies {
-            legacy
-                .get(&pkg_id)
-                .map(|deps| deps.contains(&dep_name))
-                .unwrap_or(false)
-        } else {
-            let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
-            self.activated_dependencies
-                .get(&(pkg_id, is_build))
-                .map(|deps| deps.contains(&dep_name))
-                .unwrap_or(false)
-        }
+        let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
+        self.activated_dependencies
+            .get(&(pkg_id, is_build))
+            .map(|deps| deps.contains(&dep_name))
+            .unwrap_or(false)
     }
 
     /// Variant of `activated_features` that returns `None` if this is
@@ -339,31 +299,28 @@ impl ResolvedFeatures {
         pkg_id: PackageId,
         features_for: FeaturesFor,
     ) -> CargoResult<Vec<InternedString>> {
-        if let Some(legacy) = &self.legacy_features {
-            Ok(legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone()))
+        let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
+        if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
+            Ok(fs.iter().cloned().collect())
         } else {
-            let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
-            if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
-                Ok(fs.iter().cloned().collect())
-            } else {
-                bail!("features did not find {:?} {:?}", pkg_id, is_build)
-            }
+            bail!("features did not find {:?} {:?}", pkg_id, is_build)
         }
     }
 
     /// Compares the result against the original resolver behavior.
     ///
     /// Used by `cargo fix --edition` to display any differences.
-    pub fn compare_legacy(&self, legacy: &ResolvedFeatures) -> FeatureDifferences {
-        let legacy_features = legacy.legacy_features.as_ref().unwrap();
-        let features = self
-            .activated_features
+    pub fn compare_legacy(&self, legacy: &ResolvedFeatures) -> DiffMap {
+        self.activated_features
             .iter()
             .filter_map(|((pkg_id, for_host), new_features)| {
-                let old_features = match legacy_features.get(pkg_id) {
-                    Some(feats) => feats.iter().cloned().collect(),
-                    None => BTreeSet::new(),
-                };
+                let old_features = legacy
+                    .activated_features
+                    .get(&(*pkg_id, *for_host))
+                    // The new features may have for_host entries where the old one does not.
+                    .or_else(|| legacy.activated_features.get(&(*pkg_id, false)))
+                    .map(|feats| feats.iter().cloned().collect())
+                    .unwrap_or_else(|| BTreeSet::new());
                 // The new resolver should never add features.
                 assert_eq!(new_features.difference(&old_features).next(), None);
                 let removed_features: BTreeSet<_> =
@@ -374,30 +331,7 @@ impl ResolvedFeatures {
                     Some(((*pkg_id, *for_host), removed_features))
                 }
             })
-            .collect();
-        let legacy_deps = legacy.legacy_dependencies.as_ref().unwrap();
-        let optional_deps = self
-            .activated_dependencies
-            .iter()
-            .filter_map(|((pkg_id, for_host), new_deps)| {
-                let old_deps = match legacy_deps.get(pkg_id) {
-                    Some(deps) => deps.iter().cloned().collect(),
-                    None => BTreeSet::new(),
-                };
-                // The new resolver should never add dependencies.
-                assert_eq!(new_deps.difference(&old_deps).next(), None);
-                let removed_deps: BTreeSet<_> = old_deps.difference(new_deps).cloned().collect();
-                if removed_deps.is_empty() {
-                    None
-                } else {
-                    Some(((*pkg_id, *for_host), removed_deps))
-                }
-            })
-            .collect();
-        FeatureDifferences {
-            features,
-            optional_deps,
-        }
+            .collect()
     }
 }
 
@@ -405,12 +339,6 @@ impl ResolvedFeatures {
 ///
 /// Key is `(pkg_id, for_host)`. Value is a set of features or dependencies removed.
 pub type DiffMap = BTreeMap<(PackageId, bool), BTreeSet<InternedString>>;
-
-/// Differences between resolvers.
-pub struct FeatureDifferences {
-    pub features: DiffMap,
-    pub optional_deps: DiffMap,
-}
 
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
@@ -441,10 +369,8 @@ pub struct FeatureResolver<'a, 'cfg> {
     ///
     /// The key is the `(package, for_host, dep_name)` of the package whose
     /// dependency will trigger the addition of new features. The value is the
-    /// set of `(feature, dep_prefix)` features to activate (`dep_prefix` is a
-    /// bool that indicates if `dep:` prefix was used).
-    deferred_weak_dependencies:
-        HashMap<(PackageId, bool, InternedString), HashSet<(InternedString, bool)>>,
+    /// set of features to activate.
+    deferred_weak_dependencies: HashMap<(PackageId, bool, InternedString), HashSet<InternedString>>,
 }
 
 impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
@@ -462,17 +388,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> CargoResult<ResolvedFeatures> {
         use crate::util::profile;
         let _p = profile::start("resolve features");
-
-        if !opts.new_resolver {
-            // Legacy mode.
-            return Ok(ResolvedFeatures {
-                activated_features: HashMap::new(),
-                activated_dependencies: HashMap::new(),
-                legacy_features: Some(resolve.features_clone()),
-                legacy_dependencies: Some(compute_legacy_deps(resolve)),
-                opts,
-            });
-        }
         let track_for_host = opts.decouple_host_deps || opts.ignore_inactive_targets;
         let mut r = FeatureResolver {
             ws,
@@ -495,8 +410,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         Ok(ResolvedFeatures {
             activated_features: r.activated_features,
             activated_dependencies: r.activated_dependencies,
-            legacy_features: None,
-            legacy_dependencies: None,
             opts: r.opts,
         })
     }
@@ -591,17 +504,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix,
                 weak,
             } => {
-                self.activate_dep_feature(
-                    pkg_id,
-                    for_host,
-                    *dep_name,
-                    *dep_feature,
-                    *dep_prefix,
-                    *weak,
-                )?;
+                self.activate_dep_feature(pkg_id, for_host, *dep_name, *dep_feature, *weak)?;
             }
         }
         Ok(())
@@ -675,7 +580,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     continue;
                 }
                 if let Some(to_enable) = &to_enable {
-                    for (dep_feature, dep_prefix) in to_enable {
+                    for dep_feature in to_enable {
                         log::trace!(
                             "activate deferred {} {} -> {}/{}",
                             pkg_id.name(),
@@ -683,9 +588,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             dep_name,
                             dep_feature
                         );
-                        if !dep_prefix {
-                            self.activate_rec(pkg_id, for_host, dep_name)?;
-                        }
                         let fv = FeatureValue::new(*dep_feature);
                         self.activate_fv(dep_pkg_id, dep_for_host, &fv)?;
                     }
@@ -704,7 +606,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         for_host: bool,
         dep_name: InternedString,
         dep_feature: InternedString,
-        dep_prefix: bool,
         weak: bool,
     ) -> CargoResult<()> {
         for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
@@ -733,16 +634,16 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         self.deferred_weak_dependencies
                             .entry((pkg_id, for_host, dep_name))
                             .or_default()
-                            .insert((dep_feature, dep_prefix));
+                            .insert(dep_feature);
                         continue;
                     }
 
                     // Activate the dependency on self.
                     let fv = FeatureValue::Dep { dep_name };
                     self.activate_fv(pkg_id, for_host, &fv)?;
-                    if !dep_prefix {
-                        // To retain compatibility with old behavior,
-                        // this also enables a feature of the same
+                    if !weak {
+                        // The old behavior before weak dependencies were
+                        // added is to also enables a feature of the same
                         // name.
                         self.activate_rec(pkg_id, for_host, dep_name)?;
                     }
@@ -779,19 +680,18 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> Vec<FeatureValue> {
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
-        if cli_features.all_features {
-            feature_map
-                .keys()
-                .map(|k| FeatureValue::Feature(*k))
-                .collect()
-        } else {
-            let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
-            let default = InternedString::new("default");
-            if cli_features.uses_default_features && feature_map.contains_key(&default) {
-                result.push(FeatureValue::Feature(default));
-            }
-            result
+
+        let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
+        let default = InternedString::new("default");
+        if cli_features.uses_default_features && feature_map.contains_key(&default) {
+            result.push(FeatureValue::Feature(default));
         }
+
+        if cli_features.all_features {
+            result.extend(feature_map.keys().map(|k| FeatureValue::Feature(*k)))
+        }
+
+        result
     }
 
     /// Returns the dependencies for a package, filtering out inactive targets.
@@ -872,20 +772,4 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             .expect("packages downloaded")
             .proc_macro()
     }
-}
-
-/// Computes a map of PackageId to the set of optional dependencies that are
-/// enabled for that dep (when the new resolver is not enabled).
-fn compute_legacy_deps(resolve: &Resolve) -> HashMap<PackageId, HashSet<InternedString>> {
-    let mut result: HashMap<PackageId, HashSet<InternedString>> = HashMap::new();
-    for pkg_id in resolve.iter() {
-        for (_dep_id, deps) in resolve.deps(pkg_id) {
-            for dep in deps {
-                if dep.is_optional() {
-                    result.entry(pkg_id).or_default().insert(dep.name_in_toml());
-                }
-            }
-        }
-    }
-    result
 }

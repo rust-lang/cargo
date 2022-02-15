@@ -84,7 +84,7 @@ fn add_deps_for_unit(
                 // The paths we have saved from the unit are of arbitrary relativeness and may be
                 // relative to the crate root of the dependency.
                 let path = unit.pkg.root().join(path);
-                deps.insert(path.into());
+                deps.insert(path);
             }
         }
     }
@@ -92,7 +92,7 @@ fn add_deps_for_unit(
     // Recursively traverse all transitive dependencies
     let unit_deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in unit_deps {
-        if unit.is_local() {
+        if dep.unit.is_local() {
             add_deps_for_unit(deps, cx, &dep.unit, visited)?;
         }
     }

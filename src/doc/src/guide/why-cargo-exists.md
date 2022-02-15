@@ -55,7 +55,7 @@ invocation. Furthermore, Cargo will automatically fetch from a
 [*registry*][def-registry] any dependencies we have defined for our artifact,
 and arrange for them to be incorporated into our build as needed.
 
-It is only a slight exageration to say that once you know how to build one
+It is only a slight exaggeration to say that once you know how to build one
 Cargo-based project, you know how to build *all* of them.
 
 [def-artifact]:         ../appendix/glossary.md#artifact         '"artifact" (glossary entry)'

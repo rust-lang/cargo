@@ -14,7 +14,9 @@ DESCRIPTION
        (rustc's built in unit-test and micro-benchmarking framework). If you're
        passing arguments to both Cargo and the binary, the ones after -- go to
        the binary, the ones before go to Cargo. For details about libtest's
-       arguments see the output of cargo test -- --help.
+       arguments see the output of cargo test -- --help and check out the rustc
+       book's chapter on how tests work at
+       <https://doc.rust-lang.org/rustc/tests/index.html>.
 
        As an example, this will filter for tests with foo in their name and run
        them on 3 threads in parallel:
@@ -217,9 +219,37 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
-           Test optimized artifacts with the release profile. See the PROFILES
-           section for details on how this affects profile selection.
+       -r, --release
+           Test optimized artifacts with the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Test with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
+
+       --ignore-rust-version
+           Test the target even if the selected Rust compiler is older than the
+           required Rust version as configured in the project's rust-version
+           field.
+
+       --timings=fmts
+           Output information how long each compilation takes, and track
+           concurrency information over time. Accepts an optional
+           comma-separated list of output formats; --timings without an
+           argument will default to --timings=html. Specifying an output format
+           (rather than the default) is unstable and requires
+           -Zunstable-options. Valid output formats:
+
+           o  html: Write a human-readable file cargo-timing.html to the
+              target/cargo-timings directory with a report of the compilation.
+              Also write a report to the same directory with a timestamp in the
+              filename if you want to look at older runs. HTML output is
+              suitable for human consumption only, and does not provide
+              machine-readable timing data.
+
+           o  json (unstable, requires -Zunstable-options): Emit
+              machine-readable JSON information about timing information.
 
    Output Options
        --target-dir directory
@@ -243,7 +273,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -345,35 +377,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
+       --future-incompat-report
+           Displays a future-incompat report for any future-incompatible
+           warnings produced during execution of this command
 
-       Profile selection depends on the target and crate being built. By
-       default the dev or test profiles are used. If the --release flag is
-       given, then the release or bench profiles are used.
-
-       +----------------------------------------+-------------+--------------+
-       | Target                                 | Default     | --release    |
-       |                                        | Profile     | Profile      |
-       +----------------------------------------+-------------+--------------+
-       | lib, bin, example                      | dev         | release      |
-       +----------------------------------------+-------------+--------------+
-       | test, bench, or any target in "test"   | test        | bench        |
-       | or "bench" mode                        |             |              |
-       +----------------------------------------+-------------+--------------+
-
-       Dependencies use the dev/release profiles.
-
-       Unit tests are separate executable artifacts which use the test/bench
-       profiles. Example targets are built the same as with cargo build (using
-       the dev/release profiles) unless you are building them with the test
-       harness (by setting test = true in the manifest or using the --example
-       flag) in which case they use the test/bench profiles. Library targets
-       are built with the dev/release profiles when linked to an integration
-       test, binary, or doctest.
+           See cargo-report(1)
 
 ENVIRONMENT
        See the reference

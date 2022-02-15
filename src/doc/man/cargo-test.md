@@ -19,7 +19,8 @@ dashes (`--`) are passed to the test binaries and thus to _libtest_ (rustc's
 built in unit-test and micro-benchmarking framework).  If you're passing
 arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.  For details about libtest's arguments see the
-output of `cargo test -- --help`.
+output of `cargo test -- --help` and check out the rustc book's chapter on
+how tests work at <https://doc.rust-lang.org/rustc/tests/index.html>.
 
 As an example, this will filter for tests with `foo` in their name and run them
 on 3 threads in parallel:
@@ -101,6 +102,12 @@ target options.
 
 {{> options-release }}
 
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options
@@ -148,18 +155,9 @@ includes an option to control the number of threads used:
 {{#options}}
 
 {{> options-jobs }}
+{{> options-future-incompat }}
 
 {{/options}}
-
-{{> section-profiles }}
-
-Unit tests are separate executable artifacts which use the `test`/`bench`
-profiles. Example targets are built the same as with `cargo build` (using the
-`dev`/`release` profiles) unless you are building them with the test harness
-(by setting `test = true` in the manifest or using the `--example` flag) in
-which case they use the `test`/`bench` profiles. Library targets are built
-with the `dev`/`release` profiles when linked to an integration test, binary,
-or doctest.
 
 {{> section-environment }}
 

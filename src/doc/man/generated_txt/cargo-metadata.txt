@@ -175,6 +175,10 @@ OUTPUT FORMAT
                        "categories": [
                            "command-line-utilities"
                        ],
+                       /* Optional string that is the default binary picked by cargo run. */
+                       "default_run": null,
+                       /* Optional string that is the minimum supported rust version */
+                       "rust_version": "1.56",
                        /* Array of keywords from the manifest. */
                        "keywords": [
                            "cli"
@@ -331,7 +335,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:

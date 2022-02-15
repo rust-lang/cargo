@@ -6,7 +6,7 @@ Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
-[![Build Status](https://dev.azure.com/rust-lang/cargo/_apis/build/status/rust-lang.cargo?branchName=auto-cargo)](https://dev.azure.com/rust-lang/cargo/_build?definitionId=18)
+[![CI](https://github.com/rust-lang/cargo/actions/workflows/main.yml/badge.svg?branch=auto-cargo)](https://github.com/rust-lang/cargo/actions/workflows/main.yml)
 
 Code documentation: https://docs.rs/cargo/
 

@@ -1,8 +1,10 @@
 //! Tests for build.rs scripts.
 
+use cargo_test_support::compare::assert_match_exact;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
+use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
-use cargo_test_support::{lines_match, paths::CargoPathExt};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;
@@ -81,7 +83,6 @@ fn custom_build_env_vars() {
     let file_content = format!(
         r#"
             use std::env;
-            use std::io::prelude::*;
             use std::path::Path;
 
             fn main() {{
@@ -114,19 +115,195 @@ fn custom_build_env_vars() {
                 let rustdoc = env::var("RUSTDOC").unwrap();
                 assert_eq!(rustdoc, "rustdoc");
 
+                assert!(env::var("RUSTC_WRAPPER").is_err());
+                assert!(env::var("RUSTC_WORKSPACE_WRAPPER").is_err());
+
                 assert!(env::var("RUSTC_LINKER").is_err());
+
+                assert!(env::var("RUSTFLAGS").is_err());
+                let rustflags = env::var("CARGO_ENCODED_RUSTFLAGS").unwrap();
+                assert_eq!(rustflags, "");
             }}
         "#,
         p.root()
             .join("target")
             .join("debug")
             .join("build")
-            .display()
+            .display(),
     );
 
     let p = p.file("bar/build.rs", &file_content).build();
 
     p.cargo("build --features bar_feat").run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustflags() {
+    let rustflags = "--cfg=special";
+    let rustflags_alt = "--cfg=notspecial";
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [build]
+                rustflags = ["{}"]
+                "#,
+                rustflags
+            ),
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                use std::env;
+
+                fn main() {{
+                    // Static assertion that exactly one of the cfg paths is always taken.
+                    assert!(env::var("RUSTFLAGS").is_err());
+                    let x;
+                    #[cfg(special)]
+                    {{ assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    #[cfg(notspecial)]
+                    {{ assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "{}"); x = String::new(); }}
+                    let _ = x;
+                }}
+                "#,
+                rustflags, rustflags_alt,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    // RUSTFLAGS overrides build.rustflags, so --cfg=special shouldn't be passed
+    p.cargo("check").env("RUSTFLAGS", rustflags_alt).run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_encoded_rustflags() {
+    // NOTE: We use "-Clink-arg=-B nope" here rather than, say, "-A missing_docs", since for the
+    // latter it won't matter if the whitespace accidentally gets split, as rustc will do the right
+    // thing either way.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            rustflags = ["-Clink-arg=-B nope", "--cfg=foo"]
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+
+                fn main() {{
+                    assert_eq!(env::var("CARGO_ENCODED_RUSTFLAGS").unwrap(), "-Clink-arg=-B nope\x1f--cfg=foo");
+                }}
+                "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_wrapper() {
+    let wrapper = tools::echo_wrapper();
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {{
+                assert_eq!(
+                    env::var("RUSTC_WRAPPER").unwrap(),
+                    env::var("CARGO_RUSTC_WRAPPER_CHECK").unwrap()
+                );
+            }}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_BUILD_RUSTC_WRAPPER", &wrapper)
+        .env("CARGO_RUSTC_WRAPPER_CHECK", &wrapper)
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_workspace_wrapper() {
+    let wrapper = tools::echo_wrapper();
+
+    // Workspace wrapper should be set for any crate we're operating directly on.
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {{
+                assert_eq!(
+                    env::var("RUSTC_WORKSPACE_WRAPPER").unwrap(),
+                    env::var("CARGO_RUSTC_WORKSPACE_WRAPPER_CHECK").unwrap()
+                );
+            }}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .env("CARGO_RUSTC_WORKSPACE_WRAPPER_CHECK", &wrapper)
+        .run();
+
+    // But should not be set for a crate from the registry, as then it's not in a workspace.
+    Package::new("bar", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            links = "a"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {{
+                assert!(env::var("RUSTC_WORKSPACE_WRAPPER").is_err());
+            }}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .run();
 }
 
 #[cargo_test]
@@ -162,6 +339,393 @@ fn custom_build_env_var_rustc_linker() {
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
     p.cargo("build --target").arg(&target).run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_host_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail since host == target when no target is set
+    p.cargo("build --verbose")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/linker [..]`
+[ERROR] linker `[..]/path/to/linker` not found
+"
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_host_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                target-applies-to-host = false
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // no crate type set => linker never called => build succeeds if and
+    // only if build.rs succeeds, despite linker binary not existing.
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_host_target_env() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // no crate type set => linker never called => build succeeds if and
+    // only if build.rs succeeds, despite linker binary not existing.
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host --target")
+            .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_invalid_host_config_feature_flag() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to -Zhost-config being set without -Ztarget-applies-to-host
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z host-config --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+error: the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
+",
+            )
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                target-applies-to-host = true
+                [host]
+                linker = "/path/to/host/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad target linker being set
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/target/linker [..]`
+[ERROR] linker `[..]/path/to/target/linker` not found
+"
+            )
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_host() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[ERROR] linker `[..]/path/to/host/linker` not found
+"
+            )
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [host.{}]
+                linker = "/path/to/host/arch/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                target, target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/arch/linker [..]`
+[ERROR] linker `[..]/path/to/host/arch/linker` not found
+"
+            )
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_cross_arch_host() {
+    let target = rustc_host();
+    let cross_target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host.{}]
+                linker = "/path/to/host/arch/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                cross_target, target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .run();
+    }
+}
+
+#[cargo_test]
+fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
+    let target = rustc_host();
+    let cross_target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [host.{}]
+                linker = "/path/to/host/arch/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                cross_target, target
+            ),
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    if cargo_test_support::is_nightly() {
+        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[ERROR] linker `[..]/path/to/host/linker` not found
+"
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -385,6 +949,7 @@ versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([..])`
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the links ='a-sys' value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
 failed to select a version for `a-sys` which could resolve this conflict
 ").run();
@@ -435,7 +1000,7 @@ fn links_duplicates_old_registry() {
     but a native library can be linked only once
 
 package `bar v0.1.0`
-    ... which is depended on by `foo v0.1.0 ([..]foo)`
+    ... which satisfies dependency `bar = \"^0.1\"` (locked to 0.1.0) of package `foo v0.1.0 ([..]foo)`
 links to native library `a`
 
 package `foo v0.1.0 ([..]foo)`
@@ -499,11 +1064,12 @@ fn links_duplicates_deep_dependency() {
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
     ... required by package `a v0.5.0 ([..])`
-    ... which is depended on by `foo v0.5.0 ([..])`
+    ... which satisfies path dependency `a` of package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([..])`
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the links ='a-sys' value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
 failed to select a version for `a-sys` which could resolve this conflict
 ").run();
@@ -1068,7 +1634,7 @@ fn build_deps_not_for_normal() {
         .with_stderr_contains("[..]can't find crate for `aaaaa`[..]")
         .with_stderr_contains(
             "\
-[ERROR] could not compile `foo`
+[ERROR] could not compile `foo` due to previous error
 
 Caused by:
   process didn't exit successfully: [..]
@@ -2648,25 +3214,9 @@ fn generate_good_d_files() {
 
     println!("*.d file content*: {}", &dot_d);
 
-    #[cfg(windows)]
-    assert!(
-        lines_match(
-            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\barkbarkbark [..]\\awoo\\build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "[..]\\target\\debug\\meow.exe: [..]\\awoo\\build.rs [..]\\awoo\\barkbarkbark[..]",
-            &dot_d
-        )
-    );
-    #[cfg(not(windows))]
-    assert!(
-        lines_match(
-            "[..]/target/debug/meow: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "[..]/target/debug/meow: [..]/awoo/build.rs [..]/awoo/barkbarkbark[..]",
-            &dot_d
-        )
+    assert_match_exact(
+        "[..]/target/debug/meow[EXE]: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
+        &dot_d,
     );
 
     // paths relative to dependency roots should not be allowed
@@ -2687,25 +3237,9 @@ fn generate_good_d_files() {
 
     println!("*.d file content with dep-info-basedir*: {}", &dot_d);
 
-    #[cfg(windows)]
-    assert!(
-        lines_match(
-            "target\\debug\\meow.exe: [..]awoo\\barkbarkbark [..]awoo\\build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "target\\debug\\meow.exe: [..]awoo\\build.rs [..]awoo\\barkbarkbark[..]",
-            &dot_d
-        )
-    );
-    #[cfg(not(windows))]
-    assert!(
-        lines_match(
-            "target/debug/meow: [..]awoo/barkbarkbark [..]awoo/build.rs[..]",
-            &dot_d
-        ) || lines_match(
-            "target/debug/meow: [..]awoo/build.rs [..]awoo/barkbarkbark[..]",
-            &dot_d
-        )
+    assert_match_exact(
+        "target/debug/meow[EXE]: awoo/barkbarkbark awoo/build.rs[..]",
+        &dot_d,
     );
 
     // paths relative to dependency roots should not be allowed
@@ -3694,6 +4228,7 @@ versions that meet the requirements `*` are: 0.5.0
 
 the package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([..])`
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the links ='a' value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
 failed to select a version for `a` which could resolve this conflict
 ").run();
@@ -4084,69 +4619,6 @@ fn links_interrupted_can_restart() {
 }
 
 #[cargo_test]
-#[cfg(unix)]
-fn build_script_scan_eacces() {
-    // build.rs causes a scan of the whole project, which can be a problem if
-    // a directory is not accessible.
-    use cargo_test_support::git;
-    use std::os::unix::fs::PermissionsExt;
-
-    let p = project()
-        .file("src/lib.rs", "")
-        .file("build.rs", "fn main() {}")
-        .file("secrets/stuff", "")
-        .build();
-    let path = p.root().join("secrets");
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o0)).unwrap();
-    // The last "Caused by" is a string from libc such as the following:
-    //   Permission denied (os error 13)
-    p.cargo("build")
-        .with_stderr(
-            "\
-[ERROR] failed to determine package fingerprint for build script for foo v0.0.1 ([..]/foo)
-
-Caused by:
-  failed to determine the most recently modified file in [..]/foo
-
-Caused by:
-  failed to determine list of files in [..]/foo
-
-Caused by:
-  cannot read \"[..]/foo/secrets\"
-
-Caused by:
-  [..]
-",
-        )
-        .with_status(101)
-        .run();
-
-    // Try `package.exclude` to skip a directory.
-    p.change_file(
-        "Cargo.toml",
-        r#"
-        [package]
-        name = "foo"
-        version = "0.0.1"
-        exclude = ["secrets"]
-        "#,
-    );
-    p.cargo("build").run();
-
-    // Try with git. This succeeds because the git status walker ignores
-    // directories it can't access.
-    p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
-    p.build_dir().rm_rf();
-    let repo = git::init(&p.root());
-    git::add(&repo);
-    git::commit(&repo);
-    p.cargo("build").run();
-
-    // Restore permissions so that the directory can be deleted.
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
-}
-
-#[cargo_test]
 fn dev_dep_with_links() {
     let p = project()
         .file(
@@ -4406,4 +4878,32 @@ fn duplicate_script_with_extra_env() {
             .with_stdout_contains("test src/lib.rs - (line 2) ... ok")
             .run();
     }
+}
+
+#[cargo_test]
+fn wrong_output() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:example");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:example`
+Expected a line with `cargo:key=value` with an `=` character, but none was found.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
 }

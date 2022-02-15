@@ -1,9 +1,11 @@
 //! Tests for the `cargo fix` command.
 
 use cargo::core::Edition;
+use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git;
-use cargo_test_support::paths;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
@@ -27,7 +29,7 @@ fn do_not_fix_broken_builds() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
-        .with_stderr_contains("[ERROR] could not compile `foo`")
+        .with_stderr_contains("[ERROR] could not compile `foo` due to previous error")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
@@ -560,7 +562,10 @@ fn fix_deny_warnings_but_not_others() {
                     x
                 }
 
-                fn bar() {}
+                pub fn bar() {
+                    #[allow(unused_mut)]
+                    let mut _y = 4;
+                }
             ",
         )
         .build();
@@ -569,7 +574,7 @@ fn fix_deny_warnings_but_not_others() {
         .env("__CARGO_FIX_YOLO", "1")
         .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
-    assert!(p.read_file("src/lib.rs").contains("fn bar() {}"));
+    assert!(p.read_file("src/lib.rs").contains("let mut _y = 4;"));
 }
 
 #[cargo_test]
@@ -804,6 +809,7 @@ fn prepare_for_unstable() {
         }
     };
     let latest_stable = Edition::LATEST_STABLE;
+    let prev = latest_stable.previous().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
@@ -823,15 +829,24 @@ fn prepare_for_unstable() {
     // -j1 to make the error more deterministic (otherwise there can be
     // multiple errors since they run in parallel).
     p.cargo("fix --edition --allow-no-vcs -j1")
-        .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr(&format_args!("\
 [CHECKING] foo [..]
-[ERROR] cannot migrate src/lib.rs to edition {next}
+[WARNING] `src/lib.rs` is on the latest edition, but trying to migrate to edition {next}.
 Edition {next} is unstable and not allowed in this release, consider trying the nightly release channel.
-error: could not compile `foo`
 
-To learn more, run the command again with --verbose.
-", next=next))
+If you are trying to migrate from the previous edition ({prev}), the
+process requires following these steps:
+
+1. Start with `edition = \"{prev}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{latest_stable}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+
+[FINISHED] [..]
+", next=next, latest_stable=latest_stable, prev=prev))
         .run();
 
     if !is_nightly() {
@@ -922,11 +937,10 @@ fn prepare_for_already_on_latest_unstable() {
 
     p.cargo("fix --edition --allow-no-vcs")
         .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
-[CHECKING] foo [..]
 [WARNING] `src/lib.rs` is already on the latest edition ({next_edition}), unable to migrate further
-[FINISHED] [..]
 ",
             next_edition = next_edition
         ))
@@ -958,11 +972,10 @@ fn prepare_for_already_on_latest_stable() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
-[CHECKING] foo [..]
 [WARNING] `src/lib.rs` is already on the latest edition ({latest_stable}), unable to migrate further
-[FINISHED] [..]
 ",
             latest_stable = latest_stable
         ))
@@ -1195,7 +1208,6 @@ fn doesnt_rebuild_dependencies() {
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn does_not_crash_with_rustc_wrapper() {
     let p = project()
         .file(
@@ -1210,33 +1222,16 @@ fn does_not_crash_with_rustc_wrapper() {
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .env("RUSTC_WRAPPER", "/usr/bin/env")
+        .env("RUSTC_WRAPPER", tools::echo_wrapper())
         .run();
-}
-
-#[cargo_test]
-#[cfg(unix)]
-fn does_not_crash_with_rustc_workspace_wrapper() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
+    p.build_dir().rm_rf();
     p.cargo("fix --allow-no-vcs --verbose")
-        .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .run();
 }
 
 #[cargo_test]
 fn uses_workspace_wrapper_and_primary_wrapper_override() {
-    // We don't have /usr/bin/env on Windows.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1250,7 +1245,7 @@ fn uses_workspace_wrapper_and_primary_wrapper_override() {
         .build();
 
     p.cargo("fix --allow-no-vcs --verbose")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("WRAPPER CALLED: rustc src/lib.rs --crate-name foo [..]")
         .run();
 }
@@ -1439,14 +1434,12 @@ fn fix_color_message() {
 #[cargo_test]
 fn edition_v2_resolver_report() {
     // Show a report if the V2 resolver shows differences.
-    if !is_nightly() {
-        // 2021 is unstable
-        return;
-    }
     Package::new("common", "1.0.0")
         .feature("f1", &[])
-        .file("src/lib.rs", "")
+        .feature("dev-feat", &[])
+        .add_dep(Dependency::new("opt_dep", "1.0").optional(true))
         .publish();
+    Package::new("opt_dep", "1.0.0").publish();
 
     Package::new("bar", "1.0.0")
         .add_dep(
@@ -1468,30 +1461,365 @@ fn edition_v2_resolver_report() {
                 [dependencies]
                 common = "1.0"
                 bar = "1.0"
+
+                [build-dependencies]
+                common = { version = "1.0", features = ["opt_dep"] }
+
+                [dev-dependencies]
+                common = { version="1.0", features=["dev-feat"] }
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered("\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] common v1.0.0 [..]
 [DOWNLOADED] bar v1.0.0 [..]
+[DOWNLOADED] opt_dep v1.0.0 [..]
 note: Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.
-This may cause dependencies to resolve with a different set of features.
-More information about the resolver changes may be found at https://doc.rust-lang.org/cargo/reference/features.html#feature-resolver-version-2
-The following differences were detected with the current configuration:
+This may cause some dependencies to be built with fewer features enabled than previously.
+More information about the resolver changes may be found at https://doc.rust-lang.org/nightly/edition-guide/rust-2021/default-cargo-resolver.html
+When building the following dependencies, the given features will no longer be used:
 
-  common v1.0.0 removed features `f1`
+  common v1.0.0 removed features: dev-feat, f1, opt_dep
+  common v1.0.0 (as host dependency) removed features: dev-feat, f1
 
+The following differences only apply when building with dev-dependencies:
+
+  common v1.0.0 removed features: f1, opt_dep
+
+[CHECKING] opt_dep v1.0.0
 [CHECKING] common v1.0.0
 [CHECKING] bar v1.0.0
 [CHECKING] foo v0.1.0 [..]
 [MIGRATING] src/lib.rs from 2018 edition to 2021
 [FINISHED] [..]
 ")
+        .run();
+}
+
+#[cargo_test]
+fn rustfix_handles_multi_spans() {
+    // Checks that rustfix handles a single diagnostic with multiple
+    // suggestion spans (non_fmt_panic in this case).
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    panic!(format!("hey"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs").run();
+    assert!(p.read_file("src/lib.rs").contains(r#"panic!("hey");"#));
+}
+
+#[cargo_test]
+fn fix_edition_2021() {
+    // Can migrate 2021, even when lints are allowed.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![allow(ellipsis_inclusive_range_patterns)]
+
+                pub fn f() -> bool {
+                    let x = 123;
+                    match x {
+                        0...100 => true,
+                        _ => false,
+                    }
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[MIGRATING] src/lib.rs from 2018 edition to 2021
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] [..]
+",
+        )
+        .run();
+    assert!(p.read_file("src/lib.rs").contains(r#"0..=100 => true,"#));
+}
+
+#[cargo_test]
+fn fix_shared_cross_workspace() {
+    // Fixing a file that is shared between multiple packages in the same workspace.
+    // Make sure two processes don't try to fix the same file at the same time.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "pub mod shared;")
+        // This will fix both unused and bare trait.
+        .file("foo/src/shared.rs", "pub fn fixme(x: Box<&Fn() -> ()>) {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                #[path="../../foo/src/shared.rs"]
+                pub mod shared;
+            "#,
+        )
+        .build();
+
+    // The output here can be either of these two, depending on who runs first:
+    //     [FIXED] bar/src/../../foo/src/shared.rs (2 fixes)
+    //     [FIXED] foo/src/shared.rs (2 fixes)
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_unordered(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[CHECKING] bar v0.1.0 [..]
+[FIXED] [..]foo/src/shared.rs (2 fixes)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert_match_exact(
+        "pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}",
+        &p.read_file("foo/src/shared.rs"),
+    );
+}
+
+#[cargo_test]
+fn abnormal_exit() {
+    // rustc fails unexpectedly after applying fixes, should show some error information.
+    //
+    // This works with a proc-macro that runs three times:
+    // - First run (collect diagnostics pass): writes a file, exits normally.
+    // - Second run (verify diagnostics work): it detects the presence of the
+    //   file, removes the file, and aborts the process.
+    // - Third run (collecting messages to display): file not found, exits normally.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                pm = {path="pm"}
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn f() {
+                    let mut x = 1;
+                    pm::crashme!();
+                }
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+                #[proc_macro]
+                pub fn crashme(_input: TokenStream) -> TokenStream {
+                    // Use a file to succeed on the first pass, and fail on the second.
+                    let p = std::env::var_os("ONCE_PATH").unwrap();
+                    let check_path = std::path::Path::new(&p);
+                    if check_path.exists() {
+                        eprintln!("I'm not a diagnostic.");
+                        std::fs::remove_file(check_path).unwrap();
+                        std::process::abort();
+                    } else {
+                        std::fs::write(check_path, "").unwrap();
+                        "".parse().unwrap()
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --lib --allow-no-vcs")
+        .env(
+            "ONCE_PATH",
+            paths::root().join("proc-macro-run-once").to_str().unwrap(),
+        )
+        .with_stderr_contains(
+            "[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`",
+        )
+        .with_stderr_contains("I'm not a diagnostic.")
+        // "signal: 6, SIGABRT: process abort signal" on some platforms
+        .with_stderr_contains("rustc exited abnormally: [..]")
+        .with_stderr_contains("Original diagnostics will follow.")
+        .run();
+}
+
+#[cargo_test]
+fn fix_with_run_cargo_in_proc_macros() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use proc_macro::*;
+    
+                #[proc_macro]
+                pub fn foo(_input: TokenStream) -> TokenStream {
+                    let output = std::process::Command::new(env!("CARGO"))
+                        .args(&["metadata", "--format-version=1"])
+                        .output()
+                        .unwrap();
+                    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
+                    println!("{}", std::str::from_utf8(&output.stdout).unwrap());
+                    "".parse().unwrap()
+                }                    
+            "#,
+        )
+        .file(
+            "src/bin/main.rs",
+            r#"
+                use foo::foo;
+
+                fn main() {
+                    foo!("bar")
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fix --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
+        .run();
+}
+
+#[cargo_test]
+fn non_edition_lint_migration() {
+    // Migrating to a new edition where a non-edition lint causes problems.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                // This is only used in a test.
+                // To be correct, this should be gated on #[cfg(test)], but
+                // sometimes people don't do that. If the unused_imports
+                // lint removes this, then the unittest will fail to compile.
+                use std::str::from_utf8;
+
+                pub mod foo {
+                    pub const FOO: &[u8] = &[102, 111, 111];
+                }
+
+                #[test]
+                fn example() {
+                    assert_eq!(
+                        from_utf8(::foo::FOO), Ok("foo")
+                    );
+                }
+            "#,
+        )
+        .build();
+    // Check that it complains about an unused import.
+    p.cargo("check --lib")
+        .with_stderr_contains("[..]unused_imports[..]")
+        .with_stderr_contains("[..]std::str::from_utf8[..]")
+        .run();
+    p.cargo("fix --edition --allow-no-vcs")
+        // Remove once --force-warn is stabilized
+        .masquerade_as_nightly_cargo()
+        .run();
+    let contents = p.read_file("src/lib.rs");
+    // Check it does not remove the "unused" import.
+    assert!(contents.contains("use std::str::from_utf8;"));
+    // Check that it made the edition migration.
+    assert!(contents.contains("from_utf8(crate::foo::FOO)"));
+}
+
+// For rust-lang/cargo#9857
+#[cargo_test]
+fn fix_in_dependency() {
+    Package::new("bar", "1.0.0")
+        .file(
+            "src/lib.rs",
+            r#"
+                #[macro_export]
+                macro_rules! m {
+                    ($i:tt) => {
+                        let $i = 1;
+                    };
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    bar::m!(abc);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_does_not_contain("[FIXED] [..]")
         .run();
 }

@@ -30,7 +30,7 @@ OPTIONS
            Create a package with a library target (src/lib.rs).
 
        --edition edition
-           Specify the Rust edition to use. Default is 2018. Possible values:
+           Specify the Rust edition to use. Default is 2021. Possible values:
            2015, 2018, 2021
 
        --name name
@@ -62,7 +62,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:

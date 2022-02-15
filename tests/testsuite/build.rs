@@ -6,12 +6,13 @@ use cargo::{
     ops::CompileOptions,
     Config,
 };
+use cargo_test_support::compare;
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
+use cargo_test_support::tools;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly,
-    lines_match_unordered, main_file, paths, process, project, rustc_host, sleep_ms,
-    symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly, main_file,
+    paths, process, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use cargo_util::paths::dylib_path_envvar;
 use std::env;
@@ -197,7 +198,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 3 column 23
+  TOML parse error at line 3, column 23
+    |
+  3 |                 foo = bar
+    |                       ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -217,7 +223,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 1 column 5
+  TOML parse error at line 1, column 5
+    |
+  1 | a = bar
+    |     ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -269,7 +280,7 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Expected dot for key `package.version`
+  unexpected end of input while parsing minor version number for key `package.version`
 ",
         )
         .run();
@@ -544,7 +555,7 @@ Caused by:
   failed to parse the version requirement `y` for dependency `crossbeam`
 
 Caused by:
-  the given version requirement is invalid
+  unexpected character 'y' while parsing major version number
 ",
         )
         .run();
@@ -561,6 +572,24 @@ fn cargo_compile_without_manifest() {
 }
 
 #[cargo_test]
+#[cfg(target_os = "linux")]
+fn cargo_compile_with_lowercase_cargo_toml() {
+    let p = project()
+        .no_manifest()
+        .file("cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] could not find `Cargo.toml` in `[..]` or any parent directory, \
+        but found cargo.toml please try to rename it to Cargo.toml",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_invalid_code() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -569,12 +598,7 @@ fn cargo_compile_with_invalid_code() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[ERROR] could not compile `foo`
-
-To learn more, run the command again with --verbose.\n",
-        )
+        .with_stderr_contains("[ERROR] could not compile `foo` due to previous error\n")
         .run();
     assert!(p.root().join("Cargo.lock").is_file());
 }
@@ -1082,14 +1106,14 @@ fn incompatible_dependencies() {
             "\
 error: failed to select a version for `bad`.
     ... required by package `qux v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `qux = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v1.0.0`
-    ... which is depended on by `baz v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `bad = \"=1.0.0\"` of package `baz v0.1.0`
+    ... which satisfies dependency `baz = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         )
@@ -1133,12 +1157,12 @@ versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v2.0.1`
-    ... which is depended on by `baz v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `bad = \">=2.0.1\"` of package `baz v0.1.0`
+    ... which satisfies dependency `baz = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
   previously selected package `bad v1.0.0`
-    ... which is depended on by `bar v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..])`
+    ... which satisfies dependency `bad = \"=1.0.0\"` of package `bar v0.1.0`
+    ... which satisfies dependency `bar = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         )
@@ -1289,7 +1313,7 @@ fn crate_env_vars() {
             repository = "https://example.com/repo.git"
             authors = ["wycats@example.com"]
             license = "MIT OR Apache-2.0"
-            license_file = "license.txt"
+            license-file = "license.txt"
 
             [[bin]]
             name = "foo-bar"
@@ -1330,6 +1354,7 @@ fn crate_env_vars() {
                      assert_eq!("https://example.com", HOMEPAGE);
                      assert_eq!("https://example.com/repo.git", REPOSITORY);
                      assert_eq!("MIT OR Apache-2.0", LICENSE);
+                     assert_eq!("license.txt", LICENSE_FILE);
                      assert_eq!("This is foo", DESCRIPTION);
                     let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                     VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
@@ -1363,7 +1388,10 @@ fn crate_env_vars() {
                     let tmpdir: PathBuf = tmp.unwrap().into();
 
                     let exe: PathBuf = env::current_exe().unwrap().into();
-                    let mut expected: PathBuf = exe.parent().unwrap().parent().unwrap().into();
+                    let mut expected: PathBuf = exe.parent().unwrap()
+                        .parent().unwrap()
+                        .parent().unwrap()
+                        .into();
                     expected.push("tmp");
                     assert_eq!(tmpdir, expected);
 
@@ -1616,6 +1644,39 @@ fn many_crate_types_correct() {
 }
 
 #[cargo_test]
+fn set_both_dylib_and_cdylib_crate_types() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [lib]
+
+                name = "foo"
+                crate_type = ["cdylib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  library `foo` cannot set the crate type of both `dylib` and `cdylib`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn self_dependency() {
     let p = project()
         .file(
@@ -1644,13 +1705,13 @@ fn self_dependency() {
             "\
 [ERROR] cyclic package dependency: package `test v0.0.0 ([CWD])` depends on itself. Cycle:
 package `test v0.0.0 ([CWD])`
-    ... which is depended on by `test v0.0.0 ([..])`",
+    ... which satisfies path dependency `test` of package `test v0.0.0 ([..])`",
         )
         .run();
 }
 
 #[cargo_test]
-/// Make sure broken symlinks don't break the build
+/// Make sure broken and loop symlinks don't break the build
 ///
 /// This test requires you to be able to make symlinks.
 /// For windows, this may require you to enable developer mode.
@@ -1663,9 +1724,17 @@ fn ignore_broken_symlinks() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar")
+        // To hit the symlink directory, we need a build script
+        // to trigger a full scan of package files.
+        .file("build.rs", &main_file(r#""build script""#, &[]))
+        .symlink_dir("a/b", "a/b/c/d/foo")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr_contains(
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+        )
+        .run();
     assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
@@ -1689,11 +1758,6 @@ Caused by:
 
 #[cargo_test]
 fn lto_build() {
-    // FIXME: currently this hits a linker bug on 32-bit MSVC
-    if cfg!(all(target_env = "msvc", target_pointer_width = "32")) {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1747,6 +1811,25 @@ fn verbose_build() {
 fn verbose_release_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v --release")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
+        -C metadata=[..] \
+        --out-dir [..] \
+        -L dependency=[CWD]/target/release/deps`
+[FINISHED] release [optimized] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn verbose_release_build_short() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v -r")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -1882,6 +1965,40 @@ fn explicit_examples() {
 }
 
 #[cargo_test]
+fn non_existing_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[test]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --tests -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. \
+  Please specify test.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn non_existing_example() {
     let p = project()
         .file(
@@ -1890,7 +2007,6 @@ fn non_existing_example() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
-                authors = []
 
                 [lib]
                 name = "foo"
@@ -1903,14 +2019,49 @@ fn non_existing_example() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("test -v")
+    p.cargo("build --examples -v")
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `hello` example, specify example.path",
+  can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. \
+  Please specify example.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn non_existing_benchmark() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[bench]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --benches -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. \
+  Please specify bench.path if you want to use a non-default path.",
         )
         .run();
 }
@@ -1930,7 +2081,184 @@ fn non_existing_binary() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `foo` bin, specify bin.path",
+  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. \
+  Please specify bin.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[test]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("test/foo.rs", "")
+        .build();
+
+    p.cargo("build --tests -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` test at default paths, but found a file at `test/foo.rs`.
+  Perhaps rename the file to `tests/foo.rs` for target auto-discovery, \
+  or specify test.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[example]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("example/foo.rs", "")
+        .build();
+
+    p.cargo("build --examples -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` example at default paths, but found a file at `example/foo.rs`.
+  Perhaps rename the file to `examples/foo.rs` for target auto-discovery, \
+  or specify example.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_benchmark() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[bench]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bench/foo.rs", "")
+        .build();
+
+    p.cargo("build --benches -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
+  Perhaps rename the file to `benches/foo.rs` for target auto-discovery, \
+  or specify bench.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bins/foo.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bin at default paths, but found a file at `src/bins/foo.rs`.
+  Perhaps rename the file to `src/bin/foo.rs` for target auto-discovery, \
+  or specify bin.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_subdir_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bins/foo/main.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bin at default paths, but found a file at `src/bins/foo/main.rs`.
+  Perhaps rename the file to `src/bin/foo/main.rs` for target auto-discovery, \
+  or specify bin.path if you want to use a non-default path.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn found_multiple_target_files() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bin/foo.rs", "")
+        .file("src/bin/foo/main.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        // Don't assert the inferred pathes since the order is non-deterministic.
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  cannot infer path for `foo` bin
+  Cargo doesn't know which to use because multiple target files found \
+  at `src/bin/foo[..].rs` and `src/bin/foo[..].rs`.",
         )
         .run();
 }
@@ -2455,7 +2783,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 1 column 6
+  TOML parse error at line 1, column 6
+    |
+  1 | this is not valid toml
+    |      ^
+  Unexpected `i`
+  Expected `.` or `=`
 ",
         )
         .run();
@@ -2790,8 +3123,8 @@ fn cyclic_deps_rejected() {
         .with_stderr(
 "[ERROR] cyclic package dependency: package `a v0.0.1 ([CWD]/a)` depends on itself. Cycle:
 package `a v0.0.1 ([CWD]/a)`
-    ... which is depended on by `foo v0.0.1 ([CWD])`
-    ... which is depended on by `a v0.0.1 ([..])`",
+    ... which satisfies path dependency `a` of package `foo v0.0.1 ([CWD])`
+    ... which satisfies path dependency `foo` of package `a v0.0.1 ([..])`",
         ).run();
 }
 
@@ -4054,29 +4387,69 @@ fn run_proper_binary_main_rs_as_foo() {
 }
 
 #[cargo_test]
-// NOTE: we don't have `/usr/bin/env` on Windows.
-#[cfg(not(windows))]
 fn rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();
+    let wrapper = tools::echo_wrapper();
+    let running = format!(
+        "[RUNNING] `{} rustc --crate-name foo [..]",
+        wrapper.display()
+    );
     p.cargo("build -v")
-        .env("RUSTC_WRAPPER", "/usr/bin/env")
-        .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
+        .env("RUSTC_WRAPPER", &wrapper)
+        .with_stderr_contains(&running)
+        .run();
+    p.build_dir().rm_rf();
+    p.cargo("build -v")
+        .env("RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .with_stderr_contains(&running)
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))]
 fn rustc_wrapper_relative() {
-    let p = project().file("src/lib.rs", "").build();
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    let wrapper = tools::echo_wrapper();
+    let exe_name = wrapper.file_name().unwrap().to_str().unwrap();
+    let relative_path = format!("./{}", exe_name);
+    fs::hard_link(&wrapper, p.root().join(exe_name)).unwrap();
+    let running = format!("[RUNNING] `[ROOT]/foo/./{} rustc[..]", exe_name);
     p.cargo("build -v")
-        .env("RUSTC_WRAPPER", "./sccache")
-        .with_status(101)
-        .with_stderr_contains("[..]/foo/./sccache rustc[..]")
+        .env("RUSTC_WRAPPER", &relative_path)
+        .with_stderr_contains(&running)
         .run();
+    p.build_dir().rm_rf();
+    p.cargo("build -v")
+        .env("RUSTC_WORKSPACE_WRAPPER", &relative_path)
+        .with_stderr_contains(&running)
+        .run();
+    p.build_dir().rm_rf();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+                build.rustc-wrapper = "./{}"
+            "#,
+            exe_name
+        ),
+    );
+    p.cargo("build -v").with_stderr_contains(&running).run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))]
 fn rustc_wrapper_from_path() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
@@ -4084,34 +4457,7 @@ fn rustc_wrapper_from_path() {
         .with_status(101)
         .with_stderr_contains("[..]`wannabe_sccache rustc [..]")
         .run();
-}
-
-#[cargo_test]
-// NOTE: we don't have `/usr/bin/env` on Windows.
-#[cfg(not(windows))]
-fn rustc_workspace_wrapper() {
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
-        .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
-        .run();
-}
-
-#[cargo_test]
-#[cfg(not(windows))]
-fn rustc_workspace_wrapper_relative() {
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", "./sccache")
-        .with_status(101)
-        .with_stderr_contains("[..]/foo/./sccache rustc[..]")
-        .run();
-}
-
-#[cargo_test]
-#[cfg(not(windows))]
-fn rustc_workspace_wrapper_from_path() {
-    let p = project().file("src/lib.rs", "").build();
+    p.build_dir().rm_rf();
     p.cargo("build -v")
         .env("RUSTC_WORKSPACE_WRAPPER", "wannabe_sccache")
         .with_status(101)
@@ -4288,7 +4634,7 @@ fn no_bin_in_src_with_lib() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `foo` bin, specify bin.path",
+  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. [..]",
         )
         .run();
 }
@@ -4498,7 +4844,9 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("[..]can't find `a_bin` bin, specify bin.path")
+        .with_stderr_contains(
+            "[..]can't find `a_bin` bin at `src/bin/a_bin.rs` or `src/bin/a_bin/main.rs`[..]",
+        )
         .run();
 }
 
@@ -4748,7 +5096,7 @@ fn avoid_dev_deps() {
             "\
 [UPDATING] [..]
 [ERROR] no matching package named `baz` found
-location searched: registry `https://github.com/rust-lang/crates.io-index`
+location searched: registry `crates-io`
 required by package `bar v0.1.0 ([..]/foo)`
 ",
         )
@@ -4786,6 +5134,24 @@ fn good_cargo_config_jobs() {
         )
         .build();
     p.cargo("build -v").run();
+}
+
+#[cargo_test]
+fn invalid_cargo_config_jobs() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+                [build]
+                jobs = 0
+            "#,
+        )
+        .build();
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains("error: jobs may not be 0")
+        .run();
 }
 
 #[cargo_test]
@@ -4962,12 +5328,8 @@ fn tricky_pipelining() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    foo.cargo("build -p bar")
-        .env("CARGO_BUILD_PIPELINING", "true")
-        .run();
-    foo.cargo("build -p foo")
-        .env("CARGO_BUILD_PIPELINING", "true")
-        .run();
+    foo.cargo("build -p bar").run();
+    foo.cargo("build -p foo").run();
 }
 
 #[cargo_test]
@@ -4989,7 +5351,6 @@ fn pipelining_works() {
         .build();
 
     foo.cargo("build")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_stdout("")
         .with_stderr(
             "\
@@ -5052,7 +5413,6 @@ fn pipelining_big_graph() {
         .file("b30/src/lib.rs", "")
         .build();
     foo.cargo("build -p foo")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_status(101)
         .with_stderr_contains("[ERROR] could not compile `a30`[..]")
         .run();
@@ -5306,7 +5666,7 @@ fn close_output() {
     };
 
     let stderr = spawn(false);
-    lines_match_unordered(
+    compare::match_unordered(
         "\
 [COMPILING] foo [..]
 hello stderr!
@@ -5315,13 +5675,14 @@ hello stderr!
 [ERROR] [..]
 ",
         &stderr,
+        None,
     )
     .unwrap();
 
     // Try again with stderr.
     p.build_dir().rm_rf();
     let stdout = spawn(true);
-    lines_match_unordered("hello stdout!\n", &stdout).unwrap();
+    assert_eq!(stdout, "hello stdout!\n");
 }
 
 #[cargo_test]

@@ -231,6 +231,68 @@ fn cargo_compile_git_dep_tag() {
 }
 
 #[cargo_test]
+fn cargo_compile_git_dep_pull_request() {
+    let project = project();
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file(
+                "src/dep1.rs",
+                r#"
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
+            )
+    });
+
+    // Make a reference in GitHub's pull request ref naming convention.
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let oid = repo.refname_to_id("HEAD").unwrap();
+    let force = false;
+    let log_message = "open pull request";
+    repo.reference("refs/pull/330/head", oid, force, log_message)
+        .unwrap();
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.0.0"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}", rev = "refs/pull/330/head" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
+        )
+        .build();
+
+    let git_root = git_project.root();
+
+    project
+        .cargo("build")
+        .with_stderr(&format!(
+            "[UPDATING] git repository `{}`\n\
+             [COMPILING] dep1 v0.5.0 ({}?rev=refs/pull/330/head#[..])\n\
+             [COMPILING] foo v0.0.0 ([CWD])\n\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+            path2url(&git_root),
+            path2url(&git_root),
+        ))
+        .run();
+
+    assert!(project.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn cargo_compile_with_nested_paths() {
     let git_project = git::new("dep1", |project| {
         project
@@ -2377,7 +2439,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  duplicate key: `categories` for key `project` at line 10 column 21",
+  TOML parse error at line 8, column 21
+    |
+  8 |                     categories = [\"algorithms\"]
+    |                     ^
+  Duplicate key `categories` in table `project`
+
+",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -2760,7 +2828,7 @@ to proceed despite [..]
     git::commit(&repo);
     git_project.cargo("package --no-verify").run();
     // Modify within nested submodule.
-    git_project.change_file("src/bar/mod.rs", "//test");
+    git_project.change_file("src/bar/new_file.rs", "//test");
     git_project
         .cargo("package --no-verify")
         .with_status(101)
@@ -2770,7 +2838,7 @@ to proceed despite [..]
 See [..]
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
-src/bar/mod.rs
+src/bar/new_file.rs
 
 to proceed despite [..]
 ",
@@ -3081,9 +3149,11 @@ fn metadata_master_consistency() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -3118,9 +3188,11 @@ fn metadata_master_consistency() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -3215,4 +3287,106 @@ fn metadata_master_consistency() {
     // No ?branch=master!
     let bar_source = format!("git+{}", git_project.url());
     p.cargo("metadata").with_json(&metadata(&bar_source)).run();
+}
+
+#[cargo_test]
+fn git_with_force_push() {
+    // Checks that cargo can handle force-pushes to git repos.
+    // This works by having a git dependency that is updated with an amend
+    // commit, and tries with various forms (default branch, branch, rev,
+    // tag).
+    let main = |text| format!(r#"pub fn f() {{ println!("{}"); }}"#, text);
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", &main("one"))
+    });
+    let manifest = |extra| {
+        format!(
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2018"
+
+                [dependencies]
+                dep1 = {{ git = "{}"{} }}
+            "#,
+            git_project.url(),
+            extra
+        )
+    };
+    let p = project()
+        .file("Cargo.toml", &manifest(""))
+        .file("src/main.rs", "fn main() { dep1::f(); }")
+        .build();
+    // Download the original and make sure it is OK.
+    p.cargo("build").run();
+    p.rename_run("foo", "foo1").with_stdout("one").run();
+
+    let find_head = || t!(t!(repo.head()).peel_to_commit());
+
+    let amend_commit = |text| {
+        // commit --amend a change that will require a force fetch.
+        git_project.change_file("src/lib.rs", &main(text));
+        git::add(&repo);
+        let commit = find_head();
+        let tree_id = t!(t!(repo.index()).write_tree());
+        t!(commit.amend(
+            Some("HEAD"),
+            None,
+            None,
+            None,
+            None,
+            Some(&t!(repo.find_tree(tree_id)))
+        ));
+    };
+
+    let mut rename_annoyance = 1;
+
+    let mut verify = |text: &str| {
+        // Perform the fetch.
+        p.cargo("update").run();
+        p.cargo("build").run();
+        rename_annoyance += 1;
+        p.rename_run("foo", &format!("foo{}", rename_annoyance))
+            .with_stdout(text)
+            .run();
+    };
+
+    amend_commit("two");
+    verify("two");
+
+    // Try with a rev.
+    let head1 = find_head().id().to_string();
+    let extra = format!(", rev = \"{}\"", head1);
+    p.change_file("Cargo.toml", &manifest(&extra));
+    verify("two");
+    amend_commit("three");
+    let head2 = find_head().id().to_string();
+    assert_ne!(&head1, &head2);
+    let extra = format!(", rev = \"{}\"", head2);
+    p.change_file("Cargo.toml", &manifest(&extra));
+    verify("three");
+
+    // Try with a tag.
+    git::tag(&repo, "my-tag");
+    p.change_file("Cargo.toml", &manifest(", tag = \"my-tag\""));
+    verify("three");
+    amend_commit("tag-three");
+    let head = t!(t!(repo.head()).peel(git2::ObjectType::Commit));
+    t!(repo.tag("my-tag", &head, &t!(repo.signature()), "move tag", true));
+    verify("tag-three");
+
+    // Try with a branch.
+    let br = t!(repo.branch("awesome-stuff", &find_head(), false));
+    t!(repo.checkout_tree(&t!(br.get().peel(git2::ObjectType::Tree)), None));
+    t!(repo.set_head("refs/heads/awesome-stuff"));
+    git_project.change_file("src/lib.rs", &main("awesome-three"));
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file("Cargo.toml", &manifest(", branch = \"awesome-stuff\""));
+    verify("awesome-three");
+    amend_commit("awesome-four");
+    verify("awesome-four");
 }

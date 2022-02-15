@@ -49,6 +49,7 @@ fn maybe_spurious(err: &Error) -> bool {
             || curl_err.is_couldnt_resolve_host()
             || curl_err.is_operation_timedout()
             || curl_err.is_recv_error()
+            || curl_err.is_send_error()
             || curl_err.is_http2_error()
             || curl_err.is_http2_stream_error()
             || curl_err.is_ssl_connect_error()

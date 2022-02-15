@@ -5,11 +5,23 @@ use cargo_test_support::paths;
 use std::env;
 use std::fs::{self, File};
 
-fn create_empty_gitconfig() {
+fn create_default_gitconfig() {
     // This helps on Windows where libgit2 is very aggressive in attempting to
     // find a git config file.
     let gitconfig = paths::home().join(".gitconfig");
     File::create(gitconfig).unwrap();
+
+    // If we're running this under a user account that has a different default branch set up
+    // then tests that assume the default branch is master will fail. We set the default branch
+    // to master explicitly so that tests that rely on this behavior still pass.
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+        [init]
+            defaultBranch = master
+        "#,
+    )
+    .unwrap();
 }
 
 #[cargo_test]
@@ -31,7 +43,8 @@ fn simple_lib() {
 mod tests {
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let result = 2 + 2;
+        assert_eq!(result, 4);
     }
 }
 "#
@@ -76,7 +89,7 @@ fn simple_git() {
 
     let fp = paths::root().join("foo/.gitignore");
     let contents = fs::read_to_string(&fp).unwrap();
-    assert_eq!(contents, "/target\nCargo.lock\n",);
+    assert_eq!(contents, "/target\n/Cargo.lock\n",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
@@ -120,7 +133,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/foo.rs.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"foo.rs\"
     path = \"src/main.rs\"
 
@@ -142,7 +155,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/test.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"test\"
     path = \"src/main.rs\"
 
@@ -187,7 +200,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/pub.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"pub\"
     path = \"src/main.rs\"
 
@@ -209,7 +222,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/core.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"core\"
     path = \"src/main.rs\"
 
@@ -321,7 +334,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/10-invalid.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"10-invalid\"
     path = \"src/main.rs\"
 
@@ -355,13 +368,13 @@ fn new_with_edition_2018() {
 fn new_default_edition() {
     cargo_process("new foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(manifest.contains("edition = \"2018\""));
+    assert!(manifest.contains("edition = \"2021\""));
 }
 
 #[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
-        .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
+        .with_stderr_contains("error: \"something_else\" isn't a valid value[..]")
         .with_status(1)
         .run();
 }
@@ -438,7 +451,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"ⒶⒷⒸ\"
     path = \"src/main.rs\"
 
@@ -458,7 +471,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/a¼.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"a¼\"
     path = \"src/main.rs\"
 
@@ -470,7 +483,8 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn git_default_branch() {
     // Check for init.defaultBranch support.
-    create_empty_gitconfig();
+    create_default_gitconfig();
+
     cargo_process("new foo").run();
     let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();

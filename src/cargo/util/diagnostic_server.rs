@@ -48,13 +48,14 @@ pub enum Message {
         files: Vec<String>,
         krate: Option<String>,
         errors: Vec<String>,
+        abnormal_exit: Option<String>,
     },
     ReplaceFailed {
         file: String,
         message: String,
     },
     EditionAlreadyEnabled {
-        file: String,
+        message: String,
         edition: Edition,
     },
 }
@@ -135,6 +136,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 files,
                 krate,
                 errors,
+                abnormal_exit,
             } => {
                 if let Some(ref krate) = *krate {
                     self.config.shell().warn(&format!(
@@ -171,20 +173,47 @@ impl<'a> DiagnosticPrinter<'a> {
                         }
                     }
                 }
+                if let Some(exit) = abnormal_exit {
+                    writeln!(
+                        self.config.shell().err(),
+                        "rustc exited abnormally: {}",
+                        exit
+                    )?;
+                }
                 writeln!(
                     self.config.shell().err(),
                     "Original diagnostics will follow.\n"
                 )?;
                 Ok(())
             }
-            Message::EditionAlreadyEnabled { file, edition } => {
+            Message::EditionAlreadyEnabled { message, edition } => {
                 if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
-                self.config.shell().warn(&format!(
-                    "`{}` is already on the latest edition ({}), unable to migrate further",
-                    file, edition
-                ))
+                // Don't give a really verbose warning if it has already been issued.
+                if self.dedupe.insert(Message::EditionAlreadyEnabled {
+                    message: "".to_string(), // Dummy, so that this only long-warns once.
+                    edition: *edition,
+                }) {
+                    self.config.shell().warn(&format!("\
+{}
+
+If you are trying to migrate from the previous edition ({prev_edition}), the
+process requires following these steps:
+
+1. Start with `edition = \"{prev_edition}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{this_edition}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+",
+                        message, this_edition=edition, prev_edition=edition.previous().unwrap()
+                    ))
+                } else {
+                    self.config.shell().warn(message)
+                }
             }
         }
     }

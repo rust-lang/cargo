@@ -20,6 +20,11 @@ pub struct Profiles {
     dir_names: HashMap<InternedString, InternedString>,
     /// The profile makers. Key is the profile name.
     by_name: HashMap<InternedString, ProfileMaker>,
+    /// The original profiles written by the user in the manifest and config.
+    ///
+    /// This is here to assist with error reporting, as the `ProfileMaker`
+    /// values have the inherits chains all merged together.
+    original_profiles: BTreeMap<InternedString, TomlProfile>,
     /// Whether or not unstable "named" profiles are enabled.
     named_profiles_enabled: bool,
     /// The profile the user requested to use.
@@ -44,6 +49,7 @@ impl Profiles {
                 named_profiles_enabled: false,
                 dir_names: Self::predefined_dir_names(),
                 by_name: HashMap::new(),
+                original_profiles: profiles.clone(),
                 requested_profile,
                 rustc_host,
             };
@@ -97,6 +103,7 @@ impl Profiles {
             named_profiles_enabled: true,
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
+            original_profiles: profiles.clone(),
             requested_profile,
             rustc_host,
         };
@@ -133,7 +140,6 @@ impl Profiles {
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
         let mut dir_names = HashMap::new();
         dir_names.insert(InternedString::new("dev"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("check"), InternedString::new("debug"));
         dir_names.insert(InternedString::new("test"), InternedString::new("debug"));
         dir_names.insert(InternedString::new("bench"), InternedString::new("release"));
         dir_names
@@ -169,13 +175,6 @@ impl Profiles {
             ),
             (
                 "test",
-                TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
-                    ..TomlProfile::default()
-                },
-            ),
-            (
-                "check",
                 TomlProfile {
                     inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()
@@ -324,7 +323,9 @@ impl Profiles {
                         (InternedString::new("dev"), None)
                     }
                 }
-                CompileMode::Doc { .. } => (InternedString::new("doc"), None),
+                CompileMode::Doc { .. } | CompileMode::Docscrape => {
+                    (InternedString::new("doc"), None)
+                }
             }
         } else {
             (self.requested_profile, None)
@@ -428,6 +429,19 @@ impl Profiles {
         resolve: &Resolve,
     ) -> CargoResult<()> {
         for (name, profile) in &self.by_name {
+            // If the user did not specify an override, skip this. This is here
+            // to avoid generating errors for inherited profiles which don't
+            // specify package overrides. The `by_name` profile has had the inherits
+            // chain merged, so we need to look at the original source to check
+            // if an override was specified.
+            if self
+                .original_profiles
+                .get(name)
+                .and_then(|orig| orig.package.as_ref())
+                .is_none()
+            {
+                continue;
+            }
             let found = validate_packages_unique(resolve, name, &profile.toml)?;
             // We intentionally do not validate unmatched packages for config
             // profiles, in case they are defined in a central location. This
@@ -464,6 +478,10 @@ struct ProfileMaker {
     /// The starting, hard-coded defaults for the profile.
     default: Profile,
     /// The TOML profile defined in `Cargo.toml` or config.
+    ///
+    /// This is None if the user did not specify one, in which case the
+    /// `default` is used. Note that the built-in defaults for test/bench/doc
+    /// always set this since they need to declare the `inherits` value.
     toml: Option<TomlProfile>,
 }
 
@@ -482,7 +500,7 @@ impl ProfileMaker {
         is_member: bool,
         unit_for: UnitFor,
     ) -> Profile {
-        let mut profile = self.default;
+        let mut profile = self.default.clone();
 
         // First apply profile-specific settings, things like
         // `[profile.release]`
@@ -573,6 +591,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
     }
+    if toml.codegen_backend.is_some() {
+        profile.codegen_backend = toml.codegen_backend;
+    }
     if toml.codegen_units.is_some() {
         profile.codegen_units = toml.codegen_units;
     }
@@ -605,10 +626,13 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
+    if let Some(flags) = &toml.rustflags {
+        profile.rustflags = flags.clone();
+    }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
         None | Some(StringOrBool::Bool(false)) => Strip::None,
-        Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => Strip::None,
+        Some(StringOrBool::String(ref n)) if n.as_str() == "none" => Strip::None,
         Some(StringOrBool::String(ref n)) => Strip::Named(InternedString::new(n)),
     };
 }
@@ -626,13 +650,15 @@ pub enum ProfileRoot {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Copy, Eq, PartialOrd, Ord, serde::Serialize)]
+#[derive(Clone, Eq, PartialOrd, Ord, serde::Serialize)]
 pub struct Profile {
     pub name: InternedString,
     pub opt_level: InternedString,
     #[serde(skip)] // named profiles are unstable
     pub root: ProfileRoot,
     pub lto: Lto,
+    // `None` means use rustc default.
+    pub codegen_backend: Option<InternedString>,
     // `None` means use rustc default.
     pub codegen_units: Option<u32>,
     pub debuginfo: Option<u32>,
@@ -643,6 +669,9 @@ pub struct Profile {
     pub incremental: bool,
     pub panic: PanicStrategy,
     pub strip: Strip,
+    #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stablized
+    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
+    pub rustflags: Vec<InternedString>,
 }
 
 impl Default for Profile {
@@ -652,6 +681,7 @@ impl Default for Profile {
             opt_level: InternedString::new("0"),
             root: ProfileRoot::Debug,
             lto: Lto::Bool(false),
+            codegen_backend: None,
             codegen_units: None,
             debuginfo: None,
             debug_assertions: false,
@@ -661,6 +691,7 @@ impl Default for Profile {
             incremental: false,
             panic: PanicStrategy::Unwind,
             strip: Strip::None,
+            rustflags: vec![],
         }
     }
 }
@@ -678,6 +709,7 @@ compact_debug! {
                 opt_level
                 lto
                 root
+                codegen_backend
                 codegen_units
                 debuginfo
                 split_debuginfo
@@ -687,6 +719,7 @@ compact_debug! {
                 incremental
                 panic
                 strip
+                rustflags
             )]
         }
     }
@@ -765,6 +798,7 @@ impl Profile {
         (
             self.opt_level,
             self.lto,
+            self.codegen_backend,
             self.codegen_units,
             self.debuginfo,
             self.split_debuginfo,
@@ -859,7 +893,7 @@ pub struct UnitFor {
     /// uses the `get_profile_run_custom_build` method to get the correct
     /// profile information for the unit. `host` needs to be true so that all
     /// of the dependencies of that `RunCustomBuild` unit have this flag be
-    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// sticky (and forced to `true` for all further dependencies) — which is
     /// the whole point of `UnitFor`.
     host: bool,
     /// A target for a build dependency or proc-macro (or any of its

@@ -7,7 +7,7 @@ use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, registry_path, registry_url, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
+    basic_manifest, cargo_process, no_such_file_err_msg, project, project_in, symlink_supported, t,
 };
 
 use cargo_test_support::install::{
@@ -55,6 +55,83 @@ fn simple() {
 }
 
 #[cargo_test]
+fn simple_with_message_format() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --message-format=json")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .with_json(
+            r#"
+            {
+                "reason": "compiler-artifact",
+                "package_id": "foo 0.0.1 ([..])",
+                "manifest_path": "[..]",
+                "target": {
+                    "kind": [
+                        "lib"
+                    ],
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "name": "foo",
+                    "src_path": "[..]/foo-0.0.1/src/lib.rs",
+                    "edition": "2015",
+                    "doc": true,
+                    "doctest": true,
+                    "test": true
+                },
+                "profile": "{...}",
+                "features": [],
+                "filenames": "{...}",
+                "executable": null,
+                "fresh": false
+            }
+
+            {
+                "reason": "compiler-artifact",
+                "package_id": "foo 0.0.1 ([..])",
+                "manifest_path": "[..]",
+                "target": {
+                    "kind": [
+                        "bin"
+                    ],
+                    "crate_types": [
+                        "bin"
+                    ],
+                    "name": "foo",
+                    "src_path": "[..]/foo-0.0.1/src/main.rs",
+                    "edition": "2015",
+                    "doc": true,
+                    "doctest": false,
+                    "test": true
+                },
+                "profile": "{...}",
+                "features": [],
+                "filenames": "{...}",
+                "executable": "[..]",
+                "fresh": false
+            }
+
+            {"reason":"build-finished","success":true}
+            "#,
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
 fn with_index() {
     pkg("foo", "0.0.1");
 
@@ -94,20 +171,20 @@ fn multiple_pkgs() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v0.0.1 (registry `[CWD]/registry`)
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
+[ERROR] could not find `baz` in registry `[..]` with version `*`
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.2 (registry `[CWD]/registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 [ERROR] some crates failed to install
@@ -154,20 +231,20 @@ fn multiple_pkgs_path_set() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v0.0.1 (registry `[CWD]/registry`)
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
+[ERROR] could not find `baz` in registry `[..]` with version `*`
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.2 (registry `[CWD]/registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [ERROR] some crates failed to install
 ",
@@ -400,6 +477,87 @@ fn install_target_dir() {
 }
 
 #[cargo_test]
+#[cfg(target_os = "linux")]
+fn install_path_with_lowercase_cargo_toml() {
+    let toml = paths::root().join("cargo.toml");
+    fs::write(toml, "").unwrap();
+
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `[CWD]` does not contain a Cargo.toml file, \
+but found cargo.toml please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn install_relative_path_outside_current_ws() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                authors = []
+                edition = "2021"
+
+                [dependencies]
+                foo = "1"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    let _bin_project = project_in("bar")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install --path ../bar/foo")
+        .with_stderr(&format!(
+            "\
+[INSTALLING] foo v0.0.1 ([..]/bar/foo)
+[COMPILING] foo v0.0.1 ([..]/bar/foo)
+[FINISHED] release [..]
+[INSTALLING] {home}/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([..]/bar/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+            home = cargo_home().display(),
+        ))
+        .run();
+
+    // Validate the workspace error message to display available targets.
+    p.cargo("install --path ../bar/foo --bin")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] \"--bin\" takes one argument.
+Available binaries:
+    foo
+
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn multiple_crates_error() {
     let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
@@ -414,7 +572,9 @@ fn multiple_crates_error() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
-[ERROR] multiple packages with binaries found: bar, foo
+[ERROR] multiple packages with binaries found: bar, foo. \
+When installing a git repository, cargo will always search the entire repo for any Cargo.toml. \
+Please specify which to install.
 ",
         )
         .run();
@@ -723,9 +883,7 @@ fn compile_failure() {
     found at `[..]target`
 
 Caused by:
-  could not compile `foo`
-
-To learn more, run the command again with --verbose.
+  could not compile `foo` due to previous error
 ",
         )
         .run();
@@ -756,6 +914,26 @@ fn git_repo() {
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
     assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+#[cfg(target_os = "linux")]
+fn git_repo_with_lowercase_cargo_toml() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -810,7 +988,12 @@ Caused by:
   invalid TOML found for metadata
 
 Caused by:
-  unexpected character[..]
+  TOML parse error at line 1, column 1
+    |
+  1 | [..]
+    | ^
+  Unexpected `[..]`
+  Expected key or end of input
 ",
         )
         .run();
@@ -1228,10 +1411,12 @@ but cannot be used multiple times
 
 #[cargo_test]
 fn test_install_git_cannot_be_a_base_url() {
-    cargo_process("install --git github.com:rust-lang-nursery/rustfmt.git")
+    cargo_process("install --git github.com:rust-lang/rustfmt.git")
         .with_status(101)
-        .with_stderr("\
-[ERROR] invalid url `github.com:rust-lang-nursery/rustfmt.git`: cannot-be-a-base-URLs are not supported")
+        .with_stderr(
+            "\
+[ERROR] invalid url `github.com:rust-lang/rustfmt.git`: cannot-be-a-base-URLs are not supported",
+        )
         .run();
 }
 
@@ -1658,8 +1843,9 @@ fn install_yanked_cargo_package() {
     cargo_process("install baz --version 0.0.1")
         .with_status(101)
         .with_stderr_contains(
-            "error: cannot install package `baz`, it has been yanked from registry \
-         `https://github.com/rust-lang/crates.io-index`",
+            "\
+[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
+",
         )
         .run();
 }
@@ -1754,24 +1940,24 @@ fn install_semver_metadata() {
     cargo_process("install foo --registry alternative --version 1.0.0+abc").run();
     cargo_process("install foo --registry alternative")
         .with_stderr("\
-[UPDATING] `[ROOT]/alternative-registry` index
-[IGNORED] package `foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)` is already installed, use --force to override
+[UPDATING] `alternative` index
+[IGNORED] package `foo v1.0.0+abc (registry `alternative`)` is already installed, use --force to override
 [WARNING] be sure to add [..]
 ")
         .run();
     // "Updating" is not displayed here due to the --version fast-path.
     cargo_process("install foo --registry alternative --version 1.0.0+abc")
         .with_stderr("\
-[IGNORED] package `foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)` is already installed, use --force to override
+[IGNORED] package `foo v1.0.0+abc (registry `alternative`)` is already installed, use --force to override
 [WARNING] be sure to add [..]
 ")
         .run();
     cargo_process("install foo --registry alternative --version 1.0.0 --force")
         .with_stderr(
             "\
-[UPDATING] `[ROOT]/alternative-registry` index
-[INSTALLING] foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)
-[COMPILING] foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)
+[UPDATING] `alternative` index
+[INSTALLING] foo v1.0.0+abc (registry `alternative`)
+[COMPILING] foo v1.0.0+abc (registry `alternative`)
 [FINISHED] [..]
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [REPLACED] package [..]
@@ -1783,16 +1969,18 @@ fn install_semver_metadata() {
     paths::home().join(".cargo/registry").rm_rf();
     paths::home().join(".cargo/bin").rm_rf();
     cargo_process("install foo --registry alternative --version 1.0.0")
-        .with_stderr("\
-[UPDATING] `[ROOT]/alternative-registry` index
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)
-[INSTALLING] foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)
-[COMPILING] foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)
+[DOWNLOADED] foo v1.0.0+abc (registry `alternative`)
+[INSTALLING] foo v1.0.0+abc (registry `alternative`)
+[COMPILING] foo v1.0.0+abc (registry `alternative`)
 [FINISHED] [..]
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v1.0.0+abc (registry `[ROOT]/alternative-registry`)` (executable `foo[EXE]`)
+[INSTALLED] package `foo v1.0.0+abc (registry `alternative`)` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
-")
+",
+        )
         .run();
 }

@@ -20,7 +20,7 @@ use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
-use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
+use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -50,6 +50,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
+    pub to_publish: ops::Packages,
     pub targets: Vec<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
@@ -57,9 +58,12 @@ pub struct PublishOpts<'cfg> {
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
-    let pkg = ws.current()?;
-    let mut publish_registry = opts.registry.clone();
+    let specs = opts.to_publish.to_package_id_specs(ws)?;
+    let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
 
+    let (pkg, cli_features) = pkgs.pop().unwrap();
+
+    let mut publish_registry = opts.registry.clone();
     if let Some(ref allowed_registries) = *pkg.publish() {
         if publish_registry.is_none() && allowed_registries.len() == 1 {
             // If there is only one allowed registry, push to that one directly,
@@ -101,22 +105,23 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
-    let tarball = ops::package(
+    let tarball = ops::package_one(
         ws,
+        pkg,
         &ops::PackageOpts {
             config: opts.config,
             verify: opts.verify,
             list: false,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
+            to_package: ops::Packages::Default,
             targets: opts.targets.clone(),
             jobs: opts.jobs,
-            cli_features: opts.cli_features.clone(),
+            cli_features: cli_features,
         },
     )?
     .unwrap();
 
-    // Upload said tarball to the specified destination
     opts.config
         .shell()
         .status("Uploading", pkg.package_id().to_string())?;
@@ -138,34 +143,12 @@ fn verify_dependencies(
     registry_src: SourceId,
 ) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
-        if dep.source_id().is_path() || dep.source_id().is_git() {
-            if !dep.specified_req() {
-                if !dep.is_transitive() {
-                    // dev-dependencies will be stripped in TomlManifest::prepare_for_publish
-                    continue;
-                }
-                let which = if dep.source_id().is_path() {
-                    "path"
-                } else {
-                    "git"
-                };
-                let dep_version_source = dep.registry_id().map_or_else(
-                    || "crates.io".to_string(),
-                    |registry_id| registry_id.display_registry_name(),
-                );
-                bail!(
-                    "all dependencies must have a version specified when publishing.\n\
-                     dependency `{}` does not specify a version\n\
-                     Note: The published dependency will use the version from {},\n\
-                     the `{}` specification will be removed from the dependency declaration.",
-                    dep.package_name(),
-                    dep_version_source,
-                    which,
-                )
-            }
+        if super::check_dep_has_version(dep, true)? {
+            continue;
+        }
         // TomlManifest::prepare_for_publish will rewrite the dependency
         // to be just the `version` field.
-        } else if dep.source_id() != registry_src {
+        if dep.source_id() != registry_src {
             if !dep.source_id().is_registry() {
                 // Consider making SourceId::kind a public type that we can
                 // exhaustively match on. Using match can help ensure that
@@ -304,7 +287,6 @@ fn transmit(
                 license_file: license_file.clone(),
                 badges: badges.clone(),
                 links: links.clone(),
-                v: None,
             },
             tarball,
         )
@@ -503,7 +485,6 @@ fn registry(
                     registry.as_deref(),
                     &api_host,
                 )?;
-                log::debug!("found token {:?}", token);
                 Some(token)
             }
         }
@@ -564,7 +545,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(user_agent) = &http.user_agent {
         handle.useragent(user_agent)?;
     } else {
-        handle.useragent(&version().to_string())?;
+        handle.useragent(&format!("cargo {}", version()))?;
     }
 
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
@@ -756,7 +737,7 @@ pub fn registry_login(
         "Login",
         format!(
             "token for `{}` saved",
-            reg.as_ref().map_or("crates.io", String::as_str)
+            reg.as_ref().map_or(CRATES_IO_DOMAIN, String::as_str)
         ),
     )?;
     Ok(())
@@ -764,7 +745,7 @@ pub fn registry_login(
 
 pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> {
     let (registry, reg_cfg, _) = registry(config, None, None, reg.clone(), false, false)?;
-    let reg_name = reg.as_deref().unwrap_or("crates.io");
+    let reg_name = reg.as_deref().unwrap_or(CRATES_IO_DOMAIN);
     if reg_cfg.credential_process.is_none() && reg_cfg.token.is_none() {
         config.shell().status(
             "Logout",

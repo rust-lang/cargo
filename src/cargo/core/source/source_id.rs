@@ -1,6 +1,6 @@
 use crate::core::PackageId;
-use crate::sources::DirectorySource;
-use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
+use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
 use log::trace;
 use serde::de;
@@ -24,7 +24,7 @@ pub struct SourceId {
     inner: &'static SourceIdInner,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
     /// The source URL.
     url: Url,
@@ -73,13 +73,13 @@ impl SourceId {
     /// Creates a `SourceId` object from the kind and URL.
     ///
     /// The canonical url will be calculated, but the precise field will not
-    fn new(kind: SourceKind, url: Url) -> CargoResult<SourceId> {
+    fn new(kind: SourceKind, url: Url, name: Option<&str>) -> CargoResult<SourceId> {
         let source_id = SourceId::wrap(SourceIdInner {
             kind,
             canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
-            name: None,
+            name: name.map(|n| n.into()),
         });
         Ok(source_id)
     }
@@ -139,12 +139,12 @@ impl SourceId {
                     .unwrap_or(GitReference::DefaultBranch);
                 url.set_fragment(None);
                 url.set_query(None);
-                Ok(SourceId::new(SourceKind::Registry(branch), url)?
+                Ok(SourceId::new(SourceKind::Registry(branch), url, None)?
                     .with_precise(Some("locked".to_string())))
             }
             "path" => {
                 let url = url.into_url()?;
-                SourceId::new(SourceKind::Path, url)
+                SourceId::new(SourceKind::Path, url, None)
             }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
@@ -162,46 +162,65 @@ impl SourceId {
     /// `path`: an absolute path.
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
-        SourceId::new(SourceKind::Path, url)
+        SourceId::new(SourceKind::Path, url, None)
     }
 
     /// Creates a `SourceId` from a Git reference.
     pub fn for_git(url: &Url, reference: GitReference) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Git(reference), url.clone())
+        SourceId::new(SourceKind::Git(reference), url.clone(), None)
     }
 
-    /// Creates a SourceId from a registry URL.
+    /// Creates a SourceId from a remote registry URL when the registry name
+    /// cannot be determined, e.g. a user passes `--index` directly from CLI.
+    ///
+    /// Use [`SourceId::for_alt_registry`] if a name can provided, which
+    /// generates better messages for cargo.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
         SourceId::new(
             SourceKind::Registry(GitReference::DefaultBranch),
             url.clone(),
+            None,
+        )
+    }
+
+    /// Creates a `SourceId` from a remote registry URL with given name.
+    pub fn for_alt_registry(url: &Url, name: &str) -> CargoResult<SourceId> {
+        SourceId::new(
+            SourceKind::Registry(GitReference::DefaultBranch),
+            url.clone(),
+            Some(name),
         )
     }
 
     /// Creates a SourceId from a local registry path.
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
-        SourceId::new(SourceKind::LocalRegistry, url)
+        SourceId::new(SourceKind::LocalRegistry, url, None)
     }
 
     /// Creates a `SourceId` from a directory path.
     pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
-        SourceId::new(SourceKind::Directory, url)
+        SourceId::new(SourceKind::Directory, url, None)
     }
 
     /// Returns the `SourceId` corresponding to the main repository.
     ///
     /// This is the main cargo registry by default, but it can be overridden in
-    /// a `.cargo/config`.
+    /// a `.cargo/config.toml`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
         config.crates_io_source_id(|| {
             config.check_registry_index_not_set()?;
             let url = CRATES_IO_INDEX.into_url().unwrap();
-            SourceId::for_registry(&url)
+            SourceId::new(
+                SourceKind::Registry(GitReference::DefaultBranch),
+                url,
+                Some(CRATES_IO_REGISTRY),
+            )
         })
     }
 
+    /// Gets the `SourceId` associated with given name of the remote registry.
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
         Ok(SourceId::wrap(SourceIdInner {
@@ -234,17 +253,21 @@ impl SourceId {
 
     pub fn display_index(self) -> String {
         if self.is_default_registry() {
-            "crates.io index".to_string()
+            format!("{} index", CRATES_IO_DOMAIN)
         } else {
-            format!("`{}` index", url_display(self.url()))
+            format!("`{}` index", self.display_registry_name())
         }
     }
 
     pub fn display_registry_name(self) -> String {
         if self.is_default_registry() {
-            "crates.io".to_string()
+            CRATES_IO_REGISTRY.to_string()
         } else if let Some(name) = &self.inner.name {
             name.clone()
+        } else if self.precise().is_some() {
+            // We remove `precise` here to retrieve an permissive version of
+            // `SourceIdInner`, which may contain the registry name.
+            self.with_precise(None).display_registry_name()
         } else {
             url_display(self.url())
         }
@@ -489,7 +512,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
-            SourceKind::Registry(_) => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            SourceKind::Registry(_) => write!(f, "registry `{}`", self.display_registry_name()),
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
@@ -506,6 +529,29 @@ impl Hash for SourceId {
             SourceKind::Git(_) => self.inner.canonical_url.hash(into),
             _ => self.inner.url.as_str().hash(into),
         }
+    }
+}
+
+impl Hash for SourceIdInner {
+    /// The hash of `SourceIdInner` is used to retrieve its interned value. We
+    /// only care about fields that make `SourceIdInner` unique, which are:
+    ///
+    /// - `kind`
+    /// - `precise`
+    /// - `canonical_url`
+    fn hash<S: hash::Hasher>(&self, into: &mut S) {
+        self.kind.hash(into);
+        self.precise.hash(into);
+        self.canonical_url.hash(into);
+    }
+}
+
+impl PartialEq for SourceIdInner {
+    /// This implementation must be synced with [`SourceIdInner::hash`].
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+            && self.precise == other.precise
+            && self.canonical_url == other.canonical_url
     }
 }
 
@@ -606,7 +652,12 @@ impl Ord for SourceKind {
 // you're able to restore the hash to its original value, please do so!
 // Otherwise please just leave a comment in your PR as to why the hash value is
 // changing and why the old value can't be easily preserved.
+//
+// The hash value depends on endianness and bit-width, so we only run this test on
+// little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the
+// well-known value.
 #[test]
+#[cfg(all(target_endian = "little", target_pointer_width = "64"))]
 fn test_cratesio_hash() {
     let config = Config::default().unwrap();
     let crates_io = SourceId::crates_io(&config).unwrap();
@@ -702,15 +753,15 @@ mod tests {
     fn github_sources_equal() {
         let loc = "https://github.com/foo/bar".into_url().unwrap();
         let default = SourceKind::Git(GitReference::DefaultBranch);
-        let s1 = SourceId::new(default.clone(), loc).unwrap();
+        let s1 = SourceId::new(default.clone(), loc, None).unwrap();
 
         let loc = "git://github.com/foo/bar".into_url().unwrap();
-        let s2 = SourceId::new(default, loc.clone()).unwrap();
+        let s2 = SourceId::new(default, loc.clone(), None).unwrap();
 
         assert_eq!(s1, s2);
 
         let foo = SourceKind::Git(GitReference::Branch("foo".to_string()));
-        let s3 = SourceId::new(foo, loc).unwrap();
+        let s3 = SourceId::new(foo, loc, None).unwrap();
         assert_ne!(s1, s3);
     }
 }

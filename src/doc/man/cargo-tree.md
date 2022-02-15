@@ -71,6 +71,15 @@ flag can be used to display the package's reverse dependencies only with the
 subtree of the package given to `-p`.
 {{/option}}
 
+{{#option "`--prune` _spec_" }}
+Prune the given package from the display of the dependency tree.
+{{/option}}
+
+{{#option "`--depth` _depth_" }}
+Maximum display depth of the dependency tree. A depth of 1 displays the direct
+dependencies, for example.
+{{/option}}
+
 {{#option "`--no-dedupe`" }}
 Do not de-duplicate repeated dependencies. Usually, when a package has already
 displayed its dependencies, further occurrences will not re-display its
@@ -102,8 +111,10 @@ The dependency kinds to display. Takes a comma separated list of values:
 - `no-normal` — Do not include normal dependencies.
 - `no-build` — Do not include build dependencies.
 - `no-dev` — Do not include development dependencies.
+- `no-proc-macro` — Do not include procedural macro dependencies.
 
-The `no-` prefixed options cannot be mixed with the other dependency kinds.
+The `normal`, `build`, `dev`, and `all` dependency kinds cannot be mixed with
+`no-normal`, `no-build`, or `no-dev` dependency kinds.
 
 The default is `normal,build,dev`.
 {{/option}}
@@ -134,6 +145,7 @@ strings will be replaced with the corresponding value:
 - `{l}` — The package license.
 - `{r}` — The package repository URL.
 - `{f}` — Comma-separated list of package features that are enabled.
+- `{lib}` — The name, as used in a `use` statement, of the package's library.
 {{/option}}
 
 {{#option "`--prefix` _prefix_" }}

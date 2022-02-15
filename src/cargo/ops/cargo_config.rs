@@ -51,13 +51,11 @@ pub struct GetOptions<'a> {
 }
 
 pub fn get(config: &Config, opts: &GetOptions<'_>) -> CargoResult<()> {
-    if opts.show_origin {
-        if !matches!(opts.format, ConfigFormat::Toml) {
-            bail!(
-                "the `{}` format does not support --show-origin, try the `toml` format instead",
-                opts.format
-            );
-        }
+    if opts.show_origin && !matches!(opts.format, ConfigFormat::Toml) {
+        bail!(
+            "the `{}` format does not support --show-origin, try the `toml` format instead",
+            opts.format
+        );
     }
     let key = match opts.key {
         Some(key) => ConfigKey::from_str(key),
@@ -129,19 +127,24 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
             config,
             "{} = {}{}",
             key,
-            toml::to_string(&val).unwrap(),
+            toml_edit::Value::from(val),
             origin(def)
         ),
         CV::List(vals, _def) => {
             if opts.show_origin {
                 drop_println!(config, "{} = [", key);
                 for (val, def) in vals {
-                    drop_println!(config, "    {}, # {}", toml::to_string(&val).unwrap(), def);
+                    drop_println!(
+                        config,
+                        "    {}, # {}",
+                        toml_edit::ser::to_item(&val).unwrap(),
+                        def
+                    );
                 }
                 drop_println!(config, "]");
             } else {
-                let vals: Vec<&String> = vals.iter().map(|x| &x.0).collect();
-                drop_println!(config, "{} = {}", key, toml::to_string(&vals).unwrap());
+                let vals: toml_edit::Array = vals.iter().map(|x| &x.0).collect();
+                drop_println!(config, "{} = {}", key, vals);
             }
         }
         CV::Table(table, _def) => {

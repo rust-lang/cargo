@@ -207,7 +207,7 @@ restore the source replacement configuration to continue the build
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
             let url = url(&registry, &format!("source.{}.registry", name))?;
-            srcs.push(SourceId::for_registry(&url)?);
+            srcs.push(SourceId::for_alt_registry(&url, &name)?);
         }
         if let Some(local_registry) = def.local_registry {
             let path = local_registry.resolve_path(self.config);
@@ -247,7 +247,7 @@ restore the source replacement configuration to continue the build
             check_not_set("tag", def.tag)?;
             check_not_set("rev", def.rev)?;
         }
-        if name == "crates-io" && srcs.is_empty() {
+        if name == CRATES_IO_REGISTRY && srcs.is_empty() {
             srcs.push(SourceId::crates_io(self.config)?);
         }
 

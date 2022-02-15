@@ -315,7 +315,8 @@
 use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
 use std::env;
-use std::hash::{self, Hasher};
+use std::hash::{self, Hash, Hasher};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -334,7 +335,7 @@ use crate::core::Package;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{internal, path_args, profile};
+use crate::util::{internal, path_args, profile, StableHasher};
 use crate::CARGO_ENV;
 
 use super::custom_build::BuildDeps;
@@ -502,7 +503,7 @@ struct DepFingerprint {
 /// as a fingerprint (all source files must be modified *before* this mtime).
 /// This dep-info file is not generated, however, until after the crate is
 /// compiled. As a result, this structure can be thought of as a fingerprint
-/// to-be. The actual value can be calculated via `hash()`, but the operation
+/// to-be. The actual value can be calculated via `hash_u64()`, but the operation
 /// may fail as some files may not have been generated.
 ///
 /// Note that dependencies are taken into account for fingerprints because rustc
@@ -594,7 +595,7 @@ impl Serialize for DepFingerprint {
             &self.pkg_id,
             &self.name,
             &self.public,
-            &self.fingerprint.hash(),
+            &self.fingerprint.hash_u64(),
         )
             .serialize(ser)
     }
@@ -782,9 +783,6 @@ impl LocalFingerprint {
     }
 }
 
-#[derive(Debug)]
-struct MtimeSlot(Mutex<Option<FileTime>>);
-
 impl Fingerprint {
     fn new() -> Fingerprint {
         Fingerprint {
@@ -815,7 +813,7 @@ impl Fingerprint {
         *self.memoized_hash.lock().unwrap() = None;
     }
 
-    fn hash(&self) -> u64 {
+    fn hash_u64(&self) -> u64 {
         if let Some(s) = *self.memoized_hash.lock().unwrap() {
             return s;
         }
@@ -959,13 +957,13 @@ impl Fingerprint {
                 return Err(e);
             }
 
-            if a.fingerprint.hash() != b.fingerprint.hash() {
+            if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
                 let e = format_err!(
                     "new ({}/{:x}) != old ({}/{:x})",
                     a.name,
-                    a.fingerprint.hash(),
+                    a.fingerprint.hash_u64(),
                     b.name,
-                    b.fingerprint.hash()
+                    b.fingerprint.hash_u64()
                 )
                 .context("unit dependency information changed");
                 return Err(e);
@@ -1148,39 +1146,8 @@ impl hash::Hash for Fingerprint {
             name.hash(h);
             public.hash(h);
             // use memoized dep hashes to avoid exponential blowup
-            h.write_u64(Fingerprint::hash(fingerprint));
+            h.write_u64(fingerprint.hash_u64());
         }
-    }
-}
-
-impl hash::Hash for MtimeSlot {
-    fn hash<H: Hasher>(&self, h: &mut H) {
-        self.0.lock().unwrap().hash(h)
-    }
-}
-
-impl ser::Serialize for MtimeSlot {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        self.0
-            .lock()
-            .unwrap()
-            .map(|ft| (ft.unix_seconds(), ft.nanoseconds()))
-            .serialize(s)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for MtimeSlot {
-    fn deserialize<D>(d: D) -> Result<MtimeSlot, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let kind: Option<(i64, u32)> = de::Deserialize::deserialize(d)?;
-        Ok(MtimeSlot(Mutex::new(
-            kind.map(|(s, n)| FileTime::from_unix_time(s, n)),
-        )))
     }
 }
 
@@ -1352,17 +1319,17 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
-    let mut config = 0u64;
+    let mut config = StableHasher::new();
+    if let Some(linker) = cx.bcx.linker(unit.kind) {
+        linker.hash(&mut config);
+    }
     if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
-        config = config.wrapping_add(
-            cx.bcx
-                .config
-                .doc_extern_map()
-                .map_or(0, |map| util::hash_u64(map)),
-        );
+        if let Ok(map) = cx.bcx.config.doc_extern_map() {
+            map.hash(&mut config);
+        }
     }
     if let Some(allow_features) = &cx.bcx.config.cli_unstable().allow_features {
-        config = config.wrapping_add(util::hash_u64(allow_features));
+        allow_features.hash(&mut config);
     }
     let compile_kind = unit.kind.fingerprint_hash();
     Ok(Fingerprint {
@@ -1377,7 +1344,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
         metadata,
-        config,
+        config: config.finish(),
         compile_kind,
         rustflags: extra_flags,
         fs_status: FsStatus::Stale,
@@ -1400,11 +1367,19 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
     let local = (gen_local)(
         deps,
         Some(&|| {
-            pkg_fingerprint(cx.bcx, &unit.pkg).with_context(|| {
-                format!(
-                    "failed to determine package fingerprint for build script for {}",
-                    unit.pkg
-                )
+            const IO_ERR_MESSAGE: &str = "\
+An I/O error happened. Please make sure you can access the file.
+
+By default, if your project contains a build script, cargo scans all files in
+it to determine whether a rebuild is needed. If you don't expect to access the 
+file, specify `rerun-if-changed` in your build script.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed for more information.";
+            pkg_fingerprint(cx.bcx, &unit.pkg).map_err(|err| {
+                let mut message = format!("failed to determine package fingerprint for build script for {}", unit.pkg);
+                if err.root_cause().is::<io::Error>() {
+                    message = format!("{}\n{}", message, IO_ERR_MESSAGE)
+                }
+                err.context(message)
             })
         }),
     )?
@@ -1609,14 +1584,14 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
     // fingerprint::new().rustc == 0, make sure it doesn't make it to the file system.
     // This is mostly so outside tools can reliably find out what rust version this file is for,
     // as we can use the full hash.
-    let hash = fingerprint.hash();
+    let hash = fingerprint.hash_u64();
     debug!("write fingerprint ({:x}) : {}", hash, loc.display());
     paths::write(loc, util::to_hex(hash).as_bytes())?;
 
     let json = serde_json::to_string(fingerprint).unwrap();
     if cfg!(debug_assertions) {
         let f: Fingerprint = serde_json::from_str(&json).unwrap();
-        assert_eq!(f.hash(), hash);
+        assert_eq!(f.hash_u64(), hash);
     }
     paths::write(&loc.with_extension("json"), json.as_bytes())?;
     Ok(())
@@ -1660,7 +1635,7 @@ fn compare_old_fingerprint(
         paths::set_file_time_no_err(loc, t);
     }
 
-    let new_hash = new_fingerprint.hash();
+    let new_hash = new_fingerprint.hash_u64();
 
     if util::to_hex(new_hash) == old_fingerprint_short && new_fingerprint.fs_status.up_to_date() {
         return Ok(());
@@ -1671,7 +1646,10 @@ fn compare_old_fingerprint(
         .with_context(|| internal("failed to deserialize json"))?;
     // Fingerprint can be empty after a failed rebuild (see comment in prepare_target).
     if !old_fingerprint_short.is_empty() {
-        debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
+        debug_assert_eq!(
+            util::to_hex(old_fingerprint.hash_u64()),
+            old_fingerprint_short
+        );
     }
     let result = new_fingerprint.compare(&old_fingerprint);
     assert!(result.is_err());

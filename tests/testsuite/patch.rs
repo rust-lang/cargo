@@ -5,6 +5,7 @@ use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
+use toml_edit::easy as toml;
 
 #[cargo_test]
 fn replace() {
@@ -52,7 +53,7 @@ fn replace() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([CWD]/bar)
@@ -64,50 +65,6 @@ fn replace() {
         .run();
 
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
-}
-
-#[cargo_test]
-fn from_config_without_z() {
-    Package::new("bar", "0.1.0").publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [dependencies]
-                bar = "0.1.0"
-            "#,
-        )
-        .file(
-            ".cargo/config.toml",
-            r#"
-                [patch.crates-io]
-                bar = { path = 'bar' }
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
-        .file("bar/src/lib.rs", r#""#)
-        .build();
-
-    p.cargo("build")
-        .with_stderr(
-            "\
-[WARNING] `[patch]` in cargo config was ignored, the -Zpatch-in-config command-line flag is required
-[UPDATING] `[ROOT][..]` index
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 ([..])
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
 }
 
 #[cargo_test]
@@ -139,11 +96,10 @@ fn from_config() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.1 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -181,11 +137,10 @@ fn from_config_relative() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.1 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -211,14 +166,14 @@ fn from_config_precedence() {
                 bar = "0.1.0"
 
                 [patch.crates-io]
-                bar = { path = 'bar' }
+                bar = { path = 'no-such-path' }
             "#,
         )
         .file(
             ".cargo/config.toml",
             r#"
                 [patch.crates-io]
-                bar = { path = 'no-such-path' }
+                bar = { path = 'bar' }
             "#,
         )
         .file("src/lib.rs", "")
@@ -226,11 +181,10 @@ fn from_config_precedence() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.1 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -270,7 +224,7 @@ fn nonexistent() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -365,7 +319,7 @@ fn patch_to_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -403,12 +357,12 @@ fn unused() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -421,10 +375,10 @@ fn unused() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]
 ",
         )
@@ -439,6 +393,109 @@ fn unused() {
         toml["patch"]["unused"][0]["version"].as_str(),
         Some("0.2.0")
     );
+}
+
+#[cargo_test]
+fn unused_with_mismatch_source_being_patched() {
+    registry::alt_init();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1.0"
+
+                [patch.alternative]
+                bar = { path = "bar" }
+
+                [patch.crates-io]
+                bar = { path = "baz" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
+        .file("bar/src/lib.rs", "not rust code")
+        .file("baz/Cargo.toml", &basic_manifest("bar", "0.3.0"))
+        .file("baz/src/lib.rs", "not rust code")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
+Perhaps you misspell the source URL being patched.
+Possible URLs for `[patch.<URL>]`:
+    crates-io
+[WARNING] Patch `bar v0.3.0 ([CWD]/baz)` was not used in the crate graph.
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 [..]
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn prefer_patch_version() {
+    Package::new("bar", "0.1.2").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = "0.1.0"
+
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[COMPILING] bar v0.1.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // there should be no patch.unused in the toml file
+    let lock = p.read_lockfile();
+    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    assert!(toml.get("patch").is_none());
 }
 
 #[cargo_test]
@@ -470,16 +527,15 @@ fn unused_from_config() {
         .file("bar/src/lib.rs", "not rust code")
         .build();
 
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -488,15 +544,14 @@ fn unused_from_config() {
 ",
         )
         .run();
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]
 ",
         )
@@ -548,12 +603,12 @@ fn unused_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -566,10 +621,10 @@ fn unused_git() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]
 ",
         )
@@ -601,7 +656,7 @@ fn add_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -665,7 +720,7 @@ fn add_patch_from_config() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -684,8 +739,7 @@ fn add_patch_from_config() {
         "#,
     );
 
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([CWD]/bar)
@@ -694,10 +748,7 @@ fn add_patch_from_config() {
 ",
         )
         .run();
-    p.cargo("build -Zpatch-in-config")
-        .masquerade_as_nightly_cargo()
-        .with_stderr("[FINISHED] [..]")
-        .run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -725,7 +776,7 @@ fn add_ignored_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -756,10 +807,10 @@ fn add_ignored_patch() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
@@ -767,10 +818,10 @@ fn add_ignored_patch() {
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
-[..]
-[..]
-[..]
-[..]
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
 [FINISHED] [..]",
         )
         .run();
@@ -782,6 +833,102 @@ fn add_ignored_patch() {
 [COMPILING] bar v0.1.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn add_patch_with_features() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.1.0"
+
+            [patch.crates-io]
+            bar = { path = 'bar', features = ["some_feature"] }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[UPDATING] `dummy-registry` index
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn add_patch_with_setting_default_features() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.1.0"
+
+            [patch.crates-io]
+            bar = { path = 'bar', default-features = false, features = ["none_default_feature"] }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[UPDATING] `dummy-registry` index
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] patch for `bar` uses the features mechanism. \
+default-features and features will not take effect because the patch dependency does not support this mechanism
+[FINISHED] [..]
 ",
         )
         .run();
@@ -859,7 +1006,7 @@ fn new_minor() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.1 [..]
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -909,7 +1056,7 @@ fn transitive_new_minor() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] baz v0.1.1 [..]
 [COMPILING] bar v0.1.0 [..]
 [COMPILING] foo v0.0.1 ([CWD])
@@ -947,7 +1094,7 @@ fn new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.2.0 [..]
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -976,7 +1123,7 @@ fn new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.2.0 [..]
 [COMPILING] bar v0.2.0
@@ -1028,7 +1175,7 @@ fn transitive_new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] baz v0.2.0 [..]
 [COMPILING] bar v0.1.0 [..]
 [COMPILING] foo v0.0.1 ([CWD])
@@ -1085,7 +1232,7 @@ fn shared_by_transitive() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `dummy-registry` index
 [COMPILING] baz v0.1.2 [..]
 [COMPILING] bar v0.1.0 [..]
 [COMPILING] foo v0.1.0 ([CWD])
@@ -1473,10 +1620,10 @@ fn cycle() {
         .with_stderr(
             "\
 [UPDATING] [..]
-error: cyclic package dependency: [..]
+[ERROR] cyclic package dependency: [..]
 package `[..]`
-    ... which is depended on by `[..]`
-    ... which is depended on by `[..]`
+    ... which satisfies dependency `[..]` of package `[..]`
+    ... which satisfies dependency `[..]` of package `[..]`
 ",
         )
         .run();
@@ -1622,10 +1769,9 @@ fn two_semver_compatible() {
         .with_stderr(
             "\
 warning: Patch `bar v0.1.1 [..]` was not used in the crate graph.
-Check that [..]
-with the [..]
-what is [..]
-version. [..]
+Perhaps you misspell the source URL being patched.
+Possible URLs for `[patch.<URL>]`:
+    [CWD]/bar
 [FINISHED] [..]",
         )
         .run();
@@ -1677,10 +1823,9 @@ fn multipatch_select_big() {
         .with_stderr(
             "\
 warning: Patch `bar v0.1.0 [..]` was not used in the crate graph.
-Check that [..]
-with the [..]
-what is [..]
-version. [..]
+Perhaps you misspell the source URL being patched.
+Possible URLs for `[patch.<URL>]`:
+    [CWD]/bar
 [FINISHED] [..]",
         )
         .run();
@@ -1807,7 +1952,7 @@ fn update_unused_new_version() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [COMPILING] bar v0.1.6 ([..]/bar)
 [COMPILING] foo v0.0.1 ([..]/foo)
 [FINISHED] [..]
@@ -1825,7 +1970,7 @@ fn update_unused_new_version() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [ADDING] bar v0.1.6 ([..]/bar)
 [REMOVING] bar v0.1.5
 ",
@@ -1837,7 +1982,7 @@ fn update_unused_new_version() {
     p.cargo("update")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [ADDING] bar v0.1.6 ([..]/bar)
 [REMOVING] bar v0.1.5
 ",
@@ -1876,14 +2021,14 @@ fn too_many_matches() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] `[..]/alternative-registry` index
+[UPDATING] `alternative` index
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
-  patch for `bar` in `registry `[..]/alternative-registry`` resolved to more than one candidate
+  patch for `bar` in `registry `alternative`` resolved to more than one candidate
   Found versions: 0.1.0, 0.1.1
   Update the patch definition to select only one package.
   For example, add an `=` version requirement to the patch definition, such as `version = \"=0.1.1\"`.
@@ -2001,7 +2146,7 @@ fn patch_walks_backwards() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2015,7 +2160,7 @@ fn patch_walks_backwards() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2053,7 +2198,7 @@ fn patch_walks_backwards_restricted() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2123,7 +2268,7 @@ fn patched_dep_new_version() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 [..]
 [CHECKING] baz v0.1.0
@@ -2156,9 +2301,9 @@ fn patched_dep_new_version() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.1.1 (registry `[..]/registry`)
+[DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
 [CHECKING] baz v0.1.1
 [CHECKING] bar v0.1.0 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
@@ -2200,11 +2345,11 @@ fn patch_update_doesnt_update_other_sources() {
     p.cargo("check")
         .with_stderr_unordered(
             "\
-[UPDATING] `[..]/registry` index
-[UPDATING] `[..]/alternative-registry` index
+[UPDATING] `dummy-registry` index
+[UPDATING] `alternative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 (registry `[..]/alternative-registry`)
-[CHECKING] bar v0.1.0 (registry `[..]/alternative-registry`)
+[DOWNLOADED] bar v0.1.0 (registry `alternative`)
+[CHECKING] bar v0.1.0 (registry `alternative`)
 [CHECKING] bar v0.1.0 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2226,7 +2371,7 @@ fn patch_update_doesnt_update_other_sources() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/registry` index
+[UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2264,11 +2409,11 @@ fn can_update_with_alt_reg() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/alternative-registry` index
-[UPDATING] `[..]/registry` index
+[UPDATING] `alternative` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.1 (registry `[..]/alternative-registry`)
-[CHECKING] bar v0.1.1 (registry `[..]/alternative-registry`)
+[DOWNLOADED] bar v0.1.1 (registry `alternative`)
+[CHECKING] bar v0.1.1 (registry `alternative`)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
 ",
@@ -2284,8 +2429,8 @@ fn can_update_with_alt_reg() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] `[..]/alternative-registry` index
-[UPDATING] `[..]/registry` index
+[UPDATING] `alternative` index
+[UPDATING] `dummy-registry` index
 ",
         )
         .run();
@@ -2309,11 +2454,11 @@ fn can_update_with_alt_reg() {
     p.cargo("check")
         .with_stderr(
             "\
-[UPDATING] `[..]/alternative-registry` index
-[UPDATING] `[..]/registry` index
+[UPDATING] `alternative` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.2 (registry `[..]/alternative-registry`)
-[CHECKING] bar v0.1.2 (registry `[..]/alternative-registry`)
+[DOWNLOADED] bar v0.1.2 (registry `alternative`)
+[CHECKING] bar v0.1.2 (registry `alternative`)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
 ",

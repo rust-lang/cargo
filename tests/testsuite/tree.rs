@@ -469,6 +469,24 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
+
+    // no-proc-macro
+    p.cargo("tree --target=all -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── hostdep v1.0.0
+└── targetdep v1.0.0
+[build-dependencies]
+├── build_host_dep v1.0.0
+│   ├── hostdep v1.0.0
+│   └── targetdep v1.0.0
+└── build_target_dep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -476,6 +494,10 @@ fn dep_kinds() {
     Package::new("inner-devdep", "1.0.0").publish();
     Package::new("inner-builddep", "1.0.0").publish();
     Package::new("inner-normal", "1.0.0").publish();
+    Package::new("inner-pm", "1.0.0").proc_macro(true).publish();
+    Package::new("inner-buildpm", "1.0.0")
+        .proc_macro(true)
+        .publish();
     Package::new("normaldep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dev_dep("inner-devdep", "1.0")
@@ -483,8 +505,10 @@ fn dep_kinds() {
         .publish();
     Package::new("devdep", "1.0.0")
         .dep("inner-normal", "1.0")
+        .dep("inner-pm", "1.0")
         .dev_dep("inner-devdep", "1.0")
         .build_dep("inner-builddep", "1.0")
+        .build_dep("inner-buildpm", "1.0")
         .publish();
     Package::new("builddep", "1.0.0")
         .dep("inner-normal", "1.0")
@@ -527,9 +551,11 @@ foo v0.1.0 ([..]/foo)
     └── inner-builddep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
-    └── inner-normal v1.0.0
+    ├── inner-normal v1.0.0
+    └── inner-pm v1.0.0 (proc-macro)
     [build-dependencies]
-    └── inner-builddep v1.0.0
+    ├── inner-builddep v1.0.0
+    └── inner-buildpm v1.0.0 (proc-macro)
 ",
         )
         .run();
@@ -562,6 +588,23 @@ foo v0.1.0 ([..]/foo)
         .run();
 
     p.cargo("tree -e dev,build")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+[build-dependencies]
+└── builddep v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+    [build-dependencies]
+    ├── inner-builddep v1.0.0
+    └── inner-buildpm v1.0.0 (proc-macro)
+",
+        )
+        .run();
+
+    p.cargo("tree -e dev,build,no-proc-macro")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -966,6 +1009,23 @@ foo v0.1.0 ([..]/foo)
 #[cargo_test]
 fn format() {
     Package::new("dep", "1.0.0").publish();
+    Package::new("other-dep", "1.0.0").publish();
+
+    Package::new("dep_that_is_awesome", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "dep_that_is_awesome"
+                version = "1.0.0"
+
+                [lib]
+                name = "awesome_dep"
+            "#,
+        )
+        .file("src/lib.rs", "pub struct Straw;")
+        .publish();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -978,6 +1038,9 @@ fn format() {
 
             [dependencies]
             dep = {version="1.0", optional=true}
+            other-dep = {version="1.0", optional=true}
+            dep_that_is_awesome = {version="1.0", optional=true}
+
 
             [features]
             default = ["foo"]
@@ -985,7 +1048,7 @@ fn format() {
             bar = []
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("tree --format <<<{p}>>>")
@@ -1022,8 +1085,21 @@ Caused by:
         .arg("{p} [{f}]")
         .with_stdout(
             "\
-foo v0.1.0 ([..]/foo) [bar,default,dep,foo]
-└── dep v1.0.0 []
+foo v0.1.0 ([..]/foo) [bar,default,dep,dep_that_is_awesome,foo,other-dep]
+├── dep v1.0.0 []
+├── dep_that_is_awesome v1.0.0 []
+└── other-dep v1.0.0 []
+",
+        )
+        .run();
+
+    p.cargo("tree")
+        .arg("--features=other-dep,dep_that_is_awesome")
+        .arg("--format={lib}")
+        .with_stdout(
+            "
+├── awesome_dep
+└── other_dep
 ",
         )
         .run();
@@ -1256,8 +1332,29 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
+    // Old behavior + no-proc-macro
+    p.cargo("tree -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── somedep v1.0.0
+    └── optdep v1.0.0
+",
+        )
+        .run();
+
     // -p
     p.cargo("tree -p somedep")
+        .with_stdout(
+            "\
+somedep v1.0.0
+└── optdep v1.0.0
+",
+        )
+        .run();
+
+    // -p -e no-proc-macro
+    p.cargo("tree -p somedep -e no-proc-macro")
         .with_stdout(
             "\
 somedep v1.0.0
@@ -1278,6 +1375,16 @@ somedep v1.0.0
         )
         .run();
 
+    // invert + no-proc-macro
+    p.cargo("tree -i somedep -e no-proc-macro")
+        .with_stdout(
+            "\
+somedep v1.0.0
+└── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+
     // New behavior.
     switch_to_resolver_2(&p);
 
@@ -1289,6 +1396,15 @@ foo v0.1.0 ([..]/foo)
 ├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
+└── somedep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
 └── somedep v1.0.0
 ",
         )
@@ -1314,6 +1430,17 @@ somedep v1.0.0
 somedep v1.0.0
 └── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+
+    p.cargo("tree -i somedep -e no-proc-macro")
+        .with_stdout(
+            "\
+somedep v1.0.0
+└── foo v0.1.0 ([..]/foo)
+
+somedep v1.0.0
 ",
         )
         .run();
@@ -1475,6 +1602,447 @@ a v0.1.0 ([..]/foo/a)
             "\
 b v0.1.0 ([..]/foo/b)
 └── somedep v1.0.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unknown_edge_kind() {
+    let p = project()
+        .file("Cargo.toml", "")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e unknown")
+        .with_stderr(
+            "\
+[ERROR] unknown edge kind `unknown`, valid values are \
+\"normal\", \"build\", \"dev\", \
+\"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
+\"features\", or \"all\"
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn mixed_no_edge_kinds() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e no-build,normal")
+        .with_stderr(
+            "\
+[ERROR] `normal` dependency kind cannot be mixed with \
+\"no-normal\", \"no-build\", or \"no-dev\" dependency kinds
+",
+        )
+        .with_status(101)
+        .run();
+
+    // `no-proc-macro` can be mixed with others
+    p.cargo("tree -e no-proc-macro,normal")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn depth_limit() {
+    let p = make_simple_proj();
+
+    p.cargo("tree --depth 0")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+[build-dependencies]
+[dev-dependencies]
+",
+        )
+        .run();
+
+    p.cargo("tree --depth 1")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree --depth 2")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+│   └── b v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // specify a package
+    p.cargo("tree -p bdep --depth 1")
+        .with_stdout(
+            "\
+bdep v1.0.0
+└── b v1.0.0
+",
+        )
+        .run();
+
+    // different prefix
+    p.cargo("tree --depth 1 --prefix depth")
+        .with_stdout(
+            "\
+0foo v0.1.0 ([..]/foo)
+1a v1.0.0
+1c v1.0.0
+1bdep v1.0.0
+1devdep v1.0.0
+",
+        )
+        .run();
+
+    // with edge-kinds
+    p.cargo("tree --depth 1 -e no-dev")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+",
+        )
+        .run();
+
+    // invert
+    p.cargo("tree --depth 1 --invert c")
+        .with_stdout(
+            "\
+c v1.0.0
+├── b v1.0.0
+└── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn prune() {
+    let p = make_simple_proj();
+
+    p.cargo("tree --prune c")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── a v1.0.0
+    └── b v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // multiple prune
+    p.cargo("tree --prune c --prune bdep")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── a v1.0.0
+    └── b v1.0.0
+[build-dependencies]
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // with edge-kinds
+    p.cargo("tree --prune c -e normal")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── a v1.0.0
+    └── b v1.0.0
+",
+        )
+        .run();
+
+    // pruning self does not works
+    p.cargo("tree --prune foo")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+│   └── b v1.0.0
+│       └── c v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    // dep not exist
+    p.cargo("tree --prune no-dep")
+        .with_stderr(
+            "\
+[ERROR] package ID specification `no-dep` did not match any packages
+
+<tab>Did you mean `bdep`?
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn cyclic_features() {
+    // Check for stack overflow with cyclic features (oops!).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [features]
+                a = ["b"]
+                b = ["a"]
+                default = ["a"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features")
+        .with_stdout("foo v1.0.0 ([ROOT]/foo)")
+        .run();
+
+    p.cargo("tree -e features -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\"
+│   ├── foo feature \"b\"
+│   │   └── foo feature \"a\" (*)
+│   └── foo feature \"default\" (command-line)
+├── foo feature \"b\" (*)
+└── foo feature \"default\" (command-line)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dev_dep_cycle_with_feature() {
+    // Cycle with features and a dev-dependency.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [dev-dependencies]
+                bar = { path = "bar" }
+
+                [features]
+                a = ["bar/feat1"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "1.0.0"
+
+                [dependencies]
+                foo = { path = ".." }
+
+                [features]
+                feat1 = ["foo/a"]
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features --features a")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+[dev-dependencies]
+└── bar feature \"default\"
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        └── foo feature \"default\" (command-line)
+            └── foo v1.0.0 ([ROOT]/foo) (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features a -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\" (command-line)
+│   └── bar feature \"feat1\"
+│       └── foo feature \"a\" (command-line) (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (*)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dev_dep_cycle_with_feature_nested() {
+    // Checks for an issue where a cyclic dev dependency tries to activate a
+    // feature on its parent that tries to activate the feature back on the
+    // dev-dependency.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [dev-dependencies]
+                bar = { path = "bar" }
+
+                [features]
+                a = ["bar/feat1"]
+                b = ["a"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "1.0.0"
+
+                [dependencies]
+                foo = { path = ".." }
+
+                [features]
+                feat1 = ["foo/b"]
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+[dev-dependencies]
+└── bar feature \"default\"
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        └── foo feature \"default\" (command-line)
+            └── foo v1.0.0 ([ROOT]/foo) (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features a -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\" (command-line)
+│   └── foo feature \"b\"
+│       └── bar feature \"feat1\"
+│           └── foo feature \"a\" (command-line) (*)
+├── foo feature \"b\" (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features b -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\"
+│   └── foo feature \"b\" (command-line)
+│       └── bar feature \"feat1\"
+│           └── foo feature \"a\" (*)
+├── foo feature \"b\" (command-line) (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --features bar/feat1 -i foo")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature \"a\"
+│   └── foo feature \"b\"
+│       └── bar feature \"feat1\" (command-line)
+│           └── foo feature \"a\" (*)
+├── foo feature \"b\" (*)
+└── foo feature \"default\" (command-line)
+    └── bar v1.0.0 ([ROOT]/foo/bar)
+        ├── bar feature \"default\"
+        │   [dev-dependencies]
+        │   └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── bar feature \"feat1\" (command-line) (*)
 ",
         )
         .run();

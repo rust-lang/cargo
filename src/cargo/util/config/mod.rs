@@ -79,6 +79,7 @@ use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
+use toml_edit::{easy as toml, Item};
 use url::Url;
 
 mod de;
@@ -178,6 +179,7 @@ pub struct Config {
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
     /// Cached configuration parsed by Cargo
     http_config: LazyCell<CargoHttpConfig>,
+    future_incompat_config: LazyCell<CargoFutureIncompatConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
@@ -187,14 +189,14 @@ pub struct Config {
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
-    /// - this is a integration test that uses `ProcessBuilder`
+    /// - this is an integration test that uses `ProcessBuilder`
     ///      that does not opt in with `masquerade_as_nightly_cargo`
     /// This should be true if:
     /// - this is an artifact of the rustc distribution process for "nightly"
     /// - this is being used in the rustc distribution process internally
     /// - this is a cargo executable that was built from source
     /// - this is an `#[test]` that called `enable_nightly_features`
-    /// - this is a integration test that uses `ProcessBuilder`
+    /// - this is an integration test that uses `ProcessBuilder`
     ///       that called `masquerade_as_nightly_cargo`
     /// It's public to allow tests use nightly features.
     /// NOTE: this should be set before `configure()`. If calling this from an integration test,
@@ -232,14 +234,11 @@ impl Config {
             })
             .collect();
 
-        let upper_case_env = if cfg!(windows) {
-            HashMap::new()
-        } else {
-            env.clone()
-                .into_iter()
-                .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k))
-                .collect()
-        };
+        let upper_case_env = env
+            .clone()
+            .into_iter()
+            .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k))
+            .collect();
 
         let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO") {
             Some(cache) => cache != "0",
@@ -278,6 +277,7 @@ impl Config {
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
+            future_incompat_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
@@ -696,12 +696,6 @@ impl Config {
     }
 
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
-        if cfg!(windows) {
-            // In the case of windows the check for case mismatch in keys can be skipped
-            // as windows already converts its environment keys into the desired format.
-            return;
-        }
-
         if let Some(env_key) = self.upper_case_env.get(key.as_env_key()) {
             let _ = self.shell().warn(format!(
                 "Environment variables are expected to use uppercase letters and underscores, \
@@ -732,7 +726,7 @@ impl Config {
         })
     }
 
-    fn string_to_path(&self, value: String, definition: &Definition) -> PathBuf {
+    fn string_to_path(&self, value: &str, definition: &Definition) -> PathBuf {
         let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
         if is_path {
             definition.root(self).join(value)
@@ -843,7 +837,7 @@ impl Config {
         Ok(())
     }
 
-    /// Low-level method for getting a config value as a `OptValue<HashMap<String, CV>>`.
+    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
     ///
     /// NOTE: This does not read from env. The caller is responsible for that.
     fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
@@ -916,20 +910,19 @@ impl Config {
 
         let color = color.or_else(|| term.color.as_deref());
 
-        let verbosity = match (verbose, term.verbose, quiet) {
-            (true, _, false) | (_, Some(true), false) => Verbosity::Verbose,
-
-            // Command line takes precedence over configuration, so ignore the
-            // configuration..
-            (false, _, true) => Verbosity::Quiet,
-
-            // Can't pass both at the same time on the command line regardless
-            // of configuration.
-            (true, _, true) => {
-                bail!("cannot set both --verbose and --quiet");
-            }
-
-            (false, _, false) => Verbosity::Normal,
+        // The command line takes precedence over configuration.
+        let verbosity = match (verbose, quiet) {
+            (true, true) => bail!("cannot set both --verbose and --quiet"),
+            (true, false) => Verbosity::Verbose,
+            (false, true) => Verbosity::Quiet,
+            (false, false) => match (term.verbose, term.quiet) {
+                (Some(true), Some(true)) => {
+                    bail!("cannot set both `term.verbose` and `term.quiet`")
+                }
+                (Some(true), Some(false)) => Verbosity::Verbose,
+                (Some(false), Some(true)) => Verbosity::Quiet,
+                _ => Verbosity::Normal,
+            },
         };
 
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
@@ -1183,20 +1176,82 @@ impl Config {
                 map.insert("include".to_string(), value);
                 CV::Table(map, Definition::Cli)
             } else {
-                // TODO: This should probably use a more narrow parser, reject
-                // comments, blank lines, [headers], etc.
-                let toml_v: toml::Value = toml::de::from_str(arg)
-                    .with_context(|| format!("failed to parse --config argument `{}`", arg))?;
-                let toml_table = toml_v.as_table().unwrap();
-                if toml_table.len() != 1 {
+                // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
+                // expressions followed by a value that's not an "inline table"
+                // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
+                // parse the value as a toml_edit::Document, and check that the (single)
+                // inner-most table is set via dotted keys.
+                let doc: toml_edit::Document = arg.parse().with_context(|| {
+                    format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
+                })?;
+                fn non_empty_decor(d: &toml_edit::Decor) -> bool {
+                    d.prefix().map_or(false, |p| !p.trim().is_empty())
+                        || d.suffix().map_or(false, |s| !s.trim().is_empty())
+                }
+                let ok = {
+                    let mut got_to_value = false;
+                    let mut table = doc.as_table();
+                    let mut is_root = true;
+                    while table.is_dotted() || is_root {
+                        is_root = false;
+                        if table.len() != 1 {
+                            break;
+                        }
+                        let (k, n) = table.iter().next().expect("len() == 1 above");
+                        match n {
+                            Item::Table(nt) => {
+                                if table.key_decor(k).map_or(false, non_empty_decor)
+                                    || non_empty_decor(nt.decor())
+                                {
+                                    bail!(
+                                        "--config argument `{arg}` \
+                                            includes non-whitespace decoration"
+                                    )
+                                }
+                                table = nt;
+                            }
+                            Item::Value(v) if v.is_inline_table() => {
+                                bail!(
+                                    "--config argument `{arg}` \
+                                    sets a value to an inline table, which is not accepted"
+                                );
+                            }
+                            Item::Value(v) => {
+                                if non_empty_decor(v.decor()) {
+                                    bail!(
+                                        "--config argument `{arg}` \
+                                            includes non-whitespace decoration"
+                                    )
+                                }
+                                got_to_value = true;
+                                break;
+                            }
+                            Item::ArrayOfTables(_) => {
+                                bail!(
+                                    "--config argument `{arg}` \
+                                    sets a value to an array of tables, which is not accepted"
+                                );
+                            }
+
+                            Item::None => {
+                                bail!("--config argument `{arg}` doesn't provide a value")
+                            }
+                        }
+                    }
+                    got_to_value
+                };
+                if !ok {
                     bail!(
-                        "--config argument `{}` expected exactly one key=value pair, got {} keys",
-                        arg,
-                        toml_table.len()
+                        "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
                     );
                 }
+
+                let toml_v = toml::from_document(doc).with_context(|| {
+                    format!("failed to parse value from --config argument `{arg}`")
+                })?;
+
                 CV::from_toml(Definition::Cli, toml_v)
-                    .with_context(|| format!("failed to convert --config argument `{}`", arg))?
+                    .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
             let mut seen = HashSet::new();
             let tmp_table = self
@@ -1204,7 +1259,7 @@ impl Config {
                 .with_context(|| "failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
-                .with_context(|| format!("failed to merge --config argument `{}`", arg))?;
+                .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)
     }
@@ -1427,7 +1482,11 @@ impl Config {
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
     /// `None` if it's not present.
-    fn maybe_get_tool(&self, tool: &str, from_config: &Option<PathBuf>) -> Option<PathBuf> {
+    fn maybe_get_tool(
+        &self,
+        tool: &str,
+        from_config: &Option<ConfigRelativePath>,
+    ) -> Option<PathBuf> {
         let var = tool.to_uppercase();
 
         match env::var_os(&var) {
@@ -1444,13 +1503,13 @@ impl Config {
                 Some(path)
             }
 
-            None => from_config.clone(),
+            None => from_config.as_ref().map(|p| p.resolve_program(self)),
         }
     }
 
     /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
-    fn get_tool(&self, tool: &str, from_config: &Option<PathBuf>) -> PathBuf {
+    fn get_tool(&self, tool: &str, from_config: &Option<ConfigRelativePath>) -> PathBuf {
         self.maybe_get_tool(tool, from_config)
             .unwrap_or_else(|| PathBuf::from(tool))
     }
@@ -1475,6 +1534,11 @@ impl Config {
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
         self.http_config
             .try_borrow_with(|| self.get::<CargoHttpConfig>("http"))
+    }
+
+    pub fn future_incompat_config(&self) -> CargoResult<&CargoFutureIncompatConfig> {
+        self.future_incompat_config
+            .try_borrow_with(|| self.get::<CargoFutureIncompatConfig>("future-incompat-report"))
     }
 
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
@@ -1520,6 +1584,16 @@ impl Config {
         // nothing to query. Plumbing the name into SourceId is quite challenging.
         self.doc_extern_map
             .try_borrow_with(|| self.get::<RustdocExternMap>("doc.extern-map"))
+    }
+
+    /// Returns true if the `[target]` table should be applied to host targets.
+    pub fn target_applies_to_host(&self) -> CargoResult<bool> {
+        target::get_target_applies_to_host(self)
+    }
+
+    /// Returns the `[host]` table definition for the given target triple.
+    pub fn host_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
+        target::load_host_triple(self, target)
     }
 
     /// Returns the `[target]` table definition for the given target triple.
@@ -2065,6 +2139,37 @@ pub struct CargoHttpConfig {
     pub ssl_version: Option<SslVersionConfig>,
 }
 
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoFutureIncompatConfig {
+    frequency: Option<CargoFutureIncompatFrequencyConfig>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CargoFutureIncompatFrequencyConfig {
+    Always,
+    Never,
+}
+
+impl CargoFutureIncompatConfig {
+    pub fn should_display_message(&self) -> bool {
+        use CargoFutureIncompatFrequencyConfig::*;
+
+        let frequency = self.frequency.as_ref().unwrap_or(&Always);
+        match frequency {
+            Always => true,
+            Never => false,
+        }
+    }
+}
+
+impl Default for CargoFutureIncompatFrequencyConfig {
+    fn default() -> Self {
+        Self::Always
+    }
+}
+
 /// Configuration for `ssl-version` in `http` section
 /// There are two ways to configure:
 ///
@@ -2102,6 +2207,7 @@ pub struct CargoNetConfig {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildConfig {
+    // deprecated, but preserved for compatibility
     pub pipelining: Option<bool>,
     pub dep_info_basedir: Option<ConfigRelativePath>,
     pub target_dir: Option<ConfigRelativePath>,
@@ -2110,16 +2216,17 @@ pub struct CargoBuildConfig {
     pub jobs: Option<u32>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
-    pub rustc_wrapper: Option<PathBuf>,
-    pub rustc_workspace_wrapper: Option<PathBuf>,
-    pub rustc: Option<PathBuf>,
-    pub rustdoc: Option<PathBuf>,
+    pub rustc_wrapper: Option<ConfigRelativePath>,
+    pub rustc_workspace_wrapper: Option<ConfigRelativePath>,
+    pub rustc: Option<ConfigRelativePath>,
+    pub rustdoc: Option<ConfigRelativePath>,
     pub out_dir: Option<ConfigRelativePath>,
 }
 
 #[derive(Deserialize, Default)]
 struct TermConfig {
     verbose: Option<bool>,
+    quiet: Option<bool>,
     color: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]

@@ -1,5 +1,6 @@
 # cargo-package(1)
 {{*set actionverb="Package"}}
+{{*set noall=true}}
 
 ## NAME
 
@@ -42,6 +43,22 @@ fields in the manifest.
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
 
+### .cargo_vcs_info.json format
+
+Will generate a `.cargo_vcs_info.json` in the following format
+
+```javascript
+{
+ "git": {
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+ },
+ "path_in_vcs": ""
+}
+```
+
+`path_in_vcs` will be set to a repo-relative path for packages
+in subdirectories of the version control repository.
+
 ## OPTIONS
 
 ### Package Options
@@ -66,6 +83,8 @@ Allow working directories with uncommitted VCS changes to be packaged.
 {{/option}}
 
 {{/options}}
+
+{{> section-package-selection }}
 
 ### Compilation Options
 

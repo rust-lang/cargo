@@ -131,7 +131,6 @@ fn requires_feature() {
         .file(
             "Cargo.toml",
             r#"
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -153,7 +152,12 @@ error: failed to parse manifest at `[..]`
 Caused by:
   feature `public-dependency` is required
 
-  consider adding `cargo-features = [\"public-dependency\"]` to the manifest
+  The package requires the Cargo feature called `public-dependency`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"public-dependency\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#public-dependency \
+  for more information about the status of this feature.
 ",
         )
         .run()

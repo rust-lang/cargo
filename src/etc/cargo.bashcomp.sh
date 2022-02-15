@@ -50,9 +50,13 @@ _cargo()
 	local opt___nocmd="$opt_common -V --version --list --explain"
 	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --no-run --no-fail-fast --target-dir"
 	local opt__build="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --profile --target-dir"
+	local opt__b="$opt__build"
 	local opt__check="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --profile --target-dir"
+	local opt__c="$opt__check"
 	local opt__clean="$opt_common $opt_pkg $opt_mani $opt_lock --target --release --doc --target-dir --profile"
+	local opt__clippy="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --profile --target-dir --no-deps --fix"
 	local opt__doc="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs --message-format --bin --bins --lib --target --open --no-deps --release --document-private-items --target-dir --profile"
+	local opt__d="$opt__doc"
 	local opt__fetch="$opt_common $opt_mani $opt_lock --target"
 	local opt__fix="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_jobs $opt_targets $opt_lock --release --target --message-format --broken-code --edition --edition-idioms --allow-no-vcs --allow-dirty --allow-staged --profile --target-dir"
 	local opt__generate_lockfile="$opt_common $opt_mani $opt_lock"
@@ -68,11 +72,15 @@ _cargo()
 	local opt__pkgid="$opt_common $opt_mani $opt_lock $opt_pkg"
 	local opt__publish="$opt_common $opt_mani $opt_feat $opt_lock $opt_jobs --allow-dirty --dry-run --token --no-verify --index --registry --target --target-dir"
 	local opt__read_manifest="$opt_help $opt_quiet $opt_verbose $opt_mani $opt_color $opt_lock --no-deps"
+	local opt__report="$opt_help $opt_verbose $opt_color future-incompat future-incompatibilities"
+	local opt__report__future_incompat="$opt_help $opt_verbose $opt_color $opt_pkg --id"
 	local opt__run="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs --message-format --target --bin --example --release --target-dir --profile"
+	local opt__r="$opt__run"
 	local opt__rustc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets -L --crate-type --extern --message-format --profile --target --release --target-dir"
 	local opt__rustdoc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --open --target-dir --profile"
 	local opt__search="$opt_common $opt_lock --limit --index --registry"
 	local opt__test="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --doc --target --no-run --release --no-fail-fast --target-dir --profile"
+	local opt__t="$opt__test"
 	local opt__tree="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock --target -i --invert --prefix --no-dedupe --duplicates -d --charset -f --format -e --edges"
 	local opt__uninstall="$opt_common $opt_lock $opt_pkg --bin --root"
 	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --precise --dry-run"
@@ -97,7 +105,8 @@ _cargo()
 		elif [[ "$cur" == +* ]]; then
 			COMPREPLY=( $( compgen -W "$(_toolchains)" -- "$cur" ) )
 		else
-			COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
+			_ensure_cargo_commands_cache_filled
+			COMPREPLY=( $( compgen -W "$__cargo_commands_cache" -- "$cur" ) )
 		fi
 	else
 		case "${prev}" in
@@ -132,10 +141,15 @@ _cargo()
 				_filedir -d
 				;;
 			help)
-				COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
+				_ensure_cargo_commands_cache_filled
+				COMPREPLY=( $( compgen -W "$__cargo_commands_cache" -- "$cur" ) )
 				;;
 			*)
-				local opt_var=opt__${cmd//-/_}
+				if [[ "$cmd" == "report" && "$prev" == future-incompat* ]]; then
+					local opt_var=opt__${cmd//-/_}__${prev//-/_}
+				else
+					local opt_var=opt__${cmd//-/_}
+				fi
 				if [[ -z "${!opt_var}" ]]; then
 					# Fallback to filename completion.
 					_filedir
@@ -152,7 +166,12 @@ _cargo()
 } &&
 complete -F _cargo cargo
 
-__cargo_commands=$(cargo --list 2>/dev/null | awk 'NR>1 {print $1}')
+__cargo_commands_cache=
+_ensure_cargo_commands_cache_filled(){
+	if [[ -z $__cargo_commands_cache ]]; then
+		__cargo_commands_cache="$(cargo --list 2>/dev/null | awk 'NR>1 {print $1}')"
+	fi
+}
 
 _locate_manifest(){
 	cargo locate-project --message-format plain 2>/dev/null

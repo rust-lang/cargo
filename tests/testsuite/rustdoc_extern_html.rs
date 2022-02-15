@@ -60,6 +60,8 @@ fn simple() {
 }
 
 #[cargo_test]
+// Broken, temporarily disable until https://github.com/rust-lang/rust/pull/82776 is resolved.
+#[ignore]
 fn std_docs() {
     // Mapping std docs somewhere else.
     if !is_nightly() {

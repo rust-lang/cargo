@@ -71,6 +71,15 @@ flag can be used to display the package's reverse dependencies only with the
 subtree of the package given to <code>-p</code>.</dd>
 
 
+<dt class="option-term" id="option-cargo-tree---prune"><a class="option-anchor" href="#option-cargo-tree---prune"></a><code>--prune</code> <em>spec</em></dt>
+<dd class="option-desc">Prune the given package from the display of the dependency tree.</dd>
+
+
+<dt class="option-term" id="option-cargo-tree---depth"><a class="option-anchor" href="#option-cargo-tree---depth"></a><code>--depth</code> <em>depth</em></dt>
+<dd class="option-desc">Maximum display depth of the dependency tree. A depth of 1 displays the direct
+dependencies, for example.</dd>
+
+
 <dt class="option-term" id="option-cargo-tree---no-dedupe"><a class="option-anchor" href="#option-cargo-tree---no-dedupe"></a><code>--no-dedupe</code></dt>
 <dd class="option-desc">Do not de-duplicate repeated dependencies. Usually, when a package has already
 displayed its dependencies, further occurrences will not re-display its
@@ -103,8 +112,10 @@ kind given, then it will automatically include the other dependency kinds.</li>
 <li><code>no-normal</code> — Do not include normal dependencies.</li>
 <li><code>no-build</code> — Do not include build dependencies.</li>
 <li><code>no-dev</code> — Do not include development dependencies.</li>
+<li><code>no-proc-macro</code> — Do not include procedural macro dependencies.</li>
 </ul>
-<p>The <code>no-</code> prefixed options cannot be mixed with the other dependency kinds.</p>
+<p>The <code>normal</code>, <code>build</code>, <code>dev</code>, and <code>all</code> dependency kinds cannot be mixed with
+<code>no-normal</code>, <code>no-build</code>, or <code>no-dev</code> dependency kinds.</p>
 <p>The default is <code>normal,build,dev</code>.</dd>
 
 
@@ -134,6 +145,7 @@ strings will be replaced with the corresponding value:</p>
 <li><code>{l}</code> — The package license.</li>
 <li><code>{r}</code> — The package repository URL.</li>
 <li><code>{f}</code> — Comma-separated list of package features that are enabled.</li>
+<li><code>{lib}</code> — The name, as used in a <code>use</code> statement, of the package's library.</li>
 </ul></dd>
 
 
@@ -268,7 +280,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-tree--q"><a class="option-anchor" href="#option-cargo-tree--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-tree---quiet"><a class="option-anchor" href="#option-cargo-tree---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-tree---color"><a class="option-anchor" href="#option-cargo-tree---color"></a><code>--color</code> <em>when</em></dt>

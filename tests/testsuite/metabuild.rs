@@ -25,14 +25,19 @@ fn metabuild_gated() {
     p.cargo("build")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   feature `metabuild` is required
 
-  consider adding `cargo-features = [\"metabuild\"]` to the manifest
+  The package requires the Cargo feature called `metabuild`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"metabuild\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild \
+  for more information about the status of this feature.
 ",
         )
         .run();
@@ -427,13 +432,10 @@ fn metabuild_metadata() {
     // The metabuild Target is filtered out of the `metadata` results.
     let p = basic_project();
 
-    let output = p
+    let meta = p
         .cargo("metadata --format-version=1")
         .masquerade_as_nightly_cargo()
-        .exec_with_output()
-        .expect("cargo metadata failed");
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
+        .run_json();
     let mb_info: Vec<&str> = meta["packages"]
         .as_array()
         .unwrap()
@@ -740,7 +742,7 @@ fn metabuild_failed_build_json() {
                 "code": "{...}",
                 "level": "error",
                 "message": "cannot find function `metabuild` in [..] `mb`",
-                "rendered": "[..]",
+                "rendered": "{...}",
                 "spans": "{...}"
               },
               "package_id": "foo [..]",

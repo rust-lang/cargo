@@ -168,7 +168,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context as _;
 use flate2::read::GzDecoder;
 use log::debug;
-use semver::{Version, VersionReq};
+use semver::Version;
 use serde::Deserialize;
 use tar::Archive;
 
@@ -179,18 +179,20 @@ use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
-use crate::util::{restricted_names, CargoResult, Config, Filesystem};
+use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
+pub const CRATES_IO_DOMAIN: &str = "crates.io";
 const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
+const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
-/// A "source" for a [local](local::LocalRegistry) or
-/// [remote](remote::RemoteRegistry) registry.
+/// A "source" for a local (see `local::LocalRegistry`) or remote (see
+/// `remote::RemoteRegistry`) registry.
 ///
 /// This contains common functionality that is shared between the two registry
 /// kinds, with the registry-specific logic implemented as part of the
@@ -235,7 +237,8 @@ pub struct RegistryConfig {
     /// respectively.  The substring `{prefix}` will be replaced with the
     /// crate's prefix directory name, and the substring `{lowerprefix}` will
     /// be replaced with the crate's prefix directory name converted to
-    /// lowercase.
+    /// lowercase. The substring `{sha256-checksum}` will be replaced with the
+    /// crate's sha256 checksum.
     ///
     /// For backwards compatibility, if the string does not contain any
     /// markers (`{crate}`, `{version}`, `{prefix}`, or ``{lowerprefix}`), it
@@ -373,7 +376,7 @@ impl<'a> RegistryDependency<'a> {
             default
         };
 
-        let mut dep = Dependency::parse_no_deprecated(package.unwrap_or(name), Some(&req), id)?;
+        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
         if package.is_some() {
             dep.set_explicit_name_in_toml(name);
         }
@@ -415,8 +418,8 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
-/// An abstract interface to handle both a [local](local::LocalRegistry) and
-/// [remote](remote::RemoteRegistry) registry.
+/// An abstract interface to handle both a local (see `local::LocalRegistry`)
+/// and remote (see `remote::RemoteRegistry`) registry.
 ///
 /// This allows [`RegistrySource`] to abstractly handle both registry kinds.
 pub trait RegistryData {
@@ -460,9 +463,9 @@ pub trait RegistryData {
     /// Despite the name, this doesn't actually download anything. If the
     /// `.crate` is already downloaded, then it returns [`MaybeLock::Ready`].
     /// If it hasn't been downloaded, then it returns [`MaybeLock::Download`]
-    /// which contains the URL to download. The [`crate::core::package::Download`]
+    /// which contains the URL to download. The [`crate::core::package::Downloads`]
     /// system handles the actual download process. After downloading, it
-    /// calls [`finish_download`] to save the downloaded file.
+    /// calls [`Self::finish_download`] to save the downloaded file.
     ///
     /// `checksum` is currently only used by local registries to verify the
     /// file contents (because local registries never actually download
@@ -474,7 +477,7 @@ pub trait RegistryData {
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
-    /// After [`crate::core::package::Download`] has finished a download,
+    /// After [`crate::core::package::Downloads`] has finished a download,
     /// it will call this to save the `.crate` file. This is only relevant
     /// for remote registries. This should validate the checksum and save
     /// the given data to the on-disk cache.
@@ -671,7 +674,7 @@ impl<'cfg> RegistrySource<'cfg> {
 
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
-        let req = VersionReq::exact(package.version());
+        let req = OptVersionReq::exact(package.version());
         let summary_with_cksum = self
             .index
             .summaries(package.name(), &req, &mut *self.ops)?

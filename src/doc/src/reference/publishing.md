@@ -119,11 +119,9 @@ And that’s it, you’ve now published your first crate!
 
 ### Publishing a new version of an existing crate
 
-In order to release a new version, change the `version` value specified in
-your `Cargo.toml` manifest. Keep in mind [the semver
-rules](manifest.md#the-version-field), and consult [RFC 1105] for
-what constitutes a semver-breaking change. Then run [`cargo publish`] as
-described above to upload the new version.
+In order to release a new version, change [the `version` value](manifest.md#the-version-field) specified in your `Cargo.toml` manifest.
+Keep in mind [the SemVer rules](semver.md) which provide guidelines on what is a compatible change.
+Then run [`cargo publish`] as described above to upload the new version.
 
 ### Managing a crates.io-based crate
 
@@ -255,7 +253,6 @@ listed in the "Organization access" list with a green check mark. If there's
 a button labeled `Grant` or `Request`, you should grant the access or
 request the org owner to do so.
 
-[RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
 [Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
 [`cargo login`]: ../commands/cargo-login.md
 [`cargo package`]: ../commands/cargo-package.md

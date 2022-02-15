@@ -123,15 +123,13 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
         });
         for candidate in candidates {
             if candidate.is_file() {
-                // PATH may have a component like "." in it, so we still need to
-                // canonicalize.
-                return Ok(candidate.canonicalize()?);
+                return Ok(candidate);
             }
         }
 
         anyhow::bail!("no executable for `{}` found in PATH", exec.display())
     } else {
-        Ok(exec.canonicalize()?)
+        Ok(exec.into())
     }
 }
 
@@ -161,7 +159,7 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
         .with_context(|| format!("failed to write `{}`", path.display()))
 }
 
-/// Equivalent to [`write`], but does not write anything if the file contents
+/// Equivalent to [`write()`], but does not write anything if the file contents
 /// are identical to the given contents.
 pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     (|| -> Result<()> {
@@ -184,7 +182,7 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
     Ok(())
 }
 
-/// Equivalent to [`write`], but appends to the end instead of replacing the
+/// Equivalent to [`write()`], but appends to the end instead of replacing the
 /// contents.
 pub fn append(path: &Path, contents: &[u8]) -> Result<()> {
     (|| -> Result<()> {
@@ -422,7 +420,6 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
 fn _remove_dir_all(p: &Path) -> Result<()> {
     if p.symlink_metadata()
         .with_context(|| format!("could not get metadata for `{}` to remove", p.display()))?
-        .file_type()
         .is_symlink()
     {
         return remove_file(p);
@@ -541,7 +538,18 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
         // gory details.
         fs::copy(src, dst).map(|_| ())
     } else {
-        fs::hard_link(src, dst)
+        if cfg!(target_os = "macos") {
+            // This is a work-around for a bug on macos. There seems to be a race condition
+            // with APFS when hard-linking binaries. Gatekeeper does not have signing or
+            // hash informations stored in kernel when running the process. Therefore killing it.
+            // This problem does not appear when copying files as kernel has time to process it.
+            // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
+            // as fast as hardlinking.
+            // See https://github.com/rust-lang/cargo/issues/10060 for the details
+            fs::copy(src, dst).map(|_| ())
+        } else {
+            fs::hard_link(src, dst)
+        }
     };
     link_result
         .or_else(|err| {
@@ -637,6 +645,7 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // point as the old one).
     let tempdir = TempFileBuilder::new().prefix(base).tempdir_in(parent)?;
     exclude_from_backups(tempdir.path());
+    exclude_from_content_indexing(tempdir.path());
     // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
     // here to create the directory directly and fs::create_dir_all() explicitly treats
     // the directory being created concurrently by another thread or process as success,
@@ -668,6 +677,35 @@ fn exclude_from_backups(path: &Path) {
 ",
     );
     // Similarly to exclude_from_time_machine() we ignore errors here as it's an optional feature.
+}
+
+/// Marks the directory as excluded from content indexing.
+///
+/// This is recommended to prevent the content of derived/temporary files from being indexed.
+/// This is very important for Windows users, as the live content indexing significantly slows
+/// cargo's I/O operations.
+///
+/// This is currently a no-op on non-Windows platforms.
+fn exclude_from_content_indexing(path: &Path) {
+    #[cfg(windows)]
+    {
+        use std::iter::once;
+        use std::os::windows::prelude::OsStrExt;
+        use winapi::um::fileapi::{GetFileAttributesW, SetFileAttributesW};
+        use winapi::um::winnt::FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+
+        let path: Vec<u16> = path.as_os_str().encode_wide().chain(once(0)).collect();
+        unsafe {
+            SetFileAttributesW(
+                path.as_ptr(),
+                GetFileAttributesW(path.as_ptr()) | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+            );
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+    }
 }
 
 #[cfg(not(target_os = "macos"))]

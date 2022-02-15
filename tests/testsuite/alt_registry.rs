@@ -29,17 +29,16 @@ fn depend_on_alt_registry() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `alternative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::alt_registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     p.cargo("clean").run();
@@ -48,7 +47,7 @@ fn depend_on_alt_registry() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -179,19 +178,18 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `alternative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `alternative`)
+[DOWNLOADED] [..] v0.0.1 (registry `alternative`)
+[COMPILING] baz v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::alt_registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }
 
@@ -222,19 +220,18 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `alternative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `alternative`)
+[DOWNLOADED] [..] v0.0.1 (registry `alternative`)
+[COMPILING] baz v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::alt_registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }
 
@@ -407,21 +404,19 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .publish();
 
     p.cargo("build")
-        .with_stderr_unordered(&format!(
+        .with_stderr_unordered(
             "\
-[UPDATING] `{alt_reg}` index
-[UPDATING] `{reg}` index
+[UPDATING] `alternative` index
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] baz v0.0.1
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            alt_reg = registry::alt_registry_path().to_str().unwrap(),
-            reg = registry::registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }
 
@@ -892,20 +887,19 @@ fn alt_registry_and_crates_io_deps() {
         .publish();
 
     p.cargo("build")
-        .with_stderr_contains(format!(
-            "[UPDATING] `{}` index",
-            registry::alt_registry_path().to_str().unwrap()
-        ))
-        .with_stderr_contains(&format!(
-            "[UPDATING] `{}` index",
-            registry::registry_path().to_str().unwrap()
-        ))
-        .with_stderr_contains("[DOWNLOADED] crates_io_dep v0.0.1 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[DOWNLOADED] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[COMPILING] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[COMPILING] crates_io_dep v0.0.1")
-        .with_stderr_contains("[COMPILING] foo v0.0.1 ([CWD])")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s")
+        .with_stderr_unordered(
+            "\
+[UPDATING] `alternative` index
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] crates_io_dep v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] alt_reg_dep v0.1.0 (registry `alternative`)
+[COMPILING] alt_reg_dep v0.1.0 (registry `alternative`)
+[COMPILING] crates_io_dep v0.0.1
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
         .run();
 }
 
@@ -1313,7 +1307,7 @@ fn patch_alt_reg() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `[ROOT][..]` index
+[UPDATING] `alternative` index
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -1450,24 +1444,20 @@ fn no_api() {
         .build();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `alternative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::alt_registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     // Check all of the API commands.
-    let err = format!(
-        "[ERROR] registry `{}` does not support API commands",
-        registry::alt_registry_path().display()
-    );
+    let err = "[ERROR] registry `alternative` does not support API commands";
 
     p.cargo("login --registry alternative TOKEN")
         .with_status(101)
@@ -1679,9 +1669,11 @@ fn alt_reg_metadata() {
                         "publish": null,
                         "authors": [],
                         "categories": [],
+                        "default_run": null,
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "edition": "2015",
@@ -1735,9 +1727,11 @@ fn alt_reg_metadata() {
                         "publish": null,
                         "authors": [],
                         "categories": [],
+                        "default_run": null,
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "edition": "2015",
@@ -1759,9 +1753,11 @@ fn alt_reg_metadata() {
                         "publish": null,
                         "authors": [],
                         "categories": [],
+                        "default_run": null,
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "edition": "2015",
@@ -1783,9 +1779,11 @@ fn alt_reg_metadata() {
                         "publish": null,
                         "authors": [],
                         "categories": [],
+                        "default_run": null,
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "edition": "2015",
@@ -1832,9 +1830,11 @@ fn alt_reg_metadata() {
                         "publish": null,
                         "authors": [],
                         "categories": [],
+                        "default_run": null,
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "edition": "2015",
@@ -1869,9 +1869,11 @@ fn alt_reg_metadata() {
                         "publish": null,
                         "authors": [],
                         "categories": [],
+                        "default_run": null,
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "edition": "2015",
@@ -1965,9 +1967,11 @@ fn unknown_registry() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -1989,9 +1993,11 @@ fn unknown_registry() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -2026,9 +2032,11 @@ fn unknown_registry() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -2085,17 +2093,16 @@ fn registries_index_relative_url() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `relative` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `relative`)
+[COMPILING] bar v0.0.1 (registry `relative`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::alt_registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 }
 

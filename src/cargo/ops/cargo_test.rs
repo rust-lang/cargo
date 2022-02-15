@@ -84,8 +84,6 @@ fn run_unit_tests(
         script_meta,
     } in compilation.tests.iter()
     {
-        let test = unit.target.name().to_string();
-
         let test_path = unit.target.src_path().path().unwrap();
         let exe_display = if let TargetKind::Test = unit.target.kind() {
             format!(
@@ -117,20 +115,17 @@ fn run_unit_tests(
 
         let result = cmd.exec();
 
-        match result {
-            Err(e) => {
-                let e = e.downcast::<ProcessError>()?;
-                errors.push((
-                    unit.target.kind().clone(),
-                    test.clone(),
-                    unit.pkg.name().to_string(),
-                    e,
-                ));
-                if !options.no_fail_fast {
-                    break;
-                }
+        if let Err(e) = result {
+            let e = e.downcast::<ProcessError>()?;
+            errors.push((
+                unit.target.kind().clone(),
+                unit.target.name().to_string(),
+                unit.pkg.name().to_string(),
+                e,
+            ));
+            if !options.no_fail_fast {
+                break;
             }
-            Ok(()) => {}
         }
     }
 
@@ -178,6 +173,16 @@ fn run_doc_tests(
                 CompileKind::Target(target) => {
                     if target.short_name() != compilation.host {
                         // Skip doctests, -Zdoctest-xcompile not enabled.
+                        config.shell().verbose(|shell| {
+                            shell.note(format!(
+                                "skipping doctests for {} ({}), \
+                                 cross-compilation doctests are not yet supported\n\
+                                 See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
+                                 for more information.",
+                                unit.pkg,
+                                unit.target.description_named()
+                            ))
+                        })?;
                         continue;
                     }
                 }
@@ -234,6 +239,10 @@ fn run_doc_tests(
 
         for arg in test_args {
             p.arg("--test-args").arg(arg);
+        }
+
+        if config.shell().verbosity() == Verbosity::Quiet {
+            p.arg("--test-args").arg("--quiet");
         }
 
         p.args(args);

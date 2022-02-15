@@ -32,7 +32,9 @@ or the \fBbuild.rustdocflags\fR \fIconfig value\fR <https://doc.rust\-lang.org/c
 \fB\-\-open\fR
 .RS 4
 Open the docs in a browser after building them. This will use your default
-browser unless you define another one in the \fBBROWSER\fR environment variable.
+browser unless you define another one in the \fBBROWSER\fR environment variable
+or use the \fI\f(BIdoc.browser\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#docbrowser> configuration
+option.
 .RE
 .SS "Package Selection"
 By default, the package in the current working directory is selected. The \fB\-p\fR
@@ -164,11 +166,45 @@ target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
+\fB\-r\fR, 
 \fB\-\-release\fR
 .RS 4
-Document optimized artifacts with the \fBrelease\fR profile. See the
-PROFILES section for details on how this affects profile
-selection.
+Document optimized artifacts with the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Document with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Document the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's \fBrust\-version\fR field.
+.RE
+.sp
+\fB\-\-timings=\fR\fIfmts\fR
+.RS 4
+Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma\-separated list of output
+formats; \fB\-\-timings\fR without an argument will default to \fB\-\-timings=html\fR\&.
+Specifying an output format (rather than the default) is unstable and requires
+\fB\-Zunstable\-options\fR\&. Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine\-readable timing data.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+information about timing information.
+.RE
 .RE
 .SS "Output Options"
 .sp
@@ -193,7 +229,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -322,43 +360,6 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more
-details.
-.sp
-Profile selection depends on the target and crate being built. By default the
-\fBdev\fR or \fBtest\fR profiles are used. If the \fB\-\-release\fR flag is given, then the
-\fBrelease\fR or \fBbench\fR profiles are used.
-
-.TS
-allbox tab(:);
-lt lt lt.
-T{
-Target
-T}:T{
-Default Profile
-T}:T{
-\fB\-\-release\fR Profile
-T}
-T{
-lib, bin, example
-T}:T{
-\fBdev\fR
-T}:T{
-\fBrelease\fR
-T}
-T{
-test, bench, or any target in "test" or "bench" mode
-T}:T{
-\fBtest\fR
-T}:T{
-\fBbench\fR
-T}
-.TE
-.sp
-.sp
-Dependencies use the \fBdev\fR/\fBrelease\fR profiles.
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

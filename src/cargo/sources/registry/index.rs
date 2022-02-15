@@ -70,11 +70,11 @@ use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_V_MAX};
 use crate::util::interning::InternedString;
-use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
+use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
-use cargo_util::paths;
+use cargo_util::{paths, registry::make_dep_path};
 use log::{debug, info};
-use semver::{Version, VersionReq};
+use semver::Version;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
@@ -264,7 +264,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
     /// Returns the hash listed for a specified `PackageId`.
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<&str> {
-        let req = VersionReq::exact(pkg.version());
+        let req = OptVersionReq::exact(pkg.version());
         let summary = self
             .summaries(pkg.name(), &req, load)?
             .next()
@@ -285,7 +285,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn summaries<'a, 'b>(
         &'a mut self,
         name: InternedString,
-        req: &'b VersionReq,
+        req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
     ) -> CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>
     where
@@ -293,8 +293,6 @@ impl<'cfg> RegistryIndex<'cfg> {
     {
         let source_id = self.source_id;
         let config = self.config;
-        let namespaced_features = self.config.cli_unstable().namespaced_features;
-        let weak_dep_features = self.config.cli_unstable().weak_dep_features;
 
         // First up actually parse what summaries we have available. If Cargo
         // has run previously this will parse a Cargo-specific cache file rather
@@ -309,11 +307,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         // minimize the amount of work being done here and parse as little as
         // necessary.
         let raw_data = &summaries.raw_data;
-        let max_version = if namespaced_features || weak_dep_features {
-            INDEX_V_MAX
-        } else {
-            1
-        };
         Ok(summaries
             .versions
             .iter_mut()
@@ -328,7 +321,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 },
             )
             .filter(move |is| {
-                if is.v > max_version {
+                if is.v > INDEX_V_MAX {
                     debug!(
                         "unsupported schema version {} ({} {})",
                         is.v,
@@ -339,11 +332,6 @@ impl<'cfg> RegistryIndex<'cfg> {
                 } else {
                     true
                 }
-            })
-            .filter(move |is| {
-                is.summary
-                    .unstable_gate(namespaced_features, weak_dep_features)
-                    .is_ok()
             }))
     }
 
@@ -373,12 +361,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             .chars()
             .flat_map(|c| c.to_lowercase())
             .collect::<String>();
-        let raw_path = match fs_name.len() {
-            1 => format!("1/{}", fs_name),
-            2 => format!("2/{}", fs_name),
-            3 => format!("3/{}/{}", &fs_name[..1], fs_name),
-            _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
-        };
+        let raw_path = make_dep_path(&fs_name, false);
 
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries
@@ -465,19 +448,40 @@ impl<'cfg> RegistryIndex<'cfg> {
         // this source, `<p_req>` is the version installed and `<f_req> is the
         // version requested (argument to `--precise`).
         let name = dep.package_name().as_str();
-        let summaries = summaries.filter(|s| match source_id.precise() {
+        let precise = match source_id.precise() {
             Some(p) if p.starts_with(name) && p[name.len()..].starts_with('=') => {
                 let mut vers = p[name.len() + 1..].splitn(2, "->");
-                if dep
-                    .version_req()
-                    .matches(&vers.next().unwrap().to_semver().unwrap())
-                {
-                    vers.next().unwrap() == s.version().to_string()
+                let current_vers = vers.next().unwrap().to_semver().unwrap();
+                let requested_vers = vers.next().unwrap().to_semver().unwrap();
+                Some((current_vers, requested_vers))
+            }
+            _ => None,
+        };
+        let summaries = summaries.filter(|s| match &precise {
+            Some((current, requested)) => {
+                if dep.version_req().matches(current) {
+                    // Unfortunately crates.io allows versions to differ only
+                    // by build metadata. This shouldn't be allowed, but since
+                    // it is, this will honor it if requested. However, if not
+                    // specified, then ignore it.
+                    let s_vers = s.version();
+                    match (s_vers.build.is_empty(), requested.build.is_empty()) {
+                        (true, true) => s_vers == requested,
+                        (true, false) => false,
+                        (false, true) => {
+                            // Strip out the metadata.
+                            s_vers.major == requested.major
+                                && s_vers.minor == requested.minor
+                                && s_vers.patch == requested.patch
+                                && s_vers.pre == requested.pre
+                        }
+                        (false, false) => s_vers == requested,
+                    }
                 } else {
                     true
                 }
             }
-            _ => true,
+            None => true,
         });
 
         let mut count = 0;
@@ -489,7 +493,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     pub fn is_yanked(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<bool> {
-        let req = VersionReq::exact(pkg.version());
+        let req = OptVersionReq::exact(pkg.version());
         let found = self
             .summaries(pkg.name(), &req, load)?
             .any(|summary| summary.yanked);
@@ -607,15 +611,13 @@ impl Summaries {
         // present and considered fresh this is where the debug assertions
         // actually happens to verify that our cache is indeed fresh and
         // computes exactly the same value as before.
-        if cfg!(debug_assertions) && cache_contents.is_some() {
-            if cache_bytes != cache_contents {
-                panic!(
-                    "original cache contents:\n{:?}\n\
-                     does not equal new cache contents:\n{:?}\n",
-                    cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
-                    cache_bytes.as_ref().map(|s| String::from_utf8_lossy(s)),
-                );
-            }
+        if cfg!(debug_assertions) && cache_contents.is_some() && cache_bytes != cache_contents {
+            panic!(
+                "original cache contents:\n{:?}\n\
+                 does not equal new cache contents:\n{:?}\n",
+                cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
+                cache_bytes.as_ref().map(|s| String::from_utf8_lossy(s)),
+            );
         }
 
         // Once we have our `cache_bytes` which represents the `Summaries` we're
@@ -692,8 +694,16 @@ impl Summaries {
 // * `2`: Added the "index format version" field so that if the index format
 //   changes, different versions of cargo won't get confused reading each
 //   other's caches.
+// * `3`: Bumped the version to work around an issue where multiple versions of
+//   a package were published that differ only by semver metadata. For
+//   example, openssl-src 110.0.0 and 110.0.0+1.1.0f. Previously, the cache
+//   would be incorrectly populated with two entries, both 110.0.0. After
+//   this, the metadata will be correctly included. This isn't really a format
+//   change, just a version bump to clear the incorrect cache entries. Note:
+//   the index shouldn't allow these, but unfortunately crates.io doesn't
+//   check it.
 
-const CURRENT_CACHE_VERSION: u8 = 2;
+const CURRENT_CACHE_VERSION: u8 = 3;
 
 impl<'a> SummariesCache<'a> {
     fn parse(data: &'a [u8], last_index_update: &str) -> CargoResult<SummariesCache<'a>> {

@@ -10,6 +10,7 @@ use cargo_platform::Platform;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toml_edit::easy as toml;
 
 const VERSION: u32 = 1;
 
@@ -31,9 +32,8 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
             VERSION
         );
     }
-    let config = ws.config();
     let (packages, resolve) = if opt.no_deps {
-        let packages = ws.members().map(|pkg| pkg.serialized(config)).collect();
+        let packages = ws.members().map(|pkg| pkg.serialized()).collect();
         (packages, None)
     } else {
         let (packages, resolve) = build_resolve_graph(ws, opt)?;
@@ -152,11 +152,10 @@ fn build_resolve_graph(
         );
     }
     // Get a Vec of Packages.
-    let config = ws.config();
     let actual_packages = package_map
         .into_iter()
         .filter_map(|(pkg_id, pkg)| node_map.get(&pkg_id).map(|_| pkg))
-        .map(|pkg| pkg.serialized(config))
+        .map(|pkg| pkg.serialized())
         .collect();
 
     let mr = MetadataResolve {

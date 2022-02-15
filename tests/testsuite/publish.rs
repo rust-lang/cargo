@@ -2,7 +2,7 @@
 
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
-use cargo_test_support::registry::{self, registry_path, registry_url, Package};
+use cargo_test_support::registry::{self, registry_url, Package};
 use cargo_test_support::{basic_manifest, no_such_file_err_msg, project, publish};
 use std::fs;
 
@@ -56,6 +56,34 @@ fn validate_upload_foo() {
     );
 }
 
+fn validate_upload_bar() {
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "bar",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "bar",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "bar-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
 fn validate_upload_foo_clean() {
     publish::validate_upload(
         CLEAN_FOO_JSON,
@@ -90,16 +118,15 @@ fn simple() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = registry::registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     validate_upload_foo();
@@ -141,9 +168,9 @@ fn old_token_location() {
     fs::write(&credentials, r#"token = "api-token""#).unwrap();
 
     p.cargo("publish --no-verify")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [WARNING] using `registry.token` config value with source replacement is deprecated
 This may become a hard error in the future[..]
 Use the --token command-line flag to remove this warning.
@@ -152,64 +179,14 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = registry_path().to_str().unwrap()
-        ))
-        .run();
-
-    validate_upload_foo();
-}
-
-// TODO: Deprecated
-// remove once it has been decided --host can be removed
-#[cargo_test]
-fn simple_with_host() {
-    registry::init();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                license = "MIT"
-                description = "foo"
-            "#,
         )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("publish --no-verify --token sekrit --host")
-        .arg(registry_url().to_string())
-        .with_stderr(&format!(
-            "\
-[WARNING] The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.
-[UPDATING] `{reg}` index
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-            reg = registry_path().to_str().unwrap()
-        ))
         .run();
 
     validate_upload_foo();
 }
 
-// TODO: Deprecated
-// remove once it has been decided --host can be removed
 #[cargo_test]
-fn simple_with_index_and_host() {
+fn simple_with_index() {
     registry::init();
 
     let p = project()
@@ -229,27 +206,6 @@ fn simple_with_index_and_host() {
 
     p.cargo("publish --no-verify --token sekrit --index")
         .arg(registry_url().to_string())
-        .arg("--host")
-        .arg(registry_url().to_string())
-        .with_stderr(&format!(
-            "\
-[WARNING] The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.
-[UPDATING] `{reg}` index
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-            reg = registry_path().to_str().unwrap()
-        ))
         .run();
 
     validate_upload_foo();
@@ -1213,22 +1169,42 @@ fn publish_git_with_version() {
             (
                 "Cargo.toml",
                 // Check that only `version` is included in Cargo.toml.
-                "[..]\n\
-                 [dependencies.dep1]\n\
-                 version = \"1.0\"\n\
-                 ",
+                &format!(
+                    "{}\n\
+                     [package]\n\
+                     edition = \"2018\"\n\
+                     name = \"foo\"\n\
+                     version = \"0.1.0\"\n\
+                     authors = []\n\
+                     description = \"foo\"\n\
+                     license = \"MIT\"\n\
+                     \n\
+                     [dependencies.dep1]\n\
+                     version = \"1.0\"\n\
+                    ",
+                    cargo::core::package::MANIFEST_PREAMBLE
+                ),
             ),
             (
                 "Cargo.lock",
                 // The important check here is that it is 1.0.1 in the registry.
-                "[..]\n\
+                "# This file is automatically @generated by Cargo.\n\
+                 # It is not intended for manual editing.\n\
+                 version = 3\n\
+                 \n\
+                 [[package]]\n\
+                 name = \"dep1\"\n\
+                 version = \"1.0.1\"\n\
+                 source = \"registry+https://github.com/rust-lang/crates.io-index\"\n\
+                 checksum = \"[..]\"\n\
+                 \n\
                  [[package]]\n\
                  name = \"foo\"\n\
                  version = \"0.1.0\"\n\
                  dependencies = [\n\
                  \x20\"dep1\",\n\
                  ]\n\
-                 [..]",
+                 ",
             ),
         ],
     );
@@ -1297,7 +1273,8 @@ fn publish_dev_dep_no_version() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
@@ -1310,6 +1287,8 @@ repository = "foo"
 
 [dev-dependencies]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }
@@ -1683,4 +1662,72 @@ Caused by:
         .run();
 
     t.join().unwrap();
+}
+
+#[cargo_test]
+fn in_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit -p foo")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD]/foo)
+[UPLOADING] foo v0.0.1 ([CWD]/foo)
+",
+        )
+        .run();
+
+    validate_upload_foo();
+
+    p.cargo("publish --no-verify --token sekrit -p bar")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[UPLOADING] bar v0.0.1 ([CWD]/bar)
+",
+        )
+        .run();
+
+    validate_upload_bar();
 }

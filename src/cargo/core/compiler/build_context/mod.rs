@@ -33,6 +33,9 @@ pub struct BuildContext<'a, 'cfg> {
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit, Vec<String>>,
 
+    // Crate types for `rustc`.
+    pub target_rustc_crate_types: HashMap<Unit, Vec<String>>,
+
     /// Package downloader.
     ///
     /// This holds ownership of the `Package` objects.
@@ -47,6 +50,9 @@ pub struct BuildContext<'a, 'cfg> {
     /// The dependency graph of units to compile.
     pub unit_graph: UnitGraph,
 
+    /// Reverse-dependencies of documented units, used by the rustdoc --scrape-examples flag.
+    pub scrape_units: Vec<Unit>,
+
     /// The list of all kinds that are involved in this build
     pub all_kinds: HashSet<CompileKind>,
 }
@@ -58,9 +64,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         build_config: &'a BuildConfig,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
+        target_rustc_crate_types: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
+        scrape_units: Vec<Unit>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let all_kinds = unit_graph
             .keys()
@@ -76,9 +84,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             build_config,
             profiles,
             extra_compiler_args,
+            target_rustc_crate_types,
             target_data,
             roots,
             unit_graph,
+            scrape_units,
             all_kinds,
         })
     }
@@ -121,5 +131,9 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
+    }
+
+    pub fn rustc_crate_types_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
+        self.target_rustc_crate_types.get(unit)
     }
 }
