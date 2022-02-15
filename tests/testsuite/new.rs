@@ -89,7 +89,7 @@ fn simple_git() {
 
     let fp = paths::root().join("foo/.gitignore");
     let contents = fs::read_to_string(&fp).unwrap();
-    assert_eq!(contents, "/target\nCargo.lock\n",);
+    assert_eq!(contents, "/target\n/Cargo.lock\n",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
