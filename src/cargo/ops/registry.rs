@@ -363,11 +363,7 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (
-                index,
-                token,
-                process,
-            )
+            (index, token, process)
         }
         None => {
             // Use crates.io default.
