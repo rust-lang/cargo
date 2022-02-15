@@ -1,6 +1,5 @@
 //! Tests for the `cargo search` command.
 
-use cargo::core::GitReference;
 use cargo_test_support::cargo_process;
 use cargo_test_support::git::repo;
 use cargo_test_support::paths;
@@ -151,8 +150,7 @@ fn not_update() {
         paths::home().join(".cargo"),
     );
     let lock = cfg.acquire_package_cache_lock().unwrap();
-    let mut regsrc =
-        RegistrySource::remote(sid, &HashSet::new(), &cfg, GitReference::DefaultBranch);
+    let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
     regsrc.update().unwrap();
     drop(lock);
 

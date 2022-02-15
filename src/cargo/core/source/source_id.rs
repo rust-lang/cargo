@@ -49,7 +49,7 @@ enum SourceKind {
     /// A local path.
     Path,
     /// A remote registry.
-    Registry,
+    Registry(GitReference),
     /// A local filesystem-based registry.
     LocalRegistry,
     /// A directory-based registry.
@@ -131,8 +131,15 @@ impl SourceId {
                 Ok(SourceId::for_git(&url, reference)?.with_precise(precise))
             }
             "registry" => {
-                let url = url.into_url()?;
-                Ok(SourceId::new(SourceKind::Registry, url)?
+                let mut url = url.into_url()?;
+                let branch = url
+                    .query_pairs()
+                    .find(|(k, _)| k == "branch")
+                    .map(|(_, v)| GitReference::Branch(v.into_owned()))
+                    .unwrap_or(GitReference::DefaultBranch);
+                url.set_fragment(None);
+                url.set_query(None);
+                Ok(SourceId::new(SourceKind::Registry(branch), url)?
                     .with_precise(Some("locked".to_string())))
             }
             "path" => {
@@ -165,7 +172,10 @@ impl SourceId {
 
     /// Creates a SourceId from a registry URL.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Registry, url.clone())
+        SourceId::new(
+            SourceKind::Registry(GitReference::DefaultBranch),
+            url.clone(),
+        )
     }
 
     /// Creates a SourceId from a local registry path.
@@ -195,7 +205,7 @@ impl SourceId {
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
         Ok(SourceId::wrap(SourceIdInner {
-            kind: SourceKind::Registry,
+            kind: SourceKind::Registry(config.get_registry_branch(key)?),
             canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
@@ -258,7 +268,7 @@ impl SourceId {
     pub fn is_registry(self) -> bool {
         matches!(
             self.inner.kind,
-            SourceKind::Registry | SourceKind::LocalRegistry
+            SourceKind::Registry(_) | SourceKind::LocalRegistry
         )
     }
 
@@ -267,7 +277,7 @@ impl SourceId {
     /// "remote" may also mean a file URL to a git index, so it is not
     /// necessarily "remote". This just means it is not `local-registry`.
     pub fn is_remote_registry(self) -> bool {
-        matches!(self.inner.kind, SourceKind::Registry)
+        matches!(self.inner.kind, SourceKind::Registry(_))
     }
 
     /// Returns `true` if this source from a Git repository.
@@ -282,7 +292,7 @@ impl SourceId {
         yanked_whitelist: &HashSet<PackageId>,
     ) -> CargoResult<Box<dyn super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
-        match self.inner.kind {
+        match &self.inner.kind {
             SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
             SourceKind::Path => {
                 let path = match self.inner.url.to_file_path() {
@@ -291,18 +301,10 @@ impl SourceId {
                 };
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
-            SourceKind::Registry => Ok(Box::new(RegistrySource::remote(
+            SourceKind::Registry(_) => Ok(Box::new(RegistrySource::remote(
                 self,
                 yanked_whitelist,
                 config,
-                if config.cli_unstable().registry_branches {
-                    config
-                        .cli_unstable()
-                        .fail_if_stable_opt("registry-branches", 0)?;
-                    config.get_registry_branch_from_id(&self)?
-                } else {
-                    GitReference::DefaultBranch
-                },
             ))),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
@@ -339,6 +341,14 @@ impl SourceId {
         }
     }
 
+    /// Gets the Git reference if this is a registry source, otherwise `None`.
+    pub fn registry_branch(&self) -> Option<&GitReference> {
+        match &self.inner.kind {
+            SourceKind::Registry(branch) => Some(branch),
+            _ => None,
+        }
+    }
+
     /// Creates a new `SourceId` from this source with the given `precise`.
     pub fn with_precise(self, v: Option<String>) -> SourceId {
         SourceId::wrap(SourceIdInner {
@@ -350,7 +360,7 @@ impl SourceId {
     /// Returns `true` if the remote registry is the standard <https://crates.io>.
     pub fn is_default_registry(self) -> bool {
         match self.inner.kind {
-            SourceKind::Registry => {}
+            SourceKind::Registry(_) => {}
             _ => return false,
         }
         self.inner.url.as_str() == CRATES_IO_INDEX
@@ -479,7 +489,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
-            SourceKind::Registry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            SourceKind::Registry(_) => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
@@ -566,9 +576,9 @@ impl Ord for SourceKind {
             (SourceKind::Path, _) => Ordering::Less,
             (_, SourceKind::Path) => Ordering::Greater,
 
-            (SourceKind::Registry, SourceKind::Registry) => Ordering::Equal,
-            (SourceKind::Registry, _) => Ordering::Less,
-            (_, SourceKind::Registry) => Ordering::Greater,
+            (SourceKind::Registry(a), SourceKind::Registry(b)) => a.cmp(b),
+            (SourceKind::Registry(_), _) => Ordering::Less,
+            (_, SourceKind::Registry(_)) => Ordering::Greater,
 
             (SourceKind::LocalRegistry, SourceKind::LocalRegistry) => Ordering::Equal,
             (SourceKind::LocalRegistry, _) => Ordering::Less,
@@ -600,7 +610,7 @@ impl Ord for SourceKind {
 fn test_cratesio_hash() {
     let config = Config::default().unwrap();
     let crates_io = SourceId::crates_io(&config).unwrap();
-    assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
+    assert_eq!(crate::util::hex::short_hash(&crates_io), "60ca93cad0e69d9a");
 }
 
 /// A `Display`able view into a `SourceId` that will write it as a url
@@ -610,7 +620,7 @@ pub struct SourceIdAsUrl<'a> {
 
 impl<'a> fmt::Display for SourceIdAsUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self.inner {
+        match self.inner {
             SourceIdInner {
                 kind: SourceKind::Path,
                 ref url,
@@ -632,10 +642,16 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 Ok(())
             }
             SourceIdInner {
-                kind: SourceKind::Registry,
+                kind: SourceKind::Registry(branch),
                 ref url,
                 ..
-            } => write!(f, "registry+{}", url),
+            } => {
+                write!(f, "registry+{}", url)?;
+                if let Some(pretty) = branch.pretty_ref() {
+                    write!(f, "?{}", pretty)?;
+                }
+                Ok(())
+            }
             SourceIdInner {
                 kind: SourceKind::LocalRegistry,
                 ref url,

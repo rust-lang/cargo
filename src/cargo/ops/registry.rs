@@ -18,7 +18,7 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
-use crate::core::{GitReference, Package, SourceId, Workspace};
+use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
@@ -37,7 +37,6 @@ mod auth;
 pub struct RegistryConfig {
     /// The index URL. If `None`, use crates.io.
     pub index: Option<String>,
-    pub branch: GitReference,
     /// The authentication token.
     pub token: Option<String>,
     /// Process used for fetching a token.
@@ -361,7 +360,7 @@ pub fn registry_configuration(
         ))
     };
     // `registry.default` is handled in command-line parsing.
-    let (index, branch, token, process) = match registry {
+    let (index, token, process) = match registry {
         Some(registry) => {
             validate_package_name(registry, "registry name", "")?;
             let index = Some(config.get_registry_index(registry)?.to_string());
@@ -384,14 +383,6 @@ pub fn registry_configuration(
             };
             (
                 index,
-                if config.cli_unstable().registry_branches {
-                    config
-                        .cli_unstable()
-                        .fail_if_stable_opt("registry-branches", 0)?;
-                    config.get_registry_branch(registry)?
-                } else {
-                    GitReference::DefaultBranch
-                },
                 token,
                 process,
             )
@@ -410,7 +401,7 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (None, GitReference::DefaultBranch, token, process)
+            (None, token, process)
         }
     };
 
@@ -419,7 +410,6 @@ pub fn registry_configuration(
 
     Ok(RegistryConfig {
         index,
-        branch,
         token,
         credential_process,
     })
@@ -461,7 +451,7 @@ fn registry(
     }
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
-        let mut src = RegistrySource::remote(sid, &HashSet::new(), config, reg_cfg.branch.clone());
+        let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
         // Only update the index if the config is not available or `force` is set.
         let cfg = src.config();
         let mut updated_cfg = || {

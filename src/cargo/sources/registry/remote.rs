@@ -47,18 +47,16 @@ pub struct RemoteRegistry<'cfg> {
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
-    pub fn new(
-        source_id: SourceId,
-        config: &'cfg Config,
-        name: &str,
-        branch: GitReference,
-    ) -> RemoteRegistry<'cfg> {
+    pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
         RemoteRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            index_git_ref: branch,
+            index_git_ref: source_id
+                .registry_branch()
+                .cloned()
+                .unwrap_or(GitReference::DefaultBranch),
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
