@@ -1435,3 +1435,21 @@ fn remap_path_prefix_works() {
         .with_stdout("/foo/home/.cargo/registry/src/[..]/bar-0.1.0/src/lib.rs")
         .run();
 }
+
+#[cargo_test]
+fn host_config_rustflags_with_target() {
+    // regression test for https://github.com/rust-lang/cargo/issues/10206
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("build.rs.rs", "fn main() { assert!(cfg!(foo)); }")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Zhost-config")
+        .arg("-Ztarget-applies-to-host=no")
+        .arg("-Zunstable-options")
+        .arg("--config")
+        .arg("host.rustflags=[\"--cfg=foo\"]")
+        .run();
+}
