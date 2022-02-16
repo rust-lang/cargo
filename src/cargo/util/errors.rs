@@ -100,6 +100,39 @@ impl fmt::Display for InternalError {
 }
 
 // =============================================================================
+// Already printed error
+
+/// An error that does not need to be printed because it does not add any new
+/// information to what has already been printed.
+pub struct AlreadyPrintedError {
+    inner: Error,
+}
+
+impl AlreadyPrintedError {
+    pub fn new(inner: Error) -> Self {
+        AlreadyPrintedError { inner }
+    }
+}
+
+impl std::error::Error for AlreadyPrintedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.source()
+    }
+}
+
+impl fmt::Debug for AlreadyPrintedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl fmt::Display for AlreadyPrintedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+// =============================================================================
 // Manifest error
 
 /// Error wrapper related to a particular manifest and providing it's path.

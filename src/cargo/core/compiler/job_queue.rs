@@ -77,6 +77,7 @@ use crate::core::compiler::future_incompat::{
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, Shell, TargetKind};
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
+use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
 use crate::util::{self, internal, profile};
@@ -167,6 +168,10 @@ struct DrainState<'cfg> {
     /// How many jobs we've finished
     finished: usize,
     per_package_future_incompat_reports: Vec<FutureIncompatReportPackage>,
+}
+
+pub struct ErrorsDuringDrain {
+    pub count: usize,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -786,14 +791,14 @@ impl<'cfg> DrainState<'cfg> {
         // After a job has finished we update our internal state if it was
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
-        let mut error = None;
+        let mut errors = ErrorsDuringDrain { count: 0 };
         // CAUTION! Do not use `?` or break out of the loop early. Every error
         // must be handled in such a way that the loop is still allowed to
         // drain event messages.
         loop {
-            if error.is_none() {
+            if errors.count == 0 {
                 if let Err(e) = self.spawn_work_if_possible(cx, jobserver_helper, scope) {
-                    self.handle_error(&mut cx.bcx.config.shell(), &mut error, e);
+                    self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
                 }
             }
 
@@ -804,7 +809,7 @@ impl<'cfg> DrainState<'cfg> {
             }
 
             if let Err(e) = self.grant_rustc_token_requests() {
-                self.handle_error(&mut cx.bcx.config.shell(), &mut error, e);
+                self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
             }
 
             // And finally, before we block waiting for the next event, drop any
@@ -814,7 +819,7 @@ impl<'cfg> DrainState<'cfg> {
             // to the jobserver itself.
             for event in self.wait_for_events() {
                 if let Err(event_err) = self.handle_event(cx, jobserver_helper, plan, event) {
-                    self.handle_error(&mut cx.bcx.config.shell(), &mut error, event_err);
+                    self.handle_error(&mut cx.bcx.config.shell(), &mut errors, event_err);
                 }
             }
         }
@@ -839,30 +844,24 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
-        if let Err(e) = self.timings.finished(cx, &error) {
-            if error.is_some() {
-                crate::display_error(&e, &mut cx.bcx.config.shell());
-            } else {
-                return Some(e);
-            }
+        if let Err(e) = self.timings.finished(cx, &errors.to_error()) {
+            self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
         }
         if cx.bcx.build_config.emit_json() {
             let mut shell = cx.bcx.config.shell();
             let msg = machine_message::BuildFinished {
-                success: error.is_none(),
+                success: errors.count == 0,
             }
             .to_json_string();
             if let Err(e) = writeln!(shell.out(), "{}", msg) {
-                if error.is_some() {
-                    crate::display_error(&e.into(), &mut shell);
-                } else {
-                    return Some(e.into());
-                }
+                self.handle_error(&mut shell, &mut errors, e.into());
             }
         }
 
-        if let Some(e) = error {
-            Some(e)
+        if let Some(error) = errors.to_error() {
+            // Any errors up to this point have already been printed via the
+            // `display_error` inside `handle_error`.
+            Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
             let message = format!(
                 "{} [{}] target(s) in {}",
@@ -887,19 +886,14 @@ impl<'cfg> DrainState<'cfg> {
     fn handle_error(
         &self,
         shell: &mut Shell,
-        err_state: &mut Option<anyhow::Error>,
+        err_state: &mut ErrorsDuringDrain,
         new_err: anyhow::Error,
     ) {
-        if err_state.is_some() {
-            // Already encountered one error.
-            log::warn!("{:?}", new_err);
-        } else if !self.active.is_empty() {
-            crate::display_error(&new_err, shell);
+        crate::display_error(&new_err, shell);
+        if !self.active.is_empty() && err_state.count == 0 {
             drop(shell.warn("build failed, waiting for other jobs to finish..."));
-            *err_state = Some(anyhow::format_err!("build failed"));
-        } else {
-            *err_state = Some(new_err);
         }
+        err_state.count += 1;
     }
 
     // This also records CPU usage and marks concurrency; we roughly want to do
@@ -1214,5 +1208,15 @@ feature resolver. Try updating to diesel 1.4.8 to fix this error.
 ",
         )?;
         Ok(())
+    }
+}
+
+impl ErrorsDuringDrain {
+    fn to_error(&self) -> Option<anyhow::Error> {
+        match self.count {
+            0 => None,
+            1 => Some(format_err!("1 job failed")),
+            n => Some(format_err!("{} jobs failed", n)),
+        }
     }
 }
