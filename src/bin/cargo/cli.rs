@@ -44,10 +44,9 @@ pub fn main(config: &mut Config) -> CliResult {
                         (ContextKind::InvalidSubcommand, &ContextValue::String(ref cmd)) => {
                             Some(cmd)
                         }
-                        (ContextKind::InvalidSubcommand, _) => unreachable!(),
                         _ => None,
                     })
-                    .unwrap();
+                    .expect("UnrecognizedSubcommand implies the presence of InvalidSubcommand");
                 return super::execute_external_subcommand(config, &cmd, &[&cmd, "--help"])
                     .map_err(|_| e.into());
             } else {
