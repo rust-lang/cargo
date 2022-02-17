@@ -6,7 +6,8 @@ pub fn cli() -> App {
     subcommand("report")
         .about("Generate and display various kinds of reports")
         .after_help("Run `cargo help report` for more detailed information.\n")
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .subcommand(
             subcommand("future-incompatibilities")
                 .alias("future-incompat")

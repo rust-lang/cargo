@@ -3,7 +3,7 @@ use cargo::ops::{self, TestOptions};
 
 pub fn cli() -> App {
     subcommand("bench")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Execute all benchmarks of a local package")
         .arg_quiet()
         .arg(
