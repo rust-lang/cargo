@@ -97,8 +97,7 @@ format.</dd>
 <dl>
 
 <dt class="option-term" id="option-cargo-publish---target"><a class="option-anchor" href="#option-cargo-publish---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Publish for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Publish for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
