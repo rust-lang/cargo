@@ -4,7 +4,7 @@ use crate::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("rustdoc")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Build a package's documentation, using specified custom flags.")
         .arg_quiet()
         .arg(Arg::new("args").multiple_values(true))

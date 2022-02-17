@@ -5,7 +5,7 @@ pub fn cli() -> App {
     subcommand("config")
         .about("Inspect configuration values")
         .after_help("Run `cargo help config` for more detailed information.\n")
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
         .subcommand(
             subcommand("get")
                 .arg(Arg::new("key").help("The config key to display"))

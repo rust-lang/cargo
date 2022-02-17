@@ -22,7 +22,7 @@ pub use crate::core::compiler::CompileMode;
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
 
-pub type App = clap::App<'static>;
+pub type App = clap::Command<'static>;
 
 pub trait AppExt: Sized {
     fn _arg(self, arg: Arg<'static>) -> Self;
@@ -281,7 +281,9 @@ pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static st
 }
 
 pub fn subcommand(name: &'static str) -> App {
-    App::new(name).setting(AppSettings::DeriveDisplayOrder | AppSettings::DontCollapseArgsInUsage)
+    App::new(name)
+        .dont_collapse_args_in_usage(true)
+        .setting(AppSettings::DeriveDisplayOrder)
 }
 
 /// Determines whether or not to gate `--profile` as unstable when resolving it.
