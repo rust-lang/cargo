@@ -355,16 +355,7 @@ fn custom_build_env_var_rustc_linker_bad_host_target() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -467,16 +458,7 @@ fn custom_build_invalid_host_config_feature_flag() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -510,16 +492,7 @@ fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -554,16 +527,7 @@ fn custom_build_env_var_rustc_linker_bad_host() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -600,16 +564,7 @@ fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
                 target, target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -658,7 +613,8 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
         .file("src/lib.rs", "")
         .build();
 
-    // build.rs should fail due to bad host linker being set
+    // build.rs should be built fine since cross target != host target.
+    // assertion should succeed since it's still passed the target linker
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
         .arg(&target)
         .masquerade_as_nightly_cargo()
@@ -684,16 +640,7 @@ fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
                 cross_target, target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
