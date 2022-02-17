@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("test")
         // Subcommand aliases are handled in `aliased_command()`.
         // .alias("t")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
             Arg::new("TESTNAME")

@@ -7,7 +7,7 @@ const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 
 pub fn cli() -> App {
     subcommand("rustc")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Compile a package, and pass extra options to the compiler")
         .arg_quiet()
         .arg(Arg::new("args").multiple_values(true).help("Rustc flags"))

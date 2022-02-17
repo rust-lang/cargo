@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
+use clap::error::{ContextKind, ContextValue};
 use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -33,14 +34,18 @@ pub fn main(config: &mut Config) -> CliResult {
     let args = match cli().try_get_matches() {
         Ok(args) => args,
         Err(e) => {
-            if e.kind == clap::ErrorKind::UnrecognizedSubcommand {
+            if e.kind() == clap::ErrorKind::UnrecognizedSubcommand {
                 // An unrecognized subcommand might be an external subcommand.
-                let cmd = e.info[0].clone();
-                return super::execute_external_subcommand(config, &cmd, &[&cmd, "--help"])
-                    .map_err(|_| e.into());
-            } else {
-                return Err(e.into());
+                for context in e.context() {
+                    if let (ContextKind::InvalidSubcommand, ContextValue::String(cmd)) = context {
+                        if super::execute_external_subcommand(config, cmd, &[cmd, "--help"]).is_ok()
+                        {
+                            return Ok(());
+                        }
+                    }
+                }
             }
+            return Err(e.into());
         }
     };
 
@@ -286,9 +291,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                 // Note that an alias to an external command will not receive
                 // these arguments. That may be confusing, but such is life.
                 let global_args = GlobalArgs::new(args);
-                let new_args = cli()
-                    .setting(AppSettings::NoBinaryName)
-                    .try_get_matches_from(alias)?;
+                let new_args = cli().no_binary_name(true).try_get_matches_from(alias)?;
 
                 let new_cmd = new_args.subcommand_name().expect("subcommand is required");
                 already_expanded.push(cmd.to_string());
@@ -406,14 +409,11 @@ fn cli() -> App {
         "cargo [OPTIONS] [SUBCOMMAND]"
     };
     App::new("cargo")
-        .setting(
-            AppSettings::DeriveDisplayOrder
-                | AppSettings::AllowExternalSubcommands
-                | AppSettings::NoAutoVersion,
-        )
+        .setting(AppSettings::DeriveDisplayOrder | AppSettings::NoAutoVersion)
+        .allow_external_subcommands(true)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
-        .global_setting(AppSettings::DisableColoredHelp)
+        .disable_colored_help(true)
         .override_usage(usage)
         .help_template(
             "\
