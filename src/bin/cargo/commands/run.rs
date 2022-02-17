@@ -8,7 +8,7 @@ pub fn cli() -> App {
     subcommand("run")
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Run a binary or example of the local package")
         .arg_quiet()
         .arg(
