@@ -452,6 +452,7 @@ fn test_with_dev_profile() {
 [COMPILING] foo v0.1.0 [..]
 [RUNNING] `rustc --crate-name foo [..]-C debuginfo=0[..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();

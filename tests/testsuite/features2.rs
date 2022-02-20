@@ -2074,6 +2074,7 @@ fn minimal_download() {
 [COMPILING] dev_dep v1.0.0
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 ",
         )
         .run();

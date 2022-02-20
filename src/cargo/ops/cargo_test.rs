@@ -1,11 +1,12 @@
-use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
+use crate::core::compiler::{Compilation, CompileKind, Doctest, Metadata, Unit, UnitOutput};
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{add_path_args, CargoTestError, Config, Test};
-use cargo_util::ProcessError;
+use cargo_util::{ProcessBuilder, ProcessError};
 use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
@@ -21,6 +22,7 @@ pub fn run_tests(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
+        display_no_run_information(ws, test_args, &compilation, "unittests")?;
         return Ok(None);
     }
     let (test, mut errors) = run_unit_tests(ws.config(), options, test_args, &compilation)?;
@@ -48,6 +50,7 @@ pub fn run_benches(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
+        display_no_run_information(ws, args, &compilation, "benches")?;
         return Ok(None);
     }
 
@@ -84,28 +87,16 @@ fn run_unit_tests(
         script_meta,
     } in compilation.tests.iter()
     {
-        let test_path = unit.target.src_path().path().unwrap();
-        let exe_display = if let TargetKind::Test = unit.target.kind() {
-            format!(
-                "{} ({})",
-                test_path
-                    .strip_prefix(unit.pkg.root())
-                    .unwrap_or(test_path)
-                    .display(),
-                path.strip_prefix(cwd).unwrap_or(path).display()
-            )
-        } else {
-            format!(
-                "unittests ({})",
-                path.strip_prefix(cwd).unwrap_or(path).display()
-            )
-        };
-
-        let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
-        cmd.args(test_args);
-        if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
-            cmd.arg("--quiet");
-        }
+        let (exe_display, cmd) = cmd_builds(
+            config,
+            cwd,
+            unit,
+            path,
+            script_meta,
+            test_args,
+            compilation,
+            "unittests",
+        )?;
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;
@@ -263,4 +254,78 @@ fn run_doc_tests(
         }
     }
     Ok((Test::Doc, errors))
+}
+
+fn display_no_run_information(
+    ws: &Workspace<'_>,
+    test_args: &[&str],
+    compilation: &Compilation<'_>,
+    exec_type: &str,
+) -> CargoResult<()> {
+    let config = ws.config();
+    let cwd = config.cwd();
+    for UnitOutput {
+        unit,
+        path,
+        script_meta,
+    } in compilation.tests.iter()
+    {
+        let (exe_display, cmd) = cmd_builds(
+            config,
+            cwd,
+            unit,
+            path,
+            script_meta,
+            test_args,
+            &compilation,
+            exec_type,
+        )?;
+        config
+            .shell()
+            .concise(|shell| shell.status("Executable", &exe_display))?;
+        config
+            .shell()
+            .verbose(|shell| shell.status("Executable", &cmd))?;
+    }
+
+    return Ok(());
+}
+
+fn cmd_builds(
+    config: &Config,
+    cwd: &Path,
+    unit: &Unit,
+    path: &PathBuf,
+    script_meta: &Option<Metadata>,
+    test_args: &[&str],
+    compilation: &Compilation<'_>,
+    exec_type: &str,
+) -> CargoResult<(String, ProcessBuilder)> {
+    let test_path = unit.target.src_path().path().unwrap();
+    let short_test_path = test_path
+        .strip_prefix(unit.pkg.root())
+        .unwrap_or(test_path)
+        .display();
+
+    let exe_display = match unit.target.kind() {
+        TargetKind::Test | TargetKind::Bench => format!(
+            "{} ({})",
+            short_test_path,
+            path.strip_prefix(cwd).unwrap_or(path).display()
+        ),
+        _ => format!(
+            "{} {} ({})",
+            exec_type,
+            short_test_path,
+            path.strip_prefix(cwd).unwrap_or(path).display()
+        ),
+    };
+
+    let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
+    cmd.args(test_args);
+    if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
+        cmd.arg("--quiet");
+    }
+
+    Ok((exe_display, cmd))
 }

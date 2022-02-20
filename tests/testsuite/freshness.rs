@@ -596,6 +596,8 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
+[EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[..][EXE])
 ",
         )
         .run();
@@ -1125,6 +1127,7 @@ fn reuse_workspace_lib() {
 [COMPILING] baz v0.1.1 ([..])
 [RUNNING] `rustc[..] --test [..]`
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/baz-[..][EXE]`
 ",
         )
         .run();
@@ -1376,6 +1379,7 @@ fn reuse_panic_build_dep_test() {
 [RUNNING] [..]build-script-build`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--test[..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();

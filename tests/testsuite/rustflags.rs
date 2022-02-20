@@ -1099,6 +1099,9 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/a-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/c-[..][EXE]`
 ",
         )
         .run();
@@ -1111,6 +1114,8 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] bench [optimized] target(s) in [..]
+[EXECUTABLE] `[..]/target/release/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/release/deps/a-[..][EXE]`
 ",
         )
         .run();
@@ -1181,6 +1186,9 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/a-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/c-[..][EXE]`
 ",
         )
         .run();
@@ -1193,6 +1201,8 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] bench [optimized] target(s) in [..]
+[EXECUTABLE] `[..]/target/release/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/release/deps/a-[..][EXE]`
 ",
         )
         .run();
