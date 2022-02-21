@@ -585,11 +585,9 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 ///
 /// The behavior differs slightly when cross-compiling (or, specifically, when `--target` is
 /// provided) for artifacts that are always built for the host (plugins, build scripts, ...).
-/// For those artifacts, the behavior depends on `target-applies-to-host`. In the default
-/// configuration (where `target-applies-to-host` is unset), and if `target-applies-to-host =
-/// false`, host artifacts _only_ respect `host.*.rustflags`, and no other configuration sources.
-/// If `target-applies-to-host = true`, host artifacts also respect `target.<host triple>`, and if
-/// `<target triple> == <host triple>` `RUSTFLAGS` and `CARGO_ENCODED_RUSTFLAGS`.
+/// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
+/// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
+/// necessary to retain bacwkards compatibility with older versions of Cargo.
 fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],
@@ -598,6 +596,17 @@ fn env_args(
     kind: CompileKind,
     name: &str,
 ) -> CargoResult<Vec<String>> {
+    // The `target-applies-to-host` setting is somewhat misleading in name.
+    //
+    // What it really does it opt into a _particular_ past Cargo behavior for `[target.<host>]` for
+    // host artifacts, namely that `linker` and `runner` from `[target.<host>]` are respected, but
+    // `rustflags` is _not_.
+    //
+    // The code (and comments) below are written to first apply `target-applies-to-host` _as if it
+    // was consistent_, and then adjusts the settings to match the legacy behavior that
+    // `target-applies-to-host = true` _really_ enables. This was done to (hopefully) make the
+    // logic flow clearer, and to make future modifications to the rules for when rustflags get
+    // applied less likely to break the legacy behavior.
     let target_applies_to_host = config.target_applies_to_host()?;
 
     // Include untargeted configuration sources (like `RUSTFLAGS`) if
@@ -611,10 +620,11 @@ fn env_args(
     // for the target, and `target-applies-to-host` makes it so that the host is affected by its
     // target's config, so if `--target <host triple>` then `RUSTFLAGS` should also apply to the
     // host.
-    let include_generic = !kind.is_host()
+    let mut include_generic = !kind.is_host()
         || requested_kinds == [CompileKind::Host]
-        || (target_applies_to_host == Some(true)
+        || (target_applies_to_host
             && requested_kinds == [CompileKind::Target(CompileTarget::new(host_triple)?)]);
+
     // Include targeted configuration sources (like `target.*.rustflags`) if
     //
     //  - we're compiling artifacts for the target platform; or
@@ -628,9 +638,9 @@ fn env_args(
     // build` (with no `--target`). So, we respect `target.<host triple>`.rustflags` when
     // `--target` _isn't_ supplied, which arguably matches the mental model established by
     // respecting `RUSTFLAGS` when `--target` isn't supplied.
-    let include_for_target = !kind.is_host()
-        || requested_kinds == [CompileKind::Host]
-        || target_applies_to_host == Some(true);
+    let mut include_for_target =
+        !kind.is_host() || requested_kinds == [CompileKind::Host] || target_applies_to_host;
+
     // Include host-based configuration sources (like `host.*.rustflags`) if
     //
     //  - we're compiling host artifacts; or
@@ -639,6 +649,12 @@ fn env_args(
     // Note that we do _not_ read `host.*.rustflags` just because the host's target is the same as
     // the requested target, as that's the whole point of the `host` section in the first place.
     let include_for_host = kind.is_host() || requested_kinds == [CompileKind::Host];
+
+    // Apply the legacy behavior of target_applies_to_host.
+    if target_applies_to_host && kind.is_host() && requested_kinds != [CompileKind::Host] {
+        include_generic = false;
+        include_for_target = false;
+    }
 
     if include_generic {
         // First try CARGO_ENCODED_RUSTFLAGS from the environment.
@@ -753,7 +769,7 @@ impl<'cfg> RustcTargetData<'cfg> {
         let mut target_info = HashMap::new();
         let target_applies_to_host = config.target_applies_to_host()?;
         let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
-        let host_config = if target_applies_to_host != Some(false) {
+        let host_config = if target_applies_to_host {
             config.target_cfg_triple(&rustc.host)?
         } else {
             config.host_cfg_triple(&rustc.host)?

@@ -273,10 +273,10 @@ fn env_rustflags_build_script_with_target() {
 }
 
 #[cargo_test]
-fn env_rustflags_build_script_with_target_and_applies_to_host_kind() {
-    // RUSTFLAGS *should* be passed to rustc for build scripts when --target is specified as the
-    // host triple and target-applies-to-host-kind is enabled.
-    // In this test if --cfg foo is not passed the build will fail.
+fn env_rustflags_build_script_with_target_doesnt_apply_to_host_kind() {
+    // RUSTFLAGS should *not* be passed to rustc for build scripts when --target is specified as the
+    // host triple even if target-applies-to-host-kind is enabled, to match legacy Cargo behavior.
+    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -292,7 +292,7 @@ fn env_rustflags_build_script_with_target_and_applies_to_host_kind() {
             "build.rs",
             r#"
                 fn main() { }
-                #[cfg(not(foo))]
+                #[cfg(foo)]
                 fn main() { }
             "#,
         )
@@ -732,7 +732,8 @@ fn build_rustflags_normal_source_with_target() {
         .with_stderr_contains("[..]bogus[..]")
         .run();
 
-    // With -Ztarget-applies-to-host build.rustflags should apply to build.rs since target == host
+    // With -Ztarget-applies-to-host build.rustflags should still not apply to build.rs, even when
+    // target == host, to match legacy Cargo behavior.
     p.change_file("build.rs", "fn main() {}");
     p.change_file(
         ".cargo/config",
@@ -740,7 +741,7 @@ fn build_rustflags_normal_source_with_target() {
         target-applies-to-host = true
 
         [build]
-        rustflags = ["-Clink-arg=this is a bogus argument"]
+        rustflags = ["-Z", "bogus"]
         "#,
     );
     p.cargo("build --lib --target")
@@ -748,7 +749,7 @@ fn build_rustflags_normal_source_with_target() {
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
-        .with_stderr_contains("[..]build_script_build[..]")
+        .with_stderr_does_not_contain("[..]build_script_build[..]")
         .run();
 }
 
@@ -1114,7 +1115,8 @@ fn target_rustflags_not_for_build_scripts_with_target() {
         .arg("-Ztarget-applies-to-host")
         .run();
 
-    // But if we also set the setting, then the rustflags from `target.` should apply
+    // Even with the setting, the rustflags from `target.` should not apply, to match the legacy
+    // Cargo behavior.
     p.change_file(
         ".cargo/config",
         &format!(
@@ -1131,8 +1133,40 @@ fn target_rustflags_not_for_build_scripts_with_target() {
         .arg(host)
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
-        .with_status(101)
-        .with_stderr_contains("[..]the name `main` is defined multiple times[..]")
+        .run();
+}
+
+#[cargo_test]
+fn host_rustflags_for_build_scripts() {
+    let host = rustc_host();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                // Ensure that --cfg=foo is passed.
+                fn main() { assert!(cfg!(foo)); }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            &format!(
+                "
+                target-applies-to-host = false
+
+                [host.{}]
+                rustflags = [\"--cfg=foo\"]
+                ",
+                host
+            ),
+        )
+        .build();
+
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .run();
 }
 
