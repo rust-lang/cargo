@@ -517,16 +517,11 @@ that are _always_ built for the host platform.
 allows users to opt into different (and more consistent) behavior for
 these properties.
 
-When `target-applies-to-host` is unset in the configuration file, the
-existing Cargo behavior is preserved (though see `-Zhost-config`, which
-changes that default). When it is set to `true`, _all_ options from
-`[target.<host triple>]` are respected for host artifacts. When it is
-set to `false`, _no_ options from `[target.<host triple>]` are respected
-for host artifacts.
-
-In the specific case of `rustflags`, this settings also affects whether
-`--target <host-triple>` picks up the same configuration as if
-`--target` was not supplied in the first place.
+When `target-applies-to-host` is unset, or set to `true`, in the
+configuration file, the existing Cargo behavior is preserved (though see
+`-Zhost-config`, which changes that default). When it is set to `false`,
+no options from `[target.<host triple>]` are respected for host
+artifacts.
 
 In the future, `target-applies-to-host` may end up defaulting to `false`
 to provide more sane and consistent default behavior. When set to
