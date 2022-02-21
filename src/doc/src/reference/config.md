@@ -387,7 +387,7 @@ you have args that you do not want to pass to build scripts or proc macros and
 are building for the host, pass `--target` with the host triple.
 
 It is not recommended to pass in flags that Cargo itself usually manages. For
-example, the flags driven by [profiles] are best handled by setting the
+example, the flags driven by [profiles](profiles.md) are best handled by setting the
 appropriate profile setting.
 
 > **Caution**: Due to the low-level nature of passing flags directly to the
@@ -418,7 +418,7 @@ Additional flags may also be passed with the [`cargo rustdoc`] command.
 * Environment: `CARGO_BUILD_INCREMENTAL` or `CARGO_INCREMENTAL`
 
 Whether or not to perform [incremental compilation]. The default if not set is
-to use the value from the [profile]. Otherwise this overrides the setting of
+to use the value from the [profile](profiles.md#incremental). Otherwise this overrides the setting of
 all profiles.
 
 The `CARGO_INCREMENTAL` environment variable can be set to `1` to force enable
@@ -449,7 +449,7 @@ The `[doc]` table defines options for the [`cargo doc`] command.
 
 ##### `doc.browser`
 
-* Type: string or array of strings ([program path and args])
+* Type: string or array of strings ([program path with args])
 * Default: `BROWSER` environment variable, or, if that is missing,
   opening the link in a system specific way
 
@@ -950,7 +950,7 @@ Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
 `<triple>` is being compiled for. By default, the linker is not overridden.
 
 ##### `target.<triple>.runner`
-* Type: string or array of strings ([program path and args])
+* Type: string or array of strings ([program path with args])
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUNNER`
 
@@ -1074,7 +1074,6 @@ Sets the width for progress bar.
 [override a build script]: build-scripts.md#overriding-build-scripts
 [toml]: https://toml.io/
 [incremental compilation]: profiles.md#incremental
-[profile]: profiles.md
 [program path with args]: #executable-paths-with-arguments
 [libcurl format]: https://ec.haxx.se/usingcurl-proxies.html
 [source replacement]: source-replacement.md
