@@ -1,14 +1,20 @@
 use crate::command_prelude::*;
 
-use cargo::core::{GitReference, SourceId};
+use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
+
+use cargo_util::paths;
 
 pub fn cli() -> App {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
-        .arg(Arg::with_name("crate").empty_values(false).multiple(true))
+        .arg_quiet()
+        .arg(
+            Arg::new("crate")
+                .forbid_empty_values(true)
+                .multiple_values(true),
+        )
         .arg(
             opt("version", "Specify a version to install")
                 .alias("vers")
@@ -45,7 +51,7 @@ pub fn cli() -> App {
             "list all installed packages and their versions",
         ))
         .arg_jobs()
-        .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
+        .arg(opt("force", "Force overwriting existing crates or binaries").short('f'))
         .arg(opt("no-track", "Do not save tracking information"))
         .arg_features()
         .arg_profile("Install artifacts with the specified profile")
@@ -72,16 +78,24 @@ pub fn cli() -> App {
                 .conflicts_with_all(&["git", "path", "index"]),
         )
         .arg_message_format()
+        .arg_timings()
         .after_help("Run `cargo help install` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    if let Some(path) = args.value_of_path("path", config) {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let path = args.value_of_path("path", config);
+    if let Some(path) = &path {
         config.reload_rooted_at(path)?;
     } else {
         // TODO: Consider calling set_search_stop_path(home).
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
     }
+
+    // In general, we try to avoid normalizing paths in Cargo,
+    // but in these particular cases we need it to fix rust-lang/cargo#10283.
+    // (Handle `SourceId::for_path` and `Workspace::new`,
+    // but not `Config::reload_rooted_at` which is always cwd)
+    let path = path.map(|p| paths::normalize_path(&p));
 
     let krates = args
         .values_of("crate")
@@ -102,8 +116,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             GitReference::DefaultBranch
         };
         SourceId::for_git(&url, gitref)?
-    } else if let Some(path) = args.value_of_path("path", config) {
-        SourceId::for_path(&path)?
+    } else if let Some(path) = &path {
+        SourceId::for_path(path)?
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
@@ -121,9 +135,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // We only provide workspace information for local crate installation from
     // one of the following sources:
     // - From current working directory (only work for edition 2015).
-    // - From a specific local file path.
-    let workspace = if from_cwd || args.is_present("path") {
+    // - From a specific local file path (from `--path` arg).
+    //
+    // This workspace information is for emitting helpful messages from
+    // `ArgMatchesExt::compile_options` and won't affect the actual compilation.
+    let workspace = if from_cwd {
         args.workspace(config).ok()
+    } else if let Some(path) = &path {
+        Workspace::new(&path.join("Cargo.toml"), config).ok()
     } else {
         None
     };

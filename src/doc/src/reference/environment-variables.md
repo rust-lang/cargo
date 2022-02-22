@@ -81,8 +81,8 @@ supported environment variables are:
 * `CARGO_BUILD_RUSTDOCFLAGS` — Extra `rustdoc` flags, see [`build.rustdocflags`].
 * `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
-* `CARGO_BUILD_PIPELINING` — Whether or not to use `rustc` pipelining, see [`build.pipelining`].
 * `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
+* `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notifcation, see [`future-incompat-report.frequency`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
 * `CARGO_HTTP_PROXY` — Enables HTTP proxy, see [`http.proxy`].
 * `CARGO_HTTP_TIMEOUT` — The HTTP timeout, see [`http.timeout`].
@@ -114,6 +114,7 @@ supported environment variables are:
 * `CARGO_TARGET_<triple>_LINKER` — The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
 * `CARGO_TARGET_<triple>_RUNNER` — The executable runner, see [`target.<triple>.runner`].
 * `CARGO_TARGET_<triple>_RUSTFLAGS` — Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
+* `CARGO_TERM_QUIET` — Quiet mode, see [`term.quiet`].
 * `CARGO_TERM_VERBOSE` — The default terminal verbosity, see [`term.verbose`].
 * `CARGO_TERM_COLOR` — The default color mode, see [`term.color`].
 * `CARGO_TERM_PROGRESS_WHEN` — The default progress bar showing mode, see [`term.progress.when`].
@@ -139,11 +140,11 @@ supported environment variables are:
 [`build.rustdocflags`]: config.md#buildrustdocflags
 [`build.incremental`]: config.md#buildincremental
 [`build.dep-info-basedir`]: config.md#builddep-info-basedir
-[`build.pipelining`]: config.md#buildpipelining
 [`doc.browser`]: config.md#docbrowser
 [`cargo-new.name`]: config.md#cargo-newname
 [`cargo-new.email`]: config.md#cargo-newemail
 [`cargo-new.vcs`]: config.md#cargo-newvcs
+[`future-incompat-report.frequency`]: config.md#future-incompat-reportfrequency
 [`http.debug`]: config.md#httpdebug
 [`http.proxy`]: config.md#httpproxy
 [`http.timeout`]: config.md#httptimeout
@@ -175,6 +176,7 @@ supported environment variables are:
 [`target.<triple>.linker`]: config.md#targettriplelinker
 [`target.<triple>.runner`]: config.md#targettriplerunner
 [`target.<triple>.rustflags`]: config.md#targettriplerustflags
+[`term.quiet`]: config.md#termquiet
 [`term.verbose`]: config.md#termverbose
 [`term.color`]: config.md#termcolor
 [`term.progress.when`]: config.md#termprogresswhen
@@ -316,9 +318,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_POINTER_WIDTH=64` — The CPU [pointer width].
     * `CARGO_CFG_TARGET_ENDIAN=little` — The CPU [target endianness].
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` — List of CPU [target features] enabled.
-* `OUT_DIR` — the folder in which all output should be placed. This folder is
-              inside the build directory for the package being built, and it is
-              unique for the package in question.
+* `OUT_DIR` — the folder in which all output and intermediate artifacts should
+              be placed. This folder is inside the build directory for the
+              package being built, and it is unique for the package in question.
 * `TARGET` — the target triple that is being compiled for. Native code should be
              compiled for this triple. See the [Target Triple] description
              for more information.
@@ -353,10 +355,10 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    changed by editing `.cargo/config.toml`; see the documentation
                    about [cargo configuration][cargo-config] for more
                    information.
-* `CARGO_ENCODED_RUSTFLAGS` — extra flags that Cargo invokes `rustc`
-			      with, separated by a `0x1f` character
-			      (ASCII Unit Separator). See
-			      [`build.rustflags`].
+* `CARGO_ENCODED_RUSTFLAGS` — extra flags that Cargo invokes `rustc` with,
+  separated by a `0x1f` character (ASCII Unit Separator). See
+  [`build.rustflags`]. Note that since Rust 1.55, `RUSTFLAGS` is removed from
+  the environment; scripts should use `CARGO_ENCODED_RUSTFLAGS` instead.
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
 
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows

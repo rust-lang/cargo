@@ -198,7 +198,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 3 column 23
+  TOML parse error at line 3, column 23
+    |
+  3 |                 foo = bar
+    |                       ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -218,7 +223,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid TOML value, did you mean to use a quoted string? at line 1 column 5
+  TOML parse error at line 1, column 5
+    |
+  1 | a = bar
+    |     ^
+  Unexpected `b`
+  Expected quoted string
 ",
         )
         .run();
@@ -1634,6 +1644,39 @@ fn many_crate_types_correct() {
 }
 
 #[cargo_test]
+fn set_both_dylib_and_cdylib_crate_types() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [lib]
+
+                name = "foo"
+                crate_type = ["cdylib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  library `foo` cannot set the crate type of both `dylib` and `cdylib`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn self_dependency() {
     let p = project()
         .file(
@@ -1668,7 +1711,7 @@ package `test v0.0.0 ([CWD])`
 }
 
 #[cargo_test]
-/// Make sure broken symlinks don't break the build
+/// Make sure broken and loop symlinks don't break the build
 ///
 /// This test requires you to be able to make symlinks.
 /// For windows, this may require you to enable developer mode.
@@ -1681,9 +1724,17 @@ fn ignore_broken_symlinks() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar")
+        // To hit the symlink directory, we need a build script
+        // to trigger a full scan of package files.
+        .file("build.rs", &main_file(r#""build script""#, &[]))
+        .symlink_dir("a/b", "a/b/c/d/foo")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr_contains(
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+        )
+        .run();
     assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
@@ -1760,6 +1811,25 @@ fn verbose_build() {
 fn verbose_release_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v --release")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
+        -C metadata=[..] \
+        --out-dir [..] \
+        -L dependency=[CWD]/target/release/deps`
+[FINISHED] release [optimized] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn verbose_release_build_short() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v -r")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -2713,7 +2783,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 1 column 6
+  TOML parse error at line 1, column 6
+    |
+  1 | this is not valid toml
+    |      ^
+  Unexpected `i`
+  Expected `.` or `=`
 ",
         )
         .run();
@@ -4778,7 +4853,6 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 #[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac() {
-    use cargo_test_support::paths::is_symlink;
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .file("src/bin/b.rs", "fn main() { panic!(); }")
@@ -4791,7 +4865,7 @@ fn uplift_dsym_of_bin_on_mac() {
         .run();
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
-    assert!(is_symlink(&p.target_debug_dir().join("b.dSYM")));
+    assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
     assert!(p.target_debug_dir().join("examples/c.dSYM").is_dir());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
@@ -4800,7 +4874,6 @@ fn uplift_dsym_of_bin_on_mac() {
 #[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
-    use cargo_test_support::paths::is_symlink;
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .build();
@@ -4819,7 +4892,7 @@ fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
             .join("foo-baaaaaadbaaaaaad.dSYM"),
         &dsym,
     );
-    assert!(is_symlink(&dsym));
+    assert!(dsym.is_symlink());
     assert!(!dsym.exists());
 
     p.cargo("build").enable_mac_dsym().run();
@@ -5255,12 +5328,8 @@ fn tricky_pipelining() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    foo.cargo("build -p bar")
-        .env("CARGO_BUILD_PIPELINING", "true")
-        .run();
-    foo.cargo("build -p foo")
-        .env("CARGO_BUILD_PIPELINING", "true")
-        .run();
+    foo.cargo("build -p bar").run();
+    foo.cargo("build -p foo").run();
 }
 
 #[cargo_test]
@@ -5282,7 +5351,6 @@ fn pipelining_works() {
         .build();
 
     foo.cargo("build")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_stdout("")
         .with_stderr(
             "\
@@ -5345,7 +5413,6 @@ fn pipelining_big_graph() {
         .file("b30/src/lib.rs", "")
         .build();
     foo.cargo("build -p foo")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_status(101)
         .with_stderr_contains("[ERROR] could not compile `a30`[..]")
         .run();

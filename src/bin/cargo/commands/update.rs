@@ -6,8 +6,8 @@ use cargo::util::print_available_packages;
 pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
-        .arg(opt("workspace", "Only update the workspace packages").short("w"))
+        .arg_quiet()
+        .arg(opt("workspace", "Only update the workspace packages").short('w'))
         .arg_package_spec_simple("Package to update")
         .arg(opt(
             "aggressive",
@@ -25,7 +25,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help update` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     if args.is_present_with_zero_values("package") {

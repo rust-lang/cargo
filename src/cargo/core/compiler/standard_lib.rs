@@ -1,5 +1,6 @@
 //! Code for building the standard library.
 
+use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
@@ -153,15 +154,17 @@ pub fn generate_std_roots(
             .iter()
             .find(|t| t.is_lib())
             .expect("std has a lib");
-        let unit_for = UnitFor::new_normal();
         // I don't think we need to bother with Check here, the difference
         // in time is minimal, and the difference in caching is
         // significant.
         let mode = CompileMode::Build;
-        let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
-
+        let features = std_features.activated_features(
+            pkg.package_id(),
+            FeaturesFor::NormalOrDevOrArtifactTarget(None),
+        );
         for kind in kinds {
             let list = ret.entry(*kind).or_insert_with(Vec::new);
+            let unit_for = UnitFor::new_normal(*kind);
             let profile = profiles.get_profile(
                 pkg.package_id(),
                 /*is_member*/ false,
@@ -179,6 +182,7 @@ pub fn generate_std_roots(
                 features.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
+                IsArtifact::No,
             ));
         }
     }

@@ -22,18 +22,21 @@ fn simple() {
 }
 
 #[cargo_test]
-fn simple_quiet() {
+fn quiet_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q").with_stdout("hello").run();
+    p.cargo("run -q").with_stderr("").with_stdout("hello").run();
 
-    p.cargo("run --quiet").with_stdout("hello").run();
+    p.cargo("run --quiet")
+        .with_stderr("")
+        .with_stdout("hello")
+        .run();
 }
 
 #[cargo_test]
-fn simple_quiet_and_verbose() {
+fn quiet_arg_and_verbose_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
@@ -45,7 +48,7 @@ fn simple_quiet_and_verbose() {
 }
 
 #[cargo_test]
-fn quiet_and_verbose_config() {
+fn quiet_arg_and_verbose_config() {
     let p = project()
         .file(
             ".cargo/config",
@@ -57,7 +60,52 @@ fn quiet_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q").run();
+    p.cargo("run -q").with_stderr("").with_stdout("hello").run();
+}
+
+#[cargo_test]
+fn verbose_arg_and_quiet_config() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run -v")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn quiet_config_and_verbose_config() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                verbose = true
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr("[ERROR] cannot set both `term.verbose` and `term.quiet`")
+        .run();
 }
 
 #[cargo_test]
@@ -937,6 +985,29 @@ fn release_works() {
 }
 
 #[cargo_test]
+fn release_short_works() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() { if cfg!(debug_assertions) { panic!() } }
+            "#,
+        )
+        .build();
+
+    p.cargo("run -r")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] `target/release/foo[EXE]`
+",
+        )
+        .run();
+    assert!(p.release_bin("foo").is_file());
+}
+
+#[cargo_test]
 fn run_bin_different_name() {
     let p = project()
         .file(
@@ -1180,7 +1251,7 @@ fn run_multiple_packages() {
 
     cargo().arg("-p").arg("d1").arg("-p").arg("d2")
                     .with_status(1)
-                    .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times").run();
+                    .with_stderr_contains("error: The argument '--package [<SPEC>...]' was provided more than once, but cannot be used multiple times").run();
 
     cargo()
         .arg("-p")

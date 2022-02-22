@@ -6,7 +6,7 @@ use cargo::util::print_available_packages;
 pub fn cli() -> App {
     subcommand("clean")
         .about("Remove artifacts that cargo has generated in the past")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_package_spec_simple("Package to clean artifacts for")
         .arg_manifest_path()
         .arg_target_triple("Target triple to clean output for")
@@ -17,7 +17,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help clean` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     if args.is_present_with_zero_values("package") {

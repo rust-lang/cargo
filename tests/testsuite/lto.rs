@@ -177,7 +177,7 @@ fn complicated() {
         )
         .file("build.rs", "fn main() { dep_build::foo() }")
         .file(
-            "src/main.rs",
+            "src/bin/foo-bin.rs",
             "#[dep_proc_macro::foo] fn main() { dep_normal::foo() }",
         )
         .file(
@@ -206,7 +206,9 @@ fn complicated() {
         .with_stderr_contains(
             "[..]`rustc[..]--crate-name dep_proc_macro [..]-C embed-bitcode=no[..]`",
         )
-        .with_stderr_contains("[..]`rustc[..]--crate-name test [..]--crate-type bin[..]-C lto[..]`")
+        .with_stderr_contains(
+            "[..]`rustc[..]--crate-name foo_bin [..]--crate-type bin[..]-C lto[..]`",
+        )
         .with_stderr_contains(
             "[..]`rustc[..]--crate-name test [..]--crate-type cdylib[..]-C lto[..]`",
         )
@@ -753,7 +755,7 @@ fn dylib_rlib_bin() {
             "#,
         )
         .file("src/lib.rs", "pub fn foo() { println!(\"hi!\"); }")
-        .file("src/main.rs", "fn main() { foo::foo(); }")
+        .file("src/bin/ferret.rs", "fn main() { foo::foo(); }")
         .build();
 
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
@@ -763,7 +765,7 @@ fn dylib_rlib_bin() {
         "--crate-type dylib --crate-type rlib",
         Lto::ObjectAndBitcode,
     );
-    verify_lto(&output, "foo", "--crate-type bin", Lto::Run(None));
+    verify_lto(&output, "ferret", "--crate-type bin", Lto::Run(None));
 }
 
 #[cargo_test]
@@ -834,6 +836,7 @@ fn fresh_swapping_commands() {
 [FRESH] bar v1.0.0
 [FRESH] foo [..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/release/deps/foo-[..][EXE]`
 ",
         )
         .run();

@@ -1,6 +1,5 @@
 //! Tests for the `cargo clean` command.
 
-use cargo_test_support::paths::is_symlink;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
@@ -416,7 +415,7 @@ fn package_cleans_all_the_things() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib/some-main.rs", "fn main() {}")
         .file("src/bin/other-main.rs", "fn main() {}")
         .file("examples/foo-ex-rlib.rs", "")
         .file("examples/foo-ex-cdylib.rs", "")
@@ -476,7 +475,7 @@ fn assert_all_clean(build_dir: &Path) {
         {
             continue;
         }
-        if is_symlink(path) || path.is_file() {
+        if path.is_symlink() || path.is_file() {
             panic!("{:?} was not cleaned", path);
         }
     }

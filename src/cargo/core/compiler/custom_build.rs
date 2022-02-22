@@ -1,5 +1,6 @@
 use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
+use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::compiler::CompileMode;
@@ -211,6 +212,11 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             },
         )
         .inherit_jobserver(&cx.jobserver);
+
+    // Find all artifact dependencies and make their file and containing directory discoverable using environment variables.
+    for (var, value) in artifact::get_env(cx, dependencies)? {
+        cmd.env(&var, value);
+    }
 
     if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {
         cmd.env(
@@ -588,6 +594,22 @@ impl BuildOutput {
                 script_out_dir.to_str().unwrap(),
             );
 
+            macro_rules! check_and_add_target {
+                ($target_kind: expr, $is_target_kind: expr, $link_type: expr) => {
+                    if !targets.iter().any(|target| $is_target_kind(target)) {
+                        bail!(
+                            "invalid instruction `cargo:{}` from {}\n\
+                                The package {} does not have a {} target.",
+                            key,
+                            whence,
+                            pkg_descr,
+                            $target_kind
+                        );
+                    }
+                    linker_args.push(($link_type, value));
+                };
+            }
+
             // Keep in sync with TargetConfig::parse_links_overrides.
             match key {
                 "rustc-flags" => {
@@ -613,16 +635,7 @@ impl BuildOutput {
                     linker_args.push((LinkType::Cdylib, value))
                 }
                 "rustc-link-arg-bins" => {
-                    if !targets.iter().any(|target| target.is_bin()) {
-                        bail!(
-                            "invalid instruction `cargo:{}` from {}\n\
-                                The package {} does not have a bin target.",
-                            key,
-                            whence,
-                            pkg_descr
-                        );
-                    }
-                    linker_args.push((LinkType::Bin, value));
+                    check_and_add_target!("bin", Target::is_bin, LinkType::Bin);
                 }
                 "rustc-link-arg-bin" => {
                     let mut parts = value.splitn(2, '=');
@@ -651,6 +664,15 @@ impl BuildOutput {
                         );
                     }
                     linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
+                }
+                "rustc-link-arg-tests" => {
+                    check_and_add_target!("test", Target::is_test, LinkType::Test);
+                }
+                "rustc-link-arg-benches" => {
+                    check_and_add_target!("benchmark", Target::is_bench, LinkType::Bench);
+                }
+                "rustc-link-arg-examples" => {
+                    check_and_add_target!("example", Target::is_example, LinkType::Example);
                 }
                 "rustc-link-arg" => {
                     linker_args.push((LinkType::All, value));

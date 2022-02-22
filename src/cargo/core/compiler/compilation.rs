@@ -25,6 +25,9 @@ pub struct Doctest {
     ///
     /// This is used for indexing [`Compilation::extra_env`].
     pub script_meta: Option<Metadata>,
+
+    /// Environment variables to set in the rustdoc process.
+    pub env: HashMap<String, OsString>,
 }
 
 /// Information about the output of a unit.
@@ -190,14 +193,14 @@ impl<'cfg> Compilation<'cfg> {
     ) -> CargoResult<ProcessBuilder> {
         let rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
         let cmd = fill_rustc_tool_env(rustdoc, unit);
-        let mut p = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
-        unit.target.edition().cmd_edition_arg(&mut p);
+        let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
+        unit.target.edition().cmd_edition_arg(&mut cmd);
 
         for crate_type in unit.target.rustc_crate_types() {
-            p.arg("--crate-type").arg(crate_type.as_str());
+            cmd.arg("--crate-type").arg(crate_type.as_str());
         }
 
-        Ok(p)
+        Ok(cmd)
     }
 
     /// Returns a [`ProcessBuilder`] appropriate for running a process for the

@@ -5,13 +5,13 @@ use cargo::ops::{self, PackageOpts};
 pub fn cli() -> App {
     subcommand("package")
         .about("Assemble the local package into a distributable tarball")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(
             opt(
                 "list",
                 "Print files included in a package without making one",
             )
-            .short("l"),
+            .short('l'),
         )
         .arg(opt(
             "no-verify",
@@ -38,7 +38,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help package` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let specs = args.packages_from_flags()?;
 

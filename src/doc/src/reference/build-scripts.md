@@ -69,9 +69,9 @@ the source directory of the build script’s package.
 
 ### Outputs of the Build Script
 
-Build scripts may save any output files in the directory specified in the
-[`OUT_DIR` environment variable][build-env]. Scripts should not modify any
-files outside of that directory.
+Build scripts may save any output files or intermediate artifacts in the
+directory specified in the [`OUT_DIR` environment variable][build-env]. Scripts
+should not modify any files outside of that directory.
 
 Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo:` as an instruction that will
@@ -100,6 +100,12 @@ one detailed below.
   flags to a linker for the binary `BIN`.
 * [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
   flags to a linker for binaries.
+* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) – Passes custom
+  flags to a linker for tests.
+* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) – Passes custom
+  flags to a linker for examples.
+* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) – Passes custom
+  flags to a linker for benchmarks.
 * [`cargo:rustc-link-lib=[KIND=]NAME`](#rustc-link-lib) — Adds a library to
   link.
 * [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Adds to the
@@ -136,7 +142,6 @@ link-arg=FLAG` option][link-arg] to the compiler, but only when building
 the binary target with name `BIN`. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
 
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 <a id="rustc-link-arg-bins"></a>
 #### `cargo:rustc-link-arg-bins=FLAG`
@@ -146,7 +151,6 @@ link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 binary target. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
 
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 <a id="rustc-link-lib"></a>
 #### `cargo:rustc-link-lib=[KIND=]NAME`
@@ -168,6 +172,29 @@ The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 
 [option-link]: ../../rustc/command-line-arguments.md#option-l-link-lib
 [FFI]: ../../nomicon/ffi.md
+
+
+<a id="rustc-link-arg-tests"></a>
+#### `cargo:rustc-link-arg-tests=FLAG`
+
+The `rustc-link-arg-tests` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+tests target.
+
+
+<a id="rustc-link-arg-examples"></a>
+#### `cargo:rustc-link-arg-examples=FLAG`
+
+The `rustc-link-arg-examples` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building an examples
+target.
+
+<a id="rustc-link-arg-benches"></a>
+#### `cargo:rustc-link-arg-benches=FLAG`
+
+The `rustc-link-arg-benches` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building an benchmark
+target.
 
 <a id="rustc-link-search"></a>
 #### `cargo:rustc-link-search=[KIND=]PATH`
@@ -247,7 +274,6 @@ link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 `cdylib` library target. Its usage is highly platform specific. It is useful
 to set the shared library version or the runtime-path.
 
-[link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 <a id="cargo-warning"></a>
 #### `cargo:warning=MESSAGE`

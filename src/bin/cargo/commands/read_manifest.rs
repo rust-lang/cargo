@@ -9,14 +9,12 @@ Print a JSON representation of a Cargo.toml manifest.
 Deprecated, use `cargo metadata --no-deps` instead.\
 ",
         )
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_manifest_path()
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
-    config
-        .shell()
-        .print_json(&ws.current()?.serialized(config))?;
+    config.shell().print_json(&ws.current()?.serialized())?;
     Ok(())
 }

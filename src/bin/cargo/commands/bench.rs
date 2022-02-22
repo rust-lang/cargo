@@ -3,17 +3,17 @@ use cargo::ops::{self, TestOptions};
 
 pub fn cli() -> App {
     subcommand("bench")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Execute all benchmarks of a local package")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg(
-            Arg::with_name("BENCHNAME")
+            Arg::new("BENCHNAME")
                 .help("If specified, only run benches containing this string in their names"),
         )
         .arg(
-            Arg::with_name("args")
+            Arg::new("args")
                 .help("Arguments for the bench binary")
-                .multiple(true)
+                .multiple_values(true)
                 .last(true),
         )
         .arg_targets_all(
@@ -47,10 +47,11 @@ pub fn cli() -> App {
             "Run all benchmarks regardless of failure",
         ))
         .arg_unit_graph()
+        .arg_timings()
         .after_help("Run `cargo help bench` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options(
         config,

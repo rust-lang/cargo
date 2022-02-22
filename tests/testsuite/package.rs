@@ -794,7 +794,7 @@ fn broken_symlink() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to prepare local package for uploading
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   failed to open for archiving: `[..]foo.rs`
@@ -823,6 +823,27 @@ fn package_symlink_to_dir() {
         .build()
         .cargo("package -v")
         .with_stderr_contains("[ARCHIVING] foo/Makefile")
+        .run();
+}
+
+#[cargo_test]
+/// Tests if a symlink to ancestor causes filesystem loop error.
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn filesystem_loop() {
+    if !symlink_supported() {
+        return;
+    }
+
+    project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .symlink_dir("a/b", "a/b/c/d/foo")
+        .build()
+        .cargo("package -v")
+        .with_stderr_contains(
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+        )
         .run();
 }
 
@@ -984,6 +1005,7 @@ license = "MIT"
 
 [package.metadata]
 foo = "bar"
+
 [dependencies.abc]
 version = "1.0"
 
@@ -1798,7 +1820,8 @@ fn package_restricted_windows() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
+        // use unordered here because the order of the warning is different on each platform.
+        .with_stderr_unordered(
             "\
 [WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
 [WARNING] file src/con.rs is a reserved Windows filename, it will not work on Windows platforms

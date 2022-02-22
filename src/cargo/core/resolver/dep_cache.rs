@@ -323,14 +323,14 @@ fn build_requirements<'a, 'b: 'a>(
                         return Err(e.into_activate_error(parent, s));
                     }
                 }
-            } else {
-                for fv in features.iter() {
-                    if let Err(e) = reqs.require_value(fv) {
-                        return Err(e.into_activate_error(parent, s));
-                    }
-                }
-                handle_default(*uses_default_features, &mut reqs)?;
             }
+
+            for fv in features.iter() {
+                if let Err(e) = reqs.require_value(fv) {
+                    return Err(e.into_activate_error(parent, s));
+                }
+            }
+            handle_default(*uses_default_features, &mut reqs)?;
         }
         RequestedFeatures::DepFeatures {
             features,

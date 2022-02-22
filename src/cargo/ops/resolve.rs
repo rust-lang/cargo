@@ -29,7 +29,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
 use log::{debug, trace};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
@@ -171,23 +171,15 @@ pub fn resolve_ws_with_opts<'cfg>(
         feature_opts,
     )?;
 
-    let no_lib_pkgs = pkg_set.no_lib_pkgs(
+    pkg_set.warn_no_lib_packages_and_artifact_libs_overlapping_deps(
+        ws,
         &resolved_with_overrides,
         &member_ids,
         has_dev_units,
         requested_targets,
         target_data,
         force_all_targets,
-    );
-    for (pkg_id, dep_pkgs) in no_lib_pkgs {
-        for dep_pkg in dep_pkgs {
-            ws.config().shell().warn(&format!(
-                "{} ignoring invalid dependency `{}` which is missing a lib target",
-                pkg_id,
-                dep_pkg.name(),
-            ))?;
-        }
-    }
+    )?;
 
     Ok(WorkspaceResolve {
         pkg_set,
@@ -467,25 +459,17 @@ pub fn resolve_with_previous<'cfg>(
             .require(Feature::public_dependency())
             .is_ok(),
     )?;
-    resolved.register_used_patches(&registry.patches());
-    if register_patches {
-        // It would be good if this warning was more targeted and helpful
-        // (such as showing close candidates that failed to match). However,
-        // that's not terribly easy to do, so just show a general help
-        // message.
-        let warnings: Vec<String> = resolved
-            .unused_patches()
-            .iter()
-            .map(|pkgid| format!("Patch `{}` was not used in the crate graph.", pkgid))
-            .collect();
-        if !warnings.is_empty() {
-            ws.config().shell().warn(format!(
-                "{}\n{}",
-                warnings.join("\n"),
-                UNUSED_PATCH_WARNING
-            ))?;
-        }
+    let patches: Vec<_> = registry
+        .patches()
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
+    resolved.register_used_patches(&patches[..]);
+
+    if register_patches && !resolved.unused_patches().is_empty() {
+        emit_warnings_of_unused_patches(ws, &resolved, registry)?;
     }
+
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
     }
@@ -756,4 +740,80 @@ fn master_branch_git_source(id: PackageId, resolve: &Resolve) -> Option<PackageI
         }
     }
     None
+}
+
+/// Emits warnings of unused patches case by case.
+///
+/// This function does its best to provide more targeted and helpful
+/// (such as showing close candidates that failed to match). However, that's
+/// not terribly easy to do, so just show a general help message if we cannot.
+fn emit_warnings_of_unused_patches(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+    registry: &PackageRegistry<'_>,
+) -> CargoResult<()> {
+    const MESSAGE: &str = "was not used in the crate graph.";
+
+    // Patch package with the source URLs being patch
+    let mut patch_pkgid_to_urls = HashMap::new();
+    for (url, summaries) in registry.patches().iter() {
+        for summary in summaries.iter() {
+            patch_pkgid_to_urls
+                .entry(summary.package_id())
+                .or_insert_with(HashSet::new)
+                .insert(url);
+        }
+    }
+
+    // pkg name -> all source IDs of under the same pkg name
+    let mut source_ids_grouped_by_pkg_name = HashMap::new();
+    for pkgid in resolve.iter() {
+        source_ids_grouped_by_pkg_name
+            .entry(pkgid.name())
+            .or_insert_with(HashSet::new)
+            .insert(pkgid.source_id());
+    }
+
+    let mut unemitted_unused_patches = Vec::new();
+    for unused in resolve.unused_patches().iter() {
+        // Show alternative source URLs if the source URLs being patch
+        // cannot not be found in the crate graph.
+        match (
+            source_ids_grouped_by_pkg_name.get(&unused.name()),
+            patch_pkgid_to_urls.get(unused),
+        ) {
+            (Some(ids), Some(patched_urls))
+                if ids
+                    .iter()
+                    .all(|id| !patched_urls.contains(id.canonical_url())) =>
+            {
+                use std::fmt::Write;
+                let mut msg = String::new();
+                writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
+                write!(
+                    msg,
+                    "Perhaps you misspell the source URL being patched.\n\
+                    Possible URLs for `[patch.<URL>]`:",
+                )?;
+                for id in ids.iter() {
+                    write!(msg, "\n    {}", id.display_registry_name())?;
+                }
+                ws.config().shell().warn(msg)?;
+            }
+            _ => unemitted_unused_patches.push(unused),
+        }
+    }
+
+    // Show general help message.
+    if !unemitted_unused_patches.is_empty() {
+        let warnings: Vec<_> = unemitted_unused_patches
+            .iter()
+            .map(|pkgid| format!("Patch `{}` {}", pkgid, MESSAGE))
+            .collect();
+        ws.config()
+            .shell()
+            .warn(format!("{}\n{}", warnings.join("\n"), UNUSED_PATCH_WARNING))?;
+    }
+
+    return Ok(());
 }

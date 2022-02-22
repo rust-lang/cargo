@@ -265,6 +265,25 @@ required Rust version as configured in the project's <code>rust-version</code> f
 
 
 
+<dt class="option-term" id="option-cargo-bench---timings=fmts"><a class="option-anchor" href="#option-cargo-bench---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma-separated list of output
+formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about timing information.</li>
+</ul></dd>
+
+
+
+
 </dl>
 
 ### Output Options
@@ -299,7 +318,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-bench--q"><a class="option-anchor" href="#option-cargo-bench--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-bench---quiet"><a class="option-anchor" href="#option-cargo-bench---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-bench---color"><a class="option-anchor" href="#option-cargo-bench---color"></a><code>--color</code> <em>when</em></dt>

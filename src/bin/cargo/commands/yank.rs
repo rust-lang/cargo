@@ -5,8 +5,8 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("yank")
         .about("Remove a pushed crate from the index")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
-        .arg(Arg::with_name("crate"))
+        .arg_quiet()
+        .arg(Arg::new("crate"))
         .arg(
             opt("vers", "The version to yank or un-yank")
                 .value_name("VERSION")
@@ -22,7 +22,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help yank` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     config.load_credentials()?;
 
     let registry = args.registry(config)?;

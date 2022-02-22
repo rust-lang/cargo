@@ -106,6 +106,8 @@ target options.
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options
@@ -153,6 +155,7 @@ includes an option to control the number of threads used:
 {{#options}}
 
 {{> options-jobs }}
+{{> options-future-incompat }}
 
 {{/options}}
 

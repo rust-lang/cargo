@@ -4,6 +4,7 @@ use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
+use toml_edit::easy as toml;
 
 /// Config definition of a `[target.'cfg(…)']` table.
 ///
@@ -172,18 +173,27 @@ fn parse_links_overrides(
                         .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
-                    let args = value.list(key)?;
-                    let args = args.iter().map(|v| (LinkType::Cdylib, v.0.clone()));
+                    let args = extra_link_args(LinkType::Cdylib, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-bins" => {
-                    let args = value.list(key)?;
-                    let args = args.iter().map(|v| (LinkType::Bin, v.0.clone()));
+                    let args = extra_link_args(LinkType::Bin, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg" => {
-                    let args = value.list(key)?;
-                    let args = args.iter().map(|v| (LinkType::All, v.0.clone()));
+                    let args = extra_link_args(LinkType::All, key, value)?;
+                    output.linker_args.extend(args);
+                }
+                "rustc-link-arg-tests" => {
+                    let args = extra_link_args(LinkType::Test, key, value)?;
+                    output.linker_args.extend(args);
+                }
+                "rustc-link-arg-benches" => {
+                    let args = extra_link_args(LinkType::Bench, key, value)?;
+                    output.linker_args.extend(args);
+                }
+                "rustc-link-arg-examples" => {
+                    let args = extra_link_args(LinkType::Example, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-cfg" => {
@@ -208,4 +218,13 @@ fn parse_links_overrides(
         links_overrides.insert(lib_name, output);
     }
     Ok(links_overrides)
+}
+
+fn extra_link_args<'a>(
+    link_type: LinkType,
+    key: &str,
+    value: &'a CV,
+) -> CargoResult<impl Iterator<Item = (LinkType, String)> + 'a> {
+    let args = value.list(key)?;
+    Ok(args.iter().map(move |v| (link_type.clone(), v.0.clone())))
 }

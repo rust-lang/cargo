@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use anyhow::{bail, format_err, Context as _};
 use serde::{Deserialize, Serialize};
+use toml_edit::easy as toml;
 
 use crate::core::compiler::Freshness;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
@@ -355,7 +356,7 @@ impl CrateListingV1 {
         let mut file = lock.file();
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
-        let data = toml::to_string(self)?;
+        let data = toml::to_string_pretty(self)?;
         file.write_all(data.as_bytes())?;
         Ok(())
     }

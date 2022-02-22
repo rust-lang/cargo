@@ -9,6 +9,7 @@ use anyhow::Context as _;
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
+use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CrateType};
@@ -824,6 +825,13 @@ impl Target {
     pub fn is_cdylib(&self) -> bool {
         match self.kind() {
             TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Cdylib),
+            _ => false,
+        }
+    }
+
+    pub fn is_staticlib(&self) -> bool {
+        match self.kind() {
+            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Staticlib),
             _ => false,
         }
     }

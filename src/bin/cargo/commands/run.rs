@@ -8,10 +8,14 @@ pub fn cli() -> App {
     subcommand("run")
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Run a binary or example of the local package")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
-        .arg(Arg::with_name("args").multiple(true))
+        .arg_quiet()
+        .arg(
+            Arg::new("args")
+                .allow_invalid_utf8(true)
+                .multiple_values(true),
+        )
         .arg_targets_bin_example(
             "Name of the bin target to run",
             "Name of the example target to run",
@@ -27,10 +31,11 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_unit_graph()
         .arg_ignore_rust_version()
+        .arg_timings()
         .after_help("Run `cargo help run` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(
@@ -58,19 +63,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             .iter()
             .filter_map(|pkg| pkg.manifest().default_run())
             .collect();
-        if default_runs.len() == 1 {
-            compile_opts.filter = CompileFilter::from_raw_arguments(
-                false,
-                vec![default_runs[0].to_owned()],
-                false,
-                vec![],
-                false,
-                vec![],
-                false,
-                vec![],
-                false,
-                false,
-            );
+        if let [bin] = &default_runs[..] {
+            compile_opts.filter = CompileFilter::single_bin(bin.to_string());
         } else {
             // ops::run will take care of errors if len pkgs != 1.
             compile_opts.filter = CompileFilter::Default {

@@ -5,61 +5,59 @@ use std::path::PathBuf;
 pub fn cli() -> App {
     subcommand("vendor")
         .about("Vendor all dependencies for a project locally")
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_manifest_path()
-        .arg(Arg::with_name("path").help("Where to vendor crates (`vendor` by default)"))
         .arg(
-            Arg::with_name("no-delete")
+            Arg::new("path")
+                .allow_invalid_utf8(true)
+                .help("Where to vendor crates (`vendor` by default)"),
+        )
+        .arg(
+            Arg::new("no-delete")
                 .long("no-delete")
                 .help("Don't delete older crates in the vendor directory"),
         )
         .arg(
-            Arg::with_name("tomls")
-                .short("s")
+            Arg::new("tomls")
+                .short('s')
                 .long("sync")
                 .help("Additional `Cargo.toml` to sync and vendor")
                 .value_name("TOML")
-                .multiple(true),
+                .allow_invalid_utf8(true)
+                .multiple_occurrences(true)
+                .multiple_values(true),
         )
         .arg(
-            Arg::with_name("respect-source-config")
+            Arg::new("respect-source-config")
                 .long("respect-source-config")
                 .help("Respect `[source]` config in `.cargo/config`")
-                .multiple(true),
+                .multiple_occurrences(true),
         )
         .arg(
-            Arg::with_name("versioned-dirs")
+            Arg::new("versioned-dirs")
                 .long("versioned-dirs")
                 .help("Always include version in subdir name"),
         )
         // Not supported.
         .arg(
-            Arg::with_name("no-merge-sources")
+            Arg::new("no-merge-sources")
                 .long("no-merge-sources")
-                .hidden(true),
+                .hide(true),
         )
         // Not supported.
-        .arg(
-            Arg::with_name("relative-path")
-                .long("relative-path")
-                .hidden(true),
-        )
+        .arg(Arg::new("relative-path").long("relative-path").hide(true))
+        // Not supported.
+        .arg(Arg::new("only-git-deps").long("only-git-deps").hide(true))
         // Not supported.
         .arg(
-            Arg::with_name("only-git-deps")
-                .long("only-git-deps")
-                .hidden(true),
-        )
-        // Not supported.
-        .arg(
-            Arg::with_name("disallow-duplicates")
+            Arg::new("disallow-duplicates")
                 .long("disallow-duplicates")
-                .hidden(true),
+                .hide(true),
         )
         .after_help("Run `cargo help vendor` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // We're doing the vendoring operation ourselves, so we don't actually want
     // to respect any of the `source` configuration in Cargo itself. That's
     // intended for other consumers of Cargo, but we want to go straight to the

@@ -37,6 +37,38 @@ fn vendor_simple() {
     p.cargo("build").run();
 }
 
+#[cargo_test]
+fn vendor_sample_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stdout(
+            r#"
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+"#,
+        )
+        .run();
+}
+
 fn add_vendor_config(p: &Project) {
     p.change_file(
         ".cargo/config",
@@ -752,4 +784,35 @@ fn vendor_preserves_permissions() {
     assert_eq!(metadata.mode() & 0o777, 0o644);
     let metadata = fs::metadata(p.root().join("vendor/bar/example.sh")).unwrap();
     assert_eq!(metadata.mode() & 0o777, 0o755);
+}
+
+#[cargo_test]
+fn no_remote_dependency_no_vendor() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor")
+        .with_stderr("There is no dependency to vendor in this project.")
+        .run();
+    assert!(!p.root().join("vendor").exists());
 }

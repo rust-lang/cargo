@@ -53,7 +53,7 @@ use rustfix::{self, CodeFix};
 use semver::Version;
 
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver};
+use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
@@ -284,9 +284,9 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
          the given features will no longer be used:\n"
     );
     let show_diffs = |differences: DiffMap| {
-        for ((pkg_id, for_host), removed) in differences {
+        for ((pkg_id, features_for), removed) in differences {
             drop_eprint!(config, "  {}", pkg_id);
-            if for_host {
+            if let FeaturesFor::HostDep = features_for {
                 drop_eprint!(config, " (as host dependency)");
             }
             drop_eprint!(config, " removed features: ");

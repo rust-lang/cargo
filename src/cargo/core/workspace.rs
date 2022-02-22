@@ -8,6 +8,7 @@ use anyhow::{bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
 use log::debug;
+use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::features::Features;
@@ -1116,7 +1117,7 @@ impl<'cfg> Workspace<'cfg> {
         cli_features: &CliFeatures,
         found_features: &mut BTreeSet<FeatureValue>,
     ) -> CliFeatures {
-        if cli_features.features.is_empty() || cli_features.all_features {
+        if cli_features.features.is_empty() {
             return cli_features.clone();
         }
 
@@ -1184,7 +1185,7 @@ impl<'cfg> Workspace<'cfg> {
         }
         CliFeatures {
             features: Rc::new(features),
-            all_features: false,
+            all_features: cli_features.all_features,
             uses_default_features: cli_features.uses_default_features,
         }
     }

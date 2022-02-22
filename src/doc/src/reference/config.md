@@ -73,7 +73,6 @@ rustflags = ["…", "…"]        # custom flags to pass to all compiler invocat
 rustdocflags = ["…", "…"]     # custom flags to pass to rustdoc
 incremental = true            # whether or not to enable incremental compilation
 dep-info-basedir = "…"        # path for the base directory for targets in depfiles
-pipelining = true             # rustc pipelining
 
 [doc]
 browser = "chromium"          # browser to use with `cargo doc --open`,
@@ -86,6 +85,9 @@ ENV_VAR_NAME = "value"
 ENV_VAR_NAME_2 = { value = "value", force = true }
 # Value is relative to .cargo directory containing `config.toml`, make absolute
 ENV_VAR_NAME_3 = { value = "relative/path", relative = true }
+
+[future-incompat-report]
+frequency = 'always' # when to display a notification about a future incompat report
 
 [cargo-new]
 vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
@@ -168,6 +170,7 @@ metadata_key1 = "value"
 metadata_key2 = "value"
 
 [term]
+quiet = false          # whether cargo output is quiet
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
 progress.when = 'auto' # whether cargo shows progress bar
@@ -437,12 +440,8 @@ The setting itself is a config-relative path. So, for example, a value of
 directory.
 
 ##### `build.pipelining`
-* Type: boolean
-* Default: true
-* Environment: `CARGO_BUILD_PIPELINING`
 
-Controls whether or not build pipelining is used. This allows Cargo to
-schedule overlapping invocations of `rustc` in parallel when possible.
+This option is deprecated and unused. Cargo always has pipelining enabled.
 
 #### `[doc]`
 
@@ -503,6 +502,20 @@ absolute path.
 TMPDIR = { value = "/home/tmp", force = true }
 OPENSSL_DIR = { value = "vendor/openssl", relative = true }
 ```
+
+### `[future-incompat-report]`
+
+The `[future-incompat-report]` table controls setting for [future incompat reporting](future-incompat-report.md)
+
+#### `future-incompat-report.frequency`
+* Type: string
+* Default: "always"
+* Environment: `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY`
+
+Controls how often we display a notification to the terminal when a future incompat report is available. Possible values:
+
+* `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
+* `never`: Never display a notification
 
 #### `[http]`
 
@@ -991,6 +1004,16 @@ metadata_key2 = "value"
 #### `[term]`
 
 The `[term]` table controls terminal output and interaction.
+
+##### `term.quiet`
+* Type: boolean
+* Default: false
+* Environment: `CARGO_TERM_QUIET`
+
+Controls whether or not log messages are displayed by Cargo.
+
+Specifying the `--quiet` flag will override and force quiet output.
+Specifying the `--verbose` flag will override and disable quiet output.
 
 ##### `term.verbose`
 * Type: boolean

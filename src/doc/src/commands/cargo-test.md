@@ -262,6 +262,7 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-test--r"><a class="option-anchor" href="#option-cargo-test--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-test---release"><a class="option-anchor" href="#option-cargo-test---release"></a><code>--release</code></dt>
 <dd class="option-desc">Test optimized artifacts with the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
@@ -277,6 +278,25 @@ See the <a href="../reference/profiles.html">the reference</a> for more details 
 <dt class="option-term" id="option-cargo-test---ignore-rust-version"><a class="option-anchor" href="#option-cargo-test---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Test the target even if the selected Rust compiler is older than the
 required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-test---timings=fmts"><a class="option-anchor" href="#option-cargo-test---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma-separated list of output
+formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about timing information.</li>
+</ul></dd>
+
 
 
 
@@ -314,7 +334,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-test--q"><a class="option-anchor" href="#option-cargo-test--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-test---quiet"><a class="option-anchor" href="#option-cargo-test---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-test---color"><a class="option-anchor" href="#option-cargo-test---color"></a><code>--color</code> <em>when</em></dt>
@@ -432,6 +454,12 @@ includes an option to control the number of threads used:
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</dd>
+
+
+<dt class="option-term" id="option-cargo-test---future-incompat-report"><a class="option-anchor" href="#option-cargo-test---future-incompat-report"></a><code>--future-incompat-report</code></dt>
+<dd class="option-desc">Displays a future-incompat report for any future-incompatible warnings
+produced during execution of this command</p>
+<p>See <a href="cargo-report.html">cargo-report(1)</a></dd>
 
 
 

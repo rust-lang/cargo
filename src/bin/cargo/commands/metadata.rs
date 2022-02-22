@@ -8,7 +8,7 @@ pub fn cli() -> App {
              the concrete used versions including overrides, \
              in machine-readable format",
         )
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_features()
         .arg(multi_opt(
             "filter-platform",
@@ -29,7 +29,7 @@ pub fn cli() -> App {
         .after_help("Run `cargo help metadata` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     let version = match args.value_of("format-version") {

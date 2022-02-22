@@ -55,7 +55,7 @@ function render_pipeline_graph() {
 
   // Draw Y tick marks.
   for (let n=1; n<units.length; n++) {
-    const y = graph_height - (n * Y_TICK_DIST);
+    const y = MARGIN + Y_TICK_DIST * n;
     ctx.beginPath();
     ctx.moveTo(X_LINE, y);
     ctx.lineTo(X_LINE-5, y);
@@ -64,8 +64,9 @@ function render_pipeline_graph() {
 
   // Draw Y labels.
   ctx.textAlign = 'end';
+  ctx.textBaseline = 'middle';
   for (let n=0; n<units.length; n++) {
-    let y = MARGIN + (Y_TICK_DIST * (n + 1)) - 13;
+    let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
     ctx.fillText(n+1, X_LINE-4, y);
   }
 
@@ -108,12 +109,12 @@ function render_pipeline_graph() {
     }
     ctx.fillStyle = "#000";
     ctx.textAlign = 'start';
-    ctx.textBaseline = 'hanging';
+    ctx.textBaseline = 'middle';
     ctx.font = '14px sans-serif';
     const label = `${unit.name}${unit.target} ${unit.duration}s`;
     const text_info = ctx.measureText(label);
     const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
-    ctx.fillText(label, label_x, y + BOX_HEIGHT / 2 - 6);
+    ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);
     draw_dep_lines(ctx, unit.i, false);
   }
   ctx.restore();

@@ -12,7 +12,7 @@ use std::str::FromStr;
 pub fn cli() -> App {
     subcommand("tree")
         .about("Display a tree visualization of a dependency graph")
-        .arg(opt("quiet", "Suppress status messages").short("q"))
+        .arg_quiet()
         .arg_manifest_path()
         .arg_package_spec_no_all(
             "Package to be used as the root of the tree",
@@ -20,13 +20,9 @@ pub fn cli() -> App {
             "Exclude specific workspace members",
         )
         // Deprecated, use --no-dedupe instead.
-        .arg(Arg::with_name("all").long("all").short("a").hidden(true))
+        .arg(Arg::new("all").long("all").short('a').hide(true))
         // Deprecated, use --target=all instead.
-        .arg(
-            Arg::with_name("all-targets")
-                .long("all-targets")
-                .hidden(true),
-        )
+        .arg(Arg::new("all-targets").long("all-targets").hide(true))
         .arg_features()
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform). \
@@ -34,9 +30,9 @@ pub fn cli() -> App {
         )
         // Deprecated, use -e=no-dev instead.
         .arg(
-            Arg::with_name("no-dev-dependencies")
+            Arg::new("no-dev-dependencies")
                 .long("no-dev-dependencies")
-                .hidden(true),
+                .hide(true),
         )
         .arg(
             multi_opt(
@@ -46,7 +42,7 @@ pub fn cli() -> App {
                  (features, normal, build, dev, all, \
                  no-normal, no-build, no-dev, no-proc-macro)",
             )
-            .short("e"),
+            .short('e'),
         )
         .arg(
             optional_multi_opt(
@@ -54,7 +50,7 @@ pub fn cli() -> App {
                 "SPEC",
                 "Invert the tree direction and focus on the given package",
             )
-            .short("i"),
+            .short('i'),
         )
         .arg(multi_opt(
             "prune",
@@ -63,13 +59,9 @@ pub fn cli() -> App {
         ))
         .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         // Deprecated, use --prefix=none instead.
-        .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
+        .arg(Arg::new("no-indent").long("no-indent").hide(true))
         // Deprecated, use --prefix=depth instead.
-        .arg(
-            Arg::with_name("prefix-depth")
-                .long("prefix-depth")
-                .hidden(true),
-        )
+        .arg(Arg::new("prefix-depth").long("prefix-depth").hide(true))
         .arg(
             opt(
                 "prefix",
@@ -88,7 +80,7 @@ pub fn cli() -> App {
                 "duplicates",
                 "Show only dependencies which come in multiple versions (implies -i)",
             )
-            .short("d")
+            .short('d')
             .alias("duplicate"),
         )
         .arg(
@@ -100,20 +92,17 @@ pub fn cli() -> App {
         .arg(
             opt("format", "Format string used for printing dependencies")
                 .value_name("FORMAT")
-                .short("f")
+                .short('f')
                 .default_value("{p}"),
         )
         .arg(
             // Backwards compatibility with old cargo-tree.
-            Arg::with_name("version")
-                .long("version")
-                .short("V")
-                .hidden(true),
+            Arg::new("version").long("version").short('V').hide(true),
         )
         .after_help("Run `cargo help tree` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if args.is_present("version") {
         let verbose = args.occurrences_of("verbose") > 0;
         let version = cli::get_version_string(verbose);
@@ -226,10 +215,7 @@ subtree of the package given to -p.\n\
 /// Parses `--edges` option.
 ///
 /// Returns a tuple of `EdgeKind` map and `no_proc_marco` flag.
-fn parse_edge_kinds(
-    config: &Config,
-    args: &ArgMatches<'_>,
-) -> CargoResult<(HashSet<EdgeKind>, bool)> {
+fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<EdgeKind>, bool)> {
     let (kinds, no_proc_macro) = {
         let mut no_proc_macro = false;
         let mut kinds = args.values_of("edges").map_or_else(

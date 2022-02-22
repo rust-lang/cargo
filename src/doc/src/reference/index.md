@@ -21,4 +21,6 @@ The reference covers the details of various areas of Cargo.
 * [Registries](registries.md)
 * [Dependency Resolution](resolver.md)
 * [SemVer Compatibility](semver.md)
+* [Future incompat report](future-incompat-report.md)
+* [Reporting build timings](timings.md)
 * [Unstable Features](unstable.md)

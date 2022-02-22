@@ -274,9 +274,15 @@ fn cli_path() {
     assert_error(
         config.unwrap_err(),
         "\
-failed to parse --config argument `missing.toml`
+failed to parse value from --config argument `missing.toml` as a dotted key expression
 
 Caused by:
-  expected an equals, found eof at line 1 column 13",
+  TOML parse error at line 1, column 13
+  |
+1 | missing.toml
+  |             ^
+Unexpected end of input
+Expected `.` or `=`
+",
     );
 }

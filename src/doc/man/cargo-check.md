@@ -44,6 +44,8 @@ they have `required-features` that are missing.
 
 {{> options-ignore-rust-version }}
 
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options
@@ -74,6 +76,7 @@ they have `required-features` that are missing.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-future-incompat }}
 {{/options}}
 
 {{> section-environment }}

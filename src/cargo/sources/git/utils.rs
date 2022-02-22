@@ -347,7 +347,7 @@ impl<'a> GitCheckout<'a> {
         return update_submodules(&self.repo, cargo_config);
 
         fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
-            info!("update submodules for: {:?}", repo.workdir().unwrap());
+            debug!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
                 update_submodule(repo, &mut child, cargo_config).with_context(|| {

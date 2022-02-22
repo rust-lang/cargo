@@ -420,7 +420,6 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
 fn _remove_dir_all(p: &Path) -> Result<()> {
     if p.symlink_metadata()
         .with_context(|| format!("could not get metadata for `{}` to remove", p.display()))?
-        .file_type()
         .is_symlink()
     {
         return remove_file(p);
@@ -539,7 +538,18 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
         // gory details.
         fs::copy(src, dst).map(|_| ())
     } else {
-        fs::hard_link(src, dst)
+        if cfg!(target_os = "macos") {
+            // This is a work-around for a bug on macos. There seems to be a race condition
+            // with APFS when hard-linking binaries. Gatekeeper does not have signing or
+            // hash informations stored in kernel when running the process. Therefore killing it.
+            // This problem does not appear when copying files as kernel has time to process it.
+            // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
+            // as fast as hardlinking.
+            // See https://github.com/rust-lang/cargo/issues/10060 for the details
+            fs::copy(src, dst).map(|_| ())
+        } else {
+            fs::hard_link(src, dst)
+        }
     };
     link_result
         .or_else(|err| {

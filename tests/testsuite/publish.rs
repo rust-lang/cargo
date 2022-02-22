@@ -2,7 +2,7 @@
 
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
-use cargo_test_support::registry::{self, registry_path, registry_url, Package};
+use cargo_test_support::registry::{self, registry_url, Package};
 use cargo_test_support::{basic_manifest, no_such_file_err_msg, project, publish};
 use std::fs;
 
@@ -185,57 +185,8 @@ See [..]
     validate_upload_foo();
 }
 
-// TODO: Deprecated
-// remove once it has been decided --host can be removed
 #[cargo_test]
-fn simple_with_host() {
-    registry::init();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                license = "MIT"
-                description = "foo"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("publish --no-verify --token sekrit --host")
-        .arg(registry_url().to_string())
-        .with_stderr(&format!(
-            "\
-[WARNING] The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.
-[UPDATING] `{reg}` index
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-            reg = registry_path().to_str().unwrap()
-        ))
-        .run();
-
-    validate_upload_foo();
-}
-
-// TODO: Deprecated
-// remove once it has been decided --host can be removed
-#[cargo_test]
-fn simple_with_index_and_host() {
+fn simple_with_index() {
     registry::init();
 
     let p = project()
@@ -255,27 +206,6 @@ fn simple_with_index_and_host() {
 
     p.cargo("publish --no-verify --token sekrit --index")
         .arg(registry_url().to_string())
-        .arg("--host")
-        .arg(registry_url().to_string())
-        .with_stderr(&format!(
-            "\
-[WARNING] The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.
-[UPDATING] `{reg}` index
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-            reg = registry_path().to_str().unwrap()
-        ))
         .run();
 
     validate_upload_foo();
@@ -1248,6 +1178,7 @@ fn publish_git_with_version() {
                      authors = []\n\
                      description = \"foo\"\n\
                      license = \"MIT\"\n\
+                     \n\
                      [dependencies.dep1]\n\
                      version = \"1.0\"\n\
                     ",

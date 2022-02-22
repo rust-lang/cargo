@@ -21,100 +21,6 @@ fn require(enabled_features: &[&str], disabled_features: &[&str]) -> String {
 }
 
 #[cargo_test]
-fn gated() {
-    // Need -Z weak-dep-features to enable.
-    Package::new("bar", "1.0.0").feature("feat", &[]).publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = { version = "1.0", optional = true }
-
-                [features]
-                f1 = ["bar?/feat"]
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  optional dependency features with `?` syntax are only allowed on the nightly \
-  channel and requires the `-Z weak-dep-features` flag on the command line
-  Feature `f1` had feature value `bar?/feat`.
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn dependency_gate_ignored() {
-    // Dependencies with ? features in the registry are ignored in the
-    // registry if not on nightly.
-    Package::new("baz", "1.0.0").feature("feat", &[]).publish();
-    Package::new("bar", "1.0.0")
-        .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat", &["baz?/feat"])
-        .publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = "1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
-required by package `foo v0.1.0 ([..]/foo)`
-",
-        )
-        .run();
-
-    // Publish a version without the ? feature, it should ignore 1.0.0
-    // and use this instead.
-    Package::new("bar", "1.0.1")
-        .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat", &["baz"])
-        .publish();
-    p.cargo("check")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar [..]
-[CHECKING] bar v1.0.1
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn simple() {
     Package::new("bar", "1.0.0")
         .feature("feat", &[])
@@ -140,8 +46,7 @@ fn simple() {
 
     // It's a bit unfortunate that this has to download `bar`, but avoiding
     // that is extremely difficult.
-    p.cargo("check -Z weak-dep-features --features f1")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features f1")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -153,8 +58,7 @@ fn simple() {
         )
         .run();
 
-    p.cargo("check -Z weak-dep-features --features f1,bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features f1,bar")
         .with_stderr(
             "\
 [CHECKING] bar v1.0.0
@@ -196,8 +100,7 @@ fn deferred() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -238,8 +141,7 @@ fn not_optional_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_status(101)
         .with_stderr("\
 error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -275,8 +177,7 @@ fn optional_cli_syntax() {
         .build();
 
     // Does not build bar.
-    p.cargo("check --features bar?/feat -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features bar?/feat")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -289,8 +190,7 @@ fn optional_cli_syntax() {
         .run();
 
     // Builds bar.
-    p.cargo("check --features bar?/feat,bar -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features bar?/feat,bar")
         .with_stderr(
             "\
 [CHECKING] bar v1.0.0
@@ -304,8 +204,7 @@ fn optional_cli_syntax() {
     switch_to_resolver_2(&p);
     p.build_dir().rm_rf();
     // Does not build bar.
-    p.cargo("check --features bar?/feat -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features bar?/feat")
         .with_stderr(
             "\
 [CHECKING] foo v0.1.0 [..]
@@ -315,8 +214,7 @@ fn optional_cli_syntax() {
         .run();
 
     // Builds bar.
-    p.cargo("check --features bar?/feat,bar -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features bar?/feat,bar")
         .with_stderr(
             "\
 [CHECKING] bar v1.0.0
@@ -351,8 +249,7 @@ fn required_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -366,7 +263,7 @@ optional dependency with `?` is not allowed in required-features
 
 #[cargo_test]
 fn weak_with_host_decouple() {
-    // -Z weak-opt-features with new resolver
+    // weak-dep-features with new resolver
     //
     // foo v0.1.0
     // └── common v1.0.0
@@ -447,8 +344,7 @@ fn weak_with_host_decouple() {
         )
         .build();
 
-    p.cargo("run -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -493,8 +389,7 @@ fn weak_namespaced() {
         .file("src/lib.rs", &require(&["f1"], &["f2", "bar"]))
         .build();
 
-    p.cargo("check -Z weak-dep-features -Z namespaced-features --features f1")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features f1")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -506,21 +401,18 @@ fn weak_namespaced() {
         )
         .run();
 
-    p.cargo("tree -Z weak-dep-features -Z namespaced-features -f")
+    p.cargo("tree -f")
         .arg("{p} feats:{f}")
-        .masquerade_as_nightly_cargo()
         .with_stdout("foo v0.1.0 ([ROOT]/foo) feats:")
         .run();
 
-    p.cargo("tree -Z weak-dep-features -Z namespaced-features --features f1 -f")
+    p.cargo("tree --features f1 -f")
         .arg("{p} feats:{f}")
-        .masquerade_as_nightly_cargo()
         .with_stdout("foo v0.1.0 ([ROOT]/foo) feats:f1")
         .run();
 
-    p.cargo("tree -Z weak-dep-features -Z namespaced-features --features f1,f2 -f")
+    p.cargo("tree --features f1,f2 -f")
         .arg("{p} feats:{f}")
-        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 foo v0.1.0 ([ROOT]/foo) feats:f1,f2
@@ -532,8 +424,7 @@ foo v0.1.0 ([ROOT]/foo) feats:f1,f2
     // "bar" remains not-a-feature
     p.change_file("src/lib.rs", &require(&["f1", "f2"], &["bar"]));
 
-    p.cargo("check -Z weak-dep-features -Z namespaced-features --features f1,f2")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features f1,f2")
         .with_stderr(
             "\
 [CHECKING] bar v1.0.0
@@ -568,13 +459,11 @@ fn tree() {
         .file("src/lib.rs", &require(&["f1"], &[]))
         .build();
 
-    p.cargo("tree -Z weak-dep-features --features f1")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree --features f1")
         .with_stdout("foo v0.1.0 ([ROOT]/foo)")
         .run();
 
-    p.cargo("tree -Z weak-dep-features --features f1,bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree --features f1,bar")
         .with_stdout(
             "\
 foo v0.1.0 ([ROOT]/foo)
@@ -583,8 +472,7 @@ foo v0.1.0 ([ROOT]/foo)
         )
         .run();
 
-    p.cargo("tree -Z weak-dep-features --features f1,bar -e features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree --features f1,bar -e features")
         .with_stdout(
             "\
 foo v0.1.0 ([ROOT]/foo)
@@ -594,8 +482,7 @@ foo v0.1.0 ([ROOT]/foo)
         )
         .run();
 
-    p.cargo("tree -Z weak-dep-features --features f1,bar -e features -i bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree --features f1,bar -e features -i bar")
         .with_stdout(
             "\
 bar v1.0.0
@@ -610,20 +497,17 @@ bar v1.0.0
         )
         .run();
 
-    p.cargo("tree -Z weak-dep-features -e features --features bar?/feat")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features --features bar?/feat")
         .with_stdout("foo v0.1.0 ([ROOT]/foo)")
         .run();
 
     // This is a little strange in that it produces no output.
     // Maybe `cargo tree` should print a note about why?
-    p.cargo("tree -Z weak-dep-features -e features -i bar --features bar?/feat")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features -i bar --features bar?/feat")
         .with_stdout("")
         .run();
 
-    p.cargo("tree -Z weak-dep-features -e features -i bar --features bar?/feat,bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features -i bar --features bar?/feat,bar")
         .with_stdout(
             "\
 bar v1.0.0
@@ -663,8 +547,7 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --token sekrit -Z weak-dep-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --token sekrit")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -725,6 +608,7 @@ version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+
 [dependencies.bar]
 version = "1.0"
 optional = true
