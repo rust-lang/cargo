@@ -31,6 +31,19 @@ use anyhow::Context as _;
 use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
 
+/// Result for `just_resolve_ws_with_opts`.
+pub struct PartialWorkspaceResolve<'cfg> {
+    pub registry: PackageRegistry<'cfg>,
+    /// The resolve for the entire workspace.
+    ///
+    /// This may be `None` for things like `cargo install` and `-Zavoid-dev-deps`.
+    /// This does not include `paths` overrides.
+    pub workspace_resolve: Option<Resolve>,
+    /// The narrowed resolve, with the specific features enabled, and only the
+    /// given package specs requested.
+    pub targeted_resolve: Resolve,
+}
+
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
     /// Packages to be downloaded.
@@ -79,15 +92,17 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 ///
 /// `specs` may be empty, which indicates it should resolve all workspace
 /// members. In this case, `opts.all_features` must be `true`.
-pub fn resolve_ws_with_opts<'cfg>(
+///
+/// This function will only consult the index, and will not download crate artifacts. It will
+/// therefore not trim dependency edges that are not needed on the particular platform or given the
+/// way features happen to interact, as some of that requires downloading the source of a subset of
+/// the crates in the resolve. If that functionality is needed, use `resolve_ws_with_opts`.
+pub fn just_resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData<'cfg>,
-    requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
-    force_all_targets: ForceAllTargets,
-) -> CargoResult<WorkspaceResolve<'cfg>> {
+) -> CargoResult<PartialWorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
     let resolve = if ws.ignore_lock() {
@@ -143,7 +158,39 @@ pub fn resolve_ws_with_opts<'cfg>(
         add_patches,
     )?;
 
-    let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
+    Ok(PartialWorkspaceResolve {
+        registry,
+        workspace_resolve: resolve,
+        targeted_resolve: resolved_with_overrides,
+    })
+}
+
+/// Resolves dependencies for some packages of the workspace,
+/// taking into account `paths` overrides and activated features.
+///
+/// This function will also write the result of resolution as a new lock file
+/// (unless `Workspace::require_optional_deps` is false, such as `cargo
+/// install` or `-Z avoid-dev-deps`), or it is an ephemeral workspace (`cargo
+/// install` or `cargo package`).
+///
+/// `specs` may be empty, which indicates it should resolve all workspace
+/// members. In this case, `opts.all_features` must be `true`.
+pub fn resolve_ws_with_opts<'cfg>(
+    ws: &Workspace<'cfg>,
+    target_data: &RustcTargetData<'cfg>,
+    requested_targets: &[CompileKind],
+    cli_features: &CliFeatures,
+    specs: &[PackageIdSpec],
+    has_dev_units: HasDevUnits,
+    force_all_targets: ForceAllTargets,
+) -> CargoResult<WorkspaceResolve<'cfg>> {
+    let PartialWorkspaceResolve {
+        registry,
+        workspace_resolve,
+        targeted_resolve,
+    } = just_resolve_ws_with_opts(ws, cli_features, specs, has_dev_units)?;
+
+    let pkg_set = get_resolved_packages(&targeted_resolve, registry)?;
 
     let member_ids = ws
         .members_with_features(specs, cli_features)?
@@ -151,7 +198,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         .map(|(p, _fts)| p.package_id())
         .collect::<Vec<_>>();
     pkg_set.download_accessible(
-        &resolved_with_overrides,
+        &targeted_resolve,
         &member_ids,
         has_dev_units,
         requested_targets,
@@ -163,7 +210,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     let resolved_features = FeatureResolver::resolve(
         ws,
         target_data,
-        &resolved_with_overrides,
+        &targeted_resolve,
         &pkg_set,
         cli_features,
         specs,
@@ -173,7 +220,7 @@ pub fn resolve_ws_with_opts<'cfg>(
 
     pkg_set.warn_no_lib_packages_and_artifact_libs_overlapping_deps(
         ws,
-        &resolved_with_overrides,
+        &targeted_resolve,
         &member_ids,
         has_dev_units,
         requested_targets,
@@ -183,13 +230,14 @@ pub fn resolve_ws_with_opts<'cfg>(
 
     Ok(WorkspaceResolve {
         pkg_set,
-        workspace_resolve: resolve,
-        targeted_resolve: resolved_with_overrides,
+        workspace_resolve,
+        targeted_resolve,
         resolved_features,
     })
 }
 
-fn resolve_with_registry<'cfg>(
+/// Resolve the dependency closure of the given workspace in the context of the given registry.
+pub fn resolve_with_registry<'cfg>(
     ws: &Workspace<'cfg>,
     registry: &mut PackageRegistry<'cfg>,
 ) -> CargoResult<Resolve> {
