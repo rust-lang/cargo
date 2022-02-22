@@ -10,7 +10,7 @@ pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
 pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
-pub use self::cargo_install::{install, install_list};
+pub use self::cargo_install::{install, install_list, parse_semver_flag};
 pub use self::cargo_new::{init, new, NewOptions, VersionControl};
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
 pub use self::cargo_package::{package, package_one, PackageOpts};
@@ -19,6 +19,9 @@ pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_run::run;
 pub use self::cargo_test::{run_benches, run_tests, TestOptions};
 pub use self::cargo_uninstall::uninstall;
+pub use self::common_for_install_and_uninstall::{
+    exe_names, path_source, resolve_root, select_dep_pkg, select_pkg,
+};
 pub use self::fix::{fix, fix_maybe_exec_rustc, FixOptions};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::HttpTimeout;

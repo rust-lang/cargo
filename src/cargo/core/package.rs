@@ -609,7 +609,9 @@ impl<'cfg> PackageSet<'cfg> {
         Ok(())
     }
 
-    fn filter_deps<'a>(
+    /// Filter the dependency closure of the given package to only those dependencies needed in the
+    /// given configuration.
+    pub fn filter_deps<'a>(
         pkg_id: PackageId,
         resolve: &'a Resolve,
         has_dev_units: HasDevUnits,

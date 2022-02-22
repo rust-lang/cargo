@@ -700,7 +700,8 @@ where
     Ok(None)
 }
 
-fn make_ws_rustc_target<'cfg>(
+/// Make a `Workspace` for the given to-be-installed package.
+pub fn make_ws_rustc_target<'cfg>(
     config: &'cfg Config,
     opts: &ops::CompileOptions,
     source_id: &SourceId,
@@ -725,7 +726,7 @@ fn make_ws_rustc_target<'cfg>(
 
 /// Parses x.y.z as if it were =x.y.z, and gives CLI-specific error messages in the case of invalid
 /// values.
-fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
+pub fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
     // If the version begins with character <, >, =, ^, ~ parse it as a
     // version range, otherwise parse it as a specific version
     let first = v
