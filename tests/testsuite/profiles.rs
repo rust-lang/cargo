@@ -3,6 +3,7 @@
 use std::env;
 
 use cargo_test_support::project;
+use cargo_test_support::registry::Package;
 
 #[cargo_test]
 fn profile_overrides() {
@@ -662,6 +663,41 @@ fn rustflags_requires_cargo_feature() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  feature `profile-rustflags` is required
+
+  The package requires the Cargo feature called `profile-rustflags`, but that feature is \
+  not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"profile-rustflags\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option \
+  for more information about the status of this feature.
+",
+        )
+        .run();
+
+    Package::new("bar", "1.0.0").publish();
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = "1.0"
+
+            [profile.dev.package.bar]
+            rustflags = ["-C", "link-dead-code=yes"]
+        "#,
+    );
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `profile-rustflags` is required
