@@ -150,16 +150,12 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
     pub fn dequeue(&mut self) -> Option<(N, V)> {
-        let next = self
+        let key = self
             .dep_map
             .iter()
             .filter(|(_, (deps, _))| deps.is_empty())
             .map(|(key, _)| key.clone())
-            .max_by_key(|k| self.priority[k]);
-        let key = match next {
-            Some(key) => key,
-            None => return None,
-        };
+            .max_by_key(|k| self.priority[k])?;
         let (_, data) = self.dep_map.remove(&key).unwrap();
         Some((key, data))
     }

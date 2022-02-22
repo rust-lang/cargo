@@ -47,6 +47,9 @@
 //!         # prevent collisions. One notable exception is dynamic libraries.
 //!         deps/
 //!
+//!             # Each artifact dependency gets in its own directory.
+//!             /artifact/$pkgname-$META/$kind
+//!
 //!         # Root directory for all compiled examples.
 //!         examples/
 //!
@@ -117,6 +120,8 @@ pub struct Layout {
     deps: PathBuf,
     /// The directory for build scripts: `$dest/build`
     build: PathBuf,
+    /// The directory for artifacts, i.e. binaries, cdylibs, staticlibs: `$dest/deps/artifact`
+    artifact: PathBuf,
     /// The directory for incremental files: `$dest/incremental`
     incremental: PathBuf,
     /// The directory for fingerprints: `$dest/.fingerprint`
@@ -164,10 +169,13 @@ impl Layout {
         let lock = dest.open_rw(".cargo-lock", ws.config(), "build directory")?;
         let root = root.into_path_unlocked();
         let dest = dest.into_path_unlocked();
+        let deps = dest.join("deps");
+        let artifact = deps.join("artifact");
 
         Ok(Layout {
-            deps: dest.join("deps"),
+            deps,
             build: dest.join("build"),
+            artifact,
             incremental: dest.join("incremental"),
             fingerprint: dest.join(".fingerprint"),
             examples: dest.join("examples"),
@@ -221,6 +229,10 @@ impl Layout {
     /// Fetch the build script path.
     pub fn build(&self) -> &Path {
         &self.build
+    }
+    /// Fetch the artifact path.
+    pub fn artifact(&self) -> &Path {
+        &self.artifact
     }
     /// Create and return the tmp path.
     pub fn prepare_tmp(&self) -> CargoResult<&Path> {

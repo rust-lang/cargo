@@ -26,7 +26,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::core::compiler::unit_dependencies::build_unit_dependencies;
+use crate::core::compiler::unit_dependencies::{build_unit_dependencies, IsArtifact};
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{standard_lib, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
@@ -996,9 +996,67 @@ fn generate_targets(
 ) -> CargoResult<Vec<Unit>> {
     let config = ws.config();
     // Helper for creating a list of `Unit` structures
-    let new_unit =
-        |units: &mut HashSet<Unit>, pkg: &Package, target: &Target, target_mode: CompileMode| {
-            let unit_for = if target_mode.is_any_test() {
+    let new_unit = |units: &mut HashSet<Unit>,
+                    pkg: &Package,
+                    target: &Target,
+                    initial_target_mode: CompileMode| {
+        // Custom build units are added in `build_unit_dependencies`.
+        assert!(!target.is_custom_build());
+        let target_mode = match initial_target_mode {
+            CompileMode::Test => {
+                if target.is_example() && !filter.is_specific() && !target.tested() {
+                    // Examples are included as regular binaries to verify
+                    // that they compile.
+                    CompileMode::Build
+                } else {
+                    CompileMode::Test
+                }
+            }
+            CompileMode::Build => match *target.kind() {
+                TargetKind::Test => CompileMode::Test,
+                TargetKind::Bench => CompileMode::Bench,
+                _ => CompileMode::Build,
+            },
+            // `CompileMode::Bench` is only used to inform `filter_default_targets`
+            // which command is being used (`cargo bench`). Afterwards, tests
+            // and benches are treated identically. Switching the mode allows
+            // de-duplication of units that are essentially identical. For
+            // example, `cargo build --all-targets --release` creates the units
+            // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
+            // and since these are the same, we want them to be de-duplicated in
+            // `unit_dependencies`.
+            CompileMode::Bench => CompileMode::Test,
+            _ => initial_target_mode,
+        };
+
+        let is_local = pkg.package_id().source_id().is_path();
+
+        // No need to worry about build-dependencies, roots are never build dependencies.
+        let features_for = FeaturesFor::from_for_host(target.proc_macro());
+        let features = resolved_features.activated_features(pkg.package_id(), features_for);
+
+        // If `--target` has not been specified, then the unit
+        // graph is built almost like if `--target $HOST` was
+        // specified. See `rebuild_unit_graph_shared` for more on
+        // why this is done. However, if the package has its own
+        // `package.target` key, then this gets used instead of
+        // `$HOST`
+        let explicit_kinds = if let Some(k) = pkg.manifest().forced_kind() {
+            vec![k]
+        } else {
+            requested_kinds
+                .iter()
+                .map(|kind| match kind {
+                    CompileKind::Host => {
+                        pkg.manifest().default_kind().unwrap_or(explicit_host_kind)
+                    }
+                    CompileKind::Target(t) => CompileKind::Target(*t),
+                })
+                .collect()
+        };
+
+        for kind in explicit_kinds.iter() {
+            let unit_for = if initial_target_mode.is_any_test() {
                 // NOTE: the `UnitFor` here is subtle. If you have a profile
                 // with `panic` set, the `panic` flag is cleared for
                 // tests/benchmarks and their dependencies. If this
@@ -1017,90 +1075,35 @@ fn generate_targets(
                 //
                 // Forcing the lib to be compiled three times during `cargo
                 // test` is probably also not desirable.
-                UnitFor::new_test(config)
+                UnitFor::new_test(config, *kind)
             } else if target.for_host() {
                 // Proc macro / plugin should not have `panic` set.
-                UnitFor::new_compiler()
+                UnitFor::new_compiler(*kind)
             } else {
-                UnitFor::new_normal()
+                UnitFor::new_normal(*kind)
             };
-            // Custom build units are added in `build_unit_dependencies`.
-            assert!(!target.is_custom_build());
-            let target_mode = match target_mode {
-                CompileMode::Test => {
-                    if target.is_example() && !filter.is_specific() && !target.tested() {
-                        // Examples are included as regular binaries to verify
-                        // that they compile.
-                        CompileMode::Build
-                    } else {
-                        CompileMode::Test
-                    }
-                }
-                CompileMode::Build => match *target.kind() {
-                    TargetKind::Test => CompileMode::Test,
-                    TargetKind::Bench => CompileMode::Bench,
-                    _ => CompileMode::Build,
-                },
-                // `CompileMode::Bench` is only used to inform `filter_default_targets`
-                // which command is being used (`cargo bench`). Afterwards, tests
-                // and benches are treated identically. Switching the mode allows
-                // de-duplication of units that are essentially identical. For
-                // example, `cargo build --all-targets --release` creates the units
-                // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
-                // and since these are the same, we want them to be de-duplicated in
-                // `unit_dependencies`.
-                CompileMode::Bench => CompileMode::Test,
-                _ => target_mode,
-            };
-
-            let is_local = pkg.package_id().source_id().is_path();
-
-            // No need to worry about build-dependencies, roots are never build dependencies.
-            let features_for = FeaturesFor::from_for_host(target.proc_macro());
-            let features = resolved_features.activated_features(pkg.package_id(), features_for);
-
-            // If `--target` has not been specified, then the unit
-            // graph is built almost like if `--target $HOST` was
-            // specified. See `rebuild_unit_graph_shared` for more on
-            // why this is done. However, if the package has its own
-            // `package.target` key, then this gets used instead of
-            // `$HOST`
-            let explicit_kinds = if let Some(k) = pkg.manifest().forced_kind() {
-                vec![k]
-            } else {
-                requested_kinds
-                    .iter()
-                    .map(|kind| match kind {
-                        CompileKind::Host => {
-                            pkg.manifest().default_kind().unwrap_or(explicit_host_kind)
-                        }
-                        CompileKind::Target(t) => CompileKind::Target(*t),
-                    })
-                    .collect()
-            };
-
-            for kind in explicit_kinds.iter() {
-                let profile = profiles.get_profile(
-                    pkg.package_id(),
-                    ws.is_member(pkg),
-                    is_local,
-                    unit_for,
-                    target_mode,
-                    *kind,
-                );
-                let unit = interner.intern(
-                    pkg,
-                    target,
-                    profile,
-                    kind.for_target(target),
-                    target_mode,
-                    features.clone(),
-                    /*is_std*/ false,
-                    /*dep_hash*/ 0,
-                );
-                units.insert(unit);
-            }
-        };
+            let profile = profiles.get_profile(
+                pkg.package_id(),
+                ws.is_member(pkg),
+                is_local,
+                unit_for,
+                target_mode,
+                *kind,
+            );
+            let unit = interner.intern(
+                pkg,
+                target,
+                profile,
+                kind.for_target(target),
+                target_mode,
+                features.clone(),
+                /*is_std*/ false,
+                /*dep_hash*/ 0,
+                IsArtifact::No,
+            );
+            units.insert(unit);
+        }
+    };
 
     // Create a list of proposed targets.
     let mut proposals: Vec<Proposal<'_>> = Vec::new();
@@ -1429,7 +1432,7 @@ pub fn resolve_all_features(
     package_id: PackageId,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
-        .activated_features(package_id, FeaturesFor::NormalOrDev)
+        .activated_features(package_id, FeaturesFor::NormalOrDevOrArtifactTarget(None))
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -1658,6 +1661,7 @@ fn traverse_and_share(
         unit.features.clone(),
         unit.is_std,
         new_dep_hash,
+        unit.artifact,
     );
     assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
     new_graph.entry(new_unit.clone()).or_insert(new_deps);

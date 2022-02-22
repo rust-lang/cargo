@@ -21,6 +21,12 @@ pub struct UnitDep {
     pub unit_for: UnitFor,
     /// The name the parent uses to refer to this dependency.
     pub extern_crate_name: InternedString,
+    /// If `Some`, the name of the dependency if renamed in toml.
+    /// It's particularly interesting to artifact dependencies which rely on it
+    /// for naming their environment variables. Note that the `extern_crate_name`
+    /// cannot be used for this as it also may be the build target itself,
+    /// which isn't always the renamed dependency name.
+    pub dep_name: Option<InternedString>,
     /// Whether or not this is a public dependency.
     pub public: bool,
     /// If `true`, the dependency should not be added to Rust's prelude.

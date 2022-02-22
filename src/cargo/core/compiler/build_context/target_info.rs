@@ -1,7 +1,7 @@
 use crate::core::compiler::{
     BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
 };
-use crate::core::{Dependency, Target, TargetKind, Workspace};
+use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
 use crate::util::{CargoResult, Rustc};
 use anyhow::Context as _;
@@ -748,11 +748,17 @@ impl<'cfg> RustcTargetData<'cfg> {
         // Get all kinds we currently know about.
         //
         // For now, targets can only ever come from the root workspace
-        // units as artifact dependencies are not a thing yet, so this
-        // correctly represents all the kinds that can happen. When we
-        // have artifact dependencies or other ways for targets to
-        // appear at places that are not the root units, we may have
-        // to revisit this.
+        // units and artifact dependencies, so this
+        // correctly represents all the kinds that can happen. When we have
+        // other ways for targets to appear at places that are not the root units,
+        // we may have to revisit this.
+        fn artifact_targets(package: &Package) -> impl Iterator<Item = CompileKind> + '_ {
+            package
+                .manifest()
+                .dependencies()
+                .iter()
+                .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
+        }
         let all_kinds = requested_kinds
             .iter()
             .copied()
@@ -761,23 +767,30 @@ impl<'cfg> RustcTargetData<'cfg> {
                     .default_kind()
                     .into_iter()
                     .chain(p.manifest().forced_kind())
+                    .chain(artifact_targets(p))
             }));
         for kind in all_kinds {
-            if let CompileKind::Target(target) = kind {
-                if !res.target_config.contains_key(&target) {
-                    res.target_config
-                        .insert(target, res.config.target_cfg_triple(target.short_name())?);
-                }
-                if !res.target_info.contains_key(&target) {
-                    res.target_info.insert(
-                        target,
-                        TargetInfo::new(res.config, &res.requested_kinds, &res.rustc, kind)?,
-                    );
-                }
-            }
+            res.merge_compile_kind(kind)?;
         }
 
         Ok(res)
+    }
+
+    /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
+    fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
+        if let CompileKind::Target(target) = kind {
+            if !self.target_config.contains_key(&target) {
+                self.target_config
+                    .insert(target, self.config.target_cfg_triple(target.short_name())?);
+            }
+            if !self.target_info.contains_key(&target) {
+                self.target_info.insert(
+                    target,
+                    TargetInfo::new(self.config, &self.requested_kinds, &self.rustc, kind)?,
+                );
+            }
+        }
+        Ok(())
     }
 
     /// Returns a "short" name for the given kind, suitable for keying off

@@ -81,7 +81,7 @@ struct MetadataResolveNode {
 
 #[derive(Serialize)]
 struct Dep {
-    name: String,
+    name: InternedString,
     pkg: PackageId,
     dep_kinds: Vec<DepKindInfo>,
 }
@@ -211,7 +211,12 @@ fn build_resolve_graph_r(
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                .and_then(|lib_target| resolve.extern_crate_name(pkg_id, dep_id, lib_target).ok())
+                .and_then(|lib_target| {
+                    resolve
+                        .extern_crate_name_and_dep_name(pkg_id, dep_id, lib_target)
+                        .map(|(ext_crate_name, _)| ext_crate_name)
+                        .ok()
+                })
                 .map(|name| Dep {
                     name,
                     pkg: normalize_id(dep_id),

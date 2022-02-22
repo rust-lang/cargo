@@ -1,5 +1,6 @@
 use super::job::{Freshness, Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
+use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
@@ -202,6 +203,11 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .env("RUSTC", &bcx.rustc().path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
+
+    // Find all artifact dependencies and make their file and containing directory discoverable using environment variables.
+    for (var, value) in artifact::get_env(cx, dependencies)? {
+        cmd.env(&var, value);
+    }
 
     if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {
         cmd.env(
