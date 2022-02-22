@@ -4500,6 +4500,7 @@ fn test_workspaces_cwd() {
         .run();
 }
 
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn check_cfg_features() {
     if !is_nightly() {

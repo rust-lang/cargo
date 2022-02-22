@@ -5949,6 +5949,7 @@ fn primary_package_env_var() {
     foo.cargo("test").run();
 }
 
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn check_cfg_features() {
     if !is_nightly() {
@@ -5984,6 +5985,7 @@ fn check_cfg_features() {
         .run();
 }
 
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn check_cfg_features_with_deps() {
     if !is_nightly() {
@@ -6025,6 +6027,8 @@ fn check_cfg_features_with_deps() {
         )
         .run();
 }
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn check_cfg_features_with_opt_deps() {
     if !is_nightly() {
