@@ -6071,3 +6071,44 @@ fn check_cfg_features_with_opt_deps() {
         )
         .run();
 }
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+#[cargo_test]
+fn check_cfg_features_with_namespaced_features() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar/", optional = true }
+
+                [features]
+                f_a = ["dep:bar"]
+                f_b = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
+        .build();
+
+    p.cargo("build -v -Z check-cfg-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
