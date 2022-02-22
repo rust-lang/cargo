@@ -1,6 +1,7 @@
 # cargo-fetch(1)
 
 
+
 ## NAME
 
 cargo-fetch - Fetch dependencies of a package from the network
@@ -13,7 +14,7 @@ cargo-fetch - Fetch dependencies of a package from the network
 
 If a `Cargo.lock` file is available, this command will ensure that all of the
 git dependencies and/or registry dependencies are downloaded and locally
-available. Subsequent Cargo commands never touch the network after a `cargo
+available. Subsequent Cargo commands will be able to run offline after a `cargo
 fetch` unless the lock file changes.
 
 If the lock file is not available, then this command will generate the lock
@@ -31,8 +32,7 @@ you plan to use Cargo without a network with the `--offline` flag.
 
 <dl>
 <dt class="option-term" id="option-cargo-fetch---target"><a class="option-anchor" href="#option-cargo-fetch---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Fetch for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Fetch for the given architecture. The default is all architectures. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
