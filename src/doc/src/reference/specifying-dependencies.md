@@ -255,10 +255,10 @@ winhttp = "0.4.0"
 openssl = "1.0.1"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
-native = { path = "native/i686" }
+native-i686 = { path = "native/i686" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-native = { path = "native/x86_64" }
+native-x86_64 = { path = "native/x86_64" }
 ```
 
 Like with Rust, the syntax here supports the `not`, `any`, and `all` operators
