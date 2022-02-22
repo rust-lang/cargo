@@ -782,6 +782,28 @@ fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     }
 }
 
+/// Add all features as cfg
+fn add_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) {
+    for feat in &unit.features {
+        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+    }
+
+    if cx.bcx.config.cli_unstable().check_cfg_features {
+        // This generate something like this:
+        //  - values(feature)
+        //  - values(feature, "foo", "bar")
+        let mut arg = String::from("values(feature");
+        for (&feat, _) in unit.pkg.summary().features() {
+            arg.push_str(", \"");
+            arg.push_str(&feat);
+            arg.push_str("\"");
+        }
+        arg.push(')');
+
+        cmd.arg("-Zunstable-options").arg("--check-cfg").arg(&arg);
+    }
+}
+
 /// Add error-format flags to the command.
 ///
 /// Cargo always uses JSON output. This has several benefits, such as being
@@ -978,9 +1000,7 @@ fn build_base_args(
         cmd.arg("--cfg").arg("test");
     }
 
-    for feat in &unit.features {
-        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-    }
+    add_features(cx, cmd, unit);
 
     let meta = cx.files().metadata(unit);
     cmd.arg("-C").arg(&format!("metadata={}", meta));

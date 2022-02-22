@@ -637,6 +637,7 @@ unstable_cli_options!(
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
+    check_cfg_features: bool = ("Enable compile-time checking of features in `cfg`"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -834,6 +835,7 @@ impl CliUnstable {
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
+            "check-cfg-features" => self.check_cfg_features = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,

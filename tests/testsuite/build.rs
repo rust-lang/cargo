@@ -5948,3 +5948,122 @@ fn primary_package_env_var() {
 
     foo.cargo("test").run();
 }
+
+#[cargo_test]
+fn check_cfg_features() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v -Z check-cfg-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn check_cfg_features_with_deps() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar/" }
+
+                [features]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
+        .build();
+
+    p.cargo("build -v -Z check-cfg-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] bar v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values(feature)' [..]
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+#[cargo_test]
+fn check_cfg_features_with_opt_deps() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar/", optional = true }
+
+                [features]
+                default = ["bar"]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
+        .build();
+
+    p.cargo("build -v -Z check-cfg-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] bar v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values(feature)' [..]
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"bar\", \"default\", \"f_a\", \"f_b\")' [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}

@@ -4499,3 +4499,39 @@ fn test_workspaces_cwd() {
         .with_stdout_contains("test test_integration_deep_cwd ... ok")
         .run();
 }
+
+#[cargo_test]
+fn check_cfg_features() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("test -v -Z check-cfg-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..]
+",
+        )
+        .run();
+}
