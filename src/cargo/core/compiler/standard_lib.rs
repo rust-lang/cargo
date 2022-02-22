@@ -6,7 +6,7 @@ use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::HasDevUnits;
-use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
+use crate::core::{Dependency, PackageId, PackageIdSpec, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
@@ -31,13 +31,12 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
     crates.into_iter().map(|s| s.to_string()).collect()
 }
 
-/// Resolve the standard library dependencies.
-pub fn resolve_std<'cfg>(
+/// Make a Workspace representing the standard library.
+pub fn make_std_ws<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData<'cfg>,
-    requested_targets: &[CompileKind],
     crates: &[String],
-) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
+) -> CargoResult<(Workspace<'cfg>, CliFeatures, Vec<PackageIdSpec>)> {
     let src_path = detect_sysroot_src_path(target_data)?;
     let to_patch = [
         "rustc-std-workspace-core",
@@ -111,6 +110,19 @@ pub fn resolve_std<'cfg>(
     let cli_features = CliFeatures::from_command_line(
         &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
+
+    Ok((std_ws, cli_features, specs))
+}
+
+/// Resolve the standard library dependencies.
+pub fn resolve_std<'cfg>(
+    ws: &Workspace<'cfg>,
+    target_data: &RustcTargetData<'cfg>,
+    requested_targets: &[CompileKind],
+    crates: &[String],
+) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
+    let (std_ws, cli_features, specs) = make_std_ws(ws, target_data, crates)?;
+
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
