@@ -418,8 +418,8 @@ fn registry(
     }
     // Parse all configuration options
     let reg_cfg = registry_configuration(config, registry.as_deref())?;
-    let opt_index = reg_cfg.index.as_ref().or_else(|| index.as_ref());
-    let sid = get_source_id(config, opt_index, registry.as_ref())?;
+    let opt_index = reg_cfg.index.as_deref().or_else(|| index.as_deref());
+    let sid = get_source_id(config, opt_index, registry.as_deref())?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
@@ -892,11 +892,7 @@ pub fn yank(
 ///
 /// The `index` and `reg` values are from the command-line or config settings.
 /// If both are None, returns the source for crates.io.
-fn get_source_id(
-    config: &Config,
-    index: Option<&String>,
-    reg: Option<&String>,
-) -> CargoResult<SourceId> {
+fn get_source_id(config: &Config, index: Option<&str>, reg: Option<&str>) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, r),
         (_, Some(i)) => SourceId::for_registry(&i.into_url()?),

@@ -1119,7 +1119,7 @@ impl Config {
         cv: &mut CV,
         remove: bool,
     ) -> CargoResult<Vec<(String, PathBuf, Definition)>> {
-        let abs = |path: &String, def: &Definition| -> (String, PathBuf, Definition) {
+        let abs = |path: &str, def: &Definition| -> (String, PathBuf, Definition) {
             let abs_path = match def {
                 Definition::Path(p) => p.parent().unwrap().join(&path),
                 Definition::Environment(_) | Definition::Cli => self.cwd().join(&path),
