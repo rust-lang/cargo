@@ -4074,7 +4074,7 @@ fn workspace_metadata_with_dependencies_and_resolve_multidep() {
         .file("non-artifact/src/lib.rs", "")
         .build();
 
-    p.cargo("metadata -Z unstable-options -Z bindeps -Z multidep")
+    p.cargo("metadata -Z bindeps -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_json(
             r#"

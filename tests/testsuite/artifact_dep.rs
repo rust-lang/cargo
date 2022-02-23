@@ -1420,7 +1420,7 @@ fn profile_override_basic_multidep() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build -v -Z unstable-options -Z bindeps -Z multidep")
+    p.cargo("build -v -Z bindeps -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name build_script_build [..] -C opt-level=1 [..]`",
@@ -2247,7 +2247,7 @@ fn lib_artifacts_do_not_leak_when_same_package_gets_renamed() {
         .file("bar/src/lib.rs", "pub fn doit() {}")
         .build();
 
-    p.cargo("check -v -Z unstable-options -Z bindeps -Z multidep")
+    p.cargo("check -v -Z bindeps -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("error[E0463]: can't find crate for `bar_alternate`")
@@ -2352,7 +2352,7 @@ fn multiple_bin_artifacts_with_different_names_and_different_targets() {
         .file("bar/src/lib.rs", "pub fn doit() {}")
         .build();
 
-    p.cargo("check -v -Z unstable-options -Z bindeps -Z multidep")
+    p.cargo("check -v -Z bindeps -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain(format!(
             "[RUNNING] `rustc --crate-name build_script_build build.rs [..]--target {} [..]",
@@ -2471,7 +2471,7 @@ fn different_names_to_the_same_crate_in_different_dep_kinds_with_multidep_toggle
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("test -Z unstable-options -Z multidep")
+    p.cargo("test -Z multidep")
         .masquerade_as_nightly_cargo()
         .run();
 }
@@ -2502,7 +2502,7 @@ fn different_dep_names_to_the_same_crate_in_different_categories_do_not_leak_wit
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("test -Z unstable-options -Z multidep")
+    p.cargo("test -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..] can't find crate for `bar_again`")
@@ -2532,7 +2532,7 @@ fn deps_allow_renaming_the_same_resolved_version_with_multidep_toggle() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z unstable-options -Z multidep")
+    p.cargo("check -Z multidep")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\

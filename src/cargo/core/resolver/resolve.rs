@@ -169,10 +169,10 @@ this could be indicative of a few possible situations:
                         id.source_id()
                     )
 
-                // If our checksum hasn't been calculated, then it could mean
-                // that future Cargo figured out how to checksum something or
-                // more realistically we were overridden with a source that does
-                // not have checksums.
+                    // If our checksum hasn't been calculated, then it could mean
+                    // that future Cargo figured out how to checksum something or
+                    // more realistically we were overridden with a source that does
+                    // not have checksums.
                 } else if mine.is_none() {
                     anyhow::bail!(
                         "\
@@ -191,9 +191,9 @@ unable to verify that `{0}` is the same as when the lockfile was generated
                         id.source_id()
                     )
 
-                // If the checksums aren't equal, and neither is None, then they
-                // must both be Some, in which case the checksum now differs.
-                // That's quite bad!
+                    // If the checksums aren't equal, and neither is None, then they
+                    // must both be Some, in which case the checksum now differs.
+                    // That's quite bad!
                 } else {
                     anyhow::bail!(
                         "\
@@ -295,7 +295,8 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.metadata
     }
 
-    /// Based on the dependencies between `from -> to.to_target`, return a list of one or more unique extern_crate_name/dependency-name pairs.
+    /// Based on the dependencies between `from -> to.to_target`, return a list of one
+    /// or more unique extern_crate_name/dependency-name pairs.
     /// Note that the `dependency-name` is used to derive the `extern_crate_name`.
     /// If `to == from` or if there is no dependency, the targets crate name is used.
     pub fn extern_crate_names_and_dep_names(
