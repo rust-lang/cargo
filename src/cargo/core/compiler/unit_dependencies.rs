@@ -262,6 +262,9 @@ fn compute_deps(
         return compute_deps_doc(unit, state, unit_for);
     }
 
+    let dep_filter = &|unit: &Unit, dep: &Dependency| {
+        non_custom_and_non_transitive_deps(unit, dep) && dep.maybe_lib()
+    };
     let mut ret = Vec::new();
     let mut dev_deps = Vec::new();
     for (dep_pkg_id, deps) in state.deps(unit, unit_for) {
@@ -273,10 +276,6 @@ fn compute_deps(
         let dep_pkg = state.get(dep_pkg_id);
         let mode = check_or_build_mode(unit.mode, dep_lib);
         let dep_unit_for = unit_for.with_dependency(unit, dep_lib, unit_for.root_compile_kind());
-        let dep_filter = &|unit: &Unit, dep: &Dependency| {
-            non_custom_and_non_transitive_deps(unit, dep)
-                && dep.artifact().map(|a| a.is_lib()).unwrap_or(true)
-        };
 
         let start = ret.len();
         if state.config.cli_unstable().dual_proc_macros
@@ -349,7 +348,7 @@ fn compute_deps(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    let dep_filter = &|unit: &Unit, dep: &Dependency| non_custom_and_non_transitive_deps(unit, dep);
+    let dep_filter = &|_: &Unit, _: &Dependency| true;
     ret.extend(maybe_lib(unit, state, unit_for, dep_filter)?);
 
     // If any integration tests/benches are being run, make sure that
@@ -660,7 +659,10 @@ fn compute_deps_doc(
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
-    let dep_filter = &|unit: &Unit, dep: &Dependency| non_custom_and_non_transitive_deps(unit, dep);
+
+    let dep_filter = &|unit: &Unit, dep: &Dependency| {
+        non_custom_and_non_transitive_deps(unit, dep) && dep.maybe_lib()
+    };
     for (id, deps) in state.deps(unit, unit_for) {
         let dep_lib = match calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? {
             Some(lib) => lib,
@@ -1114,21 +1116,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                 let deps: Vec<_> = deps
                     .iter()
                     .filter(|dep| {
-                        // If this target is a build command, then we only want build
-                        // dependencies, otherwise we want everything *other than* build
-                        // dependencies.
-                        if unit.target.is_custom_build() != dep.is_build() {
-                            return false;
-                        }
-
-                        // If this dependency is **not** a transitive dependency, then it
-                        // only applies to test/example targets.
-                        if !dep.is_transitive()
-                            && !unit.target.is_test()
-                            && !unit.target.is_example()
-                            && !unit.mode.is_doc_scrape()
-                            && !unit.mode.is_any_test()
-                        {
+                        if !non_custom_and_non_transitive_deps(unit, dep) {
                             return false;
                         }
 
