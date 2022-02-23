@@ -4,6 +4,7 @@ use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::path::PathBuf;
 use std::str;
+use std::task::Poll;
 use std::time::Duration;
 use std::{cmp, env};
 
@@ -431,17 +432,16 @@ fn registry(
         let _lock = config.acquire_package_cache_lock()?;
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
         // Only update the index if the config is not available or `force` is set.
-        let cfg = src.config();
-        let mut updated_cfg = || {
-            src.update()
-                .with_context(|| format!("failed to update {}", sid))?;
-            src.config()
-        };
-
-        let cfg = if force_update {
-            updated_cfg()?
-        } else {
-            cfg.or_else(|_| updated_cfg())?
+        if force_update {
+            src.invalidate_cache()
+        }
+        let cfg = loop {
+            match src.config()? {
+                Poll::Pending => src
+                    .block_until_ready()
+                    .with_context(|| format!("failed to update {}", sid))?,
+                Poll::Ready(cfg) => break cfg,
+            }
         };
 
         cfg.and_then(|cfg| cfg.api)

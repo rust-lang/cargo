@@ -302,7 +302,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // than the registry itself. In effect this is intended to be a quite
         // cheap operation.
         let summaries = match self.load_summaries(name, load)? {
-            Poll::Ready(x) => x,
+            Poll::Ready(summaries) => summaries,
             Poll::Pending => return Poll::Pending,
         };
 
@@ -356,7 +356,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         // structures.
         load.prepare()?;
 
-        // let root = self.config.assert_package_cache_locked(&self.path);
         let root = load.assert_index_locked(&self.path);
         let cache_root = root.join(".cache");
         let index_version = load.current_version();
@@ -370,7 +369,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         let raw_path = make_dep_path(&fs_name, false);
 
         let mut any_pending = false;
-
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries
         // associated with the first hit, however. The resolver will later
@@ -412,6 +410,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()))
     }
 
+    /// Clears the in-memory summmaries cache.
+    pub fn clear_summaries_cache(&mut self) {
+        self.summaries_cache.clear();
+    }
+
     pub fn query_inner(
         &mut self,
         dep: &Dependency,
@@ -448,7 +451,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         let source_id = self.source_id;
 
         let summaries = match self.summaries(dep.package_name(), dep.version_req(), load)? {
-            Poll::Ready(x) => x,
+            Poll::Ready(summaries) => summaries,
             Poll::Pending => return Poll::Pending,
         };
 
@@ -588,7 +591,7 @@ impl Summaries {
             }
         }
 
-        // This is the fallback path where we actually talk to libgit2 to load
+        // This is the fallback path where we actually talk to the registry backend to load
         // information. Here we parse every single line in the index (as we need
         // to find the versions)
         log::debug!("slow path for {:?}", relative);
@@ -628,7 +631,7 @@ impl Summaries {
                 cache_bytes = Some(cache.serialize(index_version));
             }
             Ok(())
-        });
+        })?;
 
         if matches!(err, Poll::Pending) {
             assert!(!hit_closure);
@@ -642,7 +645,6 @@ impl Summaries {
             debug_assert!(cache_contents.is_none());
             return Poll::Ready(Ok(None));
         }
-        let _ = err?;
 
         // If we've got debug assertions enabled and the cache was previously
         // present and considered fresh this is where the debug assertions

@@ -20,6 +20,7 @@ pub struct GitSource<'cfg> {
     path_source: Option<PathSource<'cfg>>,
     ident: String,
     config: &'cfg Config,
+    updated: bool,
 }
 
 impl<'cfg> GitSource<'cfg> {
@@ -42,6 +43,7 @@ impl<'cfg> GitSource<'cfg> {
             path_source: None,
             ident,
             config,
+            updated: false,
         };
 
         Ok(source)
@@ -57,66 +59,12 @@ impl<'cfg> GitSource<'cfg> {
         }
         self.path_source.as_mut().unwrap().read_packages()
     }
-}
-
-fn ident(id: &SourceId) -> String {
-    let ident = id
-        .canonical_url()
-        .raw_canonicalized_url()
-        .path_segments()
-        .and_then(|s| s.rev().next())
-        .unwrap_or("");
-
-    let ident = if ident.is_empty() { "_empty" } else { ident };
-
-    format!("{}-{}", ident, short_hash(id.canonical_url()))
-}
-
-impl<'cfg> Debug for GitSource<'cfg> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "git repo at {}", self.remote.url())?;
-
-        match self.manifest_reference.pretty_ref() {
-            Some(s) => write!(f, " ({})", s),
-            None => Ok(()),
-        }
-    }
-}
-
-impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        let src = self
-            .path_source
-            .as_mut()
-            .expect("BUG: `update()` must be called before `query()`");
-        src.query(dep, f)
-    }
-
-    fn fuzzy_query(
-        &mut self,
-        dep: &Dependency,
-        f: &mut dyn FnMut(Summary),
-    ) -> Poll<CargoResult<()>> {
-        let src = self
-            .path_source
-            .as_mut()
-            .expect("BUG: `update()` must be called before `query()`");
-        src.fuzzy_query(dep, f)
-    }
-
-    fn supports_checksums(&self) -> bool {
-        false
-    }
-
-    fn requires_precise(&self) -> bool {
-        true
-    }
-
-    fn source_id(&self) -> SourceId {
-        self.source_id
-    }
 
     fn update(&mut self) -> CargoResult<()> {
+        if self.updated {
+            return Ok(());
+        }
+
         let git_path = self.config.git_path();
         let git_path = self.config.assert_package_cache_locked(&git_path);
         let db_path = git_path.join("db").join(&self.ident);
@@ -144,10 +92,10 @@ impl<'cfg> Source for GitSource<'cfg> {
             // doesn't have it.
             (locked_rev, db) => {
                 if self.config.offline() {
-                    anyhow::bail!(
+                    return Err(anyhow::anyhow!(
                         "can't checkout from '{}': you are in the offline mode (--offline)",
                         self.remote.url()
-                    );
+                    ));
                 }
                 self.config.shell().status(
                     "Updating",
@@ -185,7 +133,67 @@ impl<'cfg> Source for GitSource<'cfg> {
 
         self.path_source = Some(path_source);
         self.locked_rev = Some(actual_rev);
-        self.path_source.as_mut().unwrap().update()
+        self.path_source.as_mut().unwrap().update()?;
+        self.updated = true;
+        Ok(())
+    }
+}
+
+fn ident(id: &SourceId) -> String {
+    let ident = id
+        .canonical_url()
+        .raw_canonicalized_url()
+        .path_segments()
+        .and_then(|s| s.rev().next())
+        .unwrap_or("");
+
+    let ident = if ident.is_empty() { "_empty" } else { ident };
+
+    format!("{}-{}", ident, short_hash(id.canonical_url()))
+}
+
+impl<'cfg> Debug for GitSource<'cfg> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "git repo at {}", self.remote.url())?;
+
+        match self.manifest_reference.pretty_ref() {
+            Some(s) => write!(f, " ({})", s),
+            None => Ok(()),
+        }
+    }
+}
+
+impl<'cfg> Source for GitSource<'cfg> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
+        if let Some(src) = self.path_source.as_mut() {
+            src.query(dep, f)
+        } else {
+            Poll::Pending
+        }
+    }
+
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
+        if let Some(src) = self.path_source.as_mut() {
+            src.fuzzy_query(dep, f)
+        } else {
+            Poll::Pending
+        }
+    }
+
+    fn supports_checksums(&self) -> bool {
+        false
+    }
+
+    fn requires_precise(&self) -> bool {
+        true
+    }
+
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -219,7 +227,11 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        Ok(())
+        self.update()
+    }
+
+    fn invalidate_cache(&mut self) {
+        self.updated = false;
     }
 }
 

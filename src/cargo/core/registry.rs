@@ -6,7 +6,7 @@ use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{profile, CanonicalUrl, Config};
+use crate::util::{CanonicalUrl, Config};
 use anyhow::{bail, Context as _};
 use log::{debug, trace};
 use url::Url;
@@ -180,6 +180,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         }
 
         self.load(namespace, kind)?;
+        self.block_until_ready()?;
         Ok(())
     }
 
@@ -446,38 +447,46 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
-        (|| {
-            debug!("loading source {}", source_id);
-            let source = self.source_config.load(source_id, &self.yanked_whitelist)?;
-            assert_eq!(source.source_id(), source_id);
+        debug!("loading source {}", source_id);
+        let source = self
+            .source_config
+            .load(source_id, &self.yanked_whitelist)
+            .with_context(|| format!("Unable to update {}", source_id))?;
+        assert_eq!(source.source_id(), source_id);
 
-            if kind == Kind::Override {
-                self.overrides.push(source_id);
-            }
-            self.add_source(source, kind);
+        if kind == Kind::Override {
+            self.overrides.push(source_id);
+        }
+        self.add_source(source, kind);
 
-            // Ensure the source has fetched all necessary remote data.
-            let _p = profile::start(format!("updating: {}", source_id));
-            self.sources.get_mut(source_id).unwrap().update()
-        })()
-        .with_context(|| format!("Unable to update {}", source_id))?;
+        // If we have an imprecise version then we don't know what we're going
+        // to look for, so we always attempt to perform an update here.
+        //
+        // If we have a precise version, then we'll update lazily during the
+        // querying phase. Note that precise in this case is only
+        // `Some("locked")` as other `Some` values indicate a `cargo update
+        // --precise` request
+        if source_id.precise() != Some("locked") {
+            self.sources.get_mut(source_id).unwrap().invalidate_cache();
+        } else {
+            debug!("skipping update due to locked registry");
+        }
         Ok(())
     }
 
-    fn query_overrides(&mut self, dep: &Dependency) -> CargoResult<Option<Summary>> {
+    fn query_overrides(&mut self, dep: &Dependency) -> Poll<CargoResult<Option<Summary>>> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.package_name(), s);
-            match src.query_vec(&dep)? {
-                Poll::Ready(mut results) => {
-                    if !results.is_empty() {
-                        return Ok(Some(results.remove(0)));
-                    }
-                }
-                Poll::Pending => panic!("overrides have to be on path deps, how did we get here?"),
+            let mut results = match src.query_vec(&dep) {
+                Poll::Ready(results) => results?,
+                Poll::Pending => return Poll::Pending,
+            };
+            if !results.is_empty() {
+                return Poll::Ready(Ok(Some(results.remove(0))));
             }
         }
-        Ok(None)
+        Poll::Ready(Ok(None))
     }
 
     /// This function is used to transform a summary to another locked summary
@@ -567,7 +576,10 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
-            let override_summary = self.query_overrides(dep)?;
+            let override_summary = match self.query_overrides(dep) {
+                Poll::Ready(override_summary) => override_summary?,
+                Poll::Pending => return Poll::Pending,
+            };
 
             // Next up on our list of candidates is to check the `[patch]`
             // section of the manifest. Here we look through all patches
@@ -715,8 +727,10 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        for (_, source) in self.sources.sources_mut() {
-            source.block_until_ready()?;
+        for (source_id, source) in self.sources.sources_mut() {
+            source
+                .block_until_ready()
+                .with_context(|| format!("Unable to update {}", source_id))?;
         }
         Ok(())
     }

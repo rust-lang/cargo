@@ -281,7 +281,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         })
         .collect();
 
-    // Query the sources for available versions, mapping `package_ids` into `summaries`.
+    // Query the sources for new versions, mapping `package_ids` into `summaries`.
     let mut summaries = Vec::new();
     while !package_ids.is_empty() {
         package_ids.retain(|&pkg_id| {

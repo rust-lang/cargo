@@ -78,11 +78,8 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
             })
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        self.inner
-            .update()
-            .with_context(|| format!("failed to update replaced source {}", self.to_replace))?;
-        Ok(())
+    fn invalidate_cache(&mut self) {
+        self.inner.invalidate_cache()
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -142,6 +139,8 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        self.inner.block_until_ready()
+        self.inner
+            .block_until_ready()
+            .with_context(|| format!("failed to update replaced source {}", self.to_replace))
     }
 }

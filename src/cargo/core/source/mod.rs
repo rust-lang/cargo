@@ -46,9 +46,8 @@ pub trait Source {
         self.query(dep, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
 
-    /// Performs any network operations required to get the entire list of all names,
-    /// versions and dependencies of packages managed by the `Source`.
-    fn update(&mut self) -> CargoResult<()>;
+    /// Ensure that the source is fully up-to-date for the current session on the next query.
+    fn invalidate_cache(&mut self);
 
     /// Fetches the full package for each name and version specified.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
@@ -150,9 +149,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).fuzzy_query(dep, f)
     }
 
-    /// Forwards to `Source::update`.
-    fn update(&mut self) -> CargoResult<()> {
-        (**self).update()
+    fn invalidate_cache(&mut self) {
+        (**self).invalidate_cache()
     }
 
     /// Forwards to `Source::download`.
@@ -224,8 +222,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).fuzzy_query(dep, f)
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        (**self).update()
+    fn invalidate_cache(&mut self) {
+        (**self).invalidate_cache()
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {

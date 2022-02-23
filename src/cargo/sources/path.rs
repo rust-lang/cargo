@@ -478,6 +478,16 @@ impl<'cfg> PathSource<'cfg> {
     pub fn path(&self) -> &Path {
         &self.path
     }
+
+    pub fn update(&mut self) -> CargoResult<()> {
+        if !self.updated {
+            let packages = self.read_packages()?;
+            self.packages.extend(packages.into_iter());
+            self.updated = true;
+        }
+
+        Ok(())
+    }
 }
 
 impl<'cfg> Debug for PathSource<'cfg> {
@@ -488,6 +498,9 @@ impl<'cfg> Debug for PathSource<'cfg> {
 
 impl<'cfg> Source for PathSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
+        if !self.updated {
+            return Poll::Pending;
+        }
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
                 f(s.clone())
@@ -501,6 +514,9 @@ impl<'cfg> Source for PathSource<'cfg> {
         _dep: &Dependency,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
+        if !self.updated {
+            return Poll::Pending;
+        }
         for s in self.packages.iter().map(|p| p.summary()) {
             f(s.clone())
         }
@@ -517,16 +533,6 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn source_id(&self) -> SourceId {
         self.source_id
-    }
-
-    fn update(&mut self) -> CargoResult<()> {
-        if !self.updated {
-            let packages = self.read_packages()?;
-            self.packages.extend(packages.into_iter());
-            self.updated = true;
-        }
-
-        Ok(())
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -565,6 +571,8 @@ impl<'cfg> Source for PathSource<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        Ok(())
+        self.update()
     }
+
+    fn invalidate_cache(&mut self) {}
 }

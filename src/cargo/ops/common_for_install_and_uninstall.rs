@@ -536,7 +536,7 @@ where
     let _lock = config.acquire_package_cache_lock()?;
 
     if needs_update {
-        source.update()?;
+        source.invalidate_cache();
     }
 
     let deps = loop {
@@ -591,7 +591,7 @@ where
     // with other global Cargos
     let _lock = config.acquire_package_cache_lock()?;
 
-    source.update()?;
+    source.invalidate_cache();
 
     return if let Some(dep) = dep {
         select_dep_pkg(source, dep, config, false)

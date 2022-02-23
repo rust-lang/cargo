@@ -205,15 +205,6 @@ pub struct RegistrySource<'cfg> {
     src_path: Filesystem,
     /// Local reference to [`Config`] for convenience.
     config: &'cfg Config,
-    /// Whether or not the index has been updated.
-    ///
-    /// This is used as an optimization to avoid updating if not needed, such
-    /// as `Cargo.lock` already exists and the index already contains the
-    /// locked entries. Or, to avoid updating multiple times.
-    ///
-    /// Only remote registries really need to update. Local registries only
-    /// check that the index exists.
-    updated: bool,
     /// Abstraction for interfacing to the different registry kinds.
     ops: Box<dyn RegistryData + 'cfg>,
     /// Interface for managing the on-disk index.
@@ -454,13 +445,15 @@ pub trait RegistryData {
     /// Loads the `config.json` file and returns it.
     ///
     /// Local registries don't have a config, and return `None`.
-    fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
+    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>>;
 
-    /// Updates the index.
+    /// Ensures the index is updated with the latest data.
     ///
-    /// For a remote registry, this updates the index over the network. Local
-    /// registries only check that the index exists.
-    fn update_index(&mut self) -> CargoResult<()>;
+    /// Invalidates cached data.
+    fn invalidate_cache(&mut self);
+
+    /// Is the local cached data up-to-date?
+    fn is_updated(&self) -> bool;
 
     /// Prepare to start downloading a `.crate` file.
     ///
@@ -573,7 +566,6 @@ impl<'cfg> RegistrySource<'cfg> {
             src_path: config.registry_source_path().join(name),
             config,
             source_id,
-            updated: false,
             index: index::RegistryIndex::new(source_id, ops.index_path(), config),
             yanked_whitelist: yanked_whitelist.clone(),
             ops,
@@ -583,7 +575,7 @@ impl<'cfg> RegistrySource<'cfg> {
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    pub fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
+    pub fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         self.ops.config()
     }
 
@@ -660,14 +652,6 @@ impl<'cfg> RegistrySource<'cfg> {
         Ok(unpack_dir.to_path_buf())
     }
 
-    fn do_update(&mut self) -> CargoResult<()> {
-        self.ops.update_index()?;
-        let path = self.ops.index_path();
-        self.index = index::RegistryIndex::new(self.source_id, path, self.config);
-        self.updated = true;
-        Ok(())
-    }
-
     fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
@@ -705,7 +689,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.source_id().precise().is_some() && !self.updated {
+        if dep.source_id().precise().is_some() && !self.ops.is_updated() {
             debug!("attempting query without update");
             let mut called = false;
             let pend =
@@ -723,7 +707,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 return Poll::Ready(Ok(()));
             } else {
                 debug!("falling back to an update");
-                self.do_update()?;
+                self.invalidate_cache();
+                return Poll::Pending;
             }
         }
 
@@ -756,20 +741,9 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        // If we have an imprecise version then we don't know what we're going
-        // to look for, so we always attempt to perform an update here.
-        //
-        // If we have a precise version, then we'll update lazily during the
-        // querying phase. Note that precise in this case is only
-        // `Some("locked")` as other `Some` values indicate a `cargo update
-        // --precise` request
-        if self.source_id.precise() != Some("locked") {
-            self.do_update()?;
-        } else {
-            debug!("skipping update due to locked registry");
-        }
-        Ok(())
+    fn invalidate_cache(&mut self) {
+        self.index.clear_summaries_cache();
+        self.ops.invalidate_cache();
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
@@ -807,17 +781,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
-        if !self.updated {
-            self.do_update()?;
-        }
+        self.invalidate_cache();
         loop {
             match self.index.is_yanked(pkg, &mut *self.ops)? {
-                Poll::Ready(yanked) => {
-                    return Ok(yanked);
-                }
-                Poll::Pending => {
-                    self.block_until_ready()?;
-                }
+                Poll::Ready(yanked) => return Ok(yanked),
+                Poll::Pending => self.block_until_ready()?,
             }
         }
     }

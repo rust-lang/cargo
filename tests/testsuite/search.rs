@@ -151,7 +151,8 @@ fn not_update() {
     );
     let lock = cfg.acquire_package_cache_lock().unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
-    regsrc.update().unwrap();
+    regsrc.invalidate_cache();
+    regsrc.block_until_ready().unwrap();
     drop(lock);
 
     cargo_process("search postgres")

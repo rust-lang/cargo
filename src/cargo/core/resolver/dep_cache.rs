@@ -150,14 +150,13 @@ impl<'a> RegistryQueryer<'a> {
                     .iter()
                     .map(|s| format!("  * {}", s.package_id()))
                     .collect::<Vec<_>>();
-                return Err(anyhow::anyhow!(
+                return Poll::Ready(Err(anyhow::anyhow!(
                     "the replacement specification `{}` matched \
                      multiple packages:\n  * {}\n{}",
                     spec,
                     s.package_id(),
                     bullets.join("\n")
-                ))
-                .into();
+                )));
             }
 
             // The dependency should be hard-coded to have the same name and an
@@ -176,14 +175,13 @@ impl<'a> RegistryQueryer<'a> {
 
             // Make sure no duplicates
             if let Some(&(ref spec, _)) = potential_matches.next() {
-                return Err(anyhow::anyhow!(
+                return Poll::Ready(Err(anyhow::anyhow!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
                     matched_spec,
                     spec,
                     summary.package_id()
-                ))
-                .into();
+                )));
             }
 
             for dep in summary.dependencies() {
@@ -245,7 +243,9 @@ impl<'a> RegistryQueryer<'a> {
                 Poll::Ready(Ok(candidates)) => Some(Ok((dep, candidates, features))),
                 Poll::Pending => {
                     all_ready = false;
-                    None // we can ignore Pending deps, resolve will be repeatedly called until there are none to ignore
+                    // we can ignore Pending deps, resolve will be repeatedly called
+                    // until there are none to ignore
+                    None
                 }
                 Poll::Ready(Err(e)) => Some(Err(e).with_context(|| {
                     format!(
