@@ -1053,8 +1053,7 @@ impl Config {
     }
 
     fn load_file(&self, path: &Path, includes: bool) -> CargoResult<ConfigValue> {
-        let mut seen = HashSet::new();
-        self._load_file(path, &mut seen, includes)
+        self._load_file(path, &mut HashSet::new(), includes)
     }
 
     fn _load_file(
@@ -1171,9 +1170,8 @@ impl Config {
                         anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
                     })?
                     .to_string();
-                let mut map = HashMap::new();
                 let value = CV::String(str_path, Definition::Cli);
-                map.insert("include".to_string(), value);
+                let map = [("include".to_string(), value)].into();
                 CV::Table(map, Definition::Cli)
             } else {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
@@ -1253,9 +1251,8 @@ impl Config {
                 CV::from_toml(Definition::Cli, toml_v)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
-            let mut seen = HashSet::new();
             let tmp_table = self
-                .load_includes(tmp_table, &mut seen)
+                .load_includes(tmp_table, &mut HashSet::new())
                 .with_context(|| "failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
@@ -1419,8 +1416,7 @@ impl Config {
 
             if let Some(token) = value_map.remove("token") {
                 if let Vacant(entry) = value_map.entry("registry".into()) {
-                    let mut map = HashMap::new();
-                    map.insert("token".into(), token);
+                    let map = [("token".into(), token)].into();
                     let table = CV::Table(map, def.clone());
                     entry.insert(table);
                 }
@@ -1994,8 +1990,7 @@ pub fn save_credentials(
 
     // Move the old token location to the new one.
     if let Some(token) = toml.as_table_mut().unwrap().remove("token") {
-        let mut map = HashMap::new();
-        map.insert("token".to_string(), token);
+        let map: HashMap<_, _> = [("token".to_string(), token)].into();
         toml.as_table_mut()
             .unwrap()
             .insert("registry".into(), map.into());
@@ -2006,13 +2001,11 @@ pub fn save_credentials(
         let (key, mut value) = {
             let key = "token".to_string();
             let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
-            let mut map = HashMap::new();
-            map.insert(key, value);
+            let map = [(key, value)].into();
             let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
 
             if let Some(registry) = registry {
-                let mut map = HashMap::new();
-                map.insert(registry.to_string(), table);
+                let map = [(registry.to_string(), table)].into();
                 (
                     "registries".into(),
                     CV::Table(map, Definition::Path(file.path().to_path_buf())),

@@ -139,11 +139,12 @@ impl Profiles {
 
     /// Returns the hard-coded directory names for built-in profiles.
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
-        let mut dir_names = HashMap::new();
-        dir_names.insert(InternedString::new("dev"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("test"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("bench"), InternedString::new("release"));
-        dir_names
+        [
+            (InternedString::new("dev"), InternedString::new("debug")),
+            (InternedString::new("test"), InternedString::new("debug")),
+            (InternedString::new("bench"), InternedString::new("release")),
+        ]
+        .into()
     }
 
     /// Initialize `by_name` with the two "root" profiles, `dev`, and

@@ -13,14 +13,12 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if let Err(e) = args.workspace(config) {
-        let mut h = HashMap::new();
-        h.insert("invalid".to_string(), e.to_string());
+        let h: HashMap<_, _> = [("invalid", e.to_string())].into();
         config.shell().print_json(&h)?;
         process::exit(1)
     }
 
-    let mut h = HashMap::new();
-    h.insert("success".to_string(), "true".to_string());
+    let h: HashMap<_, _> = [("success", "true")].into();
     config.shell().print_json(&h)?;
     Ok(())
 }

@@ -75,9 +75,8 @@ impl Message {
             .shutdown(Shutdown::Write)
             .context("failed to shutdown")?;
 
-        let mut tmp = Vec::new();
         client
-            .read_to_end(&mut tmp)
+            .read_to_end(&mut Vec::new())
             .context("failed to receive a disconnect")?;
 
         Ok(())
