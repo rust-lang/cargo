@@ -24,7 +24,6 @@ use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_I
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::validate_package_name;
 use crate::util::IntoUrl;
 use crate::{drop_print, drop_println, version};
 
@@ -344,7 +343,6 @@ pub fn registry_configuration(
     // `registry.default` is handled in command-line parsing.
     let (index, token, process) = match registry {
         Some(registry) => {
-            validate_package_name(registry, "registry name", "")?;
             let index = Some(config.get_registry_index(registry)?.to_string());
             let token_key = format!("registries.{}.token", registry);
             let token = config.get_string(&token_key)?.map(|p| p.val);
