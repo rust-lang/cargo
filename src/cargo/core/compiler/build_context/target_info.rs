@@ -596,145 +596,172 @@ fn env_args(
     kind: CompileKind,
     name: &str,
 ) -> CargoResult<Vec<String>> {
-    // The `target-applies-to-host` setting is somewhat misleading in name.
-    //
-    // What it really does it opt into a _particular_ past Cargo behavior for `[target.<host>]` for
-    // host artifacts, namely that `linker` and `runner` from `[target.<host>]` are respected, but
-    // `rustflags` is _not_.
-    //
-    // The code (and comments) below are written to first apply `target-applies-to-host` _as if it
-    // was consistent_, and then adjusts the settings to match the legacy behavior that
-    // `target-applies-to-host = true` _really_ enables. This was done to (hopefully) make the
-    // logic flow clearer, and to make future modifications to the rules for when rustflags get
-    // applied less likely to break the legacy behavior.
+    // The `target-applies-to-host` setting is somewhat misleading in name. What it really does it
+    // opt into a _particular_ legacy Cargo behavior for how rustflags are picked up.
     let target_applies_to_host = config.target_applies_to_host()?;
+    if target_applies_to_host == true {
+        // We're operating in "legacy" Cargo mode, where the presence or absence of --target makes
+        // a difference for which configuration options are picked up. Specifically:
+        //
+        // If --target is not passed, all configuration sources are consulted whether we're
+        // compiling a host artifact or not.
+        if requested_kinds == [CompileKind::Host] {
+            // RUSTFLAGS takes priority
+            if let Some(rustflags) = rustflags_from_env(name) {
+                Ok(rustflags)
 
-    // Include untargeted configuration sources (like `RUSTFLAGS`) if
-    //
-    //  - we're compiling artifacts for the target platform; or
-    //  - we're not cross-compiling; or
-    //  - we're compiling host artifacts, the requested target matches the host, and the user has
-    //    requested that the host pick up target configurations.
-    //
-    // The rationale for the third condition is that `RUSTFLAGS` is intended to affect compilation
-    // for the target, and `target-applies-to-host` makes it so that the host is affected by its
-    // target's config, so if `--target <host triple>` then `RUSTFLAGS` should also apply to the
-    // host.
-    let mut include_generic = !kind.is_host()
-        || requested_kinds == [CompileKind::Host]
-        || (target_applies_to_host
-            && requested_kinds == [CompileKind::Target(CompileTarget::new(host_triple)?)]);
+            // [host] is a new feature, so we have it take priority over [target.<host>]
+            } else if let Some(rustflags) = rustflags_from_host(config, host_triple)? {
+                Ok(rustflags)
 
-    // Include targeted configuration sources (like `target.*.rustflags`) if
-    //
-    //  - we're compiling artifacts for the target platform; or
-    //  - we're not cross-compiling; or
-    //  - we're compiling host artifacts and the user has requested that the host pick up target
-    //    configurations.
-    //
-    // The middle condition here may seem counter-intuitive. If `target-applies-to-host-kind` is
-    // disabled, then `target.*.rustflags` should arguably not apply to host artifacts. However,
-    // this is likely surprising to users who set `target.<host triple>.rustflags` and run `cargo
-    // build` (with no `--target`). So, we respect `target.<host triple>`.rustflags` when
-    // `--target` _isn't_ supplied, which arguably matches the mental model established by
-    // respecting `RUSTFLAGS` when `--target` isn't supplied.
-    let mut include_for_target =
-        !kind.is_host() || requested_kinds == [CompileKind::Host] || target_applies_to_host;
+            // but [target.<host>] _does_ apply to host artifacts
+            } else if let Some(rustflags) =
+                rustflags_from_target(config, host_triple, target_cfg, kind, name)?
+            {
+                Ok(rustflags)
 
-    // Include host-based configuration sources (like `host.*.rustflags`) if
-    //
-    //  - we're compiling host artifacts; or
-    //  - we're not cross-compiling
-    //
-    // Note that we do _not_ read `host.*.rustflags` just because the host's target is the same as
-    // the requested target, as that's the whole point of the `host` section in the first place.
-    let include_for_host = kind.is_host() || requested_kinds == [CompileKind::Host];
-
-    // Apply the legacy behavior of target_applies_to_host.
-    if target_applies_to_host && kind.is_host() && requested_kinds != [CompileKind::Host] {
-        include_generic = false;
-        include_for_target = false;
-    }
-
-    if include_generic {
-        // First try CARGO_ENCODED_RUSTFLAGS from the environment.
-        // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
-        if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", name)) {
-            if a.is_empty() {
-                return Ok(Vec::new());
+            // and otherwise we fall back to [build]
+            } else if let Some(rustflags) = rustflags_from_build(config, name)? {
+                Ok(rustflags)
+            } else {
+                Ok(Vec::new())
             }
-            return Ok(a.split('\x1f').map(str::to_string).collect());
+
+        // If --target _is_ passed, then host artifacts traditionally got _no_ rustflags applies.
+        // Since [host] is a new feature, we can dictate that it is respect even in this mode
+        // though.
+        } else if kind.is_host() {
+            if let Some(rustflags) = rustflags_from_host(config, host_triple)? {
+                Ok(rustflags)
+            } else {
+                Ok(Vec::new())
+            }
+
+        // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+        } else {
+            if let Some(rustflags) = rustflags_from_env(name) {
+                Ok(rustflags)
+            } else if let Some(rustflags) =
+                rustflags_from_target(config, host_triple, target_cfg, kind, name)?
+            {
+                Ok(rustflags)
+            } else if let Some(rustflags) = rustflags_from_build(config, name)? {
+                Ok(rustflags)
+            } else {
+                Ok(Vec::new())
+            }
         }
 
-        // Then try RUSTFLAGS from the environment
-        if let Ok(a) = env::var(name) {
-            let args = a
-                .split(' ')
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-                .map(str::to_string);
-            return Ok(args.collect());
+    // If we're _not_ in legacy mode, then host artifacts just get flags from [host], regardless of
+    // --target. Or, phrased differently, no `--target` behaves the same as `--target <host>`, and
+    // host artifacts are always "special" (they don't pick up `RUSTFLAGS` for example).
+    } else if kind.is_host() {
+        Ok(rustflags_from_host(config, host_triple)?.unwrap_or_else(Vec::new))
+
+    // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+    } else {
+        if let Some(rustflags) = rustflags_from_env(name) {
+            Ok(rustflags)
+        } else if let Some(rustflags) =
+            rustflags_from_target(config, host_triple, target_cfg, kind, name)?
+        {
+            Ok(rustflags)
+        } else if let Some(rustflags) = rustflags_from_build(config, name)? {
+            Ok(rustflags)
+        } else {
+            Ok(Vec::new())
         }
     }
+}
 
+fn rustflags_from_env(name: &str) -> Option<Vec<String>> {
+    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
+    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
+    if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", name)) {
+        if a.is_empty() {
+            return Some(Vec::new());
+        }
+        return Some(a.split('\x1f').map(str::to_string).collect());
+    }
+
+    // Then try RUSTFLAGS from the environment
+    if let Ok(a) = env::var(name) {
+        let args = a
+            .split(' ')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+        return Some(args.collect());
+    }
+
+    // No rustflags to be collected from the environment
+    None
+}
+
+fn rustflags_from_target(
+    config: &Config,
+    host_triple: &str,
+    target_cfg: Option<&[Cfg]>,
+    kind: CompileKind,
+    name: &str,
+) -> CargoResult<Option<Vec<String>>> {
     let mut rustflags = Vec::new();
 
     let name = name
         .chars()
         .flat_map(|c| c.to_lowercase())
         .collect::<String>();
-    if include_for_target {
-        // Then the target.*.rustflags value...
-        let target = match &kind {
-            CompileKind::Host => host_triple,
-            CompileKind::Target(target) => target.short_name(),
-        };
-        let key = format!("target.{}.{}", target, name);
-        if let Some(args) = config.get::<Option<StringList>>(&key)? {
-            rustflags.extend(args.as_slice().iter().cloned());
-        }
-        // ...including target.'cfg(...)'.rustflags
-        if let Some(target_cfg) = target_cfg {
-            config
-                .target_cfgs()?
-                .iter()
-                .filter_map(|(key, cfg)| {
-                    cfg.rustflags
-                        .as_ref()
-                        .map(|rustflags| (key, &rustflags.val))
-                })
-                .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
-                .for_each(|(_key, cfg_rustflags)| {
-                    rustflags.extend(cfg_rustflags.as_slice().iter().cloned());
-                });
-        }
+
+    // Then the target.*.rustflags value...
+    let target = match &kind {
+        CompileKind::Host => host_triple,
+        CompileKind::Target(target) => target.short_name(),
+    };
+    let key = format!("target.{}.{}", target, name);
+    if let Some(args) = config.get::<Option<StringList>>(&key)? {
+        rustflags.extend(args.as_slice().iter().cloned());
+    }
+    // ...including target.'cfg(...)'.rustflags
+    if let Some(target_cfg) = target_cfg {
+        config
+            .target_cfgs()?
+            .iter()
+            .filter_map(|(key, cfg)| {
+                cfg.rustflags
+                    .as_ref()
+                    .map(|rustflags| (key, &rustflags.val))
+            })
+            .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
+            .for_each(|(_key, cfg_rustflags)| {
+                rustflags.extend(cfg_rustflags.as_slice().iter().cloned());
+            });
     }
 
-    if include_for_host {
-        let target_cfg = config.host_cfg_triple(host_triple)?;
-        if let Some(rf) = target_cfg.rustflags {
-            rustflags.extend(rf.val.as_slice().iter().cloned());
-        }
+    if rustflags.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(rustflags))
     }
+}
 
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
+fn rustflags_from_host(config: &Config, host_triple: &str) -> CargoResult<Option<Vec<String>>> {
+    let target_cfg = config.host_cfg_triple(host_triple)?;
+    if let Some(rf) = target_cfg.rustflags {
+        Ok(Some(rf.val.as_slice().iter().cloned().collect()))
+    } else {
+        Ok(None)
     }
+}
 
-    if include_generic {
-        // Then the `build.rustflags` value.
-        let build = config.build_config()?;
-        let list = if name == "rustflags" {
-            &build.rustflags
-        } else {
-            &build.rustdocflags
-        };
-        if let Some(list) = list {
-            return Ok(list.as_slice().to_vec());
-        }
-    }
-
-    Ok(Vec::new())
+fn rustflags_from_build(config: &Config, name: &str) -> CargoResult<Option<Vec<String>>> {
+    // Then the `build.rustflags` value.
+    let build = config.build_config()?;
+    let list = if name.eq_ignore_ascii_case("rustflags") {
+        &build.rustflags
+    } else {
+        &build.rustdocflags
+    };
+    Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
 }
 
 /// Collection of information about `rustc` and the host and target.

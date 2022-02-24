@@ -1137,6 +1137,72 @@ fn target_rustflags_not_for_build_scripts_with_target() {
 }
 
 #[cargo_test]
+fn build_rustflags_for_build_scripts() {
+    let host = rustc_host();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() { }
+                #[cfg(foo)]
+                fn main() { }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            "
+            [build]
+            rustflags = [\"--cfg=foo\"]
+            ",
+        )
+        .build();
+
+    // With "legacy" behavior, build.rustflags should apply to build scripts without --target
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_does_not_contain("[..]build_script_build[..]")
+        .run();
+
+    // But should _not_ apply _with_ --target
+    p.cargo("build --target").arg(host).run();
+
+    // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_does_not_contain("[..]build_script_build[..]")
+        .run();
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .run();
+
+    // When set to false though, the "proper" behavior where host artifacts _only_ pick up on
+    // [host] should be applied.
+    p.change_file(
+        ".cargo/config",
+        "
+        target-applies-to-host = false
+
+        [build]
+        rustflags = [\"--cfg=foo\"]
+        ",
+    );
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .run();
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .run();
+}
+
+#[cargo_test]
 fn host_rustflags_for_build_scripts() {
     let host = rustc_host();
     let p = project()

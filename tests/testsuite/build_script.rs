@@ -469,7 +469,7 @@ fn custom_build_invalid_host_config_feature_flag() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: the -Zhost-config flag requires -Ztarget-applies-to-host
+error: the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
 ",
         )
         .run();

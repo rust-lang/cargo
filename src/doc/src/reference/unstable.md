@@ -521,7 +521,9 @@ When `target-applies-to-host` is unset, or set to `true`, in the
 configuration file, the existing Cargo behavior is preserved (though see
 `-Zhost-config`, which changes that default). When it is set to `false`,
 no options from `[target.<host triple>]` are respected for host
-artifacts.
+artifacts. Furthermore, when set to `false`, host artifacts do not pick
+up flags from `RUSTFLAGS` or `[build]`, even if `--target` is _not_
+passed to Cargo.
 
 In the future, `target-applies-to-host` may end up defaulting to `false`
 to provide more sane and consistent default behavior. When set to
@@ -565,9 +567,8 @@ The generic `host` table above will be entirely ignored when building on a
 `x86_64-unknown-linux-gnu` host as the `host.x86_64-unknown-linux-gnu` table
 takes precedence.
 
-Setting `-Zhost-config` changes the default value of
-`target-applies-to-host` to `false`, and will error if
-`target-applies-to-host` is set to `true`.
+Setting `-Zhost-config` changes the default for `target-applies-to-host` to
+`false` from `true`.
 
 ```console
 cargo +nightly -Ztarget-applies-to-host -Zhost-config build --target x86_64-unknown-linux-gnu
