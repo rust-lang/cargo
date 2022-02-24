@@ -407,5 +407,7 @@ EXAMPLES
               cargo test --test int_test_name -- modname::test_name
 
 SEE ALSO
-       cargo(1), cargo-bench(1)
+       cargo(1), cargo-bench(1), types of tests
+       <https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests>,
+       how to write tests <https://doc.rust-lang.org/rustc/tests/index.html>
 
