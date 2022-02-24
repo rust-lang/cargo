@@ -599,7 +599,7 @@ fn env_args(
     // The `target-applies-to-host` setting is somewhat misleading in name. What it really does it
     // opt into a _particular_ legacy Cargo behavior for how rustflags are picked up.
     let target_applies_to_host = config.target_applies_to_host()?;
-    if target_applies_to_host == true {
+    if target_applies_to_host {
         // We're operating in "legacy" Cargo mode, where the presence or absence of --target makes
         // a difference for which configuration options are picked up. Specifically:
         //
