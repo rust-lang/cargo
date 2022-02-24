@@ -55,7 +55,6 @@ fn env_rustflags_normal_source() {
 fn env_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -70,9 +69,7 @@ fn env_rustflags_build_script() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
+                fn main() { assert!(cfg!(foo)); }
             "#,
         )
         .build();
@@ -243,7 +240,6 @@ fn env_rustflags_normal_source_with_target() {
 fn env_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -258,9 +254,7 @@ fn env_rustflags_build_script_with_target() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(!cfg!(foo)); }
             "#,
         )
         .build();
@@ -276,7 +270,6 @@ fn env_rustflags_build_script_with_target() {
 fn env_rustflags_build_script_with_target_doesnt_apply_to_host_kind() {
     // RUSTFLAGS should *not* be passed to rustc for build scripts when --target is specified as the
     // host triple even if target-applies-to-host-kind is enabled, to match legacy Cargo behavior.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -291,9 +284,7 @@ fn env_rustflags_build_script_with_target_doesnt_apply_to_host_kind() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(!cfg!(foo)); }
             "#,
         )
         .file(
@@ -519,7 +510,6 @@ fn build_rustflags_normal_source() {
 fn build_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -534,9 +524,7 @@ fn build_rustflags_build_script() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
+                fn main() { assert!(cfg!(foo)); }
             "#,
         )
         .file(
@@ -737,7 +725,6 @@ fn build_rustflags_normal_source_with_target() {
 fn build_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -752,9 +739,7 @@ fn build_rustflags_build_script_with_target() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(!cfg!(foo)); }
             "#,
         )
         .file(
@@ -1041,9 +1026,7 @@ fn target_rustflags_also_for_build_scripts() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
+                fn main() { assert!(cfg!(foo)); }
             "#,
         )
         .file(
@@ -1069,9 +1052,7 @@ fn target_rustflags_not_for_build_scripts_with_target() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(!cfg!(foo)); }
             "#,
         )
         .file(
@@ -1124,9 +1105,7 @@ fn build_rustflags_for_build_scripts() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(cfg!(foo)); }
             "#,
         )
         .file(
@@ -1139,25 +1118,26 @@ fn build_rustflags_for_build_scripts() {
         .build();
 
     // With "legacy" behavior, build.rustflags should apply to build scripts without --target
-    p.cargo("build")
-        .with_status(101)
-        .with_stderr_contains("[..]previous definition of the value `main` here[..]")
-        .run();
+    p.cargo("build").run();
 
     // But should _not_ apply _with_ --target
-    p.cargo("build --target").arg(host).run();
+    p.cargo("build --target")
+        .arg(host)
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
+        .run();
 
     // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
     p.cargo("build")
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
-        .with_status(101)
-        .with_stderr_contains("[..]previous definition of the value `main` here[..]")
         .run();
     p.cargo("build --target")
         .arg(host)
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
         .run();
 
     // When set to false though, the "proper" behavior where host artifacts _only_ pick up on
@@ -1174,11 +1154,15 @@ fn build_rustflags_for_build_scripts() {
     p.cargo("build")
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
         .run();
     p.cargo("build --target")
         .arg(host)
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
         .run();
 }
 
