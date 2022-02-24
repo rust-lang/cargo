@@ -53,8 +53,7 @@ pub fn resolve_std<'cfg>(
         })
         .collect::<CargoResult<Vec<_>>>()?;
     let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
-    let mut patch = HashMap::new();
-    patch.insert(crates_io_url, patches);
+    let patch = HashMap::from([(crates_io_url, patches)]);
     let members = vec![
         String::from("library/std"),
         String::from("library/core"),

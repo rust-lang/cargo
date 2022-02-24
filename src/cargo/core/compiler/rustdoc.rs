@@ -64,10 +64,8 @@ pub struct RustdocExternMap {
 
 impl Default for RustdocExternMap {
     fn default() -> Self {
-        let mut registries = HashMap::new();
-        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
         Self {
-            registries,
+            registries: HashMap::from([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
             std: None,
         }
     }
