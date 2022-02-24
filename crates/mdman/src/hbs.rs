@@ -30,7 +30,7 @@ pub fn expand(file: &Path, formatter: FormatterRef) -> Result<String, Error> {
         .to_str()
         .expect("utf8 filename")
         .to_string();
-    let data: HashMap<String, String> = [("man_name", man_name)].into();
+    let data = HashMap::from([("man_name", man_name)]);
     let expanded = handlebars.render("template", &data)?;
     Ok(expanded)
 }

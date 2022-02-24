@@ -1171,7 +1171,7 @@ impl Config {
                     })?
                     .to_string();
                 let value = CV::String(str_path, Definition::Cli);
-                let map = [("include".to_string(), value)].into();
+                let map = HashMap::from([("include".to_string(), value)]);
                 CV::Table(map, Definition::Cli)
             } else {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
@@ -1416,7 +1416,7 @@ impl Config {
 
             if let Some(token) = value_map.remove("token") {
                 if let Vacant(entry) = value_map.entry("registry".into()) {
-                    let map = [("token".into(), token)].into();
+                    let map = HashMap::from([("token".into(), token)]);
                     let table = CV::Table(map, def.clone());
                     entry.insert(table);
                 }
@@ -1990,7 +1990,7 @@ pub fn save_credentials(
 
     // Move the old token location to the new one.
     if let Some(token) = toml.as_table_mut().unwrap().remove("token") {
-        let map: HashMap<_, _> = [("token".to_string(), token)].into();
+        let map = HashMap::from([("token".to_string(), token)]);
         toml.as_table_mut()
             .unwrap()
             .insert("registry".into(), map.into());
@@ -2001,11 +2001,11 @@ pub fn save_credentials(
         let (key, mut value) = {
             let key = "token".to_string();
             let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
-            let map = [(key, value)].into();
+            let map = HashMap::from([(key, value)]);
             let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
 
             if let Some(registry) = registry {
-                let map = [(registry.to_string(), table)].into();
+                let map = HashMap::from([(registry.to_string(), table)]);
                 (
                     "registries".into(),
                     CV::Table(map, Definition::Path(file.path().to_path_buf())),
