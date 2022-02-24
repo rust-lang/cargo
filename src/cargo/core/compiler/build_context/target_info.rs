@@ -596,81 +596,40 @@ fn env_args(
     kind: CompileKind,
     name: &str,
 ) -> CargoResult<Vec<String>> {
-    // The `target-applies-to-host` setting is somewhat misleading in name. What it really does it
-    // opt into a _particular_ legacy Cargo behavior for how rustflags are picked up.
     let target_applies_to_host = config.target_applies_to_host()?;
-    if target_applies_to_host {
-        // We're operating in "legacy" Cargo mode, where the presence or absence of --target makes
-        // a difference for which configuration options are picked up. Specifically:
-        //
-        // If --target is not passed, all configuration sources are consulted whether we're
-        // compiling a host artifact or not.
-        if requested_kinds == [CompileKind::Host] {
-            // RUSTFLAGS takes priority
-            if let Some(rustflags) = rustflags_from_env(name) {
-                Ok(rustflags)
 
-            // [host] is a new feature, so we have it take priority over [target.<host>]
-            } else if let Some(rustflags) = rustflags_from_host(config, name, host_triple)? {
-                Ok(rustflags)
-
-            // but [target.<host>] _does_ apply to host artifacts
-            } else if let Some(rustflags) =
-                rustflags_from_target(config, host_triple, target_cfg, kind, name)?
-            {
-                Ok(rustflags)
-
-            // and otherwise we fall back to [build]
-            } else if let Some(rustflags) = rustflags_from_build(config, name)? {
-                Ok(rustflags)
-            } else {
-                Ok(Vec::new())
-            }
-
-        // If --target _is_ passed, then host artifacts traditionally got _no_ rustflags applies.
-        // Since [host] is a new feature, we can dictate that it is respect even in this mode
-        // though.
-        } else if kind.is_host() {
-            if let Some(rustflags) = rustflags_from_host(config, name, host_triple)? {
-                Ok(rustflags)
-            } else {
-                Ok(Vec::new())
-            }
-
-        // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+    // Host artifacts should not generally pick up rustflags from anywhere except [host].
+    //
+    // The one exception to this is if `target-applies-to-host = true`, which opts into a
+    // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
+    // set elsewhere when `--target` isn't passed.
+    if kind.is_host() {
+        if target_applies_to_host && requested_kinds == [CompileKind::Host] {
+            // This is the past Cargo behavior where we fall back to the same logic as for other
+            // artifacts without --target.
         } else {
-            if let Some(rustflags) = rustflags_from_env(name) {
-                Ok(rustflags)
-            } else if let Some(rustflags) =
-                rustflags_from_target(config, host_triple, target_cfg, kind, name)?
-            {
-                Ok(rustflags)
-            } else if let Some(rustflags) = rustflags_from_build(config, name)? {
-                Ok(rustflags)
-            } else {
-                Ok(Vec::new())
-            }
+            // In all other cases, host artifacts just get flags from [host], regardless of
+            // --target. Or, phrased differently, no `--target` behaves the same as `--target
+            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
+            // example).
+            return Ok(rustflags_from_host(config, name, host_triple)?.unwrap_or_else(Vec::new));
         }
-
-    // If we're _not_ in legacy mode, then host artifacts just get flags from [host], regardless of
-    // --target. Or, phrased differently, no `--target` behaves the same as `--target <host>`, and
-    // host artifacts are always "special" (they don't pick up `RUSTFLAGS` for example).
-    } else if kind.is_host() {
-        Ok(rustflags_from_host(config, name, host_triple)?.unwrap_or_else(Vec::new))
+    }
 
     // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+    // NOTE: It is impossible to have a [host] section and reach this logic with kind.is_host(),
+    // since [host] implies `target-applies-to-host = false`, which always early-returns above.
+
+    if let Some(rustflags) = rustflags_from_env(name) {
+        Ok(rustflags)
+    } else if let Some(rustflags) =
+        rustflags_from_target(config, host_triple, target_cfg, kind, name)?
+    {
+        Ok(rustflags)
+    } else if let Some(rustflags) = rustflags_from_build(config, name)? {
+        Ok(rustflags)
     } else {
-        if let Some(rustflags) = rustflags_from_env(name) {
-            Ok(rustflags)
-        } else if let Some(rustflags) =
-            rustflags_from_target(config, host_triple, target_cfg, kind, name)?
-        {
-            Ok(rustflags)
-        } else if let Some(rustflags) = rustflags_from_build(config, name)? {
-            Ok(rustflags)
-        } else {
-            Ok(Vec::new())
-        }
+        Ok(Vec::new())
     }
 }
 
