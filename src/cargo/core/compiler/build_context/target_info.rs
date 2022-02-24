@@ -611,7 +611,7 @@ fn env_args(
                 Ok(rustflags)
 
             // [host] is a new feature, so we have it take priority over [target.<host>]
-            } else if let Some(rustflags) = rustflags_from_host(config, host_triple)? {
+            } else if let Some(rustflags) = rustflags_from_host(config, name, host_triple)? {
                 Ok(rustflags)
 
             // but [target.<host>] _does_ apply to host artifacts
@@ -631,7 +631,7 @@ fn env_args(
         // Since [host] is a new feature, we can dictate that it is respect even in this mode
         // though.
         } else if kind.is_host() {
-            if let Some(rustflags) = rustflags_from_host(config, host_triple)? {
+            if let Some(rustflags) = rustflags_from_host(config, name, host_triple)? {
                 Ok(rustflags)
             } else {
                 Ok(Vec::new())
@@ -656,7 +656,7 @@ fn env_args(
     // --target. Or, phrased differently, no `--target` behaves the same as `--target <host>`, and
     // host artifacts are always "special" (they don't pick up `RUSTFLAGS` for example).
     } else if kind.is_host() {
-        Ok(rustflags_from_host(config, host_triple)?.unwrap_or_else(Vec::new))
+        Ok(rustflags_from_host(config, name, host_triple)?.unwrap_or_else(Vec::new))
 
     // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
     } else {
@@ -711,7 +711,6 @@ fn rustflags_from_target(
         .chars()
         .flat_map(|c| c.to_lowercase())
         .collect::<String>();
-
     // Then the target.*.rustflags value...
     let target = match &kind {
         CompileKind::Host => host_triple,
@@ -744,13 +743,19 @@ fn rustflags_from_target(
     }
 }
 
-fn rustflags_from_host(config: &Config, host_triple: &str) -> CargoResult<Option<Vec<String>>> {
+fn rustflags_from_host(
+    config: &Config,
+    name: &str,
+    host_triple: &str,
+) -> CargoResult<Option<Vec<String>>> {
     let target_cfg = config.host_cfg_triple(host_triple)?;
-    if let Some(rf) = target_cfg.rustflags {
-        Ok(Some(rf.val.as_slice().iter().cloned().collect()))
+    let list = if name.eq_ignore_ascii_case("rustflags") {
+        &target_cfg.rustflags
     } else {
-        Ok(None)
-    }
+        // host.rustdocflags is not a thing, since it does not make sense
+        return Ok(None);
+    };
+    Ok(list.as_ref().map(|l| l.val.as_slice().to_vec()))
 }
 
 fn rustflags_from_build(config: &Config, name: &str) -> CargoResult<Option<Vec<String>>> {
