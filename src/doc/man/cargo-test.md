@@ -178,4 +178,4 @@ includes an option to control the number of threads used:
        cargo test --test int_test_name -- modname::test_name
 
 ## SEE ALSO
-{{man "cargo" 1}}, {{man "cargo-bench" 1}}
+{{man "cargo" 1}}, {{man "cargo-bench" 1}}, [types of tests](../reference/cargo-targets.html#tests), [how to write tests](https://doc.rust-lang.org/rustc/tests/index.html)

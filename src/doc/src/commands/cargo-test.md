@@ -491,4 +491,4 @@ details on environment variables that Cargo reads.
        cargo test --test int_test_name -- modname::test_name
 
 ## SEE ALSO
-[cargo(1)](cargo.html), [cargo-bench(1)](cargo-bench.html)
+[cargo(1)](cargo.html), [cargo-bench(1)](cargo-bench.html), [types of tests](../reference/cargo-targets.html#tests), [how to write tests](https://doc.rust-lang.org/rustc/tests/index.html)
