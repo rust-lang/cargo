@@ -508,27 +508,32 @@ CLI paths are relative to the current working directory.
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
 * Tracking Issue: [#9453](https://github.com/rust-lang/cargo/issues/9453)
 
-Historically, Cargo has respected the `linker` and `runner` options (but
-_not_ `rustflags`) of `[target.<host triple>]` configuration sections
-when building and running build scripts, plugins, and other artifacts
-that are _always_ built for the host platform.
+Historically, Cargo's behavior for whether the `linker` and `rustflags`
+configuration options from environment variables and `[target]` are
+respected for build scripts, plugins, and other artifacts that are
+_always_ built for the host platform has been somewhat inconsistent.
+When `--target` is _not_ passed, Cargo respects the same `linker` and
+`rustflags` for build scripts as for all other compile artifacts. When
+`--target` _is_ passed, however, Cargo respects `linker` from
+`[target.<host triple>]`, and does not pick up any `rustflags`
+configuration. This dual behavior is confusing, but also makes it
+difficult to correctly configure builds where the host triple and the
+target triple happen to be the same, but artifacts intended to run on
+the build host should still be configured differently.
+
 `-Ztarget-applies-to-host` enables the top-level
 `target-applies-to-host` setting in Cargo configuration files which
 allows users to opt into different (and more consistent) behavior for
-these properties.
-
-When `target-applies-to-host` is unset, or set to `true`, in the
-configuration file, the existing Cargo behavior is preserved (though see
-`-Zhost-config`, which changes that default). When it is set to `false`,
-no options from `[target.<host triple>]` are respected for host
-artifacts. Furthermore, when set to `false`, host artifacts do not pick
-up flags from `RUSTFLAGS` or `[build]`, even if `--target` is _not_
-passed to Cargo.
+these properties. When `target-applies-to-host` is unset, or set to
+`true`, in the configuration file, the existing Cargo behavior is
+preserved (though see `-Zhost-config`, which changes that default). When
+it is set to `false`, no options from `[target.<host triple>]`,
+`RUSTFLAGS`, or `[build]` are respected for host artifacts regardless of
+whether `--target` is passed to Cargo. To customize artifacts intended
+to be run on the host, use `[host]` ([`host-config`](#host-config)).
 
 In the future, `target-applies-to-host` may end up defaulting to `false`
-to provide more sane and consistent default behavior. When set to
-`false`, `host-config` can be used to customize the behavior for host
-artifacts.
+to provide more sane and consistent default behavior.
 
 ```toml
 # config.toml
