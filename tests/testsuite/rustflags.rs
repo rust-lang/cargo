@@ -731,26 +731,6 @@ fn build_rustflags_normal_source_with_target() {
         .with_status(101)
         .with_stderr_contains("[..]bogus[..]")
         .run();
-
-    // With -Ztarget-applies-to-host build.rustflags should still not apply to build.rs, even when
-    // target == host, to match legacy Cargo behavior.
-    p.change_file("build.rs", "fn main() {}");
-    p.change_file(
-        ".cargo/config",
-        r#"
-        target-applies-to-host = true
-
-        [build]
-        rustflags = ["-Z", "bogus"]
-        "#,
-    );
-    p.cargo("build --lib --target")
-        .arg(host)
-        .masquerade_as_nightly_cargo()
-        .arg("-Ztarget-applies-to-host")
-        .with_status(101)
-        .with_stderr_does_not_contain("[..]build_script_build[..]")
-        .run();
 }
 
 #[cargo_test]
@@ -1161,7 +1141,7 @@ fn build_rustflags_for_build_scripts() {
     // With "legacy" behavior, build.rustflags should apply to build scripts without --target
     p.cargo("build")
         .with_status(101)
-        .with_stderr_does_not_contain("[..]build_script_build[..]")
+        .with_stderr_contains("[..]previous definition of the value `main` here[..]")
         .run();
 
     // But should _not_ apply _with_ --target
@@ -1172,7 +1152,7 @@ fn build_rustflags_for_build_scripts() {
         .masquerade_as_nightly_cargo()
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
-        .with_stderr_does_not_contain("[..]build_script_build[..]")
+        .with_stderr_contains("[..]previous definition of the value `main` here[..]")
         .run();
     p.cargo("build --target")
         .arg(host)
