@@ -650,7 +650,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format_and_color(cx, &mut rustdoc, unit);
+    add_error_format_and_color(cx, &mut rustdoc);
     add_allow_features(cx, &mut rustdoc);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
@@ -821,19 +821,9 @@ fn add_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) {
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
-fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) {
+fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.arg("--error-format=json");
-    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts");
-    if cx
-        .bcx
-        .target_data
-        .info(unit.kind)
-        .supports_json_future_incompat
-    {
-        // Emit a future-incompat report (when supported by rustc), so we can report
-        // future-incompat dependencies to the user
-        json.push_str(",future-incompat");
-    }
+    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
     match cx.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
@@ -895,7 +885,7 @@ fn build_base_args(
     edition.cmd_edition_arg(cmd);
 
     add_path_args(bcx.ws, unit, cmd);
-    add_error_format_and_color(cx, cmd, unit);
+    add_error_format_and_color(cx, cmd);
     add_allow_features(cx, cmd);
 
     let mut contains_dy_lib = false;
