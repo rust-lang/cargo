@@ -476,7 +476,7 @@ error: the -Zhost-config flag requires -Ztarget-applies-to-host
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
+fn custom_build_linker_host_target_with_bad_host_config() {
     let target = rustc_host();
     let p = project()
         .file(
@@ -511,7 +511,7 @@ fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_bad_host() {
+fn custom_build_linker_bad_host() {
     let target = rustc_host();
     let p = project()
         .file(
@@ -546,7 +546,7 @@ fn custom_build_env_var_rustc_linker_bad_host() {
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
+fn custom_build_linker_bad_host_with_arch() {
     let target = rustc_host();
     let p = project()
         .file(
@@ -621,7 +621,7 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
+fn custom_build_linker_bad_cross_arch_host() {
     let target = rustc_host();
     let cross_target = cross_compile::alternate();
     let p = project()
