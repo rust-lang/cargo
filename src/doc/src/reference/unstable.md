@@ -1132,9 +1132,9 @@ cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
 * RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
 
 The `-Z check-cfg-features` argument tells Cargo to pass all possible features of a package to
-`rustc` unstable `--check-cfg` command line as `--check-cfg=values(feature, ...)`. This enables
-compile time checking of feature values in `#[cfg]`, `cfg!` and `#[cfg_attr]`. Note than this
-command line options will probably become the default when stabilizing.
+`rustc` and `rustdoc` unstable `--check-cfg` command line as `--check-cfg=values(feature, ...)`.
+This enables compile time checking of feature values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
+Note than this command line options will probably become the default when stabilizing.
 For instance:
 
 ```

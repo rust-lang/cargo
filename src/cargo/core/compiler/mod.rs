@@ -645,10 +645,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     paths::create_dir_all(&doc_dir)?;
 
     rustdoc.arg("-o").arg(&doc_dir);
-
-    for feat in &unit.features {
-        rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-    }
+    rustdoc.args(&features_args(cx, unit));
 
     add_error_format_and_color(cx, &mut rustdoc, unit);
     add_allow_features(cx, &mut rustdoc);
@@ -788,28 +785,6 @@ fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
         let mut arg = String::from("-Zallow-features=");
         let _ = iter_join_onto(&mut arg, allow, ",");
         cmd.arg(&arg);
-    }
-}
-
-/// Add all features as cfg
-fn add_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) {
-    for feat in &unit.features {
-        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-    }
-
-    if cx.bcx.config.cli_unstable().check_cfg_features {
-        // This generate something like this:
-        //  - values(feature)
-        //  - values(feature, "foo", "bar")
-        let mut arg = String::from("values(feature");
-        for (&feat, _) in unit.pkg.summary().features() {
-            arg.push_str(", \"");
-            arg.push_str(&feat);
-            arg.push_str("\"");
-        }
-        arg.push(')');
-
-        cmd.arg("-Zunstable-options").arg("--check-cfg").arg(&arg);
     }
 }
 
@@ -1009,7 +984,7 @@ fn build_base_args(
         cmd.arg("--cfg").arg("test");
     }
 
-    add_features(cx, cmd, unit);
+    cmd.args(&features_args(cx, unit));
 
     let meta = cx.files().metadata(unit);
     cmd.arg("-C").arg(&format!("metadata={}", meta));
@@ -1081,6 +1056,35 @@ fn build_base_args(
         }
     }
     Ok(())
+}
+
+/// Features with --cfg and all features with --check-cfg
+fn features_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let mut args = Vec::with_capacity(unit.features.len() + 2);
+
+    for feat in &unit.features {
+        args.push(OsString::from("--cfg"));
+        args.push(OsString::from(format!("feature=\"{}\"", feat)));
+    }
+
+    if cx.bcx.config.cli_unstable().check_cfg_features {
+        // This generate something like this:
+        //  - values(feature)
+        //  - values(feature, "foo", "bar")
+        let mut arg = OsString::from("values(feature");
+        for (&feat, _) in unit.pkg.summary().features() {
+            arg.push(", \"");
+            arg.push(&feat);
+            arg.push("\"");
+        }
+        arg.push(")");
+
+        args.push(OsString::from("-Zunstable-options"));
+        args.push(OsString::from("--check-cfg"));
+        args.push(arg);
+    }
+
+    args
 }
 
 fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
