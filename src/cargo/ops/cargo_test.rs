@@ -282,7 +282,7 @@ fn display_no_run_information(
             path,
             script_meta,
             test_args,
-            &compilation,
+            compilation,
             exec_type,
         )?;
         config
