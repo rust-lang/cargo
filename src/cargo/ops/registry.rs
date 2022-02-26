@@ -13,6 +13,7 @@ use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use termcolor::ColorSpec;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -955,15 +956,19 @@ pub fn search(
             }
             None => name,
         };
-        drop_println!(config, "{}", line);
+        let _ = config
+            .shell()
+            .write_stdout(format_args!("{}\n", line), &ColorSpec::new());
     }
 
     let search_max_limit = 100;
     if total_crates > limit && limit < search_max_limit {
-        drop_println!(
-            config,
-            "... and {} crates more (use --limit N to see more)",
-            total_crates - limit
+        let _ = config.shell().write_stdout(
+            format_args!(
+                "... and {} crates more (use --limit N to see more)\n",
+                total_crates - limit
+            ),
+            &ColorSpec::new(),
         );
     } else if total_crates > limit && limit >= search_max_limit {
         let extra = if source_id.is_default_registry() {
@@ -974,11 +979,9 @@ pub fn search(
         } else {
             String::new()
         };
-        drop_println!(
-            config,
-            "... and {} crates more{}",
-            total_crates - limit,
-            extra
+        let _ = config.shell().write_stdout(
+            format_args!("... and {} crates more{}\n", total_crates - limit, extra),
+            &ColorSpec::new(),
         );
     }
 
