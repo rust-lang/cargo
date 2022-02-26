@@ -329,6 +329,7 @@ fn add_pkg(
                     (_, DepKind::Build) => CompileKind::Host,
                     (_, DepKind::Normal) => node_kind,
                     (_, DepKind::Development) => node_kind,
+                    (_, DepKind::Documentation) => node_kind,
                 };
                 // Filter out inactivated targets.
                 if !show_all_targets && !target_data.dep_platform_activated(dep, kind) {

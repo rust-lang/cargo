@@ -57,7 +57,7 @@ struct State<'a, 'cfg> {
     /// A set of edges in `unit_dependencies` where (a, b) means that the
     /// dependency from a to b was added purely because it was a dev-dependency.
     /// This is used during `connect_run_custom_build_deps`.
-    dev_dependency_edges: HashSet<(Unit, Unit)>,
+    transitive_dependency_edges: HashSet<(Unit, Unit)>,
 }
 
 /// A boolean-like to indicate if a `Unit` is an artifact or not.
@@ -112,7 +112,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         profiles,
         interner,
         scrape_units,
-        dev_dependency_edges: HashSet::new(),
+        transitive_dependency_edges: HashSet::new(),
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
@@ -325,7 +325,7 @@ fn compute_deps(
             }
         }
     }
-    state.dev_dependency_edges.extend(dev_deps);
+    state.transitive_dependency_edges.extend(dev_deps);
 
     // If this target is a build script, then what we've collected so far is
     // all we need. If this isn't a build script, then it depends on the
@@ -992,7 +992,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                 // be cyclic we could have cyclic build-script executions.
                 .filter_map(move |(parent, other)| {
                     if state
-                        .dev_dependency_edges
+                        .transitive_dependency_edges
                         .contains(&((*parent).clone(), other.unit.clone()))
                     {
                         None
@@ -1087,14 +1087,23 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         }
 
                         // If this dependency is **not** a transitive dependency, then it
-                        // only applies to test/example targets.
-                        if !dep.is_transitive()
-                            && !unit.target.is_test()
-                            && !unit.target.is_example()
-                            && !unit.mode.is_doc_scrape()
-                            && !unit.mode.is_any_test()
-                        {
-                            return false;
+                        // only applies to test/example or doc/doctest targets.
+                        match dep.kind() {
+                            DepKind::Development => {
+                                if !unit.target.is_test()
+                                    && !unit.target.is_example()
+                                    && !unit.mode.is_doc_scrape()
+                                    && !unit.mode.is_any_test()
+                                {
+                                    return false;
+                                }
+                            }
+                            DepKind::Documentation => {
+                                if !unit.mode.is_doc() && !unit.mode.is_doc_test() {
+                                    return false;
+                                }
+                            }
+                            DepKind::Normal | DepKind::Build => {}
                         }
 
                         // If this dependency is only available for certain platforms,

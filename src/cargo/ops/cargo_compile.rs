@@ -444,9 +444,10 @@ pub fn create_bcx<'a, 'cfg>(
             && !ws.is_member(pkg)
             && pkg.dependencies().iter().any(|dep| !dep.is_transitive())
         {
+            // FIXME: Should include doc-dependencies when stable
             anyhow::bail!(
                 "package `{}` cannot be tested because it requires dev-dependencies \
-                 and is not a member of the workspace",
+                and is not a member of the workspace",
                 pkg.name()
             );
         }

@@ -412,6 +412,9 @@ features! {
 
     // Allow specifying rustflags directly in a profile
     (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
+
+    // Allow specifying dependencies under [doc-dependencies]
+    (unstable, doc_dependencies, "", "reference/unstable.html#documentation-dependencies"),
 }
 
 pub struct Feature {

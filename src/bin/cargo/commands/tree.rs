@@ -238,7 +238,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<
         }
 
         if kinds.is_empty() {
-            kinds.extend(&["normal", "build", "dev"]);
+            kinds.extend(&["normal", "build", "dev", "doc"]);
         }
 
         (kinds, no_proc_macro)
@@ -249,8 +249,10 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<
         result.insert(EdgeKind::Dep(DepKind::Normal));
         result.insert(EdgeKind::Dep(DepKind::Build));
         result.insert(EdgeKind::Dep(DepKind::Development));
+        result.insert(EdgeKind::Dep(DepKind::Documentation));
     };
     let unknown = |k| {
+        // FIXME: Should include no-doc when stable
         bail!(
             "unknown edge kind `{}`, valid values are \
                 \"normal\", \"build\", \"dev\", \
@@ -266,8 +268,10 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<
                 "no-normal" => result.remove(&EdgeKind::Dep(DepKind::Normal)),
                 "no-build" => result.remove(&EdgeKind::Dep(DepKind::Build)),
                 "no-dev" => result.remove(&EdgeKind::Dep(DepKind::Development)),
+                "no-doc" => result.remove(&EdgeKind::Dep(DepKind::Documentation)),
                 "features" => result.insert(EdgeKind::Feature),
-                "normal" | "build" | "dev" | "all" => {
+                "normal" | "build" | "dev" | "doc" | "all" => {
+                    // FIXME: Should include no-doc when stable
                     bail!(
                         "`{}` dependency kind cannot be mixed with \
                             \"no-normal\", \"no-build\", or \"no-dev\" \
@@ -297,6 +301,9 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<
             }
             "dev" => {
                 result.insert(EdgeKind::Dep(DepKind::Development));
+            }
+            "doc" => {
+                result.insert(EdgeKind::Dep(DepKind::Documentation));
             }
             k => return unknown(k),
         }

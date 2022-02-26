@@ -247,7 +247,7 @@ pub fn resolve_features<'b>(
     s: &'b Summary,
     opts: &'b ResolveOpts,
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
-    // First, filter by dev-dependencies.
+    // First, filter by dev-dependencies or doc-dependencies.
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
 

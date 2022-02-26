@@ -1,3 +1,4 @@
+use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Config};
@@ -41,8 +42,14 @@ impl Summary {
         for dep in dependencies.iter() {
             let dep_name = dep.name_in_toml();
             if dep.is_optional() && !dep.is_transitive() {
+                let kind = match dep.kind() {
+                    DepKind::Documentation => "doc",
+                    DepKind::Development => "dev",
+                    _ => unreachable!(),
+                };
                 bail!(
-                    "dev-dependencies are not allowed to be optional: `{}`",
+                    "{}-dependencies are not allowed to be optional: `{}`",
+                    kind,
                     dep_name
                 )
             }

@@ -328,6 +328,7 @@ fn print_node<'a>(
         EdgeKind::Dep(DepKind::Normal),
         EdgeKind::Dep(DepKind::Build),
         EdgeKind::Dep(DepKind::Development),
+        EdgeKind::Dep(DepKind::Documentation),
         EdgeKind::Feature,
     ] {
         print_dependencies(
@@ -376,6 +377,7 @@ fn print_dependencies<'a>(
         EdgeKind::Dep(DepKind::Normal) => None,
         EdgeKind::Dep(DepKind::Build) => Some("[build-dependencies]"),
         EdgeKind::Dep(DepKind::Development) => Some("[dev-dependencies]"),
+        EdgeKind::Dep(DepKind::Documentation) => Some("[doc-dependencies]"),
         EdgeKind::Feature => None,
     };
 

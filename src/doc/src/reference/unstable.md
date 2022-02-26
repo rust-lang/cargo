@@ -1141,6 +1141,38 @@ For instance:
 cargo check -Z unstable-options -Z check-cfg-features
 ```
 
+### Documentation dependencies
+
+* Tracking Issue: [#XXXX](https://github.com/rust-lang/cargo/issues/XXX)
+* PR: [#XXXX](https://github.com/rust-lang/cargo/pull/XXXX)
+
+The `doc-dependencies` feature allows documentation specific dependencies.
+You can add a [doc-dependencies] section to your Cargo.toml whose format is equivalent to [dependencies]:
+
+```
+cargo-features = ["doc-dependencies"]
+
+[project]
+name =  "foo"
+version = "0.0.1"
+
+[doc-dependencies]
+tempdir = "0.3"
+```
+
+Doc-dependencies are not used when compiling a package for building, but are used for documenting
+or running documentation tests.
+
+These dependencies are not propagated to other packages which depend on this package.
+
+You can also have target-specific documentation dependencies by using doc-dependencies in the target
+section header instead of dependencies. For example:
+
+```
+[target.'cfg(unix)'.doc-dependencies]
+mio = "0.0.1"
+```
+
 ## Stabilized and removed features
 
 ### Compile progress

@@ -183,7 +183,7 @@ fn transmit(
         .dependencies()
         .iter()
         .filter(|dep| {
-            // Skip dev-dependency without version.
+            // Skip {dev,doc}-dependency without version.
             dep.is_transitive() || dep.specified_req()
         })
         .map(|dep| {
@@ -212,6 +212,7 @@ fn transmit(
                     DepKind::Normal => "normal",
                     DepKind::Build => "build",
                     DepKind::Development => "dev",
+                    DepKind::Documentation => "doc",
                 }
                 .to_string(),
                 registry: dep_registry,

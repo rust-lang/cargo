@@ -103,6 +103,7 @@ impl ser::Serialize for Dependency {
 pub enum DepKind {
     Normal,
     Development,
+    Documentation,
     Build,
 }
 
@@ -114,6 +115,7 @@ impl ser::Serialize for DepKind {
         match *self {
             DepKind::Normal => None,
             DepKind::Development => Some("dev"),
+            DepKind::Documentation => Some("doc"),
             DepKind::Build => Some("build"),
         }
         .serialize(s)
@@ -369,7 +371,7 @@ impl Dependency {
     pub fn is_transitive(&self) -> bool {
         match self.inner.kind {
             DepKind::Normal | DepKind::Build => true,
-            DepKind::Development => false,
+            DepKind::Development | DepKind::Documentation => false,
         }
     }
 

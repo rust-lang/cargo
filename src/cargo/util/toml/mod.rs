@@ -328,6 +328,9 @@ pub struct TomlManifest {
     dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
     dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+    doc_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(rename = "doc_dependencies")]
+    doc_dependencies2: Option<BTreeMap<String, TomlDependency>>,
     build_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build_dependencies")]
     build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
@@ -1026,6 +1029,14 @@ impl TomlManifest {
                 TomlDependency::is_version_specified,
             )?,
             dev_dependencies2: None,
+            doc_dependencies: map_deps(
+                config,
+                self.doc_dependencies
+                    .as_ref()
+                    .or_else(|| self.doc_dependencies2.as_ref()),
+                TomlDependency::is_version_specified,
+            )?,
+            doc_dependencies2: None,
             build_dependencies: map_deps(
                 config,
                 self.build_dependencies
@@ -1051,6 +1062,14 @@ impl TomlManifest {
                                     TomlDependency::is_version_specified,
                                 )?,
                                 dev_dependencies2: None,
+                                doc_dependencies: map_deps(
+                                    config,
+                                    v.doc_dependencies
+                                        .as_ref()
+                                        .or_else(|| v.doc_dependencies2.as_ref()),
+                                    TomlDependency::is_version_specified,
+                                )?,
+                                doc_dependencies2: None,
                                 build_dependencies: map_deps(
                                     config,
                                     v.build_dependencies
@@ -1291,6 +1310,14 @@ impl TomlManifest {
                 .as_ref()
                 .or_else(|| me.dev_dependencies2.as_ref());
             process_dependencies(&mut cx, dev_deps, Some(DepKind::Development))?;
+            let doc_deps = me
+                .doc_dependencies
+                .as_ref()
+                .or_else(|| me.doc_dependencies2.as_ref());
+            if doc_deps.filter(|doc_deps| !doc_deps.is_empty()).is_some() {
+                features.require(Feature::doc_dependencies())?;
+            }
+            process_dependencies(&mut cx, doc_deps, Some(DepKind::Documentation))?;
             let build_deps = me
                 .build_dependencies
                 .as_ref()
@@ -1314,6 +1341,14 @@ impl TomlManifest {
                     .as_ref()
                     .or_else(|| platform.dev_dependencies2.as_ref());
                 process_dependencies(&mut cx, dev_deps, Some(DepKind::Development))?;
+                let doc_deps = platform
+                    .doc_dependencies
+                    .as_ref()
+                    .or_else(|| platform.doc_dependencies2.as_ref());
+                if doc_deps.filter(|doc_deps| !doc_deps.is_empty()).is_some() {
+                    features.require(Feature::doc_dependencies())?;
+                }
+                process_dependencies(&mut cx, doc_deps, Some(DepKind::Documentation))?;
             }
 
             replace = me.replace(&mut cx)?;
@@ -2073,6 +2108,10 @@ struct TomlPlatform {
     dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
     dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(rename = "doc-dependencies")]
+    doc_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(rename = "doc_dependencies")]
+    doc_dependencies2: Option<BTreeMap<String, TomlDependency>>,
 }
 
 impl TomlTarget {

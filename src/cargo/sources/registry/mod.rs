@@ -382,6 +382,7 @@ impl<'a> RegistryDependency<'a> {
         }
         let kind = match kind.as_deref().unwrap_or("") {
             "dev" => DepKind::Development,
+            "doc" => DepKind::Documentation,
             "build" => DepKind::Build,
             _ => DepKind::Normal,
         };
