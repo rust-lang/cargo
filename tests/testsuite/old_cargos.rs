@@ -86,8 +86,6 @@ fn collect_all_toolchains() -> Vec<(Version, String)> {
         .map(|line| (rustc_version(line), line.to_string()))
         .collect();
 
-    // Also include *this* cargo.
-    toolchains.push((rustc_version("this"), "this".to_string()));
     toolchains.sort_by(|a, b| a.0.cmp(&b.0));
     toolchains
 }
@@ -421,14 +419,26 @@ fn new_features() {
         p.build_dir().rm_rf();
         match run_cargo() {
             Ok(behavior) => {
-                if version < &Version::new(1, 51, 0) && toolchain != "this" {
+                if version < &Version::new(1, 51, 0) {
                     check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");
                     check_lock!(tc_result, "baz", which, behavior.baz, "1.0.1");
                     check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
-                } else {
+                } else if version >= &Version::new(1, 51, 0) && version <= &Version::new(1, 59, 0) {
                     check_lock!(tc_result, "bar", which, behavior.bar, "1.0.0");
                     check_lock!(tc_result, "baz", which, behavior.baz, None);
                     check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
+                }
+                // Starting with 1.60, namespaced-features has been stabilized.
+                else {
+                    check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");
+                    check_lock!(tc_result, "baz", which, behavior.baz, "1.0.1");
+                    check_lock!(
+                        tc_result,
+                        "new-baz-dep",
+                        which,
+                        behavior.new_baz_dep,
+                        "1.0.0"
+                    );
                 }
             }
             Err(e) => {
@@ -458,17 +468,14 @@ fn new_features() {
                 check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
             }
             Err(e) => {
-                if version >= &Version::new(1, 51, 0) || toolchain == "this" {
-                    // 1.0.1 can't be used without -Znamespaced-features
-                    // It gets filtered out of the index.
-                    check_err_contains(
-                        &mut tc_result,
-                        e,
-                        "candidate versions found which didn't match: 1.0.2, 1.0.0",
-                    );
-                } else {
-                    tc_result.push(format!("bar 1.0.1 locked build failed: {}", e));
-                }
+                // When version >= 1.51 and <= 1.59,
+                // 1.0.1 can't be used without -Znamespaced-features
+                // It gets filtered out of the index.
+                check_err_contains(
+                    &mut tc_result,
+                    e,
+                    "candidate versions found which didn't match: 1.0.2, 1.0.0",
+                );
             }
         }
 
@@ -476,21 +483,32 @@ fn new_features() {
         lock_bar_to(version, 102);
         match run_cargo() {
             Ok(behavior) => {
-                check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");
-                check_lock!(tc_result, "baz", which, behavior.baz, "1.0.1");
-                check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
+                if version <= &Version::new(1, 59, 0) {
+                    check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");
+                    check_lock!(tc_result, "baz", which, behavior.baz, "1.0.1");
+                    check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
+                }
+                // Starting with 1.60, namespaced-features has been stabilized.
+                else {
+                    check_lock!(tc_result, "bar", which, behavior.bar, "1.0.2");
+                    check_lock!(tc_result, "baz", which, behavior.baz, "1.0.1");
+                    check_lock!(
+                        tc_result,
+                        "new-baz-dep",
+                        which,
+                        behavior.new_baz_dep,
+                        "1.0.0"
+                    );
+                }
             }
             Err(e) => {
-                if version >= &Version::new(1, 51, 0) || toolchain == "this" {
-                    // baz can't lock to 1.0.1, it requires -Znamespaced-features
-                    check_err_contains(
-                        &mut tc_result,
-                        e,
-                        "candidate versions found which didn't match: 1.0.0",
-                    );
-                } else {
-                    tc_result.push(format!("bar 1.0.2 locked build failed: {}", e));
-                }
+                // When version >= 1.51 and <= 1.59,
+                // baz can't lock to 1.0.1, it requires -Znamespaced-features
+                check_err_contains(
+                    &mut tc_result,
+                    e,
+                    "candidate versions found which didn't match: 1.0.0",
+                );
             }
         }
 
