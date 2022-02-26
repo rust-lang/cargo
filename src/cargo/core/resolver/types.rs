@@ -130,11 +130,11 @@ impl ResolveBehavior {
 /// Options for how the resolve should work.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ResolveOpts {
-    /// Whether or not dev-dependencies should be included.
+    /// Whether or not {doc,dev}-dependencies should be included.
     ///
     /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
     /// It also gets set to `false` when activating dependencies in the resolver.
-    pub dev_deps: bool,
+    pub transitive_deps: bool,
     /// Set of features requested on the command-line.
     pub features: RequestedFeatures,
 }
@@ -143,13 +143,16 @@ impl ResolveOpts {
     /// Creates a ResolveOpts that resolves everything.
     pub fn everything() -> ResolveOpts {
         ResolveOpts {
-            dev_deps: true,
+            transitive_deps: true,
             features: RequestedFeatures::CliFeatures(CliFeatures::new_all(true)),
         }
     }
 
-    pub fn new(dev_deps: bool, features: RequestedFeatures) -> ResolveOpts {
-        ResolveOpts { dev_deps, features }
+    pub fn new(transitive_deps: bool, features: RequestedFeatures) -> ResolveOpts {
+        ResolveOpts {
+            transitive_deps,
+            features,
+        }
     }
 }
 

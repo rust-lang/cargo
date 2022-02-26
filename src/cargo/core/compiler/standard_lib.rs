@@ -5,7 +5,7 @@ use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
-use crate::core::resolver::HasDevUnits;
+use crate::core::resolver::HasTransitiveUnits;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
@@ -116,7 +116,7 @@ pub fn resolve_std<'cfg>(
         requested_targets,
         &cli_features,
         &specs,
-        HasDevUnits::No,
+        HasTransitiveUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
     )?;
     Ok((

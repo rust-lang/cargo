@@ -1,7 +1,7 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
-use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
+use crate::core::resolver::{features::CliFeatures, HasTransitiveUnits, Resolve};
 use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
@@ -127,7 +127,7 @@ fn build_resolve_graph(
         &requested_kinds,
         &metadata_opts.cli_features,
         &specs,
-        HasDevUnits::Yes,
+        HasTransitiveUnits::Yes,
         force_all,
     )?;
 

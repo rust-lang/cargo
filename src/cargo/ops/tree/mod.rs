@@ -3,7 +3,7 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
+use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasTransitiveUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
@@ -140,10 +140,13 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     let has_dev = if opts
         .edge_kinds
         .contains(&EdgeKind::Dep(DepKind::Development))
+        || opts
+            .edge_kinds
+            .contains(&EdgeKind::Dep(DepKind::Documentation))
     {
-        HasDevUnits::Yes
+        HasTransitiveUnits::Yes
     } else {
-        HasDevUnits::No
+        HasTransitiveUnits::No
     };
     let force_all = if opts.target == Target::All {
         ForceAllTargets::Yes

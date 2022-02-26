@@ -1,5 +1,5 @@
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::{CliFeatures, HasDevUnits};
+use crate::core::resolver::features::{CliFeatures, HasTransitiveUnits};
 use crate::core::{PackageId, PackageIdSpec};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
@@ -25,7 +25,7 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
         &mut registry,
         ws,
         &CliFeatures::new_all(true),
-        HasDevUnits::Yes,
+        HasTransitiveUnits::Yes,
         None,
         None,
         &[],
@@ -62,7 +62,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         &mut registry,
                         ws,
                         &CliFeatures::new_all(true),
-                        HasDevUnits::Yes,
+                        HasTransitiveUnits::Yes,
                         None,
                         None,
                         &[],
@@ -120,7 +120,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         &mut registry,
         ws,
         &CliFeatures::new_all(true),
-        HasDevUnits::Yes,
+        HasTransitiveUnits::Yes,
         Some(&previous_resolve),
         Some(&to_avoid),
         &[],

@@ -21,7 +21,7 @@ use toml_edit::easy as toml;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
-use crate::core::resolver::{HasDevUnits, Resolve};
+use crate::core::resolver::{HasTransitiveUnits, Resolve};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{SourceMap, Summary, Workspace};
@@ -494,7 +494,7 @@ impl<'cfg> PackageSet<'cfg> {
         &self,
         resolve: &Resolve,
         root_ids: &[PackageId],
-        has_dev_units: HasDevUnits,
+        has_transitive_units: HasTransitiveUnits,
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData<'cfg>,
         force_all_targets: ForceAllTargets,
@@ -503,7 +503,7 @@ impl<'cfg> PackageSet<'cfg> {
             used: &mut BTreeSet<PackageId>,
             resolve: &Resolve,
             pkg_id: PackageId,
-            has_dev_units: HasDevUnits,
+            has_transitive_units: HasTransitiveUnits,
             requested_kinds: &[CompileKind],
             target_data: &RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
@@ -514,7 +514,7 @@ impl<'cfg> PackageSet<'cfg> {
             let filtered_deps = PackageSet::filter_deps(
                 pkg_id,
                 resolve,
-                has_dev_units,
+                has_transitive_units,
                 requested_kinds,
                 target_data,
                 force_all_targets,
@@ -524,7 +524,7 @@ impl<'cfg> PackageSet<'cfg> {
                     used,
                     resolve,
                     pkg_id,
-                    has_dev_units,
+                    has_transitive_units,
                     requested_kinds,
                     target_data,
                     force_all_targets,
@@ -543,7 +543,7 @@ impl<'cfg> PackageSet<'cfg> {
                 &mut to_download,
                 resolve,
                 *id,
-                has_dev_units,
+                has_transitive_units,
                 requested_kinds,
                 target_data,
                 force_all_targets,
@@ -560,7 +560,7 @@ impl<'cfg> PackageSet<'cfg> {
         ws: &Workspace<'cfg>,
         resolve: &Resolve,
         root_ids: &[PackageId],
-        has_dev_units: HasDevUnits,
+        has_transitive_units: HasTransitiveUnits,
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
@@ -571,7 +571,7 @@ impl<'cfg> PackageSet<'cfg> {
                 let dep_pkgs_to_deps: Vec<_> = PackageSet::filter_deps(
                     root_id,
                     resolve,
-                    has_dev_units,
+                    has_transitive_units,
                     requested_kinds,
                     target_data,
                     force_all_targets,
@@ -612,7 +612,7 @@ impl<'cfg> PackageSet<'cfg> {
     fn filter_deps<'a>(
         pkg_id: PackageId,
         resolve: &'a Resolve,
-        has_dev_units: HasDevUnits,
+        has_transitive_units: HasTransitiveUnits,
         requested_kinds: &'a [CompileKind],
         target_data: &'a RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
@@ -621,7 +621,9 @@ impl<'cfg> PackageSet<'cfg> {
             .deps(pkg_id)
             .filter(move |&(_id, deps)| {
                 deps.iter().any(|dep| {
-                    if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
+                    if (dep.kind() == DepKind::Development || dep.kind() == DepKind::Documentation)
+                        && has_transitive_units == HasTransitiveUnits::No
+                    {
                         return false;
                     }
                     if force_all_targets == ForceAllTargets::No {

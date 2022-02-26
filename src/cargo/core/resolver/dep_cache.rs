@@ -249,7 +249,9 @@ pub fn resolve_features<'b>(
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies or doc-dependencies.
     let deps = s.dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
+    let deps = deps
+        .iter()
+        .filter(|d| d.is_transitive() || opts.transitive_deps);
 
     let reqs = build_requirements(parent, s, opts)?;
     let mut ret = Vec::new();

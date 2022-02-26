@@ -54,7 +54,7 @@ use semver::Version;
 
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
-use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
+use crate::core::resolver::{HasTransitiveUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
@@ -257,14 +257,14 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         let diffs = v2_features.compare_legacy(&ws_resolve.resolved_features);
         Ok((ws_resolve, diffs))
     };
-    let (_, without_dev_diffs) = resolve_differences(HasDevUnits::No)?;
-    let (ws_resolve, mut with_dev_diffs) = resolve_differences(HasDevUnits::Yes)?;
-    if without_dev_diffs.is_empty() && with_dev_diffs.is_empty() {
+    let (_, without_transitive_diffs) = resolve_differences(HasTransitiveUnits::No)?;
+    let (ws_resolve, mut with_transitive_diffs) = resolve_differences(HasTransitiveUnits::Yes)?;
+    if without_transitive_diffs.is_empty() && with_transitive_diffs.is_empty() {
         // Nothing is different, nothing to report.
         return Ok(());
     }
     // Only display unique changes with dev-dependencies.
-    with_dev_diffs.retain(|k, vals| without_dev_diffs.get(k) != Some(vals));
+    with_transitive_diffs.retain(|k, vals| without_transitive_diffs.get(k) != Some(vals));
     let config = ws.config();
     config.shell().note(
         "Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.",
@@ -295,16 +295,16 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         }
         drop_eprint!(config, "\n");
     };
-    if !without_dev_diffs.is_empty() {
-        show_diffs(without_dev_diffs);
+    if !without_transitive_diffs.is_empty() {
+        show_diffs(without_transitive_diffs);
     }
-    if !with_dev_diffs.is_empty() {
+    if !with_transitive_diffs.is_empty() {
         // FIXME: Include doc-dependencies when stable
         drop_eprintln!(
             config,
-            "The following differences only apply when building with dev-dependencies:\n"
+            "The following differences only apply when building with dev-dependencies or doc-dependencies:\n"
         );
-        show_diffs(with_dev_diffs);
+        show_diffs(with_transitive_diffs);
     }
     report_maybe_diesel(config, &ws_resolve.targeted_resolve)?;
     Ok(())

@@ -69,7 +69,7 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
+pub use self::features::{CliFeatures, ForceAllTargets, HasTransitiveUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
 pub use self::version_prefs::{VersionOrdering, VersionPreferences};
@@ -378,7 +378,7 @@ fn activate_deps_loop(
 
             let pid = candidate.package_id();
             let opts = ResolveOpts {
-                dev_deps: false,
+                transitive_deps: false,
                 features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
                     uses_default_features: dep.uses_default_features(),

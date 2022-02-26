@@ -34,7 +34,7 @@ use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTarget
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
-use crate::core::resolver::{HasDevUnits, Resolve};
+use crate::core::resolver::{HasTransitiveUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, SourceId, TargetKind, Workspace};
 use crate::drop_println;
@@ -377,18 +377,19 @@ pub fn create_bcx<'a, 'cfg>(
     };
 
     let resolve_specs = full_specs.to_package_id_specs(ws)?;
-    let has_dev_units = if filter.need_dev_deps(build_config.mode) || need_reverse_dependencies {
-        HasDevUnits::Yes
-    } else {
-        HasDevUnits::No
-    };
+    let has_transitive_units =
+        if filter.need_dev_deps(build_config.mode) || need_reverse_dependencies {
+            HasTransitiveUnits::Yes
+        } else {
+            HasTransitiveUnits::No
+        };
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
         &build_config.requested_kinds,
         cli_features,
         &resolve_specs,
-        has_dev_units,
+        has_transitive_units,
         crate::core::resolver::features::ForceAllTargets::No,
     )?;
     let WorkspaceResolve {

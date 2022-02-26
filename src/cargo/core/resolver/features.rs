@@ -86,7 +86,7 @@ pub struct FeatureOpts {
 /// `cargo test` because the lib may need to be built 3 times instead of
 /// twice.
 #[derive(Copy, Clone, PartialEq)]
-pub enum HasDevUnits {
+pub enum HasTransitiveUnits {
     Yes,
     No,
 }
@@ -163,7 +163,7 @@ impl FeaturesFor {
 impl FeatureOpts {
     pub fn new(
         ws: &Workspace<'_>,
-        has_dev_units: HasDevUnits,
+        has_dev_units: HasTransitiveUnits,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
@@ -195,7 +195,7 @@ impl FeatureOpts {
                 enable(&vec!["all".to_string()]).unwrap();
             }
         }
-        if let HasDevUnits::Yes = has_dev_units {
+        if let HasTransitiveUnits::Yes = has_dev_units {
             // Dev deps cannot be decoupled when they are in use.
             opts.decouple_dev_deps = false;
         }
@@ -206,12 +206,15 @@ impl FeatureOpts {
     }
 
     /// Creates a new FeatureOpts for the given behavior.
-    pub fn new_behavior(behavior: ResolveBehavior, has_dev_units: HasDevUnits) -> FeatureOpts {
+    pub fn new_behavior(
+        behavior: ResolveBehavior,
+        has_dev_units: HasTransitiveUnits,
+    ) -> FeatureOpts {
         match behavior {
             ResolveBehavior::V1 => FeatureOpts::default(),
             ResolveBehavior::V2 => FeatureOpts {
                 decouple_host_deps: true,
-                decouple_dev_deps: has_dev_units == HasDevUnits::No,
+                decouple_dev_deps: has_dev_units == HasTransitiveUnits::No,
                 ignore_inactive_targets: true,
                 compare: false,
             },

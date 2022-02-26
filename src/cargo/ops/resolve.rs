@@ -16,7 +16,7 @@ use crate::core::resolver::features::{
     CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
 };
 use crate::core::resolver::{
-    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionPreferences,
+    self, HasTransitiveUnits, Resolve, ResolveOpts, ResolveVersion, VersionPreferences,
 };
 use crate::core::summary::Summary;
 use crate::core::Feature;
@@ -85,7 +85,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
-    has_dev_units: HasDevUnits,
+    has_dev_units: HasTransitiveUnits,
     force_all_targets: ForceAllTargets,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
@@ -198,7 +198,7 @@ fn resolve_with_registry<'cfg>(
         registry,
         ws,
         &CliFeatures::new_all(true),
-        HasDevUnits::Yes,
+        HasTransitiveUnits::Yes,
         prev.as_ref(),
         None,
         &[],
@@ -230,7 +230,7 @@ pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
     cli_features: &CliFeatures,
-    has_dev_units: HasDevUnits,
+    has_dev_units: HasTransitiveUnits,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
@@ -387,13 +387,13 @@ pub fn resolve_with_previous<'cfg>(
 
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
-    let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
+    let transitive_deps = ws.require_optional_deps() || has_dev_units == HasTransitiveUnits::Yes;
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
     // without disturbing the graph structure.
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep, dev_deps);
+        register_previous_locks(ws, registry, r, &keep, transitive_deps);
     }
 
     // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
@@ -422,7 +422,7 @@ pub fn resolve_with_previous<'cfg>(
             (
                 summary,
                 ResolveOpts {
-                    dev_deps,
+                    transitive_deps,
                     features: RequestedFeatures::CliFeatures(features),
                 },
             )
