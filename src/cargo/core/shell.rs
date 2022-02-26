@@ -333,6 +333,17 @@ impl Shell {
         }
     }
 
+    /// Write a styled fragment
+    ///
+    /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
+    pub fn write_stdout(
+        &mut self,
+        fragment: impl fmt::Display,
+        color: &ColorSpec,
+    ) -> CargoResult<()> {
+        self.output.write_stdout(fragment, color)
+    }
+
     /// Prints a message to stderr and translates ANSI escape code into console colors.
     pub fn print_ansi_stderr(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
@@ -418,6 +429,22 @@ impl ShellOut {
                     Some(message) => writeln!(w, " {}", message)?,
                     None => write!(w, " ")?,
                 }
+            }
+        }
+        Ok(())
+    }
+
+    /// Write a styled fragment
+    fn write_stdout(&mut self, fragment: impl fmt::Display, color: &ColorSpec) -> CargoResult<()> {
+        match *self {
+            ShellOut::Stream { ref mut stdout, .. } => {
+                stdout.reset()?;
+                stdout.set_color(&color)?;
+                write!(stdout, "{}", fragment)?;
+                stdout.reset()?;
+            }
+            ShellOut::Write(ref mut w) => {
+                write!(w, "{}", fragment)?;
             }
         }
         Ok(())
