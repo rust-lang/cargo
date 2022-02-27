@@ -919,8 +919,8 @@ impl Config {
                 (Some(true), Some(true)) => {
                     bail!("cannot set both `term.verbose` and `term.quiet`")
                 }
-                (Some(true), Some(false)) => Verbosity::Verbose,
-                (Some(false), Some(true)) => Verbosity::Quiet,
+                (Some(true), _) => Verbosity::Verbose,
+                (_, Some(true)) => Verbosity::Quiet,
                 _ => Verbosity::Normal,
             },
         };
