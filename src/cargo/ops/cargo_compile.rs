@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::{build_unit_dependencies, IsArtifact};
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::{standard_lib, TargetInfo};
+use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -505,6 +505,10 @@ pub fn create_bcx<'a, 'cfg>(
         interner,
     )?;
 
+    if let Some(args) = target_rustc_crate_types {
+        override_rustc_crate_types(&mut units, args, interner)?;
+    }
+
     let mut scrape_units = match rustdoc_scrape_examples {
         Some(arg) => {
             let filter = match arg.as_str() {
@@ -648,28 +652,6 @@ pub fn create_bcx<'a, 'cfg>(
         }
     }
 
-    let mut crate_types = HashMap::new();
-    if let Some(args) = target_rustc_crate_types {
-        if units.len() != 1 {
-            anyhow::bail!(
-                "crate types to rustc can only be passed to one \
-                 target, consider filtering\nthe package by passing, \
-                 e.g., `--lib` or `--example` to specify a single target"
-            );
-        }
-        match units[0].target.kind() {
-            TargetKind::Lib(_) | TargetKind::ExampleLib(_) => {
-                crate_types.insert(units[0].clone(), args.clone());
-            }
-            _ => {
-                anyhow::bail!(
-                    "crate types can only be specified for libraries and example libraries.\n\
-                    Binaries, tests, and benchmarks are always the `bin` crate type"
-                );
-            }
-        }
-    }
-
     if honor_rust_version {
         // Remove any pre-release identifiers for easier comparison
         let current_version = &target_data.rustc.version;
@@ -706,7 +688,6 @@ pub fn create_bcx<'a, 'cfg>(
         build_config,
         profiles,
         extra_compiler_args,
-        crate_types,
         target_data,
         units,
         unit_graph,
@@ -1870,4 +1851,51 @@ fn remove_duplicate_doc(
         visit(unit, unit_graph, &mut visited);
     }
     unit_graph.retain(|unit, _| visited.contains(unit));
+}
+
+/// Override crate types for given units.
+///
+/// This is primarily used by `cargo rustc --crate-type`.
+fn override_rustc_crate_types(
+    units: &mut [Unit],
+    args: &[String],
+    interner: &UnitInterner,
+) -> CargoResult<()> {
+    if units.len() != 1 {
+        anyhow::bail!(
+            "crate types to rustc can only be passed to one \
+            target, consider filtering\nthe package by passing, \
+            e.g., `--lib` or `--example` to specify a single target"
+        );
+    }
+
+    let unit = &units[0];
+    let override_unit = |f: fn(Vec<CrateType>) -> TargetKind| {
+        let crate_types = args.iter().map(|s| s.into()).collect();
+        let mut target = unit.target.clone();
+        target.set_kind(f(crate_types));
+        interner.intern(
+            &unit.pkg,
+            &target,
+            unit.profile.clone(),
+            unit.kind,
+            unit.mode,
+            unit.features.clone(),
+            unit.is_std,
+            unit.dep_hash,
+            unit.artifact,
+        )
+    };
+    units[0] = match unit.target.kind() {
+        TargetKind::Lib(_) => override_unit(TargetKind::Lib),
+        TargetKind::ExampleLib(_) => override_unit(TargetKind::ExampleLib),
+        _ => {
+            anyhow::bail!(
+                "crate types can only be specified for libraries and example libraries.\n\
+                Binaries, tests, and benchmarks are always the `bin` crate type"
+            );
+        }
+    };
+
+    Ok(())
 }
