@@ -224,11 +224,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut unstable_opts = false;
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lto_args(&self, unit));
+                args.extend(compiler::features_args(&self, unit));
 
-                for feature in &unit.features {
-                    args.push("--cfg".into());
-                    args.push(format!("feature=\"{}\"", feature).into());
-                }
                 let script_meta = self.find_build_script_metadata(unit);
                 if let Some(meta) = script_meta {
                     if let Some(output) = self.build_script_outputs.lock().unwrap().get(meta) {

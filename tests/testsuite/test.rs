@@ -4536,3 +4536,42 @@ fn check_cfg_features() {
         )
         .run();
 }
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+#[cargo_test]
+fn check_cfg_features_doc() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc and rustdoc command line
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                default = ["f_a"]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
+        .build();
+
+    p.cargo("test -v --doc -Z check-cfg-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[DOCTEST] foo
+[RUNNING] `rustdoc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
+",
+        )
+        .run();
+}
