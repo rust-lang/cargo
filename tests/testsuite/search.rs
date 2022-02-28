@@ -190,3 +190,27 @@ fn multiple_query_params() {
         .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
+
+#[cargo_test]
+fn ignore_quiet() {
+    setup();
+    set_cargo_config();
+
+    cargo_process("search -q postgres")
+        .with_stdout_contains(SEARCH_RESULTS)
+        .run();
+}
+
+#[cargo_test]
+fn colored_results() {
+    setup();
+    set_cargo_config();
+
+    cargo_process("search --color=never postgres")
+        .with_stdout_does_not_contain("[..]\x1b[[..]")
+        .run();
+
+    cargo_process("search --color=always postgres")
+        .with_stdout_contains("[..]\x1b[[..]")
+        .run();
+}

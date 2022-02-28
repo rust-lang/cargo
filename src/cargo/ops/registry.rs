@@ -13,6 +13,8 @@ use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use termcolor::Color::Green;
+use termcolor::ColorSpec;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -955,15 +957,26 @@ pub fn search(
             }
             None => name,
         };
-        drop_println!(config, "{}", line);
+        let mut fragments = line.split(query).peekable();
+        while let Some(fragment) = fragments.next() {
+            let _ = config.shell().write_stdout(fragment, &ColorSpec::new());
+            if fragments.peek().is_some() {
+                let _ = config
+                    .shell()
+                    .write_stdout(query, &ColorSpec::new().set_bold(true).set_fg(Some(Green)));
+            }
+        }
+        let _ = config.shell().write_stdout("\n", &ColorSpec::new());
     }
 
     let search_max_limit = 100;
     if total_crates > limit && limit < search_max_limit {
-        drop_println!(
-            config,
-            "... and {} crates more (use --limit N to see more)",
-            total_crates - limit
+        let _ = config.shell().write_stdout(
+            format_args!(
+                "... and {} crates more (use --limit N to see more)\n",
+                total_crates - limit
+            ),
+            &ColorSpec::new(),
         );
     } else if total_crates > limit && limit >= search_max_limit {
         let extra = if source_id.is_default_registry() {
@@ -974,11 +987,9 @@ pub fn search(
         } else {
             String::new()
         };
-        drop_println!(
-            config,
-            "... and {} crates more{}",
-            total_crates - limit,
-            extra
+        let _ = config.shell().write_stdout(
+            format_args!("... and {} crates more{}\n", total_crates - limit, extra),
+            &ColorSpec::new(),
         );
     }
 
