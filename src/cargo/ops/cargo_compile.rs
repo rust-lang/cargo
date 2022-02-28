@@ -1068,7 +1068,6 @@ fn generate_targets(
                 ws.is_member(pkg),
                 is_local,
                 unit_for,
-                target_mode,
                 *kind,
             );
             let unit = interner.intern(

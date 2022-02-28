@@ -506,21 +506,8 @@ impl TomlProfile {
             }
         }
 
-        // Feature gate definition of named profiles
-        match name {
-            "dev" | "release" | "bench" | "test" | "doc" => {}
-            _ => {
-                features.require(Feature::named_profiles())?;
-            }
-        }
-
         // Profile name validation
         Self::validate_name(name)?;
-
-        // Feature gate on uses of keys related to named profiles
-        if self.inherits.is_some() {
-            features.require(Feature::named_profiles())?;
-        }
 
         if let Some(dir_name) = self.dir_name {
             // This is disabled for now, as we would like to stabilize named

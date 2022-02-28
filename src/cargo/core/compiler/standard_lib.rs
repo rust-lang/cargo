@@ -169,7 +169,6 @@ pub fn generate_std_roots(
                 /*is_member*/ false,
                 /*is_local*/ false,
                 unit_for,
-                mode,
                 *kind,
             );
             list.push(interner.intern(
