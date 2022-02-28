@@ -55,7 +55,6 @@ fn env_rustflags_normal_source() {
 fn env_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -70,9 +69,7 @@ fn env_rustflags_build_script() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
+                fn main() { assert!(cfg!(foo)); }
             "#,
         )
         .build();
@@ -243,7 +240,6 @@ fn env_rustflags_normal_source_with_target() {
 fn env_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -258,9 +254,7 @@ fn env_rustflags_build_script_with_target() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(!cfg!(foo)); }
             "#,
         )
         .build();
@@ -268,6 +262,44 @@ fn env_rustflags_build_script_with_target() {
     let host = rustc_host();
     p.cargo("build --target")
         .arg(host)
+        .env("RUSTFLAGS", "--cfg foo")
+        .run();
+}
+
+#[cargo_test]
+fn env_rustflags_build_script_with_target_doesnt_apply_to_host_kind() {
+    // RUSTFLAGS should *not* be passed to rustc for build scripts when --target is specified as the
+    // host triple even if target-applies-to-host-kind is enabled, to match legacy Cargo behavior.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() { assert!(!cfg!(foo)); }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                target-applies-to-host = true
+            "#,
+        )
+        .build();
+
+    let host = rustc_host();
+    p.cargo("build --target")
+        .masquerade_as_nightly_cargo()
+        .arg(host)
+        .arg("-Ztarget-applies-to-host")
         .env("RUSTFLAGS", "--cfg foo")
         .run();
 }
@@ -478,7 +510,6 @@ fn build_rustflags_normal_source() {
 fn build_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -493,9 +524,7 @@ fn build_rustflags_build_script() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
+                fn main() { assert!(cfg!(foo)); }
             "#,
         )
         .file(
@@ -664,7 +693,7 @@ fn build_rustflags_normal_source_with_target() {
 
     let host = &rustc_host();
 
-    // Use RUSTFLAGS to pass an argument that will generate an error
+    // Use build.rustflags to pass an argument that will generate an error
     p.cargo("build --lib --target")
         .arg(host)
         .with_status(101)
@@ -696,7 +725,6 @@ fn build_rustflags_normal_source_with_target() {
 fn build_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
     let p = project()
         .file(
             "Cargo.toml",
@@ -711,9 +739,7 @@ fn build_rustflags_build_script_with_target() {
         .file(
             "build.rs",
             r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
+                fn main() { assert!(!cfg!(foo)); }
             "#,
         )
         .file(
@@ -990,6 +1016,187 @@ fn target_rustflags_normal_source() {
     p.cargo("bench")
         .with_status(101)
         .with_stderr_contains("[..]bogus[..]")
+        .run();
+}
+
+#[cargo_test]
+fn target_rustflags_also_for_build_scripts() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() { assert!(cfg!(foo)); }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            &format!(
+                "
+            [target.{}]
+            rustflags = [\"--cfg=foo\"]
+            ",
+                rustc_host()
+            ),
+        )
+        .build();
+
+    p.cargo("build").run();
+}
+
+#[cargo_test]
+fn target_rustflags_not_for_build_scripts_with_target() {
+    let host = rustc_host();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() { assert!(!cfg!(foo)); }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            &format!(
+                "
+            [target.{}]
+            rustflags = [\"--cfg=foo\"]
+            ",
+                host
+            ),
+        )
+        .build();
+
+    p.cargo("build --target").arg(host).run();
+
+    // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .run();
+
+    // Even with the setting, the rustflags from `target.` should not apply, to match the legacy
+    // Cargo behavior.
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            "
+        target-applies-to-host = true
+
+        [target.{}]
+        rustflags = [\"--cfg=foo\"]
+        ",
+            host
+        ),
+    );
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .run();
+}
+
+#[cargo_test]
+fn build_rustflags_for_build_scripts() {
+    let host = rustc_host();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() { assert!(cfg!(foo)); }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            "
+            [build]
+            rustflags = [\"--cfg=foo\"]
+            ",
+        )
+        .build();
+
+    // With "legacy" behavior, build.rustflags should apply to build scripts without --target
+    p.cargo("build").run();
+
+    // But should _not_ apply _with_ --target
+    p.cargo("build --target")
+        .arg(host)
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
+        .run();
+
+    // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .run();
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
+        .run();
+
+    // When set to false though, the "proper" behavior where host artifacts _only_ pick up on
+    // [host] should be applied.
+    p.change_file(
+        ".cargo/config",
+        "
+        target-applies-to-host = false
+
+        [build]
+        rustflags = [\"--cfg=foo\"]
+        ",
+    );
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
+        .run();
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
+        .run();
+}
+
+#[cargo_test]
+fn host_rustflags_for_build_scripts() {
+    let host = rustc_host();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                // Ensure that --cfg=foo is passed.
+                fn main() { assert!(cfg!(foo)); }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            &format!(
+                "
+                target-applies-to-host = false
+
+                [host.{}]
+                rustflags = [\"--cfg=foo\"]
+                ",
+                host
+            ),
+        )
+        .build();
+
+    p.cargo("build --target")
+        .arg(host)
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .run();
 }
 
@@ -1443,5 +1650,24 @@ fn remap_path_prefix_works() {
             format!("--remap-path-prefix={}=/foo", paths::root().display()),
         )
         .with_stdout("/foo/home/.cargo/registry/src/[..]/bar-0.1.0/src/lib.rs")
+        .run();
+}
+
+#[cargo_test]
+fn host_config_rustflags_with_target() {
+    // regression test for https://github.com/rust-lang/cargo/issues/10206
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("build.rs.rs", "fn main() { assert!(cfg!(foo)); }")
+        .file(".cargo/config.toml", "target-applies-to-host = false")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Zhost-config")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zunstable-options")
+        .arg("--config")
+        .arg("host.rustflags=[\"--cfg=foo\"]")
         .run();
 }

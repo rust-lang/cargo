@@ -144,7 +144,7 @@ impl TargetInfo {
             &rustc.host,
             None,
             kind,
-            "RUSTFLAGS",
+            Flags::Rust,
         )?;
         let extra_fingerprint = kind.fingerprint_hash();
         let mut process = rustc.workspace_process();
@@ -241,7 +241,7 @@ impl TargetInfo {
                 &rustc.host,
                 Some(&cfg),
                 kind,
-                "RUSTFLAGS",
+                Flags::Rust,
             )?,
             rustdocflags: env_args(
                 config,
@@ -249,7 +249,7 @@ impl TargetInfo {
                 &rustc.host,
                 Some(&cfg),
                 kind,
-                "RUSTDOCFLAGS",
+                Flags::Rustdoc,
             )?,
             cfg,
             supports_split_debuginfo,
@@ -554,6 +554,28 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
     result
 }
 
+#[derive(Debug, Copy, Clone)]
+enum Flags {
+    Rust,
+    Rustdoc,
+}
+
+impl Flags {
+    fn as_key(self) -> &'static str {
+        match self {
+            Flags::Rust => "rustflags",
+            Flags::Rustdoc => "rustdocflags",
+        }
+    }
+
+    fn as_env(self) -> &'static str {
+        match self {
+            Flags::Rust => "RUSTFLAGS",
+            Flags::Rustdoc => "RUSTDOCFLAGS",
+        }
+    }
+}
+
 /// Acquire extra flags to pass to the compiler from various locations.
 ///
 /// The locations are:
@@ -561,82 +583,105 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 ///  - the `CARGO_ENCODED_RUSTFLAGS` environment variable
 ///  - the `RUSTFLAGS` environment variable
 ///
-/// then if this was not found
+/// then if none of those were found
 ///
 ///  - `target.*.rustflags` from the config (.cargo/config)
 ///  - `target.cfg(..).rustflags` from the config
+///  - `host.*.rustflags` from the config if compiling a host artifact or without `--target`
 ///
-/// then if neither of these were found
+/// then if none of those were found
 ///
 ///  - `build.rustflags` from the config
 ///
-/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
-/// scripts, ...), even if it is the same as the target.
+/// The behavior differs slightly when cross-compiling (or, specifically, when `--target` is
+/// provided) for artifacts that are always built for the host (plugins, build scripts, ...).
+/// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
+/// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
+/// necessary to retain bacwkards compatibility with older versions of Cargo.
 fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
-    name: &str,
+    flags: Flags,
 ) -> CargoResult<Vec<String>> {
-    // We *want* to apply RUSTFLAGS only to builds for the
-    // requested target architecture, and not to things like build
-    // scripts and plugins, which may be for an entirely different
-    // architecture. Cargo's present architecture makes it quite
-    // hard to only apply flags to things that are not build
-    // scripts and plugins though, so we do something more hacky
-    // instead to avoid applying the same RUSTFLAGS to multiple targets
-    // arches:
+    let target_applies_to_host = config.target_applies_to_host()?;
+
+    // Host artifacts should not generally pick up rustflags from anywhere except [host].
     //
-    // 1) If --target is not specified we just apply RUSTFLAGS to
-    // all builds; they are all going to have the same target.
-    //
-    // 2) If --target *is* specified then we only apply RUSTFLAGS
-    // to compilation units with the Target kind, which indicates
-    // it was chosen by the --target flag.
-    //
-    // This means that, e.g., even if the specified --target is the
-    // same as the host, build scripts in plugins won't get
-    // RUSTFLAGS.
-    if requested_kinds != [CompileKind::Host] && kind.is_host() {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
+    // The one exception to this is if `target-applies-to-host = true`, which opts into a
+    // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
+    // set elsewhere when `--target` isn't passed.
+    if kind.is_host() {
+        if target_applies_to_host && requested_kinds == [CompileKind::Host] {
+            // This is the past Cargo behavior where we fall back to the same logic as for other
+            // artifacts without --target.
+        } else {
+            // In all other cases, host artifacts just get flags from [host], regardless of
+            // --target. Or, phrased differently, no `--target` behaves the same as `--target
+            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
+            // example).
+            return Ok(rustflags_from_host(config, flags, host_triple)?.unwrap_or_else(Vec::new));
+        }
     }
 
+    // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+    // NOTE: It is impossible to have a [host] section and reach this logic with kind.is_host(),
+    // since [host] implies `target-applies-to-host = false`, which always early-returns above.
+
+    if let Some(rustflags) = rustflags_from_env(flags) {
+        Ok(rustflags)
+    } else if let Some(rustflags) =
+        rustflags_from_target(config, host_triple, target_cfg, kind, flags)?
+    {
+        Ok(rustflags)
+    } else if let Some(rustflags) = rustflags_from_build(config, flags)? {
+        Ok(rustflags)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+fn rustflags_from_env(flags: Flags) -> Option<Vec<String>> {
     // First try CARGO_ENCODED_RUSTFLAGS from the environment.
     // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
-    if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", name)) {
+    if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", flags.as_env())) {
         if a.is_empty() {
-            return Ok(Vec::new());
+            return Some(Vec::new());
         }
-        return Ok(a.split('\x1f').map(str::to_string).collect());
+        return Some(a.split('\x1f').map(str::to_string).collect());
     }
 
     // Then try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
+    if let Ok(a) = env::var(flags.as_env()) {
         let args = a
             .split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
-        return Ok(args.collect());
+        return Some(args.collect());
     }
 
+    // No rustflags to be collected from the environment
+    None
+}
+
+fn rustflags_from_target(
+    config: &Config,
+    host_triple: &str,
+    target_cfg: Option<&[Cfg]>,
+    kind: CompileKind,
+    flag: Flags,
+) -> CargoResult<Option<Vec<String>>> {
     let mut rustflags = Vec::new();
 
-    let name = name
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .collect::<String>();
     // Then the target.*.rustflags value...
     let target = match &kind {
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    let key = format!("target.{}.{}", target, name);
+    let key = format!("target.{}.{}", target, flag.as_key());
     if let Some(args) = config.get::<Option<StringList>>(&key)? {
         rustflags.extend(args.as_slice().iter().cloned());
     }
@@ -656,22 +701,37 @@ fn env_args(
             });
     }
 
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
+    if rustflags.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(rustflags))
     }
+}
 
+fn rustflags_from_host(
+    config: &Config,
+    flag: Flags,
+    host_triple: &str,
+) -> CargoResult<Option<Vec<String>>> {
+    let target_cfg = config.host_cfg_triple(host_triple)?;
+    let list = match flag {
+        Flags::Rust => &target_cfg.rustflags,
+        Flags::Rustdoc => {
+            // host.rustdocflags is not a thing, since it does not make sense
+            return Ok(None);
+        }
+    };
+    Ok(list.as_ref().map(|l| l.val.as_slice().to_vec()))
+}
+
+fn rustflags_from_build(config: &Config, flag: Flags) -> CargoResult<Option<Vec<String>>> {
     // Then the `build.rustflags` value.
     let build = config.build_config()?;
-    let list = if name == "rustflags" {
-        &build.rustflags
-    } else {
-        &build.rustdocflags
+    let list = match flag {
+        Flags::Rust => &build.rustflags,
+        Flags::Rustdoc => &build.rustdocflags,
     };
-    if let Some(list) = list {
-        return Ok(list.as_slice().to_vec());
-    }
-
-    Ok(Vec::new())
+    Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
 }
 
 /// Collection of information about `rustc` and the host and target.

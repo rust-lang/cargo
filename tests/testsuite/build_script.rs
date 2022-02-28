@@ -355,16 +355,7 @@ fn custom_build_env_var_rustc_linker_bad_host_target() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -411,12 +402,10 @@ fn custom_build_env_var_rustc_linker_host_target() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo()
-            .run();
-    }
+    p.cargo("build -Z target-applies-to-host --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
 #[cargo_test]
@@ -448,13 +437,11 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host --target")
-            .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
-            .arg(&target)
-            .masquerade_as_nightly_cargo()
-            .run();
-    }
+    p.cargo("build -Z target-applies-to-host --target")
+        .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+        .arg(&target)
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
 #[cargo_test]
@@ -471,83 +458,25 @@ fn custom_build_invalid_host_config_feature_flag() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
     // build.rs should fail due to -Zhost-config being set without -Ztarget-applies-to-host
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z host-config --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo()
-            .with_status(101)
-            .with_stderr_contains(
-                "\
+    p.cargo("build -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(
+            "\
 error: the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
 ",
-            )
-            .run();
-    }
+        )
+        .run();
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_host_target_with_bad_host_config() {
-    let target = rustc_host();
-    let p = project()
-        .file(
-            ".cargo/config",
-            &format!(
-                r#"
-                target-applies-to-host = true
-                [host]
-                linker = "/path/to/host/linker"
-                [target.{}]
-                linker = "/path/to/target/linker"
-                "#,
-                target
-            ),
-        )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    // build.rs should fail due to bad target linker being set
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo()
-            .with_status(101)
-            .with_stderr_contains(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/target/linker [..]`
-[ERROR] linker `[..]/path/to/target/linker` not found
-"
-            )
-            .run();
-    }
-}
-
-#[cargo_test]
-fn custom_build_env_var_rustc_linker_bad_host() {
+fn custom_build_linker_host_target_with_bad_host_config() {
     let target = rustc_host();
     let p = project()
         .file(
@@ -562,22 +491,12 @@ fn custom_build_env_var_rustc_linker_bad_host() {
                 target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
     // build.rs should fail due to bad host linker being set
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
@@ -589,11 +508,45 @@ fn custom_build_env_var_rustc_linker_bad_host() {
 "
             )
             .run();
-    }
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
+fn custom_build_linker_bad_host() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [host]
+                linker = "/path/to/host/linker"
+                [target.{}]
+                linker = "/path/to/target/linker"
+                "#,
+                target
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs should fail due to bad host linker being set
+    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+            .arg(&target)
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(
+                "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[ERROR] linker `[..]/path/to/host/linker` not found
+"
+            )
+            .run();
+}
+
+#[cargo_test]
+fn custom_build_linker_bad_host_with_arch() {
     let target = rustc_host();
     let p = project()
         .file(
@@ -610,22 +563,12 @@ fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
                 target, target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
     // build.rs should fail due to bad host linker being set
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
@@ -637,7 +580,6 @@ fn custom_build_env_var_rustc_linker_bad_host_with_arch() {
 "
             )
             .run();
-    }
 }
 
 #[cargo_test]
@@ -670,17 +612,16 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
         .file("src/lib.rs", "")
         .build();
 
-    // build.rs should fail due to bad host linker being set
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo()
-            .run();
-    }
+    // build.rs should be built fine since cross target != host target.
+    // assertion should succeed since it's still passed the target linker
+    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
 #[cargo_test]
-fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
+fn custom_build_linker_bad_cross_arch_host() {
     let target = rustc_host();
     let cross_target = cross_compile::alternate();
     let p = project()
@@ -698,22 +639,12 @@ fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
                 cross_target, target
             ),
         )
-        .file(
-            "build.rs",
-            r#"
-            use std::env;
-
-            fn main() {
-                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/target/linker"));
-            }
-            "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
     // build.rs should fail due to bad host linker being set
-    if cargo_test_support::is_nightly() {
-        p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
             .masquerade_as_nightly_cargo()
             .with_status(101)
@@ -725,7 +656,6 @@ fn custom_build_env_var_rustc_linker_bad_cross_arch_host() {
 "
             )
             .run();
-    }
 }
 
 #[cargo_test]

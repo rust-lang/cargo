@@ -509,14 +509,32 @@ CLI paths are relative to the current working directory.
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
 * Tracking Issue: [#9453](https://github.com/rust-lang/cargo/issues/9453)
 
-The `target-applies-to-host` key in a config file can be used set the desired
-behavior for passing target config flags to build scripts.
+Historically, Cargo's behavior for whether the `linker` and `rustflags`
+configuration options from environment variables and `[target]` are
+respected for build scripts, plugins, and other artifacts that are
+_always_ built for the host platform has been somewhat inconsistent.
+When `--target` is _not_ passed, Cargo respects the same `linker` and
+`rustflags` for build scripts as for all other compile artifacts. When
+`--target` _is_ passed, however, Cargo respects `linker` from
+`[target.<host triple>]`, and does not pick up any `rustflags`
+configuration. This dual behavior is confusing, but also makes it
+difficult to correctly configure builds where the host triple and the
+target triple happen to be the same, but artifacts intended to run on
+the build host should still be configured differently.
 
-It requires the `-Ztarget-applies-to-host` command-line option.
+`-Ztarget-applies-to-host` enables the top-level
+`target-applies-to-host` setting in Cargo configuration files which
+allows users to opt into different (and more consistent) behavior for
+these properties. When `target-applies-to-host` is unset, or set to
+`true`, in the configuration file, the existing Cargo behavior is
+preserved (though see `-Zhost-config`, which changes that default). When
+it is set to `false`, no options from `[target.<host triple>]`,
+`RUSTFLAGS`, or `[build]` are respected for host artifacts regardless of
+whether `--target` is passed to Cargo. To customize artifacts intended
+to be run on the host, use `[host]` ([`host-config`](#host-config)).
 
-The current default for `target-applies-to-host` is `true`, which will be
-changed to `false` in the future, if `-Zhost-config` is used the new `false`
-default will be set for `target-applies-to-host`.
+In the future, `target-applies-to-host` may end up defaulting to `false`
+to provide more sane and consistent default behavior.
 
 ```toml
 # config.toml
@@ -536,8 +554,9 @@ such as build scripts that must run on the host system instead of the target
 system when cross compiling. It supports both generic and host arch specific
 tables. Matching host arch tables take precedence over generic host tables.
 
-It requires the `-Zhost-config` and `-Ztarget-applies-to-host` command-line
-options to be set.
+It requires the `-Zhost-config` and `-Ztarget-applies-to-host`
+command-line options to be set, and that `target-applies-to-host =
+false` is set in the Cargo configuration file.
 
 ```toml
 # config.toml
@@ -545,6 +564,7 @@ options to be set.
 linker = "/path/to/host/linker"
 [host.x86_64-unknown-linux-gnu]
 linker = "/path/to/host/arch/linker"
+rustflags = ["-Clink-arg=--verbose"]
 [target.x86_64-unknown-linux-gnu]
 linker = "/path/to/target/linker"
 ```
