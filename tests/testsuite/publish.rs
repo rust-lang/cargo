@@ -1294,6 +1294,94 @@ repository = "foo"
 }
 
 #[cargo_test]
+fn publish_doc_dep_no_version() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["doc-dependencies"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+
+            [doc-dependencies]
+            bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[UPLOADING] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": "foo",
+          "features": {},
+          "homepage": "foo",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": "foo",
+          "vers": "0.1.0"
+        }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+cargo-features = ["doc-dependencies"]
+
+[package]
+name = "foo"
+version = "0.1.0"
+authors = []
+description = "foo"
+homepage = "foo"
+documentation = "foo"
+license = "MIT"
+repository = "foo"
+
+[doc-dependencies]
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
+    );
+}
+
+#[cargo_test]
 fn credentials_ambiguous_filename() {
     registry::init();
 

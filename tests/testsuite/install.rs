@@ -1350,6 +1350,36 @@ fn dev_dependencies_lock_file_untouched() {
 }
 
 #[cargo_test]
+fn doc_dependencies_lock_file_untouched() {
+    Package::new("foo", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [doc-dependencies]
+                bar = { path = "a" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").masquerade_as_nightly_cargo().run();
+    let lock = p.read_lockfile();
+    p.cargo("install").masquerade_as_nightly_cargo().run();
+    let lock2 = p.read_lockfile();
+    assert!(lock == lock2, "different lockfiles");
+}
+
+#[cargo_test]
 fn install_target_native() {
     pkg("foo", "0.1.0");
 

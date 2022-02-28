@@ -195,6 +195,41 @@ Caused by:
 }
 
 #[cargo_test]
+fn invalid5_alt() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [doc-dependencies.bar]
+                path = "bar"
+                optional = true
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  doc-dependencies are not allowed to be optional: `bar`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn invalid6() {
     let p = project()
         .file(
@@ -1099,6 +1134,41 @@ fn optional_and_dev_dep() {
 }
 
 #[cargo_test]
+fn optional_and_doc_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [package]
+                name    = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                foo = { path = "foo", optional = true }
+                [doc-dependencies]
+                foo = { path = "foo" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] test v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn activating_feature_activates_dep() {
     let p = project()
         .file(
@@ -1409,6 +1479,37 @@ fn only_dep_is_optional() {
         .build();
 
     p.cargo("build").run();
+}
+
+#[cargo_test]
+fn only_dep_is_optional_alt() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                foo = ['bar']
+
+                [dependencies]
+                bar = { version = "0.1", optional = true }
+
+                [doc-dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
 #[cargo_test]

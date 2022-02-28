@@ -1148,7 +1148,6 @@ fn workspace_metadata_with_dependencies_and_resolve() {
             "bar/Cargo.toml",
             &r#"
                 [package]
-
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -3523,11 +3522,16 @@ fn dep_kinds() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["doc-dependencies"]
+
             [package]
             name = "foo"
             version = "0.1.0"
 
             [dependencies]
+            bar = "0.1"
+
+            [doc-dependencies]
             bar = "0.1"
 
             [dev-dependencies]
@@ -3544,6 +3548,7 @@ fn dep_kinds() {
         .build();
 
     p.cargo("metadata")
+        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
             {
@@ -3578,6 +3583,10 @@ fn dep_kinds() {
                           },
                           {
                             "kind": "dev",
+                            "target": null
+                          },
+                          {
+                            "kind": "doc",
                             "target": null
                           },
                           {

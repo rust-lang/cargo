@@ -39,6 +39,47 @@ fn simple() {
 }
 
 #[cargo_test]
+fn simple_with_doc_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+
+                [doc-dependencies]
+                bar = { path = "bar/" }
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] bar v0.0.1 ([CWD]/bar)
+[..] bar v0.0.1 ([CWD]/bar)
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+}
+
+#[cargo_test]
 fn doc_no_libs() {
     let p = project()
         .file(

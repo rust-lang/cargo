@@ -2842,6 +2842,60 @@ fn cargo_platform_specific_dependency() {
 }
 
 #[cargo_test]
+fn cargo_platform_specific_dependency_with_doc() {
+    let host = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["doc-dependencies"]
+
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+                    build = "build.rs"
+
+                    [target.{host}.dependencies]
+                    dep = {{ path = "dep" }}
+                    [target.{host}.build-dependencies]
+                    build = {{ path = "build" }}
+                    [target.{host}.dev-dependencies]
+                    dev = {{ path = "dev" }}
+                    [target.{host}.doc-dependencies]
+                    doc = {{ path = "doc" }}
+                "#,
+                host = host
+            ),
+        )
+        .file("src/main.rs", "extern crate dep; fn main() { dep::dep() }")
+        .file(
+            "tests/foo.rs",
+            "extern crate dev; #[test] fn foo() { dev::dev() }",
+        )
+        .file(
+            "build.rs",
+            "extern crate build; fn main() { build::build(); }",
+        )
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.5.0"))
+        .file("dep/src/lib.rs", "pub fn dep() {}")
+        .file("build/Cargo.toml", &basic_manifest("build", "0.5.0"))
+        .file("build/src/lib.rs", "pub fn build() {}")
+        .file("dev/Cargo.toml", &basic_manifest("dev", "0.5.0"))
+        .file("dev/src/lib.rs", "pub fn dev() {}")
+        .file("doc/Cargo.toml", &basic_manifest("doc", "0.5.0"))
+        .file("doc/src/lib.rs", "pub fn doc() {}")
+        .build();
+
+    p.cargo("build").masquerade_as_nightly_cargo().run();
+
+    assert!(p.bin("foo").is_file());
+    p.cargo("test").masquerade_as_nightly_cargo().run();
+    p.cargo("doc").masquerade_as_nightly_cargo().run();
+}
+
+#[cargo_test]
 fn bad_platform_specific_dependency() {
     let p = project()
         .file(
@@ -5101,6 +5155,45 @@ required by package `bar v0.1.0 ([..]/foo)`
 ",
         )
         .run();
+    p.cargo("build -Zavoid-dev-deps")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn avoid_doc_deps() {
+    Package::new("foo", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+
+                [doc-dependencies]
+                baz = "1.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] no matching package named `baz` found
+location searched: registry `crates-io`
+required by package `bar v0.1.0 ([..]/foo)`
+",
+        )
+        .run();
+    // FIXME: Should be something like -Zavoid-doc-deps
     p.cargo("build -Zavoid-dev-deps")
         .masquerade_as_nightly_cargo()
         .run();

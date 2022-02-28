@@ -36,6 +36,43 @@ fn make_simple_proj() -> Project {
         .build()
 }
 
+fn make_simple_proj_with_doc() -> Project {
+    Package::new("c", "1.0.0").publish();
+    Package::new("b", "1.0.0").dep("c", "1.0").publish();
+    Package::new("a", "1.0.0").dep("b", "1.0").publish();
+    Package::new("bdep", "1.0.0").dep("b", "1.0").publish();
+    Package::new("devdep", "1.0.0").dep("b", "1.0.0").publish();
+    Package::new("docdep", "1.0.0").dep("b", "1.0.0").publish();
+
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["doc-dependencies"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            a = "1.0"
+            c = "1.0"
+
+            [build-dependencies]
+            bdep = "1.0"
+
+            [dev-dependencies]
+            devdep = "1.0"
+
+            [doc-dependencies]
+            docdep = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build()
+}
+
 #[cargo_test]
 fn simple() {
     // A simple test with a few different dependencies.
@@ -60,6 +97,45 @@ foo v0.1.0 ([..]/foo)
         .run();
 
     p.cargo("tree -p bdep")
+        .with_stdout(
+            "\
+bdep v1.0.0
+└── b v1.0.0
+    └── c v1.0.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn simple_with_doc() {
+    // A simple test with a few different dependencies.
+    let p = make_simple_proj_with_doc();
+
+    p.cargo("tree")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+│   └── b v1.0.0
+│       └── c v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+[doc-dependencies]
+└── docdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -p bdep")
+        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 bdep v1.0.0

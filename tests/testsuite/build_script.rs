@@ -2167,6 +2167,41 @@ fn test_dev_dep_build_script() {
 }
 
 #[cargo_test]
+fn test_doc_dep_build_script() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+
+                [doc-dependencies.a]
+                path = "a"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file("a/build.rs", "fn main() {}")
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc").masquerade_as_nightly_cargo().run();
+}
+
+#[cargo_test]
 fn build_script_with_dynamic_native_dependency() {
     let build = project()
         .at("builder")
@@ -4653,6 +4688,47 @@ fn dev_dep_with_links() {
         .file("bar/src/lib.rs", "")
         .build();
     p.cargo("check --tests").run()
+}
+
+#[ignore] // FIXME: overflow it's stack
+#[cargo_test]
+fn doc_dep_with_links() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                links = "x"
+
+                [doc-dependencies]
+                bar = { path = "./bar" }
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                links = "y"
+
+                [dependencies]
+                foo = { path = ".." }
+            "#,
+        )
+        .file("bar/build.rs", "fn main() {}")
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc").masquerade_as_nightly_cargo().run()
 }
 
 #[cargo_test]

@@ -604,6 +604,75 @@ fn no_rebuild_transitive_target_deps() {
 }
 
 #[cargo_test]
+fn no_rebuild_transitive_target_deps_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                a = { path = "a" }
+                [doc-dependencies]
+                b = { path = "b" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("tests/foo.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+
+                [target.foo.dependencies]
+                c = { path = "../c" }
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                c = { path = "../c" }
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] c v0.0.1 ([..])
+[DOCUMENTING] c v0.0.1 ([..])
+[CHECKING] a v0.0.1 ([..])
+[DOCUMENTING] a v0.0.1 ([..])
+[CHECKING] b v0.0.1 ([..])
+[DOCUMENTING] b v0.0.1 ([..])
+[DOCUMENTING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rerun_if_changed_in_dep() {
     let p = project()
         .file(

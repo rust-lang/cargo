@@ -146,6 +146,49 @@ fn cargo_compile_with_root_dev_deps() {
 }
 
 #[cargo_test]
+fn cargo_compile_with_root_doc_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [doc-dependencies.bar]
+                version = "0.5.0"
+                path = "../bar"
+
+                [[bin]]
+                name = "foo"
+            "#,
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        .build();
+    let _p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn gimme() -> &'static str {
+                    "zoidberg"
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]can't find crate for `bar`")
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_root_dev_deps_with_testing() {
     let p = project()
         .file(
@@ -1132,6 +1175,81 @@ fn catch_tricky_cycle() {
         .build();
 
     p.cargo("test")
+        .with_stderr_contains("[..]cyclic package dependency[..]")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn catch_tricky_cycle_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["doc-dependencies"]
+                
+                [package]
+                name = "message"
+                version = "0.1.0"
+
+                [doc-dependencies]
+                test = { path = "test" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "tangle/Cargo.toml",
+            r#"
+                [package]
+                name = "tangle"
+                version = "0.1.0"
+
+                [dependencies]
+                message = { path = ".." }
+                snapshot = { path = "../snapshot" }
+            "#,
+        )
+        .file("tangle/src/lib.rs", "")
+        .file(
+            "snapshot/Cargo.toml",
+            r#"
+                [package]
+                name = "snapshot"
+                version = "0.1.0"
+
+                [dependencies]
+                ledger = { path = "../ledger" }
+            "#,
+        )
+        .file("snapshot/src/lib.rs", "")
+        .file(
+            "ledger/Cargo.toml",
+            r#"
+                [package]
+                name = "ledger"
+                version = "0.1.0"
+
+                [dependencies]
+                tangle = { path = "../tangle" }
+            "#,
+        )
+        .file("ledger/src/lib.rs", "")
+        .file(
+            "test/Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.1.0"
+
+                [dependencies]
+                snapshot = { path = "../snapshot" }
+            "#,
+        )
+        .file("test/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]cyclic package dependency[..]")
         .with_status(101)
         .run();
