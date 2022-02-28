@@ -1146,9 +1146,6 @@ impl TomlManifest {
         let pkgid = project.to_package_id(source_id)?;
 
         let edition = if let Some(ref edition) = project.edition {
-            features
-                .require(Feature::edition())
-                .with_context(|| "editions are unstable")?;
             edition
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?
