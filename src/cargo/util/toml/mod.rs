@@ -1137,9 +1137,13 @@ impl TomlManifest {
         } else {
             Edition::Edition2015
         };
-        if edition == Edition::Edition2021 {
-            features.require(Feature::edition2021())?;
-        } else if !edition.is_stable() {
+        // Add these lines if start a new unstable edition.
+        // ```
+        // if edition == Edition::Edition20xx {
+        //     features.require(Feature::edition20xx))?;
+        // }
+        // ```
+        if !edition.is_stable() {
             // Guard in case someone forgets to add .require()
             return Err(util::errors::internal(format!(
                 "edition {} should be gated",
