@@ -496,12 +496,10 @@ impl TomlProfile {
     ) -> CargoResult<()> {
         self.validate_profile(name, features)?;
         if let Some(ref profile) = self.build_override {
-            features.require(Feature::profile_overrides())?;
             profile.validate_override("build-override")?;
             profile.validate_profile(&format!("{name}.build-override"), features)?;
         }
         if let Some(ref packages) = self.package {
-            features.require(Feature::profile_overrides())?;
             for (override_name, profile) in packages {
                 profile.validate_override("package")?;
                 profile.validate_profile(&format!("{name}.package.{override_name}"), features)?;
