@@ -30,7 +30,7 @@ use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context as _, Error};
+use anyhow::{bail, Context as _, Error};
 use lazycell::LazyCell;
 use log::{debug, trace};
 
@@ -853,6 +853,10 @@ fn build_base_args(
         ..
     } = unit.profile.clone();
     let test = unit.mode.is_any_test();
+
+    if strip != Strip::None && debuginfo.unwrap_or(0) > 0 {
+        bail!("`strip` and `debuginfo` cannot both be active")
+    }
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
