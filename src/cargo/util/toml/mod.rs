@@ -1175,14 +1175,6 @@ impl TomlManifest {
             features.require(Feature::metabuild())?;
         }
 
-        if project.resolver.is_some()
-            || me
-                .workspace
-                .as_ref()
-                .map_or(false, |ws| ws.resolver.is_some())
-        {
-            features.require(Feature::resolver())?;
-        }
         let resolve_behavior = match (
             project.resolver.as_ref(),
             me.workspace.as_ref().and_then(|ws| ws.resolver.as_ref()),
@@ -1521,13 +1513,6 @@ impl TomlManifest {
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
             profiles.validate(&features, &mut warnings)?;
-        }
-        if me
-            .workspace
-            .as_ref()
-            .map_or(false, |ws| ws.resolver.is_some())
-        {
-            features.require(Feature::resolver())?;
         }
         let resolve_behavior = me
             .workspace
