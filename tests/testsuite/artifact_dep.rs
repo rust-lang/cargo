@@ -426,6 +426,84 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
 }
 
 #[cargo_test]
+#[ignore]
+fn feature_resolution_works_for_cfg_target_specification() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let target_arch = cross_compile::alternate_arch();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                resolver = "2"
+
+                [dependencies.d1]
+                path = "d1"
+                artifact = "bin"
+                target = "$TARGET"
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let _b = include_bytes!(env!("CARGO_BIN_FILE_D1"));
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            &r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                authors = []
+
+                [target.'cfg(target_arch = "$ARCH")'.dependencies.d2]
+                path = "../d2"
+            "#
+            .replace("$ARCH", target_arch),
+        )
+        .file(
+            "d1/src/main.rs",
+            r#"fn main() {
+                d1::f();
+            }"#,
+        )
+        .file(
+            "d1/src/lib.rs",
+            &r#"pub fn f() {
+                #[cfg(target_arch = "$ARCH")]
+                d2::f();
+            }
+            "#
+            .replace("$ARCH", target_arch),
+        )
+        .file(
+            "d2/Cargo.toml",
+            r#"
+                [package]
+                name = "d2"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("d2/src/lib.rs", "pub fn f() {}")
+        .build();
+
+    p.cargo("build -Z bindeps")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
 fn build_script_with_bin_artifacts() {
     let p = project()
         .file(
