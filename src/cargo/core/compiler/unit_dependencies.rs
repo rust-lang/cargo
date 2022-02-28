@@ -861,7 +861,6 @@ fn new_unit_dep(
         state.ws.is_member(pkg),
         is_local,
         unit_for,
-        mode,
         kind,
     );
     new_unit_dep_with_profile(

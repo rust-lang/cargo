@@ -46,7 +46,6 @@ pub fn targets(
     let has_lib;
 
     if let Some(target) = clean_lib(
-        features,
         manifest.lib.as_ref(),
         package_root,
         package_name,
@@ -78,7 +77,6 @@ pub fn targets(
     )?);
 
     targets.extend(clean_examples(
-        features,
         manifest.example.as_ref(),
         package_root,
         edition,
@@ -88,7 +86,6 @@ pub fn targets(
     )?);
 
     targets.extend(clean_tests(
-        features,
         manifest.test.as_ref(),
         package_root,
         edition,
@@ -98,7 +95,6 @@ pub fn targets(
     )?);
 
     targets.extend(clean_benches(
-        features,
         manifest.bench.as_ref(),
         package_root,
         edition,
@@ -147,7 +143,6 @@ pub fn targets(
 }
 
 fn clean_lib(
-    features: &Features,
     toml_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
@@ -251,7 +246,7 @@ fn clean_lib(
     };
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path, edition);
-    configure(features, lib, &mut target)?;
+    configure(lib, &mut target)?;
     Ok(Some(target))
 }
 
@@ -350,7 +345,7 @@ fn clean_bins(
             edition,
         );
 
-        configure(features, bin, &mut target)?;
+        configure(bin, &mut target)?;
         result.push(target);
     }
     return Ok(result);
@@ -379,7 +374,6 @@ fn clean_bins(
 }
 
 fn clean_examples(
-    features: &Features,
     toml_examples: Option<&Vec<TomlExampleTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -416,7 +410,7 @@ fn clean_examples(
             toml.required_features.clone(),
             edition,
         );
-        configure(features, &toml, &mut target)?;
+        configure(&toml, &mut target)?;
         result.push(target);
     }
 
@@ -424,7 +418,6 @@ fn clean_examples(
 }
 
 fn clean_tests(
-    features: &Features,
     toml_tests: Option<&Vec<TomlTestTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -451,14 +444,13 @@ fn clean_tests(
     for (path, toml) in targets {
         let mut target =
             Target::test_target(&toml.name(), path, toml.required_features.clone(), edition);
-        configure(features, &toml, &mut target)?;
+        configure(&toml, &mut target)?;
         result.push(target);
     }
     Ok(result)
 }
 
 fn clean_benches(
-    features: &Features,
     toml_benches: Option<&Vec<TomlBenchTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -506,7 +498,7 @@ fn clean_benches(
     for (path, toml) in targets {
         let mut target =
             Target::bench_target(&toml.name(), path, toml.required_features.clone(), edition);
-        configure(features, &toml, &mut target)?;
+        configure(&toml, &mut target)?;
         result.push(target);
     }
 
@@ -804,7 +796,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
+fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -819,9 +811,6 @@ fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> Car
             (Some(false), _) | (_, Some(false)) => false,
         });
     if let Some(edition) = toml.edition.clone() {
-        features
-            .require(Feature::edition())
-            .with_context(|| "editions are unstable")?;
         target.set_edition(
             edition
                 .parse()

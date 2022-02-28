@@ -496,33 +496,18 @@ impl TomlProfile {
     ) -> CargoResult<()> {
         self.validate_profile(name, features)?;
         if let Some(ref profile) = self.build_override {
-            features.require(Feature::profile_overrides())?;
             profile.validate_override("build-override")?;
             profile.validate_profile(&format!("{name}.build-override"), features)?;
         }
         if let Some(ref packages) = self.package {
-            features.require(Feature::profile_overrides())?;
             for (override_name, profile) in packages {
                 profile.validate_override("package")?;
                 profile.validate_profile(&format!("{name}.package.{override_name}"), features)?;
             }
         }
 
-        // Feature gate definition of named profiles
-        match name {
-            "dev" | "release" | "bench" | "test" | "doc" => {}
-            _ => {
-                features.require(Feature::named_profiles())?;
-            }
-        }
-
         // Profile name validation
         Self::validate_name(name)?;
-
-        // Feature gate on uses of keys related to named profiles
-        if self.inherits.is_some() {
-            features.require(Feature::named_profiles())?;
-        }
 
         if let Some(dir_name) = self.dir_name {
             // This is disabled for now, as we would like to stabilize named
@@ -1146,18 +1131,19 @@ impl TomlManifest {
         let pkgid = project.to_package_id(source_id)?;
 
         let edition = if let Some(ref edition) = project.edition {
-            features
-                .require(Feature::edition())
-                .with_context(|| "editions are unstable")?;
             edition
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?
         } else {
             Edition::Edition2015
         };
-        if edition == Edition::Edition2021 {
-            features.require(Feature::edition2021())?;
-        } else if !edition.is_stable() {
+        // Add these lines if start a new unstable edition.
+        // ```
+        // if edition == Edition::Edition20xx {
+        //     features.require(Feature::edition20xx))?;
+        // }
+        // ```
+        if !edition.is_stable() {
             // Guard in case someone forgets to add .require()
             return Err(util::errors::internal(format!(
                 "edition {} should be gated",
@@ -1193,14 +1179,6 @@ impl TomlManifest {
             features.require(Feature::metabuild())?;
         }
 
-        if project.resolver.is_some()
-            || me
-                .workspace
-                .as_ref()
-                .map_or(false, |ws| ws.resolver.is_some())
-        {
-            features.require(Feature::resolver())?;
-        }
         let resolve_behavior = match (
             project.resolver.as_ref(),
             me.workspace.as_ref().and_then(|ws| ws.resolver.as_ref()),
@@ -1539,13 +1517,6 @@ impl TomlManifest {
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
             profiles.validate(&features, &mut warnings)?;
-        }
-        if me
-            .workspace
-            .as_ref()
-            .map_or(false, |ws| ws.resolver.is_some())
-        {
-            features.require(Feature::resolver())?;
         }
         let resolve_behavior = me
             .workspace
@@ -1959,7 +1930,6 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
             dep.set_kind(kind);
         }
         if let Some(name_in_toml) = explicit_name_in_toml {
-            cx.features.require(Feature::rename_dependency())?;
             dep.set_explicit_name_in_toml(name_in_toml);
         }
 

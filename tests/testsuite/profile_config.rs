@@ -312,7 +312,7 @@ fn named_config_profile() {
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config
     use super::config::ConfigBuilder;
-    use cargo::core::compiler::{CompileKind, CompileMode};
+    use cargo::core::compiler::CompileKind;
     use cargo::core::profiles::{Profiles, UnitFor};
     use cargo::core::{PackageId, Workspace};
     use cargo::util::interning::InternedString;
@@ -370,9 +370,8 @@ fn named_config_profile() {
     let dep_pkg = PackageId::new("dep", "0.1.0", crates_io).unwrap();
 
     // normal package
-    let mode = CompileMode::Build;
     let kind = CompileKind::Host;
-    let p = profiles.get_profile(a_pkg, true, true, UnitFor::new_normal(kind), mode, kind);
+    let p = profiles.get_profile(a_pkg, true, true, UnitFor::new_normal(kind), kind);
     assert_eq!(p.name, "foo");
     assert_eq!(p.codegen_units, Some(2)); // "foo" from config
     assert_eq!(p.opt_level, "1"); // "middle" from manifest
@@ -381,14 +380,7 @@ fn named_config_profile() {
     assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
 
     // build-override
-    let bo = profiles.get_profile(
-        a_pkg,
-        true,
-        true,
-        UnitFor::new_host(false, kind),
-        mode,
-        kind,
-    );
+    let bo = profiles.get_profile(a_pkg, true, true, UnitFor::new_host(false, kind), kind);
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
     assert_eq!(bo.opt_level, "0"); // default to zero
@@ -397,7 +389,7 @@ fn named_config_profile() {
     assert_eq!(bo.overflow_checks, true); // SAME as normal
 
     // package overrides
-    let po = profiles.get_profile(dep_pkg, false, true, UnitFor::new_normal(kind), mode, kind);
+    let po = profiles.get_profile(dep_pkg, false, true, UnitFor::new_normal(kind), kind);
     assert_eq!(po.name, "foo");
     assert_eq!(po.codegen_units, Some(7)); // "foo" package override from config
     assert_eq!(po.opt_level, "1"); // SAME as normal

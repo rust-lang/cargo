@@ -1,7 +1,7 @@
-use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, Unit};
+use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{Feature, PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
+use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, config, CargoResult, Config};
@@ -26,8 +26,6 @@ pub struct Profiles {
     /// This is here to assist with error reporting, as the `ProfileMaker`
     /// values have the inherits chains all merged together.
     original_profiles: BTreeMap<InternedString, TomlProfile>,
-    /// Whether or not unstable "named" profiles are enabled.
-    named_profiles_enabled: bool,
     /// The profile the user requested to use.
     requested_profile: InternedString,
     /// The host target for rustc being used by this `Profiles`.
@@ -44,64 +42,8 @@ impl Profiles {
         let mut profiles = merge_config_profiles(ws, requested_profile)?;
         let rustc_host = ws.config().load_global_rustc(Some(ws))?.host;
 
-        if !ws.unstable_features().is_enabled(Feature::named_profiles()) {
-            let mut profile_makers = Profiles {
-                incremental,
-                named_profiles_enabled: false,
-                dir_names: Self::predefined_dir_names(),
-                by_name: HashMap::new(),
-                original_profiles: profiles.clone(),
-                requested_profile,
-                rustc_host,
-            };
-
-            profile_makers.by_name.insert(
-                InternedString::new("dev"),
-                ProfileMaker::new(Profile::default_dev(), profiles.remove("dev")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("dev"), InternedString::new("debug"));
-
-            profile_makers.by_name.insert(
-                InternedString::new("release"),
-                ProfileMaker::new(Profile::default_release(), profiles.remove("release")),
-            );
-            profile_makers.dir_names.insert(
-                InternedString::new("release"),
-                InternedString::new("release"),
-            );
-
-            profile_makers.by_name.insert(
-                InternedString::new("test"),
-                ProfileMaker::new(Profile::default_test(), profiles.remove("test")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("test"), InternedString::new("debug"));
-
-            profile_makers.by_name.insert(
-                InternedString::new("bench"),
-                ProfileMaker::new(Profile::default_bench(), profiles.remove("bench")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("bench"), InternedString::new("release"));
-
-            profile_makers.by_name.insert(
-                InternedString::new("doc"),
-                ProfileMaker::new(Profile::default_doc(), profiles.remove("doc")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("doc"), InternedString::new("debug"));
-
-            return Ok(profile_makers);
-        }
-
         let mut profile_makers = Profiles {
             incremental,
-            named_profiles_enabled: true,
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
             original_profiles: profiles.clone(),
@@ -290,48 +232,9 @@ impl Profiles {
         is_member: bool,
         is_local: bool,
         unit_for: UnitFor,
-        mode: CompileMode,
         kind: CompileKind,
     ) -> Profile {
-        let (profile_name, inherits) = if !self.named_profiles_enabled {
-            // With the feature disabled, we degrade `--profile` back to the
-            // `--release` and `--debug` predicates, and convert back from
-            // ProfileKind::Custom instantiation.
-
-            let release = matches!(self.requested_profile.as_str(), "release" | "bench");
-
-            match mode {
-                CompileMode::Test | CompileMode::Bench | CompileMode::Doctest => {
-                    if release {
-                        (
-                            InternedString::new("bench"),
-                            Some(InternedString::new("release")),
-                        )
-                    } else {
-                        (
-                            InternedString::new("test"),
-                            Some(InternedString::new("dev")),
-                        )
-                    }
-                }
-                CompileMode::Build | CompileMode::Check { .. } | CompileMode::RunCustomBuild => {
-                    // Note: `RunCustomBuild` doesn't normally use this code path.
-                    // `build_unit_profiles` normally ensures that it selects the
-                    // ancestor's profile. However, `cargo clean -p` can hit this
-                    // path.
-                    if release {
-                        (InternedString::new("release"), None)
-                    } else {
-                        (InternedString::new("dev"), None)
-                    }
-                }
-                CompileMode::Doc { .. } | CompileMode::Docscrape => {
-                    (InternedString::new("doc"), None)
-                }
-            }
-        } else {
-            (self.requested_profile, None)
-        };
+        let (profile_name, inherits) = (self.requested_profile, None);
         let maker = self.get_profile_maker(profile_name).unwrap();
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
 
@@ -404,15 +307,7 @@ impl Profiles {
     /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
     pub fn base_profile(&self) -> Profile {
-        let profile_name = if !self.named_profiles_enabled {
-            match self.requested_profile.as_str() {
-                "release" | "bench" => self.requested_profile,
-                _ => InternedString::new("dev"),
-            }
-        } else {
-            self.requested_profile
-        };
-
+        let profile_name = self.requested_profile;
         let maker = self.get_profile_maker(profile_name).unwrap();
         maker.get_profile(None, /*is_member*/ true, /*is_for_host*/ false)
     }
@@ -769,29 +664,6 @@ impl Profile {
             root: ProfileRoot::Release,
             opt_level: InternedString::new("3"),
             ..Profile::default()
-        }
-    }
-
-    // NOTE: Remove the following three once `named_profiles` is default:
-
-    fn default_test() -> Profile {
-        Profile {
-            name: InternedString::new("test"),
-            ..Profile::default_dev()
-        }
-    }
-
-    fn default_bench() -> Profile {
-        Profile {
-            name: InternedString::new("bench"),
-            ..Profile::default_release()
-        }
-    }
-
-    fn default_doc() -> Profile {
-        Profile {
-            name: InternedString::new("doc"),
-            ..Profile::default_dev()
         }
     }
 
