@@ -1,6 +1,6 @@
 use cargo::core::compiler::{CompileKind, RustcTargetData};
 use cargo::core::resolver::features::{CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets};
-use cargo::core::resolver::{HasDevUnits, ResolveBehavior};
+use cargo::core::resolver::{HasTransitiveUnits, ResolveBehavior};
 use cargo::core::{PackageIdSpec, Workspace};
 use cargo::ops::WorkspaceResolve;
 use cargo::Config;
@@ -147,7 +147,7 @@ struct ResolveInfo<'cfg> {
     target_data: RustcTargetData<'cfg>,
     cli_features: CliFeatures,
     specs: Vec<PackageIdSpec>,
-    has_dev_units: HasDevUnits,
+    has_dev_units: HasTransitiveUnits,
     force_all_targets: ForceAllTargets,
     ws_resolve: WorkspaceResolve<'cfg>,
 }
@@ -186,7 +186,7 @@ fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
     let cli_features = CliFeatures::from_command_line(&[], false, true).unwrap();
     let pkgs = cargo::ops::Packages::Default;
     let specs = pkgs.to_package_id_specs(&ws).unwrap();
-    let has_dev_units = HasDevUnits::Yes;
+    let has_dev_units = HasTransitiveUnits::Yes;
     let force_all_targets = ForceAllTargets::No;
     // Do an initial run to download anything necessary so that it does
     // not confuse criterion's warmup.
