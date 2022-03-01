@@ -4690,7 +4690,6 @@ fn dev_dep_with_links() {
     p.cargo("check --tests").run()
 }
 
-#[ignore] // FIXME: overflow it's stack
 #[cargo_test]
 fn doc_dep_with_links() {
     let p = project()
@@ -4728,7 +4727,11 @@ fn doc_dep_with_links() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("doc").masquerade_as_nightly_cargo().run()
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]cyclic package dependency[..]")
+        .run()
 }
 
 #[cargo_test]

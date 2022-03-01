@@ -54,6 +54,7 @@ use std::time::{Duration, Instant};
 
 use log::{debug, trace};
 
+use crate::core::dependency::DepKind;
 use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
@@ -1009,13 +1010,14 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     for id in resolve.iter() {
         let map = graph.entry(id).or_insert_with(BTreeMap::new);
         for (dep_id, listings) in resolve.deps_not_replaced(id) {
-            let transitive_dep = listings.iter().find(|d| d.is_transitive());
+            // We explitly don't use is_transitive() as doc-deps can create cycles.
+            let not_dev_dep = listings.iter().find(|d| d.kind() != DepKind::Development);
 
-            if let Some(transitive_dep) = transitive_dep.cloned() {
-                map.insert(dep_id, transitive_dep.clone());
+            if let Some(not_dev_dep) = not_dev_dep.cloned() {
+                map.insert(dep_id, not_dev_dep.clone());
                 resolve
                     .replacement(dep_id)
-                    .map(|p| map.insert(p, transitive_dep));
+                    .map(|p| map.insert(p, not_dev_dep));
             }
         }
     }

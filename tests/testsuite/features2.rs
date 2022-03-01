@@ -709,7 +709,6 @@ fn cyclical_dev_dep() {
     p.cargo("test").run();
 }
 
-#[ignore] // FIXME: overflow it's stack
 #[cargo_test]
 fn cyclical_doc_dep() {
     // Check how a cyclical doc-dependency will work.
@@ -731,42 +730,26 @@ fn cyclical_doc_dep() {
             foo = { path = '.', features = ["doc"] }
             "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn assert_doc(enabled: bool) {
-                assert_eq!(enabled, cfg!(feature="doc"));
-            }
-
-            #[test]
-            fn test_in_lib() {
-                assert_doc(true);
-            }
-            "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                let expected: bool = std::env::args().skip(1).next().unwrap().parse().unwrap();
-                foo::assert_doc(expected);
-            }
-            "#,
-        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "")
         .build();
 
     // Old way unifies features.
-    p.cargo("run true").masquerade_as_nightly_cargo().run();
-    // dev feature should always be enabled in tests.
-    p.cargo("doc").masquerade_as_nightly_cargo().run();
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]cyclic package dependency[..]")
+        .run();
 
     // New behavior.
     switch_to_resolver_2(&p);
-    // Should decouple main.
-    p.cargo("run false").masquerade_as_nightly_cargo().run();
 
     // And this should be no different.
-    p.cargo("doc").masquerade_as_nightly_cargo().run();
+    p.cargo("doc")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]cyclic package dependency[..]")
+        .run();
 }
 
 #[cargo_test]
