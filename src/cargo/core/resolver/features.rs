@@ -857,7 +857,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             )
                         });
 
-                        let dep_fks = match artifact_target_keys {
+                        let mut dep_fks = match artifact_target_keys {
                             // The artifact is also a library and does specify custom
                             // targets.
                             // The library's feature key needs to be used alongside
@@ -873,6 +873,16 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // Use the standard feature key without any alteration.
                             Some((_, None)) | None => vec![lib_fk],
                         };
+
+                        // This is more of a hack to fix a particular issue with platform-gated
+                        // dependencies' build scripts, which unfortunately we can't determine
+                        // here any better than checking for a platform and blindly adding the
+                        // feature key that it will later query.
+                        // If it matters, the dependency that actually should add this key
+                        // drops out in line 798.
+                        if dep.platform().is_some() {
+                            dep_fks.push(FeaturesFor::NormalOrDevOrArtifactTarget(None));
+                        }
                         dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk))
                     })
                     .collect::<Vec<_>>();

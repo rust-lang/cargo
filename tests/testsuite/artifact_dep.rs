@@ -426,7 +426,6 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
 }
 
 #[cargo_test]
-#[ignore]
 fn feature_resolution_works_for_cfg_target_specification() {
     if cross_compile::disabled() {
         return;
