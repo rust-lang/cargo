@@ -857,14 +857,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // targets.
                             // The library's feature key needs to be used alongside
                             // the keys artifact targets.
-                            Some((is_lib, Some(mut dep_fks))) if is_lib => {
+                            // For good measure, we always add the lib_fk as build scripts
+                            // may trigger it to be queried.
+                            Some((_, Some(mut dep_fks))) => {
                                 dep_fks.push(lib_fk);
                                 dep_fks
                             }
-                            // The artifact is not a library, but does specify
-                            // custom targets.
-                            // Use only these targets feature keys.
-                            Some((_, Some(dep_fks))) => dep_fks,
                             // There is no artifact in the current dependency
                             // or there is no target specified on the artifact.
                             // Use the standard feature key without any alteration.

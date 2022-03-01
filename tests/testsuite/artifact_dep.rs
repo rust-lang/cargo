@@ -426,7 +426,6 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
 }
 
 #[cargo_test]
-#[ignore]
 fn feature_resolution_works_for_cfg_target_specification() {
     if cross_compile::disabled() {
         return;
@@ -467,8 +466,8 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 authors = []
 
                 # [target.'cfg(target_arch = "$ARCH")'.dependencies]
-                # [dependencies]
-                # d2 = { path = "../d2" }
+                [dependencies]
+                d2 = { path = "../d2" }
             "#
             .replace("$ARCH", target_arch),
         )
@@ -483,7 +482,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
             "d1/src/lib.rs",
             &r#"pub fn f() {
                 // #[cfg(target_arch = "$ARCH")]
-                // d2::f();
+                d2::f();
             }
             "#
             .replace("$ARCH", target_arch),
