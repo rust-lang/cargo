@@ -772,8 +772,13 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // We always count platforms as activated if the target stems from an artifact
             // dependency's target specification. This triggers in conjunction with
             // `[target.'cfg(…)'.dependencies]` manifest sections.
-            if matches!(fk, FeaturesFor::NormalOrDevOrArtifactTarget(Some(_))) {
-                return true;
+            if let FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)) = fk {
+                if self
+                    .target_data
+                    .dep_platform_activated(dep, CompileKind::Target(target))
+                {
+                    return true;
+                }
             }
             // Not a build dependency, and not for a build script, so must be Target.
             self.requested_targets
