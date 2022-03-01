@@ -426,6 +426,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
 }
 
 #[cargo_test]
+#[ignore]
 fn feature_resolution_works_for_cfg_target_specification() {
     if cross_compile::disabled() {
         return;
@@ -465,8 +466,8 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 version = "0.0.1"
                 authors = []
 
-                [target.'cfg(target_arch = "$ARCH")'.dependencies.d2]
-                path = "../d2"
+                [target.'cfg(target_arch = "$ARCH")'.dependencies]
+                d2 = { path = "../d2" }
             "#
             .replace("$ARCH", target_arch),
         )
@@ -476,6 +477,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 d1::f();
             }"#,
         )
+        .file("d1/build.rs", r#"fn main() { }"#)
         .file(
             "d1/src/lib.rs",
             &r#"pub fn f() {
@@ -497,7 +499,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
         .file("d2/src/lib.rs", "pub fn f() {}")
         .build();
 
-    p.cargo("build -Z bindeps")
+    p.cargo("test -Z bindeps")
         .masquerade_as_nightly_cargo()
         .run();
 }
