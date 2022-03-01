@@ -310,6 +310,71 @@ fn two_lockfiles() {
 }
 
 #[cargo_test]
+fn test_sync_argument() {
+    let p = project()
+        .no_manifest()
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bitflags = "=0.7.0"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                bitflags = "=0.8.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+
+                [dependencies]
+                bitflags = "=0.8.0"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    Package::new("bitflags", "0.7.0").publish();
+    Package::new("bitflags", "0.8.0").publish();
+
+    p.cargo("vendor --respect-source-config --manifest-path foo/Cargo.toml -s bar/Cargo.toml baz/Cargo.toml test_vendor")
+        .with_stderr("\
+error: failed to read [..]
+
+Caused by:
+  No such file or directory (os error 2)
+",
+        )
+        .with_status(101)
+        .run();
+
+    p.cargo("vendor --respect-source-config --manifest-path foo/Cargo.toml -s bar/Cargo.toml baz/Cargo.toml -- test_vendor")
+        .run();
+
+    let lock = p.read_file("test_vendor/bitflags/Cargo.toml");
+    assert!(lock.contains("version = \"0.8.0\""));
+    let lock = p.read_file("test_vendor/bitflags-0.7.0/Cargo.toml");
+    assert!(lock.contains("version = \"0.7.0\""));
+}
+
+#[cargo_test]
 fn delete_old_crates() {
     let p = project()
         .file(
