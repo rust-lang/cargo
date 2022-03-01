@@ -466,8 +466,9 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 version = "0.0.1"
                 authors = []
 
-                [target.'cfg(target_arch = "$ARCH")'.dependencies]
-                d2 = { path = "../d2" }
+                # [target.'cfg(target_arch = "$ARCH")'.dependencies]
+                # [dependencies]
+                # d2 = { path = "../d2" }
             "#
             .replace("$ARCH", target_arch),
         )
@@ -481,8 +482,8 @@ fn feature_resolution_works_for_cfg_target_specification() {
         .file(
             "d1/src/lib.rs",
             &r#"pub fn f() {
-                #[cfg(target_arch = "$ARCH")]
-                d2::f();
+                // #[cfg(target_arch = "$ARCH")]
+                // d2::f();
             }
             "#
             .replace("$ARCH", target_arch),
@@ -496,6 +497,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 authors = []
             "#,
         )
+        .file("d2/build.rs", r#"fn main() { }"#)
         .file("d2/src/lib.rs", "pub fn f() {}")
         .build();
 
