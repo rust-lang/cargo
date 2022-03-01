@@ -696,6 +696,7 @@ impl fmt::Debug for PrettyPrintRegistry {
                             d.version_req(),
                             match d.kind() {
                                 DepKind::Development => "DepKind::Development",
+                                DepKind::Documentation => "DepKind::Documentation",
                                 DepKind::Build => "DepKind::Build",
                                 DepKind::Normal => "DepKind::Normal",
                             },
