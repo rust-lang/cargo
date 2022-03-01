@@ -89,6 +89,47 @@ fn verbose_arg_and_quiet_config() {
 }
 
 #[cargo_test]
+fn quiet_config_alone() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run").with_stderr("").with_stdout("hello").run();
+}
+
+#[cargo_test]
+fn verbose_config_alone() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                verbose = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
 fn quiet_config_and_verbose_config() {
     let p = project()
         .file(
