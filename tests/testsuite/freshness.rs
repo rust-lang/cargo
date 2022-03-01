@@ -661,8 +661,8 @@ fn no_rebuild_transitive_target_deps_doc() {
             "\
 [CHECKING] c v0.0.1 ([..])
 [DOCUMENTING] c v0.0.1 ([..])
-[CHECKING] a v0.0.1 ([..])
-[DOCUMENTING] a v0.0.1 ([..])
+[..] a v0.0.1 ([..])
+[..] a v0.0.1 ([..])
 [CHECKING] b v0.0.1 ([..])
 [DOCUMENTING] b v0.0.1 ([..])
 [DOCUMENTING] foo v0.0.1 ([..])

@@ -302,7 +302,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         // FIXME: Include doc-dependencies when stable
         drop_eprintln!(
             config,
-            "The following differences only apply when building with dev-dependencies or doc-dependencies:\n"
+            "The following differences only apply when building with dev-dependencies:\n"
         );
         show_diffs(with_transitive_diffs);
     }
