@@ -1,7 +1,7 @@
 use crate::core::compiler::CompileKind;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
@@ -73,7 +73,9 @@ impl BuildConfig {
         }
         let jobs = match jobs.or(cfg.jobs) {
             Some(j) => j,
-            None => available_parallelism()?.get() as u32,
+            None => available_parallelism()
+                .context("failed to determine the amount of parallelism available")?
+                .get() as u32,
         };
         if jobs == 0 {
             anyhow::bail!("jobs may not be 0");
