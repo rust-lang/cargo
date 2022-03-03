@@ -95,7 +95,15 @@ pub(super) fn activation_error(
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
-        msg.push_str("` are: ");
+        msg.push_str("` ");
+
+        if let Some(v) = dep.version_req().locked_version() {
+            msg.push_str("(locked to ");
+            msg.push_str(&v.to_string());
+            msg.push_str(") ");
+        }
+
+        msg.push_str("are: ");
         msg.push_str(
             &candidates
                 .iter()
@@ -239,12 +247,19 @@ pub(super) fn activation_error(
                 versions.join(", ")
             };
 
+            let locked_version = dep
+                .version_req()
+                .locked_version()
+                .map(|v| format!(" (locked to {})", v))
+                .unwrap_or_default();
+
             let mut msg = format!(
-                "failed to select a version for the requirement `{} = \"{}\"`\n\
+                "failed to select a version for the requirement `{} = \"{}\"`{}\n\
                  candidate versions found which didn't match: {}\n\
                  location searched: {}\n",
                 dep.package_name(),
                 dep.version_req(),
+                locked_version,
                 versions,
                 registry.describe_source(dep.source_id()),
             );
@@ -254,7 +269,7 @@ pub(super) fn activation_error(
             // If we have a path dependency with a locked version, then this may
             // indicate that we updated a sub-package and forgot to run `cargo
             // update`. In this case try to print a helpful error!
-            if dep.source_id().is_path() && dep.version_req().to_string().starts_with('=') {
+            if dep.source_id().is_path() && dep.version_req().is_locked() {
                 msg.push_str(
                     "\nconsider running `cargo update` to update \
                      a path dependency's locked version",
