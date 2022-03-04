@@ -19,7 +19,7 @@ Settings](https://crates.io/me) page and run the [`cargo login`] command.
 $ cargo login
 ```
 
-Then at the propt put in the token specified.
+Then at the prompt put in the token specified.
 ```console
 please paste the API Token found on https://crates.io/me below
 abcdefghijklmnopqrstuvwxyz012345
