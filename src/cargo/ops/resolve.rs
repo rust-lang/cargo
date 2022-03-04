@@ -296,80 +296,82 @@ pub fn resolve_with_previous<'cfg>(
             // resolved to. This second element is calculated by looking at the
             // previous resolve graph, which is primarily what's done here to
             // build the `registrations` list.
-            let mut registrations = Vec::new();
-            for dep in patches {
-                let candidates = || {
-                    previous
-                        .iter()
-                        .chain(previous.unused_patches().iter().cloned())
-                        .filter(&pre_patch_keep)
-                };
+            let registrations: Vec<_> = patches
+                .into_iter()
+                .map(|dep| {
+                    let candidates = || {
+                        previous
+                            .iter()
+                            .chain(previous.unused_patches().iter().cloned())
+                            .filter(&pre_patch_keep)
+                    };
 
-                let lock = match candidates().find(|id| dep.matches_id(*id)) {
-                    // If we found an exactly matching candidate in our list of
-                    // candidates, then that's the one to use.
-                    Some(package_id) => {
-                        let mut locked_dep = dep.clone();
-                        locked_dep.lock_to(package_id);
-                        Some(LockedPatchDependency {
-                            dependency: locked_dep,
-                            package_id,
-                            alt_package_id: None,
-                        })
-                    }
-                    None => {
-                        // If the candidate does not have a matching source id
-                        // then we may still have a lock candidate. If we're
-                        // loading a v2-encoded resolve graph and `dep` is a
-                        // git dep with `branch = 'master'`, then this should
-                        // also match candidates without `branch = 'master'`
-                        // (which is now treated separately in Cargo).
-                        //
-                        // In this scenario we try to convert candidates located
-                        // in the resolve graph to explicitly having the
-                        // `master` branch (if they otherwise point to
-                        // `DefaultBranch`). If this works and our `dep`
-                        // matches that then this is something we'll lock to.
-                        match candidates().find(|&id| {
-                            match master_branch_git_source(id, previous) {
-                                Some(id) => dep.matches_id(id),
-                                None => false,
-                            }
-                        }) {
-                            Some(id_using_default) => {
-                                let id_using_master = id_using_default.with_source_id(
-                                    dep.source_id().with_precise(
-                                        id_using_default
-                                            .source_id()
-                                            .precise()
-                                            .map(|s| s.to_string()),
-                                    ),
-                                );
-
-                                let mut locked_dep = dep.clone();
-                                locked_dep.lock_to(id_using_master);
-                                Some(LockedPatchDependency {
-                                    dependency: locked_dep,
-                                    package_id: id_using_master,
-                                    // Note that this is where the magic
-                                    // happens, where the resolve graph
-                                    // probably has locks pointing to
-                                    // DefaultBranch sources, and by including
-                                    // this here those will get transparently
-                                    // rewritten to Branch("master") which we
-                                    // have a lock entry for.
-                                    alt_package_id: Some(id_using_default),
-                                })
-                            }
-
-                            // No locked candidate was found
-                            None => None,
+                    let lock = match candidates().find(|id| dep.matches_id(*id)) {
+                        // If we found an exactly matching candidate in our list of
+                        // candidates, then that's the one to use.
+                        Some(package_id) => {
+                            let mut locked_dep = dep.clone();
+                            locked_dep.lock_to(package_id);
+                            Some(LockedPatchDependency {
+                                dependency: locked_dep,
+                                package_id,
+                                alt_package_id: None,
+                            })
                         }
-                    }
-                };
+                        None => {
+                            // If the candidate does not have a matching source id
+                            // then we may still have a lock candidate. If we're
+                            // loading a v2-encoded resolve graph and `dep` is a
+                            // git dep with `branch = 'master'`, then this should
+                            // also match candidates without `branch = 'master'`
+                            // (which is now treated separately in Cargo).
+                            //
+                            // In this scenario we try to convert candidates located
+                            // in the resolve graph to explicitly having the
+                            // `master` branch (if they otherwise point to
+                            // `DefaultBranch`). If this works and our `dep`
+                            // matches that then this is something we'll lock to.
+                            match candidates().find(|&id| {
+                                match master_branch_git_source(id, previous) {
+                                    Some(id) => dep.matches_id(id),
+                                    None => false,
+                                }
+                            }) {
+                                Some(id_using_default) => {
+                                    let id_using_master = id_using_default.with_source_id(
+                                        dep.source_id().with_precise(
+                                            id_using_default
+                                                .source_id()
+                                                .precise()
+                                                .map(|s| s.to_string()),
+                                        ),
+                                    );
 
-                registrations.push((dep, lock));
-            }
+                                    let mut locked_dep = dep.clone();
+                                    locked_dep.lock_to(id_using_master);
+                                    Some(LockedPatchDependency {
+                                        dependency: locked_dep,
+                                        package_id: id_using_master,
+                                        // Note that this is where the magic
+                                        // happens, where the resolve graph
+                                        // probably has locks pointing to
+                                        // DefaultBranch sources, and by including
+                                        // this here those will get transparently
+                                        // rewritten to Branch("master") which we
+                                        // have a lock entry for.
+                                        alt_package_id: Some(id_using_default),
+                                    })
+                                }
+
+                                // No locked candidate was found
+                                None => None,
+                            }
+                        }
+                    };
+
+                    (dep, lock)
+                })
+                .collect();
 
             let canonical = CanonicalUrl::new(url)?;
             for (orig_patch, unlock_id) in registry.patch(url, &registrations)? {
