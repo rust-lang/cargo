@@ -1000,11 +1000,9 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 break Ok(pair);
             }
             assert!(!self.pending.is_empty());
-            let timeout = self
-                .set
-                .multi
-                .get_timeout()?
-                .unwrap_or_else(|| Duration::new(5, 0));
+            let min_timeout = Duration::new(1, 0);
+            let timeout = self.set.multi.get_timeout()?.unwrap_or(min_timeout);
+            let timeout = timeout.min(min_timeout);
             self.set
                 .multi
                 .wait(&mut [], timeout)
