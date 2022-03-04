@@ -1568,13 +1568,14 @@ fn local_fingerprints_deps(
         local.push(LocalFingerprint::RerunIfChanged { output, paths });
     }
 
-    for var in deps.rerun_if_env_changed.iter() {
-        let val = env::var(var).ok();
-        local.push(LocalFingerprint::RerunIfEnvChanged {
-            var: var.clone(),
-            val,
-        });
-    }
+    local.extend(
+        deps.rerun_if_env_changed
+            .iter()
+            .map(|var| LocalFingerprint::RerunIfEnvChanged {
+                var: var.clone(),
+                val: env::var(var).ok(),
+            }),
+    );
 
     local
 }
@@ -1697,14 +1698,13 @@ pub fn parse_dep_info(
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
-    for (ty, path) in info.files {
-        let path = match ty {
+    ret.files.extend(info.files.into_iter().map(|(ty, path)| {
+        match ty {
             DepInfoPathType::PackageRootRelative => pkg_root.join(path),
             // N.B. path might be absolute here in which case the join will have no effect
             DepInfoPathType::TargetRootRelative => target_root.join(path),
-        };
-        ret.files.push(path);
-    }
+        }
+    }));
     Ok(Some(ret))
 }
 
