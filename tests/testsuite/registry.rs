@@ -8,7 +8,9 @@ use cargo_test_support::{cargo_process, registry::registry_url};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
 use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
+use std::process::Stdio;
 
 #[cargo_test]
 fn simple() {
@@ -881,6 +883,36 @@ fn login_with_differently_sized_token() {
     cargo_process("login lmaolmaolmao -v").run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
+}
+
+#[cargo_test]
+fn login_with_token_on_stdin() {
+    registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+    cargo_process("login lmao -v").run();
+    let mut cargo = cargo_process("login").build_command();
+    cargo
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = cargo.spawn().unwrap();
+    let out = BufReader::new(child.stdout.as_mut().unwrap())
+        .lines()
+        .next()
+        .unwrap()
+        .unwrap();
+    assert!(out.starts_with("please paste the API Token found on "));
+    assert!(out.ends_with("/me below"));
+    child
+        .stdin
+        .as_ref()
+        .unwrap()
+        .write_all(b"some token\n")
+        .unwrap();
+    child.wait().unwrap();
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert_eq!(credentials, "[registry]\ntoken = \"some token\"\n");
 }
 
 #[cargo_test]
