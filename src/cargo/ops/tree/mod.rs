@@ -47,7 +47,7 @@ pub struct TreeOptions {
     pub graph_features: bool,
     /// Maximum display depth of the dependency tree.
     pub max_display_depth: u32,
-    /// Exculdes proc-macro dependencies.
+    /// Excludes proc-macro dependencies.
     pub no_proc_macro: bool,
 }
 

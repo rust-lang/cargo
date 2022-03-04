@@ -71,7 +71,7 @@ Each new feature described below should explain how to use it.
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
-    * [Different binary name](#different-binary-name) — Assign a name to the built binary that is seperate from the crate name.
+    * [Different binary name](#different-binary-name) — Assign a name to the built binary that is separate from the crate name.
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
     * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
