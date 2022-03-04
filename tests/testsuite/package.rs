@@ -1888,7 +1888,6 @@ src/lib.rs
 }
 
 #[cargo_test]
-#[cfg(windows)]
 fn reserved_windows_name() {
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "pub mod aux;")
@@ -1925,16 +1924,7 @@ Caused by:
   failed to unpack package `[..] `[..]`)`
 
 Caused by:
-  failed to unpack entry at `[..]aux.rs`
-
-Caused by:
-  `[..]aux.rs` appears to contain a reserved Windows path, it cannot be extracted on Windows
-
-Caused by:
-  failed to unpack `[..]aux.rs`
-
-Caused by:
-  failed to unpack `[..]aux.rs` into `[..]aux.rs`",
+  `[..]aux.rs` appears to contain a reserved Windows path, it cannot be extracted on Windows",
         )
         .run();
 }

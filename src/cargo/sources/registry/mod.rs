@@ -623,17 +623,15 @@ impl<'cfg> RegistrySource<'cfg> {
                     prefix
                 )
             }
-            // Unpacking failed
-            let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
-            if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
-                result = result.with_context(|| {
-                    format!(
-                        "`{}` appears to contain a reserved Windows path, \
-                        it cannot be extracted on Windows",
-                        entry_path.display()
-                    )
-                });
+            if restricted_names::is_windows_reserved_path(&entry_path) {
+                anyhow::bail!(
+                    "`{}` appears to contain a reserved Windows path, \
+                    it cannot be extracted on Windows",
+                    entry_path.display()
+                )
             }
+            // Unpacking failed
+            let result = entry.unpack_in(parent).map_err(anyhow::Error::from);
             result
                 .with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
