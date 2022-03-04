@@ -236,7 +236,7 @@ fn make_config(ws_root: &Path) -> Config {
     config
 }
 
-/// Benchmark of the full `resovle_ws_with_opts` which runs the resolver
+/// Benchmark of the full `resolve_ws_with_opts` which runs the resolver
 /// twice, the feature resolver, and more. This is a major component of a
 /// regular cargo build.
 fn resolve_ws(c: &mut Criterion) {

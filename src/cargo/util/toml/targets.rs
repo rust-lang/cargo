@@ -821,7 +821,7 @@ fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
 }
 
 /// Build an error message for a target path that cannot be determined either
-/// by auto-discovery or specifiying.
+/// by auto-discovery or specifying.
 ///
 /// This function tries to detect commonly wrong paths for targets:
 ///
