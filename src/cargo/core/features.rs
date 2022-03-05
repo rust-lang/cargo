@@ -651,6 +651,7 @@ unstable_cli_options!(
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
+    targeted_rustflags: bool = ("Make Cargo respect target-specific variants for RUSTFLAGS and CARGO_ENCODED_RUSTFLAGS"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
@@ -853,6 +854,7 @@ impl CliUnstable {
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
+            "targeted-rustflags" => self.targeted_rustflags = parse_empty(k, v)?,
             "features" => {
                 // For now this is still allowed (there are still some
                 // unstable options like "compare"). This should be removed at

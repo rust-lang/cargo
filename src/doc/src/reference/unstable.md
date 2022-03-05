@@ -1161,6 +1161,33 @@ For instance:
 cargo check -Z unstable-options -Z check-cfg-features
 ```
 
+### targeted-rustflags
+
+The `-Z targeted-rustflags` argument tells Cargo to also look for
+target-specific variants of the `RUSTFLAGS` and
+`CARGO_ENCODED_RUSTFLAGS` variables (and the same for `RUSTDOCFLAGS`).
+The following variants are supported:
+
+1. `<var>_<target>` - for example, `RUSTFLAGS_X86_64_UNKNOWN_LINUX_GNU`
+1. `<build-kind>_<var>` - for example, `HOST_RUSTFLAGS` or `TARGET_RUSTFLAGS`
+
+`HOST_RUSTFLAGS` allows setting flags to be passed to rustc for
+host-artifacts (like build scripts) when cross-compiling, or _all_
+artifacts when not cross-compiling. See also the `host-config` feature.
+Note that Cargo considers _any_ `--target` as cross-compiling, even if
+the specified target is equal to the host's target triple.
+`TARGET_RUSTFLAGS` specifically applies to all artifacts being built for
+the target triple specified with `--target`.
+
+This feature interacts with the `target-applies-to-host` setting. When
+set to `false`, `<var>_<host target>` will _not_ apply to artifacts
+built for the host, like build scripts.
+
+More specific flags always take precedence over less specific ones, with
+ties broken in favor of `CARGO_ENCODED_RUSTFLAGS`. So, for example, if
+`RUSTFLAGS_$TARGET` and `TARGET_CARGO_ENCODED_RUSTFLAGS` are both
+specified, `RUSTFLAGS_$TARGET` would be used.
+
 ## Stabilized and removed features
 
 ### Compile progress

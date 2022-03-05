@@ -52,6 +52,176 @@ fn env_rustflags_normal_source() {
 }
 
 #[cargo_test]
+fn env_rustflags_variants() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #[cfg(not(for_lib))]
+                compile_error!("did not use the expected rustflags");
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() { assert!(cfg!(for_brs)) }
+            "#,
+        )
+        .build();
+    let host = rustc_host();
+
+    // First, check that the extended rustflags are feature-gated.
+    p.cargo("build")
+        .arg("--target")
+        .arg(&host)
+        .env(
+            &format!("RUSTFLAGS_{}", host.replace('-', "_").to_uppercase()),
+            "--cfg=for_brs --cfg=for_lib",
+        )
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed: cfg!(for_brs)[..]")
+        .run();
+    // Without --target, both lib.rs and build.rs should pick up RUSTFLAGS.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .env("RUSTFLAGS", "--cfg=for_lib --cfg=for_brs")
+        .run();
+    // Same with CARGO_ENCODED_RUSTFLAGS.
+    // NOTE: We just assume that CARGO_ENCODED_RUSTFLAGS works like RUSTFLAGS after this.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .env("CARGO_ENCODED_RUSTFLAGS", "--cfg=for_lib\x1f--cfg=for_brs")
+        .run();
+    // TARGET_RUSTFLAGS should _not_ affect the build script.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .env("TARGET_RUSTFLAGS", "--cfg=for_lib --cfg=for_brs")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed: cfg!(for_brs)[..]")
+        .run();
+    // With --target, lib.rs should pick up RUSTFLAGS, but build.rs should not.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .arg("--target")
+        .arg(&host)
+        .env("RUSTFLAGS", "--cfg=for_lib --cfg=for_brs")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed: cfg!(for_brs)[..]")
+        .run();
+    // build.rs picks up HOST_RUSTFLAGS (but lib does not).
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .arg("--target")
+        .arg(&host)
+        .env("HOST_RUSTFLAGS", "--cfg=for_brs")
+        .env("RUSTFLAGS", "--cfg=for_lib")
+        .run();
+    // lib.rs picks up TARGET_RUSTFLAGS too.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .arg("--target")
+        .arg(&host)
+        .env("HOST_RUSTFLAGS", "--cfg=for_brs")
+        .env("TARGET_RUSTFLAGS", "--cfg=for_lib")
+        .run();
+    // Without `target-applies-to-host = false`, host picks up RUSTFLAGS_$HOST, and it takes
+    // precedence over all the other flags.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .arg("--target")
+        .arg(&host)
+        .env(
+            &format!("RUSTFLAGS_{}", host.replace('-', "_").to_uppercase()),
+            "--cfg=for_brs --cfg=for_lib",
+        )
+        .env("HOST_RUSTFLAGS", "--cfg=host")
+        .env("TARGET_RUSTFLAGS", "--cfg=target")
+        .env("RUSTFLAGS", "--cfg=generic")
+        .run();
+    // But with `target-applies-to-host = false`, host _only_ picks up `HOST_RUSTFLAGS`.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zunstable-options")
+        .arg("--config")
+        .arg("target-applies-to-host=false")
+        .arg("--target")
+        .arg(&host)
+        .env(
+            &format!("RUSTFLAGS_{}", host.replace('-', "_").to_uppercase()),
+            "--cfg=for_lib",
+        )
+        .env("HOST_RUSTFLAGS", "--cfg=for_brs")
+        .env("RUSTFLAGS", "--cfg=generic")
+        .run();
+}
+
+#[cargo_test]
+fn env_rustflags_specificity() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #[cfg(not(expected))]
+                compile_error!("did not use the expected rustflags");
+            "#,
+        )
+        .build();
+    let host = rustc_host();
+
+    // CARGO_ENCODED_RUSTFLAGS should be preferred over RUSTFLAGS.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .env("CARGO_ENCODED_RUSTFLAGS", "--cfg=expected")
+        .env("RUSTFLAGS", "--cfg=rustflags")
+        .run();
+    // RUSTFLAGS with target specified should be preferred over CARGO_ENCODED_RUSTFLAGS.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .env(
+            &format!("RUSTFLAGS_{}", host.replace('-', "_").to_uppercase()),
+            "--cfg=expected",
+        )
+        .env("CARGO_ENCODED_RUSTFLAGS", "--cfg=encoded")
+        .run();
+    // Same with TARGET_RUSTFLAGS over CARGO_ENCODED_RUSTFLAGS.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .arg("--target")
+        .arg(&host)
+        .env("TARGET_RUSTFLAGS", "--cfg=expected")
+        .env("CARGO_ENCODED_RUSTFLAGS", "--cfg=encoded")
+        .run();
+    // But CARGO_ENCODED_RUSTFLAGS should win ties.
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .arg("-Ztargeted-rustflags")
+        .env(
+            &format!(
+                "CARGO_ENCODED_RUSTFLAGS_{}",
+                host.replace('-', "_").to_uppercase()
+            ),
+            "--cfg=expected",
+        )
+        .env(
+            &format!("RUSTFLAGS_{}", host.replace('-', "_").to_uppercase()),
+            "--cfg=rustflags",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn env_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
