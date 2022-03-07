@@ -264,11 +264,6 @@ impl<'src> SourceMap<'src> {
         }
     }
 
-    /// Like `HashMap::contains_key`.
-    pub fn contains(&self, id: SourceId) -> bool {
-        self.map.contains_key(&id)
-    }
-
     /// Like `HashMap::get`.
     pub fn get(&self, id: SourceId) -> Option<&(dyn Source + 'src)> {
         self.map.get(&id).map(|s| s.as_ref())
@@ -279,30 +274,15 @@ impl<'src> SourceMap<'src> {
         self.map.get_mut(&id).map(|s| s.as_mut())
     }
 
-    /// Like `HashMap::get`, but first calculates the `SourceId` from a `PackageId`.
-    pub fn get_by_package_id(&self, pkg_id: PackageId) -> Option<&(dyn Source + 'src)> {
-        self.get(pkg_id.source_id())
-    }
-
     /// Like `HashMap::insert`, but derives the `SourceId` key from the `Source`.
     pub fn insert(&mut self, source: Box<dyn Source + 'src>) {
         let id = source.source_id();
         self.map.insert(id, source);
     }
 
-    /// Like `HashMap::is_empty`.
-    pub fn is_empty(&self) -> bool {
-        self.map.is_empty()
-    }
-
     /// Like `HashMap::len`.
     pub fn len(&self) -> usize {
         self.map.len()
-    }
-
-    /// Like `HashMap::values`.
-    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a Box<dyn Source + 'src>> {
-        self.map.values()
     }
 
     /// Like `HashMap::iter_mut`.
