@@ -316,21 +316,20 @@ impl<'cfg> Timings<'cfg> {
                 .with_context(|| "failed to save html timing report")?;
         }
         if self.report_json {
-            self.report_json(cx, error)
+            self.report_json(cx)
                 .with_context(|| "failed to save json timing report")?;
         }
         Ok(())
     }
 
-    fn report_json(&self, cx: &Context<'_, '_>, _error: &Option<anyhow::Error>) -> CargoResult<()> {
-        let _duration = self.start.elapsed().as_secs_f64();
+    /// Save JSON report to disk
+    fn report_json(&self, cx: &Context<'_, '_>) -> CargoResult<()> {
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let timings_path = cx.files().host_root().join("cargo-timings");
         paths::create_dir_all(&timings_path)?;
         let filename = timings_path.join(format!("cargo-timing-{}.json", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
-        let json = serde_json::to_string(self)?;
-        f.write_all(json.as_bytes())?;
+        f.write_all(serde_json::to_string(self)?.as_bytes())?;
         let msg = format!(
             "report saved to {}",
             std::env::current_dir()
