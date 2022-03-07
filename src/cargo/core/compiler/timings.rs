@@ -10,7 +10,7 @@ use crate::util::cpu::State;
 use crate::util::{CargoResult, Config};
 use anyhow::Context as _;
 use cargo_util::paths;
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;

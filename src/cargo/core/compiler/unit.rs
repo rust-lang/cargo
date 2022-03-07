@@ -4,7 +4,7 @@ use crate::core::{profiles::Profile, Package};
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use crate::util::Config;
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
