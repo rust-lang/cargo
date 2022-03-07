@@ -4,6 +4,7 @@ use crate::core::{profiles::Profile, Package};
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use crate::util::Config;
+use serde::{Serialize, Serializer, ser::SerializeStruct};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
@@ -142,6 +143,25 @@ impl fmt::Debug for Unit {
             .field("is_std", &self.is_std)
             .field("dep_hash", &self.dep_hash)
             .finish()
+    }
+}
+
+impl Serialize for Unit {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Unit", 9)?;
+        state.serialize_field("pkg_id", &self.pkg.package_id())?;
+        state.serialize_field("target", &self.target)?;
+        state.serialize_field("profile", &self.profile)?;
+        state.serialize_field("kind", &self.kind)?;
+        state.serialize_field("mode", &self.mode)?;
+        state.serialize_field("features", &self.features)?;
+        state.serialize_field("artifact", &self.artifact.is_true())?;
+        state.serialize_field("is_std", &self.is_std)?;
+        state.serialize_field("dep_hash", &self.dep_hash)?;
+        state.end()
     }
 }
 

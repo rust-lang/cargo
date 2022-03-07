@@ -7,10 +7,10 @@ use crate::core::compiler::job_queue::JobId;
 use crate::core::compiler::{BuildContext, Context, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
-use crate::util::machine_message::{self, Message};
 use crate::util::{CargoResult, Config};
 use anyhow::Context as _;
 use cargo_util::paths;
+use serde::{Serialize, Serializer, ser::SerializeStruct};
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
@@ -55,7 +55,26 @@ pub struct Timings<'cfg> {
     cpu_usage: Vec<(f64, f64)>,
 }
 
+impl Serialize for Timings<'_> {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Timings", 8)?;
+        state.serialize_field("duration", &self.start.elapsed().as_secs_f64())?;
+        state.serialize_field("root_tuples", &self.root_targets)?;
+        state.serialize_field("profile", &self.profile)?;
+        state.serialize_field("total_fresh", &self.total_fresh)?;
+        state.serialize_field("total_dirty", &self.total_dirty)?;
+        state.serialize_field("unit_times", &self.unit_times)?;
+        state.serialize_field("concurrency", &self.concurrency)?;
+        state.serialize_field("cpu_usage", &self.cpu_usage)?;
+        state.end()
+    }
+}
+
 /// Tracking information for an individual unit.
+#[derive(Serialize)]
 struct UnitTime {
     unit: Unit,
     /// A string describing the cargo target.
@@ -74,7 +93,7 @@ struct UnitTime {
 }
 
 /// Periodic concurrency tracking information.
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 struct Concurrency {
     /// Time as an offset in seconds from `Timings::start`.
     t: f64,
@@ -218,17 +237,6 @@ impl<'cfg> Timings<'cfg> {
         unit_time
             .unlocked_units
             .extend(unlocked.iter().cloned().cloned());
-        if self.report_json {
-            let msg = machine_message::TimingInfo {
-                package_id: unit_time.unit.pkg.package_id(),
-                target: &unit_time.unit.target,
-                mode: unit_time.unit.mode,
-                duration: unit_time.duration,
-                rmeta_time: unit_time.rmeta_time,
-            }
-            .to_json_string();
-            crate::drop_println!(self.config, "{}", msg);
-        }
         self.unit_times.push(unit_time);
     }
 
@@ -305,8 +313,36 @@ impl<'cfg> Timings<'cfg> {
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
             self.report_html(cx, error)
-                .with_context(|| "failed to save timing report")?;
+                .with_context(|| "failed to save html timing report")?;
         }
+        if self.report_json {
+            self.report_json(cx, error)
+                .with_context(|| "failed to save json timing report")?;
+        }
+        Ok(())
+    }
+
+    fn report_json(&self, cx: &Context<'_, '_>, _error: &Option<anyhow::Error>) -> CargoResult<()> {
+        let _duration = self.start.elapsed().as_secs_f64();
+        let timestamp = self.start_str.replace(&['-', ':'][..], "");
+        let timings_path = cx.files().host_root().join("cargo-timings");
+        paths::create_dir_all(&timings_path)?;
+        let filename = timings_path.join(format!("cargo-timing-{}.json", timestamp));
+        let mut f = BufWriter::new(paths::create(&filename)?);
+        let json = serde_json::to_string(self)?;
+        f.write_all(json.as_bytes())?;
+        let msg = format!(
+            "report saved to {}",
+            std::env::current_dir()
+                .unwrap_or_default()
+                .join(&filename)
+                .display()
+        );
+        let unstamped_filename = timings_path.join("cargo-timing.json");
+        paths::link_or_copy(&filename, &unstamped_filename)?;
+        self.config
+            .shell()
+            .status_with_color("Timing", msg, termcolor::Color::Cyan)?;
         Ok(())
     }
 
