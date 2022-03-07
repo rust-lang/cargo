@@ -598,7 +598,7 @@ impl Summaries {
         let mut ret = Summaries::default();
         let mut hit_closure = false;
         let mut cache_bytes = None;
-        let err = load.load(root, relative, &mut |contents| {
+        let result = load.load(root, relative, &mut |contents| {
             ret.raw_data = contents.to_vec();
             let mut cache = SummariesCache::default();
             hit_closure = true;
@@ -631,16 +631,13 @@ impl Summaries {
                 cache_bytes = Some(cache.serialize(index_version));
             }
             Ok(())
-        })?;
+        });
 
-        if matches!(err, Poll::Pending) {
+        if result?.is_pending() {
             assert!(!hit_closure);
             return Poll::Pending;
         }
 
-        // We ignore lookup failures as those are just crates which don't exist
-        // or we haven't updated the registry yet. If we actually ran the
-        // closure though then we care about those errors.
         if !hit_closure {
             debug_assert!(cache_contents.is_none());
             return Poll::Ready(Ok(None));

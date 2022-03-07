@@ -20,7 +20,6 @@ pub struct GitSource<'cfg> {
     path_source: Option<PathSource<'cfg>>,
     ident: String,
     config: &'cfg Config,
-    updated: bool,
 }
 
 impl<'cfg> GitSource<'cfg> {
@@ -43,7 +42,6 @@ impl<'cfg> GitSource<'cfg> {
             path_source: None,
             ident,
             config,
-            updated: false,
         };
 
         Ok(source)
@@ -55,87 +53,10 @@ impl<'cfg> GitSource<'cfg> {
 
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
-            self.update()?;
+            self.invalidate_cache();
+            self.block_until_ready()?;
         }
         self.path_source.as_mut().unwrap().read_packages()
-    }
-
-    fn update(&mut self) -> CargoResult<()> {
-        if self.updated {
-            return Ok(());
-        }
-
-        let git_path = self.config.git_path();
-        let git_path = self.config.assert_package_cache_locked(&git_path);
-        let db_path = git_path.join("db").join(&self.ident);
-
-        let db = self.remote.db_at(&db_path).ok();
-        let (db, actual_rev) = match (self.locked_rev, db) {
-            // If we have a locked revision, and we have a preexisting database
-            // which has that revision, then no update needs to happen.
-            (Some(rev), Some(db)) if db.contains(rev) => (db, rev),
-
-            // If we're in offline mode, we're not locked, and we have a
-            // database, then try to resolve our reference with the preexisting
-            // repository.
-            (None, Some(db)) if self.config.offline() => {
-                let rev = db.resolve(&self.manifest_reference).with_context(|| {
-                    "failed to lookup reference in preexisting repository, and \
-                         can't check for updates in offline mode (--offline)"
-                })?;
-                (db, rev)
-            }
-
-            // ... otherwise we use this state to update the git database. Note
-            // that we still check for being offline here, for example in the
-            // situation that we have a locked revision but the database
-            // doesn't have it.
-            (locked_rev, db) => {
-                if self.config.offline() {
-                    return Err(anyhow::anyhow!(
-                        "can't checkout from '{}': you are in the offline mode (--offline)",
-                        self.remote.url()
-                    ));
-                }
-                self.config.shell().status(
-                    "Updating",
-                    format!("git repository `{}`", self.remote.url()),
-                )?;
-
-                trace!("updating git source `{:?}`", self.remote);
-
-                self.remote.checkout(
-                    &db_path,
-                    db,
-                    &self.manifest_reference,
-                    locked_rev,
-                    self.config,
-                )?
-            }
-        };
-
-        // Don’t use the full hash, in order to contribute less to reaching the
-        // path length limit on Windows. See
-        // <https://github.com/servo/servo/pull/14397>.
-        let short_id = db.to_short_id(actual_rev)?;
-
-        // Check out `actual_rev` from the database to a scoped location on the
-        // filesystem. This will use hard links and such to ideally make the
-        // checkout operation here pretty fast.
-        let checkout_path = git_path
-            .join("checkouts")
-            .join(&self.ident)
-            .join(short_id.as_str());
-        db.copy_to(actual_rev, &checkout_path, self.config)?;
-
-        let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
-
-        self.path_source = Some(path_source);
-        self.locked_rev = Some(actual_rev);
-        self.path_source.as_mut().unwrap().update()?;
-        self.updated = true;
-        Ok(())
     }
 }
 
@@ -196,6 +117,82 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.source_id
     }
 
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if self.path_source.is_some() {
+            return Ok(());
+        }
+
+        let git_path = self.config.git_path();
+        let git_path = self.config.assert_package_cache_locked(&git_path);
+        let db_path = git_path.join("db").join(&self.ident);
+
+        let db = self.remote.db_at(&db_path).ok();
+        let (db, actual_rev) = match (self.locked_rev, db) {
+            // If we have a locked revision, and we have a preexisting database
+            // which has that revision, then no update needs to happen.
+            (Some(rev), Some(db)) if db.contains(rev) => (db, rev),
+
+            // If we're in offline mode, we're not locked, and we have a
+            // database, then try to resolve our reference with the preexisting
+            // repository.
+            (None, Some(db)) if self.config.offline() => {
+                let rev = db.resolve(&self.manifest_reference).with_context(|| {
+                    "failed to lookup reference in preexisting repository, and \
+                         can't check for updates in offline mode (--offline)"
+                })?;
+                (db, rev)
+            }
+
+            // ... otherwise we use this state to update the git database. Note
+            // that we still check for being offline here, for example in the
+            // situation that we have a locked revision but the database
+            // doesn't have it.
+            (locked_rev, db) => {
+                if self.config.offline() {
+                    anyhow::bail!(
+                        "can't checkout from '{}': you are in the offline mode (--offline)",
+                        self.remote.url()
+                    );
+                }
+                self.config.shell().status(
+                    "Updating",
+                    format!("git repository `{}`", self.remote.url()),
+                )?;
+
+                trace!("updating git source `{:?}`", self.remote);
+
+                self.remote.checkout(
+                    &db_path,
+                    db,
+                    &self.manifest_reference,
+                    locked_rev,
+                    self.config,
+                )?
+            }
+        };
+
+        // Don’t use the full hash, in order to contribute less to reaching the
+        // path length limit on Windows. See
+        // <https://github.com/servo/servo/pull/14397>.
+        let short_id = db.to_short_id(actual_rev)?;
+
+        // Check out `actual_rev` from the database to a scoped location on the
+        // filesystem. This will use hard links and such to ideally make the
+        // checkout operation here pretty fast.
+        let checkout_path = git_path
+            .join("checkouts")
+            .join(&self.ident)
+            .join(short_id.as_str());
+        db.copy_to(actual_rev, &checkout_path, self.config)?;
+
+        let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
+        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
+
+        self.path_source = Some(path_source);
+        self.locked_rev = Some(actual_rev);
+        self.path_source.as_mut().unwrap().update()
+    }
+
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
             "getting packages for package ID `{}` from `{:?}`",
@@ -226,13 +223,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         Ok(false)
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        self.update()
-    }
-
-    fn invalidate_cache(&mut self) {
-        self.updated = false;
-    }
+    fn invalidate_cache(&mut self) {}
 }
 
 #[cfg(test)]

@@ -105,7 +105,13 @@ pub trait Source {
     /// as yanked. This ignores the yanked whitelist.
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool>;
 
-    /// Block until all outstanding Poll::Pending requests are Poll::Ready.
+    /// Block until all outstanding Poll::Pending requests are `Poll::Ready`.
+    ///
+    /// After calling this function, the source should return `Poll::Ready` for
+    /// any queries that previously returned `Poll::Pending`.
+    ///
+    /// If no queries previously returned `Poll::Pending`, and `invalidate_cache`
+    /// was not called, this function should be a no-op.
     fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 

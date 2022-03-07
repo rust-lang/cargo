@@ -637,7 +637,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 let source = self.sources.get_mut(dep.source_id());
                 match (override_summary, source) {
                     (Some(_), None) => {
-                        return Err(anyhow::anyhow!("override found but no real ones")).into()
+                        return Poll::Ready(Err(anyhow::anyhow!("override found but no real ones")))
                     }
                     (None, None) => return Poll::Ready(Ok(())),
 
@@ -678,8 +678,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     // the summaries it gives us though.
                     (Some(override_summary), Some(source)) => {
                         if !patches.is_empty() {
-                            return Err(anyhow::anyhow!("found patches and a path override"))
-                                .into();
+                            return Poll::Ready(Err(anyhow::anyhow!("found patches and a path override")))
                         }
                         let mut n = 0;
                         let mut to_warn = None;
@@ -704,7 +703,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         };
 
         if n > 1 {
-            return Err(anyhow::anyhow!("found an override with a non-locked list")).into();
+            return Poll::Ready(Err(anyhow::anyhow!("found an override with a non-locked list")))
         } else if let Some(summary) = to_warn {
             self.warn_bad_override(&override_summary, &summary)?;
         }
@@ -865,7 +864,7 @@ fn summary_for_patch(
         let mut vers: Vec<_> = summaries.iter().map(|summary| summary.version()).collect();
         vers.sort();
         let versions: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
-        return Err(anyhow::anyhow!(
+        return Poll::Ready(Err(anyhow::anyhow!(
             "patch for `{}` in `{}` resolved to more than one candidate\n\
             Found versions: {}\n\
             Update the patch definition to select only one package.\n\
@@ -875,8 +874,7 @@ fn summary_for_patch(
             orig_patch.source_id(),
             versions.join(", "),
             versions.last().unwrap()
-        ))
-        .into();
+        )))
     }
     assert!(summaries.is_empty());
     // No summaries found, try to help the user figure out what is wrong.
@@ -932,7 +930,7 @@ fn summary_for_patch(
             format!("versions `{}`", strs.join(", "))
         }
     };
-    Err(if found.is_empty() {
+    Poll::Ready(Err(if found.is_empty() {
         anyhow::anyhow!(
             "The patch location `{}` does not appear to contain any packages \
             matching the name `{}`.",
@@ -950,6 +948,5 @@ fn summary_for_patch(
             found,
             orig_patch.version_req()
         )
-    })
-    .into()
+    }))
 }

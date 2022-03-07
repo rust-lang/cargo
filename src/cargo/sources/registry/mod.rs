@@ -447,9 +447,7 @@ pub trait RegistryData {
     /// Local registries don't have a config, and return `None`.
     fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>>;
 
-    /// Ensures the index is updated with the latest data.
-    ///
-    /// Invalidates cached data.
+    /// Invalidates locally cached data.
     fn invalidate_cache(&mut self);
 
     /// Is the local cached data up-to-date?

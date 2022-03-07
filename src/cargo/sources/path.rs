@@ -574,5 +574,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         self.update()
     }
 
-    fn invalidate_cache(&mut self) {}
+    fn invalidate_cache(&mut self) {
+        // Path source has no local cache.
+    }
 }

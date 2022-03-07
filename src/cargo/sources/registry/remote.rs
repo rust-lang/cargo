@@ -36,8 +36,8 @@ pub struct RemoteRegistry<'cfg> {
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
     current_sha: Cell<Option<InternedString>>,
-    needs_update: Cell<bool>,
-    updated: bool,
+    needs_update: Cell<bool>, // Does this registry need to be updated?
+    updated: bool,            // Has this registry been updated this session?
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -141,8 +141,108 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn filename(&self, pkg: PackageId) -> String {
         format!("{}-{}.crate", pkg.name(), pkg.version())
     }
+}
 
-    fn update_index_worker(&mut self) -> CargoResult<()> {
+const LAST_UPDATED_FILE: &str = ".last-updated";
+
+impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
+    fn prepare(&self) -> CargoResult<()> {
+        self.repo()?; // create intermediate dirs and initialize the repo
+        Ok(())
+    }
+
+    fn index_path(&self) -> &Filesystem {
+        &self.index_path
+    }
+
+    fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
+        self.config.assert_package_cache_locked(path)
+    }
+
+    fn current_version(&self) -> Option<InternedString> {
+        if let Some(sha) = self.current_sha.get() {
+            return Some(sha);
+        }
+        let sha = InternedString::new(&self.head().ok()?.to_string());
+        self.current_sha.set(Some(sha));
+        Some(sha)
+    }
+
+    fn load(
+        &self,
+        _root: &Path,
+        path: &Path,
+        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
+    ) -> Poll<CargoResult<()>> {
+        if self.needs_update.get() {
+            return Poll::Pending;
+        }
+
+        // Note that the index calls this method and the filesystem is locked
+        // in the index, so we don't need to worry about an `update_index`
+        // happening in a different process.
+        fn load_helper(
+            registry: &RemoteRegistry<'_>,
+            path: &Path,
+            data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
+        ) -> CargoResult<CargoResult<()>> {
+            let repo = registry.repo()?;
+            let tree = registry.tree()?;
+            let entry = tree.get_path(path);
+            let entry = entry?;
+            let object = entry.to_object(repo)?;
+            let blob = match object.as_blob() {
+                Some(blob) => blob,
+                None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
+            };
+            Ok(data(blob.content()))
+        }
+
+        match load_helper(&self, path, data) {
+            Ok(result) => Poll::Ready(result),
+            Err(_) if !self.updated => {
+                // If git returns an error and we haven't updated the repo, return
+                // pending to allow an update to try again.
+                self.needs_update.set(true);
+                Poll::Pending
+            }
+            Err(e)
+                if e.downcast_ref::<git2::Error>()
+                    .map(|e| e.code() == git2::ErrorCode::NotFound)
+                    .unwrap_or_default() =>
+            {
+                // The repo has been updated and the file does not exist.
+                Poll::Ready(Ok(()))
+            }
+            Err(e) => Poll::Ready(Err(e)),
+        }
+    }
+
+    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+        debug!("loading config");
+        self.prepare()?;
+        self.config.assert_package_cache_locked(&self.index_path);
+        let mut config = None;
+        match self.load(Path::new(""), Path::new("config.json"), &mut |json| {
+            config = Some(serde_json::from_slice(json)?);
+            Ok(())
+        })? {
+            Poll::Ready(()) => {
+                trace!("config loaded");
+                Poll::Ready(Ok(config))
+            }
+            Poll::Pending => Poll::Pending,
+        }
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if !self.needs_update.get() {
+            return Ok(());
+        }
+
+        self.updated = true;
+        self.needs_update.set(false);
+
         if self.config.offline() {
             return Ok(());
         }
@@ -188,99 +288,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
         paths::create(&path.join(LAST_UPDATED_FILE))?;
 
         Ok(())
-    }
-}
-
-const LAST_UPDATED_FILE: &str = ".last-updated";
-
-impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
-    fn prepare(&self) -> CargoResult<()> {
-        self.repo()?; // create intermediate dirs and initialize the repo
-        Ok(())
-    }
-
-    fn index_path(&self) -> &Filesystem {
-        &self.index_path
-    }
-
-    fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
-        self.config.assert_package_cache_locked(path)
-    }
-
-    fn current_version(&self) -> Option<InternedString> {
-        if let Some(sha) = self.current_sha.get() {
-            return Some(sha);
-        }
-        let sha = InternedString::new(&self.head().ok()?.to_string());
-        self.current_sha.set(Some(sha));
-        Some(sha)
-    }
-
-    fn load(
-        &self,
-        _root: &Path,
-        path: &Path,
-        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> Poll<CargoResult<()>> {
-        if self.needs_update.get() {
-            return Poll::Pending;
-        }
-
-        // Note that the index calls this method and the filesystem is locked
-        // in the index, so we don't need to worry about an `update_index`
-        // happening in a different process.
-        let mut not_found = false;
-        let result = || -> CargoResult<CargoResult<()>> {
-            let repo = self.repo()?;
-            let tree = self.tree()?;
-            let entry = tree.get_path(path);
-            if let Some(e) = entry.as_ref().err() {
-                not_found = e.code() == git2::ErrorCode::NotFound;
-            }
-            let entry = entry?;
-            let object = entry.to_object(repo)?;
-            let blob = match object.as_blob() {
-                Some(blob) => blob,
-                None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
-            };
-            Ok(data(blob.content()))
-        }();
-
-        match result {
-            Ok(result) => Poll::Ready(result),
-            Err(_) if !self.updated => {
-                // If git returns an error and we haven't updated the repo, return
-                // pending to allow an update to try again.
-                self.needs_update.set(true);
-                Poll::Pending
-            }
-            Err(e)
-                if e.downcast_ref::<git2::Error>()
-                    .map(|e| e.code() == git2::ErrorCode::NotFound)
-                    .unwrap_or_default() =>
-            {
-                // The repo has been updated and the file does not exist.
-                Poll::Ready(Ok(()))
-            }
-            Err(e) => Poll::Ready(Err(e)),
-        }
-    }
-
-    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
-        debug!("loading config");
-        self.prepare()?;
-        self.config.assert_package_cache_locked(&self.index_path);
-        let mut config = None;
-        match self.load(Path::new(""), Path::new("config.json"), &mut |json| {
-            config = Some(serde_json::from_slice(json)?);
-            Ok(())
-        })? {
-            Poll::Ready(()) => {
-                trace!("config loaded");
-                Poll::Ready(Ok(config))
-            }
-            Poll::Pending => Poll::Pending,
-        }
     }
 
     fn invalidate_cache(&mut self) {
@@ -383,15 +390,6 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             return meta.len() > 0;
         }
         false
-    }
-
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        if self.needs_update.get() {
-            self.update_index_worker()?;
-            self.needs_update.set(false);
-            self.updated = true;
-        }
-        Ok(())
     }
 }
 
