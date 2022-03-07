@@ -2011,7 +2011,7 @@ src/lib.rs
 fn reserved_windows_name() {
     // If we are running on a version of Windows that allows these reserved filenames,
     // skip this test.
-    if cargo::util::restricted_names::windows_reserved_names_are_allowed() {
+    if paths::windows_reserved_names_are_allowed() {
         return;
     }
 

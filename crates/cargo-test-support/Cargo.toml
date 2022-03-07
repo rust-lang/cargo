@@ -25,5 +25,8 @@ termcolor = "1.1.2"
 toml_edit = { version = "0.14.3", features = ["serde", "easy", "perf"] }
 url = "2.2.2"
 
+[target.'cfg(windows)'.dependencies]
+winapi = "0.3"
+
 [features]
 deny-warnings = []
