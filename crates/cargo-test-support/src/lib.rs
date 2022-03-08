@@ -3,8 +3,6 @@
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
 #![allow(clippy::all)]
-#![warn(clippy::needless_borrow)]
-#![warn(clippy::redundant_clone)]
 #![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 use std::env;

@@ -5,8 +5,6 @@
 // Due to some of the default clippy lints being somewhat subjective and not
 // necessarily an improvement, we prefer to not use them at this time.
 #![allow(clippy::all)]
-#![warn(clippy::needless_borrow)]
-#![warn(clippy::redundant_clone)]
 
 use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
