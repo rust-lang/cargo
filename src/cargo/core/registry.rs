@@ -678,7 +678,9 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     // the summaries it gives us though.
                     (Some(override_summary), Some(source)) => {
                         if !patches.is_empty() {
-                            return Poll::Ready(Err(anyhow::anyhow!("found patches and a path override")))
+                            return Poll::Ready(Err(anyhow::anyhow!(
+                                "found patches and a path override"
+                            )));
                         }
                         let mut n = 0;
                         let mut to_warn = None;
@@ -703,7 +705,9 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         };
 
         if n > 1 {
-            return Poll::Ready(Err(anyhow::anyhow!("found an override with a non-locked list")))
+            return Poll::Ready(Err(anyhow::anyhow!(
+                "found an override with a non-locked list"
+            )));
         } else if let Some(summary) = to_warn {
             self.warn_bad_override(&override_summary, &summary)?;
         }
@@ -874,7 +878,7 @@ fn summary_for_patch(
             orig_patch.source_id(),
             versions.join(", "),
             versions.last().unwrap()
-        )))
+        )));
     }
     assert!(summaries.is_empty());
     // No summaries found, try to help the user figure out what is wrong.
