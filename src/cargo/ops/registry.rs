@@ -39,10 +39,45 @@ mod auth;
 pub struct RegistryConfig {
     /// The index URL. If `None`, use crates.io.
     pub index: Option<String>,
+    pub credential: Credential,
+}
+
+#[derive(Debug)]
+pub enum Credential {
+    None,
     /// The authentication token.
-    pub token: Option<String>,
+    Token(String),
     /// Process used for fetching a token.
-    pub credential_process: Option<(PathBuf, Vec<String>)>,
+    Process((PathBuf, Vec<String>)),
+}
+
+impl RegistryConfig {
+    /// Returns `true` if the credential is [`None`].
+    ///
+    /// [`None`]: Credential::None
+    pub fn is_none(&self) -> bool {
+        matches!(&self.credential, Credential::None)
+    }
+    /// Returns `true` if the credential is [`Token`].
+    ///
+    /// [`Token`]: Credential::Token
+    pub fn is_token(&self) -> bool {
+        matches!(&self.credential, Credential::Token(..))
+    }
+    pub fn as_token(&self) -> Option<&str> {
+        if let Credential::Token(v) = &self.credential {
+            Some(&*v)
+        } else {
+            None
+        }
+    }
+    pub fn as_process(&self) -> Option<&(PathBuf, Vec<String>)> {
+        if let Credential::Process(v) = &self.credential {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 pub struct PublishOpts<'cfg> {
@@ -347,10 +382,10 @@ pub fn registry_configuration(
     let (index, token, process) = match registry {
         Some(registry) => {
             let index = Some(config.get_registry_index(registry)?.to_string());
-            let token_key = format!("registries.{}.token", registry);
+            let token_key = format!("registries.{registry}.token");
             let token = config.get_string(&token_key)?.map(|p| p.val);
             let process = if config.cli_unstable().credential_process {
-                let mut proc_key = format!("registries.{}.credential-process", registry);
+                let mut proc_key = format!("registries.{registry}.credential-process");
                 let mut process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
                 if process.is_none() && token.is_none() {
                     // This explicitly ignores the global credential-process if
@@ -389,8 +424,12 @@ pub fn registry_configuration(
 
     Ok(RegistryConfig {
         index,
-        token,
-        credential_process,
+        credential: match (token, credential_process) {
+            (None, None) => Credential::None,
+            (None, Some(process)) => Credential::Process(process),
+            (Some(x), None) => Credential::Token(x),
+            (Some(_), Some(_)) => unreachable!("Only one of these values may be set."),
+        },
     })
 }
 
@@ -459,7 +498,7 @@ fn registry(
             // people. It will affect those using source replacement, but
             // hopefully that's a relatively small set of users.
             if token.is_none()
-                && reg_cfg.token.is_some()
+                && reg_cfg.is_token()
                 && registry.is_none()
                 && !sid.is_default_registry()
                 && !crates_io::is_url_crates_io(&api_host)
@@ -471,13 +510,12 @@ fn registry(
                         see <https://github.com/rust-lang/cargo/issues/xxx>.\n\
                         Use the --token command-line flag to remove this warning.",
                 )?;
-                reg_cfg.token.clone()
+                reg_cfg.as_token().map(|t| t.to_owned())
             } else {
                 let token = auth::auth_token(
                     config,
                     token.as_deref(),
-                    reg_cfg.token.as_deref(),
-                    reg_cfg.credential_process.as_ref(),
+                    &reg_cfg.credential,
                     registry.as_deref(),
                     &api_host,
                 )?;
@@ -714,7 +752,7 @@ pub fn registry_login(
         }
     };
 
-    if let Some(old_token) = &reg_cfg.token {
+    if let Credential::Token(old_token) = &reg_cfg.credential {
         if old_token == &token {
             config.shell().status("Login", "already logged in")?;
             return Ok(());
@@ -724,7 +762,7 @@ pub fn registry_login(
     auth::login(
         config,
         token,
-        reg_cfg.credential_process.as_ref(),
+        reg_cfg.as_process(),
         reg.as_deref(),
         registry.host(),
     )?;
@@ -742,7 +780,7 @@ pub fn registry_login(
 pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> {
     let (registry, reg_cfg, _) = registry(config, None, None, reg.clone(), false, false)?;
     let reg_name = reg.as_deref().unwrap_or(CRATES_IO_DOMAIN);
-    if reg_cfg.credential_process.is_none() && reg_cfg.token.is_none() {
+    if reg_cfg.is_none() {
         config.shell().status(
             "Logout",
             format!("not currently logged in to `{}`", reg_name),
@@ -751,7 +789,7 @@ pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> 
     }
     auth::logout(
         config,
-        reg_cfg.credential_process.as_ref(),
+        reg_cfg.as_process(),
         reg.as_deref(),
         registry.host(),
     )?;
