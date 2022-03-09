@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::Path;
+use std::task::Poll;
 
 /// A local registry is a registry that lives on the filesystem as a set of
 /// `.crate` files with an `index` directory in the same format as a remote
@@ -17,6 +18,7 @@ pub struct LocalRegistry<'cfg> {
     root: Filesystem,
     src_path: Filesystem,
     config: &'cfg Config,
+    updated: bool,
 }
 
 impl<'cfg> LocalRegistry<'cfg> {
@@ -26,6 +28,7 @@ impl<'cfg> LocalRegistry<'cfg> {
             index_path: Filesystem::new(root.join("index")),
             root: Filesystem::new(root.to_path_buf()),
             config,
+            updated: false,
         }
     }
 }
@@ -54,32 +57,48 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()> {
-        data(&paths::read_bytes(&root.join(path))?)
+    ) -> Poll<CargoResult<()>> {
+        if self.updated {
+            Poll::Ready(Ok(data(&paths::read_bytes(&root.join(path))?)?))
+        } else {
+            Poll::Pending
+        }
     }
 
-    fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
+    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         // Local registries don't have configuration for remote APIs or anything
         // like that
-        Ok(None)
+        Poll::Ready(Ok(None))
     }
 
-    fn update_index(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if self.updated {
+            return Ok(());
+        }
         // Nothing to update, we just use what's on disk. Verify it actually
         // exists though. We don't use any locks as we're just checking whether
         // these directories exist.
         let root = self.root.clone().into_path_unlocked();
         if !root.is_dir() {
-            anyhow::bail!("local registry path is not a directory: {}", root.display())
+            anyhow::bail!("local registry path is not a directory: {}", root.display());
         }
         let index_path = self.index_path.clone().into_path_unlocked();
         if !index_path.is_dir() {
             anyhow::bail!(
                 "local registry index path is not a directory: {}",
                 index_path.display()
-            )
+            );
         }
+        self.updated = true;
         Ok(())
+    }
+
+    fn invalidate_cache(&mut self) {
+        // Local registry has no cache - just reads from disk.
+    }
+
+    fn is_updated(&self) -> bool {
+        self.updated
     }
 
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Feature, Shell, Verbosity, Workspace};
-use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
+use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;

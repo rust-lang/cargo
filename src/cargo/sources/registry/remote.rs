@@ -20,6 +20,7 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
+use std::task::Poll;
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are
@@ -35,6 +36,8 @@ pub struct RemoteRegistry<'cfg> {
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
     current_sha: Cell<Option<InternedString>>,
+    needs_update: Cell<bool>, // Does this registry need to be updated?
+    updated: bool,            // Has this registry been updated this session?
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -50,6 +53,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
             repo: LazyCell::new(),
             head: Cell::new(None),
             current_sha: Cell::new(None),
+            needs_update: Cell::new(false),
+            updated: false,
         }
     }
 
@@ -168,35 +173,76 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         _root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()> {
+    ) -> Poll<CargoResult<()>> {
+        if self.needs_update.get() {
+            return Poll::Pending;
+        }
+
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
-        let repo = self.repo()?;
-        let tree = self.tree()?;
-        let entry = tree.get_path(path)?;
-        let object = entry.to_object(repo)?;
-        let blob = match object.as_blob() {
-            Some(blob) => blob,
-            None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
-        };
-        data(blob.content())
+        fn load_helper(
+            registry: &RemoteRegistry<'_>,
+            path: &Path,
+            data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
+        ) -> CargoResult<CargoResult<()>> {
+            let repo = registry.repo()?;
+            let tree = registry.tree()?;
+            let entry = tree.get_path(path);
+            let entry = entry?;
+            let object = entry.to_object(repo)?;
+            let blob = match object.as_blob() {
+                Some(blob) => blob,
+                None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
+            };
+            Ok(data(blob.content()))
+        }
+
+        match load_helper(&self, path, data) {
+            Ok(result) => Poll::Ready(result),
+            Err(_) if !self.updated => {
+                // If git returns an error and we haven't updated the repo, return
+                // pending to allow an update to try again.
+                self.needs_update.set(true);
+                Poll::Pending
+            }
+            Err(e)
+                if e.downcast_ref::<git2::Error>()
+                    .map(|e| e.code() == git2::ErrorCode::NotFound)
+                    .unwrap_or_default() =>
+            {
+                // The repo has been updated and the file does not exist.
+                Poll::Ready(Ok(()))
+            }
+            Err(e) => Poll::Ready(Err(e)),
+        }
     }
 
-    fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
+    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         debug!("loading config");
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
         let mut config = None;
-        self.load(Path::new(""), Path::new("config.json"), &mut |json| {
+        match self.load(Path::new(""), Path::new("config.json"), &mut |json| {
             config = Some(serde_json::from_slice(json)?);
             Ok(())
-        })?;
-        trace!("config loaded");
-        Ok(config)
+        })? {
+            Poll::Ready(()) => {
+                trace!("config loaded");
+                Poll::Ready(Ok(config))
+            }
+            Poll::Pending => Poll::Pending,
+        }
     }
 
-    fn update_index(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if !self.needs_update.get() {
+            return Ok(());
+        }
+
+        self.updated = true;
+        self.needs_update.set(false);
+
         if self.config.offline() {
             return Ok(());
         }
@@ -244,6 +290,16 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
+    fn invalidate_cache(&mut self) {
+        if !self.updated {
+            self.needs_update.set(true);
+        }
+    }
+
+    fn is_updated(&self) -> bool {
+        self.updated
+    }
+
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let filename = self.filename(pkg);
 
@@ -262,7 +318,13 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             }
         }
 
-        let config = self.config()?.unwrap();
+        let config = loop {
+            match self.config()? {
+                Poll::Pending => self.block_until_ready()?,
+                Poll::Ready(cfg) => break cfg.unwrap(),
+            }
+        };
+
         let mut url = config.dl;
         if !url.contains(CRATE_TEMPLATE)
             && !url.contains(VERSION_TEMPLATE)
