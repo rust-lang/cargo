@@ -2,7 +2,12 @@
 
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
-Learn more at https://doc.rust-lang.org/cargo/
+**To start using Cargo**, learn more at [The Cargo Book].
+
+**To start developing Cargo itself**, read the [Cargo Contributor Guide].
+
+[The Cargo Book]: https://doc.rust-lang.org/cargo/
+[Cargo Contributor Guide]: https://rust-lang.github.io/cargo/contrib/
 
 ## Code Status
 
@@ -68,8 +73,6 @@ Please report all issues on the GitHub [issue tracker][issues].
 
 See the **[Cargo Contributor Guide]** for a complete introduction
 to contributing to Cargo.
-
-[Cargo Contributor Guide]: https://rust-lang.github.io/cargo/contrib/
 
 ## License
 
