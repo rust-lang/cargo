@@ -1175,9 +1175,27 @@ fn run_with_library_paths() {
         )
         .file(
             "src/main.rs",
+            r##"
+            extern crate foo;
+
+            fn main() {
+                foo::assert_search_path();
+            }
+            "##,
+        )
+        .file(
+            "src/lib.rs",
             &format!(
                 r##"
-                    fn main() {{
+                    #[test]
+                    fn test_search_path() {{
+                        assert_search_path();
+                    }}
+
+                    /// ```
+                    /// foo::assert_search_path();
+                    /// ```
+                    pub fn assert_search_path() {{
                         let search_path = std::env::var_os("{}").unwrap();
                         let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
                         println!("{{:#?}}", paths);
@@ -1193,6 +1211,7 @@ fn run_with_library_paths() {
         .build();
 
     p.cargo("run").run();
+    p.cargo("test").run();
 }
 
 #[cargo_test]
