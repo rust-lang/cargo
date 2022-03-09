@@ -406,7 +406,8 @@ fn proc_macro_conflicting_warning() {
 
     foo.cargo("build")
         .with_stderr_contains(
-            "[WARNING] found both `proc-macro` and `proc_macro` are set in the `foo` library target",
+"[WARNING] conflicting between `proc-macro` and `proc_macro` in the `foo` library target.\n
+        `proc_macro` is ignored and not recommended for use in the future",
         )
         .run();
 }

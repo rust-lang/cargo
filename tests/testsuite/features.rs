@@ -2102,7 +2102,8 @@ fn default_features_conflicting_warning() {
 
     p.cargo("build")
         .with_stderr_contains(
-            "[WARNING] found both `default-features` and `default_features` are set in the `a` dependency",
+"[WARNING] conflicting between `default-features` and `default_features` in the `a` dependency.\n
+        `default_features` is ignored and not recommended for use in the future"
         )
-            .run();
+        .run();
 }

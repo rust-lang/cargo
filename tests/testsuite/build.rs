@@ -1705,9 +1705,10 @@ fn dev_dependencies_conflicting_warning() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("build")
-    .with_stderr_contains(
-        "[WARNING] found both `dev-dependencies` and `dev_dependencies` are set in the `foo` package",
-    )
+        .with_stderr_contains(
+"[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `foo` package.\n
+        `dev_dependencies` is ignored and not recommended for use in the future"
+        )
         .run();
 }
 
@@ -1740,9 +1741,10 @@ fn build_dependencies_conflicting_warning() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("build")
-    .with_stderr_contains(
-        "[WARNING] found both `build-dependencies` and `build_dependencies` are set in the `foo` package",
-    )
+        .with_stderr_contains(
+"[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `foo` package.\n
+        `build_dependencies` is ignored and not recommended for use in the future"
+        )
         .run();
 }
 
@@ -1766,9 +1768,10 @@ fn lib_crate_types_conflicting_warning() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("build")
-    .with_stderr_contains(
-        "[WARNING] found both `crate-type` and `crate_type` are set in the `foo` library target",
-    )
+        .with_stderr_contains(
+"[WARNING] conflicting between `crate-type` and `crate_type` in the `foo` library target.\n
+        `crate_type` is ignored and not recommended for use in the future",
+        )
         .run();
 }
 
@@ -1812,8 +1815,10 @@ fn examples_crate_types_conflicting_warning() {
     p.cargo("build")
         .with_stderr_contains(
             "\
-[WARNING] found both `crate-type` and `crate_type` are set in the `ex` example target
-[WARNING] found both `crate-type` and `crate_type` are set in the `goodbye` example target",
+[WARNING] conflicting between `crate-type` and `crate_type` in the `ex` example target.\n
+        `crate_type` is ignored and not recommended for use in the future
+[WARNING] conflicting between `crate-type` and `crate_type` in the `goodbye` example target.\n
+        `crate_type` is ignored and not recommended for use in the future",
         )
         .run();
 }
@@ -3016,9 +3021,10 @@ fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
 
     p.cargo("build")
         .with_stderr_contains(
-            format!("[WARNING] found both `build-dependencies` and `build_dependencies` are set in the `{}` platform target", host),
+        format!("[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `{}` platform target.\n
+        `build_dependencies` is ignored and not recommended for use in the future", host)
         )
-            .run();
+        .run();
 
     assert!(p.bin("foo").is_file());
 }
@@ -3055,9 +3061,10 @@ fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
 
     p.cargo("build")
         .with_stderr_contains(
-        format!("[WARNING] found both `dev-dependencies` and `dev_dependencies` are set in the `{}` platform target", host),
+        format!("[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `{}` platform target.\n
+        `dev_dependencies` is ignored and not recommended for use in the future", host)
         )
-            .run();
+        .run();
 
     assert!(p.bin("foo").is_file());
     p.cargo("test").run();
