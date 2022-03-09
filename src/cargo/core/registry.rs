@@ -180,6 +180,11 @@ impl<'cfg> PackageRegistry<'cfg> {
         }
 
         self.load(namespace, kind)?;
+
+        // This isn't strictly necessary since it will be called later.
+        // However it improves error messages for sources that issue errors
+        // in `block_until_ready` because the callers here have context about
+        // which deps are being resolved.
         self.block_until_ready()?;
         Ok(())
     }
@@ -273,7 +278,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         // First up we need to actually resolve each `deps` specification to
         // precisely one summary. We're not using the `query` method below as it
         // internally uses maps we're building up as part of this method
-        // (`patches_available` and `patches). Instead we're going straight to
+        // (`patches_available` and `patches`). Instead we're going straight to
         // the source to load information from it.
         //
         // Remember that each dependency listed in `[patch]` has to resolve to

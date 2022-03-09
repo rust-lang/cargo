@@ -1,22 +1,17 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
+use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{
-    LoadResponse, RegistryConfig, RegistryData, CHECKSUM_TEMPLATE, CRATE_TEMPLATE,
-    LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE, VERSION_TEMPLATE,
-};
+use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, Filesystem};
 use anyhow::Context as _;
-use cargo_util::{paths, registry::make_dep_path, Sha256};
+use cargo_util::paths;
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
-use std::fmt::Write as FmtWrite;
-use std::fs::{self, File, OpenOptions};
-use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
@@ -36,8 +31,8 @@ pub struct RemoteRegistry<'cfg> {
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
     current_sha: Cell<Option<InternedString>>,
-    needs_update: Cell<bool>, // Does this registry need to be updated?
-    updated: bool,            // Has this registry been updated this session?
+    needs_update: bool, // Does this registry need to be updated?
+    updated: bool,      // Has this registry been updated this session?
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -53,7 +48,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
             repo: LazyCell::new(),
             head: Cell::new(None),
             current_sha: Cell::new(None),
-            needs_update: Cell::new(false),
+            needs_update: false,
             updated: false,
         }
     }
@@ -138,10 +133,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
 
-    fn filename(&self, pkg: PackageId) -> String {
-        format!("{}-{}.crate", pkg.name(), pkg.version())
-    }
-
     fn current_version(&self) -> Option<InternedString> {
         if let Some(sha) = self.current_sha.get() {
             return Some(sha);
@@ -169,12 +160,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn load(
-        &self,
+        &mut self,
         _root: &Path,
         path: &Path,
         index_version: Option<&str>,
     ) -> Poll<CargoResult<LoadResponse>> {
-        if self.needs_update.get() {
+        if self.needs_update {
             return Poll::Pending;
         }
         // Check if the cache is valid.
@@ -211,7 +202,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             Err(_) if !self.updated => {
                 // If git returns an error and we haven't updated the repo, return
                 // pending to allow an update to try again.
-                self.needs_update.set(true);
+                self.needs_update = true;
                 Poll::Pending
             }
             Err(e)
@@ -241,12 +232,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        if !self.needs_update.get() {
+        if !self.needs_update {
             return Ok(());
         }
 
         self.updated = true;
-        self.needs_update.set(false);
+        self.needs_update = false;
 
         if self.config.offline() {
             return Ok(());
@@ -297,7 +288,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
     fn invalidate_cache(&mut self) {
         if !self.updated {
-            self.needs_update.set(true);
+            self.needs_update = true;
         }
     }
 
@@ -306,51 +297,20 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
-        let filename = self.filename(pkg);
-
-        // Attempt to open an read-only copy first to avoid an exclusive write
-        // lock and also work with read-only filesystems. Note that we check the
-        // length of the file like below to handle interrupted downloads.
-        //
-        // If this fails then we fall through to the exclusive path where we may
-        // have to redownload the file.
-        let path = self.cache_path.join(&filename);
-        let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(dst) = File::open(&path) {
-            let meta = dst.metadata()?;
-            if meta.len() > 0 {
-                return Ok(MaybeLock::Ready(dst));
-            }
-        }
-
-        let config = loop {
+        let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
                 Poll::Ready(cfg) => break cfg.unwrap(),
             }
         };
 
-        let mut url = config.dl;
-        if !url.contains(CRATE_TEMPLATE)
-            && !url.contains(VERSION_TEMPLATE)
-            && !url.contains(PREFIX_TEMPLATE)
-            && !url.contains(LOWER_PREFIX_TEMPLATE)
-            && !url.contains(CHECKSUM_TEMPLATE)
-        {
-            write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
-        }
-        let prefix = make_dep_path(&*pkg.name(), true);
-        let url = url
-            .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
-            .replace(CHECKSUM_TEMPLATE, checksum);
-
-        Ok(MaybeLock::Download {
-            url,
-            descriptor: pkg.to_string(),
-        })
+        download::download(
+            &self.cache_path,
+            &self.config,
+            pkg,
+            checksum,
+            registry_config,
+        )
     }
 
     fn finish_download(
@@ -359,42 +319,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         checksum: &str,
         data: &[u8],
     ) -> CargoResult<File> {
-        // Verify what we just downloaded
-        let actual = Sha256::new().update(data).finish_hex();
-        if actual != checksum {
-            anyhow::bail!("failed to verify the checksum of `{}`", pkg)
-        }
-
-        let filename = self.filename(pkg);
-        self.cache_path.create_dir()?;
-        let path = self.cache_path.join(&filename);
-        let path = self.config.assert_package_cache_locked(&path);
-        let mut dst = OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(&path)
-            .with_context(|| format!("failed to open `{}`", path.display()))?;
-        let meta = dst.metadata()?;
-        if meta.len() > 0 {
-            return Ok(dst);
-        }
-
-        dst.write_all(data)?;
-        dst.seek(SeekFrom::Start(0))?;
-        Ok(dst)
+        download::finish_download(&self.cache_path, &self.config, pkg, checksum, data)
     }
 
     fn is_crate_downloaded(&self, pkg: PackageId) -> bool {
-        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let path = Path::new(&filename);
-
-        let path = self.cache_path.join(path);
-        let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(meta) = fs::metadata(path) {
-            return meta.len() > 0;
-        }
-        false
+        download::is_crate_downloaded(&self.cache_path, &self.config, pkg)
     }
 }
 

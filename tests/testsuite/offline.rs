@@ -62,7 +62,7 @@ fn offline_missing_optional() {
 [ERROR] failed to download `opt_dep v1.0.0`
 
 Caused by:
-  can't make HTTP request in the offline mode
+  attempting to make an HTTP request, but --offline was specified
 ",
         )
         .with_status(101)
@@ -325,7 +325,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
 [ERROR] failed to download `bar v0.1.0`
 
 Caused by:
-  can't make HTTP request in the offline mode
+  attempting to make an HTTP request, but --offline was specified
 ",
         )
         .run();
