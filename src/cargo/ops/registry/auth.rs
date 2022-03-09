@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use super::Credential;
+use super::RegistryConfig;
 
 enum Action {
     Get,
@@ -20,17 +20,17 @@ enum Action {
 pub(super) fn auth_token(
     config: &Config,
     cli_token: Option<&str>,
-    credential: &Credential,
+    credential: &RegistryConfig,
     registry_name: Option<&str>,
     api_url: &str,
 ) -> CargoResult<String> {
     let token = match (cli_token, credential) {
-        (None, Credential::None) => {
+        (None, RegistryConfig::None) => {
             bail!("no upload token found, please run `cargo login` or pass `--token`");
         }
         (Some(cli_token), _) => cli_token.to_string(),
-        (None, Credential::Token(config_token)) => config_token.to_string(),
-        (None, Credential::Process(process)) => {
+        (None, RegistryConfig::Token(config_token)) => config_token.to_string(),
+        (None, RegistryConfig::Process(process)) => {
             let registry_name = registry_name.unwrap_or(CRATES_IO_REGISTRY);
             run_command(config, process, registry_name, api_url, Action::Get)?.unwrap()
         }

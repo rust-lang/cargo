@@ -36,14 +36,7 @@ mod auth;
 ///
 /// This is loaded based on the `--registry` flag and the config settings.
 #[derive(Debug)]
-pub struct RegistryConfig {
-    /// The index URL. If `None`, use crates.io.
-    pub index: Option<String>,
-    pub credential: Credential,
-}
-
-#[derive(Debug)]
-pub enum Credential {
+pub enum RegistryConfig {
     None,
     /// The authentication token.
     Token(String),
@@ -56,23 +49,23 @@ impl RegistryConfig {
     ///
     /// [`None`]: Credential::None
     pub fn is_none(&self) -> bool {
-        matches!(&self.credential, Credential::None)
+        matches!(self, Self::None)
     }
     /// Returns `true` if the credential is [`Token`].
     ///
     /// [`Token`]: Credential::Token
     pub fn is_token(&self) -> bool {
-        matches!(&self.credential, Credential::Token(..))
+        matches!(self, Self::Token(..))
     }
     pub fn as_token(&self) -> Option<&str> {
-        if let Credential::Token(v) = &self.credential {
+        if let Self::Token(v) = self {
             Some(&*v)
         } else {
             None
         }
     }
     pub fn as_process(&self) -> Option<&(PathBuf, Vec<String>)> {
-        if let Credential::Process(v) = &self.credential {
+        if let Self::Process(v) = self {
             Some(v)
         } else {
             None
@@ -133,8 +126,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let (mut registry, _reg_cfg, reg_id) = registry(
         opts.config,
         opts.token.clone(),
-        opts.index.clone(),
-        publish_registry,
+        opts.index.as_deref(),
+        publish_registry.as_deref(),
         true,
         !opts.dry_run,
     )?;
@@ -371,17 +364,14 @@ pub fn registry_configuration(
 ) -> CargoResult<RegistryConfig> {
     let err_both = |token_key: &str, proc_key: &str| {
         Err(format_err!(
-            "both `{TOKEN_KEY}` and `{PROC_KEY}` \
+            "both `{token_key}` and `{proc_key}` \
              were specified in the config\n\
              Only one of these values may be set, remove one or the other to proceed.",
-            TOKEN_KEY = token_key,
-            PROC_KEY = proc_key,
         ))
     };
     // `registry.default` is handled in command-line parsing.
-    let (index, token, process) = match registry {
+    let (token, process) = match registry {
         Some(registry) => {
-            let index = Some(config.get_registry_index(registry)?.to_string());
             let token_key = format!("registries.{registry}.token");
             let token = config.get_string(&token_key)?.map(|p| p.val);
             let process = if config.cli_unstable().credential_process {
@@ -399,7 +389,7 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (index, token, process)
+            (token, process)
         }
         None => {
             // Use crates.io default.
@@ -415,21 +405,18 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (None, token, process)
+            (token, process)
         }
     };
 
     let credential_process =
         process.map(|process| (process.path.resolve_program(config), process.args));
 
-    Ok(RegistryConfig {
-        index,
-        credential: match (token, credential_process) {
-            (None, None) => Credential::None,
-            (None, Some(process)) => Credential::Process(process),
-            (Some(x), None) => Credential::Token(x),
-            (Some(_), Some(_)) => unreachable!("Only one of these values may be set."),
-        },
+    Ok(match (token, credential_process) {
+        (None, None) => RegistryConfig::None,
+        (None, Some(process)) => RegistryConfig::Process(process),
+        (Some(x), None) => RegistryConfig::Token(x),
+        (Some(_), Some(_)) => unreachable!("Only one of these values may be set."),
     })
 }
 
@@ -447,8 +434,8 @@ pub fn registry_configuration(
 fn registry(
     config: &Config,
     token: Option<String>,
-    index: Option<String>,
-    registry: Option<String>,
+    index: Option<&str>,
+    registry: Option<&str>,
     force_update: bool,
     validate_token: bool,
 ) -> CargoResult<(Registry, RegistryConfig, SourceId)> {
@@ -457,9 +444,12 @@ fn registry(
         bail!("both `--index` and `--registry` should not be set at the same time");
     }
     // Parse all configuration options
-    let reg_cfg = registry_configuration(config, registry.as_deref())?;
-    let opt_index = reg_cfg.index.as_deref().or_else(|| index.as_deref());
-    let sid = get_source_id(config, opt_index, registry.as_deref())?;
+    let reg_cfg = registry_configuration(config, registry)?;
+    let opt_index = registry
+        .map(|r| config.get_registry_index(r))
+        .transpose()?
+        .map(|u| u.to_string());
+    let sid = get_source_id(config, opt_index.as_deref().or(index), registry)?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
@@ -512,13 +502,8 @@ fn registry(
                 )?;
                 reg_cfg.as_token().map(|t| t.to_owned())
             } else {
-                let token = auth::auth_token(
-                    config,
-                    token.as_deref(),
-                    &reg_cfg.credential,
-                    registry.as_deref(),
-                    &api_host,
-                )?;
+                let token =
+                    auth::auth_token(config, token.as_deref(), &reg_cfg, registry, &api_host)?;
                 Some(token)
             }
         }
@@ -730,7 +715,8 @@ pub fn registry_login(
     token: Option<String>,
     reg: Option<String>,
 ) -> CargoResult<()> {
-    let (registry, reg_cfg, _) = registry(config, token.clone(), None, reg.clone(), false, false)?;
+    let (registry, reg_cfg, _) =
+        registry(config, token.clone(), None, reg.as_deref(), false, false)?;
 
     let token = match token {
         Some(token) => token,
@@ -752,7 +738,7 @@ pub fn registry_login(
         }
     };
 
-    if let Credential::Token(old_token) = &reg_cfg.credential {
+    if let RegistryConfig::Token(old_token) = &reg_cfg {
         if old_token == &token {
             config.shell().status("Login", "already logged in")?;
             return Ok(());
@@ -778,7 +764,7 @@ pub fn registry_login(
 }
 
 pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> {
-    let (registry, reg_cfg, _) = registry(config, None, None, reg.clone(), false, false)?;
+    let (registry, reg_cfg, _) = registry(config, None, None, reg.as_deref(), false, false)?;
     let reg_name = reg.as_deref().unwrap_or(CRATES_IO_DOMAIN);
     if reg_cfg.is_none() {
         config.shell().status(
@@ -826,8 +812,8 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let (mut registry, _, _) = registry(
         config,
         opts.token.clone(),
-        opts.index.clone(),
-        opts.registry.clone(),
+        opts.index.as_deref(),
+        opts.registry.as_deref(),
         true,
         true,
     )?;
@@ -902,7 +888,8 @@ pub fn yank(
         None => bail!("a version must be specified to yank"),
     };
 
-    let (mut registry, _, _) = registry(config, token, index, reg, true, true)?;
+    let (mut registry, _, _) =
+        registry(config, token, index.as_deref(), reg.as_deref(), true, true)?;
 
     if undo {
         config
@@ -961,7 +948,8 @@ pub fn search(
         prefix
     }
 
-    let (mut registry, _, source_id) = registry(config, None, index, reg, false, false)?;
+    let (mut registry, _, source_id) =
+        registry(config, None, index.as_deref(), reg.as_deref(), false, false)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
             "failed to retrieve search results from the registry at {}",
