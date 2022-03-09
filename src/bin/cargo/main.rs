@@ -1,7 +1,5 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
 #![allow(clippy::all)]
-#![warn(clippy::needless_borrow)]
-#![warn(clippy::redundant_clone)]
 
 use cargo::core::shell::Shell;
 use cargo::util::toml::StringOrVec;
