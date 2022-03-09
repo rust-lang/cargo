@@ -3,12 +3,22 @@
 This chapter gives an overview of how to build Cargo, make a change, and
 submit a Pull Request.
 
+0. [Before hacking on Cargo.](#before-hacking-on-cargo)
 1. [Check out the Cargo source.](#checkout-out-the-source)
 2. [Building Cargo.](#building-cargo)
 3. [Making a change.](#making-a-change)
 4. [Writing and running tests.](../tests/index.md)
 5. [Submitting a Pull Request.](#submitting-a-pull-request)
 6. [The merging process.](#the-merging-process)
+
+## Before hacking on Cargo
+
+We encourage people to discuss their design before hacking on code. This gives
+the Cargo team a chance to know your idea more. Sometimes after a discussion,
+we even find a way to solve the problem without coding! Typically, you
+[file an issue] or start a thread on the [internals forum] before submitting a
+pull request. Please read [the process] of how features and bugs are managed in
+Cargo.
 
 ## Checkout out the source
 
@@ -143,3 +153,6 @@ more information on how Cargo releases are made.
 [homu-cargo]: https://buildbot2.rust-lang.org/homu/queue/cargo
 [homu-rust]: https://buildbot2.rust-lang.org/homu/queue/rust
 [release chapter]: release.md
+[internals forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo
+[file an issue]: https://github.com/rust-lang/cargo/issues
+[the process]: index.md
