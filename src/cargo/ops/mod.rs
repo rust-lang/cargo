@@ -32,6 +32,7 @@ pub use self::resolve::{
 };
 pub use self::vendor::{vendor, VendorOptions};
 
+pub mod cargo_add;
 mod cargo_clean;
 mod cargo_compile;
 pub mod cargo_config;
