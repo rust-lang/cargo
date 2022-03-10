@@ -10,6 +10,9 @@ use std::path::Path;
 
 use cargo_util::paths;
 use indexmap::IndexSet;
+use termcolor::Color::Green;
+use termcolor::Color::Red;
+use termcolor::ColorSpec;
 use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
@@ -544,6 +547,10 @@ fn populate_available_features(
 fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoResult<()> {
     use std::fmt::Write;
 
+    if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
+        return Ok(());
+    }
+
     let mut message = String::new();
     write!(message, "{}", dep.name)?;
     match dep.source() {
@@ -573,6 +580,7 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
     };
     write!(message, " {section}")?;
     write!(message, ".")?;
+    shell.status("Adding", message)?;
 
     let mut activated: IndexSet<_> = dep.features.iter().flatten().map(|s| s.as_str()).collect();
     if dep.default_features().unwrap_or(true) {
@@ -604,19 +612,19 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
         .collect::<Vec<_>>();
     deactivated.sort();
     if !activated.is_empty() || !deactivated.is_empty() {
-        writeln!(message)?;
-        write!(message, "{:>13}Features:", " ")?;
+        let prefix = format!("{:>13}", " ");
+        shell.write_stderr(format_args!("{}Features:\n", prefix), &ColorSpec::new())?;
         for feat in activated {
-            writeln!(message)?;
-            write!(message, "{:>13}+ {}", " ", feat)?;
+            shell.write_stderr(&prefix, &ColorSpec::new())?;
+            shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
+            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
         }
         for feat in deactivated {
-            writeln!(message)?;
-            write!(message, "{:>13}- {}", " ", feat)?;
+            shell.write_stderr(&prefix, &ColorSpec::new())?;
+            shell.write_stderr('-', &ColorSpec::new().set_bold(true).set_fg(Some(Red)))?;
+            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
         }
     }
-
-    shell.status("Adding", message)?;
 
     Ok(())
 }
