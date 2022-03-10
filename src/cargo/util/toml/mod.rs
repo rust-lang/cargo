@@ -180,6 +180,15 @@ pub fn parse_document(
         .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
 }
 
+/// Warn about paths that have been deprecated and may conflict.
+fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec<String>) {
+    let old_path = new_path.replace("-", "_");
+    warnings.push(format!(
+        "conflicting between `{new_path}` and `{old_path}` in the `{name}` {kind}.\n
+        `{old_path}` is ignored and not recommended for use in the future"
+    ))
+}
+
 type TomlLibTarget = TomlTarget;
 type TomlBinTarget = TomlTarget;
 type TomlExampleTarget = TomlTarget;
@@ -1264,11 +1273,17 @@ impl TomlManifest {
 
             // Collect the dependencies.
             process_dependencies(&mut cx, me.dependencies.as_ref(), None)?;
+            if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
+                warn_on_deprecated("dev-dependencies", package_name, "package", cx.warnings);
+            }
             let dev_deps = me
                 .dev_dependencies
                 .as_ref()
                 .or_else(|| me.dev_dependencies2.as_ref());
             process_dependencies(&mut cx, dev_deps, Some(DepKind::Development))?;
+            if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
+                warn_on_deprecated("build-dependencies", package_name, "package", cx.warnings);
+            }
             let build_deps = me
                 .build_dependencies
                 .as_ref()
@@ -1282,11 +1297,17 @@ impl TomlManifest {
                     Some(platform)
                 };
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
+                if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
+                    warn_on_deprecated("build-dependencies", name, "platform target", cx.warnings);
+                }
                 let build_deps = platform
                     .build_dependencies
                     .as_ref()
                     .or_else(|| platform.build_dependencies2.as_ref());
                 process_dependencies(&mut cx, build_deps, Some(DepKind::Build))?;
+                if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
+                    warn_on_deprecated("dev-dependencies", name, "platform target", cx.warnings);
+                }
                 let dev_deps = platform
                     .dev_dependencies
                     .as_ref()
@@ -1908,6 +1929,9 @@ impl<P: ResolveToPath> DetailedTomlDependency<P> {
 
         let version = self.version.as_deref();
         let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
+        if self.default_features.is_some() && self.default_features2.is_some() {
+            warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
+        }
         dep.set_features(self.features.iter().flatten())
             .set_default_features(
                 self.default_features
@@ -2057,6 +2081,17 @@ impl TomlTarget {
         }
     }
 
+    fn validate_proc_macro(&self, warnings: &mut Vec<String>) {
+        if self.proc_macro_raw.is_some() && self.proc_macro_raw2.is_some() {
+            warn_on_deprecated(
+                "proc-macro",
+                self.name().as_str(),
+                "library target",
+                warnings,
+            );
+        }
+    }
+
     fn proc_macro(&self) -> Option<bool> {
         self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
             if let Some(types) = self.crate_types() {
@@ -2066,6 +2101,17 @@ impl TomlTarget {
             }
             None
         })
+    }
+
+    fn validate_crate_types(&self, target_kind_human: &str, warnings: &mut Vec<String>) {
+        if self.crate_type.is_some() && self.crate_type2.is_some() {
+            warn_on_deprecated(
+                "crate-type",
+                self.name().as_str(),
+                format!("{target_kind_human} target").as_str(),
+                warnings,
+            );
+        }
     }
 
     fn crate_types(&self) -> Option<&Vec<String>> {

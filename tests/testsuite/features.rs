@@ -2067,3 +2067,43 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn default_features_conflicting_warning() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                a = { path = "a", features = ["f1"], default-features = false, default_features = false }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                authors = []
+
+                [features]
+                default = ["f1"]
+                f1 = []
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr_contains(
+"[WARNING] conflicting between `default-features` and `default_features` in the `a` dependency.\n
+        `default_features` is ignored and not recommended for use in the future"
+        )
+        .run();
+}
