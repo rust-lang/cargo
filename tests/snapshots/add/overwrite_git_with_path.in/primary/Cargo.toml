@@ -1,0 +1,8 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dependencies]
+cargo-list-test-fixture-dependency = { git = "git://git.git", branch = "main", optional = true }

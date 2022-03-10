@@ -1,0 +1,9 @@
+    Updating `dummy-registry` index
+      Adding your-face v99999.0.0 to dependencies.
+             Features:
+             + noze
+             - ears
+             - eyes
+             - mouth
+             - nose
+error: unrecognized features: ["noze"]

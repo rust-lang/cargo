@@ -1,0 +1,10 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dependencies]
+atty = "0.2.13"
+toml = "99999.0.0"
+toml_edit = "0.1.5"

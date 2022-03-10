@@ -1,0 +1,12 @@
+    Updating git repository `[ROOTURL]/case/does-not-exist/`
+...
+error: failed to load source for dependency `fake-git`
+
+Caused by:
+  Unable to update [ROOTURL]/case/does-not-exist/
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/does-not-exist-[..]
+
+Caused by:
+...
