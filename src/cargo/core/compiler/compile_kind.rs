@@ -1,4 +1,5 @@
 use crate::core::Target;
+use crate::util::config::BuildTargetConfigValue;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, StableHasher};
@@ -66,19 +67,34 @@ impl CompileKind {
                 .into_iter()
                 .collect());
         }
-        let kind = match &config.build_config()?.target {
-            Some(val) => {
-                let value = if val.raw_value().ends_with(".json") {
-                    let path = val.clone().resolve_path(config);
-                    path.to_str().expect("must be utf-8 in toml").to_string()
-                } else {
-                    val.raw_value().to_string()
-                };
-                CompileKind::Target(CompileTarget::new(&value)?)
+
+        let kinds = match &config.build_config()?.target {
+            None => vec![CompileKind::Host],
+            Some(build_target_config) => {
+                let values = build_target_config.values(config);
+                if values.len() > 1 && !config.cli_unstable().multitarget {
+                    bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
+                }
+                values
+                    .into_iter()
+                    .map(|k| {
+                        use BuildTargetConfigValue::*;
+                        let value = match &k {
+                            Path(p) => p.to_str().expect("must be utf-8 in toml"),
+                            Simple(s) => s,
+                        };
+                        CompileTarget::new(value).map(CompileKind::Target)
+                    })
+                    // First collect into a set to deduplicate any `--target` passed
+                    // more than once...
+                    .collect::<CargoResult<BTreeSet<_>>>()?
+                    // ... then generate a flat list for everything else to use.
+                    .into_iter()
+                    .collect()
             }
-            None => CompileKind::Host,
         };
-        Ok(vec![kind])
+
+        Ok(kinds)
     }
 
     /// Hash used for fingerprinting.
