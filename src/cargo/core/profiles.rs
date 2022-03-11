@@ -408,8 +408,11 @@ impl ProfileMaker {
             // basically turning down the optimization level and avoid limiting
             // codegen units. This ensures that we spend little time optimizing as
             // well as enabling parallelism by not constraining codegen units.
+            // Turning off debuginfo also allows the compiler to noticeably perform
+            // less work.
             profile.opt_level = InternedString::new("0");
             profile.codegen_units = None;
+            profile.debuginfo = None;
         }
         // ... and next comes any other sorts of overrides specified in
         // profiles, such as `[profile.release.build-override]` or
