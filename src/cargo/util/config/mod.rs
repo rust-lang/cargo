@@ -2222,6 +2222,7 @@ impl BuildTargetConfig {
 }
 
 /// Represents a value of `build.target`.
+#[derive(Debug)]
 pub enum BuildTargetConfigValue<'a> {
     /// Path to a target specification file (in JSON).
     /// <https://doc.rust-lang.org/rustc/targets/custom.html>
