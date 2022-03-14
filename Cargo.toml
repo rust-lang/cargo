@@ -1,6 +1,6 @@
 [package]
 name = "build-rs"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 
 description = "Convenience wrapper for cargo buildscript input/output"
