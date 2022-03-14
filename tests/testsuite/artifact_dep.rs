@@ -2155,7 +2155,6 @@ fn build_script_output_string(p: &Project, package_name: &str) -> String {
 }
 
 #[cargo_test]
-#[ignore]
 fn build_script_features_for_shared_dependency() {
     // When a build script is built and run, its features should match. Here:
     //
@@ -2252,7 +2251,7 @@ fn build_script_features_for_shared_dependency() {
                         assert!(var_os("CARGO_FEATURE_F2").is_some());
                     } else {
                         assert!(var_os("CARGO_FEATURE_F1").is_some());
-                        assert!(var_os("CARGO_FEATURE_F2").is_none());
+                        assert!(var_os("CARGO_FEATURE_F2").is_none()); 
                     }
                 }
             "#
