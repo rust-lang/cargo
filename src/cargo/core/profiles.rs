@@ -1097,6 +1097,18 @@ impl UnitFor {
         }
     }
 
+    pub fn for_custom_build(self) -> UnitFor {
+        UnitFor {
+            host: true,
+            host_features: self.host_features,
+            // Force build scripts to always use `panic=unwind` for now to
+            // maximally share dependencies with procedural macros.
+            panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind: self.root_compile_kind,
+            artifact_target_for_features: self.artifact_target_for_features,
+        }
+    }
+
     /// Set the artifact compile target for use in features using the given `artifact`.
     pub(crate) fn with_artifact_features(mut self, artifact: &Artifact) -> UnitFor {
         self.artifact_target_for_features = artifact.target().and_then(|t| t.to_compile_target());

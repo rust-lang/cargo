@@ -464,10 +464,7 @@ fn compute_deps_custom_build(
     // All dependencies of this unit should use profiles for custom builds.
     // If this is a build script of a proc macro, make sure it uses host
     // features.
-    let script_unit_for = UnitFor::new_host(
-        unit_for.is_for_host_features(),
-        unit_for.root_compile_kind(),
-    );
+    let script_unit_for = unit_for.for_custom_build();
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself.
@@ -782,7 +779,7 @@ fn dep_build_script(
             // The profile stored in the Unit is the profile for the thing
             // the custom build script is running for.
             let profile = state.profiles.get_profile_run_custom_build(&unit.profile);
-            // UnitFor::new_host is used because we want the `host` flag set
+            // UnitFor::for_custom_build is used because we want the `host` flag set
             // for all of our build dependencies (so they all get
             // build-override profiles), including compiling the build.rs
             // script itself.
@@ -807,10 +804,7 @@ fn dep_build_script(
             // compiled twice. I believe it is not feasible to only build it
             // once because it would break a large number of scripts (they
             // would think they have the wrong set of features enabled).
-            let script_unit_for = UnitFor::new_host(
-                unit_for.is_for_host_features(),
-                unit_for.root_compile_kind(),
-            );
+            let script_unit_for = unit_for.for_custom_build();
             new_unit_dep_with_profile(
                 state,
                 unit,

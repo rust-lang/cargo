@@ -761,29 +761,25 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> Vec<(PackageId, Vec<(&'a Dependency, FeaturesFor)>)> {
         // Helper for determining if a platform is activated.
         let platform_activated = |dep: &Dependency| -> bool {
-            // We always care about build-dependencies, and they are always
-            // Host. If we are computing dependencies "for a build script",
-            // even normal dependencies are host-only.
-            if fk == FeaturesFor::HostDep || dep.is_build() {
-                return self
-                    .target_data
-                    .dep_platform_activated(dep, CompileKind::Host);
-            }
             // We always count platforms as activated if the target stems from an artifact
             // dependency's target specification. This triggers in conjunction with
             // `[target.'cfg(…)'.dependencies]` manifest sections.
-            if let FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)) = fk {
-                if self
-                    .target_data
-                    .dep_platform_activated(dep, CompileKind::Target(target))
-                {
-                    return true;
+            match (dep.is_build(), fk) {
+                (true, _) | (_, FeaturesFor::HostDep) => {
+                    // We always care about build-dependencies, and they are always
+                    // Host. If we are computing dependencies "for a build script",
+                    // even normal dependencies are host-only.
+                    self.target_data
+                        .dep_platform_activated(dep, CompileKind::Host)
                 }
+                (_, FeaturesFor::NormalOrDevOrArtifactTarget(None)) => self
+                    .requested_targets
+                    .iter()
+                    .any(|kind| self.target_data.dep_platform_activated(dep, *kind)),
+                (_, FeaturesFor::NormalOrDevOrArtifactTarget(Some(target))) => self
+                    .target_data
+                    .dep_platform_activated(dep, CompileKind::Target(target)),
             }
-            // Not a build dependency, and not for a build script, so must be Target.
-            self.requested_targets
-                .iter()
-                .any(|kind| self.target_data.dep_platform_activated(dep, *kind))
         };
         self.resolve
             .deps(pkg_id)
@@ -857,7 +853,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             )
                         });
 
-                        let mut dep_fks = match artifact_target_keys {
+                        let dep_fks = match artifact_target_keys {
                             // The artifact is also a library and does specify custom
                             // targets.
                             // The library's feature key needs to be used alongside
@@ -873,16 +869,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // Use the standard feature key without any alteration.
                             Some((_, None)) | None => vec![lib_fk],
                         };
-
-                        // This is more of a hack to fix a particular issue with platform-gated
-                        // dependencies' build scripts, which unfortunately we can't determine
-                        // here any better than checking for a platform and blindly adding the
-                        // feature key that it will later query.
-                        // If it matters, the dependency that actually should add this key
-                        // drops out in line 798.
-                        if dep.platform().is_some() {
-                            dep_fks.push(FeaturesFor::NormalOrDevOrArtifactTarget(None));
-                        }
                         dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk))
                     })
                     .collect::<Vec<_>>();

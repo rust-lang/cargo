@@ -431,7 +431,6 @@ fn feature_resolution_works_for_cfg_target_specification() {
         return;
     }
     let target = cross_compile::alternate();
-    let target_arch = cross_compile::alternate_arch();
     let p = project()
         .file(
             "Cargo.toml",
@@ -465,10 +464,10 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 version = "0.0.1"
                 authors = []
 
-                [target.'cfg(target_arch = "$ARCH")'.dependencies]
+                [target.'$TARGET'.dependencies]
                 d2 = { path = "../d2" }
             "#
-            .replace("$ARCH", target_arch),
+            .replace("$TARGET", target),
         )
         .file(
             "d1/src/main.rs",
@@ -480,11 +479,11 @@ fn feature_resolution_works_for_cfg_target_specification() {
         .file(
             "d1/src/lib.rs",
             &r#"pub fn f() {
-                #[cfg(target_arch = "$ARCH")]
+                #[cfg(target = "$TARGET")]
                 d2::f();
             }
             "#
-            .replace("$ARCH", target_arch),
+            .replace("$TARGET", target),
         )
         .file(
             "d2/Cargo.toml",
