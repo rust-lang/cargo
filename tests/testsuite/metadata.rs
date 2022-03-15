@@ -925,9 +925,8 @@ fn workspace_metadata() {
 }
 
 #[cargo_test]
-fn workspace_metadata_with_dependencies_no_deps() {
+fn workspace_metadata_no_deps() {
     let p = project()
-        // NOTE that 'artifact' isn't mentioned in the workspace here, yet it shows up as member.
         .file(
             "Cargo.toml",
             r#"
@@ -935,29 +934,13 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 members = ["bar", "baz"]
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-
-                name = "bar"
-                version = "0.5.0"
-                authors = ["wycats@example.com"]
-                
-                [dependencies]
-                baz = { path = "../baz/" }
-                artifact = { path = "../artifact/", artifact = "bin" }
-           "#,
-        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "")
-        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
-        .file("artifact/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata --no-deps -Z bindeps")
-        .masquerade_as_nightly_cargo()
+    p.cargo("metadata --no-deps")
         .with_json(
             r#"
     {
@@ -978,42 +961,8 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 "id": "bar[..]",
                 "keywords": [],
                 "source": null,
+                "dependencies": [],
                 "license": null,
-                "dependencies": [
-                   {
-                      "features": [],
-                      "kind": null,
-                      "name": "artifact",
-                      "optional": false,
-                      "path": "[..]/foo/artifact",
-                      "registry": null,
-                      "rename": null,
-                      "req": "*",
-                      "source": null,
-                      "target": null,
-                      "uses_default_features": true,
-                      "artifact": {
-                          "kinds": [
-                            "bin"
-                          ],
-                          "lib": false,
-                          "target": null
-                        }
-                    }, 
-                    {
-                      "features": [],
-                      "kind": null,
-                      "name": "baz",
-                      "optional": false,
-                      "path": "[..]/foo/baz",
-                      "registry": null,
-                      "rename": null,
-                      "req": "*",
-                      "source": null,
-                      "target": null,
-                      "uses_default_features": true
-                    }
-                  ],
                 "license_file": null,
                 "links": null,
                 "description": null,
@@ -1034,49 +983,6 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 "manifest_path": "[..]bar/Cargo.toml",
                 "metadata": null,
                 "publish": null
-            },
-            {
-              "authors": [
-                "wycats@example.com"
-              ],
-              "categories": [],
-              "default_run": null,
-              "dependencies": [],
-              "description": null,
-              "documentation": null,
-              "edition": "2015",
-              "features": {},
-              "homepage": null,
-              "id": "artifact 0.5.0 (path+file:[..]/foo/artifact)",
-              "keywords": [],
-              "license": null,
-              "license_file": null,
-              "links": null,
-              "manifest_path": "[..]/foo/artifact/Cargo.toml",
-              "metadata": null,
-              "name": "artifact",
-              "publish": null,
-              "readme": null,
-              "repository": null,
-              "rust_version": null,
-              "source": null,
-              "targets": [
-                {
-                  "crate_types": [
-                    "bin"
-                  ],
-                  "doc": true,
-                  "doctest": false,
-                  "edition": "2015",
-                  "kind": [
-                    "bin"
-                  ],
-                  "name": "artifact",
-                  "src_path": "[..]/foo/artifact/src/main.rs",
-                  "test": true
-                }
-              ],
-              "version": "0.5.0"
             },
             {
                 "authors": [
@@ -1118,11 +1024,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 "publish": null
             }
         ],
-        "workspace_members": [
-            "bar 0.5.0 (path+file:[..]bar)",
-            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
-            "baz 0.5.0 (path+file:[..]baz)"
-        ],
+        "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
