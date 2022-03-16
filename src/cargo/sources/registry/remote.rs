@@ -2,8 +2,8 @@ use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
-    RegistryConfig, RegistryData, CHECKSUM_TEMPLATE, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE,
-    PREFIX_TEMPLATE, VERSION_TEMPLATE,
+    LoadResponse, RegistryConfig, RegistryData, CHECKSUM_TEMPLATE, CRATE_TEMPLATE,
+    LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE, VERSION_TEMPLATE,
 };
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -141,6 +141,15 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn filename(&self, pkg: PackageId) -> String {
         format!("{}-{}.crate", pkg.name(), pkg.version())
     }
+
+    fn current_version(&self) -> Option<InternedString> {
+        if let Some(sha) = self.current_sha.get() {
+            return Some(sha);
+        }
+        let sha = InternedString::new(&self.head().ok()?.to_string());
+        self.current_sha.set(Some(sha));
+        Some(sha)
+    }
 }
 
 const LAST_UPDATED_FILE: &str = ".last-updated";
@@ -159,33 +168,28 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.config.assert_package_cache_locked(path)
     }
 
-    fn current_version(&self) -> Option<InternedString> {
-        if let Some(sha) = self.current_sha.get() {
-            return Some(sha);
-        }
-        let sha = InternedString::new(&self.head().ok()?.to_string());
-        self.current_sha.set(Some(sha));
-        Some(sha)
-    }
-
     fn load(
         &self,
         _root: &Path,
         path: &Path,
-        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> Poll<CargoResult<()>> {
+        index_version: Option<&str>,
+    ) -> Poll<CargoResult<LoadResponse>> {
         if self.needs_update.get() {
             return Poll::Pending;
         }
-
+        // Check if the cache is valid.
+        let current_version = self.current_version();
+        if current_version.is_some() && current_version.as_deref() == index_version {
+            return Poll::Ready(Ok(LoadResponse::CacheValid));
+        }
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
         fn load_helper(
             registry: &RemoteRegistry<'_>,
             path: &Path,
-            data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-        ) -> CargoResult<CargoResult<()>> {
+            current_version: Option<&str>,
+        ) -> CargoResult<LoadResponse> {
             let repo = registry.repo()?;
             let tree = registry.tree()?;
             let entry = tree.get_path(path);
@@ -195,11 +199,15 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 Some(blob) => blob,
                 None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
             };
-            Ok(data(blob.content()))
+
+            Ok(LoadResponse::Data {
+                raw_data: blob.content().to_vec(),
+                index_version: current_version.map(String::from),
+            })
         }
 
-        match load_helper(&self, path, data) {
-            Ok(result) => Poll::Ready(result),
+        match load_helper(&self, path, current_version.as_deref()) {
+            Ok(result) => Poll::Ready(Ok(result)),
             Err(_) if !self.updated => {
                 // If git returns an error and we haven't updated the repo, return
                 // pending to allow an update to try again.
@@ -212,7 +220,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                     .unwrap_or_default() =>
             {
                 // The repo has been updated and the file does not exist.
-                Poll::Ready(Ok(()))
+                Poll::Ready(Ok(LoadResponse::NotFound))
             }
             Err(e) => Poll::Ready(Err(e)),
         }
@@ -222,15 +230,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         debug!("loading config");
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
-        let mut config = None;
-        match self.load(Path::new(""), Path::new("config.json"), &mut |json| {
-            config = Some(serde_json::from_slice(json)?);
-            Ok(())
-        })? {
-            Poll::Ready(()) => {
+        match self.load(Path::new(""), Path::new("config.json"), None)? {
+            Poll::Ready(LoadResponse::Data { raw_data, .. }) => {
                 trace!("config loaded");
-                Poll::Ready(Ok(config))
+                Poll::Ready(Ok(Some(serde_json::from_slice(&raw_data)?)))
             }
+            Poll::Ready(_) => Poll::Ready(Ok(None)),
             Poll::Pending => Poll::Pending,
         }
     }

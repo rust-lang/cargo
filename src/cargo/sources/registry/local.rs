@@ -1,7 +1,6 @@
 use crate::core::PackageId;
-use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
+use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
-use crate::util::interning::InternedString;
 use crate::util::{Config, Filesystem};
 use cargo_util::{paths, Sha256};
 use std::fs::File;
@@ -48,18 +47,17 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         path.as_path_unlocked()
     }
 
-    fn current_version(&self) -> Option<InternedString> {
-        None
-    }
-
     fn load(
         &self,
         root: &Path,
         path: &Path,
-        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> Poll<CargoResult<()>> {
+        _index_version: Option<&str>,
+    ) -> Poll<CargoResult<LoadResponse>> {
         if self.updated {
-            Poll::Ready(Ok(data(&paths::read_bytes(&root.join(path))?)?))
+            Poll::Ready(Ok(LoadResponse::Data {
+                raw_data: paths::read_bytes(&root.join(path))?,
+                index_version: None,
+            }))
         } else {
             Poll::Pending
         }
