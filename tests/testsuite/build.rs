@@ -5672,7 +5672,6 @@ fn close_output() {
 hello stderr!
 [ERROR] [..]
 [WARNING] build failed, waiting for other jobs to finish...
-[ERROR] [..]
 ",
         &stderr,
         None,

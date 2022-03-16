@@ -174,6 +174,37 @@ pub struct ErrorsDuringDrain {
     pub count: usize,
 }
 
+struct ErrorToHandle {
+    error: anyhow::Error,
+
+    /// This field is true for "interesting" errors and false for "mundane"
+    /// errors. If false, we print the above error only if it's the first one
+    /// encountered so far while draining the job queue.
+    ///
+    /// At most places that an error is propagated, we set this to false to
+    /// avoid scenarios where Cargo might end up spewing tons of redundant error
+    /// messages. For example if an i/o stream got closed somewhere, we don't
+    /// care about individually reporting every thread that it broke; just the
+    /// first is enough.
+    ///
+    /// The exception where print_always is true is that we do report every
+    /// instance of a rustc invocation that failed with diagnostics. This
+    /// corresponds to errors from Message::Finish.
+    print_always: bool,
+}
+
+impl<E> From<E> for ErrorToHandle
+where
+    anyhow::Error: From<E>,
+{
+    fn from(error: E) -> Self {
+        ErrorToHandle {
+            error: anyhow::Error::from(error),
+            print_always: false,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct JobId(pub u32);
 
@@ -617,7 +648,7 @@ impl<'cfg> DrainState<'cfg> {
         jobserver_helper: &HelperThread,
         plan: &mut BuildPlan,
         event: Message,
-    ) -> CargoResult<()> {
+    ) -> Result<(), ErrorToHandle> {
         match event {
             Message::Run(id, cmd) => {
                 cx.bcx
@@ -682,11 +713,14 @@ impl<'cfg> DrainState<'cfg> {
                 debug!("end ({:?}): {:?}", unit, result);
                 match result {
                     Ok(()) => self.finish(id, &unit, artifact, cx)?,
-                    Err(e) => {
+                    Err(error) => {
                         let msg = "The following warnings were emitted during compilation:";
                         self.emit_warnings(Some(msg), &unit, cx)?;
                         self.back_compat_notice(cx, &unit)?;
-                        return Err(e);
+                        return Err(ErrorToHandle {
+                            error,
+                            print_always: true,
+                        });
                     }
                 }
             }
@@ -854,7 +888,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             .to_json_string();
             if let Err(e) = writeln!(shell.out(), "{}", msg) {
-                self.handle_error(&mut shell, &mut errors, e.into());
+                self.handle_error(&mut shell, &mut errors, e);
             }
         }
 
@@ -887,13 +921,18 @@ impl<'cfg> DrainState<'cfg> {
         &self,
         shell: &mut Shell,
         err_state: &mut ErrorsDuringDrain,
-        new_err: anyhow::Error,
+        new_err: impl Into<ErrorToHandle>,
     ) {
-        crate::display_error(&new_err, shell);
-        if !self.active.is_empty() && err_state.count == 0 {
-            drop(shell.warn("build failed, waiting for other jobs to finish..."));
+        let new_err = new_err.into();
+        if new_err.print_always || err_state.count == 0 {
+            crate::display_error(&new_err.error, shell);
+            if err_state.count == 0 && !self.active.is_empty() {
+                drop(shell.warn("build failed, waiting for other jobs to finish..."));
+            }
+            err_state.count += 1;
+        } else {
+            log::warn!("{:?}", new_err.error);
         }
-        err_state.count += 1;
     }
 
     // This also records CPU usage and marks concurrency; we roughly want to do
