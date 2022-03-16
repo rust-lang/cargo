@@ -89,6 +89,10 @@ struct MetaInfo {
     ///
     /// If this is `true`, the `meta_hash` is used for the filename.
     use_extra_filename: bool,
+
+    /// This flag is set by collision detection and forces the use of a more unique hash
+    /// instead of the stable one.
+    output_conflicts_without_meta_hash: bool,
 }
 
 /// Collection of information about the files emitted by the compiler, and the
@@ -220,7 +224,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
         let meta = &self.metas[unit];
-        if meta.use_extra_filename {
+        if meta.use_extra_filename || meta.output_conflicts_without_meta_hash {
             format!("{}-{}", name, meta.meta_hash)
         } else {
             format!("{}-{}", name, self.target_short_hash(unit))
@@ -370,6 +374,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(Arc::clone)
     }
 
+    pub(super) fn set_non_colliding_outputs(&mut self, unit: &Unit, outputs: Arc<Vec<OutputFile>>) {
+        let cell = LazyCell::new();
+        cell.fill(outputs).unwrap();
+        self.outputs.insert(unit.clone(), cell);
+    }
+
     /// Returns the path where the output for the given unit and FileType
     /// should be uplifted to.
     ///
@@ -421,7 +431,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         Some(uplift_path)
     }
 
-    fn calc_outputs(
+    pub(super) fn calc_outputs(
         &self,
         unit: &Unit,
         bcx: &BuildContext<'a, 'cfg>,
@@ -625,6 +635,7 @@ fn compute_metadata(
     MetaInfo {
         meta_hash: Metadata(hasher.finish()),
         use_extra_filename: should_use_metadata(bcx, unit),
+        output_conflicts_without_meta_hash: false,
     }
 }
 

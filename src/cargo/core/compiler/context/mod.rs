@@ -128,7 +128,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
-        self.check_collisions()?;
+        self.check_collisions_and_avoid_some()?;
         self.compute_metadata_for_doc_units();
 
         // We need to make sure that if there were any previous docs
@@ -421,7 +421,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
-    fn check_collisions(&self) -> CargoResult<()> {
+    fn check_collisions_and_avoid_some(&mut self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
         let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
             format!(
@@ -528,6 +528,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     doc_collision_error(unit, prev)?;
                 }
             }
+            let mut alt_outputs = None;
+            let mut collisions_prevented = 0;
             for output in self.outputs(unit)?.iter() {
                 if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
                     if unit.mode.is_doc() {
@@ -535,10 +537,27 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         // and https://github.com/rust-lang/rust/issues/61378
                         report_collision(unit, other_unit, &output.path, rustdoc_suggestion)?;
                     } else {
-                        report_collision(unit, other_unit, &output.path, suggestion)?;
+                        let files = self.files.as_mut().unwrap();
+                        if !files.use_extra_filename(unit)
+                            && !alt_outputs
+                                .get_or_insert_with(|| {
+                                    files
+                                        .calc_outputs(unit, &self.bcx)
+                                        .expect("infallible by now")
+                                })
+                                .iter()
+                                .any(|out| out.path == output.path)
+                        {
+                            collisions_prevented += 1;
+                            continue;
+                        } else {
+                            report_collision(unit, other_unit, &output.path, suggestion)?;
+                        }
                     }
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
+                    // We don't check for collision prevention on unix as typically these only happen on MSVC platforms
+                    // which doesn't use hardlinks. If this changes, one would do another collision here.
                     if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit) {
                         report_collision(unit, other_unit, hardlink, suggestion)?;
                     }
@@ -554,6 +573,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             suggestion
                         ))?;
                     }
+                }
+            }
+
+            if collisions_prevented != 0 {
+                if let Some(alt_outputs) = alt_outputs {
+                    self.files
+                        .as_mut()
+                        .unwrap()
+                        .set_non_colliding_outputs(unit, alt_outputs);
                 }
             }
         }
