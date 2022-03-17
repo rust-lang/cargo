@@ -411,6 +411,20 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
+pub enum LoadResponse {
+    /// The cache is valid. The cached data should be used.
+    CacheValid,
+
+    /// The cache is out of date. Returned data should be used.
+    Data {
+        raw_data: Vec<u8>,
+        index_version: Option<String>,
+    },
+
+    /// The requested crate was found.
+    NotFound,
+}
+
 /// An abstract interface to handle both a local (see `local::LocalRegistry`)
 /// and remote (see `remote::RemoteRegistry`) registry.
 ///
@@ -432,15 +446,13 @@ pub trait RegistryData {
     ///
     /// * `root` is the root path to the index.
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
-    /// * `data` is a callback that will receive the raw bytes of the index JSON file.
-    ///
-    /// If `load` returns a `Poll::Pending` then it must not have called data.
+    /// * `index_version` is the version of the requested crate data currently in cache.
     fn load(
         &self,
         root: &Path,
         path: &Path,
-        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> Poll<CargoResult<()>>;
+        index_version: Option<&str>,
+    ) -> Poll<CargoResult<LoadResponse>>;
 
     /// Loads the `config.json` file and returns it.
     ///
@@ -494,15 +506,6 @@ pub trait RegistryData {
     ///
     /// Returns the [`Path`] to the [`Filesystem`].
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
-
-    /// Returns the current "version" of the index.
-    ///
-    /// For local registries, this returns `None` because there is no
-    /// versioning. For remote registries, this returns the SHA hash of the
-    /// git index on disk (or None if the index hasn't been downloaded yet).
-    ///
-    /// This is used by index caching to check if the cache is out of date.
-    fn current_version(&self) -> Option<InternedString>;
 
     /// Block until all outstanding Poll::Pending requests are Poll::Ready.
     fn block_until_ready(&mut self) -> CargoResult<()>;
