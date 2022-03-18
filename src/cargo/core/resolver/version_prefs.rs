@@ -92,7 +92,15 @@ mod test {
         let pkg_id = pkgid(name, version);
         let config = Config::default().unwrap();
         let features = BTreeMap::new();
-        Summary::new(&config, pkg_id, Vec::new(), &features, None::<&String>).unwrap()
+        Summary::new(
+            &config,
+            pkg_id,
+            Vec::new(),
+            &features,
+            None::<&String>,
+            None,
+        )
+        .unwrap()
     }
 
     fn describe(summaries: &Vec<Summary>) -> String {

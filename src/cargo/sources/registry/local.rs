@@ -99,7 +99,12 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         self.updated
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(
+        &mut self,
+        pkg: PackageId,
+        _override_dl: Option<&str>,
+        checksum: &str,
+    ) -> CargoResult<MaybeLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
 
         // Note that the usage of `into_path_unlocked` here is because the local

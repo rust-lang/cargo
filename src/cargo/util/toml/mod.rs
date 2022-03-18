@@ -1627,6 +1627,7 @@ impl TomlManifest {
             deps,
             me.features.as_ref().unwrap_or(&empty_features),
             project.links.as_deref(),
+            None,
         )?;
 
         let metadata = ManifestMetadata {

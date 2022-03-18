@@ -264,6 +264,11 @@ explaining the format of the entry.
     // The `links` string value from the package's manifest, or null if not
     // specified. This field is optional and defaults to null.
     "links": null,
+    // This optional field specifies the download link for this package
+    // only, overriding the global `dl` link declared in the registry's
+    // `config.toml`. The `{crate}` markers et al. are not interpolated
+    // in this context.
+    "dl": "https://crates.io/api/v1/crates/foo/0.1.0/download"
     // An unsigned 32-bit integer value indicating the schema version of this
     // entry.
     //

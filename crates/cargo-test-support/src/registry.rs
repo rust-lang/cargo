@@ -324,6 +324,7 @@ pub struct Package {
     rust_version: Option<String>,
     cargo_features: Vec<String>,
     v: Option<u32>,
+    dl: Option<String>,
 }
 
 type FeatureMap = BTreeMap<String, Vec<String>>;
@@ -561,6 +562,7 @@ impl Package {
             rust_version: None,
             cargo_features: Vec::new(),
             v: None,
+            dl: None,
         }
     }
 
@@ -709,6 +711,12 @@ impl Package {
         self
     }
 
+    /// Specifies a different download URI for the package.
+    pub fn dl(&mut self, dl: &str) -> &mut Package {
+        self.dl = Some(dl.to_string());
+        self
+    }
+
     pub fn cargo_feature(&mut self, feature: &str) -> &mut Package {
         self.cargo_features.push(feature.to_owned());
         self
@@ -787,6 +795,9 @@ impl Package {
         }
         if let Some(v) = self.v {
             json["v"] = serde_json::json!(v);
+        }
+        if let Some(dl) = &self.dl {
+            json["dl"] = serde_json::json!(dl);
         }
         let line = json.to_string();
 

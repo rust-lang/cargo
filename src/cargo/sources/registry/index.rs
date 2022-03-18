@@ -265,19 +265,21 @@ impl<'cfg> RegistryIndex<'cfg> {
         }
     }
 
-    /// Returns the hash listed for a specified `PackageId`.
-    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
+    /// Returns the package summary for a specified `PackageId`.
+    pub fn summary(
+        &mut self,
+        pkg: PackageId,
+        load: &mut dyn RegistryData,
+    ) -> Poll<CargoResult<&IndexSummary>> {
         let req = OptVersionReq::exact(pkg.version());
         let summary = self.summaries(pkg.name(), &req, load)?;
         let summary = match summary {
             Poll::Ready(mut summary) => summary.next(),
             Poll::Pending => return Poll::Pending,
         };
-        Poll::Ready(Ok(summary
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
-            .summary
-            .checksum()
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
+        Poll::Ready(Ok(
+            summary.ok_or_else(|| internal(format!("no summary for {}", pkg)))?
+        ))
     }
 
     /// Load a list of summaries for `name` package in this registry which
@@ -854,6 +856,7 @@ impl IndexSummary {
             yanked,
             links,
             v,
+            dl,
         } = serde_json::from_slice(line)?;
         let v = v.unwrap_or(1);
         log::trace!("json parsed registry {}/{}", name, vers);
@@ -867,7 +870,7 @@ impl IndexSummary {
                 features.entry(name).or_default().extend(values);
             }
         }
-        let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
+        let mut summary = Summary::new(config, pkgid, deps, &features, links, dl)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,

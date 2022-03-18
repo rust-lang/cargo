@@ -548,7 +548,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         self.requested_update = true;
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(
+        &mut self,
+        pkg: PackageId,
+        override_dl: Option<&str>,
+        checksum: &str,
+    ) -> CargoResult<MaybeLock> {
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
@@ -559,6 +564,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             &self.cache_path,
             &self.config,
             pkg,
+            override_dl,
             checksum,
             registry_config,
         )

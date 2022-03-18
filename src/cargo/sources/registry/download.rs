@@ -24,6 +24,7 @@ pub(super) fn download(
     cache_path: &Filesystem,
     config: &Config,
     pkg: PackageId,
+    override_dl: Option<&str>,
     checksum: &str,
     registry_config: RegistryConfig,
 ) -> CargoResult<MaybeLock> {
@@ -44,30 +45,36 @@ pub(super) fn download(
         }
     }
 
-    let mut url = registry_config.dl;
-    if !url.contains(CRATE_TEMPLATE)
-        && !url.contains(VERSION_TEMPLATE)
-        && !url.contains(PREFIX_TEMPLATE)
-        && !url.contains(LOWER_PREFIX_TEMPLATE)
-        && !url.contains(CHECKSUM_TEMPLATE)
-    {
-        // Original format before customizing the download URL was supported.
-        write!(
-            url,
-            "/{}/{}/download",
-            pkg.name(),
-            pkg.version().to_string()
-        )
-        .unwrap();
-    } else {
-        let prefix = make_dep_prefix(&*pkg.name());
-        url = url
-            .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
-            .replace(CHECKSUM_TEMPLATE, checksum);
-    }
+    let url = override_dl.map_or_else(
+        || {
+            let mut url = registry_config.dl;
+            if !url.contains(CRATE_TEMPLATE)
+                && !url.contains(VERSION_TEMPLATE)
+                && !url.contains(PREFIX_TEMPLATE)
+                && !url.contains(LOWER_PREFIX_TEMPLATE)
+                && !url.contains(CHECKSUM_TEMPLATE)
+            {
+                // Original format before customizing the download URL was supported.
+                write!(
+                    url,
+                    "/{}/{}/download",
+                    pkg.name(),
+                    pkg.version().to_string()
+                )
+                .unwrap();
+            } else {
+                let prefix = make_dep_prefix(&*pkg.name());
+                url = url
+                    .replace(CRATE_TEMPLATE, &*pkg.name())
+                    .replace(VERSION_TEMPLATE, &pkg.version().to_string())
+                    .replace(PREFIX_TEMPLATE, &prefix)
+                    .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
+                    .replace(CHECKSUM_TEMPLATE, checksum);
+            }
+            url
+        },
+        ToString::to_string,
+    );
 
     Ok(MaybeLock::Download {
         url,

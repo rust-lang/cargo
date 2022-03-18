@@ -176,8 +176,10 @@ use tar::Archive;
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
 use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::sources::registry::index::IndexSummary;
 use crate::sources::PathSource;
 use crate::util::hex;
+use crate::util::internal;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;
@@ -277,6 +279,8 @@ pub struct RegistryPackage<'a> {
     /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
     links: Option<InternedString>,
+    /// Allows overriding the registry's global `dl` link for this package only.
+    dl: Option<InternedString>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version 1. Entries with unknown
@@ -481,7 +485,12 @@ pub trait RegistryData {
     /// `finish_download`. For already downloaded `.crate` files, it does not
     /// validate the checksum, assuming the filesystem does not suffer from
     /// corruption or manipulation.
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
+    fn download(
+        &mut self,
+        pkg: PackageId,
+        override_dl: Option<&str>,
+        checksum: &str,
+    ) -> CargoResult<MaybeLock>;
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
@@ -764,13 +773,20 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = loop {
-            match self.index.hash(package, &mut *self.ops)? {
+        let (hash, override_dl) = loop {
+            match self.index.summary(package, &mut *self.ops)? {
                 Poll::Pending => self.block_until_ready()?,
-                Poll::Ready(hash) => break hash,
+                Poll::Ready(IndexSummary { ref summary, .. }) => {
+                    break (
+                        summary
+                            .checksum()
+                            .ok_or_else(|| internal(format!("no hash listed for {}", package)))?,
+                        summary.dl(),
+                    )
+                }
             }
         };
-        match self.ops.download(package, hash)? {
+        match self.ops.download(package, override_dl.as_deref(), hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download { url, descriptor } => {
                 Ok(MaybePackage::Download { url, descriptor })
@@ -780,9 +796,13 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let hash = loop {
-            match self.index.hash(package, &mut *self.ops)? {
+            match self.index.summary(package, &mut *self.ops)? {
                 Poll::Pending => self.block_until_ready()?,
-                Poll::Ready(hash) => break hash,
+                Poll::Ready(IndexSummary { ref summary, .. }) => {
+                    break summary
+                        .checksum()
+                        .ok_or_else(|| internal(format!("no hash listed for {}", package)))?
+                }
             }
         };
         let file = self.ops.finish_download(package, hash, &data)?;

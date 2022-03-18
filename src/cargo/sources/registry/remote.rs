@@ -296,7 +296,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.updated
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(
+        &mut self,
+        pkg: PackageId,
+        override_dl: Option<&str>,
+        checksum: &str,
+    ) -> CargoResult<MaybeLock> {
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
@@ -308,6 +313,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             &self.cache_path,
             &self.config,
             pkg,
+            override_dl,
             checksum,
             registry_config,
         )
