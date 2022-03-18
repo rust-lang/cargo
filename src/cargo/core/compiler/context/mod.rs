@@ -225,6 +225,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lto_args(&self, unit));
                 args.extend(compiler::features_args(&self, unit));
+                args.extend(compiler::check_cfg_args(&self, unit));
 
                 let script_meta = self.find_build_script_metadata(unit);
                 if let Some(meta) = script_meta {

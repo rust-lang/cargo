@@ -639,6 +639,8 @@ unstable_cli_options!(
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     check_cfg_features: bool = ("Enable compile-time checking of features in `cfg`"),
+    check_cfg_well_known_names: bool = ("Enable compile-time checking of well known names in `cfg`"),
+    check_cfg_well_known_values: bool = ("Enable compile-time checking of well known values in `cfg`"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -837,6 +839,8 @@ impl CliUnstable {
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "check-cfg-features" => self.check_cfg_features = parse_empty(k, v)?,
+            "check-cfg-well-known-names" => self.check_cfg_well_known_names = parse_empty(k, v)?,
+            "check-cfg-well-known-values" => self.check_cfg_well_known_values = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,

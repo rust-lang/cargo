@@ -4575,3 +4575,109 @@ fn check_cfg_features_doc() {
         )
         .run();
 }
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+#[cargo_test]
+fn check_cfg_well_known_names() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("test -v -Z check-cfg-well-known-names")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'names()' [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..]
+",
+        )
+        .run();
+}
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+#[cargo_test]
+fn check_cfg_well_known_values() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("test -v -Z check-cfg-well-known-values")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values()' [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..]
+",
+        )
+        .run();
+}
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+#[cargo_test]
+fn check_cfg_well_known_names_doc() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
+        .build();
+
+    p.cargo("test -v --doc -Z check-cfg-well-known-names")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'names()' [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[DOCTEST] foo
+[RUNNING] `rustdoc [..] --check-cfg 'names()' [..]
+",
+        )
+        .run();
+}
+
+#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+#[cargo_test]
+fn check_cfg_well_known_values_doc() {
+    if !is_nightly() {
+        // --check-cfg is a nightly only rustc command line
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
+        .build();
+
+    p.cargo("test -v --doc -Z check-cfg-well-known-values")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc [..] --check-cfg 'values()' [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[DOCTEST] foo
+[RUNNING] `rustdoc [..] --check-cfg 'values()' [..]
+",
+        )
+        .run();
+}
