@@ -1959,7 +1959,7 @@ foo v1.0.0 ([ROOT]/foo)
 [dev-dependencies]
 └── bar feature \"default\"
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        └── foo feature \"default\" (command-line)
+        └── foo feature \"default\"
             └── foo v1.0.0 ([ROOT]/foo) (*)
 ",
         )
@@ -1972,7 +1972,7 @@ foo v1.0.0 ([ROOT]/foo)
 ├── foo feature \"a\" (command-line)
 │   └── bar feature \"feat1\"
 │       └── foo feature \"a\" (command-line) (*)
-└── foo feature \"default\" (command-line)
+└── foo feature \"default\"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature \"default\"
         │   [dev-dependencies]
@@ -2029,7 +2029,7 @@ foo v1.0.0 ([ROOT]/foo)
 [dev-dependencies]
 └── bar feature \"default\"
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        └── foo feature \"default\" (command-line)
+        └── foo feature \"default\"
             └── foo v1.0.0 ([ROOT]/foo) (*)
 ",
         )
@@ -2044,7 +2044,7 @@ foo v1.0.0 ([ROOT]/foo)
 │       └── bar feature \"feat1\"
 │           └── foo feature \"a\" (command-line) (*)
 ├── foo feature \"b\" (*)
-└── foo feature \"default\" (command-line)
+└── foo feature \"default\"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature \"default\"
         │   [dev-dependencies]
@@ -2063,7 +2063,7 @@ foo v1.0.0 ([ROOT]/foo)
 │       └── bar feature \"feat1\"
 │           └── foo feature \"a\" (*)
 ├── foo feature \"b\" (command-line) (*)
-└── foo feature \"default\" (command-line)
+└── foo feature \"default\"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature \"default\"
         │   [dev-dependencies]
@@ -2082,12 +2082,69 @@ foo v1.0.0 ([ROOT]/foo)
 │       └── bar feature \"feat1\" (command-line)
 │           └── foo feature \"a\" (*)
 ├── foo feature \"b\" (*)
-└── foo feature \"default\" (command-line)
+└── foo feature \"default\"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature \"default\"
         │   [dev-dependencies]
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
         └── bar feature \"feat1\" (command-line) (*)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn default_feature() {
+    // tree without an implicit feature
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { version = "1.0", optional=true }
+
+                [features]
+                default = ["a"]   
+                a = ["dep:bar"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar feature \"default\"
+    └── bar v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -e features --all-features")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar feature \"default\"
+    └── bar v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -e features -i bar --all-features")
+        .with_stdout(
+            "\
+bar v1.0.0
+└── bar feature \"default\"
+    └── foo v0.1.0 ([ROOT]/foo)
+        ├── foo feature \"a\" (command-line)
+        │   └── foo feature \"default\" (command-line)
+        └── foo feature \"default\" (command-line)
 ",
         )
         .run();

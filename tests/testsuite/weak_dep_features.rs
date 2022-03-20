@@ -489,7 +489,6 @@ bar v1.0.0
 ├── bar feature \"default\"
 │   └── foo v0.1.0 ([ROOT]/foo)
 │       ├── foo feature \"bar\" (command-line)
-│       ├── foo feature \"default\" (command-line)
 │       └── foo feature \"f1\" (command-line)
 └── bar feature \"feat\"
     └── foo feature \"f1\" (command-line)
@@ -513,8 +512,7 @@ bar v1.0.0
 bar v1.0.0
 ├── bar feature \"default\"
 │   └── foo v0.1.0 ([ROOT]/foo)
-│       ├── foo feature \"bar\" (command-line)
-│       └── foo feature \"default\" (command-line)
+│       └── foo feature \"bar\" (command-line)
 └── bar feature \"feat\" (command-line)
 ",
         )

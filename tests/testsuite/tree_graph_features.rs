@@ -215,7 +215,6 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── foo feature \"default\" (command-line)
 ├── foo feature \"f1\" (command-line)
 └── foo feature \"opt\"
     └── foo feature \"f1\" (command-line)
@@ -233,7 +232,6 @@ notopt v1.0.0
 │   └── notopt feature \"animal\" (*)
 └── notopt feature \"default\"
     └── foo v0.1.0 ([..]/foo)
-        ├── foo feature \"default\" (command-line)
         ├── foo feature \"f1\" (command-line)
         └── foo feature \"opt\"
             └── foo feature \"f1\" (command-line)
@@ -250,7 +248,6 @@ notopt v1.0.0
 │   └── notopt feature \"animal\" (command-line)
 └── notopt feature \"default\"
     └── foo v0.1.0 ([..]/foo)
-        └── foo feature \"default\" (command-line)
 ",
         )
         .run();
@@ -275,7 +272,6 @@ foo v0.1.0 ([..]/foo)
 opt2 v1.0.0
 └── opt2 feature \"default\"
     └── foo v0.1.0 ([..]/foo)
-        ├── foo feature \"default\" (command-line)
         ├── foo feature \"f1\" (command-line)
         │   └── foo feature \"f2\" (command-line)
         ├── foo feature \"f2\" (command-line)
