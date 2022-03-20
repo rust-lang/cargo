@@ -500,8 +500,9 @@ fn add_cli_features(
         to_add.extend(feature_map.keys().map(|feat| FeatureValue::Feature(*feat)));
     }
 
-    if cli_features.uses_default_features {
-        to_add.insert(FeatureValue::Feature(InternedString::new("default")));
+    let default = InternedString::new("default");
+    if cli_features.uses_default_features && feature_map.contains_key(&default) {
+        to_add.insert(FeatureValue::Feature(default));
     }
     to_add.extend(cli_features.features.iter().cloned());
 

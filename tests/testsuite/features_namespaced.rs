@@ -849,8 +849,7 @@ foo v0.1.0 ([ROOT]/foo)
 bar v1.0.0
 └── bar feature \"default\"
     └── foo v0.1.0 ([ROOT]/foo)
-        ├── foo feature \"a\" (command-line)
-        └── foo feature \"default\" (command-line)
+        └── foo feature \"a\" (command-line)
 ",
         )
         .run();
