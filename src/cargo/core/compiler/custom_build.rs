@@ -405,7 +405,21 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 },
                 true,
             )
-            .with_context(|| format!("failed to run custom build command for `{}`", pkg_descr));
+            .with_context(|| {
+                let mut build_error_context = format!("failed to run custom build command for `{}`", pkg_descr);
+
+                // If we're opting into backtraces, mention that build dependencies' backtraces can
+                // be improved by setting a higher debuginfo level.
+                if let Ok(show_backtraces) = std::env::var("RUST_BACKTRACE") {
+                    if show_backtraces != "0" {
+                        build_error_context.push_str("\n\
+                            note: To improve backtraces for build dependencies, make sure full debug info is turned on. \
+                            More details at https://doc.rust-lang.org/cargo/reference/profiles.html#build-dependencies");
+                    }
+                }
+
+                build_error_context
+            });
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(
