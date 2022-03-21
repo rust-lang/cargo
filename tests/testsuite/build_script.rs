@@ -48,6 +48,44 @@ Caused by:
 }
 
 #[cargo_test]
+fn custom_build_script_failed_backtraces_message() {
+    // In this situation (no dependency sharing), debuginfo is turned off in
+    // `dev.build-override`. However, if an error occurs running e.g. a build
+    // script, and backtraces are opted into: a message explaining how to
+    // improve backtraces is also displayed.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() { std::process::exit(101); }")
+        .build();
+    p.cargo("build -v")
+        .env("RUST_BACKTRACE", "1")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
+[RUNNING] `[..]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+note: To improve backtraces for build dependencies[..]
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_env_vars() {
     let p = project()
         .file(
