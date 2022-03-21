@@ -11,7 +11,7 @@ use crate::core::Shell;
 use anyhow::Error;
 use log::debug;
 
-pub use crate::util::errors::{InternalError, VerboseError};
+pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};
 pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};
 pub use crate::version::version;
 
@@ -74,31 +74,27 @@ pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell)
 }
 
 fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
-    let verbosity = shell.verbosity();
-    let is_verbose = |e: &(dyn std::error::Error + 'static)| -> bool {
-        verbosity != Verbose && e.downcast_ref::<VerboseError>().is_some()
-    };
-    // Generally the top error shouldn't be verbose, but check it anyways.
-    if is_verbose(err.as_ref()) {
-        return true;
-    }
-    if as_err {
-        drop(shell.error(&err));
-    } else {
-        drop(writeln!(shell.err(), "{}", err));
-    }
-    for cause in err.chain().skip(1) {
-        // If we're not in verbose mode then print remaining errors until one
+    for (i, err) in err.chain().enumerate() {
+        // If we're not in verbose mode then only print cause chain until one
         // marked as `VerboseError` appears.
-        if is_verbose(cause) {
+        //
+        // Generally the top error shouldn't be verbose, but check it anyways.
+        if shell.verbosity() != Verbose && err.is::<VerboseError>() {
             return true;
         }
-        drop(writeln!(shell.err(), "\nCaused by:"));
-        drop(write!(
-            shell.err(),
-            "{}",
-            indented_lines(&cause.to_string())
-        ));
+        if err.is::<AlreadyPrintedError>() {
+            break;
+        }
+        if i == 0 {
+            if as_err {
+                drop(shell.error(&err));
+            } else {
+                drop(writeln!(shell.err(), "{}", err));
+            }
+        } else {
+            drop(writeln!(shell.err(), "\nCaused by:"));
+            drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
+        }
     }
     false
 }
