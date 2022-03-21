@@ -298,18 +298,27 @@ The `bench` profile inherits the settings from the [`release`](#release) profile
 
 #### Build Dependencies
 
-All profiles, by default, do not optimize build dependencies (build scripts,
-proc macros, and their dependencies). The default settings for build overrides
-are:
+To compile quickly, all profiles, by default, do not optimize build
+dependencies (build scripts, proc macros, and their dependencies), and avoid
+computing debug info. The default settings for build overrides are:
 
 ```toml
 [profile.dev.build-override]
 opt-level = 0
 codegen-units = 256
+debug = false
 
 [profile.release.build-override]
 opt-level = 0
 codegen-units = 256
+debug = false
+```
+
+However, if errors occur while running build dependencies, turning full debug
+info on will improve backtraces and debuggability when needed:
+
+```toml
+debug = true
 ```
 
 Build dependencies otherwise inherit settings from the active profile in use, as
