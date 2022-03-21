@@ -238,6 +238,11 @@ fn relative_depinfo_paths_ws() {
 
     // Test relative dep-info paths in a workspace with --target with
     // proc-macros and other dependency kinds.
+    //
+    // Note: `dev` and `dev.build-override` have different defaults. `pmdep`
+    // would be built twice in the general case: once without debuginfo and once
+    // with debuginfo = 2. Setting `debug = 2` in `dev.build-override` ensures
+    // it will only create a single dep-info file.
     Package::new("regdep", "0.1.0")
         .file("src/lib.rs", "pub fn f() {}")
         .publish();
@@ -255,6 +260,9 @@ fn relative_depinfo_paths_ws() {
             r#"
             [workspace]
             members = ["foo"]
+
+            [profile.dev.build-override]
+            debug = 2 # see note above
             "#,
         )
         /*********** Main Project ***********/

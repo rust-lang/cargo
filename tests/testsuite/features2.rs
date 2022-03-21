@@ -1050,6 +1050,11 @@ fn decouple_proc_macro() {
 #[cargo_test]
 fn proc_macro_ws() {
     // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
+    //
+    // Note, `dev` and `dev.build-override` have different defaults. `pm` would
+    // be built twice in the general case: once without debuginfo and once with
+    // debuginfo = 2. Setting `debug = 2` in `dev.build-override` ensures it's
+    // only built once and `foo` remains fresh during the second check build.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1057,6 +1062,9 @@ fn proc_macro_ws() {
             [workspace]
             members = ["foo", "pm"]
             resolver = "2"
+
+            [profile.dev.build-override]
+            debug = 2 # see note above
             "#,
         )
         .file(
@@ -2161,6 +2169,11 @@ fn pm_with_int_shared() {
     // with `--workspace`, see https://github.com/rust-lang/cargo/issues/8312.
     //
     // This uses a const-eval hack to do compile-time feature checking.
+    //
+    // Note, `dev` and `dev.build-override` have different defaults. `pm` would
+    // be built twice in the general case: once without debuginfo and once with
+    // debuginfo = 2. Setting `debug = 2` in `dev.build-override` ensures it's
+    // only built once in this test.
     let p = project()
         .file(
             "Cargo.toml",
@@ -2168,6 +2181,9 @@ fn pm_with_int_shared() {
                 [workspace]
                 members = ["foo", "pm", "shared"]
                 resolver = "2"
+
+                [profile.dev.build-override]
+                debug = 2 # see note above
             "#,
         )
         .file(

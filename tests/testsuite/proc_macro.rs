@@ -498,6 +498,10 @@ fn proc_macro_extern_prelude() {
 
 #[cargo_test]
 fn proc_macro_built_once() {
+    // Note: `dev` and `dev.build-override` have different defaults. `the-macro`
+    // would be built twice in the general case: once without debuginfo and once
+    // with debuginfo = 2. Setting `debug = 2` in `dev.build-override` ensures
+    // it's only built once in this test.
     let p = project()
         .file(
             "Cargo.toml",
@@ -505,6 +509,9 @@ fn proc_macro_built_once() {
                 [workspace]
                 members = ['a', 'b']
                 resolver = "2"
+
+                [profile.dev.build-override]
+                debug = 2 # see note above
             "#,
         )
         .file(

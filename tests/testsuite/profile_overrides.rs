@@ -135,6 +135,9 @@ fn profile_override_bad_settings() {
 #[cargo_test]
 fn profile_override_hierarchy() {
     // Test that the precedence rules are correct for different types.
+    // Note, `dev` and `dev.build-override` have different defaults. `dep` would be built twice in
+    // the general case: once without debuginfo and once with debuginfo = 2. Setting `debug = 2` in
+    // `dev.build-override` ensures it's only built once in this test.
     let p = project()
         .file(
             "Cargo.toml",
@@ -153,6 +156,7 @@ fn profile_override_hierarchy() {
 
             [profile.dev.build-override]
             codegen-units = 4
+            debug = 2 # see note above
             "#,
         )
         // m1

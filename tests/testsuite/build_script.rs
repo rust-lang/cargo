@@ -4379,6 +4379,10 @@ fn optional_build_script_dep() {
 
 #[cargo_test]
 fn optional_build_dep_and_required_normal_dep() {
+    // Note: `dev` and `dev.build-override` have different defaults. `bar` would
+    // be built twice in the general case: once without debuginfo and once with
+    // debuginfo = 2. Setting `debug = 2` in `dev.build-override` ensures it's
+    // only built once in this test.
     let p = project()
         .file(
             "Cargo.toml",
@@ -4393,6 +4397,9 @@ fn optional_build_dep_and_required_normal_dep() {
 
             [build-dependencies]
             bar = { path = "./bar" }
+
+            [profile.dev.build-override]
+            debug = 2 # see note above
             "#,
         )
         .file("build.rs", "extern crate bar; fn main() { bar::bar(); }")
