@@ -226,7 +226,10 @@ fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
     Ok(())
 }
 
-/// Compute the dependencies of a single unit.
+/// Compute the dependencies of a single unit, recursively computing all
+/// transitive dependencies.
+///
+/// The result is stored in `state.unit_dependencies`.
 fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoResult<()> {
     // Currently the `unit_dependencies` map does not include `unit_for`. This should
     // be safe for now. `TestDependency` only exists to clear the `panic`
@@ -246,10 +249,7 @@ fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoRe
     Ok(())
 }
 
-/// For a package, returns all targets that are registered as dependencies
-/// for that package.
-/// This returns a `Vec` of `(Unit, UnitFor)` pairs. The `UnitFor`
-/// is the profile type that should be used for dependencies of the unit.
+/// Returns the direct unit dependencies for the given `Unit`.
 fn compute_deps(
     unit: &Unit,
     state: &mut State<'_, '_>,
