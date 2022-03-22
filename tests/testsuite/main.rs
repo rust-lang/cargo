@@ -39,6 +39,7 @@ mod cross_compile;
 mod cross_publish;
 mod custom_target;
 mod death;
+mod deduplicate_workspace;
 mod dep_info;
 mod directory;
 mod doc;

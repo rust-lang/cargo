@@ -22,7 +22,9 @@ use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
-use crate::util::toml::{read_manifest, TomlDependency, TomlProfiles};
+use crate::util::toml::{
+    read_manifest, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
+};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
 
@@ -123,6 +125,15 @@ pub enum WorkspaceConfig {
     Member { root: Option<String> },
 }
 
+impl WorkspaceConfig {
+    pub fn inheritable(&self) -> Option<&InheritableFields> {
+        match self {
+            WorkspaceConfig::Root(root) => Some(&root.inheritable_fields),
+            WorkspaceConfig::Member { .. } => None,
+        }
+    }
+}
+
 /// Intermediate configuration of a workspace root in a manifest.
 ///
 /// Knows the Workspace Root path, as well as `members` and `exclude` lists of path patterns, which
@@ -133,6 +144,7 @@ pub struct WorkspaceRootConfig {
     members: Option<Vec<String>>,
     default_members: Option<Vec<String>>,
     exclude: Vec<String>,
+    inheritable_fields: InheritableFields,
     custom_metadata: Option<toml::Value>,
 }
 
@@ -1567,6 +1579,7 @@ impl WorkspaceRootConfig {
         members: &Option<Vec<String>>,
         default_members: &Option<Vec<String>>,
         exclude: &Option<Vec<String>>,
+        inheritable: &Option<InheritableFields>,
         custom_metadata: &Option<toml::Value>,
     ) -> WorkspaceRootConfig {
         WorkspaceRootConfig {
@@ -1574,10 +1587,10 @@ impl WorkspaceRootConfig {
             members: members.clone(),
             default_members: default_members.clone(),
             exclude: exclude.clone().unwrap_or_default(),
+            inheritable_fields: inheritable.clone().unwrap_or_default(),
             custom_metadata: custom_metadata.clone(),
         }
     }
-
     /// Checks the path against the `excluded` list.
     ///
     /// This method does **not** consider the `members` list.
@@ -1639,5 +1652,123 @@ impl WorkspaceRootConfig {
             .map(|p| p.with_context(|| format!("unable to match path to pattern `{}`", &path)))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
+    }
+}
+
+/// A group of fields that are inheritable by members of the workspace
+#[derive(Clone, Debug, Default)]
+pub struct InheritableFields {
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    version: Option<semver::Version>,
+    authors: Option<Vec<String>>,
+    description: Option<String>,
+    homepage: Option<String>,
+    documentation: Option<String>,
+    readme: Option<StringOrBool>,
+    keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
+    license: Option<String>,
+    license_file: Option<String>,
+    repository: Option<String>,
+    publish: Option<VecStringOrBool>,
+    edition: Option<String>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+}
+
+impl InheritableFields {
+    pub fn new(
+        dependencies: Option<BTreeMap<String, TomlDependency>>,
+        version: Option<semver::Version>,
+        authors: Option<Vec<String>>,
+        description: Option<String>,
+        homepage: Option<String>,
+        documentation: Option<String>,
+        readme: Option<StringOrBool>,
+        keywords: Option<Vec<String>>,
+        categories: Option<Vec<String>>,
+        license: Option<String>,
+        license_file: Option<String>,
+        repository: Option<String>,
+        publish: Option<VecStringOrBool>,
+        edition: Option<String>,
+        badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    ) -> InheritableFields {
+        Self {
+            dependencies,
+            version,
+            authors,
+            description,
+            homepage,
+            documentation,
+            readme,
+            keywords,
+            categories,
+            license,
+            license_file,
+            repository,
+            publish,
+            edition,
+            badges,
+        }
+    }
+
+    pub fn dependencies(&self) -> Option<BTreeMap<String, TomlDependency>> {
+        self.dependencies.clone()
+    }
+
+    pub fn version(&self) -> Option<semver::Version> {
+        self.version.clone()
+    }
+
+    pub fn authors(&self) -> Option<Vec<String>> {
+        self.authors.clone()
+    }
+
+    pub fn description(&self) -> Option<String> {
+        self.description.clone()
+    }
+
+    pub fn homepage(&self) -> Option<String> {
+        self.homepage.clone()
+    }
+
+    pub fn documentation(&self) -> Option<String> {
+        self.documentation.clone()
+    }
+
+    pub fn readme(&self) -> Option<StringOrBool> {
+        self.readme.clone()
+    }
+
+    pub fn keywords(&self) -> Option<Vec<String>> {
+        self.keywords.clone()
+    }
+
+    pub fn categories(&self) -> Option<Vec<String>> {
+        self.categories.clone()
+    }
+
+    pub fn license(&self) -> Option<String> {
+        self.license.clone()
+    }
+
+    pub fn license_file(&self) -> Option<String> {
+        self.license_file.clone()
+    }
+
+    pub fn repository(&self) -> Option<String> {
+        self.repository.clone()
+    }
+
+    pub fn publish(&self) -> Option<VecStringOrBool> {
+        self.publish.clone()
+    }
+
+    pub fn edition(&self) -> Option<String> {
+        self.edition.clone()
+    }
+
+    pub fn badges(&self) -> Option<BTreeMap<String, BTreeMap<String, String>>> {
+        self.badges.clone()
     }
 }
