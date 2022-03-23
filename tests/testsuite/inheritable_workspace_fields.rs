@@ -1,4 +1,4 @@
-//! Tests for deduplicating Cargo.toml fields with { workspace = true }
+//! Tests for inheriting Cargo.toml fields with { workspace = true }
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_lib_manifest, git, paths, project, publish, registry};
 
@@ -495,10 +495,10 @@ fn inherit_from_own_undefined_field() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error reading `description` from workspace root manifest's `[workspace.description]`
+  error inheriting `description` from workspace root manifest's `workspace.description`
 
 Caused by:
-  [workspace.description] was not defined
+  `workspace.description` was not defined
 ",
         )
         .run();
@@ -604,7 +604,7 @@ fn error_on_unimplemented_inheritance_fields() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error reading `version` from workspace root manifest's `[workspace.version]`
+  error inheriting `version` from workspace root manifest's `workspace.version`
 
 Caused by:
   inheriting from a parent workspace is not implemented yet
@@ -677,7 +677,7 @@ Caused by:
   failed to parse manifest at `[CWD]/bar/Cargo.toml`
 
 Caused by:
-  error reading `dependencies.detailed` from workspace root manifest's `[workspace.dependencies.detailed]`
+  error reading `dependencies.detailed` from workspace root manifest's `workspace.dependencies.detailed`
 
 Caused by:
   inheriting from a parent workspace is not implemented yet
@@ -724,7 +724,7 @@ fn error_workspace_false() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  workspace cannot be false for key `package.description`
+  `workspace=false` is unsupported for `package.description`
 ",
         )
         .run();
@@ -768,7 +768,8 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  `dependencies.dep` specified `{ workspace = true}`, but workspace dependencies cannot do this
+  `workspace.dependencies.dep` specified `{ workspace = true }`, but workspace dependencies \
+  cannot do this
 ",
         )
         .run();

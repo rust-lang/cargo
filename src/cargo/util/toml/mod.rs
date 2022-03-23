@@ -129,7 +129,8 @@ pub fn read_manifest_from_str(
             }
             if let TomlDependency::Workspace(_) = dep {
                 bail!(
-                    "`dependencies.{}` specified `{{ workspace = true}}`, but workspace dependencies cannot do this",
+                    "`workspace.dependencies.{}` specified `{{ workspace = true }}`, but \
+                    workspace dependencies cannot do this",
                     name
                 );
             }
@@ -1010,12 +1011,13 @@ impl<T> MaybeWorkspace<T> {
             MaybeWorkspace::Workspace(TomlWorkspaceField { workspace: true }) => {
                 cargo_features.require(Feature::workspace_inheritance())?;
                 get_ws_field().context(format!(
-                    "error reading `{}` from workspace root manifest's `[workspace.{}]`",
+                    "error inheriting `{}` from workspace root manifest's `workspace.{}`",
                     label, label
                 ))
             }
             MaybeWorkspace::Workspace(TomlWorkspaceField { workspace: false }) => Err(anyhow!(
-                "workspace cannot be false for key `package.{label}`",
+                "`workspace=false` is unsupported for `package.{}`",
+                label,
             )),
         }
     }
@@ -2190,7 +2192,7 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
             }) => {
                 cargo_features.require(Feature::workspace_inheritance())?;
                 get_ws_dependency().context(format!(
-                    "error reading `dependencies.{}` from workspace root manifest's `[workspace.dependencies.{}]`",
+                    "error reading `dependencies.{}` from workspace root manifest's `workspace.dependencies.{}`",
                     label, label
                 )).map(|dep| {
                     match dep {
@@ -2200,16 +2202,22 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
                             dep.add_features(features);
                             dep.update_optional(optional);
                             TomlDependency::Detailed(dep)
-                        }
-                        // We check for this when we parse a toml file
-                        TomlDependency::Workspace(_) => unreachable!(),
+                        },
+                        TomlDependency::Workspace(_) => {
+                            unreachable!(
+                                "We check that no workspace defines dependencies with \
+                                `{{ workspace = true }}` when we read a manifest from a string. \
+                                this should not happen but did on {}",
+                                label
+                            )
+                        },
                     }
                 })
             }
             TomlDependency::Workspace(TomlWorkspaceDependency {
                 workspace: false, ..
             }) => Err(anyhow!(
-                "workspace cannot be false for key `dependencies.{}`",
+                "`workspace=false` is unsupported for `package.dependencies.{}`",
                 label,
             )),
         }

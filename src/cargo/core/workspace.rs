@@ -1714,18 +1714,18 @@ impl InheritableFields {
 
     pub fn dependencies(&self) -> CargoResult<BTreeMap<String, TomlDependency>> {
         self.dependencies.clone().map_or(
-            Err(anyhow!("[workspace.dependencies] was not defined")),
+            Err(anyhow!("`workspace.dependencies` was not defined")),
             |d| Ok(d),
         )
     }
 
     pub fn get_dependency(&self, name: &str) -> CargoResult<TomlDependency> {
         self.dependencies.clone().map_or(
-            Err(anyhow!("[workspace.dependencies] was not defined")),
+            Err(anyhow!("`workspace.dependencies` was not defined")),
             |deps| {
                 deps.get(name).map_or(
                     Err(anyhow!(
-                        "dependency {} was not found in [workspace.dependencies]",
+                        "`dependency.{}` was not found in `workspace.dependencies`",
                         name
                     )),
                     |dep| Ok(dep.clone()),
@@ -1737,7 +1737,7 @@ impl InheritableFields {
     pub fn version(&self) -> CargoResult<semver::Version> {
         self.version
             .clone()
-            .map_or(Err(anyhow!("[workspace.version] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.version` was not defined")), |d| {
                 Ok(d)
             })
     }
@@ -1745,14 +1745,14 @@ impl InheritableFields {
     pub fn authors(&self) -> CargoResult<Vec<String>> {
         self.authors
             .clone()
-            .map_or(Err(anyhow!("[workspace.authors] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.authors` was not defined")), |d| {
                 Ok(d)
             })
     }
 
     pub fn description(&self) -> CargoResult<String> {
         self.description.clone().map_or(
-            Err(anyhow!("[workspace.description] was not defined")),
+            Err(anyhow!("`workspace.description` was not defined")),
             |d| Ok(d),
         )
     }
@@ -1760,14 +1760,14 @@ impl InheritableFields {
     pub fn homepage(&self) -> CargoResult<String> {
         self.homepage
             .clone()
-            .map_or(Err(anyhow!("[workspace.homepage] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.homepage` was not defined")), |d| {
                 Ok(d)
             })
     }
 
     pub fn documentation(&self) -> CargoResult<String> {
         self.documentation.clone().map_or(
-            Err(anyhow!("[workspace.documentation] was not defined")),
+            Err(anyhow!("`workspace.documentation` was not defined")),
             |d| Ok(d),
         )
     }
@@ -1775,7 +1775,7 @@ impl InheritableFields {
     pub fn readme(&self) -> CargoResult<StringOrBool> {
         self.readme
             .clone()
-            .map_or(Err(anyhow!("[workspace.readme] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.readme` was not defined")), |d| {
                 Ok(d)
             })
     }
@@ -1783,14 +1783,14 @@ impl InheritableFields {
     pub fn keywords(&self) -> CargoResult<Vec<String>> {
         self.keywords
             .clone()
-            .map_or(Err(anyhow!("[workspace.keywords] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.keywords` was not defined")), |d| {
                 Ok(d)
             })
     }
 
     pub fn categories(&self) -> CargoResult<Vec<String>> {
         self.categories.clone().map_or(
-            Err(anyhow!("[workspace.categories] was not defined")),
+            Err(anyhow!("`workspace.categories` was not defined")),
             |d| Ok(d),
         )
     }
@@ -1798,21 +1798,21 @@ impl InheritableFields {
     pub fn license(&self) -> CargoResult<String> {
         self.license
             .clone()
-            .map_or(Err(anyhow!("[workspace.license] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.license` was not defined")), |d| {
                 Ok(d)
             })
     }
 
     pub fn license_file(&self) -> CargoResult<String> {
         self.license_file.clone().map_or(
-            Err(anyhow!("[workspace.license_file] was not defined")),
+            Err(anyhow!("`workspace.license_file` was not defined")),
             |d| Ok(d),
         )
     }
 
     pub fn repository(&self) -> CargoResult<String> {
         self.repository.clone().map_or(
-            Err(anyhow!("[workspace.repository] was not defined")),
+            Err(anyhow!("`workspace.repository` was not defined")),
             |d| Ok(d),
         )
     }
@@ -1820,7 +1820,7 @@ impl InheritableFields {
     pub fn publish(&self) -> CargoResult<VecStringOrBool> {
         self.publish
             .clone()
-            .map_or(Err(anyhow!("[workspace.publish] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.publish` was not defined")), |d| {
                 Ok(d)
             })
     }
@@ -1828,7 +1828,7 @@ impl InheritableFields {
     pub fn edition(&self) -> CargoResult<String> {
         self.edition
             .clone()
-            .map_or(Err(anyhow!("[workspace.edition] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.edition` was not defined")), |d| {
                 Ok(d)
             })
     }
@@ -1836,7 +1836,7 @@ impl InheritableFields {
     pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
         self.badges
             .clone()
-            .map_or(Err(anyhow!("[workspace.badges] was not defined")), |d| {
+            .map_or(Err(anyhow!("`workspace.badges` was not defined")), |d| {
                 Ok(d)
             })
     }
