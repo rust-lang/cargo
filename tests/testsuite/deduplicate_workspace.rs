@@ -121,11 +121,9 @@ fn inherit_own_workspace_fields() {
             authors = { workspace = true }
             description = { workspace = true }
             documentation = { workspace = true }
-            readme = { workspace = true }
             homepage = { workspace = true }
             repository = { workspace = true }
             license = { workspace = true }
-            license-file = { workspace = true }
             keywords = { workspace = true }
             categories = { workspace = true }
             publish = { workspace = true }
@@ -137,11 +135,9 @@ fn inherit_own_workspace_fields() {
             authors = ["Rustaceans"]
             description = "This is a crate"
             documentation = "https://www.rust-lang.org/learn"
-            readme = "README.md"
             homepage = "https://www.rust-lang.org"
             repository = "https://github.com/example/example"
             license = "MIT"
-            license-file = "LICENSE"
             keywords = ["cli"]
             categories = ["development-tools"]
             publish = true
@@ -151,8 +147,6 @@ fn inherit_own_workspace_fields() {
             "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file("LICENSE", "license")
-        .file("README.md", "README.md")
         .build();
 
     p.cargo("publish --token sekrit")
@@ -173,11 +167,11 @@ fn inherit_own_workspace_fields() {
           "homepage": "https://www.rust-lang.org",
           "keywords": ["cli"],
           "license": "MIT",
-          "license_file": "LICENSE",
+          "license_file": null,
           "links": null,
           "name": "foo",
-          "readme": "README.md",
-          "readme_file": "README.md",
+          "readme": null,
+          "readme_file": null,
           "repository": "https://github.com/example/example",
           "vers": "1.2.3"
           }
@@ -188,8 +182,6 @@ fn inherit_own_workspace_fields() {
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
-            "README.md",
-            "LICENSE",
             ".cargo_vcs_info.json",
         ],
         &[(
@@ -207,11 +199,9 @@ publish = true
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
 documentation = "https://www.rust-lang.org/learn"
-readme = "README.md"
 keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"
-license-file = "LICENSE"
 repository = "https://github.com/example/example"
 
 [badges.gitlab]
@@ -506,6 +496,9 @@ fn inherit_from_own_undefined_field() {
 
 Caused by:
   error reading `description` from workspace root manifest's `[workspace.description]`
+
+Caused by:
+  [workspace.description] was not defined
 ",
         )
         .run();
@@ -571,7 +564,7 @@ fn inherited_dependencies_union_features() {
 }
 
 #[cargo_test]
-fn deny_inherit_fields_from_parent_workspace() {
+fn error_on_unimplemented_inheritance_fields() {
     registry::init();
 
     let p = project().build();
@@ -611,14 +604,17 @@ fn deny_inherit_fields_from_parent_workspace() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  You cannot inherit fields from a parent workspace currently, tried to on version
+  error reading `version` from workspace root manifest's `[workspace.version]`
+
+Caused by:
+  inheriting from a parent workspace is not implemented yet
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn deny_inherit_dependencies_from_parent_workspace() {
+fn error_on_unimplemented_inheritance_dependencies() {
     let git_project = git::new("detailed", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("detailed"))
@@ -681,7 +677,10 @@ Caused by:
   failed to parse manifest at `[CWD]/bar/Cargo.toml`
 
 Caused by:
-  You cannot inherit fields from a parent workspace currently, tried to on `[dependency.detailed]`
+  error reading `dependencies.detailed` from workspace root manifest's `[workspace.dependencies.detailed]`
+
+Caused by:
+  inheriting from a parent workspace is not implemented yet
 ",
         )
         .run();
@@ -717,6 +716,7 @@ fn error_workspace_false() {
         .build();
 
     p.cargo("build")
+        .masquerade_as_nightly_cargo()
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -725,6 +725,50 @@ fn error_workspace_false() {
 
 Caused by:
   workspace cannot be false for key `package.description`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_workspace_dependency_looked_for_workspace_itself() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+            [package]
+            name = "bar"
+            version = "1.2.3"
+            workspace = ".."
+
+            [dependencies]
+            dep = { workspace = true }
+
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            dep = { workspace = true }
+
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  `dependencies.dep` specified `{ workspace = true}`, but workspace dependencies cannot do this
 ",
         )
         .run();

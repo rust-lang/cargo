@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::{bail, Context as _};
+use anyhow::{anyhow, bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
 use log::debug;
@@ -1712,63 +1712,132 @@ impl InheritableFields {
         }
     }
 
-    pub fn dependencies(&self) -> Option<BTreeMap<String, TomlDependency>> {
-        self.dependencies.clone()
+    pub fn dependencies(&self) -> CargoResult<BTreeMap<String, TomlDependency>> {
+        self.dependencies.clone().map_or(
+            Err(anyhow!("[workspace.dependencies] was not defined")),
+            |d| Ok(d),
+        )
     }
 
-    pub fn version(&self) -> Option<semver::Version> {
-        self.version.clone()
+    pub fn get_dependency(&self, name: &str) -> CargoResult<TomlDependency> {
+        self.dependencies.clone().map_or(
+            Err(anyhow!("[workspace.dependencies] was not defined")),
+            |deps| {
+                deps.get(name).map_or(
+                    Err(anyhow!(
+                        "dependency {} was not found in [workspace.dependencies]",
+                        name
+                    )),
+                    |dep| Ok(dep.clone()),
+                )
+            },
+        )
     }
 
-    pub fn authors(&self) -> Option<Vec<String>> {
-        self.authors.clone()
+    pub fn version(&self) -> CargoResult<semver::Version> {
+        self.version
+            .clone()
+            .map_or(Err(anyhow!("[workspace.version] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn description(&self) -> Option<String> {
-        self.description.clone()
+    pub fn authors(&self) -> CargoResult<Vec<String>> {
+        self.authors
+            .clone()
+            .map_or(Err(anyhow!("[workspace.authors] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn homepage(&self) -> Option<String> {
-        self.homepage.clone()
+    pub fn description(&self) -> CargoResult<String> {
+        self.description.clone().map_or(
+            Err(anyhow!("[workspace.description] was not defined")),
+            |d| Ok(d),
+        )
     }
 
-    pub fn documentation(&self) -> Option<String> {
-        self.documentation.clone()
+    pub fn homepage(&self) -> CargoResult<String> {
+        self.homepage
+            .clone()
+            .map_or(Err(anyhow!("[workspace.homepage] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn readme(&self) -> Option<StringOrBool> {
-        self.readme.clone()
+    pub fn documentation(&self) -> CargoResult<String> {
+        self.documentation.clone().map_or(
+            Err(anyhow!("[workspace.documentation] was not defined")),
+            |d| Ok(d),
+        )
     }
 
-    pub fn keywords(&self) -> Option<Vec<String>> {
-        self.keywords.clone()
+    pub fn readme(&self) -> CargoResult<StringOrBool> {
+        self.readme
+            .clone()
+            .map_or(Err(anyhow!("[workspace.readme] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn categories(&self) -> Option<Vec<String>> {
-        self.categories.clone()
+    pub fn keywords(&self) -> CargoResult<Vec<String>> {
+        self.keywords
+            .clone()
+            .map_or(Err(anyhow!("[workspace.keywords] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn license(&self) -> Option<String> {
-        self.license.clone()
+    pub fn categories(&self) -> CargoResult<Vec<String>> {
+        self.categories.clone().map_or(
+            Err(anyhow!("[workspace.categories] was not defined")),
+            |d| Ok(d),
+        )
     }
 
-    pub fn license_file(&self) -> Option<String> {
-        self.license_file.clone()
+    pub fn license(&self) -> CargoResult<String> {
+        self.license
+            .clone()
+            .map_or(Err(anyhow!("[workspace.license] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn repository(&self) -> Option<String> {
-        self.repository.clone()
+    pub fn license_file(&self) -> CargoResult<String> {
+        self.license_file.clone().map_or(
+            Err(anyhow!("[workspace.license_file] was not defined")),
+            |d| Ok(d),
+        )
     }
 
-    pub fn publish(&self) -> Option<VecStringOrBool> {
-        self.publish.clone()
+    pub fn repository(&self) -> CargoResult<String> {
+        self.repository.clone().map_or(
+            Err(anyhow!("[workspace.repository] was not defined")),
+            |d| Ok(d),
+        )
     }
 
-    pub fn edition(&self) -> Option<String> {
-        self.edition.clone()
+    pub fn publish(&self) -> CargoResult<VecStringOrBool> {
+        self.publish
+            .clone()
+            .map_or(Err(anyhow!("[workspace.publish] was not defined")), |d| {
+                Ok(d)
+            })
     }
 
-    pub fn badges(&self) -> Option<BTreeMap<String, BTreeMap<String, String>>> {
-        self.badges.clone()
+    pub fn edition(&self) -> CargoResult<String> {
+        self.edition
+            .clone()
+            .map_or(Err(anyhow!("[workspace.edition] was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
+        self.badges
+            .clone()
+            .map_or(Err(anyhow!("[workspace.badges] was not defined")), |d| {
+                Ok(d)
+            })
     }
 }

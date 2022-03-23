@@ -127,6 +127,12 @@ pub fn read_manifest_from_str(
                     name
                 );
             }
+            if let TomlDependency::Workspace(_) = dep {
+                bail!(
+                    "`dependencies.{}` specified `{{ workspace = true}}`, but workspace dependencies cannot do this",
+                    name
+                );
+            }
         }
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
@@ -997,18 +1003,13 @@ impl<T> MaybeWorkspace<T> {
         self,
         cargo_features: &Features,
         label: &str,
-        inherit: impl FnOnce() -> Option<&'a InheritableFields>,
-        get_ws: impl FnOnce(&InheritableFields) -> Option<T>,
+        get_ws_field: impl FnOnce() -> CargoResult<T>,
     ) -> CargoResult<T> {
         match self {
             MaybeWorkspace::Defined(value) => Ok(value),
             MaybeWorkspace::Workspace(TomlWorkspaceField { workspace: true }) => {
                 cargo_features.require(Feature::workspace_inheritance())?;
-                let inherit = inherit().context(format!(
-                    "You cannot inherit fields from a parent workspace currently, tried to on {}",
-                    label
-                ))?;
-                get_ws(inherit).context(format!(
+                get_ws_field().context(format!(
                     "error reading `{}` from workspace root manifest's `[workspace.{}]`",
                     label, label
                 ))
@@ -1016,15 +1017,6 @@ impl<T> MaybeWorkspace<T> {
             MaybeWorkspace::Workspace(TomlWorkspaceField { workspace: false }) => Err(anyhow!(
                 "workspace cannot be false for key `package.{label}`",
             )),
-        }
-    }
-
-    /// This does not try to resolve a `MaybeWorkspace` it gets a &T if it is defined.
-    /// If it is not defined it will return an error
-    fn inner(&self, label: &str) -> CargoResult<&T> {
-        match self {
-            MaybeWorkspace::Workspace(_) => Err(anyhow!("{} has not been resolved yet`", label)),
-            MaybeWorkspace::Defined(d) => Ok(d),
         }
     }
 }
@@ -1071,11 +1063,11 @@ pub struct TomlProject {
     description: Option<MaybeWorkspace<String>>,
     homepage: Option<MaybeWorkspace<String>>,
     documentation: Option<MaybeWorkspace<String>>,
-    readme: Option<MaybeWorkspace<StringOrBool>>,
+    readme: Option<StringOrBool>,
     keywords: Option<MaybeWorkspace<Vec<String>>>,
     categories: Option<MaybeWorkspace<Vec<String>>>,
     license: Option<MaybeWorkspace<String>>,
-    license_file: Option<MaybeWorkspace<String>>,
+    license_file: Option<String>,
     repository: Option<MaybeWorkspace<String>>,
     resolver: Option<String>,
 
@@ -1154,23 +1146,20 @@ impl TomlManifest {
             .clone();
         package.workspace = None;
         package.resolver = ws.resolve_behavior().to_manifest();
-        if let Some(license_file) = package.license_file.clone() {
-            let file = license_file.inner("license_file").context(anyhow!(
-                "license-file should have been resolved before prepare_for_publish"
-            ))?;
-            let license_path = Path::new(&file);
+        if let Some(license_file) = &package.license_file {
+            let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
             if abs_license_path.strip_prefix(package_root).is_err() {
                 // This path points outside of the package root. `cargo package`
                 // will copy it into the root, so adjust the path to this location.
-                package.license_file = Some(MaybeWorkspace::Defined(
+                package.license_file = Some(
                     license_path
                         .file_name()
                         .unwrap()
                         .to_str()
                         .unwrap()
                         .to_string(),
-                ));
+                );
             }
         }
         let all = |_d: &TomlDependency| true;
@@ -1293,10 +1282,12 @@ impl TomlManifest {
         config: &Config,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
         // This is for later when we try to find the workspace root
-        fn get_ws(inheritable: Option<&InheritableFields>) -> Option<&InheritableFields> {
+        fn get_ws(inheritable: Option<&InheritableFields>) -> CargoResult<&InheritableFields> {
             match inheritable {
-                Some(inheritable) => Some(inheritable),
-                None => None,
+                Some(inheritable) => Ok(inheritable),
+                None => Err(anyhow!(
+                    "inheriting from a parent workspace is not implemented yet",
+                )),
             }
         }
 
@@ -1359,12 +1350,10 @@ impl TomlManifest {
 
         validate_package_name(package_name, "package name", "")?;
 
-        let version = project.version.clone().resolve(
-            &features,
-            "version",
-            || get_ws(inheritable),
-            |i| i.version(),
-        )?;
+        let version = project
+            .version
+            .clone()
+            .resolve(&features, "version", || get_ws(inheritable)?.version())?;
 
         project.version = MaybeWorkspace::Defined(version.clone());
 
@@ -1372,12 +1361,7 @@ impl TomlManifest {
 
         let edition = if let Some(edition) = project.edition.clone() {
             let edition: Edition = edition
-                .resolve(
-                    &features,
-                    "edition",
-                    || get_ws(inheritable),
-                    |i| i.edition(),
-                )?
+                .resolve(&features, "edition", || get_ws(inheritable)?.edition())?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
             project.edition = Some(MaybeWorkspace::Defined(edition.to_string()));
@@ -1502,12 +1486,9 @@ impl TomlManifest {
             };
             let mut deps: BTreeMap<String, TomlDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v.clone().resolve(
-                    features,
-                    n,
-                    || get_ws(inheritable),
-                    |i| i.dependencies().map(|deps| deps.get(n).unwrap().clone()),
-                )?;
+                let resolved = v
+                    .clone()
+                    .resolve(features, n, || get_ws(inheritable)?.get_dependency(n))?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                 cx.deps.push(dep);
@@ -1646,96 +1627,74 @@ impl TomlManifest {
             project.links.as_deref(),
         )?;
 
-        fn resolve_to_option<'a, T>(
-            features: &Features,
-            value: Option<MaybeWorkspace<T>>,
-            label: &str,
-            inheritable_fields: Option<&'a InheritableFields>,
-            resolve: impl FnOnce(&InheritableFields) -> Option<T>,
-        ) -> CargoResult<Option<T>> {
-            match value {
-                None => Ok(None),
-                Some(mw) => {
-                    match mw.resolve(&features, label, || get_ws(inheritable_fields), resolve) {
-                        Ok(t) => Ok(Some(t)),
-                        Err(e) => Err(e),
-                    }
-                }
-            }
-        }
-
         let metadata = ManifestMetadata {
-            description: resolve_to_option(
-                &features,
-                project.description.clone(),
-                "description",
-                inheritable,
-                |i| i.description(),
-            )?,
-            homepage: resolve_to_option(
-                &features,
-                project.homepage.clone(),
-                "homepage",
-                inheritable,
-                |i| i.homepage(),
-            )?,
-            documentation: resolve_to_option(
-                &features,
-                project.documentation.clone(),
-                "documentation",
-                inheritable,
-                |i| i.documentation(),
-            )?,
+            description: project
+                .description
+                .clone()
+                .map(|mw| {
+                    mw.resolve(&features, "description", || {
+                        get_ws(inheritable)?.description()
+                    })
+                })
+                .transpose()?,
+            homepage: project
+                .homepage
+                .clone()
+                .map(|mw| mw.resolve(&features, "homepage", || get_ws(inheritable)?.homepage()))
+                .transpose()?,
+            documentation: project
+                .documentation
+                .clone()
+                .map(|mw| {
+                    mw.resolve(&features, "documentation", || {
+                        get_ws(inheritable)?.documentation()
+                    })
+                })
+                .transpose()?,
             readme: readme_for_project(package_root, project),
-            authors: resolve_to_option(
-                &features,
-                project.authors.clone(),
-                "authors",
-                inheritable,
-                |i| i.authors(),
-            )?
-            .unwrap_or_default(),
-            license: resolve_to_option(
-                &features,
-                project.license.clone(),
-                "license",
-                inheritable,
-                |i| i.license(),
-            )?,
-            license_file: resolve_to_option(
-                &features,
-                project.license_file.clone(),
-                "license_file",
-                inheritable,
-                |i| i.license_file(),
-            )?,
-            repository: resolve_to_option(
-                &features,
-                project.repository.clone(),
-                "repository",
-                inheritable,
-                |i| i.repository(),
-            )?,
-            keywords: resolve_to_option(
-                &features,
-                project.keywords.clone(),
-                "keywords",
-                inheritable,
-                |i| i.keywords(),
-            )?
-            .unwrap_or_default(),
-            categories: resolve_to_option(
-                &features,
-                project.categories.clone(),
-                "categories",
-                inheritable,
-                |i| i.categories(),
-            )?
-            .unwrap_or_default(),
-            badges: resolve_to_option(&features, me.badges.clone(), "badges", inheritable, |i| {
-                i.badges()
-            })?
-            .unwrap_or_default(),
+            authors: project
+                .authors
+                .clone()
+                .map(|mw| mw.resolve(&features, "authors", || get_ws(inheritable)?.authors()))
+                .transpose()?
+                .unwrap_or_default(),
+            license: project
+                .license
+                .clone()
+                .map(|mw| mw.resolve(&features, "license", || get_ws(inheritable)?.license()))
+                .transpose()?,
+            license_file: project.license_file.clone(),
+            repository: project
+                .repository
+                .clone()
+                .map(|mw| {
+                    mw.resolve(&features, "repository", || {
+                        get_ws(inheritable)?.repository()
+                    })
+                })
+                .transpose()?,
+            keywords: project
+                .keywords
+                .clone()
+                .map(|mw| mw.resolve(&features, "keywords", || get_ws(inheritable)?.keywords()))
+                .transpose()?
+                .unwrap_or_default(),
+            categories: project
+                .categories
+                .clone()
+                .map(|mw| {
+                    mw.resolve(&features, "categories", || {
+                        get_ws(inheritable)?.categories()
+                    })
+                })
+                .transpose()?
+                .unwrap_or_default(),
+            badges: me
+                .badges
+                .clone()
+                .map(|mw| mw.resolve(&features, "badges", || get_ws(inheritable)?.badges()))
+                .transpose()?
+                .unwrap_or_default(),
             links: project.links.clone(),
         };
         project.description = metadata
@@ -1750,10 +1709,6 @@ impl TomlManifest {
             .documentation
             .clone()
             .map(|documentation| MaybeWorkspace::Defined(documentation));
-        project.readme = metadata
-            .readme
-            .clone()
-            .map(|readme| MaybeWorkspace::Defined(StringOrBool::String(readme)));
         project.authors = project
             .authors
             .as_ref()
@@ -1762,10 +1717,6 @@ impl TomlManifest {
             .license
             .clone()
             .map(|license| MaybeWorkspace::Defined(license));
-        project.license_file = metadata
-            .license_file
-            .clone()
-            .map(|license_file| MaybeWorkspace::Defined(license_file));
         project.repository = metadata
             .repository
             .clone()
@@ -1786,12 +1737,7 @@ impl TomlManifest {
 
         let publish = project.publish.clone().map(|publish| {
             publish
-                .resolve(
-                    &features,
-                    "publish",
-                    || get_ws(inheritable),
-                    |i| i.publish(),
-                )
+                .resolve(&features, "publish", || get_ws(inheritable)?.publish())
                 .unwrap()
         });
 
@@ -2128,12 +2074,12 @@ impl TomlManifest {
 /// Returns the name of the README file for a `TomlProject`.
 fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<String> {
     match &project.readme {
-        Some(MaybeWorkspace::Defined(value)) => match value {
+        None => default_readme_from_package_root(package_root),
+        Some(value) => match value {
             StringOrBool::Bool(false) => None,
             StringOrBool::Bool(true) => Some("README.md".to_string()),
             StringOrBool::String(v) => Some(v.clone()),
         },
-        _ => default_readme_from_package_root(package_root),
     }
 }
 
@@ -2224,7 +2170,7 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
         match self {
             TomlDependency::Detailed(d) => d.optional.unwrap_or(false),
             TomlDependency::Simple(..) => false,
-            TomlDependency::Workspace(_) => unreachable!(),
+            TomlDependency::Workspace(w) => w.optional.unwrap_or(false),
         }
     }
 
@@ -2232,8 +2178,7 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
         self,
         cargo_features: &Features,
         label: &str,
-        inherit: impl FnOnce() -> Option<&'a InheritableFields>,
-        get_ws: impl FnOnce(&InheritableFields) -> Option<TomlDependency<P>>,
+        get_ws_dependency: impl FnOnce() -> CargoResult<TomlDependency<P>>,
     ) -> CargoResult<TomlDependency<P>> {
         match self {
             TomlDependency::Detailed(d) => Ok(TomlDependency::Detailed(d)),
@@ -2244,32 +2189,28 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
                 optional,
             }) => {
                 cargo_features.require(Feature::workspace_inheritance())?;
-
-                let inherit = inherit().context(format!(
-                    "You cannot inherit fields from a parent workspace currently, tried to on `[dependency.{}]`",
-                    label
-                ))?;
-
-                get_ws(inherit).map_or(
-                    Err(anyhow!("error reading `{label}` from workspace root manifest's `[workspace.{label}]`")),
-                    |dep| {
-                        match dep {
-                            TomlDependency::Simple(s) => Ok(TomlDependency::Simple(s)),
-                            TomlDependency::Detailed(d) => {
-                                let mut dep = d.clone();
-                                dep.add_features(features);
-                                dep.update_optional(optional);
-                                Ok(TomlDependency::Detailed(dep))
-                            }
-                            TomlDependency::Workspace(_) => bail!("tried to inherit from `dependency.{label}`, but it also tried to inherit from a workspace")
+                get_ws_dependency().context(format!(
+                    "error reading `dependencies.{}` from workspace root manifest's `[workspace.dependencies.{}]`",
+                    label, label
+                )).map(|dep| {
+                    match dep {
+                        TomlDependency::Simple(s) => TomlDependency::Simple(s),
+                        TomlDependency::Detailed(d) => {
+                            let mut dep = d.clone();
+                            dep.add_features(features);
+                            dep.update_optional(optional);
+                            TomlDependency::Detailed(dep)
                         }
+                        // We check for this when we parse a toml file
+                        TomlDependency::Workspace(_) => unreachable!(),
                     }
-                )
+                })
             }
             TomlDependency::Workspace(TomlWorkspaceDependency {
                 workspace: false, ..
             }) => Err(anyhow!(
-                "workspace cannot be false for key `dependency.{label}`",
+                "workspace cannot be false for key `dependencies.{}`",
+                label,
             )),
         }
     }
