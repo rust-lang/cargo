@@ -498,9 +498,7 @@ impl<'cfg> Debug for PathSource<'cfg> {
 
 impl<'cfg> Source for PathSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        if !self.updated {
-            return Poll::Pending;
-        }
+        self.update()?;
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
                 f(s.clone())
@@ -514,9 +512,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         _dep: &Dependency,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        if !self.updated {
-            return Poll::Pending;
-        }
+        self.update()?;
         for s in self.packages.iter().map(|p| p.summary()) {
             f(s.clone())
         }
@@ -537,7 +533,7 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
-
+        self.update()?;
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)

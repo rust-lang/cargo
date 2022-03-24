@@ -48,7 +48,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
     }
 
     fn load(
-        &self,
+        &mut self,
         root: &Path,
         path: &Path,
         _index_version: Option<&str>,

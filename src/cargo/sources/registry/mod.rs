@@ -220,7 +220,8 @@ pub struct RegistrySource<'cfg> {
 }
 
 /// The `config.json` file stored in the index.
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
     /// Download endpoint for all crates.
     ///
@@ -448,7 +449,7 @@ pub trait RegistryData {
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
     /// * `index_version` is the version of the requested crate data currently in cache.
     fn load(
-        &self,
+        &mut self,
         root: &Path,
         path: &Path,
         index_version: Option<&str>,
@@ -524,6 +525,8 @@ pub enum MaybeLock {
     Download { url: String, descriptor: String },
 }
 
+mod download;
+mod http_remote;
 mod index;
 mod local;
 mod remote;
@@ -539,10 +542,23 @@ impl<'cfg> RegistrySource<'cfg> {
         source_id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
-    ) -> RegistrySource<'cfg> {
+    ) -> CargoResult<RegistrySource<'cfg>> {
         let name = short_name(source_id);
-        let ops = remote::RemoteRegistry::new(source_id, config, &name);
-        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
+        let ops = if source_id.url().scheme().starts_with("sparse+") {
+            if !config.cli_unstable().http_registry {
+                anyhow::bail!("Usage of HTTP-based registries requires `-Z http-registry`");
+            }
+            Box::new(http_remote::HttpRegistry::new(source_id, config, &name)) as Box<_>
+        } else {
+            Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>
+        };
+        Ok(RegistrySource::new(
+            source_id,
+            config,
+            &name,
+            ops,
+            yanked_whitelist,
+        ))
     }
 
     pub fn local(
@@ -748,10 +764,12 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = self
-            .index
-            .hash(package, &mut *self.ops)?
-            .expect("we got to downloading a dep while pending!?");
+        let hash = loop {
+            match self.index.hash(package, &mut *self.ops)? {
+                Poll::Pending => self.block_until_ready()?,
+                Poll::Ready(hash) => break hash,
+            }
+        };
         match self.ops.download(package, hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download { url, descriptor } => {
@@ -761,10 +779,12 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        let hash = self
-            .index
-            .hash(package, &mut *self.ops)?
-            .expect("we got to downloading a dep while pending!?");
+        let hash = loop {
+            match self.index.hash(package, &mut *self.ops)? {
+                Poll::Pending => self.block_until_ready()?,
+                Poll::Ready(hash) => break hash,
+            }
+        };
         let file = self.ops.finish_download(package, hash, &data)?;
         self.get_pkg(package, &file)
     }
@@ -793,5 +813,29 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
         self.ops.block_until_ready()
+    }
+}
+
+fn make_dep_prefix(name: &str) -> String {
+    match name.len() {
+        1 => String::from("1"),
+        2 => String::from("2"),
+        3 => format!("3/{}", &name[..1]),
+        _ => format!("{}/{}", &name[0..2], &name[2..4]),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::make_dep_prefix;
+
+    #[test]
+    fn dep_prefix() {
+        assert_eq!(make_dep_prefix("a"), "1");
+        assert_eq!(make_dep_prefix("ab"), "2");
+        assert_eq!(make_dep_prefix("abc"), "3/a");
+        assert_eq!(make_dep_prefix("Abc"), "3/A");
+        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
+        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
     }
 }

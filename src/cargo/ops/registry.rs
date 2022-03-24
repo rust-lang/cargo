@@ -459,7 +459,7 @@ fn registry(
     }
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
-        let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
+        let mut src = RegistrySource::remote(sid, &HashSet::new(), config)?;
         // Only update the index if the config is not available or `force` is set.
         if force_update {
             src.invalidate_cache()
@@ -528,8 +528,11 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
              specified"
         )
     }
-    if !config.network_allowed() {
-        bail!("can't make HTTP request in the offline mode")
+    if config.offline() {
+        bail!(
+            "attempting to make an HTTP request, but --offline was \
+             specified"
+        )
     }
 
     // The timeout option for libcurl by default times out the entire transfer,

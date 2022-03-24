@@ -78,6 +78,7 @@ use semver::Version;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::Poll;
@@ -421,11 +422,12 @@ impl<'cfg> RegistryIndex<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        if self.config.offline()
-            && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)?
-                != Poll::Ready(0)
-        {
-            return Poll::Ready(Ok(()));
+        if self.config.offline() {
+            match self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? {
+                Poll::Ready(0) => {}
+                Poll::Ready(_) => return Poll::Ready(Ok(())),
+                Poll::Pending => return Poll::Pending,
+            }
             // If offline, and there are no matches, try again with online.
             // This is necessary for dependencies that are not used (such as
             // target-cfg or optional), but are not downloaded. Normally the
@@ -545,9 +547,6 @@ impl Summaries {
     /// for `relative` from the underlying index (aka typically libgit2 with
     /// crates.io) and then parse everything in there.
     ///
-    /// * `index_version` - a version string to describe the current state of
-    ///   the index which for remote registries is the current git sha and
-    ///   for local registries is not available.
     /// * `root` - this is the root argument passed to `load`
     /// * `cache_root` - this is the root on the filesystem itself of where to
     ///   store cache files.
@@ -584,20 +583,11 @@ impl Summaries {
             Err(e) => log::debug!("cache missing for {:?} error: {}", relative, e),
         }
 
-        let mut response = load.load(root, relative, index_version.as_deref())?;
-        // In debug builds, perform a second load without the cache so that
-        // we can validate that the cache is correct.
-        if cfg!(debug_assertions) && matches!(response, Poll::Ready(LoadResponse::CacheValid)) {
-            response = load.load(root, relative, None)?;
-        }
-        let response = match response {
+        let response = match load.load(root, relative, index_version.as_deref())? {
             Poll::Pending => return Poll::Pending,
             Poll::Ready(response) => response,
         };
 
-        let mut bytes_to_cache = None;
-        let mut version_to_cache = None;
-        let mut ret = Summaries::default();
         match response {
             LoadResponse::CacheValid => {
                 log::debug!("fast path for registry cache of {:?}", relative);
@@ -605,6 +595,11 @@ impl Summaries {
             }
             LoadResponse::NotFound => {
                 debug_assert!(cached_summaries.is_none());
+                if let Err(e) = fs::remove_file(cache_path) {
+                    if e.kind() != ErrorKind::NotFound {
+                        log::debug!("failed to remove from cache: {}", e);
+                    }
+                }
                 return Poll::Ready(Ok(None));
             }
             LoadResponse::Data {
@@ -616,6 +611,7 @@ impl Summaries {
                 // to find the versions)
                 log::debug!("slow path for {:?}", relative);
                 let mut cache = SummariesCache::default();
+                let mut ret = Summaries::default();
                 ret.raw_data = raw_data;
                 for line in split(&ret.raw_data, b'\n') {
                     // Attempt forwards-compatibility on the index by ignoring
@@ -643,47 +639,38 @@ impl Summaries {
                     ret.versions.insert(version, summary.into());
                 }
                 if let Some(index_version) = index_version {
-                    bytes_to_cache = Some(cache.serialize(index_version.as_str()));
-                    version_to_cache = Some(index_version);
+                    log::trace!("caching index_version {}", index_version);
+                    let cache_bytes = cache.serialize(index_version.as_str());
+                    // Once we have our `cache_bytes` which represents the `Summaries` we're
+                    // about to return, write that back out to disk so future Cargo
+                    // invocations can use it.
+                    //
+                    // This is opportunistic so we ignore failure here but are sure to log
+                    // something in case of error.
+                    if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+                        let path = Filesystem::new(cache_path.clone());
+                        config.assert_package_cache_locked(&path);
+                        if let Err(e) = fs::write(cache_path, &cache_bytes) {
+                            log::info!("failed to write cache: {}", e);
+                        }
+                    }
+
+                    // If we've got debug assertions enabled read back in the cached values
+                    // and assert they match the expected result.
+                    #[cfg(debug_assertions)]
+                    {
+                        let readback = SummariesCache::parse(&cache_bytes)
+                            .expect("failed to parse cache we just wrote");
+                        assert_eq!(
+                            readback.index_version, index_version,
+                            "index_version mismatch"
+                        );
+                        assert_eq!(readback.versions, cache.versions, "versions mismatch");
+                    }
                 }
+                Poll::Ready(Ok(Some(ret)))
             }
         }
-
-        // If we've got debug assertions enabled and the cache was previously
-        // present and considered fresh this is where the debug assertions
-        // actually happens to verify that our cache is indeed fresh and
-        // computes exactly the same value as before.
-        let cache_contents = cached_summaries.as_ref().map(|s| &s.raw_data);
-        if cfg!(debug_assertions)
-            && index_version.as_deref() == version_to_cache.as_deref()
-            && cached_summaries.is_some()
-            && bytes_to_cache.as_ref() != cache_contents
-        {
-            panic!(
-                "original cache contents:\n{:?}\n\
-                 does not equal new cache contents:\n{:?}\n",
-                cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
-                bytes_to_cache.as_ref().map(|s| String::from_utf8_lossy(s)),
-            );
-        }
-
-        // Once we have our `cache_bytes` which represents the `Summaries` we're
-        // about to return, write that back out to disk so future Cargo
-        // invocations can use it.
-        //
-        // This is opportunistic so we ignore failure here but are sure to log
-        // something in case of error.
-        if let Some(cache_bytes) = bytes_to_cache {
-            if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
-                let path = Filesystem::new(cache_path.clone());
-                config.assert_package_cache_locked(&path);
-                if let Err(e) = fs::write(cache_path, cache_bytes) {
-                    log::info!("failed to write cache: {}", e);
-                }
-            }
-        }
-
-        Poll::Ready(Ok(Some(ret)))
     }
 
     /// Parses an open `File` which represents information previously cached by
