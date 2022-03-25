@@ -650,12 +650,11 @@ fn install_default_features() {
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[ERROR] no binaries are available for install using the selected features
+[WARNING] none of the package's binaries are available for install using the selected features
 ",
         )
         .run();
@@ -772,12 +771,11 @@ fn install_multiple_required_features() {
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[ERROR] no binaries are available for install using the selected features
+[WARNING] none of the package's binaries are available for install using the selected features
 ",
         )
         .run();
@@ -1029,12 +1027,11 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 
     // install
     p.cargo("install --path .")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[ERROR] no binaries are available for install using the selected features
+[WARNING] none of the package's binaries are available for install using the selected features
 ",
         )
         .run();

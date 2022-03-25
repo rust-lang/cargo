@@ -5,7 +5,8 @@ use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
-use crate::ops::common_for_install_and_uninstall::*;
+use crate::ops::CompileFilter;
+use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem, Rustc, ToSemver, VersionReqExt};
@@ -272,7 +273,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         Ok(duplicates)
     }
 
-    fn install_one(mut self) -> CargoResult<()> {
+    fn install_one(mut self) -> CargoResult<bool> {
         self.config.shell().status("Installing", &self.pkg)?;
 
         let dst = self.root.join("bin").into_path_unlocked();
@@ -322,7 +323,41 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             })
             .collect::<CargoResult<_>>()?;
         if binaries.is_empty() {
-            bail!("no binaries are available for install using the selected features");
+            // Cargo already warns the user if they use a target specifier that matches nothing,
+            // but we want to error if the user asked for a _particular_ binary to be installed,
+            // and we didn't end up installing it.
+            //
+            // NOTE: This _should_ be impossible to hit since --bin=does_not_exist will fail on
+            // target selection, and --bin=requires_a without --features=a will fail with "target
+            // .. requires the features ..". But rather than assume that's the case, we define the
+            // behavior for this fallback case as well.
+            if matches!(
+                self.opts.filter,
+                CompileFilter::Only {
+                    bins: FilterRule::Just(..),
+                    ..
+                }
+            ) {
+                bail!("no binaries are available for install using the selected features");
+            }
+
+            // If the user did not specify a filter and there _are_ binaries available, but none
+            // were selected given the current set of features, let the user know.
+            if matches!(
+                self.opts.filter,
+                CompileFilter::Default { .. }
+                    | CompileFilter::Only {
+                        bins: FilterRule::All,
+                        ..
+                    }
+            ) && self.pkg.targets().iter().any(|t| t.is_bin())
+            {
+                self.config
+                    .shell()
+                    .warn("none of the package's binaries are available for install using the selected features")?;
+            }
+
+            return Ok(false);
         }
         // This is primarily to make testing easier.
         binaries.sort_unstable();
@@ -455,7 +490,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     executables(successful_bins.iter())
                 ),
             )?;
-            Ok(())
+            Ok(true)
         } else {
             if !to_install.is_empty() {
                 self.config.shell().status(
@@ -481,7 +516,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     ),
                 )?;
             }
-            Ok(())
+            Ok(true)
         }
     }
 
@@ -545,10 +580,11 @@ pub fn install(
             no_track,
             true,
         )?;
+        let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
-            installable_pkg.install_one()?;
+            installed_anything = installable_pkg.install_one()?;
         }
-        (true, false)
+        (installed_anything, false)
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
@@ -601,8 +637,10 @@ pub fn install(
 
         for (krate, result) in install_results {
             match result {
-                Ok(()) => {
-                    succeeded.push(krate);
+                Ok(installed) => {
+                    if installed {
+                        succeeded.push(krate);
+                    }
                 }
                 Err(e) => {
                     crate::display_error(&e, &mut config.shell());
