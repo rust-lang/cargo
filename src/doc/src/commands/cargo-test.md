@@ -310,6 +310,17 @@ specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to <code>target</code> in the root of the workspace.</dd>
 
+    
+ 
+If we want to see printed values for passing tests as well, we can tell Rust
+to also show the output of successful tests at the end with `--show-output`.
+
+```console
+$ cargo test -- --show-output
+```
+
+When we run the tests in Listing 11-10 again with the `--show-output` flag, we
+see the following output.
 
 </dl>
 
