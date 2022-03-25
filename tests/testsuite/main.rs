@@ -57,6 +57,7 @@ mod git_auth;
 mod git_gc;
 mod glob_targets;
 mod help;
+mod inheritable_workspace_fields;
 mod init;
 mod install;
 mod install_upgrade;

@@ -68,6 +68,7 @@ Each new feature described below should explain how to use it.
     * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
     * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
+    * [workspace-inheritance](#workspace-inheritance) - Allow workspace members to share fields and dependencies
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
@@ -1355,3 +1356,65 @@ See the [Features chapter](features.md#dependency-features) for more information
 The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
 (`--timings=html` and the machine-readable `--timings=json` output remain
 unstable and require `-Zunstable-options`.)
+
+### workspace-inheritance
+
+* RFC: [#2906](https://github.com/rust-lang/rfcs/blob/master/text/2906-cargo-workspace-deduplicate.md)
+* Tracking Issue: [#8415](https://github.com/rust-lang/cargo/issues/8415)
+
+The `workspace-inheritance` feature allows workspace members to inherit fields
+and dependencies from a workspace.
+
+Example 1: 
+
+```toml
+# in workspace's Cargo.toml
+[workspace.dependencies]
+log = "0.3.1"
+log2 = { version = "2.0.0", package = "log" }
+serde = { git = 'https://github.com/serde-rs/serde' }
+wasm-bindgen-cli = { path = "crates/cli" }
+```
+
+```toml
+# in a workspace member's Cargo.toml
+[dependencies]
+log = { workspace = true }
+log2 = { workspace = true }
+```
+
+Example 2: 
+```toml
+# in workspace's Cargo.toml
+[workspace]
+version = "1.2.3"
+authors = ["Nice Folks"]
+description = "..."
+documentation = "https://example.github.io/example"
+readme = "README.md"
+homepage = "https://example.com"
+repository = "https://github.com/example/example"
+license = "MIT"
+license-file = "./LICENSE"
+keywords = ["cli"]
+categories = ["development-tools"]
+publish = false
+edition = "2018"
+```
+
+```toml
+# in a workspace member's Cargo.toml
+[package]
+version = { workspace = true }
+authors = { workspace = true }
+description = { workspace = true }
+documentation = { workspace = true }
+readme = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+license-file = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+publish = { workspace = true }
+```

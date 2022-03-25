@@ -10,7 +10,9 @@ pub use self::resolver::{Resolve, ResolveVersion};
 pub use self::shell::{Shell, Verbosity};
 pub use self::source::{GitReference, Source, SourceId, SourceMap};
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
-pub use self::workspace::{MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig};
+pub use self::workspace::{
+    InheritableFields, MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig,
+};
 
 pub mod compiler;
 pub mod dependency;

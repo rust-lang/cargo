@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::{bail, Context as _};
+use anyhow::{anyhow, bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
 use log::debug;
@@ -22,7 +22,9 @@ use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
-use crate::util::toml::{read_manifest, TomlDependency, TomlProfiles};
+use crate::util::toml::{
+    read_manifest, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
+};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
 
@@ -123,6 +125,15 @@ pub enum WorkspaceConfig {
     Member { root: Option<String> },
 }
 
+impl WorkspaceConfig {
+    pub fn inheritable(&self) -> Option<&InheritableFields> {
+        match self {
+            WorkspaceConfig::Root(root) => Some(&root.inheritable_fields),
+            WorkspaceConfig::Member { .. } => None,
+        }
+    }
+}
+
 /// Intermediate configuration of a workspace root in a manifest.
 ///
 /// Knows the Workspace Root path, as well as `members` and `exclude` lists of path patterns, which
@@ -133,6 +144,7 @@ pub struct WorkspaceRootConfig {
     members: Option<Vec<String>>,
     default_members: Option<Vec<String>>,
     exclude: Vec<String>,
+    inheritable_fields: InheritableFields,
     custom_metadata: Option<toml::Value>,
 }
 
@@ -1567,6 +1579,7 @@ impl WorkspaceRootConfig {
         members: &Option<Vec<String>>,
         default_members: &Option<Vec<String>>,
         exclude: &Option<Vec<String>>,
+        inheritable: &Option<InheritableFields>,
         custom_metadata: &Option<toml::Value>,
     ) -> WorkspaceRootConfig {
         WorkspaceRootConfig {
@@ -1574,10 +1587,10 @@ impl WorkspaceRootConfig {
             members: members.clone(),
             default_members: default_members.clone(),
             exclude: exclude.clone().unwrap_or_default(),
+            inheritable_fields: inheritable.clone().unwrap_or_default(),
             custom_metadata: custom_metadata.clone(),
         }
     }
-
     /// Checks the path against the `excluded` list.
     ///
     /// This method does **not** consider the `members` list.
@@ -1639,5 +1652,192 @@ impl WorkspaceRootConfig {
             .map(|p| p.with_context(|| format!("unable to match path to pattern `{}`", &path)))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
+    }
+}
+
+/// A group of fields that are inheritable by members of the workspace
+#[derive(Clone, Debug, Default)]
+pub struct InheritableFields {
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    version: Option<semver::Version>,
+    authors: Option<Vec<String>>,
+    description: Option<String>,
+    homepage: Option<String>,
+    documentation: Option<String>,
+    readme: Option<StringOrBool>,
+    keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
+    license: Option<String>,
+    license_file: Option<String>,
+    repository: Option<String>,
+    publish: Option<VecStringOrBool>,
+    edition: Option<String>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+}
+
+impl InheritableFields {
+    pub fn new(
+        dependencies: Option<BTreeMap<String, TomlDependency>>,
+        version: Option<semver::Version>,
+        authors: Option<Vec<String>>,
+        description: Option<String>,
+        homepage: Option<String>,
+        documentation: Option<String>,
+        readme: Option<StringOrBool>,
+        keywords: Option<Vec<String>>,
+        categories: Option<Vec<String>>,
+        license: Option<String>,
+        license_file: Option<String>,
+        repository: Option<String>,
+        publish: Option<VecStringOrBool>,
+        edition: Option<String>,
+        badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    ) -> InheritableFields {
+        Self {
+            dependencies,
+            version,
+            authors,
+            description,
+            homepage,
+            documentation,
+            readme,
+            keywords,
+            categories,
+            license,
+            license_file,
+            repository,
+            publish,
+            edition,
+            badges,
+        }
+    }
+
+    pub fn dependencies(&self) -> CargoResult<BTreeMap<String, TomlDependency>> {
+        self.dependencies.clone().map_or(
+            Err(anyhow!("`workspace.dependencies` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn get_dependency(&self, name: &str) -> CargoResult<TomlDependency> {
+        self.dependencies.clone().map_or(
+            Err(anyhow!("`workspace.dependencies` was not defined")),
+            |deps| {
+                deps.get(name).map_or(
+                    Err(anyhow!(
+                        "`dependency.{}` was not found in `workspace.dependencies`",
+                        name
+                    )),
+                    |dep| Ok(dep.clone()),
+                )
+            },
+        )
+    }
+
+    pub fn version(&self) -> CargoResult<semver::Version> {
+        self.version
+            .clone()
+            .map_or(Err(anyhow!("`workspace.version` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn authors(&self) -> CargoResult<Vec<String>> {
+        self.authors
+            .clone()
+            .map_or(Err(anyhow!("`workspace.authors` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn description(&self) -> CargoResult<String> {
+        self.description.clone().map_or(
+            Err(anyhow!("`workspace.description` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn homepage(&self) -> CargoResult<String> {
+        self.homepage
+            .clone()
+            .map_or(Err(anyhow!("`workspace.homepage` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn documentation(&self) -> CargoResult<String> {
+        self.documentation.clone().map_or(
+            Err(anyhow!("`workspace.documentation` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn readme(&self) -> CargoResult<StringOrBool> {
+        self.readme
+            .clone()
+            .map_or(Err(anyhow!("`workspace.readme` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn keywords(&self) -> CargoResult<Vec<String>> {
+        self.keywords
+            .clone()
+            .map_or(Err(anyhow!("`workspace.keywords` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn categories(&self) -> CargoResult<Vec<String>> {
+        self.categories.clone().map_or(
+            Err(anyhow!("`workspace.categories` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn license(&self) -> CargoResult<String> {
+        self.license
+            .clone()
+            .map_or(Err(anyhow!("`workspace.license` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn license_file(&self) -> CargoResult<String> {
+        self.license_file.clone().map_or(
+            Err(anyhow!("`workspace.license_file` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn repository(&self) -> CargoResult<String> {
+        self.repository.clone().map_or(
+            Err(anyhow!("`workspace.repository` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn publish(&self) -> CargoResult<VecStringOrBool> {
+        self.publish
+            .clone()
+            .map_or(Err(anyhow!("`workspace.publish` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn edition(&self) -> CargoResult<String> {
+        self.edition
+            .clone()
+            .map_or(Err(anyhow!("`workspace.edition` was not defined")), |d| {
+                Ok(d)
+            })
+    }
+
+    pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
+        self.badges
+            .clone()
+            .map_or(Err(anyhow!("`workspace.badges` was not defined")), |d| {
+                Ok(d)
+            })
     }
 }
