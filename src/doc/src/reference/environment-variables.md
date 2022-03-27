@@ -310,7 +310,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
   those defined in `RUSTFLAGS`). Some examples of what these variables are:
     * `CARGO_CFG_UNIX` — Set on [unix-like platforms].
     * `CARGO_CFG_WINDOWS` — Set on [windows-like platforms].
-    * `CARGO_CFG_TARGET_FAMILY=unix` — The [target family], either `unix` or `windows`.
+    * `CARGO_CFG_TARGET_FAMILY=unix` — The [target family], for example `unix` or `windows`.
     * `CARGO_CFG_TARGET_OS=macos` — The [target operating system].
     * `CARGO_CFG_TARGET_ARCH=x86_64` — The CPU [target architecture].
     * `CARGO_CFG_TARGET_VENDOR=apple` — The [target vendor].
