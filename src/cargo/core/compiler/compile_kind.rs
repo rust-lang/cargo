@@ -1,5 +1,4 @@
 use crate::core::Target;
-use crate::util::config::BuildTargetConfigValue;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, StableHasher};
@@ -53,11 +52,8 @@ impl CompileKind {
         config: &Config,
         targets: &[String],
     ) -> CargoResult<Vec<CompileKind>> {
-        if targets.len() > 1 && !config.cli_unstable().multitarget {
-            bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
-        }
-        if !targets.is_empty() {
-            return Ok(targets
+        let dedup = |targets: &[String]| {
+            Ok(targets
                 .iter()
                 .map(|value| Ok(CompileKind::Target(CompileTarget::new(value)?)))
                 // First collect into a set to deduplicate any `--target` passed
@@ -65,36 +61,22 @@ impl CompileKind {
                 .collect::<CargoResult<BTreeSet<_>>>()?
                 // ... then generate a flat list for everything else to use.
                 .into_iter()
-                .collect());
+                .collect())
+        };
+
+        if !targets.is_empty() {
+            if targets.len() > 1 && !config.cli_unstable().multitarget {
+                bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
+            }
+            return dedup(targets);
         }
 
         let kinds = match &config.build_config()?.target {
-            None => vec![CompileKind::Host],
-            Some(build_target_config) => {
-                let values = build_target_config.values(config);
-                if values.len() > 1 && !config.cli_unstable().multitarget {
-                    bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
-                }
-                values
-                    .into_iter()
-                    .map(|k| {
-                        use BuildTargetConfigValue::*;
-                        let value = match &k {
-                            Path(p) => p.to_str().expect("must be utf-8 in toml"),
-                            Simple(s) => s,
-                        };
-                        CompileTarget::new(value).map(CompileKind::Target)
-                    })
-                    // First collect into a set to deduplicate any `--target` passed
-                    // more than once...
-                    .collect::<CargoResult<BTreeSet<_>>>()?
-                    // ... then generate a flat list for everything else to use.
-                    .into_iter()
-                    .collect()
-            }
+            None => Ok(vec![CompileKind::Host]),
+            Some(build_target_config) => dedup(&build_target_config.values(config)?),
         };
 
-        Ok(kinds)
+        kinds
     }
 
     /// Hash used for fingerprinting.

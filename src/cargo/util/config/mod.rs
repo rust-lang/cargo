@@ -2203,32 +2203,36 @@ enum BuildTargetConfigInner {
 }
 
 impl BuildTargetConfig {
-    /// Gets values of `build.target` as a list of [`BuildTargetConfigValue`].
-    pub fn values(&self, config: &Config) -> Vec<BuildTargetConfigValue<'_>> {
-        let def_root = self.inner.definition.root(config);
-        fn map<'a>(s: &'a str, root: &Path) -> BuildTargetConfigValue<'a> {
+    /// Gets values of `build.target` as a list of strings.
+    pub fn values(&self, config: &Config) -> CargoResult<Vec<String>> {
+        let map = |s: &String| {
             if s.ends_with(".json") {
-                // To absolute path.
-                BuildTargetConfigValue::Path(root.join(s))
+                // Path to a target specification file (in JSON).
+                // <https://doc.rust-lang.org/rustc/targets/custom.html>
+                self.inner
+                    .definition
+                    .root(config)
+                    .join(s)
+                    .to_str()
+                    .expect("must be utf-8 in toml")
+                    .to_string()
             } else {
-                BuildTargetConfigValue::Simple(s)
+                // A string. Probably a target triple.
+                s.to_string()
             }
-        }
-        match &self.inner.val {
-            BuildTargetConfigInner::One(s) => vec![map(s, def_root)],
-            BuildTargetConfigInner::Many(v) => v.iter().map(|s| map(s, def_root)).collect(),
-        }
+        };
+        let values = match &self.inner.val {
+            BuildTargetConfigInner::One(s) => vec![map(s)],
+            BuildTargetConfigInner::Many(v) => {
+                if v.len() > 1 && !config.cli_unstable().multitarget {
+                    bail!("specifying multiple `target` in `build.target` config value requires `-Zmultitarget`")
+                } else {
+                    v.iter().map(map).collect()
+                }
+            }
+        };
+        Ok(values)
     }
-}
-
-/// Represents a value of `build.target`.
-#[derive(Debug)]
-pub enum BuildTargetConfigValue<'a> {
-    /// Path to a target specification file (in JSON).
-    /// <https://doc.rust-lang.org/rustc/targets/custom.html>
-    Path(PathBuf),
-    /// A string. Probably a target triple.
-    Simple(&'a str),
 }
 
 #[derive(Deserialize, Default)]
