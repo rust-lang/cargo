@@ -717,7 +717,7 @@ fn compute_deps_doc(
                 unit_for.root_compile_kind(),
             );
             deps_of(scrape_unit, state, unit_for)?;
-            ret.push(new_unit_dep(
+            ret.push(new_unit_dep_with_profile(
                 state,
                 scrape_unit,
                 &scrape_unit.pkg,
@@ -725,6 +725,7 @@ fn compute_deps_doc(
                 unit_for,
                 scrape_unit.kind,
                 scrape_unit.mode,
+                scrape_unit.profile.clone(),
                 IS_NO_ARTIFACT_DEP,
             )?);
         }
