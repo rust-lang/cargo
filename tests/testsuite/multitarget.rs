@@ -30,7 +30,7 @@ fn double_target_rejected_with_config() {
         .build();
 
     p.cargo("build")
-        .with_stderr("[ERROR] specifying multiple `--target` flags requires `-Zmultitarget`")
+        .with_stderr("[ERROR] specifying multiple `target` in `build.target` config value requires `-Zmultitarget`")
         .with_status(101)
         .run();
 }
