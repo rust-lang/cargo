@@ -2561,6 +2561,60 @@ fn scrape_examples_missing_flag() {
 }
 
 #[cargo_test]
+fn scrape_examples_with_overriden_profiles() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    // #10500 is an issue where different profile overrides would make `cargo -Z
+    // rustdoc-scrape-examples` panic due to incomplete memoization of some
+    // units to scrape.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [profile.dev]
+                panic = "abort"
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [profile.dev.build-override]
+                debug = 0
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
 fn lib_before_bin() {
     // Checks that the library is documented before the binary.
     // Previously they were built concurrently, which can cause issues
