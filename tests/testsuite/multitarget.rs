@@ -272,10 +272,7 @@ fn works_with_env() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
-        .env("CARGO_BUILD_TARGET", t)
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build").env("CARGO_BUILD_TARGET", t).run();
 
     assert!(p.target_bin(t, "foo").is_file());
 }
