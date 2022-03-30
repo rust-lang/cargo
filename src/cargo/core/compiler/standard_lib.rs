@@ -197,7 +197,7 @@ pub fn generate_std_roots(
             // std does not have artifact dependencies at the moment
             let unit_for = UnitFor::new_normal(explicit_host_kind);
             let features =
-                std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
+                std_features.activated_features(pkg.package_id(), FeaturesFor::default());
             (pkg, lib, unit_for, features)
         })
         .collect();
