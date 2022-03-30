@@ -1419,6 +1419,19 @@ fn test_install_git_cannot_be_a_base_url() {
 }
 
 #[cargo_test]
+fn test_install_from_git_generate_suggestion() {
+    registry::init();
+    cargo_process("install https://github.com/rust-lang/cargo")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+error: could not find `https://github.com/rust-lang/cargo` in registry `crates-io` with version `*`. Try adding `--git https://github.com/rust-lang/cargo`",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn uninstall_multiple_and_specifying_bin() {
     cargo_process("uninstall foo bar --bin baz")
         .with_status(101)
