@@ -234,27 +234,26 @@ impl<'a> Graph<'a> {
         let mut dupes: Vec<(&Node, usize)> = packages
             .into_iter()
             .filter(|(_name, indexes)| {
-                let mut pkg_map = HashMap::new();
                 indexes
                     .into_iter()
-                    .filter(|(node, _)| {
-                        // Do not treat duplicates on the host or target as duplicates.
-                        let ignore_kind_package = match node {
+                    .map(|(node, _)| {
+                        match node {
                             Node::Package {
                                 package_id,
                                 features,
                                 ..
-                            } => Node::Package {
-                                package_id: package_id.clone(),
-                                features: features.clone(),
-                                kind: CompileKind::Host,
-                            },
+                            } => {
+                                // Do not treat duplicates on the host or target as duplicates.
+                                Node::Package {
+                                    package_id: package_id.clone(),
+                                    features: features.clone(),
+                                    kind: CompileKind::Host,
+                                }
+                            }
                             _ => unreachable!(),
-                        };
-                        !pkg_map.contains_key(&ignore_kind_package)
-                            && pkg_map.insert(ignore_kind_package, ()).is_none()
+                        }
                     })
-                    .collect::<Vec<&(&Node, usize)>>()
+                    .collect::<HashSet<_>>()
                     .len()
                     > 1
             })
