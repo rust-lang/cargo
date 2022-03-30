@@ -2224,8 +2224,8 @@ impl BuildTargetConfig {
         let values = match &self.inner.val {
             BuildTargetConfigInner::One(s) => vec![map(s)],
             BuildTargetConfigInner::Many(v) => {
-                if v.len() > 1 && !config.cli_unstable().multitarget {
-                    bail!("specifying multiple `target` in `build.target` config value requires `-Zmultitarget`")
+                if !config.cli_unstable().multitarget {
+                    bail!("specifying an array in `build.target` config value requires `-Zmultitarget`")
                 } else {
                     v.iter().map(map).collect()
                 }

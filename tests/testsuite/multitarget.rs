@@ -16,7 +16,7 @@ fn double_target_rejected() {
 }
 
 #[cargo_test]
-fn double_target_rejected_with_config() {
+fn array_of_target_rejected_with_config() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
         .file("src/main.rs", "fn main() {}")
@@ -30,7 +30,24 @@ fn double_target_rejected_with_config() {
         .build();
 
     p.cargo("build")
-        .with_stderr("[ERROR] specifying multiple `target` in `build.target` config value requires `-Zmultitarget`")
+        .with_stderr(
+            "[ERROR] specifying an array in `build.target` config value requires `-Zmultitarget`",
+        )
+        .with_status(101)
+        .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [build]
+            target = ["a"]
+        "#,
+    );
+
+    p.cargo("build")
+        .with_stderr(
+            "[ERROR] specifying an array in `build.target` config value requires `-Zmultitarget`",
+        )
         .with_status(101)
         .run();
 }
