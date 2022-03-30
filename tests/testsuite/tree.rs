@@ -985,6 +985,51 @@ cat v2.0.0
 }
 
 #[cargo_test]
+fn duplicates_with_target() {
+    // --target flag
+    if cross_compile::disabled() {
+        return;
+    }
+    Package::new("a", "1.0.0").publish();
+    Package::new("dog", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            a = "1.0"
+            dog = "1.0"
+
+            [build-dependencies]
+            a = "1.0"
+            dog = "1.0"
+
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+    p.cargo("tree -d").with_stdout("").run();
+
+    p.cargo("tree -d --target")
+        .arg(alternate())
+        .with_stdout("")
+        .run();
+
+    p.cargo("tree -d --target")
+        .arg(rustc_host())
+        .with_stdout("")
+        .run();
+
+    p.cargo("tree -d --target=all").with_stdout("").run();
+}
+
+#[cargo_test]
 fn charset() {
     let p = make_simple_proj();
     p.cargo("tree --charset ascii")
