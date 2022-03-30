@@ -47,7 +47,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     }
 
     if !ws.config().lock_update_allowed() {
-        let flag = if ws.config().network_allowed() {
+        let flag = if ws.config().locked() {
             "--locked"
         } else {
             "--frozen"
