@@ -854,6 +854,22 @@ fn proc_macro() {
 }
 
 #[cargo_test]
+fn check_keep_going() {
+    let foo = project()
+        .file("src/bin/one.rs", "compile_error!(\"ONE\"); fn main() {}")
+        .file("src/bin/two.rs", "compile_error!(\"TWO\"); fn main() {}")
+        .build();
+
+    // Due to -j1, without --keep-going only one of the two bins would be built.
+    foo.cargo("check -j1 --keep-going -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("error: ONE")
+        .with_stderr_contains("error: TWO")
+        .run();
+}
+
+#[cargo_test]
 fn does_not_use_empty_rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check").env("RUSTC_WRAPPER", "").run();

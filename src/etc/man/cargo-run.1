@@ -273,6 +273,13 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
+.sp
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+\fB\-Zunstable\-options\fR\&.
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

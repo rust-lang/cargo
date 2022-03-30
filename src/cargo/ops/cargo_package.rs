@@ -30,6 +30,7 @@ pub struct PackageOpts<'cfg> {
     pub allow_dirty: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
+    pub keep_going: bool,
     pub to_package: ops::Packages,
     pub targets: Vec<String>,
     pub cli_features: CliFeatures,
@@ -177,6 +178,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
                 allow_dirty: opts.allow_dirty,
                 verify: opts.verify,
                 jobs: opts.jobs,
+                keep_going: opts.keep_going,
                 to_package: ops::Packages::Default,
                 targets: opts.targets.clone(),
                 cli_features: cli_features,
@@ -755,7 +757,13 @@ fn run_verify(
     ops::compile_with_exec(
         &ws,
         &ops::CompileOptions {
-            build_config: BuildConfig::new(config, opts.jobs, &opts.targets, CompileMode::Build)?,
+            build_config: BuildConfig::new(
+                config,
+                opts.jobs,
+                opts.keep_going,
+                &opts.targets,
+                CompileMode::Build,
+            )?,
             cli_features: opts.cli_features.clone(),
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {

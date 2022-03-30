@@ -91,6 +91,7 @@ which defaults to `crates-io`.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 ### Display Options

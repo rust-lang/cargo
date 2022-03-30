@@ -434,6 +434,12 @@ Rust test harness runs benchmarks serially in a single thread.
 the number of CPUs.</dd>
 
 
+<dt class="option-term" id="option-cargo-bench---keep-going"><a class="option-anchor" href="#option-cargo-bench---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+<code>-Zunstable-options</code>.</dd>
+
+
 </dl>
 
 ## ENVIRONMENT

@@ -85,8 +85,10 @@ pub struct CompileOptions {
 
 impl CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
+        let jobs = None;
+        let keep_going = false;
         Ok(CompileOptions {
-            build_config: BuildConfig::new(config, None, &[], mode)?,
+            build_config: BuildConfig::new(config, jobs, keep_going, &[], mode)?,
             cli_features: CliFeatures::new_all(false),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {

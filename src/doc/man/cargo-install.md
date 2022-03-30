@@ -181,6 +181,7 @@ See also the `--profile` option for choosing a specific profile by name.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 ### Display Options

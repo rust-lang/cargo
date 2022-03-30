@@ -90,6 +90,7 @@ Run the specified example.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 {{> section-environment }}

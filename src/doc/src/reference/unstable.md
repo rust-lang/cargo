@@ -81,7 +81,8 @@ Each new feature described below should explain how to use it.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
-    * [crate-type](#crate-type) - Supports passing crate types to the compiler.
+    * [crate-type](#crate-type) — Supports passing crate types to the compiler.
+    * [keep-going](#keep-going) — Build as much as possible rather than aborting on the first error.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
@@ -446,6 +447,26 @@ command-line option:
 
 ```console
 cargo rustc --crate-type lib,cdylib -Z unstable-options
+```
+
+### keep-going
+* Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/10496)
+
+`cargo build --keep-going` (and similarly for `check`, `test` etc) will build as
+many crates in the dependency graph as possible, rather than aborting the build
+at the first one that fails to build.
+
+For example if the current package depends on dependencies `fails` and `works`,
+one of which fails to build, `cargo check -j1` may or may not build the one that
+succeeds (depending on which one of the two builds Cargo picked to run first),
+whereas `cargo check -j1 --keep-going` would definitely run both builds, even if
+the one run first fails.
+
+The `-Z unstable-options` command-line option must be used in order to use
+`--keep-going` while it is not yet stable:
+
+```console
+cargo check --keep-going -Z unstable-options
 ```
 
 ### config-cli

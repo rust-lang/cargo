@@ -296,6 +296,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
+       --keep-going
+           Build as many crates in the dependency graph as possible, rather
+           than aborting the build on the first one that fails to build.
+           Unstable, requires -Zunstable-options.
+
        --future-incompat-report
            Displays a future-incompat report for any future-incompatible
            warnings produced during execution of this command
