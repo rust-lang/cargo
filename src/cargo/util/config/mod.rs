@@ -2169,7 +2169,7 @@ pub struct CargoBuildConfig {
     pub dep_info_basedir: Option<ConfigRelativePath>,
     pub target_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
-    pub target: Option<ConfigRelativePath>,
+    pub target: Option<BuildTargetConfig>,
     pub jobs: Option<u32>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
@@ -2178,6 +2178,61 @@ pub struct CargoBuildConfig {
     pub rustc: Option<ConfigRelativePath>,
     pub rustdoc: Option<ConfigRelativePath>,
     pub out_dir: Option<ConfigRelativePath>,
+}
+
+/// Configuration for `build.target`.
+///
+/// Accepts in the following forms:
+///
+/// ```toml
+/// target = "a"
+/// target = ["a"]
+/// target = ["a", "b"]
+/// ```
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
+pub struct BuildTargetConfig {
+    inner: Value<BuildTargetConfigInner>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum BuildTargetConfigInner {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl BuildTargetConfig {
+    /// Gets values of `build.target` as a list of strings.
+    pub fn values(&self, config: &Config) -> CargoResult<Vec<String>> {
+        let map = |s: &String| {
+            if s.ends_with(".json") {
+                // Path to a target specification file (in JSON).
+                // <https://doc.rust-lang.org/rustc/targets/custom.html>
+                self.inner
+                    .definition
+                    .root(config)
+                    .join(s)
+                    .to_str()
+                    .expect("must be utf-8 in toml")
+                    .to_string()
+            } else {
+                // A string. Probably a target triple.
+                s.to_string()
+            }
+        };
+        let values = match &self.inner.val {
+            BuildTargetConfigInner::One(s) => vec![map(s)],
+            BuildTargetConfigInner::Many(v) => {
+                if !config.cli_unstable().multitarget {
+                    bail!("specifying an array in `build.target` config value requires `-Zmultitarget`")
+                } else {
+                    v.iter().map(map).collect()
+                }
+            }
+        };
+        Ok(values)
+    }
 }
 
 #[derive(Deserialize, Default)]

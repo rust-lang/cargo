@@ -238,6 +238,12 @@ or running tests for both targets:
 cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
 ```
 
+This can also be specified in `.cargo/config.toml` files.
+
+```toml
+[build]
+target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+```
 
 #### New `dir-name` attribute
 
