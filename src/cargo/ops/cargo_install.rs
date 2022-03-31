@@ -331,27 +331,29 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             // target selection, and --bin=requires_a without --features=a will fail with "target
             // .. requires the features ..". But rather than assume that's the case, we define the
             // behavior for this fallback case as well.
-            if matches!(
-                self.opts.filter,
-                CompileFilter::Only {
-                    bins: FilterRule::Just(..),
-                    ..
+            if let CompileFilter::Only { bins, examples, .. } = &self.opts.filter {
+                let mut any_specific = false;
+                if let FilterRule::Just(ref v) = bins {
+                    if !v.is_empty() {
+                        any_specific = true;
+                    }
                 }
-            ) {
-                bail!("no binaries are available for install using the selected features");
+                if let FilterRule::Just(ref v) = examples {
+                    if !v.is_empty() {
+                        any_specific = true;
+                    }
+                }
+                if any_specific {
+                    bail!("no binaries are available for install using the selected features");
+                }
             }
 
-            // If the user did not specify a filter and there _are_ binaries available, but none
-            // were selected given the current set of features, let the user know.
-            if matches!(
-                self.opts.filter,
-                CompileFilter::Default { .. }
-                    | CompileFilter::Only {
-                        bins: FilterRule::All,
-                        ..
-                    }
-            ) && self.pkg.targets().iter().any(|t| t.is_bin())
-            {
+            // If there _are_ binaries available, but none were selected given the current set of
+            // features, let the user know.
+            //
+            // Note that we know at this point that _if_ bins or examples is set to `::Just`,
+            // they're `::Just([])`, which is `FilterRule::none()`.
+            if self.pkg.targets().iter().any(|t| t.is_bin()) {
                 self.config
                     .shell()
                     .warn("none of the package's binaries are available for install using the selected features")?;

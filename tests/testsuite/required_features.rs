@@ -754,20 +754,51 @@ fn install_multiple_required_features() {
                 name = "foo_2"
                 path = "src/foo_2.rs"
                 required-features = ["a"]
+
+                [[example]]
+                name = "foo_3"
+                path = "src/foo_3.rs"
+                required-features = ["b", "c"]
+
+                [[example]]
+                name = "foo_4"
+                path = "src/foo_4.rs"
+                required-features = ["a"]
             "#,
         )
         .file("src/foo_1.rs", "fn main() {}")
         .file("src/foo_2.rs", "fn main() {}")
+        .file("src/foo_3.rs", "fn main() {}")
+        .file("src/foo_4.rs", "fn main() {}")
         .build();
 
     p.cargo("install --path .").run();
     assert_has_not_installed_exe(cargo_home(), "foo_1");
     assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    p.cargo("uninstall foo").run();
+
+    p.cargo("install --path . --bins --examples").run();
+    assert_has_not_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_installed_exe(cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --features c").run();
     assert_has_installed_exe(cargo_home(), "foo_1");
     assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    p.cargo("uninstall foo").run();
+
+    p.cargo("install --path . --features c --bins --examples")
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_installed_exe(cargo_home(), "foo_3");
+    assert_has_installed_exe(cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -779,8 +810,40 @@ fn install_multiple_required_features() {
 ",
         )
         .run();
+    p.cargo("install --path . --no-default-features --bins")
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 ([..])
+[WARNING] Target filter `bins` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+",
+        )
+        .run();
+    p.cargo("install --path . --no-default-features --examples")
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 ([..])
+[WARNING] Target filter `examples` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+",
+        )
+        .run();
+    p.cargo("install --path . --no-default-features --bins --examples")
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 ([..])
+[WARNING] Target filters `bins`, `examples` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+",
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo_1");
     assert_has_not_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_not_installed_exe(cargo_home(), "foo_4");
 }
 
 #[cargo_test]
