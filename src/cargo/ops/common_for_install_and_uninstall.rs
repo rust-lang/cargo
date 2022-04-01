@@ -17,7 +17,7 @@ use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::Config;
+use crate::util::{Config, OptVersionReq};
 use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
@@ -522,25 +522,6 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
-fn is_package_name_a_git_url(package_name: &InternedString) -> bool {
-    if let Ok(url) = Url::parse(package_name) {
-        if let Some(domain) = url.domain() {
-            // REVIEW
-            // Are there any other git services without "git"
-            // in the domain?
-            // bitbucket?
-            // Is it possible to ask the cargo/crates team for
-            // some stats where crates projects are currently hosted on
-            return domain.contains("git");
-        }
-    }
-    false
-}
-
-fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> bool {
-    return dep.source_id().is_registry() && is_package_name_a_git_url(&dep.package_name());
-}
-
 /// Gets a Package based on command-line requirements.
 pub fn select_dep_pkg<T>(
     source: &mut T,
@@ -566,43 +547,111 @@ where
             Poll::Pending => source.block_until_ready()?,
         }
     };
-    match deps.iter().map(|p| p.package_id()).max() {
-        Some(pkgid) => {
-            let pkg = Box::new(source).download_now(pkgid, config)?;
-            Ok(pkg)
+    if let Some(pkgid) = deps.iter().map(|p| p.package_id()).max() {
+        let pkg = Box::new(source).download_now(pkgid, config)?;
+        Ok(pkg)
+    } else {
+        let spe = SelectPackageError::new(dep, source);
+        bail!(anyhow::Error::from(spe))
+    }
+}
+
+struct YankedInfo {
+    package_name: InternedString,
+    source_id: SourceId,
+}
+
+struct PackageNotFound {
+    package_name: InternedString,
+    source_id: SourceId,
+    // REVIEW make it a reference or is cloning ok?
+    version_req: OptVersionReq,
+}
+
+enum SelectPackageError {
+    /// Return when the Package had been yanked from the Registry
+    Yanked(YankedInfo),
+    // Return when someone accidentally passed a git(hub|lab|ea) URL as the package name
+    UrlTreatedAsPackageName(PackageNotFound),
+    // Catch-all variant for all other errors
+    CouldntFindInRegistry(PackageNotFound),
+}
+
+fn is_package_name_a_git_url(package_name: &InternedString) -> bool {
+    if let Ok(url) = Url::parse(package_name) {
+        if let Some(domain) = url.domain() {
+            // REVIEW
+            // Are there any other git services without "git"
+            // in the domain?
+            // bitbucket?
+            // Is it possible to ask the cargo/crates team for
+            // some stats where crates projects are currently hosted on
+            return domain.contains("git");
         }
-        None => {
-            let is_yanked: bool = if dep.version_req().is_exact() {
-                let version: String = dep.version_req().to_string();
-                PackageId::new(dep.package_name(), &version[1..], source.source_id())
-                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+    }
+    false
+}
+
+fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> bool {
+    return dep.source_id().is_registry() && is_package_name_a_git_url(&dep.package_name());
+}
+
+impl SelectPackageError {
+    fn new<T>(dep: Dependency, source: &mut T) -> Self
+    where
+        T: Source,
+    {
+        let is_yanked: bool = if dep.version_req().is_exact() {
+            let version: String = dep.version_req().to_string();
+            PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+        } else {
+            false
+        };
+        if is_yanked {
+            SelectPackageError::Yanked(YankedInfo {
+                package_name: dep.package_name(),
+                source_id: source.source_id(),
+            })
+        } else {
+            if was_git_url_miscategorised_as_a_registry_dep(&dep) {
+                SelectPackageError::UrlTreatedAsPackageName(PackageNotFound {
+                    package_name: dep.package_name(),
+                    source_id: source.source_id(),
+                    version_req: dep.version_req().clone(),
+                })
             } else {
-                false
-            };
-            if is_yanked {
-                bail!(
-                    "cannot install package `{}`, it has been yanked from {}",
-                    dep.package_name(),
-                    source.source_id()
-                )
-            } else {
-                if was_git_url_miscategorised_as_a_registry_dep(&dep) {
-                    bail!(
-                        "could not find `{}` in {} with version `{}`. Try adding `--git {}`",
-                        dep.package_name(),
-                        source.source_id(),
-                        dep.version_req(),
-                        dep.package_name(),
-                    )
-                } else {
-                    bail!(
-                        "could not find `{}` in {} with version `{}`",
-                        dep.package_name(),
-                        source.source_id(),
-                        dep.version_req(),
-                    )
-                }
+                SelectPackageError::CouldntFindInRegistry(PackageNotFound {
+                    package_name: dep.package_name(),
+                    source_id: source.source_id(),
+                    version_req: dep.version_req().clone(),
+                })
             }
+        }
+    }
+}
+
+impl From<SelectPackageError> for anyhow::Error {
+    fn from(err: SelectPackageError) -> Self {
+        match err {
+            SelectPackageError::Yanked(info) => anyhow::anyhow!(
+                "cannot install package `{}`, it has been yanked from {}",
+                info.package_name,
+                info.source_id
+            ),
+            SelectPackageError::UrlTreatedAsPackageName(pkg_not_found) => anyhow::anyhow!(
+                "could not find `{}` in {} with version `{}`. Try adding `--git {}`",
+                pkg_not_found.package_name,
+                pkg_not_found.source_id,
+                pkg_not_found.version_req,
+                pkg_not_found.package_name,
+            ),
+            SelectPackageError::CouldntFindInRegistry(pkg_not_found) => anyhow::anyhow!(
+                "could not find `{}` in {} with version `{}`",
+                pkg_not_found.package_name,
+                pkg_not_found.source_id,
+                pkg_not_found.version_req,
+            ),
         }
     }
 }
