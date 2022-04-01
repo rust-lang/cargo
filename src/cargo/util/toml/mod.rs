@@ -2196,7 +2196,18 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
                     label, label
                 )).map(|dep| {
                     match dep {
-                        TomlDependency::Simple(s) => TomlDependency::Simple(s),
+                        TomlDependency::Simple(s) => {
+                            if optional.is_some() || features.is_some() {
+                                TomlDependency::Detailed(DetailedTomlDependency::<P> {
+                                    version: Some(s),
+                                    optional,
+                                    features,
+                                    ..Default::default()
+                                })
+                            } else {
+                                TomlDependency::Simple(s)
+                            }
+                        },
                         TomlDependency::Detailed(d) => {
                             let mut dep = d.clone();
                             dep.add_features(features);
