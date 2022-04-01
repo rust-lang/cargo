@@ -608,13 +608,10 @@ fn formats_source() {
 
     assert_eq!(
         fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
-        r#"#[cfg(test)]
-mod tests {
-  #[test]
-  fn it_works() {
-    let result = 2 + 2;
-    assert_eq!(result, 4);
-  }
+        r#"#[test]
+fn it_works() {
+  let result = 2 + 2;
+  assert_eq!(result, 4);
 }
 "#
     );
@@ -629,13 +626,10 @@ fn ignores_failure_to_format_source() {
 
     assert_eq!(
         fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
-        r#"#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
+        r#"#[test]
+fn it_works() {
+    let result = 2 + 2;
+    assert_eq!(result, 4);
 }
 "#
     );

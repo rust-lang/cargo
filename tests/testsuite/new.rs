@@ -39,13 +39,10 @@ fn simple_lib() {
     let contents = fs::read_to_string(&lib).unwrap();
     assert_eq!(
         contents,
-        r#"#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
+        r#"#[test]
+fn it_works() {
+    let result = 2 + 2;
+    assert_eq!(result, 4);
 }
 "#
     );
