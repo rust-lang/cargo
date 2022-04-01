@@ -353,7 +353,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             //
             // Note that we know at this point that _if_ bins or examples is set to `::Just`,
             // they're `::Just([])`, which is `FilterRule::none()`.
-            if self.pkg.targets().iter().any(|t| t.is_bin()) {
+            if self.pkg.targets().iter().any(|t| t.is_executable()) {
                 self.config
                     .shell()
                     .warn("none of the package's binaries are available for install using the selected features")?;
