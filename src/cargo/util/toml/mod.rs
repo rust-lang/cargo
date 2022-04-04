@@ -20,7 +20,7 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{find_workspace_root, Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{
     Edition, EitherManifest, Feature, Features, InheritableFields, VirtualManifest, Workspace,
 };
@@ -1283,13 +1283,30 @@ impl TomlManifest {
         package_root: &Path,
         config: &Config,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
-        // This is for later when we try to find the workspace root
-        fn get_ws(inheritable: Option<&InheritableFields>) -> CargoResult<&InheritableFields> {
-            match inheritable {
-                Some(inheritable) => Ok(inheritable),
-                None => Err(anyhow!(
-                    "inheriting from a parent workspace is not implemented yet",
-                )),
+        fn get_ws(
+            config: &Config,
+            resolved_path: PathBuf,
+            workspace_config: WorkspaceConfig,
+        ) -> CargoResult<InheritableFields> {
+            match workspace_config {
+                WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+                WorkspaceConfig::Member {
+                    root: Some(ref path_to_root),
+                } => {
+                    let path = resolved_path
+                        .parent()
+                        .unwrap()
+                        .join(path_to_root)
+                        .join("Cargo.toml");
+                    let root_path = paths::normalize_path(&path);
+                    inheritable_from_path(config, root_path)
+                }
+                WorkspaceConfig::Member { root: None } => {
+                    match find_workspace_root(&resolved_path, config)? {
+                        Some(path_to_root) => inheritable_from_path(config, path_to_root),
+                        None => Err(anyhow!("failed to find a workspace root")),
+                    }
+                }
             }
         }
 
@@ -1343,8 +1360,6 @@ impl TomlManifest {
             ),
         };
 
-        let inheritable = workspace_config.inheritable();
-
         let package_name = project.name.trim();
         if package_name.is_empty() {
             bail!("package name cannot be an empty string")
@@ -1352,10 +1367,11 @@ impl TomlManifest {
 
         validate_package_name(package_name, "package name", "")?;
 
-        let version = project
-            .version
-            .clone()
-            .resolve(&features, "version", || get_ws(inheritable)?.version())?;
+        let resolved_path = package_root.join("Cargo.toml");
+
+        let version = project.version.clone().resolve(&features, "version", || {
+            get_ws(config, resolved_path.clone(), workspace_config.clone())?.version()
+        })?;
 
         project.version = MaybeWorkspace::Defined(version.clone());
 
@@ -1363,7 +1379,9 @@ impl TomlManifest {
 
         let edition = if let Some(edition) = project.edition.clone() {
             let edition: Edition = edition
-                .resolve(&features, "edition", || get_ws(inheritable)?.edition())?
+                .resolve(&features, "edition", || {
+                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.edition()
+                })?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
             project.edition = Some(MaybeWorkspace::Defined(edition.to_string()));
@@ -1480,7 +1498,7 @@ impl TomlManifest {
             cx: &mut Context<'_, '_>,
             new_deps: Option<&BTreeMap<String, TomlDependency>>,
             kind: Option<DepKind>,
-            inheritable: Option<&InheritableFields>,
+            workspace_config: &WorkspaceConfig,
         ) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
             let dependencies = match new_deps {
                 Some(dependencies) => dependencies,
@@ -1488,9 +1506,14 @@ impl TomlManifest {
             };
             let mut deps: BTreeMap<String, TomlDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v
-                    .clone()
-                    .resolve(features, n, || get_ws(inheritable)?.get_dependency(n))?;
+                let resolved = v.clone().resolve(features, n, || {
+                    get_ws(
+                        cx.config,
+                        cx.root.join("Cargo.toml"),
+                        workspace_config.clone(),
+                    )?
+                    .get_dependency(n)
+                })?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                 cx.deps.push(dep);
@@ -1505,7 +1528,7 @@ impl TomlManifest {
             &mut cx,
             me.dependencies.as_ref(),
             None,
-            inheritable,
+            &workspace_config,
         )?;
         if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
             warn_on_deprecated("dev-dependencies", package_name, "package", cx.warnings);
@@ -1519,7 +1542,7 @@ impl TomlManifest {
             &mut cx,
             dev_deps,
             Some(DepKind::Development),
-            inheritable,
+            &workspace_config,
         )?;
         if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
             warn_on_deprecated("build-dependencies", package_name, "package", cx.warnings);
@@ -1533,7 +1556,7 @@ impl TomlManifest {
             &mut cx,
             build_deps,
             Some(DepKind::Build),
-            inheritable,
+            &workspace_config,
         )?;
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
@@ -1548,7 +1571,7 @@ impl TomlManifest {
                 &mut cx,
                 platform.dependencies.as_ref(),
                 None,
-                inheritable,
+                &workspace_config,
             )
             .unwrap();
             if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
@@ -1563,7 +1586,7 @@ impl TomlManifest {
                 &mut cx,
                 build_deps,
                 Some(DepKind::Build),
-                inheritable,
+                &workspace_config,
             )
             .unwrap();
             if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
@@ -1578,7 +1601,7 @@ impl TomlManifest {
                 &mut cx,
                 dev_deps,
                 Some(DepKind::Development),
-                inheritable,
+                &workspace_config,
             )
             .unwrap();
             target.insert(
@@ -1635,21 +1658,27 @@ impl TomlManifest {
                 .clone()
                 .map(|mw| {
                     mw.resolve(&features, "description", || {
-                        get_ws(inheritable)?.description()
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
+                            .description()
                     })
                 })
                 .transpose()?,
             homepage: project
                 .homepage
                 .clone()
-                .map(|mw| mw.resolve(&features, "homepage", || get_ws(inheritable)?.homepage()))
+                .map(|mw| {
+                    mw.resolve(&features, "homepage", || {
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.homepage()
+                    })
+                })
                 .transpose()?,
             documentation: project
                 .documentation
                 .clone()
                 .map(|mw| {
                     mw.resolve(&features, "documentation", || {
-                        get_ws(inheritable)?.documentation()
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
+                            .documentation()
                     })
                 })
                 .transpose()?,
@@ -1657,13 +1686,21 @@ impl TomlManifest {
             authors: project
                 .authors
                 .clone()
-                .map(|mw| mw.resolve(&features, "authors", || get_ws(inheritable)?.authors()))
+                .map(|mw| {
+                    mw.resolve(&features, "authors", || {
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.authors()
+                    })
+                })
                 .transpose()?
                 .unwrap_or_default(),
             license: project
                 .license
                 .clone()
-                .map(|mw| mw.resolve(&features, "license", || get_ws(inheritable)?.license()))
+                .map(|mw| {
+                    mw.resolve(&features, "license", || {
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.license()
+                    })
+                })
                 .transpose()?,
             license_file: project.license_file.clone(),
             repository: project
@@ -1671,14 +1708,19 @@ impl TomlManifest {
                 .clone()
                 .map(|mw| {
                     mw.resolve(&features, "repository", || {
-                        get_ws(inheritable)?.repository()
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
+                            .repository()
                     })
                 })
                 .transpose()?,
             keywords: project
                 .keywords
                 .clone()
-                .map(|mw| mw.resolve(&features, "keywords", || get_ws(inheritable)?.keywords()))
+                .map(|mw| {
+                    mw.resolve(&features, "keywords", || {
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.keywords()
+                    })
+                })
                 .transpose()?
                 .unwrap_or_default(),
             categories: project
@@ -1686,7 +1728,8 @@ impl TomlManifest {
                 .clone()
                 .map(|mw| {
                     mw.resolve(&features, "categories", || {
-                        get_ws(inheritable)?.categories()
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
+                            .categories()
                     })
                 })
                 .transpose()?
@@ -1694,7 +1737,11 @@ impl TomlManifest {
             badges: me
                 .badges
                 .clone()
-                .map(|mw| mw.resolve(&features, "badges", || get_ws(inheritable)?.badges()))
+                .map(|mw| {
+                    mw.resolve(&features, "badges", || {
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.badges()
+                    })
+                })
                 .transpose()?
                 .unwrap_or_default(),
             links: project.links.clone(),
@@ -1739,7 +1786,9 @@ impl TomlManifest {
 
         let publish = project.publish.clone().map(|publish| {
             publish
-                .resolve(&features, "publish", || get_ws(inheritable)?.publish())
+                .resolve(&features, "publish", || {
+                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.publish()
+                })
                 .unwrap()
         });
 
@@ -2070,6 +2119,22 @@ impl TomlManifest {
 
     pub fn features(&self) -> Option<&BTreeMap<InternedString, Vec<InternedString>>> {
         self.features.as_ref()
+    }
+}
+
+fn inheritable_from_path(
+    config: &Config,
+    resolved_path: PathBuf,
+) -> CargoResult<InheritableFields> {
+    let key = resolved_path.parent().unwrap();
+    let source_id = SourceId::for_path(key)?;
+    let (man, _) = read_manifest(&resolved_path, source_id, config)?;
+    match man.workspace_config() {
+        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        _ => bail!(
+            "root of a workspace inferred but wasn't a root: {}",
+            resolved_path.display()
+        ),
     }
 }
 

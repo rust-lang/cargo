@@ -591,16 +591,6 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
-        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
-            let path = member_manifest
-                .parent()
-                .unwrap()
-                .join(root_link)
-                .join("Cargo.toml");
-            debug!("find_root - pointer {}", path.display());
-            paths::normalize_path(&path)
-        }
-
         {
             let current = self.packages.load(manifest_path)?;
             match *current.workspace_config() {
@@ -1643,6 +1633,10 @@ impl WorkspaceRootConfig {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
     }
+
+    pub fn inheritable(&self) -> &InheritableFields {
+        &self.inheritable_fields
+    }
 }
 
 /// A group of fields that are inheritable by members of the workspace
@@ -1832,7 +1826,53 @@ impl InheritableFields {
     }
 }
 
-pub fn find_root_iter<'a>(
+fn parse_manifest(manifest_path: &Path, config: &Config) -> CargoResult<EitherManifest> {
+    let key = manifest_path.parent().unwrap();
+    let source_id = SourceId::for_path(key)?;
+    let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, config)?;
+    Ok(manifest)
+}
+
+pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
+    find_root_iter(manifest_path, config)
+        .find_map(|ances_manifest_path| {
+            let manifest = parse_manifest(&ances_manifest_path, config);
+            match manifest {
+                Ok(manifest) => match *manifest.workspace_config() {
+                    WorkspaceConfig::Root(ref ances_root_config) => {
+                        debug!("find_root - found a root checking exclusion");
+                        if !ances_root_config.is_excluded(manifest_path) {
+                            debug!("find_root - found!");
+                            Some(Ok(ances_manifest_path))
+                        } else {
+                            None
+                        }
+                    }
+                    WorkspaceConfig::Member {
+                        root: Some(ref path_to_root),
+                    } => {
+                        debug!("find_root - found pointer");
+                        Some(Ok(read_root_pointer(&ances_manifest_path, path_to_root)))
+                    }
+                    WorkspaceConfig::Member { .. } => None,
+                },
+                Err(e) => Some(Err(e)),
+            }
+        })
+        .transpose()
+}
+
+fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
+    let path = member_manifest
+        .parent()
+        .unwrap()
+        .join(root_link)
+        .join("Cargo.toml");
+    debug!("find_root - pointer {}", path.display());
+    paths::normalize_path(&path)
+}
+
+fn find_root_iter<'a>(
     manifest_path: &'a Path,
     config: &'a Config,
 ) -> impl Iterator<Item = PathBuf> + 'a {
