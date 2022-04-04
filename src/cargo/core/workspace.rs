@@ -615,43 +615,33 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        for path in paths::ancestors(manifest_path, None).skip(2) {
-            if path.ends_with("target/package") {
-                break;
-            }
-
-            let ances_manifest_path = path.join("Cargo.toml");
-            debug!("find_root - trying {}", ances_manifest_path.display());
-            if ances_manifest_path.exists() {
-                match *self.packages.load(&ances_manifest_path)?.workspace_config() {
-                    WorkspaceConfig::Root(ref ances_root_config) => {
-                        debug!("find_root - found a root checking exclusion");
-                        if !ances_root_config.is_excluded(manifest_path) {
-                            debug!("find_root - found!");
-                            return Ok(Some(ances_manifest_path));
+        find_root_iter(manifest_path, self.config)
+            .find_map(|ances_manifest_path| {
+                debug!("find_root - trying {}", ances_manifest_path.display());
+                let manifest = self.packages.load(&ances_manifest_path);
+                match manifest {
+                    Ok(manifest) => match *manifest.workspace_config() {
+                        WorkspaceConfig::Root(ref ances_root_config) => {
+                            debug!("find_root - found a root checking exclusion");
+                            if !ances_root_config.is_excluded(manifest_path) {
+                                debug!("find_root - found!");
+                                Some(Ok(ances_manifest_path))
+                            } else {
+                                None
+                            }
                         }
-                    }
-                    WorkspaceConfig::Member {
-                        root: Some(ref path_to_root),
-                    } => {
-                        debug!("find_root - found pointer");
-                        return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
-                    }
-                    WorkspaceConfig::Member { .. } => {}
+                        WorkspaceConfig::Member {
+                            root: Some(ref path_to_root),
+                        } => {
+                            debug!("find_root - found pointer");
+                            Some(Ok(read_root_pointer(&ances_manifest_path, path_to_root)))
+                        }
+                        WorkspaceConfig::Member { .. } => None,
+                    },
+                    Err(e) => Some(Err(e)),
                 }
-            }
-
-            // Don't walk across `CARGO_HOME` when we're looking for the
-            // workspace root. Sometimes a package will be organized with
-            // `CARGO_HOME` pointing inside of the workspace root or in the
-            // current package, but we don't want to mistakenly try to put
-            // crates.io crates into the workspace by accident.
-            if self.config.home() == path {
-                break;
-            }
-        }
-
-        Ok(None)
+            })
+            .transpose()
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -1839,5 +1829,62 @@ impl InheritableFields {
             .map_or(Err(anyhow!("`workspace.badges` was not defined")), |d| {
                 Ok(d)
             })
+    }
+}
+
+pub fn find_root_iter<'a>(
+    manifest_path: &'a Path,
+    config: &'a Config,
+) -> impl Iterator<Item = PathBuf> + 'a {
+    LookBehind::new(paths::ancestors(manifest_path, None).skip(2))
+        .into_iter()
+        .take_while(|path| !path.curr.ends_with("target/package"))
+        // Don't walk across `CARGO_HOME` when we're looking for the
+        // workspace root. Sometimes a package will be organized with
+        // `CARGO_HOME` pointing inside of the workspace root or in the
+        // current package, but we don't want to mistakenly try to put
+        // crates.io crates into the workspace by accident.
+        .take_while(|path| {
+            if let Some(last) = path.last {
+                config.home() != last
+            } else {
+                true
+            }
+        })
+        .map(|path| path.curr.join("Cargo.toml"))
+        .filter(|ances_manifest_path| ances_manifest_path.exists())
+}
+
+struct LookBehindWindow<'a, T: ?Sized> {
+    curr: &'a T,
+    last: Option<&'a T>,
+}
+
+struct LookBehind<'a, T: ?Sized, K: Iterator<Item = &'a T>> {
+    iter: K,
+    last: Option<&'a T>,
+}
+
+impl<'a, T: ?Sized, K: Iterator<Item = &'a T>> LookBehind<'a, T, K> {
+    fn new(items: K) -> Self {
+        Self {
+            iter: items,
+            last: None,
+        }
+    }
+}
+
+impl<'a, T: ?Sized, K: Iterator<Item = &'a T>> Iterator for LookBehind<'a, T, K> {
+    type Item = LookBehindWindow<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            None => None,
+            Some(next) => {
+                let last = self.last;
+                self.last = Some(next);
+                Some(LookBehindWindow { curr: next, last })
+            }
+        }
     }
 }
