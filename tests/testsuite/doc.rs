@@ -2561,6 +2561,39 @@ fn scrape_examples_missing_flag() {
 }
 
 #[cargo_test]
+fn scrape_examples_configure_profile() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [profile.dev]
+                panic = "abort"
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+    assert!(doc_html.contains("More examples"));
+}
+
+#[cargo_test]
 fn lib_before_bin() {
     // Checks that the library is documented before the binary.
     // Previously they were built concurrently, which can cause issues
