@@ -171,7 +171,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // Check if the cache is valid.
         let current_version = self.current_version();
         if let (Some(c), Some(i)) = (current_version, index_version) {
-            if c.ends_with(i) {
+            if i.ends_with(c.as_str()) {
                 return Poll::Ready(Ok(LoadResponse::CacheValid));
             }
         }
