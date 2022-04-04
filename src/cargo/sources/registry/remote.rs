@@ -170,8 +170,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
         // Check if the cache is valid.
         let current_version = self.current_version();
-        if current_version.is_some() && current_version.as_deref() == index_version {
-            return Poll::Ready(Ok(LoadResponse::CacheValid));
+        if let (Some(c), Some(i)) = (current_version, index_version) {
+            if c.ends_with(i) {
+                return Poll::Ready(Ok(LoadResponse::CacheValid));
+            }
         }
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
@@ -185,6 +187,13 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             let tree = registry.tree()?;
             let entry = tree.get_path(path);
             let entry = entry?;
+            let file_version = entry.id().to_string();
+            if let Some(c) = current_version {
+                if c.starts_with(&file_version) {
+                    return Ok(LoadResponse::CacheValid);
+                }
+            }
+
             let object = entry.to_object(repo)?;
             let blob = match object.as_blob() {
                 Some(blob) => blob,
@@ -194,6 +203,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             Ok(LoadResponse::Data {
                 raw_data: blob.content().to_vec(),
                 index_version: current_version.map(String::from),
+                // TODO: When the reading code has been stable for long enough (Say 7/2022)
+                // change to `file_version + ":" + current_version`
             })
         }
 
