@@ -605,33 +605,26 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        find_root_iter(manifest_path, self.config)
-            .find_map(|ances_manifest_path| {
-                debug!("find_root - trying {}", ances_manifest_path.display());
-                let manifest = self.packages.load(&ances_manifest_path);
-                match manifest {
-                    Ok(manifest) => match *manifest.workspace_config() {
-                        WorkspaceConfig::Root(ref ances_root_config) => {
-                            debug!("find_root - found a root checking exclusion");
-                            if !ances_root_config.is_excluded(manifest_path) {
-                                debug!("find_root - found!");
-                                Some(Ok(ances_manifest_path))
-                            } else {
-                                None
-                            }
-                        }
-                        WorkspaceConfig::Member {
-                            root: Some(ref path_to_root),
-                        } => {
-                            debug!("find_root - found pointer");
-                            Some(Ok(read_root_pointer(&ances_manifest_path, path_to_root)))
-                        }
-                        WorkspaceConfig::Member { .. } => None,
-                    },
-                    Err(e) => Some(Err(e)),
+        for ances_manifest_path in find_root_iter(manifest_path, self.config) {
+            debug!("find_root - trying {}", ances_manifest_path.display());
+            match *self.packages.load(&ances_manifest_path)?.workspace_config() {
+                WorkspaceConfig::Root(ref ances_root_config) => {
+                    debug!("find_root - found a root checking exclusion");
+                    if !ances_root_config.is_excluded(manifest_path) {
+                        debug!("find_root - found!");
+                        return Ok(Some(ances_manifest_path));
+                    }
                 }
-            })
-            .transpose()
+                WorkspaceConfig::Member {
+                    root: Some(ref path_to_root),
+                } => {
+                    debug!("find_root - found pointer");
+                    return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
+                }
+                WorkspaceConfig::Member { .. } => {}
+            }
+        }
+        Ok(None)
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -1834,32 +1827,26 @@ fn parse_manifest(manifest_path: &Path, config: &Config) -> CargoResult<EitherMa
 }
 
 pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
-    find_root_iter(manifest_path, config)
-        .find_map(|ances_manifest_path| {
-            let manifest = parse_manifest(&ances_manifest_path, config);
-            match manifest {
-                Ok(manifest) => match *manifest.workspace_config() {
-                    WorkspaceConfig::Root(ref ances_root_config) => {
-                        debug!("find_root - found a root checking exclusion");
-                        if !ances_root_config.is_excluded(manifest_path) {
-                            debug!("find_root - found!");
-                            Some(Ok(ances_manifest_path))
-                        } else {
-                            None
-                        }
-                    }
-                    WorkspaceConfig::Member {
-                        root: Some(ref path_to_root),
-                    } => {
-                        debug!("find_root - found pointer");
-                        Some(Ok(read_root_pointer(&ances_manifest_path, path_to_root)))
-                    }
-                    WorkspaceConfig::Member { .. } => None,
-                },
-                Err(e) => Some(Err(e)),
+    for ances_manifest_path in find_root_iter(manifest_path, config) {
+        debug!("find_root - trying {}", ances_manifest_path.display());
+        match *parse_manifest(&ances_manifest_path, config)?.workspace_config() {
+            WorkspaceConfig::Root(ref ances_root_config) => {
+                debug!("find_root - found a root checking exclusion");
+                if !ances_root_config.is_excluded(manifest_path) {
+                    debug!("find_root - found!");
+                    return Ok(Some(ances_manifest_path));
+                }
             }
-        })
-        .transpose()
+            WorkspaceConfig::Member {
+                root: Some(ref path_to_root),
+            } => {
+                debug!("find_root - found pointer");
+                return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
+            }
+            WorkspaceConfig::Member { .. } => {}
+        }
+    }
+    Ok(None)
 }
 
 fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
@@ -1877,7 +1864,6 @@ fn find_root_iter<'a>(
     config: &'a Config,
 ) -> impl Iterator<Item = PathBuf> + 'a {
     LookBehind::new(paths::ancestors(manifest_path, None).skip(2))
-        .into_iter()
         .take_while(|path| !path.curr.ends_with("target/package"))
         // Don't walk across `CARGO_HOME` when we're looking for the
         // workspace root. Sometimes a package will be organized with
