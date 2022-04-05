@@ -625,6 +625,25 @@ fn dylib() {
 }
 
 #[cargo_test]
+fn lto_with_unsupported_crate_types() {
+    let p = project_with_dep("'dylib','rlib'");
+    p.cargo("build --release -v")
+        .with_stderr_contains(
+            "\
+[WARNING] LTO can only be performed if all of the crate types support it, \
+package `bar` have some crate types do not support LTO: dylib,rlib
+[WARNING] LTO can only be performed if all of the crate types support it, \
+package `registry` have some crate types do not support LTO: lib
+[WARNING] LTO can only be performed if all of the crate types support it, \
+package `registry-shared` have some crate types do not support LTO: lib
+[WARNING] LTO can only be performed if all of the crate types support it, \
+package `registry-shared` have some crate types do not support LTO: lib
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_profile() {
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
