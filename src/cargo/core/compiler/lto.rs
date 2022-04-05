@@ -106,7 +106,19 @@ fn calculate(
     };
     // LTO can only be performed if *all* of the crate types support it.
     // For example, a cdylib/rlib combination won't allow LTO.
-    let all_lto_types = crate_types.iter().all(CrateType::can_lto);
+    let can_not_lto_types = crate_types
+        .iter()
+        .filter(|ct| !ct.can_lto())
+        .map(|ct| ct.as_str())
+        .collect::<Vec<_>>();
+    let all_lto_types = can_not_lto_types.len() == 0;
+    if !all_lto_types {
+        bcx.config.shell().warn(format!(
+            "LTO can only be performed if all of the crate types support it,\
+             you have some crate types do not support LTO: {}",
+            can_not_lto_types.join(","),
+        ))?;
+    }
     // Compute the LTO based on the profile, and what our parent requires.
     let lto = if unit.target.for_host() {
         // Disable LTO for host builds since we only really want to perform LTO
