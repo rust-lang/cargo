@@ -411,6 +411,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 for cfg in &output.cfgs {
                     rustc.arg("--cfg").arg(cfg);
                 }
+                if !output.check_cfgs.is_empty() {
+                    rustc.arg("-Zunstable-options");
+                    for check_cfg in &output.check_cfgs {
+                        rustc.arg("--check-cfg").arg(check_cfg);
+                    }
+                }
                 if pass_l_flag {
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);
@@ -717,6 +723,12 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
                 for cfg in output.cfgs.iter() {
                     rustdoc.arg("--cfg").arg(cfg);
+                }
+                if !output.check_cfgs.is_empty() {
+                    rustdoc.arg("-Zunstable-options");
+                    for check_cfg in &output.check_cfgs {
+                        rustdoc.arg("--check-cfg").arg(check_cfg);
+                    }
                 }
                 for &(ref name, ref value) in output.env.iter() {
                     rustdoc.env(name, value);
@@ -1055,7 +1067,7 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
 
 /// Generate the --check-cfg arguments for the unit
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if let Some((features, well_known_names, well_known_values)) =
+    if let Some((features, well_known_names, well_known_values, _output)) =
         cx.bcx.config.cli_unstable().check_cfg
     {
         let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);

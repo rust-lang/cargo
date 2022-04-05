@@ -235,6 +235,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             args.push(cfg.into());
                         }
 
+                        if !output.check_cfgs.is_empty() {
+                            args.push("-Zunstable-options".into());
+                            for check_cfg in &output.check_cfgs {
+                                args.push("--check-cfg".into());
+                                args.push(check_cfg.into());
+                            }
+                        }
+
                         for (lt, arg) in &output.linker_args {
                             if lt.applies_to(&unit.target) {
                                 args.push("-C".into());
