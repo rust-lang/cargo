@@ -1,6 +1,6 @@
 //! Tests for inheriting Cargo.toml fields with { workspace = true }
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{basic_lib_manifest, git, paths, project, publish, registry};
+use cargo_test_support::{basic_lib_manifest, git, path2url, paths, project, publish, registry};
 
 #[cargo_test]
 fn permit_additional_workspace_fields() {
@@ -564,7 +564,7 @@ fn inherited_dependencies_union_features() {
 }
 
 #[cargo_test]
-fn error_on_unimplemented_inheritance_fields() {
+fn inherit_workspace_fields() {
     registry::init();
 
     let p = project().build();
@@ -576,45 +576,403 @@ fn error_on_unimplemented_inheritance_fields() {
             [workspace]
             members = ["bar"]
             version = "1.2.3"
+            authors = ["Rustaceans"]
+            description = "This is a crate"
+            documentation = "https://www.rust-lang.org/learn"
+            homepage = "https://www.rust-lang.org"
+            repository = "https://github.com/example/example"
+            keywords = ["cli"]
+            categories = ["development-tools"]
+            publish = true
+            edition = "2018"
+            [workspace.badges]
+            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
+            badges = { workspace = true }
             cargo-features = ["workspace-inheritance"]
-
             [package]
             name = "bar"
             workspace = ".."
             version = { workspace = true }
+            authors = { workspace = true }
+            description = { workspace = true }
+            documentation = { workspace = true }
+            homepage = { workspace = true }
+            repository = { workspace = true }
+            keywords = { workspace = true }
+            categories = { workspace = true }
+            publish = { workspace = true }
+            edition = { workspace = true }
         "#,
         )
-        .file("LICENSE", "license")
-        .file("README.md", "README.md")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --token sekrit")
+        .masquerade_as_nightly_cargo()
+        .cwd("bar")
+        .run();
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": ["Rustaceans"],
+          "badges": {
+            "gitlab": { "branch": "master", "repository": "https://gitlab.com/rust-lang/rust" }
+          },
+          "categories": ["development-tools"],
+          "deps": [],
+          "description": "This is a crate",
+          "documentation": "https://www.rust-lang.org/learn",
+          "features": {},
+          "homepage": "https://www.rust-lang.org",
+          "keywords": ["cli"],
+          "license": null,
+          "license_file": null,
+          "links": null,
+          "name": "bar",
+          "readme": null,
+          "readme_file": null,
+          "repository": "https://github.com/example/example",
+          "vers": "1.2.3"
+          }
+        "#,
+        "bar-1.2.3.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+cargo-features = ["workspace-inheritance"]
+
+[package]
+edition = "2018"
+name = "bar"
+version = "1.2.3"
+authors = ["Rustaceans"]
+publish = true
+description = "This is a crate"
+homepage = "https://www.rust-lang.org"
+documentation = "https://www.rust-lang.org/learn"
+keywords = ["cli"]
+categories = ["development-tools"]
+repository = "https://github.com/example/example"
+
+[badges.gitlab]
+branch = "master"
+repository = "https://gitlab.com/rust-lang/rust"
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
+    );
+}
+
+#[cargo_test]
+fn inherit_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            [workspace.dependencies]
+            dep = "0.1"
+            dep-build = "0.8"
+            dep-dev = "0.5.2"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+            [dependencies]
+            dep = { workspace = true }
+            [build-dependencies]
+            dep-build = { workspace = true }
+            [dev-dependencies]
+            dep-dev = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("dep", "0.1.2").publish();
+    Package::new("dep-build", "0.8.2").publish();
+    Package::new("dep-dev", "0.5.2").publish();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep-build v0.8.2 ([..])
+[DOWNLOADED] dep v0.1.2 ([..])
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    p.cargo("check").masquerade_as_nightly_cargo().run();
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+    assert!(lockfile.contains("dep-dev"));
+    assert!(lockfile.contains("dep-build"));
+    p.cargo("publish --token sekrit")
+        .masquerade_as_nightly_cargo()
+        .cwd("bar")
+        .run();
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "dep",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.1"
+            },
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "dev",
+              "name": "dep-dev",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.5.2"
+            },
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "build",
+              "name": "dep-build",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.8"
+            }
+          ],
+          "description": null,
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": null,
+          "license_file": null,
+          "links": null,
+          "name": "bar",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.2.0"
+          }
+        "#,
+        "bar-0.2.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "Cargo.lock", "src/main.rs"],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+cargo-features = ["workspace-inheritance"]
+
+[package]
+name = "bar"
+version = "0.2.0"
+authors = []
+
+[dependencies.dep]
+version = "0.1"
+
+[dev-dependencies.dep-dev]
+version = "0.5.2"
+
+[build-dependencies.dep-build]
+version = "0.8"
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
+    );
+}
+
+#[cargo_test]
+fn inherit_target_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            [workspace.dependencies]
+            dep = "0.1"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+            [target.'cfg(unix)'.dependencies]
+            dep = { workspace = true }
+            [target.'cfg(windows)'.dependencies]
+            dep = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("dep", "0.1.2").publish();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.2 ([..])
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+}
+
+#[cargo_test]
+fn inherit_dependency_override_optional() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            [workspace.dependencies]
+            dep = "0.1.0"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+            [dependencies]
+            dep = { workspace = true, optional = true }
+        "#,
+        )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .cwd("bar")
-        .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  error inheriting `version` from workspace root manifest's `workspace.version`
-
-Caused by:
-  inheriting from a parent workspace is not implemented yet
+[UPDATING] `[..]` index
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn error_on_unimplemented_inheritance_dependencies() {
+fn inherit_dependency_features() {
+    Package::new("dep", "0.1.0")
+        .feature("fancy", &["fancy_dep"])
+        .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("fancy_dep", "0.2.4").publish();
+    Package::new("dancy_dep", "0.6.8").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [project]
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+            [dependencies]
+            dep = { workspace = true, features = ["fancy"] }
+
+            [workspace]
+            members = []
+            [workspace.dependencies]
+            dep = "0.1"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] fancy_dep v0.2.4 ([..])
+[DOWNLOADED] dep v0.1.0 ([..])
+[COMPILING] fancy_dep v0.2.4
+[COMPILING] dep v0.1.0
+[COMPILING] bar v0.2.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+    assert!(lockfile.contains("fancy_dep"));
+}
+
+#[cargo_test]
+fn inherit_detailed_dependencies() {
     let git_project = git::new("detailed", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("detailed"))
@@ -641,7 +999,6 @@ fn error_on_unimplemented_inheritance_dependencies() {
                 r#"
             [workspace]
             members = ["bar"]
-
             [workspace.dependencies]
             detailed = {{ git = '{}', branch = "branchy" }}
         "#,
@@ -658,7 +1015,6 @@ fn error_on_unimplemented_inheritance_dependencies() {
             name = "bar"
             version = "0.2.0"
             authors = []
-
             [dependencies]
             detailed = { workspace = true }
         "#,
@@ -666,23 +1022,19 @@ fn error_on_unimplemented_inheritance_dependencies() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
+    let git_root = git_project.root();
+
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
+        .with_stderr(&format!(
             "\
-[ERROR] failed to load manifest for workspace member `[CWD]/bar`
-
-Caused by:
-  failed to parse manifest at `[CWD]/bar/Cargo.toml`
-
-Caused by:
-  error reading `dependencies.detailed` from workspace root manifest's `workspace.dependencies.detailed`
-
-Caused by:
-  inheriting from a parent workspace is not implemented yet
-",
-        )
+[UPDATING] git repository `{}`\n\
+[COMPILING] detailed v0.5.0 ({}?branch=branchy#[..])\n\
+[COMPILING] bar v0.2.0 ([CWD]/bar)\n\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+            path2url(&git_root),
+            path2url(&git_root),
+        ))
         .run();
 }
 
@@ -770,6 +1122,149 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
 Caused by:
   `workspace.dependencies.dep` specified `{ workspace = true }`, but workspace dependencies \
   cannot do this
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_malformed_workspace_root() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = [invalid toml
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [package]
+            name = "bar"
+            workspace = ".."
+            version = "1.2.3"
+            authors = ["rustaceans"]
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .cwd("bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  [..]
+
+Caused by:
+  [..]
+    |
+  3 |             members = [invalid toml
+    |                        ^
+  Unexpected `i`
+  Expected newline or `#`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_no_root_workspace() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [package]
+            name = "bar"
+            workspace = ".."
+            version = "1.2.3"
+            authors = ["rustaceans"]
+            description = { workspace = true }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .cwd("bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/Cargo.toml`
+
+Caused by:
+  error inheriting `description` from workspace root manifest's `workspace.description`
+
+Caused by:
+  root of a workspace inferred but wasn't a root: [..]/Cargo.toml
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_inherit_unspecified_dependency() {
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [package]
+            name = "bar"
+            workspace = ".."
+            version = "1.2.3"
+            authors = ["rustaceans"]
+            [dependencies]
+            foo = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .cwd("bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  error reading `dependencies.foo` from workspace root manifest's `workspace.dependencies.foo`
+
+Caused by:
+  `workspace.dependencies` was not defined
 ",
         )
         .run();
