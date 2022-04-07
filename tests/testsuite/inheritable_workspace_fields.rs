@@ -1,6 +1,8 @@
 //! Tests for inheriting Cargo.toml fields with { workspace = true }
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{basic_lib_manifest, git, path2url, paths, project, publish, registry};
+use cargo_test_support::{
+    basic_lib_manifest, basic_manifest, git, path2url, paths, project, publish, registry,
+};
 
 #[cargo_test]
 fn permit_additional_workspace_fields() {
@@ -581,6 +583,8 @@ fn inherit_workspace_fields() {
             documentation = "https://www.rust-lang.org/learn"
             homepage = "https://www.rust-lang.org"
             repository = "https://github.com/example/example"
+            license = "MIT"
+            license-file = "LICENSE"
             keywords = ["cli"]
             categories = ["development-tools"]
             publish = true
@@ -604,12 +608,15 @@ fn inherit_workspace_fields() {
             documentation = { workspace = true }
             homepage = { workspace = true }
             repository = { workspace = true }
+            license = { workspace = true }
+            license-file = { workspace = true }
             keywords = { workspace = true }
             categories = { workspace = true }
             publish = { workspace = true }
             edition = { workspace = true }
         "#,
         )
+        .file("LICENSE", "license")
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
@@ -631,8 +638,8 @@ fn inherit_workspace_fields() {
           "features": {},
           "homepage": "https://www.rust-lang.org",
           "keywords": ["cli"],
-          "license": null,
-          "license_file": null,
+          "license": "MIT",
+          "license_file": "../LICENSE",
           "links": null,
           "name": "bar",
           "readme": null,
@@ -647,6 +654,7 @@ fn inherit_workspace_fields() {
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
+            "LICENSE",
             ".cargo_vcs_info.json",
         ],
         &[(
@@ -666,6 +674,8 @@ homepage = "https://www.rust-lang.org"
 documentation = "https://www.rust-lang.org/learn"
 keywords = ["cli"]
 categories = ["development-tools"]
+license = "MIT"
+license-file = "LICENSE"
 repository = "https://github.com/example/example"
 
 [badges.gitlab]
@@ -1036,6 +1046,52 @@ fn inherit_detailed_dependencies() {
             path2url(&git_root),
         ))
         .run();
+}
+
+#[cargo_test]
+fn inherit_path_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            [workspace.dependencies]
+            dep = { path = "dep" }
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["workspace-inheritance"]
+
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+            [dependencies]
+            dep = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.9.0"))
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] dep v0.9.0 ([CWD]/dep)
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
 }
 
 #[cargo_test]

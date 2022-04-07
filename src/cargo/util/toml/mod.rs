@@ -20,7 +20,9 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{find_workspace_root, Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{
+    find_workspace_root, resolve_relative_path, Dependency, Manifest, PackageId, Summary, Target,
+};
 use crate::core::{
     Edition, EitherManifest, Feature, Features, InheritableFields, VirtualManifest, Workspace,
 };
@@ -1021,6 +1023,12 @@ impl<T> MaybeWorkspace<T> {
             )),
         }
     }
+    fn as_defined(&self) -> Option<&T> {
+        match self {
+            MaybeWorkspace::Workspace(_) => None,
+            MaybeWorkspace::Defined(defined) => Some(defined),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -1069,7 +1077,7 @@ pub struct TomlProject {
     keywords: Option<MaybeWorkspace<Vec<String>>>,
     categories: Option<MaybeWorkspace<Vec<String>>>,
     license: Option<MaybeWorkspace<String>>,
-    license_file: Option<String>,
+    license_file: Option<MaybeWorkspace<String>>,
     repository: Option<MaybeWorkspace<String>>,
     resolver: Option<String>,
 
@@ -1149,19 +1157,22 @@ impl TomlManifest {
         package.workspace = None;
         package.resolver = ws.resolve_behavior().to_manifest();
         if let Some(license_file) = &package.license_file {
+            let license_file = license_file
+                .as_defined()
+                .context("license file should have been resolved before `prepare_for_publish()`")?;
             let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
             if abs_license_path.strip_prefix(package_root).is_err() {
                 // This path points outside of the package root. `cargo package`
                 // will copy it into the root, so adjust the path to this location.
-                package.license_file = Some(
+                package.license_file = Some(MaybeWorkspace::Defined(
                     license_path
                         .file_name()
                         .unwrap()
                         .to_str()
                         .unwrap()
                         .to_string(),
-                );
+                ));
             }
         }
         let all = |_d: &TomlDependency| true;
@@ -1340,6 +1351,7 @@ impl TomlManifest {
                     config.publish.clone(),
                     config.edition.clone(),
                     config.badges.clone(),
+                    package_root.to_path_buf(),
                 );
 
                 WorkspaceConfig::Root(WorkspaceRootConfig::new(
@@ -1506,13 +1518,12 @@ impl TomlManifest {
             };
             let mut deps: BTreeMap<String, TomlDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v.clone().resolve(features, n, || {
+                let resolved = v.clone().resolve(features, n, cx, || {
                     get_ws(
                         cx.config,
                         cx.root.join("Cargo.toml"),
                         workspace_config.clone(),
-                    )?
-                    .get_dependency(n)
+                    )
                 })?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
@@ -1702,7 +1713,16 @@ impl TomlManifest {
                     })
                 })
                 .transpose()?,
-            license_file: project.license_file.clone(),
+            license_file: project
+                .license_file
+                .clone()
+                .map(|mw| {
+                    mw.resolve(&features, "license", || {
+                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
+                            .license_file(package_root)
+                    })
+                })
+                .transpose()?,
             repository: project
                 .repository
                 .clone()
@@ -1766,6 +1786,10 @@ impl TomlManifest {
             .license
             .clone()
             .map(|license| MaybeWorkspace::Defined(license));
+        project.license_file = metadata
+            .license_file
+            .clone()
+            .map(|license_file| MaybeWorkspace::Defined(license_file));
         project.repository = metadata
             .repository
             .clone()
@@ -1999,6 +2023,7 @@ impl TomlManifest {
                     config.publish.clone(),
                     config.edition.clone(),
                     config.badges.clone(),
+                    root.to_path_buf(),
                 );
                 WorkspaceConfig::Root(WorkspaceRootConfig::new(
                     root,
@@ -2240,13 +2265,16 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
             TomlDependency::Workspace(w) => w.optional.unwrap_or(false),
         }
     }
+}
 
+impl TomlDependency {
     fn resolve<'a>(
         self,
         cargo_features: &Features,
         label: &str,
-        get_ws_dependency: impl FnOnce() -> CargoResult<TomlDependency<P>>,
-    ) -> CargoResult<TomlDependency<P>> {
+        cx: &mut Context<'_, '_>,
+        get_inheritable: impl FnOnce() -> CargoResult<InheritableFields>,
+    ) -> CargoResult<TomlDependency> {
         match self {
             TomlDependency::Detailed(d) => Ok(TomlDependency::Detailed(d)),
             TomlDependency::Simple(s) => Ok(TomlDependency::Simple(s)),
@@ -2256,28 +2284,30 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
                 optional,
             }) => {
                 cargo_features.require(Feature::workspace_inheritance())?;
-                get_ws_dependency().context(format!(
+                let inheritable = get_inheritable()?;
+                inheritable.get_dependency(label).context(format!(
                     "error reading `dependencies.{}` from workspace root manifest's `workspace.dependencies.{}`",
                     label, label
                 )).map(|dep| {
                     match dep {
                         TomlDependency::Simple(s) => {
                             if optional.is_some() || features.is_some() {
-                                TomlDependency::Detailed(DetailedTomlDependency::<P> {
+                                Ok(TomlDependency::Detailed(DetailedTomlDependency {
                                     version: Some(s),
                                     optional,
                                     features,
                                     ..Default::default()
-                                })
+                                }))
                             } else {
-                                TomlDependency::Simple(s)
+                                Ok(TomlDependency::Simple(s))
                             }
                         },
                         TomlDependency::Detailed(d) => {
                             let mut dep = d.clone();
                             dep.add_features(features);
                             dep.update_optional(optional);
-                            TomlDependency::Detailed(dep)
+                            dep.resolve_path(label,inheritable.ws_root(), cx.root)?;
+                            Ok(TomlDependency::Detailed(dep))
                         },
                         TomlDependency::Workspace(_) => {
                             unreachable!(
@@ -2288,7 +2318,7 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
                             )
                         },
                     }
-                })
+                })?
             }
             TomlDependency::Workspace(TomlWorkspaceDependency {
                 workspace: false, ..
@@ -2543,7 +2573,9 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
         }
         Ok(dep)
     }
+}
 
+impl DetailedTomlDependency {
     fn add_features(&mut self, features: Option<Vec<String>>) {
         self.features = match (self.features.clone(), features.clone()) {
             (Some(dep_feat), Some(inherit_feat)) => Some(
@@ -2560,6 +2592,23 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
 
     fn update_optional(&mut self, optional: Option<bool>) {
         self.optional = optional;
+    }
+
+    fn resolve_path(
+        &mut self,
+        name: &str,
+        root_path: &Path,
+        package_root: &Path,
+    ) -> CargoResult<()> {
+        if let Some(rel_path) = &self.path {
+            self.path = Some(resolve_relative_path(
+                name,
+                root_path,
+                package_root,
+                rel_path,
+            )?)
+        }
+        Ok(())
     }
 }
 
