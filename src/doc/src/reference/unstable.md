@@ -1201,6 +1201,7 @@ It's values are:
     Note than this command line options will probably become the default when stabilizing.
  - `names`: enables well known names checking via `--check-cfg=names()`.
  - `values`: enables well known values checking via `--check-cfg=values()`.
+ - `output`: enable the use of `rustc-check-cfg` in build script.
 
 For instance:
 
@@ -1210,6 +1211,29 @@ cargo check -Z unstable-options -Z check-cfg=names
 cargo check -Z unstable-options -Z check-cfg=values
 cargo check -Z unstable-options -Z check-cfg=features,names,values
 ```
+
+Or for `output`:
+
+```rust,no_run
+// build.rs
+println!("cargo:rustc-check-cfg=names(foo, bar)");
+```
+
+```
+cargo check -Z unstable-options -Z check-cfg=output
+```
+
+### `cargo:rustc-check-cfg=CHECK_CFG`
+
+The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
+`--check-cfg` flag to the compiler. This may be used for compile-time
+detection of unexpected conditional compilation name and/or values.
+
+This can only be used in combination with `-Zcheck-cfg=output` otherwise it is ignored
+with a warning.
+
+If you want to integrate with Cargo features, use `-Zcheck-cfg=features` instead of
+trying to do it manually with this option.
 
 ### workspace-inheritance
 
