@@ -1,7 +1,23 @@
 # Changelog
 
+## Cargo 1.62 (2022-05-19)
+[1ef1e0a1...HEAD](https://github.com/rust-lang/cargo/compare/1ef1e0a1...HEAD)
+
+### Added
+
+### Changed
+
+- `cargo install` will no longer generate an error if no binaries were found
+  to install (such as missing required features).
+  [#10508](https://github.com/rust-lang/cargo/pull/10508)
+
+### Fixed
+
+### Nightly only
+
+
 ## Cargo 1.61 (2022-04-07)
-[ea2a21c9...HEAD](https://github.com/rust-lang/cargo/compare/ea2a21c9...HEAD)
+[ea2a21c9...rust-1.61.0](https://github.com/rust-lang/cargo/compare/ea2a21c9...rust-1.61.0)
 
 ### Added
 
@@ -9,8 +25,33 @@
 
 - `cargo test --no-run` will now display the path to the test executables.
   [#10346](https://github.com/rust-lang/cargo/pull/10346)
+- `cargo tree --duplicates` no longer reports dependencies that are shared
+  between the host and the target as duplicates.
+  [#10466](https://github.com/rust-lang/cargo/pull/10466)
+- Updated to the 1.4.2 release of libgit2 which brings in several fixes
+  [#10442](https://github.com/rust-lang/cargo/pull/10442)
+  [#10479](https://github.com/rust-lang/cargo/pull/10479)
+- `cargo vendor` no longer allows multiple values for `--sync`, you must pass
+  multiple `--sync` flags instead.
+  [#10448](https://github.com/rust-lang/cargo/pull/10448)
+- Warnings are now issued for manifest keys that have mixed both underscore
+  and dash variants (such as specifying both `proc_macro` and `proc-macro`)
+  [#10316](https://github.com/rust-lang/cargo/pull/10316)
+- Cargo now uses the standard library's `available_parallelism` instead of the
+  `num_cpus` crate for determining the default parallelism.
+  [#10427](https://github.com/rust-lang/cargo/pull/10427)
+- `cargo search` terms are now highlighted.
+  [#10425](https://github.com/rust-lang/cargo/pull/10425)
 
 ### Fixed
+
+- Paths passed to VCS tools like `hg` are now added after `--` to avoid
+  conflict with VCS flags.
+  [#10483](https://github.com/rust-lang/cargo/pull/10483)
+- Fixed the `http.timeout` configuration value to actually work.
+  [#10456](https://github.com/rust-lang/cargo/pull/10456)
+- Fixed issues with `cargo rustc --crate-type` not working in some situations.
+  [#10388](https://github.com/rust-lang/cargo/pull/10388)
 
 ### Nightly only
 
@@ -18,6 +59,23 @@
   [#10408](https://github.com/rust-lang/cargo/pull/10408)
 - Added `-Z bindeps` to support binary artifact dependencies (RFC-3028)
   [#9992](https://github.com/rust-lang/cargo/pull/9992)
+- `-Z multitarget` is now supported in the `build.target` config value with an array.
+  [#10473](https://github.com/rust-lang/cargo/pull/10473)
+- Added `--keep-going` flag which will continue compilation even if one crate
+  fails to compile.
+  [#10383](https://github.com/rust-lang/cargo/pull/10383)
+- Start work on inheriting manifest values in a workspace.
+  [#10497](https://github.com/rust-lang/cargo/pull/10497)
+  [#10517](https://github.com/rust-lang/cargo/pull/10517)
+- Added support for HTTP registries.
+  [#10470](https://github.com/rust-lang/cargo/pull/10470)
+  [#10064](https://github.com/rust-lang/cargo/pull/10064)
+- Fixed panic when artifact target is used for `[target.'cfg(<target>)'.dependencies]`
+  [#10433](https://github.com/rust-lang/cargo/pull/10433)
+- Fixed host flags to pass to build scripts (`-Z target-applies-to-host`)
+  [#10395](https://github.com/rust-lang/cargo/pull/10395)
+- Added `-Z check-cfg-features` support for rustdoc
+  [#10428](https://github.com/rust-lang/cargo/pull/10428)
 
 
 ## Cargo 1.60 (2022-04-07)
@@ -89,6 +147,9 @@
 - `cargo test TEST_FILTER` should no longer build binaries that are explicitly
   disabled with `test = false`.
   [#10305](https://github.com/rust-lang/cargo/pull/10305)
+- Fixed regression with `term.verbose` without `term.quiet`, and vice versa.
+  [#10429](https://github.com/rust-lang/cargo/pull/10429)
+  [#10436](https://github.com/rust-lang/cargo/pull/10436)
 
 ### Nightly only
 
@@ -96,6 +157,9 @@
   [#10217](https://github.com/rust-lang/cargo/pull/10217)
 - Changed `--config` to only support dotted keys.
   [#10176](https://github.com/rust-lang/cargo/pull/10176)
+- Fixed profile `rustflags` not being gated in profile overrides.
+  [#10411](https://github.com/rust-lang/cargo/pull/10411)
+  [#10413](https://github.com/rust-lang/cargo/pull/10413)
 
 ## Cargo 1.59 (2022-02-24)
 [7f08ace4...rust-1.59.0](https://github.com/rust-lang/cargo/compare/7f08ace4...rust-1.59.0)
