@@ -22,6 +22,9 @@ pub struct ProcessBuilder {
     env: BTreeMap<String, Option<OsString>>,
     /// The directory to run the program from.
     cwd: Option<OsString>,
+    /// A list of wrappers that wrap the original program when calling
+    /// [`ProcessBuilder::wrapped`]. The last one is the outermost one.
+    wrappers: Vec<OsString>,
     /// The `make` jobserver. See the [jobserver crate] for
     /// more information.
     ///
@@ -48,9 +51,9 @@ impl fmt::Display for ProcessBuilder {
             }
         }
 
-        write!(f, "{}", self.program.to_string_lossy())?;
+        write!(f, "{}", self.get_program().to_string_lossy())?;
 
-        for arg in &self.args {
+        for arg in self.get_args() {
             write!(f, " {}", escape(arg.to_string_lossy()))?;
         }
 
@@ -66,6 +69,7 @@ impl ProcessBuilder {
             args: Vec::new(),
             cwd: None,
             env: BTreeMap::new(),
+            wrappers: Vec::new(),
             jobserver: None,
             display_env_vars: false,
         }
@@ -92,6 +96,13 @@ impl ProcessBuilder {
 
     /// (chainable) Replaces the args list with the given `args`.
     pub fn args_replace<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut ProcessBuilder {
+        if let Some(program) = self.wrappers.pop() {
+            // User intend to replace all args, so we
+            // - use the outermost wrapper as the main program, and
+            // - cleanup other inner wrappers.
+            self.program = program;
+            self.wrappers = Vec::new();
+        }
         self.args = args.iter().map(|t| t.as_ref().to_os_string()).collect();
         self
     }
@@ -117,12 +128,17 @@ impl ProcessBuilder {
 
     /// Gets the executable name.
     pub fn get_program(&self) -> &OsString {
-        &self.program
+        self.wrappers.last().unwrap_or(&self.program)
     }
 
     /// Gets the program arguments.
-    pub fn get_args(&self) -> &[OsString] {
-        &self.args
+    pub fn get_args(&self) -> impl Iterator<Item = &OsString> {
+        self.wrappers
+            .iter()
+            .rev()
+            .chain(once(&self.program))
+            .chain(self.args.iter())
+            .skip(1) // Skip the main `program
     }
 
     /// Gets the current working directory for the process.
@@ -327,7 +343,12 @@ impl ProcessBuilder {
     /// Converts `ProcessBuilder` into a `std::process::Command`, and handles the jobserver, if
     /// present.
     pub fn build_command(&self) -> Command {
-        let mut command = Command::new(&self.program);
+        let mut command = {
+            let mut iter = self.wrappers.iter().rev().chain(once(&self.program));
+            let mut cmd = Command::new(iter.next().expect("at least one `program` exists"));
+            cmd.args(iter);
+            cmd
+        };
         if let Some(cwd) = self.get_cwd() {
             command.current_dir(cwd);
         }
@@ -363,21 +384,12 @@ impl ProcessBuilder {
     /// let cmd = cmd.wrapped(Some("sccache"));
     /// ```
     pub fn wrapped(mut self, wrapper: Option<impl AsRef<OsStr>>) -> Self {
-        let wrapper = if let Some(wrapper) = wrapper.as_ref() {
-            wrapper.as_ref()
-        } else {
-            return self;
-        };
-
-        if wrapper.is_empty() {
-            return self;
+        if let Some(wrapper) = wrapper.as_ref() {
+            let wrapper = wrapper.as_ref();
+            if !wrapper.is_empty() {
+                self.wrappers.push(wrapper.to_os_string());
+            }
         }
-
-        let args = once(self.program).chain(self.args.into_iter()).collect();
-
-        self.program = wrapper.to_os_string();
-        self.args = args;
-
         self
     }
 }

@@ -78,7 +78,7 @@ impl Invocation {
             .ok_or_else(|| anyhow::format_err!("unicode program string required"))?
             .to_string();
         self.cwd = Some(cmd.get_cwd().unwrap().to_path_buf());
-        for arg in cmd.get_args().iter() {
+        for arg in cmd.get_args() {
             self.args.push(
                 arg.to_str()
                     .ok_or_else(|| anyhow::format_err!("unicode argument string required"))?

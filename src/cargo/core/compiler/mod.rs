@@ -754,7 +754,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 // The --crate-version flag could have already been passed in RUSTDOCFLAGS
 // or as an extra compiler argument for rustdoc
 fn crate_version_flag_already_present(rustdoc: &ProcessBuilder) -> bool {
-    rustdoc.get_args().iter().any(|flag| {
+    rustdoc.get_args().any(|flag| {
         flag.to_str()
             .map_or(false, |flag| flag.starts_with(RUSTDOC_CRATE_VERSION_FLAG))
     })

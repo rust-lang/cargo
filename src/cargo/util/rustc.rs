@@ -351,7 +351,7 @@ fn rustc_fingerprint(
 fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
     let mut hasher = StableHasher::new();
     extra_fingerprint.hash(&mut hasher);
-    cmd.get_args().hash(&mut hasher);
+    cmd.get_args().for_each(|arg| arg.hash(&mut hasher));
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
     env.sort_unstable();
     env.hash(&mut hasher);
