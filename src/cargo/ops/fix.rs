@@ -42,7 +42,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::{self, Command, ExitStatus};
+use std::process::{self, ExitStatus};
 use std::str;
 
 use anyhow::{bail, Context, Error};
@@ -353,9 +353,15 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         .ok();
     let mut rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
     rustc.env_remove(FIX_ENV);
+    args.apply(&mut rustc);
 
     trace!("start rustfixing {:?}", args.file);
-    let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
+    let json_error_rustc = {
+        let mut cmd = rustc.clone();
+        cmd.arg("--error-format=json");
+        cmd
+    };
+    let fixes = rustfix_crate(&lock_addr, &json_error_rustc, &args.file, &args, config)?;
 
     // Ok now we have our final goal of testing out the changes that we applied.
     // If these changes went awry and actually started to cause the crate to
@@ -366,11 +372,8 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     // new rustc, and otherwise we capture the output to hide it in the scenario
     // that we have to back it all out.
     if !fixes.files.is_empty() {
-        let mut cmd = rustc.build_command();
-        args.apply(&mut cmd);
-        cmd.arg("--error-format=json");
-        debug!("calling rustc for final verification: {:?}", cmd);
-        let output = cmd.output().context("failed to spawn rustc")?;
+        debug!("calling rustc for final verification: {json_error_rustc}");
+        let output = json_error_rustc.output()?;
 
         if output.status.success() {
             for (path, file) in fixes.files.iter() {
@@ -407,15 +410,13 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
     // - If the fix failed, show the original warnings and suggestions.
     // - If `--broken-code`, show the error messages.
     // - If the fix succeeded, show any remaining warnings.
-    let mut cmd = rustc.build_command();
-    args.apply(&mut cmd);
     for arg in args.format_args {
         // Add any json/error format arguments that Cargo wants. This allows
         // things like colored output to work correctly.
-        cmd.arg(arg);
+        rustc.arg(arg);
     }
-    debug!("calling rustc to display remaining diagnostics: {:?}", cmd);
-    exit_with(cmd.status().context("failed to spawn rustc")?);
+    debug!("calling rustc to display remaining diagnostics: {rustc}");
+    exit_with(rustc.status()?);
 }
 
 #[derive(Default)]
@@ -502,7 +503,7 @@ fn rustfix_crate(
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        rustfix_and_fix(&mut fixes, rustc, filename, args, config)?;
+        rustfix_and_fix(&mut fixes, rustc, filename, config)?;
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
@@ -543,26 +544,14 @@ fn rustfix_and_fix(
     fixes: &mut FixedCrate,
     rustc: &ProcessBuilder,
     filename: &Path,
-    args: &FixArgs,
     config: &Config,
 ) -> Result<(), Error> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
     let only = HashSet::new();
 
-    let mut cmd = rustc.build_command();
-    cmd.arg("--error-format=json");
-    args.apply(&mut cmd);
-    debug!(
-        "calling rustc to collect suggestions and validate previous fixes: {:?}",
-        cmd
-    );
-    let output = cmd.output().with_context(|| {
-        format!(
-            "failed to execute `{}`",
-            rustc.get_program().to_string_lossy()
-        )
-    })?;
+    debug!("calling rustc to collect suggestions and validate previous fixes: {rustc}");
+    let output = rustc.output()?;
 
     // If rustc didn't succeed for whatever reasons then we're very likely to be
     // looking at otherwise broken code. Let's not make things accidentally
@@ -834,7 +823,7 @@ impl FixArgs {
         })
     }
 
-    fn apply(&self, cmd: &mut Command) {
+    fn apply(&self, cmd: &mut ProcessBuilder) {
         cmd.arg(&self.file);
         cmd.args(&self.other);
         if self.prepare_for_edition.is_some() {
