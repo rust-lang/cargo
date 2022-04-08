@@ -93,18 +93,24 @@ impl Rustc {
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn process(&self) -> ProcessBuilder {
-        ProcessBuilder::new(self.path.as_path()).wrapped(self.wrapper.as_ref())
+        let mut cmd = ProcessBuilder::new(self.path.as_path()).wrapped(self.wrapper.as_ref());
+        cmd.retry_with_argfile(true);
+        cmd
     }
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn workspace_process(&self) -> ProcessBuilder {
-        ProcessBuilder::new(self.path.as_path())
+        let mut cmd = ProcessBuilder::new(self.path.as_path())
             .wrapped(self.workspace_wrapper.as_ref())
-            .wrapped(self.wrapper.as_ref())
+            .wrapped(self.wrapper.as_ref());
+        cmd.retry_with_argfile(true);
+        cmd
     }
 
     pub fn process_no_wrapper(&self) -> ProcessBuilder {
-        ProcessBuilder::new(&self.path)
+        let mut cmd = ProcessBuilder::new(&self.path);
+        cmd.retry_with_argfile(true);
+        cmd
     }
 
     /// Gets the output for the given command.

@@ -194,6 +194,7 @@ impl<'cfg> Compilation<'cfg> {
         let rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
         let cmd = fill_rustc_tool_env(rustdoc, unit);
         let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
+        cmd.retry_with_argfile(true);
         unit.target.edition().cmd_edition_arg(&mut cmd);
 
         for crate_type in unit.target.rustc_crate_types() {
