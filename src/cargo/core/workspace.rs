@@ -23,7 +23,7 @@ use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
 use crate::util::toml::{
-    read_manifest, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
+    read_manifest, readme_for_project, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
 };
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
@@ -1754,12 +1754,15 @@ impl InheritableFields {
         )
     }
 
-    pub fn readme(&self) -> CargoResult<StringOrBool> {
-        self.readme
-            .clone()
-            .map_or(Err(anyhow!("`workspace.readme` was not defined")), |d| {
-                Ok(d)
-            })
+    pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
+        readme_for_project(self.ws_root.as_path(), self.readme.clone()).map_or(
+            Err(anyhow!("`workspace.readme` was not defined")),
+            |readme| {
+                let rel_path =
+                    resolve_relative_path("readme", &self.ws_root, package_root, &readme)?;
+                Ok(StringOrBool::String(rel_path))
+            },
+        )
     }
 
     pub fn keywords(&self) -> CargoResult<Vec<String>> {
