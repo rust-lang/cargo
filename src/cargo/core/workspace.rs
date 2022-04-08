@@ -27,6 +27,8 @@ use crate::util::toml::{
 };
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
+use cargo_util::paths::normalize_path;
+use pathdiff::diff_paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///
@@ -1650,6 +1652,7 @@ pub struct InheritableFields {
     publish: Option<VecStringOrBool>,
     edition: Option<String>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    ws_root: PathBuf,
 }
 
 impl InheritableFields {
@@ -1669,6 +1672,7 @@ impl InheritableFields {
         publish: Option<VecStringOrBool>,
         edition: Option<String>,
         badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+        ws_root: PathBuf,
     ) -> InheritableFields {
         Self {
             dependencies,
@@ -1686,6 +1690,7 @@ impl InheritableFields {
             publish,
             edition,
             badges,
+            ws_root,
         }
     }
 
@@ -1780,10 +1785,10 @@ impl InheritableFields {
             })
     }
 
-    pub fn license_file(&self) -> CargoResult<String> {
+    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
         self.license_file.clone().map_or(
             Err(anyhow!("`workspace.license_file` was not defined")),
-            |d| Ok(d),
+            |d| resolve_relative_path("license-file", &self.ws_root, package_root, &d),
         )
     }
 
@@ -1816,6 +1821,37 @@ impl InheritableFields {
             .map_or(Err(anyhow!("`workspace.badges` was not defined")), |d| {
                 Ok(d)
             })
+    }
+
+    pub fn ws_root(&self) -> &PathBuf {
+        &self.ws_root
+    }
+}
+
+pub fn resolve_relative_path(
+    label: &str,
+    old_root: &Path,
+    new_root: &Path,
+    rel_path: &str,
+) -> CargoResult<String> {
+    let joined_path = normalize_path(&old_root.join(rel_path));
+    match diff_paths(joined_path, new_root) {
+        None => Err(anyhow!(
+            "`{}` was defined in {} but could not be resolved with {}",
+            label,
+            old_root.display(),
+            new_root.display()
+        )),
+        Some(path) => Ok(path
+            .to_str()
+            .ok_or_else(|| {
+                anyhow!(
+                    "`{}` resolved to non-UTF value (`{}`)",
+                    label,
+                    path.display()
+                )
+            })?
+            .to_owned()),
     }
 }
 
