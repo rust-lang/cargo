@@ -231,10 +231,7 @@ impl Cache {
         } else {
             debug!("rustc info cache miss");
             debug!("running {}", cmd);
-            let output = cmd
-                .build_command()
-                .output()
-                .with_context(|| format!("could not execute process {} (never executed)", cmd))?;
+            let output = cmd.output()?;
             let stdout = String::from_utf8(output.stdout)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
                 .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
