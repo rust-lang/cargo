@@ -1073,7 +1073,7 @@ pub struct TomlProject {
     description: Option<MaybeWorkspace<String>>,
     homepage: Option<MaybeWorkspace<String>>,
     documentation: Option<MaybeWorkspace<String>>,
-    readme: Option<StringOrBool>,
+    readme: Option<MaybeWorkspace<StringOrBool>>,
     keywords: Option<MaybeWorkspace<Vec<String>>>,
     categories: Option<MaybeWorkspace<Vec<String>>>,
     license: Option<MaybeWorkspace<String>>,
@@ -1173,6 +1173,31 @@ impl TomlManifest {
                         .unwrap()
                         .to_string(),
                 ));
+            }
+        }
+
+        if let Some(readme) = &package.readme {
+            let readme = readme
+                .as_defined()
+                .context("readme should have been resolved before `prepare_for_publish()`")?;
+            match readme {
+                StringOrBool::String(readme) => {
+                    let readme_path = Path::new(&readme);
+                    let abs_readme_path = paths::normalize_path(&package_root.join(readme_path));
+                    if abs_readme_path.strip_prefix(package_root).is_err() {
+                        // This path points outside of the package root. `cargo package`
+                        // will copy it into the root, so adjust the path to this location.
+                        package.readme = Some(MaybeWorkspace::Defined(StringOrBool::String(
+                            readme_path
+                                .file_name()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                        )));
+                    }
+                }
+                StringOrBool::Bool(_) => {}
             }
         }
         let all = |_d: &TomlDependency| true;
@@ -1693,7 +1718,19 @@ impl TomlManifest {
                     })
                 })
                 .transpose()?,
-            readme: readme_for_project(package_root, project),
+            readme: readme_for_project(
+                package_root,
+                project
+                    .readme
+                    .clone()
+                    .map(|mw| {
+                        mw.resolve(&features, "readme", || {
+                            get_ws(config, resolved_path.clone(), workspace_config.clone())?
+                                .readme(package_root)
+                        })
+                    })
+                    .transpose()?,
+            ),
             authors: project
                 .authors
                 .clone()
@@ -1778,6 +1815,10 @@ impl TomlManifest {
             .documentation
             .clone()
             .map(|documentation| MaybeWorkspace::Defined(documentation));
+        project.readme = metadata
+            .readme
+            .clone()
+            .map(|readme| MaybeWorkspace::Defined(StringOrBool::String(readme)));
         project.authors = project
             .authors
             .as_ref()
@@ -2164,8 +2205,8 @@ fn inheritable_from_path(
 }
 
 /// Returns the name of the README file for a `TomlProject`.
-fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<String> {
-    match &project.readme {
+pub fn readme_for_project(package_root: &Path, readme: Option<StringOrBool>) -> Option<String> {
+    match &readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
             StringOrBool::Bool(false) => None,

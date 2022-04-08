@@ -581,6 +581,7 @@ fn inherit_workspace_fields() {
             authors = ["Rustaceans"]
             description = "This is a crate"
             documentation = "https://www.rust-lang.org/learn"
+            readme = "README.md"
             homepage = "https://www.rust-lang.org"
             repository = "https://github.com/example/example"
             license = "MIT"
@@ -606,6 +607,7 @@ fn inherit_workspace_fields() {
             authors = { workspace = true }
             description = { workspace = true }
             documentation = { workspace = true }
+            readme = { workspace = true }
             homepage = { workspace = true }
             repository = { workspace = true }
             license = { workspace = true }
@@ -617,6 +619,7 @@ fn inherit_workspace_fields() {
         "#,
         )
         .file("LICENSE", "license")
+        .file("README.md", "README.md")
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
@@ -642,8 +645,8 @@ fn inherit_workspace_fields() {
           "license_file": "../LICENSE",
           "links": null,
           "name": "bar",
-          "readme": null,
-          "readme_file": null,
+          "readme": "README.md",
+          "readme_file": "../README.md",
           "repository": "https://github.com/example/example",
           "vers": "1.2.3"
           }
@@ -654,6 +657,7 @@ fn inherit_workspace_fields() {
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
+            "README.md",
             "LICENSE",
             ".cargo_vcs_info.json",
         ],
@@ -672,6 +676,7 @@ publish = true
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
 documentation = "https://www.rust-lang.org/learn"
+readme = "README.md"
 keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"

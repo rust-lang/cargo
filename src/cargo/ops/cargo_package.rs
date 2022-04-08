@@ -286,6 +286,13 @@ fn build_ar_list(
             ))?;
         }
     }
+    if let Some(readme) = &pkg.manifest().metadata().readme {
+        let readme_path = Path::new(readme);
+        let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
+        if abs_file_path.exists() {
+            check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
+        }
+    }
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
 
     Ok(result)
