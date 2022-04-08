@@ -1,15 +1,19 @@
 use crate::process_error::ProcessError;
 use crate::read2;
+
 use anyhow::{bail, Context, Result};
 use jobserver::Client;
 use shell_escape::escape;
+use tempfile::NamedTempFile;
+
 use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::io;
 use std::iter::once;
 use std::path::Path;
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, ExitStatus, Output, Stdio};
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -32,6 +36,8 @@ pub struct ProcessBuilder {
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
+    /// `true` to retry with an argfile if hitting "command line too big" error.
+    retry_with_argfile: bool,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -72,6 +78,7 @@ impl ProcessBuilder {
             wrappers: Vec::new(),
             jobserver: None,
             display_env_vars: false,
+            retry_with_argfile: false,
         }
     }
 
@@ -177,13 +184,28 @@ impl ProcessBuilder {
         self
     }
 
+    /// Enables retrying with an argfile if hitting "command line too big" error
+    pub fn retry_with_argfile(&mut self, enabled: bool) -> &mut Self {
+        self.retry_with_argfile = enabled;
+        self
+    }
+
+    fn should_retry_with_argfile(&self, err: &io::Error) -> bool {
+        self.retry_with_argfile && imp::command_line_too_big(err)
+    }
+
+    /// Like [`Command::status`] but with a better error message.
+    pub fn status(&self) -> Result<ExitStatus> {
+        self.build_and_spawn(|_| {})
+            .and_then(|mut child| child.wait())
+            .with_context(|| {
+                ProcessError::new(&format!("could not execute process {self}"), None, None)
+            })
+    }
+
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
     pub fn exec(&self) -> Result<()> {
-        let mut command = self.build_command();
-        let exit = command.status().with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
-        })?;
-
+        let exit = self.status()?;
         if exit.success() {
             Ok(())
         } else {
@@ -215,14 +237,22 @@ impl ProcessBuilder {
         imp::exec_replace(self)
     }
 
+    /// Like [`Command::output`] but with a better error message.
+    pub fn output(&self) -> Result<Output> {
+        self.build_and_spawn(|cmd| {
+            cmd.stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .stdin(Stdio::null());
+        })
+        .and_then(|child| child.wait_with_output())
+        .with_context(|| {
+            ProcessError::new(&format!("could not execute process {self}"), None, None)
+        })
+    }
+
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
     pub fn exec_with_output(&self) -> Result<Output> {
-        let mut command = self.build_command();
-
-        let output = command.output().with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
-        })?;
-
+        let output = self.output()?;
         if output.status.success() {
             Ok(output)
         } else {
@@ -253,16 +283,15 @@ impl ProcessBuilder {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
-        let mut cmd = self.build_command();
-        cmd.stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .stdin(Stdio::null());
-
         let mut callback_error = None;
         let mut stdout_pos = 0;
         let mut stderr_pos = 0;
         let status = (|| {
-            let mut child = cmd.spawn()?;
+            let mut child = self.build_and_spawn(|cmd| {
+                cmd.stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .stdin(Stdio::null());
+            })?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
@@ -340,9 +369,68 @@ impl ProcessBuilder {
         Ok(output)
     }
 
-    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles the jobserver, if
-    /// present.
-    pub fn build_command(&self) -> Command {
+    /// Builds a command from `ProcessBuilder` and spawn it.
+    ///
+    /// There is a risk when spawning a process, it might hit "command line
+    /// too big" OS error. To handle those kind of OS errors, this method try
+    /// to reinvoke the command with a `@<path>` argfile that contains all the
+    /// arguments.
+    ///
+    /// * `apply`: Modify the command before invoking. Useful for updating [`Stdio`].
+    fn build_and_spawn(&self, apply: impl Fn(&mut Command)) -> io::Result<Child> {
+        let mut cmd = self.build_command();
+        apply(&mut cmd);
+
+        match cmd.spawn() {
+            Err(ref e) if self.should_retry_with_argfile(e) => {
+                let (mut cmd, _argfile) = self.build_command_with_argfile()?;
+                apply(&mut cmd);
+                cmd.spawn()
+            }
+            res => res,
+        }
+    }
+
+    /// Builds the command with an `@<path>` argfile that contains all the
+    /// arguments. This is primarily served for rustc/rustdoc command family.
+    ///
+    /// Ref:
+    ///
+    /// - https://doc.rust-lang.org/rustdoc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+    /// - https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
+    fn build_command_with_argfile(&self) -> io::Result<(Command, NamedTempFile)> {
+        use std::io::Write as _;
+
+        let mut tmp = tempfile::Builder::new()
+            .prefix("cargo-argfile.")
+            .tempfile()?;
+
+        let path = tmp.path().display();
+        let mut cmd = self.build_command_without_args();
+        cmd.arg(format!("@{path}"));
+        log::debug!("created argfile at {path} for `{self}`");
+
+        let cap = self.get_args().map(|arg| arg.len() + 1).sum::<usize>();
+        let mut buf = String::with_capacity(cap);
+        for arg in &self.args {
+            let arg = arg
+                .to_str()
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "argument contains invalid UTF-8 characters",
+                    )
+                })?;
+            // TODO: Shall we escape line feed?
+            buf.push_str(arg);
+            buf.push('\n');
+        }
+        tmp.write_all(buf.as_bytes())?;
+        Ok((cmd, tmp))
+    }
+
+    /// Builds a command from `ProcessBuilder` for everythings but not `args`.
+    fn build_command_without_args(&self) -> Command {
         let mut command = {
             let mut iter = self.wrappers.iter().rev().chain(once(&self.program));
             let mut cmd = Command::new(iter.next().expect("at least one `program` exists"));
@@ -351,9 +439,6 @@ impl ProcessBuilder {
         };
         if let Some(cwd) = self.get_cwd() {
             command.current_dir(cwd);
-        }
-        for arg in &self.args {
-            command.arg(arg);
         }
         for (k, v) in &self.env {
             match *v {
@@ -367,6 +452,19 @@ impl ProcessBuilder {
         }
         if let Some(ref c) = self.jobserver {
             c.configure(&mut command);
+        }
+        command
+    }
+
+    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles
+    /// the jobserver, if present.
+    ///
+    /// Note that this method doesn't take argfile fallback into account. The
+    /// caller should handle it by themselves.
+    pub fn build_command(&self) -> Command {
+        let mut command = self.build_command_without_args();
+        for arg in &self.args {
+            command.arg(arg);
         }
         command
     }
@@ -398,16 +496,27 @@ impl ProcessBuilder {
 mod imp {
     use super::{ProcessBuilder, ProcessError};
     use anyhow::Result;
+    use std::io;
     use std::os::unix::process::CommandExt;
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         let mut command = process_builder.build_command();
-        let error = command.exec();
+
+        let mut error = command.exec();
+        if process_builder.should_retry_with_argfile(&error) {
+            let (mut command, _argfile) = process_builder.build_command_with_argfile()?;
+            error = command.exec()
+        }
+
         Err(anyhow::Error::from(error).context(ProcessError::new(
             &format!("could not execute process {}", process_builder),
             None,
             None,
         )))
+    }
+
+    pub fn command_line_too_big(err: &io::Error) -> bool {
+        err.raw_os_error() == Some(libc::E2BIG)
     }
 }
 
@@ -415,6 +524,7 @@ mod imp {
 mod imp {
     use super::{ProcessBuilder, ProcessError};
     use anyhow::Result;
+    use std::io;
     use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
     use winapi::um::consoleapi::SetConsoleCtrlHandler;
 
@@ -432,5 +542,31 @@ mod imp {
 
         // Just execute the process as normal.
         process_builder.exec()
+    }
+
+    pub fn command_line_too_big(err: &io::Error) -> bool {
+        use winapi::shared::winerror::ERROR_FILENAME_EXCED_RANGE;
+        err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE as i32)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    #[test]
+    fn test_argfile() {
+        let mut cmd = ProcessBuilder::new("echo");
+        cmd.args(["foo", "bar"].as_slice());
+        let (cmd, argfile) = cmd.build_command_with_argfile().unwrap();
+
+        assert_eq!(cmd.get_program(), "echo");
+        let cmd_args: Vec<_> = cmd.get_args().map(|s| s.to_str().unwrap()).collect();
+        assert_eq!(cmd_args.len(), 1);
+        assert!(cmd_args[0].starts_with("@"));
+        assert!(cmd_args[0].contains("cargo-argfile."));
+
+        let buf = fs::read_to_string(argfile.path()).unwrap();
+        assert_eq!(buf, "foo\nbar\n");
     }
 }
