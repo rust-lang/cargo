@@ -44,7 +44,7 @@ use std::path::{Path, PathBuf};
 use std::process::{self, ExitStatus};
 use std::{env, fs, str};
 
-use anyhow::{bail, Context, Error};
+use anyhow::{bail, Context as _};
 use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuilder};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
@@ -443,7 +443,7 @@ fn rustfix_crate(
     filename: &Path,
     args: &FixArgs,
     config: &Config,
-) -> Result<FixedCrate, Error> {
+) -> CargoResult<FixedCrate> {
     if !args.can_run_rustfix(config)? {
         // This fix should not be run. Skipping...
         return Ok(FixedCrate::default());
@@ -548,7 +548,7 @@ fn rustfix_and_fix(
     rustc: &ProcessBuilder,
     filename: &Path,
     config: &Config,
-) -> Result<(), Error> {
+) -> CargoResult<()> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
     let only = HashSet::new();
@@ -695,7 +695,7 @@ fn exit_with(status: ExitStatus) -> ! {
     process::exit(status.code().unwrap_or(3));
 }
 
-fn log_failed_fix(stderr: &[u8], status: ExitStatus) -> Result<(), Error> {
+fn log_failed_fix(stderr: &[u8], status: ExitStatus) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let diagnostics = stderr
@@ -776,12 +776,12 @@ struct FixArgs {
 }
 
 impl FixArgs {
-    fn get() -> Result<FixArgs, Error> {
+    fn get() -> CargoResult<FixArgs> {
         Self::from_args(env::args_os())
     }
 
     // This is a separate function so that we can use it in tests.
-    fn from_args(argv: impl IntoIterator<Item = OsString>) -> Result<Self, Error> {
+    fn from_args(argv: impl IntoIterator<Item = OsString>) -> CargoResult<Self> {
         let mut argv = argv.into_iter();
         let mut rustc = argv
             .nth(1)
@@ -792,7 +792,7 @@ impl FixArgs {
         let mut other = Vec::new();
         let mut format_args = Vec::new();
 
-        let mut handle_arg = |arg: OsString| -> Result<(), Error> {
+        let mut handle_arg = |arg: OsString| -> CargoResult<()> {
             let path = PathBuf::from(arg);
             if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
                 file = Some(path);
