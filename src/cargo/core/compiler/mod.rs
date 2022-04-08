@@ -682,7 +682,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 rustdoc.arg("--scrape-examples-target-crate").arg(name);
             }
         }
-    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.is_member(&unit.pkg) {
+    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.unit_needs_doc_scrape(unit) {
         // We only pass scraped examples to packages in the workspace
         // since examples are only coming from reverse-dependencies of workspace packages
 
