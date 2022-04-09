@@ -218,11 +218,13 @@ impl ProcessBuilder {
     }
 
     fn _status(&self) -> io::Result<ExitStatus> {
-        let mut cmd = self.build_command();
-        match cmd.spawn() {
-            Err(ref e) if self.should_retry_with_argfile(e) => {}
-            Err(e) => return Err(e),
-            Ok(mut child) => return child.wait(),
+        if !debug_force_argfile(self.retry_with_argfile) {
+            let mut cmd = self.build_command();
+            match cmd.spawn() {
+                Err(ref e) if self.should_retry_with_argfile(e) => {}
+                Err(e) => return Err(e),
+                Ok(mut child) => return child.wait(),
+            }
         }
         let (mut cmd, _argfile) = self.build_command_with_argfile()?;
         cmd.spawn()?.wait()
@@ -269,11 +271,13 @@ impl ProcessBuilder {
     }
 
     fn _output(&self) -> io::Result<Output> {
-        let mut cmd = self.build_command();
-        match piped(&mut cmd).spawn() {
-            Err(ref e) if self.should_retry_with_argfile(e) => {}
-            Err(e) => return Err(e),
-            Ok(child) => return child.wait_with_output(),
+        if !debug_force_argfile(self.retry_with_argfile) {
+            let mut cmd = self.build_command();
+            match piped(&mut cmd).spawn() {
+                Err(ref e) if self.should_retry_with_argfile(e) => {}
+                Err(e) => return Err(e),
+                Ok(child) => return child.wait_with_output(),
+            }
         }
         let (mut cmd, _argfile) = self.build_command_with_argfile()?;
         piped(&mut cmd).spawn()?.wait_with_output()
@@ -317,11 +321,13 @@ impl ProcessBuilder {
         let mut stderr_pos = 0;
 
         let spawn = |mut cmd| {
-            match piped(&mut cmd).spawn() {
-                Err(ref e) if self.should_retry_with_argfile(e) => {}
-                Err(e) => return Err(e),
-                Ok(child) => return Ok((child, None)),
-            };
+            if !debug_force_argfile(self.retry_with_argfile) {
+                match piped(&mut cmd).spawn() {
+                    Err(ref e) if self.should_retry_with_argfile(e) => {}
+                    Err(e) => return Err(e),
+                    Ok(child) => return Ok((child, None)),
+                }
+            }
             let (mut cmd, argfile) = self.build_command_with_argfile()?;
             Ok((piped(&mut cmd).spawn()?, Some(argfile)))
         };
@@ -506,6 +512,13 @@ impl ProcessBuilder {
     }
 }
 
+/// Forces the command to use `@path` argfile.
+///
+/// You should set `__CARGO_TEST_FORCE_ARGFILE` to enable this.
+fn debug_force_argfile(retry_enabled: bool) -> bool {
+    cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
+}
+
 /// Creates new pipes for stderr and stdout. Ignores stdin.
 fn piped(cmd: &mut Command) -> &mut Command {
     cmd.stdout(Stdio::piped())
@@ -515,18 +528,23 @@ fn piped(cmd: &mut Command) -> &mut Command {
 
 #[cfg(unix)]
 mod imp {
-    use super::{ProcessBuilder, ProcessError};
+    use super::{debug_force_argfile, ProcessBuilder, ProcessError};
     use anyhow::Result;
     use std::io;
     use std::os::unix::process::CommandExt;
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
-        let mut command = process_builder.build_command();
-
-        let mut error = command.exec();
-        if process_builder.should_retry_with_argfile(&error) {
+        let mut error;
+        if debug_force_argfile(process_builder.retry_with_argfile) {
             let (mut command, _argfile) = process_builder.build_command_with_argfile()?;
             error = command.exec()
+        } else {
+            let mut command = process_builder.build_command();
+            error = command.exec();
+            if process_builder.should_retry_with_argfile(&error) {
+                let (mut command, _argfile) = process_builder.build_command_with_argfile()?;
+                error = command.exec()
+            }
         }
 
         Err(anyhow::Error::from(error).context(ProcessError::new(
