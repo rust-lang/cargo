@@ -886,7 +886,7 @@ bar = { artifact = "cdylib", version = "1.0", target = "wasm32-unknown-unknown" 
 
 ```rust
 fn main() {
-  wasm::run_file(env!("CARGO_CDYLIB_FILE_BAR"));
+  wasm::run_file(std::env::var("CARGO_CDYLIB_FILE_BAR").unwrap());
 }
 ```
 
