@@ -230,10 +230,10 @@ fn build_ar_list(
                 });
             }
             "Cargo.lock" => continue,
-            VCS_INFO_FILE => anyhow::bail!(
+            VCS_INFO_FILE | "Cargo.toml.orig" => anyhow::bail!(
                 "invalid inclusion of reserved file name \
                      {} in package source",
-                VCS_INFO_FILE
+                rel_str
             ),
             _ => {
                 result.push(ArchiveFile {
