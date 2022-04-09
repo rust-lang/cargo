@@ -13,7 +13,7 @@ use std::fmt;
 use std::io;
 use std::iter::once;
 use std::path::Path;
-use std::process::{Child, Command, ExitStatus, Output, Stdio};
+use std::process::{Command, ExitStatus, Output, Stdio};
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -213,11 +213,19 @@ impl ProcessBuilder {
 
     /// Like [`Command::status`] but with a better error message.
     pub fn status(&self) -> Result<ExitStatus> {
-        self.build_and_spawn(|_| {})
-            .and_then(|mut child| child.wait())
-            .with_context(|| {
-                ProcessError::new(&format!("could not execute process {self}"), None, None)
-            })
+        self._status()
+            .with_context(|| ProcessError::could_not_execute(self))
+    }
+
+    fn _status(&self) -> io::Result<ExitStatus> {
+        let mut cmd = self.build_command();
+        match cmd.spawn() {
+            Err(ref e) if self.should_retry_with_argfile(e) => {}
+            Err(e) => return Err(e),
+            Ok(mut child) => return child.wait(),
+        }
+        let (mut cmd, _argfile) = self.build_command_with_argfile()?;
+        cmd.spawn()?.wait()
     }
 
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
@@ -256,15 +264,19 @@ impl ProcessBuilder {
 
     /// Like [`Command::output`] but with a better error message.
     pub fn output(&self) -> Result<Output> {
-        self.build_and_spawn(|cmd| {
-            cmd.stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .stdin(Stdio::null());
-        })
-        .and_then(|child| child.wait_with_output())
-        .with_context(|| {
-            ProcessError::new(&format!("could not execute process {self}"), None, None)
-        })
+        self._output()
+            .with_context(|| ProcessError::could_not_execute(self))
+    }
+
+    fn _output(&self) -> io::Result<Output> {
+        let mut cmd = self.build_command();
+        match piped(&mut cmd).spawn() {
+            Err(ref e) if self.should_retry_with_argfile(e) => {}
+            Err(e) => return Err(e),
+            Ok(child) => return child.wait_with_output(),
+        }
+        let (mut cmd, _argfile) = self.build_command_with_argfile()?;
+        piped(&mut cmd).spawn()?.wait_with_output()
     }
 
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
@@ -303,12 +315,20 @@ impl ProcessBuilder {
         let mut callback_error = None;
         let mut stdout_pos = 0;
         let mut stderr_pos = 0;
+
+        let spawn = |mut cmd| {
+            match piped(&mut cmd).spawn() {
+                Err(ref e) if self.should_retry_with_argfile(e) => {}
+                Err(e) => return Err(e),
+                Ok(child) => return Ok((child, None)),
+            };
+            let (mut cmd, argfile) = self.build_command_with_argfile()?;
+            Ok((piped(&mut cmd).spawn()?, Some(argfile)))
+        };
+
         let status = (|| {
-            let mut child = self.build_and_spawn(|cmd| {
-                cmd.stdout(Stdio::piped())
-                    .stderr(Stdio::piped())
-                    .stdin(Stdio::null());
-            })?;
+            let cmd = self.build_command();
+            let (mut child, _argfile) = spawn(cmd)?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
@@ -356,9 +376,7 @@ impl ProcessBuilder {
             })?;
             child.wait()
         })()
-        .with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
-        })?;
+        .with_context(|| ProcessError::could_not_execute(self))?;
         let output = Output {
             status,
             stdout,
@@ -384,28 +402,6 @@ impl ProcessBuilder {
         }
 
         Ok(output)
-    }
-
-    /// Builds a command from `ProcessBuilder` and spawn it.
-    ///
-    /// There is a risk when spawning a process, it might hit "command line
-    /// too big" OS error. To handle those kind of OS errors, this method try
-    /// to reinvoke the command with a `@<path>` argfile that contains all the
-    /// arguments.
-    ///
-    /// * `apply`: Modify the command before invoking. Useful for updating [`Stdio`].
-    fn build_and_spawn(&self, apply: impl Fn(&mut Command)) -> io::Result<Child> {
-        let mut cmd = self.build_command();
-        apply(&mut cmd);
-
-        match cmd.spawn() {
-            Err(ref e) if self.should_retry_with_argfile(e) => {
-                let (mut cmd, _argfile) = self.build_command_with_argfile()?;
-                apply(&mut cmd);
-                cmd.spawn()
-            }
-            res => res,
-        }
     }
 
     /// Builds the command with an `@<path>` argfile that contains all the
@@ -507,6 +503,13 @@ impl ProcessBuilder {
         }
         self
     }
+}
+
+/// Creates new pipes for stderr and stdout. Ignores stdin.
+fn piped(cmd: &mut Command) -> &mut Command {
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null())
 }
 
 #[cfg(unix)]
