@@ -413,10 +413,11 @@ impl ProcessBuilder {
             .prefix("cargo-argfile.")
             .tempfile()?;
 
-        let path = tmp.path().display();
+        let mut arg = OsString::from("@");
+        arg.push(tmp.path());
         let mut cmd = self.build_command_without_args();
-        cmd.arg(format!("@{path}"));
-        log::debug!("created argfile at {path} for `{self}`");
+        cmd.arg(arg);
+        log::debug!("created argfile at {} for {self}", tmp.path().display());
 
         let cap = self.get_args().map(|arg| arg.len() + 1).sum::<usize>();
         let mut buf = Vec::with_capacity(cap);
