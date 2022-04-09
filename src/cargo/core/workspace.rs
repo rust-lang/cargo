@@ -11,6 +11,7 @@ use log::debug;
 use toml_edit::easy as toml;
 use url::Url;
 
+use crate::core::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
@@ -1499,6 +1500,15 @@ impl<'cfg> Workspace<'cfg> {
         assert!(member_specific_features.is_empty());
 
         ms
+    }
+
+    /// Returns true if `unit` should depend on the output of Docscrape units.
+    pub fn unit_needs_doc_scrape(&self, unit: &Unit) -> bool {
+        // We do not add scraped units for Host units, as they're either build scripts
+        // (not documented) or proc macros (have no scrape-able exports). Additionally,
+        // naively passing a proc macro's unit_for to new_unit_dep will currently cause
+        // Cargo to panic, see issue #10545.
+        self.is_member(&unit.pkg) && !unit.target.for_host()
     }
 }
 

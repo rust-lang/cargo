@@ -2594,6 +2594,58 @@ fn scrape_examples_configure_profile() {
 }
 
 #[cargo_test]
+fn scrape_examples_issue_10545() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"                
+                [workspace]
+                resolver = "2"
+                members = ["a", "b"]              
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+            edition = "2021"
+
+            [features]
+            default = ["foo"]
+            foo = []
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
 fn lib_before_bin() {
     // Checks that the library is documented before the binary.
     // Previously they were built concurrently, which can cause issues
