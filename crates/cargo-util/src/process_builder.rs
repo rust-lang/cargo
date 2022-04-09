@@ -226,8 +226,10 @@ impl ProcessBuilder {
                 Ok(mut child) => return child.wait(),
             }
         }
-        let (mut cmd, _argfile) = self.build_command_with_argfile()?;
-        cmd.spawn()?.wait()
+        let (mut cmd, argfile) = self.build_command_with_argfile()?;
+        let status = cmd.spawn()?.wait();
+        close_tempfile_and_log_error(argfile);
+        status
     }
 
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
@@ -279,8 +281,10 @@ impl ProcessBuilder {
                 Ok(child) => return child.wait_with_output(),
             }
         }
-        let (mut cmd, _argfile) = self.build_command_with_argfile()?;
-        piped(&mut cmd).spawn()?.wait_with_output()
+        let (mut cmd, argfile) = self.build_command_with_argfile()?;
+        let output = piped(&mut cmd).spawn()?.wait_with_output();
+        close_tempfile_and_log_error(argfile);
+        output
     }
 
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
@@ -334,7 +338,7 @@ impl ProcessBuilder {
 
         let status = (|| {
             let cmd = self.build_command();
-            let (mut child, _argfile) = spawn(cmd)?;
+            let (mut child, argfile) = spawn(cmd)?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
@@ -380,7 +384,11 @@ impl ProcessBuilder {
                 data.drain(..idx);
                 *pos = 0;
             })?;
-            child.wait()
+            let status = child.wait();
+            if let Some(argfile) = argfile {
+                close_tempfile_and_log_error(argfile);
+            }
+            status
         })()
         .with_context(|| ProcessError::could_not_execute(self))?;
         let output = Output {
@@ -526,25 +534,37 @@ fn piped(cmd: &mut Command) -> &mut Command {
         .stdin(Stdio::null())
 }
 
+fn close_tempfile_and_log_error(file: NamedTempFile) {
+    file.close().unwrap_or_else(|e| {
+        log::warn!("failed to close temporary file: {e}");
+    });
+}
+
 #[cfg(unix)]
 mod imp {
-    use super::{debug_force_argfile, ProcessBuilder, ProcessError};
+    use super::{close_tempfile_and_log_error, debug_force_argfile, ProcessBuilder, ProcessError};
     use anyhow::Result;
     use std::io;
     use std::os::unix::process::CommandExt;
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         let mut error;
+        let mut file = None;
         if debug_force_argfile(process_builder.retry_with_argfile) {
-            let (mut command, _argfile) = process_builder.build_command_with_argfile()?;
+            let (mut command, argfile) = process_builder.build_command_with_argfile()?;
+            file = Some(argfile);
             error = command.exec()
         } else {
             let mut command = process_builder.build_command();
             error = command.exec();
             if process_builder.should_retry_with_argfile(&error) {
-                let (mut command, _argfile) = process_builder.build_command_with_argfile()?;
+                let (mut command, argfile) = process_builder.build_command_with_argfile()?;
+                file = Some(argfile);
                 error = command.exec()
             }
+        }
+        if let Some(file) = file {
+            close_tempfile_and_log_error(file);
         }
 
         Err(anyhow::Error::from(error).context(ProcessError::new(
