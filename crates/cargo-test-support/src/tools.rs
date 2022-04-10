@@ -24,8 +24,17 @@ pub fn echo_wrapper() -> PathBuf {
         .file(
             "src/main.rs",
             r#"
+            use std::fs::read_to_string;
+            use std::path::PathBuf;
             fn main() {
-                let args = std::env::args().collect::<Vec<_>>();
+                // Handle args from `@path` argfile for rustc
+                let args = std::env::args()
+                    .flat_map(|p| if let Some(p) = p.strip_prefix("@") {
+                        read_to_string(p).unwrap().lines().map(String::from).collect()
+                    } else {
+                        vec![p]
+                    })
+                    .collect::<Vec<_>>();
                 eprintln!("WRAPPER CALLED: {}", args[1..].join(" "));
                 let status = std::process::Command::new(&args[1])
                     .args(&args[2..]).status().unwrap();

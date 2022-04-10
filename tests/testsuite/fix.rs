@@ -89,8 +89,14 @@ fn broken_fixes_backed_out() {
 
                 fn main() {
                     // Ignore calls to things like --print=file-names and compiling build.rs.
+                    // Also compatible for rustc invocations with `@path` argfile.
                     let is_lib_rs = env::args_os()
                         .map(PathBuf::from)
+                        .flat_map(|p| if let Some(p) = p.to_str().unwrap_or_default().strip_prefix("@") {
+                            fs::read_to_string(p).unwrap().lines().map(PathBuf::from).collect()
+                        } else {
+                            vec![p]
+                        })
                         .any(|l| l == Path::new("src/lib.rs"));
                     if is_lib_rs {
                         let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
@@ -1319,8 +1325,15 @@ fn fix_to_broken_code() {
                 use std::process::{self, Command};
 
                 fn main() {
+                    // Ignore calls to things like --print=file-names and compiling build.rs.
+                    // Also compatible for rustc invocations with `@path` argfile.
                     let is_lib_rs = env::args_os()
                         .map(PathBuf::from)
+                        .flat_map(|p| if let Some(p) = p.to_str().unwrap_or_default().strip_prefix("@") {
+                            fs::read_to_string(p).unwrap().lines().map(PathBuf::from).collect()
+                        } else {
+                            vec![p]
+                        })
                         .any(|l| l == Path::new("src/lib.rs"));
                     if is_lib_rs {
                         let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
