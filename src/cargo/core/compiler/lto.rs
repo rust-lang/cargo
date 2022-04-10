@@ -61,7 +61,7 @@ pub fn generate(bcx: &BuildContext<'_, '_>) -> CargoResult<HashMap<Unit, Lto>> {
                 }
             }
         };
-        calculate(bcx, &mut map, unit, root_lto)?;
+        calculate(bcx, &mut map, unit, root_lto, false)?;
     }
     Ok(map)
 }
@@ -91,6 +91,7 @@ fn calculate(
     map: &mut HashMap<Unit, Lto>,
     unit: &Unit,
     parent_lto: Lto,
+    is_dep: bool,
 ) -> CargoResult<()> {
     let crate_types = match unit.mode {
         // Note: Doctest ignores LTO, but for now we'll compute it as-if it is
@@ -112,7 +113,7 @@ fn calculate(
         .map(|ct| ct.as_str())
         .collect::<Vec<_>>();
     let all_lto_types = not_lto_types.len() == 0;
-    if !all_lto_types {
+    if !all_lto_types && !is_dep {
         if let profiles::Lto::Named(_) | profiles::Lto::Bool(_) = unit.profile.lto {
             bcx.config.shell().warn(format!(
                 "LTO can only be performed if all of the crate types support it, \
@@ -201,7 +202,7 @@ fn calculate(
     };
 
     for dep in &bcx.unit_graph[unit] {
-        calculate(bcx, map, &dep.unit, merged_lto)?;
+        calculate(bcx, map, &dep.unit, merged_lto, true)?;
     }
     Ok(())
 }

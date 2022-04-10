@@ -626,18 +626,36 @@ fn dylib() {
 
 #[cargo_test]
 fn lto_with_unsupported_crate_types() {
-    let p = project_with_dep("'dylib','rlib'");
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [lib]
+                crate-type = ['dylib','rlib']
+
+                [profile.release]
+                lto = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    println!("foo");
+                }
+            "#,
+        )
+        .build();
+
     p.cargo("build --release -v")
         .with_stderr_contains(
             "\
 [WARNING] LTO can only be performed if all of the crate types support it, \
-package `bar` have some crate types do not support LTO: dylib,rlib
-[WARNING] LTO can only be performed if all of the crate types support it, \
-package `registry` have some crate types do not support LTO: lib
-[WARNING] LTO can only be performed if all of the crate types support it, \
-package `registry-shared` have some crate types do not support LTO: lib
-[WARNING] LTO can only be performed if all of the crate types support it, \
-package `registry-shared` have some crate types do not support LTO: lib
+package `foo` have some crate types do not support LTO: dylib,rlib
 ",
         )
         .run();
