@@ -68,6 +68,13 @@ jobs:
 
     # Deny warnings on CI to avoid warnings getting into the codebase.
     - run: cargo test --features 'deny-warnings'
+    - name: Check operability of rustc invocation with argfile
+      env:
+        __CARGO_TEST_FORCE_ARGFILE: 1
+      run: |
+        # This only tests `cargo fix` because fix-proxy-mode is one of the most
+        # complicated subprocess management in Cargo.
+        cargo test --test testsuite --features 'deny-warnings' -- fix::
     - run: cargo test --features 'deny-warnings' --manifest-path crates/cargo-test-support/Cargo.toml
       env:
         CARGO_TARGET_DIR: target
