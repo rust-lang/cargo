@@ -7,6 +7,7 @@ use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::Config;
 use anyhow::Context;
+use cargo_util::paths::exclude_from_backups_and_indexing;
 use log::trace;
 use std::fmt::{self, Debug, Formatter};
 use std::task::Poll;
@@ -122,8 +123,20 @@ impl<'cfg> Source for GitSource<'cfg> {
             return Ok(());
         }
 
-        let git_path = self.config.git_path();
-        let git_path = self.config.assert_package_cache_locked(&git_path);
+        let git_fs = self.config.git_path();
+        git_fs.create_dir()?;
+        let git_path = self.config.assert_package_cache_locked(&git_fs);
+
+        // Before getting a checkout, make sure that `<cargo_home>/git` is
+        // marked as excluded from indexing and backups. Older versions of Cargo
+        // didn't do this, so we do it here regardless of whether `<cargo_home>`
+        // exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        exclude_from_backups_and_indexing(&git_path)?;
+
         let db_path = git_path.join("db").join(&self.ident);
 
         let db = self.remote.db_at(&db_path).ok();

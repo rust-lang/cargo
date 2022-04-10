@@ -315,19 +315,24 @@ impl Config {
         self.home_path.join("git")
     }
 
+    /// Gets the Cargo base directory for all registry information (`<cargo_home>/registry`).
+    pub fn registry_base_path(&self) -> Filesystem {
+        self.home_path.join("registry")
+    }
+
     /// Gets the Cargo registry index directory (`<cargo_home>/registry/index`).
     pub fn registry_index_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("index")
+        self.registry_base_path().join("index")
     }
 
     /// Gets the Cargo registry cache directory (`<cargo_home>/registry/path`).
     pub fn registry_cache_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("cache")
+        self.registry_base_path().join("cache")
     }
 
     /// Gets the Cargo registry source directory (`<cargo_home>/registry/src`).
     pub fn registry_source_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("src")
+        self.registry_base_path().join("src")
     }
 
     /// Gets the default Cargo registry.
