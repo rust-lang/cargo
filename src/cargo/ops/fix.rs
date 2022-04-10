@@ -405,7 +405,18 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
                     paths::write(path, &file.original_code)?;
                 }
             }
-            log_failed_fix(&output.stderr, output.status)?;
+
+            let krate = {
+                let mut iter = json_error_rustc.get_args();
+                let mut krate = None;
+                while let Some(arg) = iter.next() {
+                    if arg == "--crate-name" {
+                        krate = iter.next().and_then(|s| s.to_owned().into_string().ok());
+                    }
+                }
+                krate
+            };
+            log_failed_fix(krate, &output.stderr, output.status)?;
         }
     }
 
@@ -695,7 +706,7 @@ fn exit_with(status: ExitStatus) -> ! {
     process::exit(status.code().unwrap_or(3));
 }
 
-fn log_failed_fix(stderr: &[u8], status: ExitStatus) -> CargoResult<()> {
+fn log_failed_fix(krate: Option<String>, stderr: &[u8], status: ExitStatus) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let diagnostics = stderr
@@ -717,19 +728,6 @@ fn log_failed_fix(stderr: &[u8], status: ExitStatus) -> CargoResult<()> {
             .filter(|x| !x.starts_with('{'))
             .map(|x| x.to_string()),
     );
-    let mut krate = None;
-    let mut prev_dash_dash_krate_name = false;
-    for arg in env::args() {
-        if prev_dash_dash_krate_name {
-            krate = Some(arg.clone());
-        }
-
-        if arg == "--crate-name" {
-            prev_dash_dash_krate_name = true;
-        } else {
-            prev_dash_dash_krate_name = false;
-        }
-    }
 
     let files = files.into_iter().collect();
     let abnormal_exit = if status.code().map_or(false, is_simple_exit_code) {
