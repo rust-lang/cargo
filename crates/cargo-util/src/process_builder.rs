@@ -37,6 +37,7 @@ pub struct ProcessBuilder {
     /// `true` to include environment variable in display.
     display_env_vars: bool,
     /// `true` to retry with an argfile if hitting "command line too big" error.
+    /// See [`ProcessBuilder::retry_with_argfile`] for more information.
     retry_with_argfile: bool,
 }
 
@@ -185,6 +186,22 @@ impl ProcessBuilder {
     }
 
     /// Enables retrying with an argfile if hitting "command line too big" error
+    ///
+    /// This is primarily for the `@path` arg of rustc and rustdoc, which treat
+    /// each line as an command-line argument, so `LF` and `CRLF` bytes are not
+    /// valid as an argument for argfile at this moment.
+    /// For example, `RUSTDOCFLAGS="--crate-version foo\nbar" cargo doc` is
+    /// valid when invoking from command-line but not from argfile.
+    ///
+    /// To sum up, the limitations of the argfile are:
+    ///
+    /// - Must be valid UTF-8 encoded.
+    /// - Must not contain any newlines in each argument.
+    ///
+    /// Ref:
+    ///
+    /// - https://doc.rust-lang.org/rustdoc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+    /// - https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
     pub fn retry_with_argfile(&mut self, enabled: bool) -> &mut Self {
         self.retry_with_argfile = enabled;
         self
@@ -393,11 +410,6 @@ impl ProcessBuilder {
 
     /// Builds the command with an `@<path>` argfile that contains all the
     /// arguments. This is primarily served for rustc/rustdoc command family.
-    ///
-    /// Ref:
-    ///
-    /// - https://doc.rust-lang.org/rustdoc/command-line-arguments.html#path-load-command-line-flags-from-a-path
-    /// - https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
     fn build_command_with_argfile(&self) -> io::Result<(Command, NamedTempFile)> {
         use std::io::Write as _;
 
@@ -411,21 +423,26 @@ impl ProcessBuilder {
         log::debug!("created argfile at {path} for `{self}`");
 
         let cap = self.get_args().map(|arg| arg.len() + 1).sum::<usize>();
-        let mut buf = String::with_capacity(cap);
+        let mut buf = Vec::with_capacity(cap);
         for arg in &self.args {
-            let arg = arg
-                .to_str()
-                .ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        "argument contains invalid UTF-8 characters",
-                    )
-                })?;
-            // TODO: Shall we escape line feed?
-            buf.push_str(arg);
-            buf.push('\n');
+            let arg = arg.to_str().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!(
+                        "argument for argfile contains invalid UTF-8 characters: `{}`",
+                        arg.to_string_lossy()
+                    ),
+                )
+            })?;
+            if arg.contains('\n') {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("argument for argfile contains newlines: `{arg}`"),
+                ));
+            }
+            writeln!(buf, "{arg}")?;
         }
-        tmp.write_all(buf.as_bytes())?;
+        tmp.write_all(&mut buf)?;
         Ok((cmd, tmp))
     }
 
@@ -552,10 +569,11 @@ mod imp {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::ProcessBuilder;
     use std::fs;
+
     #[test]
-    fn test_argfile() {
+    fn argfile_build_succeeds() {
         let mut cmd = ProcessBuilder::new("echo");
         cmd.args(["foo", "bar"].as_slice());
         let (cmd, argfile) = cmd.build_command_with_argfile().unwrap();
@@ -568,5 +586,40 @@ mod tests {
 
         let buf = fs::read_to_string(argfile.path()).unwrap();
         assert_eq!(buf, "foo\nbar\n");
+    }
+
+    #[test]
+    fn argfile_build_fails_if_arg_contains_newline() {
+        let mut cmd = ProcessBuilder::new("echo");
+        cmd.arg("foo\n");
+        let err = cmd.build_command_with_argfile().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "argument for argfile contains newlines: `foo\n`"
+        );
+    }
+
+    #[test]
+    fn argfile_build_fails_if_arg_contains_invalid_utf8() {
+        let mut cmd = ProcessBuilder::new("echo");
+
+        #[cfg(windows)]
+        let invalid_arg = {
+            use std::os::windows::prelude::*;
+            std::ffi::OsString::from_wide(&[0x0066, 0x006f, 0xD800, 0x006f])
+        };
+
+        #[cfg(unix)]
+        let invalid_arg = {
+            use std::os::unix::ffi::OsStrExt;
+            std::ffi::OsStr::from_bytes(&[0x66, 0x6f, 0x80, 0x6f]).to_os_string()
+        };
+
+        cmd.arg(invalid_arg);
+        let err = cmd.build_command_with_argfile().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "argument for argfile contains invalid UTF-8 characters: `fo�o`"
+        );
     }
 }
