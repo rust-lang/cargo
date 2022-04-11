@@ -36,6 +36,7 @@ pub struct PackageOpts<'cfg> {
     pub cli_features: CliFeatures,
 }
 
+const ORIGINAL_MANIFEST_FILE: &str = "Cargo.toml.orig";
 const VCS_INFO_FILE: &str = ".cargo_vcs_info.json";
 
 struct ArchiveFile {
@@ -219,8 +220,8 @@ fn build_ar_list(
         match rel_str.as_ref() {
             "Cargo.toml" => {
                 result.push(ArchiveFile {
-                    rel_path: PathBuf::from("Cargo.toml.orig"),
-                    rel_str: "Cargo.toml.orig".to_string(),
+                    rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
+                    rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
                 result.push(ArchiveFile {
@@ -230,9 +231,8 @@ fn build_ar_list(
                 });
             }
             "Cargo.lock" => continue,
-            VCS_INFO_FILE | "Cargo.toml.orig" => anyhow::bail!(
-                "invalid inclusion of reserved file name \
-                     {} in package source",
+            VCS_INFO_FILE | ORIGINAL_MANIFEST_FILE => anyhow::bail!(
+                "invalid inclusion of reserved file name {} in package source",
                 rel_str
             ),
             _ => {
