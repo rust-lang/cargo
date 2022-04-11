@@ -19,7 +19,7 @@ path = "src/cargo/lib.rs"
 atty = "0.2"
 bytesize = "1.0"
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.2" }
-cargo-util = { path = "crates/cargo-util", version = "0.1.2" }
+cargo-util = { path = "crates/cargo-util", version = "0.1.3" }
 crates-io = { path = "crates/crates-io", version = "0.34.0" }
 crossbeam-utils = "0.8"
 curl = { version = "0.4.41", features = ["http2"] }

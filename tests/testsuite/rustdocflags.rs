@@ -112,6 +112,7 @@ fn whitespace() {
 
     const SPACED_VERSION: &str = "a\nb\tc\u{00a0}d";
     p.cargo("doc")
+        .env_remove("__CARGO_TEST_FORCE_ARGFILE") // Not applicable for argfile.
         .env(
             "RUSTDOCFLAGS",
             format!("--crate-version {}", SPACED_VERSION),

@@ -93,18 +93,24 @@ impl Rustc {
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn process(&self) -> ProcessBuilder {
-        ProcessBuilder::new(self.path.as_path()).wrapped(self.wrapper.as_ref())
+        let mut cmd = ProcessBuilder::new(self.path.as_path()).wrapped(self.wrapper.as_ref());
+        cmd.retry_with_argfile(true);
+        cmd
     }
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn workspace_process(&self) -> ProcessBuilder {
-        ProcessBuilder::new(self.path.as_path())
+        let mut cmd = ProcessBuilder::new(self.path.as_path())
             .wrapped(self.workspace_wrapper.as_ref())
-            .wrapped(self.wrapper.as_ref())
+            .wrapped(self.wrapper.as_ref());
+        cmd.retry_with_argfile(true);
+        cmd
     }
 
     pub fn process_no_wrapper(&self) -> ProcessBuilder {
-        ProcessBuilder::new(&self.path)
+        let mut cmd = ProcessBuilder::new(&self.path);
+        cmd.retry_with_argfile(true);
+        cmd
     }
 
     /// Gets the output for the given command.
@@ -231,10 +237,7 @@ impl Cache {
         } else {
             debug!("rustc info cache miss");
             debug!("running {}", cmd);
-            let output = cmd
-                .build_command()
-                .output()
-                .with_context(|| format!("could not execute process {} (never executed)", cmd))?;
+            let output = cmd.output()?;
             let stdout = String::from_utf8(output.stdout)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
                 .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
@@ -351,7 +354,7 @@ fn rustc_fingerprint(
 fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
     let mut hasher = StableHasher::new();
     extra_fingerprint.hash(&mut hasher);
-    cmd.get_args().hash(&mut hasher);
+    cmd.get_args().for_each(|arg| arg.hash(&mut hasher));
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
     env.sort_unstable();
     env.hash(&mut hasher);
