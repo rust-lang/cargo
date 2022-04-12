@@ -1039,7 +1039,7 @@ fn check_cfg_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-features")
+    p.cargo("check -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -1064,7 +1064,7 @@ fn check_cfg_well_known_names() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-well-known-names")
+    p.cargo("check -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -1089,7 +1089,7 @@ fn check_cfg_well_known_values() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-well-known-values")
+    p.cargo("check -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\

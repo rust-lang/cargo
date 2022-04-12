@@ -2808,7 +2808,7 @@ fn doc_check_cfg_features() {
         .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
         .build();
 
-    p.cargo("doc -v -Z check-cfg-features")
+    p.cargo("doc -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\

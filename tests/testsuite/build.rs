@@ -6249,7 +6249,7 @@ fn check_cfg_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-features")
+    p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -6290,7 +6290,7 @@ fn check_cfg_features_with_deps() {
         .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-features")
+    p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -6334,7 +6334,7 @@ fn check_cfg_features_with_opt_deps() {
         .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-features")
+    p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -6377,7 +6377,7 @@ fn check_cfg_features_with_namespaced_features() {
         .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-features")
+    p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -6402,7 +6402,7 @@ fn check_cfg_well_known_names() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-well-known-names")
+    p.cargo("build -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -6427,7 +6427,7 @@ fn check_cfg_well_known_values() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-well-known-values")
+    p.cargo("build -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -6463,7 +6463,7 @@ fn check_cfg_all() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-features -Z check-cfg-well-known-names -Z check-cfg-well-known-values")
+    p.cargo("build -v -Zcheck-cfg=features,names,values")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\

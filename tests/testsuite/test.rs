@@ -4524,7 +4524,7 @@ fn check_cfg_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("test -v -Z check-cfg-features")
+    p.cargo("test -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -4562,7 +4562,7 @@ fn check_cfg_features_doc() {
         .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
         .build();
 
-    p.cargo("test -v --doc -Z check-cfg-features")
+    p.cargo("test -v --doc -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -4589,7 +4589,7 @@ fn check_cfg_well_known_names() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("test -v -Z check-cfg-well-known-names")
+    p.cargo("test -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -4615,7 +4615,7 @@ fn check_cfg_well_known_values() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("test -v -Z check-cfg-well-known-values")
+    p.cargo("test -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -4641,7 +4641,7 @@ fn check_cfg_well_known_names_doc() {
         .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
         .build();
 
-    p.cargo("test -v --doc -Z check-cfg-well-known-names")
+    p.cargo("test -v --doc -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -4668,7 +4668,7 @@ fn check_cfg_well_known_values_doc() {
         .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
         .build();
 
-    p.cargo("test -v --doc -Z check-cfg-well-known-values")
+    p.cargo("test -v --doc -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
