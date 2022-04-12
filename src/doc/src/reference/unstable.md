@@ -1202,6 +1202,32 @@ For instance:
 cargo check -Z unstable-options -Z check-cfg-features
 ```
 
+### check-cfg-well-known-names
+
+* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
+
+The `-Z check-cfg-well-known-names` argument tells Cargo to activate `rustc` and `rustdoc` unstable
+`--check-cfg` command line as `--check-cfg=names()`.
+This enables compile time checking of well known names in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
+For instance:
+
+```
+cargo check -Z unstable-options -Z check-cfg-well-known-names
+```
+
+### check-cfg-well-known-values
+
+* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
+
+The `-Z check-cfg-well-known-values` argument tells Cargo to activate `rustc` and `rustdoc` unstable
+`--check-cfg` command line as `--check-cfg=values()`.
+This enables compile time checking of well known values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
+For instance:
+
+```
+cargo check -Z unstable-options -Z check-cfg-well-known-values
+```
+
 ## Stabilized and removed features
 
 ### Compile progress

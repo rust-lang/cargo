@@ -646,6 +646,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(cx, unit));
+    rustdoc.args(&check_cfg_args(cx, unit));
 
     add_error_format_and_color(cx, &mut rustdoc);
     add_allow_features(cx, &mut rustdoc);
@@ -966,6 +967,7 @@ fn build_base_args(
     }
 
     cmd.args(&features_args(cx, unit));
+    cmd.args(&check_cfg_args(cx, unit));
 
     let meta = cx.files().metadata(unit);
     cmd.arg("-C").arg(&format!("metadata={}", meta));
@@ -1039,14 +1041,29 @@ fn build_base_args(
     Ok(())
 }
 
-/// Features with --cfg and all features with --check-cfg
-fn features_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    let mut args = Vec::with_capacity(unit.features.len() + 2);
+/// All active features for the unit passed as --cfg
+fn features_args(_cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let mut args = Vec::with_capacity(unit.features.len() * 2);
 
     for feat in &unit.features {
         args.push(OsString::from("--cfg"));
         args.push(OsString::from(format!("feature=\"{}\"", feat)));
     }
+
+    args
+}
+
+/// Generate the --check-cfg arguments for the unit
+fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    if !cx.bcx.config.cli_unstable().check_cfg_features
+        && !cx.bcx.config.cli_unstable().check_cfg_well_known_names
+        && !cx.bcx.config.cli_unstable().check_cfg_well_known_values
+    {
+        return Vec::new();
+    }
+
+    let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
+    args.push(OsString::from("-Zunstable-options"));
 
     if cx.bcx.config.cli_unstable().check_cfg_features {
         // This generate something like this:
@@ -1060,9 +1077,18 @@ fn features_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
         }
         arg.push(")");
 
-        args.push(OsString::from("-Zunstable-options"));
         args.push(OsString::from("--check-cfg"));
         args.push(arg);
+    }
+
+    if cx.bcx.config.cli_unstable().check_cfg_well_known_names {
+        args.push(OsString::from("--check-cfg"));
+        args.push(OsString::from("names()"));
+    }
+
+    if cx.bcx.config.cli_unstable().check_cfg_well_known_values {
+        args.push(OsString::from("--check-cfg"));
+        args.push(OsString::from("values()"));
     }
 
     args
