@@ -234,8 +234,7 @@ impl Profiles {
         unit_for: UnitFor,
         kind: CompileKind,
     ) -> Profile {
-        let (profile_name, inherits) = (self.requested_profile, None);
-        let maker = self.get_profile_maker(profile_name).unwrap();
+        let maker = self.get_profile_maker(self.requested_profile).unwrap();
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
@@ -243,15 +242,6 @@ impl Profiles {
         match unit_for.panic_setting() {
             PanicSetting::AlwaysUnwind => profile.panic = PanicStrategy::Unwind,
             PanicSetting::ReadProfile => {}
-            PanicSetting::Inherit => {
-                if let Some(inherits) = inherits {
-                    // TODO: Fixme, broken with named profiles.
-                    let maker = self.get_profile_maker(inherits).unwrap();
-                    profile.panic = maker
-                        .get_profile(Some(pkg_id), is_member, unit_for.is_for_host())
-                        .panic;
-                }
-            }
         }
 
         // Default macOS debug information to being stored in the "unpacked"
@@ -285,7 +275,7 @@ impl Profiles {
         if !is_local {
             profile.incremental = false;
         }
-        profile.name = profile_name;
+        profile.name = self.requested_profile;
         profile
     }
 
@@ -840,10 +830,6 @@ enum PanicSetting {
     /// Indicates that this unit will read its `profile` setting and use
     /// whatever is configured there.
     ReadProfile,
-
-    /// This unit will ignore its `panic` setting in its profile and will
-    /// instead inherit it from the `dev` or `release` profile, as appropriate.
-    Inherit,
 }
 
 impl UnitFor {
@@ -909,7 +895,7 @@ impl UnitFor {
             // (basically avoid recompiles) but historical defaults required
             // that we always unwound.
             panic_setting: if config.cli_unstable().panic_abort_tests {
-                PanicSetting::Inherit
+                PanicSetting::ReadProfile
             } else {
                 PanicSetting::AlwaysUnwind
             },
@@ -965,6 +951,18 @@ impl UnitFor {
             host_features,
             panic_setting,
             root_compile_kind,
+            artifact_target_for_features: self.artifact_target_for_features,
+        }
+    }
+
+    pub fn for_custom_build(self) -> UnitFor {
+        UnitFor {
+            host: true,
+            host_features: self.host_features,
+            // Force build scripts to always use `panic=unwind` for now to
+            // maximally share dependencies with procedural macros.
+            panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind: self.root_compile_kind,
             artifact_target_for_features: self.artifact_target_for_features,
         }
     }

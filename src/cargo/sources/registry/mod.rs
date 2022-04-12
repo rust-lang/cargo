@@ -164,6 +164,7 @@ use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
 use anyhow::Context as _;
 use flate2::read::GzDecoder;
@@ -179,6 +180,7 @@ use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
+use crate::util::network::PollExt;
 use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
@@ -203,15 +205,6 @@ pub struct RegistrySource<'cfg> {
     src_path: Filesystem,
     /// Local reference to [`Config`] for convenience.
     config: &'cfg Config,
-    /// Whether or not the index has been updated.
-    ///
-    /// This is used as an optimization to avoid updating if not needed, such
-    /// as `Cargo.lock` already exists and the index already contains the
-    /// locked entries. Or, to avoid updating multiple times.
-    ///
-    /// Only remote registries really need to update. Local registries only
-    /// check that the index exists.
-    updated: bool,
     /// Abstraction for interfacing to the different registry kinds.
     ops: Box<dyn RegistryData + 'cfg>,
     /// Interface for managing the on-disk index.
@@ -227,7 +220,8 @@ pub struct RegistrySource<'cfg> {
 }
 
 /// The `config.json` file stored in the index.
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
     /// Download endpoint for all crates.
     ///
@@ -418,6 +412,20 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
+pub enum LoadResponse {
+    /// The cache is valid. The cached data should be used.
+    CacheValid,
+
+    /// The cache is out of date. Returned data should be used.
+    Data {
+        raw_data: Vec<u8>,
+        index_version: Option<String>,
+    },
+
+    /// The requested crate was found.
+    NotFound,
+}
+
 /// An abstract interface to handle both a local (see `local::LocalRegistry`)
 /// and remote (see `remote::RemoteRegistry`) registry.
 ///
@@ -439,24 +447,24 @@ pub trait RegistryData {
     ///
     /// * `root` is the root path to the index.
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
-    /// * `data` is a callback that will receive the raw bytes of the index JSON file.
+    /// * `index_version` is the version of the requested crate data currently in cache.
     fn load(
-        &self,
+        &mut self,
         root: &Path,
         path: &Path,
-        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()>;
+        index_version: Option<&str>,
+    ) -> Poll<CargoResult<LoadResponse>>;
 
     /// Loads the `config.json` file and returns it.
     ///
     /// Local registries don't have a config, and return `None`.
-    fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
+    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>>;
 
-    /// Updates the index.
-    ///
-    /// For a remote registry, this updates the index over the network. Local
-    /// registries only check that the index exists.
-    fn update_index(&mut self) -> CargoResult<()>;
+    /// Invalidates locally cached data.
+    fn invalidate_cache(&mut self);
+
+    /// Is the local cached data up-to-date?
+    fn is_updated(&self) -> bool;
 
     /// Prepare to start downloading a `.crate` file.
     ///
@@ -500,14 +508,8 @@ pub trait RegistryData {
     /// Returns the [`Path`] to the [`Filesystem`].
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
 
-    /// Returns the current "version" of the index.
-    ///
-    /// For local registries, this returns `None` because there is no
-    /// versioning. For remote registries, this returns the SHA hash of the
-    /// git index on disk (or None if the index hasn't been downloaded yet).
-    ///
-    /// This is used by index caching to check if the cache is out of date.
-    fn current_version(&self) -> Option<InternedString>;
+    /// Block until all outstanding Poll::Pending requests are Poll::Ready.
+    fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 
 /// The status of [`RegistryData::download`] which indicates if a `.crate`
@@ -523,6 +525,8 @@ pub enum MaybeLock {
     Download { url: String, descriptor: String },
 }
 
+mod download;
+mod http_remote;
 mod index;
 mod local;
 mod remote;
@@ -538,10 +542,23 @@ impl<'cfg> RegistrySource<'cfg> {
         source_id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
-    ) -> RegistrySource<'cfg> {
+    ) -> CargoResult<RegistrySource<'cfg>> {
         let name = short_name(source_id);
-        let ops = remote::RemoteRegistry::new(source_id, config, &name);
-        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
+        let ops = if source_id.url().scheme().starts_with("sparse+") {
+            if !config.cli_unstable().http_registry {
+                anyhow::bail!("Usage of HTTP-based registries requires `-Z http-registry`");
+            }
+            Box::new(http_remote::HttpRegistry::new(source_id, config, &name)) as Box<_>
+        } else {
+            Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>
+        };
+        Ok(RegistrySource::new(
+            source_id,
+            config,
+            &name,
+            ops,
+            yanked_whitelist,
+        ))
     }
 
     pub fn local(
@@ -566,7 +583,6 @@ impl<'cfg> RegistrySource<'cfg> {
             src_path: config.registry_source_path().join(name),
             config,
             source_id,
-            updated: false,
             index: index::RegistryIndex::new(source_id, ops.index_path(), config),
             yanked_whitelist: yanked_whitelist.clone(),
             ops,
@@ -576,7 +592,7 @@ impl<'cfg> RegistrySource<'cfg> {
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    pub fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
+    pub fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         self.ops.config()
     }
 
@@ -653,14 +669,6 @@ impl<'cfg> RegistrySource<'cfg> {
         Ok(unpack_dir.to_path_buf())
     }
 
-    fn do_update(&mut self) -> CargoResult<()> {
-        self.ops.update_index()?;
-        let path = self.ops.index_path();
-        self.index = index::RegistryIndex::new(self.source_id, path, self.config);
-        self.updated = true;
-        Ok(())
-    }
-
     fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
@@ -678,6 +686,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let summary_with_cksum = self
             .index
             .summaries(package.name(), &req, &mut *self.ops)?
+            .expect("a downloaded dep now pending!?")
             .map(|s| s.summary.clone())
             .next()
             .expect("summary not found");
@@ -692,26 +701,31 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
         // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.source_id().precise().is_some() && !self.updated {
+        if dep.source_id().precise().is_some() && !self.ops.is_updated() {
             debug!("attempting query without update");
             let mut called = false;
-            self.index
-                .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                    if dep.matches(&s) {
-                        called = true;
-                        f(s);
-                    }
-                })?;
+            let pend =
+                self.index
+                    .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
+                        if dep.matches(&s) {
+                            called = true;
+                            f(s);
+                        }
+                    })?;
+            if pend.is_pending() {
+                return Poll::Pending;
+            }
             if called {
-                return Ok(());
+                return Poll::Ready(Ok(()));
             } else {
                 debug!("falling back to an update");
-                self.do_update()?;
+                self.invalidate_cache();
+                return Poll::Pending;
             }
         }
 
@@ -723,7 +737,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             })
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
         self.index
             .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, f)
     }
@@ -740,24 +758,18 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        // If we have an imprecise version then we don't know what we're going
-        // to look for, so we always attempt to perform an update here.
-        //
-        // If we have a precise version, then we'll update lazily during the
-        // querying phase. Note that precise in this case is only
-        // `Some("locked")` as other `Some` values indicate a `cargo update
-        // --precise` request
-        if self.source_id.precise() != Some("locked") {
-            self.do_update()?;
-        } else {
-            debug!("skipping update due to locked registry");
-        }
-        Ok(())
+    fn invalidate_cache(&mut self) {
+        self.index.clear_summaries_cache();
+        self.ops.invalidate_cache();
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
+        let hash = loop {
+            match self.index.hash(package, &mut *self.ops)? {
+                Poll::Pending => self.block_until_ready()?,
+                Poll::Ready(hash) => break hash,
+            }
+        };
         match self.ops.download(package, hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download { url, descriptor } => {
@@ -767,7 +779,12 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
+        let hash = loop {
+            match self.index.hash(package, &mut *self.ops)? {
+                Poll::Pending => self.block_until_ready()?,
+                Poll::Ready(hash) => break hash,
+            }
+        };
         let file = self.ops.finish_download(package, hash, &data)?;
         self.get_pkg(package, &file)
     }
@@ -785,9 +802,40 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
-        if !self.updated {
-            self.do_update()?;
+        self.invalidate_cache();
+        loop {
+            match self.index.is_yanked(pkg, &mut *self.ops)? {
+                Poll::Ready(yanked) => return Ok(yanked),
+                Poll::Pending => self.block_until_ready()?,
+            }
         }
-        self.index.is_yanked(pkg, &mut *self.ops)
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        self.ops.block_until_ready()
+    }
+}
+
+fn make_dep_prefix(name: &str) -> String {
+    match name.len() {
+        1 => String::from("1"),
+        2 => String::from("2"),
+        3 => format!("3/{}", &name[..1]),
+        _ => format!("{}/{}", &name[0..2], &name[2..4]),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::make_dep_prefix;
+
+    #[test]
+    fn dep_prefix() {
+        assert_eq!(make_dep_prefix("a"), "1");
+        assert_eq!(make_dep_prefix("ab"), "2");
+        assert_eq!(make_dep_prefix("abc"), "3/a");
+        assert_eq!(make_dep_prefix("Abc"), "3/A");
+        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
+        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
     }
 }

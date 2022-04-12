@@ -62,7 +62,7 @@ fn offline_missing_optional() {
 [ERROR] failed to download `opt_dep v1.0.0`
 
 Caused by:
-  can't make HTTP request in the offline mode
+  attempting to make an HTTP request, but --offline was specified
 ",
         )
         .with_status(101)
@@ -325,7 +325,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
 [ERROR] failed to download `bar v0.1.0`
 
 Caused by:
-  can't make HTTP request in the offline mode
+  attempting to make an HTTP request, but --offline was specified
 ",
         )
         .run();
@@ -697,6 +697,19 @@ fn offline_and_frozen_and_no_lock() {
 error: the lock file [ROOT]/foo/Cargo.lock needs to be updated but --frozen was passed to prevent this
 If you want to try to generate the lock file without accessing the network, \
 remove the --frozen flag and use --offline instead.
+")
+        .run();
+}
+
+#[cargo_test]
+fn offline_and_locked_and_no_frozen() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build --locked --offline")
+        .with_status(101)
+        .with_stderr("\
+error: the lock file [ROOT]/foo/Cargo.lock needs to be updated but --locked was passed to prevent this
+If you want to try to generate the lock file without accessing the network, \
+remove the --locked flag and use --offline instead.
 ")
         .run();
 }

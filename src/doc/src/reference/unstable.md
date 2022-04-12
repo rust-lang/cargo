@@ -68,6 +68,7 @@ Each new feature described below should explain how to use it.
     * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
     * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
+    * [workspace-inheritance](#workspace-inheritance) - Allow workspace members to share fields and dependencies
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
@@ -80,7 +81,8 @@ Each new feature described below should explain how to use it.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
-    * [crate-type](#crate-type) - Supports passing crate types to the compiler.
+    * [crate-type](#crate-type) — Supports passing crate types to the compiler.
+    * [keep-going](#keep-going) — Build as much as possible rather than aborting on the first error.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
@@ -100,6 +102,7 @@ Each new feature described below should explain how to use it.
 * Registries
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
+    * [http-registry](#http-registry) — Adds support for fetching from http registries (`sparse+`)
 
 ### allow-features
 
@@ -235,6 +238,12 @@ or running tests for both targets:
 cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
 ```
 
+This can also be specified in `.cargo/config.toml` files.
+
+```toml
+[build]
+target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+```
 
 #### New `dir-name` attribute
 
@@ -444,6 +453,26 @@ command-line option:
 
 ```console
 cargo rustc --crate-type lib,cdylib -Z unstable-options
+```
+
+### keep-going
+* Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/10496)
+
+`cargo build --keep-going` (and similarly for `check`, `test` etc) will build as
+many crates in the dependency graph as possible, rather than aborting the build
+at the first one that fails to build.
+
+For example if the current package depends on dependencies `fails` and `works`,
+one of which fails to build, `cargo check -j1` may or may not build the one that
+succeeds (depending on which one of the two builds Cargo picked to run first),
+whereas `cargo check -j1 --keep-going` would definitely run both builds, even if
+the one run first fails.
+
+The `-Z unstable-options` command-line option must be used in order to use
+`--keep-going` while it is not yet stable:
+
+```console
+cargo check --keep-going -Z unstable-options
 ```
 
 ### config-cli
@@ -857,7 +886,7 @@ bar = { artifact = "cdylib", version = "1.0", target = "wasm32-unknown-unknown" 
 
 ```rust
 fn main() {
-  wasm::run_file(env!("CARGO_CDYLIB_FILE_BAR"));
+  wasm::run_file(std::env::var("CARGO_CDYLIB_FILE_BAR").unwrap());
 }
 ```
 
@@ -880,6 +909,18 @@ fn main() {
 }
 ```
 
+### http-registry
+* Tracking Issue: [9069](https://github.com/rust-lang/cargo/issues/9069)
+* RFC: [#2789](https://github.com/rust-lang/rfcs/pull/2789)
+
+The `http-registry` feature allows cargo to interact with remote registries served
+over http rather than git. These registries can be identified by urls starting with
+`sparse+http://` or `sparse+https://`.
+
+When fetching index metadata over http, cargo only downloads the metadata for relevant
+crates, which can save significant time and bandwidth.
+
+The format of the http index is identical to a checkout of a git-based index.
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
@@ -1188,6 +1229,32 @@ ties broken in favor of `CARGO_ENCODED_RUSTFLAGS`. So, for example, if
 `RUSTFLAGS_$TARGET` and `TARGET_CARGO_ENCODED_RUSTFLAGS` are both
 specified, `RUSTFLAGS_$TARGET` would be used.
 
+### check-cfg-well-known-names
+
+* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
+
+The `-Z check-cfg-well-known-names` argument tells Cargo to activate `rustc` and `rustdoc` unstable
+`--check-cfg` command line as `--check-cfg=names()`.
+This enables compile time checking of well known names in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
+For instance:
+
+```
+cargo check -Z unstable-options -Z check-cfg-well-known-names
+```
+
+### check-cfg-well-known-values
+
+* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
+
+The `-Z check-cfg-well-known-values` argument tells Cargo to activate `rustc` and `rustdoc` unstable
+`--check-cfg` command line as `--check-cfg=values()`.
+This enables compile time checking of well known values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
+For instance:
+
+```
+cargo check -Z unstable-options -Z check-cfg-well-known-values
+```
+
 ## Stabilized and removed features
 
 ### Compile progress
@@ -1369,3 +1436,65 @@ See the [Features chapter](features.md#dependency-features) for more information
 The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
 (`--timings=html` and the machine-readable `--timings=json` output remain
 unstable and require `-Zunstable-options`.)
+
+### workspace-inheritance
+
+* RFC: [#2906](https://github.com/rust-lang/rfcs/blob/master/text/2906-cargo-workspace-deduplicate.md)
+* Tracking Issue: [#8415](https://github.com/rust-lang/cargo/issues/8415)
+
+The `workspace-inheritance` feature allows workspace members to inherit fields
+and dependencies from a workspace.
+
+Example 1: 
+
+```toml
+# in workspace's Cargo.toml
+[workspace.dependencies]
+log = "0.3.1"
+log2 = { version = "2.0.0", package = "log" }
+serde = { git = 'https://github.com/serde-rs/serde' }
+wasm-bindgen-cli = { path = "crates/cli" }
+```
+
+```toml
+# in a workspace member's Cargo.toml
+[dependencies]
+log = { workspace = true }
+log2 = { workspace = true }
+```
+
+Example 2: 
+```toml
+# in workspace's Cargo.toml
+[workspace]
+version = "1.2.3"
+authors = ["Nice Folks"]
+description = "..."
+documentation = "https://example.github.io/example"
+readme = "README.md"
+homepage = "https://example.com"
+repository = "https://github.com/example/example"
+license = "MIT"
+license-file = "./LICENSE"
+keywords = ["cli"]
+categories = ["development-tools"]
+publish = false
+edition = "2018"
+```
+
+```toml
+# in a workspace member's Cargo.toml
+[package]
+version = { workspace = true }
+authors = { workspace = true }
+description = { workspace = true }
+documentation = { workspace = true }
+readme = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+license-file = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+publish = { workspace = true }
+```

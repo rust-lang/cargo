@@ -284,6 +284,45 @@ in package source
 }
 
 #[cargo_test]
+fn orig_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                description = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                exclude = ["*.no-existe"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {}
+            "#,
+        )
+        .file("Cargo.toml.orig", "oops")
+        .build();
+    p.cargo("package")
+        .arg("--no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid inclusion of reserved file name Cargo.toml.orig \
+in package source
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn path_dependency_no_version() {
     let p = project()
         .file(
@@ -801,6 +840,84 @@ Caused by:
 
 Caused by:
   [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
+/// Test that /dir and /dir/ matches symlinks to directories.
+fn gitignore_symlink_dir() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+            .symlink_dir("src", "src1")
+            .symlink_dir("src", "src2")
+            .symlink_dir("src", "src3")
+            .symlink_dir("src", "src4")
+            .file(".gitignore", "/src1\n/src2/\nsrc3\nsrc4/")
+    });
+
+    p.cargo("package -l --no-metadata")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
+/// Test that /dir and /dir/ matches symlinks to directories in dirty working directory.
+fn gitignore_symlink_dir_dirty() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+            .file(".gitignore", "/src1\n/src2/\nsrc3\nsrc4/")
+    });
+
+    p.symlink("src", "src1");
+    p.symlink("src", "src2");
+    p.symlink("src", "src3");
+    p.symlink("src", "src4");
+
+    p.cargo("package -l --no-metadata")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+
+    p.cargo("package -l --no-metadata --allow-dirty")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
 ",
         )
         .run();

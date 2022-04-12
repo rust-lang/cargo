@@ -426,6 +426,84 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
 }
 
 #[cargo_test]
+fn feature_resolution_works_for_cfg_target_specification() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                resolver = "2"
+
+                [dependencies.d1]
+                path = "d1"
+                artifact = "bin"
+                target = "$TARGET"
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let _b = include_bytes!(env!("CARGO_BIN_FILE_D1"));
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            &r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                authors = []
+
+                [target.'$TARGET'.dependencies]
+                d2 = { path = "../d2" }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "d1/src/main.rs",
+            r#"fn main() {
+                d1::f();
+            }"#,
+        )
+        .file("d1/build.rs", r#"fn main() { }"#)
+        .file(
+            "d1/src/lib.rs",
+            &r#"pub fn f() {
+                #[cfg(target = "$TARGET")]
+                d2::f();
+            }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "d2/Cargo.toml",
+            r#"
+                [package]
+                name = "d2"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("d2/build.rs", r#"fn main() { }"#)
+        .file("d2/src/lib.rs", "pub fn f() {}")
+        .build();
+
+    p.cargo("test -Z bindeps")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
 fn build_script_with_bin_artifacts() {
     let p = project()
         .file(
@@ -2074,4 +2152,114 @@ fn build_script_output_string(p: &Project, package_name: &str) -> String {
         .unwrap();
     assert_eq!(paths.len(), 1);
     std::fs::read_to_string(&paths[0]).unwrap()
+}
+
+#[cargo_test]
+fn build_script_features_for_shared_dependency() {
+    // When a build script is built and run, its features should match. Here:
+    //
+    // foo
+    //   -> artifact on d1 with target
+    //   -> common with features f1
+    //
+    // d1
+    //   -> common with features f2
+    //
+    // common has features f1 and f2, with a build script.
+    //
+    // When common is built as a dependency of d1, it should have features
+    // `f2` (for the library and the build script).
+    //
+    // When common is built as a dependency of foo, it should have features
+    // `f1` (for the library and the build script).
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                resolver = "2"
+
+                [dependencies]
+                d1 = { path = "d1", artifact = "bin", target = "$TARGET" }
+                common = { path = "common", features = ["f1"] }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let _b = include_bytes!(env!("CARGO_BIN_FILE_D1"));
+                    common::f1();
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+
+                [dependencies]
+                common = { path = "../common", features = ["f2"] }
+            "#,
+        )
+        .file(
+            "d1/src/main.rs",
+            r#"fn main() {
+                common::f2();
+            }"#,
+        )
+        .file(
+            "common/Cargo.toml",
+            r#"
+                [package]
+                name = "common"
+                version = "0.0.1"
+
+                [features]
+                f1 = []
+                f2 = []
+            "#,
+        )
+        .file(
+            "common/src/lib.rs",
+            r#"
+                #[cfg(feature = "f1")]
+                pub fn f1() {}
+
+                #[cfg(feature = "f2")]
+                pub fn f2() {}
+            "#,
+        )
+        .file(
+            "common/build.rs",
+            &r#"
+                use std::env::var_os;
+                fn main() {
+                    assert_eq!(var_os("CARGO_FEATURE_F1").is_some(), cfg!(feature="f1"));
+                    assert_eq!(var_os("CARGO_FEATURE_F2").is_some(), cfg!(feature="f2"));
+                    if std::env::var("TARGET").unwrap() == "$TARGET" {
+                        assert!(var_os("CARGO_FEATURE_F1").is_none());
+                        assert!(var_os("CARGO_FEATURE_F2").is_some());
+                    } else {
+                        assert!(var_os("CARGO_FEATURE_F1").is_some());
+                        assert!(var_os("CARGO_FEATURE_F2").is_none()); 
+                    }
+                }
+            "#
+            .replace("$TARGET", target),
+        )
+        .build();
+
+    p.cargo("build -Z bindeps -v")
+        .masquerade_as_nightly_cargo()
+        .run();
 }

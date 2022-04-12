@@ -52,11 +52,8 @@ impl CompileKind {
         config: &Config,
         targets: &[String],
     ) -> CargoResult<Vec<CompileKind>> {
-        if targets.len() > 1 && !config.cli_unstable().multitarget {
-            bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
-        }
-        if !targets.is_empty() {
-            return Ok(targets
+        let dedup = |targets: &[String]| {
+            Ok(targets
                 .iter()
                 .map(|value| Ok(CompileKind::Target(CompileTarget::new(value)?)))
                 // First collect into a set to deduplicate any `--target` passed
@@ -64,21 +61,22 @@ impl CompileKind {
                 .collect::<CargoResult<BTreeSet<_>>>()?
                 // ... then generate a flat list for everything else to use.
                 .into_iter()
-                .collect());
-        }
-        let kind = match &config.build_config()?.target {
-            Some(val) => {
-                let value = if val.raw_value().ends_with(".json") {
-                    let path = val.clone().resolve_path(config);
-                    path.to_str().expect("must be utf-8 in toml").to_string()
-                } else {
-                    val.raw_value().to_string()
-                };
-                CompileKind::Target(CompileTarget::new(&value)?)
-            }
-            None => CompileKind::Host,
+                .collect())
         };
-        Ok(vec![kind])
+
+        if !targets.is_empty() {
+            if targets.len() > 1 && !config.cli_unstable().multitarget {
+                bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
+            }
+            return dedup(targets);
+        }
+
+        let kinds = match &config.build_config()?.target {
+            None => Ok(vec![CompileKind::Host]),
+            Some(build_target_config) => dedup(&build_target_config.values(config)?),
+        };
+
+        kinds
     }
 
     /// Hash used for fingerprinting.

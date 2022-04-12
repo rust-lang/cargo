@@ -2,6 +2,21 @@ use anyhow::Error;
 
 use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::Config;
+use std::task::Poll;
+
+pub trait PollExt<T> {
+    fn expect(self, msg: &str) -> T;
+}
+
+impl<T> PollExt<T> for Poll<T> {
+    #[track_caller]
+    fn expect(self, msg: &str) -> T {
+        match self {
+            Poll::Ready(val) => val,
+            Poll::Pending => panic!("{}", msg),
+        }
+    }
+}
 
 pub struct Retry<'a> {
     config: &'a Config,

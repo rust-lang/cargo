@@ -405,13 +405,6 @@ impl<'cfg> PackageSet<'cfg> {
     ) -> CargoResult<PackageSet<'cfg>> {
         // We've enabled the `http2` feature of `curl` in Cargo, so treat
         // failures here as fatal as it would indicate a build-time problem.
-        //
-        // Note that the multiplexing support is pretty new so we're having it
-        // off-by-default temporarily.
-        //
-        // Also note that pipelining is disabled as curl authors have indicated
-        // that it's buggy, and we've empirically seen that it's buggy with HTTP
-        // proxies.
         let mut multi = Multi::new();
         let multiplexing = config.http_config()?.multiplexing.unwrap_or(true);
         multi
@@ -700,7 +693,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             return Ok(Some(pkg));
         }
 
-        // Ask the original source fo this `PackageId` for the corresponding
+        // Ask the original source for this `PackageId` for the corresponding
         // package. That may immediately come back and tell us that the package
         // is ready, or it could tell us that it needs to be downloaded.
         let mut sources = self.set.sources.borrow_mut();
@@ -757,7 +750,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // initiate dozens of connections to crates.io, but rather only one.
         // Once the main one is opened we realized that pipelining is possible
         // and multiplexing is possible with static.crates.io. All in all this
-        // reduces the number of connections done to a more manageable state.
+        // reduces the number of connections down to a more manageable state.
         try_old_curl!(handle.pipewait(true), "pipewait");
 
         handle.write_function(move |buf| {
@@ -1000,11 +993,9 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 break Ok(pair);
             }
             assert!(!self.pending.is_empty());
-            let timeout = self
-                .set
-                .multi
-                .get_timeout()?
-                .unwrap_or_else(|| Duration::new(5, 0));
+            let min_timeout = Duration::new(1, 0);
+            let timeout = self.set.multi.get_timeout()?.unwrap_or(min_timeout);
+            let timeout = timeout.min(min_timeout);
             self.set
                 .multi
                 .wait(&mut [], timeout)

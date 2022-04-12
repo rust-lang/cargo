@@ -112,6 +112,7 @@ Allow working directories with uncommitted VCS changes to be packaged.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 ### Display Options

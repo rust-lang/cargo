@@ -412,6 +412,9 @@ features! {
 
     // Allow specifying rustflags directly in a profile
     (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
+
+    // Allow specifying rustflags directly in a profile
+    (unstable, workspace_inheritance, "", "reference/unstable.html#workspace-inheritance"),
 }
 
 pub struct Feature {
@@ -639,6 +642,8 @@ unstable_cli_options!(
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     check_cfg_features: bool = ("Enable compile-time checking of features in `cfg`"),
+    check_cfg_well_known_names: bool = ("Enable compile-time checking of well known names in `cfg`"),
+    check_cfg_well_known_values: bool = ("Enable compile-time checking of well known values in `cfg`"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -650,6 +655,7 @@ unstable_cli_options!(
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
+    http_registry: bool = ("Support HTTP-based crate registries"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     targeted_rustflags: bool = ("Make Cargo respect target-specific variants for RUSTFLAGS and CARGO_ENCODED_RUSTFLAGS"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
@@ -838,6 +844,8 @@ impl CliUnstable {
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "check-cfg-features" => self.check_cfg_features = parse_empty(k, v)?,
+            "check-cfg-well-known-names" => self.check_cfg_well_known_names = parse_empty(k, v)?,
+            "check-cfg-well-known-values" => self.check_cfg_well_known_values = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
@@ -877,6 +885,7 @@ impl CliUnstable {
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
+            "http-registry" => self.http_registry = parse_empty(k, v)?,
             "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),
             "weak-dep-features" => stabilized_warn(k, "1.60", STABILIZED_WEAK_DEP_FEATURES),
             "credential-process" => self.credential_process = parse_empty(k, v)?,

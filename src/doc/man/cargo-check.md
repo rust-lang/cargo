@@ -76,6 +76,7 @@ they have `required-features` that are missing.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{> options-future-incompat }}
 {{/options}}
 

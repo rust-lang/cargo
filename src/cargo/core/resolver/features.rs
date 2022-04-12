@@ -761,18 +761,25 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> Vec<(PackageId, Vec<(&'a Dependency, FeaturesFor)>)> {
         // Helper for determining if a platform is activated.
         let platform_activated = |dep: &Dependency| -> bool {
-            // We always care about build-dependencies, and they are always
-            // Host. If we are computing dependencies "for a build script",
-            // even normal dependencies are host-only.
-            if fk == FeaturesFor::HostDep || dep.is_build() {
-                return self
+            // We always count platforms as activated if the target stems from an artifact
+            // dependency's target specification. This triggers in conjunction with
+            // `[target.'cfg(…)'.dependencies]` manifest sections.
+            match (dep.is_build(), fk) {
+                (true, _) | (_, FeaturesFor::HostDep) => {
+                    // We always care about build-dependencies, and they are always
+                    // Host. If we are computing dependencies "for a build script",
+                    // even normal dependencies are host-only.
+                    self.target_data
+                        .dep_platform_activated(dep, CompileKind::Host)
+                }
+                (_, FeaturesFor::NormalOrDevOrArtifactTarget(None)) => self
+                    .requested_targets
+                    .iter()
+                    .any(|kind| self.target_data.dep_platform_activated(dep, *kind)),
+                (_, FeaturesFor::NormalOrDevOrArtifactTarget(Some(target))) => self
                     .target_data
-                    .dep_platform_activated(dep, CompileKind::Host);
+                    .dep_platform_activated(dep, CompileKind::Target(target)),
             }
-            // Not a build dependency, and not for a build script, so must be Target.
-            self.requested_targets
-                .iter()
-                .any(|kind| self.target_data.dep_platform_activated(dep, *kind))
         };
         self.resolve
             .deps(pkg_id)

@@ -68,7 +68,7 @@
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage, INDEX_V_MAX};
+use crate::sources::registry::{LoadResponse, RegistryData, RegistryPackage, INDEX_V_MAX};
 use crate::util::interning::InternedString;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
@@ -78,8 +78,10 @@ use semver::Version;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
+use std::task::Poll;
 
 /// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
 /// Therefore, the index must store uncanonicalized version of the name so old Cargo's can find it.
@@ -246,6 +248,7 @@ pub struct IndexSummary {
 #[derive(Default)]
 struct SummariesCache<'a> {
     versions: Vec<(Version, &'a [u8])>,
+    index_version: &'a str,
 }
 
 impl<'cfg> RegistryIndex<'cfg> {
@@ -263,16 +266,18 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Returns the hash listed for a specified `PackageId`.
-    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<&str> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
-        let summary = self
-            .summaries(pkg.name(), &req, load)?
-            .next()
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?;
-        summary
+        let summary = self.summaries(pkg.name(), &req, load)?;
+        let summary = match summary {
+            Poll::Ready(mut summary) => summary.next(),
+            Poll::Pending => return Poll::Pending,
+        };
+        Poll::Ready(Ok(summary
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
             .summary
             .checksum()
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
     }
 
     /// Load a list of summaries for `name` package in this registry which
@@ -287,7 +292,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         name: InternedString,
         req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
-    ) -> CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>
+    ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>>
     where
         'a: 'b,
     {
@@ -298,7 +303,10 @@ impl<'cfg> RegistryIndex<'cfg> {
         // has run previously this will parse a Cargo-specific cache file rather
         // than the registry itself. In effect this is intended to be a quite
         // cheap operation.
-        let summaries = self.load_summaries(name, load)?;
+        let summaries = match self.load_summaries(name, load)? {
+            Poll::Ready(summaries) => summaries,
+            Poll::Pending => return Poll::Pending,
+        };
 
         // Iterate over our summaries, extract all relevant ones which match our
         // version requirement, and then parse all corresponding rows in the
@@ -307,7 +315,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // minimize the amount of work being done here and parse as little as
         // necessary.
         let raw_data = &summaries.raw_data;
-        Ok(summaries
+        Poll::Ready(Ok(summaries
             .versions
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
@@ -332,28 +340,26 @@ impl<'cfg> RegistryIndex<'cfg> {
                 } else {
                     true
                 }
-            }))
+            })))
     }
 
     fn load_summaries(
         &mut self,
         name: InternedString,
         load: &mut dyn RegistryData,
-    ) -> CargoResult<&mut Summaries> {
+    ) -> Poll<CargoResult<&mut Summaries>> {
         // If we've previously loaded what versions are present for `name`, just
         // return that since our cache should still be valid.
         if self.summaries_cache.contains_key(&name) {
-            return Ok(self.summaries_cache.get_mut(&name).unwrap());
+            return Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()));
         }
 
         // Prepare the `RegistryData` which will lazily initialize internal data
         // structures.
         load.prepare()?;
 
-        // let root = self.config.assert_package_cache_locked(&self.path);
         let root = load.assert_index_locked(&self.path);
         let cache_root = root.join(".cache");
-        let index_version = load.current_version();
 
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
@@ -363,14 +369,14 @@ impl<'cfg> RegistryIndex<'cfg> {
             .collect::<String>();
         let raw_path = make_dep_path(&fs_name, false);
 
+        let mut any_pending = false;
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries
         // associated with the first hit, however. The resolver will later
         // reject any candidates that have the wrong name, and with this it'll
         // along the way produce helpful "did you mean?" suggestions.
-        for path in UncanonicalizedIter::new(&raw_path).take(1024) {
+        for (i, path) in UncanonicalizedIter::new(&raw_path).take(1024).enumerate() {
             let summaries = Summaries::parse(
-                index_version.as_deref(),
                 root,
                 &cache_root,
                 path.as_ref(),
@@ -378,16 +384,35 @@ impl<'cfg> RegistryIndex<'cfg> {
                 load,
                 self.config,
             )?;
-            if let Some(summaries) = summaries {
-                self.summaries_cache.insert(name, summaries);
-                return Ok(self.summaries_cache.get_mut(&name).unwrap());
+            if summaries.is_pending() {
+                if i == 0 {
+                    // If we have not herd back about the name as requested
+                    // then don't ask about other spellings yet.
+                    // This prevents us spamming all the variations in the
+                    // case where we have the correct spelling.
+                    return Poll::Pending;
+                }
+                any_pending = true;
             }
+            if let Poll::Ready(Some(summaries)) = summaries {
+                self.summaries_cache.insert(name, summaries);
+                return Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()));
+            }
+        }
+
+        if any_pending {
+            return Poll::Pending;
         }
 
         // If nothing was found then this crate doesn't exists, so just use an
         // empty `Summaries` list.
         self.summaries_cache.insert(name, Summaries::default());
-        Ok(self.summaries_cache.get_mut(&name).unwrap())
+        Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()))
+    }
+
+    /// Clears the in-memory summmaries cache.
+    pub fn clear_summaries_cache(&mut self) {
+        self.summaries_cache.clear();
     }
 
     pub fn query_inner(
@@ -396,11 +421,13 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
-    ) -> CargoResult<()> {
-        if self.config.offline()
-            && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0
-        {
-            return Ok(());
+    ) -> Poll<CargoResult<()>> {
+        if self.config.offline() {
+            match self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? {
+                Poll::Ready(0) => {}
+                Poll::Ready(_) => return Poll::Ready(Ok(())),
+                Poll::Pending => return Poll::Pending,
+            }
             // If offline, and there are no matches, try again with online.
             // This is necessary for dependencies that are not used (such as
             // target-cfg or optional), but are not downloaded. Normally the
@@ -410,8 +437,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             // indicating that the required dependency is unavailable while
             // offline will be displayed.
         }
-        self.query_inner_with_online(dep, load, yanked_whitelist, f, true)?;
-        Ok(())
+        self.query_inner_with_online(dep, load, yanked_whitelist, f, true)
+            .map_ok(|_| ())
     }
 
     fn query_inner_with_online(
@@ -421,10 +448,15 @@ impl<'cfg> RegistryIndex<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
         online: bool,
-    ) -> CargoResult<usize> {
+    ) -> Poll<CargoResult<usize>> {
         let source_id = self.source_id;
-        let summaries = self
-            .summaries(dep.package_name(), dep.version_req(), load)?
+
+        let summaries = match self.summaries(dep.package_name(), dep.version_req(), load)? {
+            Poll::Ready(summaries) => summaries,
+            Poll::Pending => return Poll::Pending,
+        };
+
+        let summaries = summaries
             // First filter summaries for `--offline`. If we're online then
             // everything is a candidate, otherwise if we're offline we're only
             // going to consider candidates which are actually present on disk.
@@ -489,15 +521,19 @@ impl<'cfg> RegistryIndex<'cfg> {
             f(summary);
             count += 1;
         }
-        Ok(count)
+        Poll::Ready(Ok(count))
     }
 
-    pub fn is_yanked(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<bool> {
+    pub fn is_yanked(
+        &mut self,
+        pkg: PackageId,
+        load: &mut dyn RegistryData,
+    ) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::exact(pkg.version());
         let found = self
-            .summaries(pkg.name(), &req, load)?
-            .any(|summary| summary.yanked);
-        Ok(found)
+            .summaries(pkg.name(), &req, load)
+            .map_ok(|mut p| p.any(|summary| summary.yanked));
+        found
     }
 }
 
@@ -511,9 +547,6 @@ impl Summaries {
     /// for `relative` from the underlying index (aka typically libgit2 with
     /// crates.io) and then parse everything in there.
     ///
-    /// * `index_version` - a version string to describe the current state of
-    ///   the index which for remote registries is the current git sha and
-    ///   for local registries is not available.
     /// * `root` - this is the root argument passed to `load`
     /// * `cache_root` - this is the root on the filesystem itself of where to
     ///   store cache files.
@@ -524,125 +557,127 @@ impl Summaries {
     /// * `load` - the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
     pub fn parse(
-        index_version: Option<&str>,
         root: &Path,
         cache_root: &Path,
         relative: &Path,
         source_id: SourceId,
         load: &mut dyn RegistryData,
         config: &Config,
-    ) -> CargoResult<Option<Summaries>> {
+    ) -> Poll<CargoResult<Option<Summaries>>> {
         // First up, attempt to load the cache. This could fail for all manner
         // of reasons, but consider all of them non-fatal and just log their
         // occurrence in case anyone is debugging anything.
         let cache_path = cache_root.join(relative);
-        let mut cache_contents = None;
-        if let Some(index_version) = index_version {
-            match fs::read(&cache_path) {
-                Ok(contents) => match Summaries::parse_cache(contents, index_version) {
-                    Ok(s) => {
-                        log::debug!("fast path for registry cache of {:?}", relative);
-                        if cfg!(debug_assertions) {
-                            cache_contents = Some(s.raw_data);
-                        } else {
-                            return Ok(Some(s));
+        let mut cached_summaries = None;
+        let mut index_version = None;
+        match fs::read(&cache_path) {
+            Ok(contents) => match Summaries::parse_cache(contents) {
+                Ok((s, v)) => {
+                    cached_summaries = Some(s);
+                    index_version = Some(v);
+                }
+                Err(e) => {
+                    log::debug!("failed to parse {:?} cache: {}", relative, e);
+                }
+            },
+            Err(e) => log::debug!("cache missing for {:?} error: {}", relative, e),
+        }
+
+        let response = match load.load(root, relative, index_version.as_deref())? {
+            Poll::Pending => return Poll::Pending,
+            Poll::Ready(response) => response,
+        };
+
+        match response {
+            LoadResponse::CacheValid => {
+                log::debug!("fast path for registry cache of {:?}", relative);
+                return Poll::Ready(Ok(cached_summaries));
+            }
+            LoadResponse::NotFound => {
+                debug_assert!(cached_summaries.is_none());
+                if let Err(e) = fs::remove_file(cache_path) {
+                    if e.kind() != ErrorKind::NotFound {
+                        log::debug!("failed to remove from cache: {}", e);
+                    }
+                }
+                return Poll::Ready(Ok(None));
+            }
+            LoadResponse::Data {
+                raw_data,
+                index_version,
+            } => {
+                // This is the fallback path where we actually talk to the registry backend to load
+                // information. Here we parse every single line in the index (as we need
+                // to find the versions)
+                log::debug!("slow path for {:?}", relative);
+                let mut cache = SummariesCache::default();
+                let mut ret = Summaries::default();
+                ret.raw_data = raw_data;
+                for line in split(&ret.raw_data, b'\n') {
+                    // Attempt forwards-compatibility on the index by ignoring
+                    // everything that we ourselves don't understand, that should
+                    // allow future cargo implementations to break the
+                    // interpretation of each line here and older cargo will simply
+                    // ignore the new lines.
+                    let summary = match IndexSummary::parse(config, line, source_id) {
+                        Ok(summary) => summary,
+                        Err(e) => {
+                            // This should only happen when there is an index
+                            // entry from a future version of cargo that this
+                            // version doesn't understand. Hopefully, those future
+                            // versions of cargo correctly set INDEX_V_MAX and
+                            // CURRENT_CACHE_VERSION, otherwise this will skip
+                            // entries in the cache preventing those newer
+                            // versions from reading them (that is, until the
+                            // cache is rebuilt).
+                            log::info!("failed to parse {:?} registry package: {}", relative, e);
+                            continue;
+                        }
+                    };
+                    let version = summary.summary.package_id().version().clone();
+                    cache.versions.push((version.clone(), line));
+                    ret.versions.insert(version, summary.into());
+                }
+                if let Some(index_version) = index_version {
+                    log::trace!("caching index_version {}", index_version);
+                    let cache_bytes = cache.serialize(index_version.as_str());
+                    // Once we have our `cache_bytes` which represents the `Summaries` we're
+                    // about to return, write that back out to disk so future Cargo
+                    // invocations can use it.
+                    //
+                    // This is opportunistic so we ignore failure here but are sure to log
+                    // something in case of error.
+                    if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+                        let path = Filesystem::new(cache_path.clone());
+                        config.assert_package_cache_locked(&path);
+                        if let Err(e) = fs::write(cache_path, &cache_bytes) {
+                            log::info!("failed to write cache: {}", e);
                         }
                     }
-                    Err(e) => {
-                        log::debug!("failed to parse {:?} cache: {}", relative, e);
+
+                    // If we've got debug assertions enabled read back in the cached values
+                    // and assert they match the expected result.
+                    #[cfg(debug_assertions)]
+                    {
+                        let readback = SummariesCache::parse(&cache_bytes)
+                            .expect("failed to parse cache we just wrote");
+                        assert_eq!(
+                            readback.index_version, index_version,
+                            "index_version mismatch"
+                        );
+                        assert_eq!(readback.versions, cache.versions, "versions mismatch");
                     }
-                },
-                Err(e) => log::debug!("cache missing for {:?} error: {}", relative, e),
-            }
-        }
-
-        // This is the fallback path where we actually talk to libgit2 to load
-        // information. Here we parse every single line in the index (as we need
-        // to find the versions)
-        log::debug!("slow path for {:?}", relative);
-        let mut ret = Summaries::default();
-        let mut hit_closure = false;
-        let mut cache_bytes = None;
-        let err = load.load(root, relative, &mut |contents| {
-            ret.raw_data = contents.to_vec();
-            let mut cache = SummariesCache::default();
-            hit_closure = true;
-            for line in split(contents, b'\n') {
-                // Attempt forwards-compatibility on the index by ignoring
-                // everything that we ourselves don't understand, that should
-                // allow future cargo implementations to break the
-                // interpretation of each line here and older cargo will simply
-                // ignore the new lines.
-                let summary = match IndexSummary::parse(config, line, source_id) {
-                    Ok(summary) => summary,
-                    Err(e) => {
-                        // This should only happen when there is an index
-                        // entry from a future version of cargo that this
-                        // version doesn't understand. Hopefully, those future
-                        // versions of cargo correctly set INDEX_V_MAX and
-                        // CURRENT_CACHE_VERSION, otherwise this will skip
-                        // entries in the cache preventing those newer
-                        // versions from reading them (that is, until the
-                        // cache is rebuilt).
-                        log::info!("failed to parse {:?} registry package: {}", relative, e);
-                        continue;
-                    }
-                };
-                let version = summary.summary.package_id().version().clone();
-                cache.versions.push((version.clone(), line));
-                ret.versions.insert(version, summary.into());
-            }
-            if let Some(index_version) = index_version {
-                cache_bytes = Some(cache.serialize(index_version));
-            }
-            Ok(())
-        });
-
-        // We ignore lookup failures as those are just crates which don't exist
-        // or we haven't updated the registry yet. If we actually ran the
-        // closure though then we care about those errors.
-        if !hit_closure {
-            debug_assert!(cache_contents.is_none());
-            return Ok(None);
-        }
-        err?;
-
-        // If we've got debug assertions enabled and the cache was previously
-        // present and considered fresh this is where the debug assertions
-        // actually happens to verify that our cache is indeed fresh and
-        // computes exactly the same value as before.
-        if cfg!(debug_assertions) && cache_contents.is_some() && cache_bytes != cache_contents {
-            panic!(
-                "original cache contents:\n{:?}\n\
-                 does not equal new cache contents:\n{:?}\n",
-                cache_contents.as_ref().map(|s| String::from_utf8_lossy(s)),
-                cache_bytes.as_ref().map(|s| String::from_utf8_lossy(s)),
-            );
-        }
-
-        // Once we have our `cache_bytes` which represents the `Summaries` we're
-        // about to return, write that back out to disk so future Cargo
-        // invocations can use it.
-        //
-        // This is opportunistic so we ignore failure here but are sure to log
-        // something in case of error.
-        if let Some(cache_bytes) = cache_bytes {
-            if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
-                let path = Filesystem::new(cache_path.clone());
-                config.assert_package_cache_locked(&path);
-                if let Err(e) = fs::write(cache_path, cache_bytes) {
-                    log::info!("failed to write cache: {}", e);
                 }
+                Poll::Ready(Ok(Some(ret)))
             }
         }
-
-        Ok(Some(ret))
     }
 
     /// Parses an open `File` which represents information previously cached by
     /// Cargo.
-    pub fn parse_cache(contents: Vec<u8>, last_index_update: &str) -> CargoResult<Summaries> {
-        let cache = SummariesCache::parse(&contents, last_index_update)?;
+    pub fn parse_cache(contents: Vec<u8>) -> CargoResult<(Summaries, InternedString)> {
+        let cache = SummariesCache::parse(&contents)?;
+        let index_version = InternedString::new(cache.index_version);
         let mut ret = Summaries::default();
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
@@ -650,7 +685,7 @@ impl Summaries {
                 .insert(version, MaybeIndexSummary::Unparsed { start, end });
         }
         ret.raw_data = contents;
-        return Ok(ret);
+        return Ok((ret, index_version));
 
         // Returns the start/end offsets of `inner` with `outer`. Asserts that
         // `inner` is a subslice of `outer`.
@@ -706,7 +741,7 @@ impl Summaries {
 const CURRENT_CACHE_VERSION: u8 = 3;
 
 impl<'a> SummariesCache<'a> {
-    fn parse(data: &'a [u8], last_index_update: &str) -> CargoResult<SummariesCache<'a>> {
+    fn parse(data: &'a [u8]) -> CargoResult<SummariesCache<'a>> {
         // NB: keep this method in sync with `serialize` below
         let (first_byte, rest) = data
             .split_first()
@@ -728,18 +763,13 @@ impl<'a> SummariesCache<'a> {
         let rest = &rest[4..];
 
         let mut iter = split(rest, 0);
-        if let Some(update) = iter.next() {
-            if update != last_index_update.as_bytes() {
-                bail!(
-                    "cache out of date: current index ({}) != cache ({})",
-                    last_index_update,
-                    str::from_utf8(update)?,
-                )
-            }
+        let last_index_update = if let Some(update) = iter.next() {
+            str::from_utf8(update)?
         } else {
             bail!("malformed file");
-        }
+        };
         let mut ret = SummariesCache::default();
+        ret.index_version = last_index_update;
         while let Some(version) = iter.next() {
             let version = str::from_utf8(version)?;
             let version = Version::parse(version)?;

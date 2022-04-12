@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
+use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
@@ -129,14 +130,14 @@ pub fn resolve_with_config_raw(
             dep: &Dependency,
             f: &mut dyn FnMut(Summary),
             fuzzy: bool,
-        ) -> CargoResult<()> {
+        ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
                 if fuzzy || dep.matches(summary) {
                     self.used.insert(summary.package_id());
                     f(summary.clone());
                 }
             }
-            Ok(())
+            Poll::Ready(Ok(()))
         }
 
         fn describe_source(&self, _src: SourceId) -> String {
@@ -145,6 +146,10 @@ pub fn resolve_with_config_raw(
 
         fn is_replaced(&self, _src: SourceId) -> bool {
             false
+        }
+
+        fn block_until_ready(&mut self) -> CargoResult<()> {
+            Ok(())
         }
     }
     impl<'a> Drop for MyRegistry<'a> {

@@ -85,8 +85,10 @@ pub struct CompileOptions {
 
 impl CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
+        let jobs = None;
+        let keep_going = false;
         Ok(CompileOptions {
-            build_config: BuildConfig::new(config, None, &[], mode)?,
+            build_config: BuildConfig::new(config, jobs, keep_going, &[], mode)?,
             cli_features: CliFeatures::new_all(false),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {
@@ -544,6 +546,10 @@ pub fn create_bcx<'a, 'cfg>(
                 &profiles,
                 interner,
             )?
+            .into_iter()
+            // Proc macros should not be scraped for functions, since they only export macros
+            .filter(|unit| !unit.target.proc_macro())
+            .collect::<Vec<_>>()
         }
         None => Vec::new(),
     };

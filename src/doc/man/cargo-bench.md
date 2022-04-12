@@ -139,6 +139,7 @@ Rust test harness runs benchmarks serially in a single thread.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 {{> section-environment }}

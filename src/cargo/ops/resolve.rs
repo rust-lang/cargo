@@ -20,9 +20,7 @@ use crate::core::resolver::{
 };
 use crate::core::summary::Summary;
 use crate::core::Feature;
-use crate::core::{
-    GitReference, PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace,
-};
+use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;

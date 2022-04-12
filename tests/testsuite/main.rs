@@ -1,8 +1,6 @@
 // See src/cargo/lib.rs for notes on these lint settings.
 #![warn(rust_2018_idioms)]
 #![allow(clippy::all)]
-#![warn(clippy::needless_borrow)]
-#![warn(clippy::redundant_clone)]
 #![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 #[macro_use]
@@ -59,6 +57,7 @@ mod git_auth;
 mod git_gc;
 mod glob_targets;
 mod help;
+mod inheritable_workspace_fields;
 mod init;
 mod install;
 mod install_upgrade;

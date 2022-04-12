@@ -135,6 +135,11 @@ impl SourceId {
                 Ok(SourceId::new(SourceKind::Registry, url, None)?
                     .with_precise(Some("locked".to_string())))
             }
+            "sparse" => {
+                let url = string.into_url()?;
+                Ok(SourceId::new(SourceKind::Registry, url, None)?
+                    .with_precise(Some("locked".to_string())))
+            }
             "path" => {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
@@ -301,7 +306,7 @@ impl SourceId {
                 self,
                 yanked_whitelist,
                 config,
-            ))),
+            )?)),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,

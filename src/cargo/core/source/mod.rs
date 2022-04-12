@@ -1,5 +1,6 @@
 use std::collections::hash_map::HashMap;
 use std::fmt;
+use std::task::Poll;
 
 use crate::core::package::PackageSet;
 use crate::core::{Dependency, Package, PackageId, Summary};
@@ -28,23 +29,25 @@ pub trait Source {
     fn requires_precise(&self) -> bool;
 
     /// Attempts to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>>;
 
     /// Attempts to find the packages that are close to a dependency request.
     /// Each source gets to define what `close` means for it.
     /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Index` source may return dependencies that have the same canonicalization.
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query_vec(&mut self, dep: &Dependency) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s))?;
-        Ok(ret)
+        self.query(dep, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
 
-    /// Performs any network operations required to get the entire list of all names,
-    /// versions and dependencies of packages managed by the `Source`.
-    fn update(&mut self) -> CargoResult<()>;
+    /// Ensure that the source is fully up-to-date for the current session on the next query.
+    fn invalidate_cache(&mut self);
 
     /// Fetches the full package for each name and version specified.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
@@ -101,6 +104,15 @@ pub trait Source {
     /// Query if a package is yanked. Only registry sources can mark packages
     /// as yanked. This ignores the yanked whitelist.
     fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool>;
+
+    /// Block until all outstanding Poll::Pending requests are `Poll::Ready`.
+    ///
+    /// After calling this function, the source should return `Poll::Ready` for
+    /// any queries that previously returned `Poll::Pending`.
+    ///
+    /// If no queries previously returned `Poll::Pending`, and `invalidate_cache`
+    /// was not called, this function should be a no-op.
+    fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 
 pub enum MaybePackage {
@@ -130,18 +142,21 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::query`.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
         (**self).query(dep, f)
     }
 
     /// Forwards to `Source::query`.
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
         (**self).fuzzy_query(dep, f)
     }
 
-    /// Forwards to `Source::update`.
-    fn update(&mut self) -> CargoResult<()> {
-        (**self).update()
+    fn invalidate_cache(&mut self) {
+        (**self).invalidate_cache()
     }
 
     /// Forwards to `Source::download`.
@@ -178,6 +193,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
         (**self).is_yanked(pkg)
     }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        (**self).block_until_ready()
+    }
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
@@ -197,16 +216,20 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).requires_precise()
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
         (**self).query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
         (**self).fuzzy_query(dep, f)
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        (**self).update()
+    fn invalidate_cache(&mut self) {
+        (**self).invalidate_cache()
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -240,6 +263,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
         (**self).is_yanked(pkg)
     }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        (**self).block_until_ready()
+    }
 }
 
 /// A `HashMap` of `SourceId` -> `Box<Source>`.
@@ -264,11 +291,6 @@ impl<'src> SourceMap<'src> {
         }
     }
 
-    /// Like `HashMap::contains_key`.
-    pub fn contains(&self, id: SourceId) -> bool {
-        self.map.contains_key(&id)
-    }
-
     /// Like `HashMap::get`.
     pub fn get(&self, id: SourceId) -> Option<&(dyn Source + 'src)> {
         self.map.get(&id).map(|s| s.as_ref())
@@ -279,30 +301,15 @@ impl<'src> SourceMap<'src> {
         self.map.get_mut(&id).map(|s| s.as_mut())
     }
 
-    /// Like `HashMap::get`, but first calculates the `SourceId` from a `PackageId`.
-    pub fn get_by_package_id(&self, pkg_id: PackageId) -> Option<&(dyn Source + 'src)> {
-        self.get(pkg_id.source_id())
-    }
-
     /// Like `HashMap::insert`, but derives the `SourceId` key from the `Source`.
     pub fn insert(&mut self, source: Box<dyn Source + 'src>) {
         let id = source.source_id();
         self.map.insert(id, source);
     }
 
-    /// Like `HashMap::is_empty`.
-    pub fn is_empty(&self) -> bool {
-        self.map.is_empty()
-    }
-
     /// Like `HashMap::len`.
     pub fn len(&self) -> usize {
         self.map.len()
-    }
-
-    /// Like `HashMap::values`.
-    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a Box<dyn Source + 'src>> {
-        self.map.values()
     }
 
     /// Like `HashMap::iter_mut`.

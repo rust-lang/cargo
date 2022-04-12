@@ -26,8 +26,8 @@ to use the vendored sources, which you will need to add to `.cargo/config.toml`.
 {{#options}}
 
 {{#option "`-s` _manifest_" "`--sync` _manifest_" }}
-Specify extra `Cargo.toml` manifests to workspaces which should also be
-vendored and synced to the output.
+Specify an extra `Cargo.toml` manifest to workspaces which should also be
+vendored and synced to the output. May be specified multiple times.
 {{/option}}
 
 {{#option "`--no-delete`" }}

@@ -45,6 +45,7 @@ impl HgRepo {
         ProcessBuilder::new("hg")
             .cwd(cwd)
             .arg("init")
+            .arg("--")
             .arg(path)
             .exec()?;
         Ok(HgRepo)
@@ -65,6 +66,7 @@ impl PijulRepo {
         ProcessBuilder::new("pijul")
             .cwd(cwd)
             .arg("init")
+            .arg("--")
             .arg(path)
             .exec()?;
         Ok(PijulRepo)
@@ -85,6 +87,7 @@ impl FossilRepo {
         ProcessBuilder::new("fossil")
             .cwd(cwd)
             .arg("init")
+            .arg("--")
             .arg(&db_path)
             .exec()?;
 
@@ -92,6 +95,7 @@ impl FossilRepo {
         ProcessBuilder::new("fossil")
             .cwd(&path)
             .arg("open")
+            .arg("--")
             .arg(db_fname)
             .exec()?;
 

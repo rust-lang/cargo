@@ -1,11 +1,12 @@
 use crate::core::compiler::CompileKind;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::thread::available_parallelism;
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]
@@ -14,6 +15,8 @@ pub struct BuildConfig {
     pub requested_kinds: Vec<CompileKind>,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
+    /// Do not abort the build as soon as there is an error.
+    pub keep_going: bool,
     /// Build profile
     pub requested_profile: InternedString,
     /// The mode we are compiling in.
@@ -55,6 +58,7 @@ impl BuildConfig {
     pub fn new(
         config: &Config,
         jobs: Option<u32>,
+        keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
@@ -70,7 +74,12 @@ impl BuildConfig {
                  its environment, ignoring the `-j` parameter",
             )?;
         }
-        let jobs = jobs.or(cfg.jobs).unwrap_or(::num_cpus::get() as u32);
+        let jobs = match jobs.or(cfg.jobs) {
+            Some(j) => j,
+            None => available_parallelism()
+                .context("failed to determine the amount of parallelism available")?
+                .get() as u32,
+        };
         if jobs == 0 {
             anyhow::bail!("jobs may not be 0");
         }
@@ -78,6 +87,7 @@ impl BuildConfig {
         Ok(BuildConfig {
             requested_kinds,
             jobs,
+            keep_going,
             requested_profile: InternedString::new("dev"),
             mode,
             message_format: MessageFormat::Human,

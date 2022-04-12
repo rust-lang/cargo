@@ -6,6 +6,13 @@ a part of that process.
 See the [Working on Cargo] chapter for an overview of the contribution
 process.
 
+Please read the guidelines below before working on an issue or new feature.
+
+**Due to limited review capacity, the Cargo team is not accepting new features
+or major changes at this time. Please consult with the team before opening a
+new PR. Only issues that have been explicitly marked as accepted will be
+reviewed.**
+
 [Working on Cargo]: working-on-cargo.md
 
 ## Cargo team
@@ -17,10 +24,6 @@ The team meets on a weekly basis on a video chat. If you are interested in
 participating, feel free to contact us on [Zulip].
 
 ## Roadmap
-
-The Cargo team typically establishes a roadmap each year that sets which areas
-they will be focusing on. This is usually posted on the Inside Rust Blog (such
-as [the 2020 roadmap]).
 
 The [Roadmap Project Board] is used for tracking major initiatives. This gives
 an overview of the things the team is interested in and thinking about.
@@ -76,6 +79,7 @@ Most of them require some design work, which can be difficult. Check out the
 Cargo follows the Rust model of evolution. Major features usually go through
 an [RFC process]. Therefore, before opening a feature request issue create a
 Pre-RFC thread on the [internals][irlo] forum to get preliminary feedback.
+
 Implementing a feature as a [custom subcommand][subcommands] is encouraged as
 it helps demonstrate the demand for the functionality and is a great way to
 deliver a working solution faster as it can iterate outside of Cargo's release

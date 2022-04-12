@@ -91,6 +91,7 @@ See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{> options-future-incompat }}
 {{/options}}
 

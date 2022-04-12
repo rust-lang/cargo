@@ -1,4 +1,5 @@
 use std::fmt;
+use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
@@ -220,15 +221,23 @@ pub(super) fn activation_error(
     // give an error message that nothing was found.
     //
     // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
-    // was meant. So we re-query the registry with `deb="*"` so we can
+    // was meant. So we re-query the registry with `dep="*"` so we can
     // list a few versions that were actually found.
     let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
     new_dep.set_version_req(all_req);
-    let mut candidates = match registry.query_vec(&new_dep, false) {
-        Ok(candidates) => candidates,
-        Err(e) => return to_resolve_err(e),
+
+    let mut candidates = loop {
+        match registry.query_vec(&new_dep, false) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return to_resolve_err(e),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return to_resolve_err(e),
+            },
+        }
     };
+
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
     let mut msg =
@@ -284,10 +293,17 @@ pub(super) fn activation_error(
         } else {
             // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
             // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-            let mut candidates = Vec::new();
-            if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s), true) {
-                return to_resolve_err(e);
+            let mut candidates = loop {
+                match registry.query_vec(&new_dep, true) {
+                    Poll::Ready(Ok(candidates)) => break candidates,
+                    Poll::Ready(Err(e)) => return to_resolve_err(e),
+                    Poll::Pending => match registry.block_until_ready() {
+                        Ok(()) => continue,
+                        Err(e) => return to_resolve_err(e),
+                    },
+                }
             };
+
             candidates.sort_unstable_by_key(|a| a.name());
             candidates.dedup_by(|a, b| a.name() == b.name());
             let mut candidates: Vec<_> = candidates

@@ -226,7 +226,10 @@ fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
     Ok(())
 }
 
-/// Compute the dependencies of a single unit.
+/// Compute the dependencies of a single unit, recursively computing all
+/// transitive dependencies.
+///
+/// The result is stored in `state.unit_dependencies`.
 fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoResult<()> {
     // Currently the `unit_dependencies` map does not include `unit_for`. This should
     // be safe for now. `TestDependency` only exists to clear the `panic`
@@ -246,10 +249,7 @@ fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoRe
     Ok(())
 }
 
-/// For a package, returns all targets that are registered as dependencies
-/// for that package.
-/// This returns a `Vec` of `(Unit, UnitFor)` pairs. The `UnitFor`
-/// is the profile type that should be used for dependencies of the unit.
+/// Returns the direct unit dependencies for the given `Unit`.
 fn compute_deps(
     unit: &Unit,
     state: &mut State<'_, '_>,
@@ -464,10 +464,7 @@ fn compute_deps_custom_build(
     // All dependencies of this unit should use profiles for custom builds.
     // If this is a build script of a proc macro, make sure it uses host
     // features.
-    let script_unit_for = UnitFor::new_host(
-        unit_for.is_for_host_features(),
-        unit_for.root_compile_kind(),
-    );
+    let script_unit_for = unit_for.for_custom_build();
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself.
@@ -711,14 +708,9 @@ fn compute_deps_doc(
         }
     }
 
-    // Add all units being scraped for examples as a dependency of Doc units.
-    if state.ws.is_member(&unit.pkg) {
+    // Add all units being scraped for examples as a dependency of top-level Doc units.
+    if state.ws.unit_needs_doc_scrape(unit) {
         for scrape_unit in state.scrape_units.iter() {
-            // This needs to match the FeaturesFor used in cargo_compile::generate_targets.
-            let unit_for = UnitFor::new_host(
-                scrape_unit.target.proc_macro(),
-                unit_for.root_compile_kind(),
-            );
             deps_of(scrape_unit, state, unit_for)?;
             ret.push(new_unit_dep(
                 state,
@@ -782,7 +774,7 @@ fn dep_build_script(
             // The profile stored in the Unit is the profile for the thing
             // the custom build script is running for.
             let profile = state.profiles.get_profile_run_custom_build(&unit.profile);
-            // UnitFor::new_host is used because we want the `host` flag set
+            // UnitFor::for_custom_build is used because we want the `host` flag set
             // for all of our build dependencies (so they all get
             // build-override profiles), including compiling the build.rs
             // script itself.
@@ -807,10 +799,7 @@ fn dep_build_script(
             // compiled twice. I believe it is not feasible to only build it
             // once because it would break a large number of scripts (they
             // would think they have the wrong set of features enabled).
-            let script_unit_for = UnitFor::new_host(
-                unit_for.is_for_host_features(),
-                unit_for.root_compile_kind(),
-            );
+            let script_unit_for = unit_for.for_custom_build();
             new_unit_dep_with_profile(
                 state,
                 unit,

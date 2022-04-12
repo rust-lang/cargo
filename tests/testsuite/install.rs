@@ -879,11 +879,9 @@ fn compile_failure() {
         .with_status(101)
         .with_stderr_contains(
             "\
+[ERROR] could not compile `foo` due to previous error
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be \
     found at `[..]target`
-
-Caused by:
-  could not compile `foo` due to previous error
 ",
         )
         .run();

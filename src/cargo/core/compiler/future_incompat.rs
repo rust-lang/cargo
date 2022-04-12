@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io::{Read, Write};
+use std::task::Poll;
 
 pub const REPORT_PREAMBLE: &str = "\
 The following warnings were discovered during the build. These warnings are an
@@ -264,7 +265,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     let _lock = ws.config().acquire_package_cache_lock().ok()?;
     // Create a set of updated registry sources.
     let map = SourceConfigMap::new(ws.config()).ok()?;
-    let package_ids: BTreeSet<_> = package_ids
+    let mut package_ids: BTreeSet<_> = package_ids
         .iter()
         .filter(|pkg_id| pkg_id.source_id().is_registry())
         .collect();
@@ -279,15 +280,35 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
             Some((sid, source))
         })
         .collect();
-    // Query the sources for new versions.
+
+    // Query the sources for new versions, mapping `package_ids` into `summaries`.
+    let mut summaries = Vec::new();
+    while !package_ids.is_empty() {
+        package_ids.retain(|&pkg_id| {
+            let source = match sources.get_mut(&pkg_id.source_id()) {
+                Some(s) => s,
+                None => return false,
+            };
+            let dep = match Dependency::parse(pkg_id.name(), None, pkg_id.source_id()) {
+                Ok(dep) => dep,
+                Err(_) => return false,
+            };
+            match source.query_vec(&dep) {
+                Poll::Ready(Ok(sum)) => {
+                    summaries.push((pkg_id, sum));
+                    false
+                }
+                Poll::Ready(Err(_)) => false,
+                Poll::Pending => true,
+            }
+        });
+        for (_, source) in sources.iter_mut() {
+            source.block_until_ready().ok()?;
+        }
+    }
+
     let mut updates = String::new();
-    for pkg_id in package_ids {
-        let source = match sources.get_mut(&pkg_id.source_id()) {
-            Some(s) => s,
-            None => continue,
-        };
-        let dep = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()).ok()?;
-        let summaries = source.query_vec(&dep).ok()?;
+    for (pkg_id, summaries) in summaries {
         let mut updated_versions: Vec<_> = summaries
             .iter()
             .map(|summary| summary.version())
