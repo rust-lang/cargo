@@ -1055,43 +1055,42 @@ fn features_args(_cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 
 /// Generate the --check-cfg arguments for the unit
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if !cx.bcx.config.cli_unstable().check_cfg_features
-        && !cx.bcx.config.cli_unstable().check_cfg_well_known_names
-        && !cx.bcx.config.cli_unstable().check_cfg_well_known_values
+    if let Some((features, well_known_names, well_known_values)) =
+        cx.bcx.config.cli_unstable().check_cfg
     {
-        return Vec::new();
-    }
+        let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
+        args.push(OsString::from("-Zunstable-options"));
 
-    let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
-    args.push(OsString::from("-Zunstable-options"));
+        if features {
+            // This generate something like this:
+            //  - values(feature)
+            //  - values(feature, "foo", "bar")
+            let mut arg = OsString::from("values(feature");
+            for (&feat, _) in unit.pkg.summary().features() {
+                arg.push(", \"");
+                arg.push(&feat);
+                arg.push("\"");
+            }
+            arg.push(")");
 
-    if cx.bcx.config.cli_unstable().check_cfg_features {
-        // This generate something like this:
-        //  - values(feature)
-        //  - values(feature, "foo", "bar")
-        let mut arg = OsString::from("values(feature");
-        for (&feat, _) in unit.pkg.summary().features() {
-            arg.push(", \"");
-            arg.push(&feat);
-            arg.push("\"");
+            args.push(OsString::from("--check-cfg"));
+            args.push(arg);
         }
-        arg.push(")");
 
-        args.push(OsString::from("--check-cfg"));
-        args.push(arg);
+        if well_known_names {
+            args.push(OsString::from("--check-cfg"));
+            args.push(OsString::from("names()"));
+        }
+
+        if well_known_values {
+            args.push(OsString::from("--check-cfg"));
+            args.push(OsString::from("values()"));
+        }
+
+        args
+    } else {
+        Vec::new()
     }
-
-    if cx.bcx.config.cli_unstable().check_cfg_well_known_names {
-        args.push(OsString::from("--check-cfg"));
-        args.push(OsString::from("names()"));
-    }
-
-    if cx.bcx.config.cli_unstable().check_cfg_well_known_values {
-        args.push(OsString::from("--check-cfg"));
-        args.push(OsString::from("values()"));
-    }
-
-    args
 }
 
 fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
