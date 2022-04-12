@@ -11,6 +11,7 @@ use log::debug;
 use toml_edit::easy as toml;
 use url::Url;
 
+use crate::core::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
@@ -23,10 +24,12 @@ use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
 use crate::util::toml::{
-    read_manifest, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
+    read_manifest, readme_for_project, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
 };
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
+use cargo_util::paths::normalize_path;
+use pathdiff::diff_paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///
@@ -591,16 +594,6 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
-        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
-            let path = member_manifest
-                .parent()
-                .unwrap()
-                .join(root_link)
-                .join("Cargo.toml");
-            debug!("find_root - pointer {}", path.display());
-            paths::normalize_path(&path)
-        }
-
         {
             let current = self.packages.load(manifest_path)?;
             match *current.workspace_config() {
@@ -615,42 +608,25 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        for path in paths::ancestors(manifest_path, None).skip(2) {
-            if path.ends_with("target/package") {
-                break;
-            }
-
-            let ances_manifest_path = path.join("Cargo.toml");
+        for ances_manifest_path in find_root_iter(manifest_path, self.config) {
             debug!("find_root - trying {}", ances_manifest_path.display());
-            if ances_manifest_path.exists() {
-                match *self.packages.load(&ances_manifest_path)?.workspace_config() {
-                    WorkspaceConfig::Root(ref ances_root_config) => {
-                        debug!("find_root - found a root checking exclusion");
-                        if !ances_root_config.is_excluded(manifest_path) {
-                            debug!("find_root - found!");
-                            return Ok(Some(ances_manifest_path));
-                        }
+            match *self.packages.load(&ances_manifest_path)?.workspace_config() {
+                WorkspaceConfig::Root(ref ances_root_config) => {
+                    debug!("find_root - found a root checking exclusion");
+                    if !ances_root_config.is_excluded(manifest_path) {
+                        debug!("find_root - found!");
+                        return Ok(Some(ances_manifest_path));
                     }
-                    WorkspaceConfig::Member {
-                        root: Some(ref path_to_root),
-                    } => {
-                        debug!("find_root - found pointer");
-                        return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
-                    }
-                    WorkspaceConfig::Member { .. } => {}
                 }
-            }
-
-            // Don't walk across `CARGO_HOME` when we're looking for the
-            // workspace root. Sometimes a package will be organized with
-            // `CARGO_HOME` pointing inside of the workspace root or in the
-            // current package, but we don't want to mistakenly try to put
-            // crates.io crates into the workspace by accident.
-            if self.config.home() == path {
-                break;
+                WorkspaceConfig::Member {
+                    root: Some(ref path_to_root),
+                } => {
+                    debug!("find_root - found pointer");
+                    return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
+                }
+                WorkspaceConfig::Member { .. } => {}
             }
         }
-
         Ok(None)
     }
 
@@ -1525,6 +1501,15 @@ impl<'cfg> Workspace<'cfg> {
 
         ms
     }
+
+    /// Returns true if `unit` should depend on the output of Docscrape units.
+    pub fn unit_needs_doc_scrape(&self, unit: &Unit) -> bool {
+        // We do not add scraped units for Host units, as they're either build scripts
+        // (not documented) or proc macros (have no scrape-able exports). Additionally,
+        // naively passing a proc macro's unit_for to new_unit_dep will currently cause
+        // Cargo to panic, see issue #10545.
+        self.is_member(&unit.pkg) && !unit.target.for_host()
+    }
 }
 
 impl<'cfg> Packages<'cfg> {
@@ -1653,6 +1638,10 @@ impl WorkspaceRootConfig {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
     }
+
+    pub fn inheritable(&self) -> &InheritableFields {
+        &self.inheritable_fields
+    }
 }
 
 /// A group of fields that are inheritable by members of the workspace
@@ -1673,6 +1662,7 @@ pub struct InheritableFields {
     publish: Option<VecStringOrBool>,
     edition: Option<String>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    ws_root: PathBuf,
 }
 
 impl InheritableFields {
@@ -1692,6 +1682,7 @@ impl InheritableFields {
         publish: Option<VecStringOrBool>,
         edition: Option<String>,
         badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+        ws_root: PathBuf,
     ) -> InheritableFields {
         Self {
             dependencies,
@@ -1709,6 +1700,7 @@ impl InheritableFields {
             publish,
             edition,
             badges,
+            ws_root,
         }
     }
 
@@ -1772,12 +1764,15 @@ impl InheritableFields {
         )
     }
 
-    pub fn readme(&self) -> CargoResult<StringOrBool> {
-        self.readme
-            .clone()
-            .map_or(Err(anyhow!("`workspace.readme` was not defined")), |d| {
-                Ok(d)
-            })
+    pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
+        readme_for_project(self.ws_root.as_path(), self.readme.clone()).map_or(
+            Err(anyhow!("`workspace.readme` was not defined")),
+            |readme| {
+                let rel_path =
+                    resolve_relative_path("readme", &self.ws_root, package_root, &readme)?;
+                Ok(StringOrBool::String(rel_path))
+            },
+        )
     }
 
     pub fn keywords(&self) -> CargoResult<Vec<String>> {
@@ -1803,10 +1798,10 @@ impl InheritableFields {
             })
     }
 
-    pub fn license_file(&self) -> CargoResult<String> {
+    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
         self.license_file.clone().map_or(
             Err(anyhow!("`workspace.license_file` was not defined")),
-            |d| Ok(d),
+            |d| resolve_relative_path("license-file", &self.ws_root, package_root, &d),
         )
     }
 
@@ -1839,5 +1834,132 @@ impl InheritableFields {
             .map_or(Err(anyhow!("`workspace.badges` was not defined")), |d| {
                 Ok(d)
             })
+    }
+
+    pub fn ws_root(&self) -> &PathBuf {
+        &self.ws_root
+    }
+}
+
+pub fn resolve_relative_path(
+    label: &str,
+    old_root: &Path,
+    new_root: &Path,
+    rel_path: &str,
+) -> CargoResult<String> {
+    let joined_path = normalize_path(&old_root.join(rel_path));
+    match diff_paths(joined_path, new_root) {
+        None => Err(anyhow!(
+            "`{}` was defined in {} but could not be resolved with {}",
+            label,
+            old_root.display(),
+            new_root.display()
+        )),
+        Some(path) => Ok(path
+            .to_str()
+            .ok_or_else(|| {
+                anyhow!(
+                    "`{}` resolved to non-UTF value (`{}`)",
+                    label,
+                    path.display()
+                )
+            })?
+            .to_owned()),
+    }
+}
+
+fn parse_manifest(manifest_path: &Path, config: &Config) -> CargoResult<EitherManifest> {
+    let key = manifest_path.parent().unwrap();
+    let source_id = SourceId::for_path(key)?;
+    let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, config)?;
+    Ok(manifest)
+}
+
+pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
+    for ances_manifest_path in find_root_iter(manifest_path, config) {
+        debug!("find_root - trying {}", ances_manifest_path.display());
+        match *parse_manifest(&ances_manifest_path, config)?.workspace_config() {
+            WorkspaceConfig::Root(ref ances_root_config) => {
+                debug!("find_root - found a root checking exclusion");
+                if !ances_root_config.is_excluded(manifest_path) {
+                    debug!("find_root - found!");
+                    return Ok(Some(ances_manifest_path));
+                }
+            }
+            WorkspaceConfig::Member {
+                root: Some(ref path_to_root),
+            } => {
+                debug!("find_root - found pointer");
+                return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
+            }
+            WorkspaceConfig::Member { .. } => {}
+        }
+    }
+    Ok(None)
+}
+
+fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
+    let path = member_manifest
+        .parent()
+        .unwrap()
+        .join(root_link)
+        .join("Cargo.toml");
+    debug!("find_root - pointer {}", path.display());
+    paths::normalize_path(&path)
+}
+
+fn find_root_iter<'a>(
+    manifest_path: &'a Path,
+    config: &'a Config,
+) -> impl Iterator<Item = PathBuf> + 'a {
+    LookBehind::new(paths::ancestors(manifest_path, None).skip(2))
+        .take_while(|path| !path.curr.ends_with("target/package"))
+        // Don't walk across `CARGO_HOME` when we're looking for the
+        // workspace root. Sometimes a package will be organized with
+        // `CARGO_HOME` pointing inside of the workspace root or in the
+        // current package, but we don't want to mistakenly try to put
+        // crates.io crates into the workspace by accident.
+        .take_while(|path| {
+            if let Some(last) = path.last {
+                config.home() != last
+            } else {
+                true
+            }
+        })
+        .map(|path| path.curr.join("Cargo.toml"))
+        .filter(|ances_manifest_path| ances_manifest_path.exists())
+}
+
+struct LookBehindWindow<'a, T: ?Sized> {
+    curr: &'a T,
+    last: Option<&'a T>,
+}
+
+struct LookBehind<'a, T: ?Sized, K: Iterator<Item = &'a T>> {
+    iter: K,
+    last: Option<&'a T>,
+}
+
+impl<'a, T: ?Sized, K: Iterator<Item = &'a T>> LookBehind<'a, T, K> {
+    fn new(items: K) -> Self {
+        Self {
+            iter: items,
+            last: None,
+        }
+    }
+}
+
+impl<'a, T: ?Sized, K: Iterator<Item = &'a T>> Iterator for LookBehind<'a, T, K> {
+    type Item = LookBehindWindow<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            None => None,
+            Some(next) => {
+                let last = self.last;
+                self.last = Some(next);
+                Some(LookBehindWindow { curr: next, last })
+            }
+        }
     }
 }

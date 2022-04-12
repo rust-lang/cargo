@@ -284,6 +284,45 @@ in package source
 }
 
 #[cargo_test]
+fn orig_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                description = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                exclude = ["*.no-existe"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {}
+            "#,
+        )
+        .file("Cargo.toml.orig", "oops")
+        .build();
+    p.cargo("package")
+        .arg("--no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid inclusion of reserved file name Cargo.toml.orig \
+in package source
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn path_dependency_no_version() {
     let p = project()
         .file(

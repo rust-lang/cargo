@@ -95,6 +95,13 @@ impl ProcessError {
             stderr: stderr.map(|s| s.to_vec()),
         }
     }
+
+    /// Creates a [`ProcessError`] with "could not execute process {cmd}".
+    ///
+    /// * `cmd` is usually but not limited to [`std::process::Command`].
+    pub fn could_not_execute(cmd: impl fmt::Display) -> ProcessError {
+        ProcessError::new(&format!("could not execute process {cmd}"), None, None)
+    }
 }
 
 /// Converts an [`ExitStatus`]  to a human-readable string suitable for

@@ -1,15 +1,19 @@
 use crate::process_error::ProcessError;
 use crate::read2;
+
 use anyhow::{bail, Context, Result};
 use jobserver::Client;
 use shell_escape::escape;
+use tempfile::NamedTempFile;
+
 use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::io;
 use std::iter::once;
 use std::path::Path;
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, ExitStatus, Output, Stdio};
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -22,6 +26,9 @@ pub struct ProcessBuilder {
     env: BTreeMap<String, Option<OsString>>,
     /// The directory to run the program from.
     cwd: Option<OsString>,
+    /// A list of wrappers that wrap the original program when calling
+    /// [`ProcessBuilder::wrapped`]. The last one is the outermost one.
+    wrappers: Vec<OsString>,
     /// The `make` jobserver. See the [jobserver crate] for
     /// more information.
     ///
@@ -29,6 +36,9 @@ pub struct ProcessBuilder {
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
+    /// `true` to retry with an argfile if hitting "command line too big" error.
+    /// See [`ProcessBuilder::retry_with_argfile`] for more information.
+    retry_with_argfile: bool,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -48,9 +58,9 @@ impl fmt::Display for ProcessBuilder {
             }
         }
 
-        write!(f, "{}", self.program.to_string_lossy())?;
+        write!(f, "{}", self.get_program().to_string_lossy())?;
 
-        for arg in &self.args {
+        for arg in self.get_args() {
             write!(f, " {}", escape(arg.to_string_lossy()))?;
         }
 
@@ -66,8 +76,10 @@ impl ProcessBuilder {
             args: Vec::new(),
             cwd: None,
             env: BTreeMap::new(),
+            wrappers: Vec::new(),
             jobserver: None,
             display_env_vars: false,
+            retry_with_argfile: false,
         }
     }
 
@@ -92,6 +104,13 @@ impl ProcessBuilder {
 
     /// (chainable) Replaces the args list with the given `args`.
     pub fn args_replace<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut ProcessBuilder {
+        if let Some(program) = self.wrappers.pop() {
+            // User intend to replace all args, so we
+            // - use the outermost wrapper as the main program, and
+            // - cleanup other inner wrappers.
+            self.program = program;
+            self.wrappers = Vec::new();
+        }
         self.args = args.iter().map(|t| t.as_ref().to_os_string()).collect();
         self
     }
@@ -117,12 +136,17 @@ impl ProcessBuilder {
 
     /// Gets the executable name.
     pub fn get_program(&self) -> &OsString {
-        &self.program
+        self.wrappers.last().unwrap_or(&self.program)
     }
 
     /// Gets the program arguments.
-    pub fn get_args(&self) -> &[OsString] {
-        &self.args
+    pub fn get_args(&self) -> impl Iterator<Item = &OsString> {
+        self.wrappers
+            .iter()
+            .rev()
+            .chain(once(&self.program))
+            .chain(self.args.iter())
+            .skip(1) // Skip the main `program
     }
 
     /// Gets the current working directory for the process.
@@ -161,13 +185,56 @@ impl ProcessBuilder {
         self
     }
 
+    /// Enables retrying with an argfile if hitting "command line too big" error
+    ///
+    /// This is primarily for the `@path` arg of rustc and rustdoc, which treat
+    /// each line as an command-line argument, so `LF` and `CRLF` bytes are not
+    /// valid as an argument for argfile at this moment.
+    /// For example, `RUSTDOCFLAGS="--crate-version foo\nbar" cargo doc` is
+    /// valid when invoking from command-line but not from argfile.
+    ///
+    /// To sum up, the limitations of the argfile are:
+    ///
+    /// - Must be valid UTF-8 encoded.
+    /// - Must not contain any newlines in each argument.
+    ///
+    /// Ref:
+    ///
+    /// - https://doc.rust-lang.org/rustdoc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+    /// - https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
+    pub fn retry_with_argfile(&mut self, enabled: bool) -> &mut Self {
+        self.retry_with_argfile = enabled;
+        self
+    }
+
+    fn should_retry_with_argfile(&self, err: &io::Error) -> bool {
+        self.retry_with_argfile && imp::command_line_too_big(err)
+    }
+
+    /// Like [`Command::status`] but with a better error message.
+    pub fn status(&self) -> Result<ExitStatus> {
+        self._status()
+            .with_context(|| ProcessError::could_not_execute(self))
+    }
+
+    fn _status(&self) -> io::Result<ExitStatus> {
+        if !debug_force_argfile(self.retry_with_argfile) {
+            let mut cmd = self.build_command();
+            match cmd.spawn() {
+                Err(ref e) if self.should_retry_with_argfile(e) => {}
+                Err(e) => return Err(e),
+                Ok(mut child) => return child.wait(),
+            }
+        }
+        let (mut cmd, argfile) = self.build_command_with_argfile()?;
+        let status = cmd.spawn()?.wait();
+        close_tempfile_and_log_error(argfile);
+        status
+    }
+
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
     pub fn exec(&self) -> Result<()> {
-        let mut command = self.build_command();
-        let exit = command.status().with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
-        })?;
-
+        let exit = self.status()?;
         if exit.success() {
             Ok(())
         } else {
@@ -199,14 +266,30 @@ impl ProcessBuilder {
         imp::exec_replace(self)
     }
 
+    /// Like [`Command::output`] but with a better error message.
+    pub fn output(&self) -> Result<Output> {
+        self._output()
+            .with_context(|| ProcessError::could_not_execute(self))
+    }
+
+    fn _output(&self) -> io::Result<Output> {
+        if !debug_force_argfile(self.retry_with_argfile) {
+            let mut cmd = self.build_command();
+            match piped(&mut cmd).spawn() {
+                Err(ref e) if self.should_retry_with_argfile(e) => {}
+                Err(e) => return Err(e),
+                Ok(child) => return child.wait_with_output(),
+            }
+        }
+        let (mut cmd, argfile) = self.build_command_with_argfile()?;
+        let output = piped(&mut cmd).spawn()?.wait_with_output();
+        close_tempfile_and_log_error(argfile);
+        output
+    }
+
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
     pub fn exec_with_output(&self) -> Result<Output> {
-        let mut command = self.build_command();
-
-        let output = command.output().with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
-        })?;
-
+        let output = self.output()?;
         if output.status.success() {
             Ok(output)
         } else {
@@ -237,16 +320,25 @@ impl ProcessBuilder {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
-        let mut cmd = self.build_command();
-        cmd.stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .stdin(Stdio::null());
-
         let mut callback_error = None;
         let mut stdout_pos = 0;
         let mut stderr_pos = 0;
+
+        let spawn = |mut cmd| {
+            if !debug_force_argfile(self.retry_with_argfile) {
+                match piped(&mut cmd).spawn() {
+                    Err(ref e) if self.should_retry_with_argfile(e) => {}
+                    Err(e) => return Err(e),
+                    Ok(child) => return Ok((child, None)),
+                }
+            }
+            let (mut cmd, argfile) = self.build_command_with_argfile()?;
+            Ok((piped(&mut cmd).spawn()?, Some(argfile)))
+        };
+
         let status = (|| {
-            let mut child = cmd.spawn()?;
+            let cmd = self.build_command();
+            let (mut child, argfile) = spawn(cmd)?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
@@ -292,11 +384,13 @@ impl ProcessBuilder {
                 data.drain(..idx);
                 *pos = 0;
             })?;
-            child.wait()
+            let status = child.wait();
+            if let Some(argfile) = argfile {
+                close_tempfile_and_log_error(argfile);
+            }
+            status
         })()
-        .with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
-        })?;
+        .with_context(|| ProcessError::could_not_execute(self))?;
         let output = Output {
             status,
             stdout,
@@ -324,15 +418,55 @@ impl ProcessBuilder {
         Ok(output)
     }
 
-    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles the jobserver, if
-    /// present.
-    pub fn build_command(&self) -> Command {
-        let mut command = Command::new(&self.program);
+    /// Builds the command with an `@<path>` argfile that contains all the
+    /// arguments. This is primarily served for rustc/rustdoc command family.
+    fn build_command_with_argfile(&self) -> io::Result<(Command, NamedTempFile)> {
+        use std::io::Write as _;
+
+        let mut tmp = tempfile::Builder::new()
+            .prefix("cargo-argfile.")
+            .tempfile()?;
+
+        let mut arg = OsString::from("@");
+        arg.push(tmp.path());
+        let mut cmd = self.build_command_without_args();
+        cmd.arg(arg);
+        log::debug!("created argfile at {} for {self}", tmp.path().display());
+
+        let cap = self.get_args().map(|arg| arg.len() + 1).sum::<usize>();
+        let mut buf = Vec::with_capacity(cap);
+        for arg in &self.args {
+            let arg = arg.to_str().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!(
+                        "argument for argfile contains invalid UTF-8 characters: `{}`",
+                        arg.to_string_lossy()
+                    ),
+                )
+            })?;
+            if arg.contains('\n') {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("argument for argfile contains newlines: `{arg}`"),
+                ));
+            }
+            writeln!(buf, "{arg}")?;
+        }
+        tmp.write_all(&mut buf)?;
+        Ok((cmd, tmp))
+    }
+
+    /// Builds a command from `ProcessBuilder` for everythings but not `args`.
+    fn build_command_without_args(&self) -> Command {
+        let mut command = {
+            let mut iter = self.wrappers.iter().rev().chain(once(&self.program));
+            let mut cmd = Command::new(iter.next().expect("at least one `program` exists"));
+            cmd.args(iter);
+            cmd
+        };
         if let Some(cwd) = self.get_cwd() {
             command.current_dir(cwd);
-        }
-        for arg in &self.args {
-            command.arg(arg);
         }
         for (k, v) in &self.env {
             match *v {
@@ -350,6 +484,19 @@ impl ProcessBuilder {
         command
     }
 
+    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles
+    /// the jobserver, if present.
+    ///
+    /// Note that this method doesn't take argfile fallback into account. The
+    /// caller should handle it by themselves.
+    pub fn build_command(&self) -> Command {
+        let mut command = self.build_command_without_args();
+        for arg in &self.args {
+            command.arg(arg);
+        }
+        command
+    }
+
     /// Wraps an existing command with the provided wrapper, if it is present and valid.
     ///
     /// # Examples
@@ -363,39 +510,72 @@ impl ProcessBuilder {
     /// let cmd = cmd.wrapped(Some("sccache"));
     /// ```
     pub fn wrapped(mut self, wrapper: Option<impl AsRef<OsStr>>) -> Self {
-        let wrapper = if let Some(wrapper) = wrapper.as_ref() {
-            wrapper.as_ref()
-        } else {
-            return self;
-        };
-
-        if wrapper.is_empty() {
-            return self;
+        if let Some(wrapper) = wrapper.as_ref() {
+            let wrapper = wrapper.as_ref();
+            if !wrapper.is_empty() {
+                self.wrappers.push(wrapper.to_os_string());
+            }
         }
-
-        let args = once(self.program).chain(self.args.into_iter()).collect();
-
-        self.program = wrapper.to_os_string();
-        self.args = args;
-
         self
     }
 }
 
+/// Forces the command to use `@path` argfile.
+///
+/// You should set `__CARGO_TEST_FORCE_ARGFILE` to enable this.
+fn debug_force_argfile(retry_enabled: bool) -> bool {
+    cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
+}
+
+/// Creates new pipes for stderr and stdout. Ignores stdin.
+fn piped(cmd: &mut Command) -> &mut Command {
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null())
+}
+
+fn close_tempfile_and_log_error(file: NamedTempFile) {
+    file.close().unwrap_or_else(|e| {
+        log::warn!("failed to close temporary file: {e}");
+    });
+}
+
 #[cfg(unix)]
 mod imp {
-    use super::{ProcessBuilder, ProcessError};
+    use super::{close_tempfile_and_log_error, debug_force_argfile, ProcessBuilder, ProcessError};
     use anyhow::Result;
+    use std::io;
     use std::os::unix::process::CommandExt;
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
-        let mut command = process_builder.build_command();
-        let error = command.exec();
+        let mut error;
+        let mut file = None;
+        if debug_force_argfile(process_builder.retry_with_argfile) {
+            let (mut command, argfile) = process_builder.build_command_with_argfile()?;
+            file = Some(argfile);
+            error = command.exec()
+        } else {
+            let mut command = process_builder.build_command();
+            error = command.exec();
+            if process_builder.should_retry_with_argfile(&error) {
+                let (mut command, argfile) = process_builder.build_command_with_argfile()?;
+                file = Some(argfile);
+                error = command.exec()
+            }
+        }
+        if let Some(file) = file {
+            close_tempfile_and_log_error(file);
+        }
+
         Err(anyhow::Error::from(error).context(ProcessError::new(
             &format!("could not execute process {}", process_builder),
             None,
             None,
         )))
+    }
+
+    pub fn command_line_too_big(err: &io::Error) -> bool {
+        err.raw_os_error() == Some(libc::E2BIG)
     }
 }
 
@@ -403,6 +583,7 @@ mod imp {
 mod imp {
     use super::{ProcessBuilder, ProcessError};
     use anyhow::Result;
+    use std::io;
     use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
     use winapi::um::consoleapi::SetConsoleCtrlHandler;
 
@@ -420,5 +601,67 @@ mod imp {
 
         // Just execute the process as normal.
         process_builder.exec()
+    }
+
+    pub fn command_line_too_big(err: &io::Error) -> bool {
+        use winapi::shared::winerror::ERROR_FILENAME_EXCED_RANGE;
+        err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE as i32)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ProcessBuilder;
+    use std::fs;
+
+    #[test]
+    fn argfile_build_succeeds() {
+        let mut cmd = ProcessBuilder::new("echo");
+        cmd.args(["foo", "bar"].as_slice());
+        let (cmd, argfile) = cmd.build_command_with_argfile().unwrap();
+
+        assert_eq!(cmd.get_program(), "echo");
+        let cmd_args: Vec<_> = cmd.get_args().map(|s| s.to_str().unwrap()).collect();
+        assert_eq!(cmd_args.len(), 1);
+        assert!(cmd_args[0].starts_with("@"));
+        assert!(cmd_args[0].contains("cargo-argfile."));
+
+        let buf = fs::read_to_string(argfile.path()).unwrap();
+        assert_eq!(buf, "foo\nbar\n");
+    }
+
+    #[test]
+    fn argfile_build_fails_if_arg_contains_newline() {
+        let mut cmd = ProcessBuilder::new("echo");
+        cmd.arg("foo\n");
+        let err = cmd.build_command_with_argfile().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "argument for argfile contains newlines: `foo\n`"
+        );
+    }
+
+    #[test]
+    fn argfile_build_fails_if_arg_contains_invalid_utf8() {
+        let mut cmd = ProcessBuilder::new("echo");
+
+        #[cfg(windows)]
+        let invalid_arg = {
+            use std::os::windows::prelude::*;
+            std::ffi::OsString::from_wide(&[0x0066, 0x006f, 0xD800, 0x006f])
+        };
+
+        #[cfg(unix)]
+        let invalid_arg = {
+            use std::os::unix::ffi::OsStrExt;
+            std::ffi::OsStr::from_bytes(&[0x66, 0x6f, 0x80, 0x6f]).to_os_string()
+        };
+
+        cmd.arg(invalid_arg);
+        let err = cmd.build_command_with_argfile().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "argument for argfile contains invalid UTF-8 characters: `fo�o`"
+        );
     }
 }

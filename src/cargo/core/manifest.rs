@@ -26,6 +26,15 @@ pub enum EitherManifest {
     Virtual(VirtualManifest),
 }
 
+impl EitherManifest {
+    pub(crate) fn workspace_config(&self) -> &WorkspaceConfig {
+        match *self {
+            EitherManifest::Real(ref r) => r.workspace_config(),
+            EitherManifest::Virtual(ref v) => v.workspace_config(),
+        }
+    }
+}
+
 /// Contains all the information about a package, as loaded from a `Cargo.toml`.
 ///
 /// This is deserialized using the [`TomlManifest`] type.

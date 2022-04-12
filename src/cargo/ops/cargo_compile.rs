@@ -546,6 +546,10 @@ pub fn create_bcx<'a, 'cfg>(
                 &profiles,
                 interner,
             )?
+            .into_iter()
+            // Proc macros should not be scraped for functions, since they only export macros
+            .filter(|unit| !unit.target.proc_macro())
+            .collect::<Vec<_>>()
         }
         None => Vec::new(),
     };

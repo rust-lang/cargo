@@ -36,6 +36,7 @@ pub struct PackageOpts<'cfg> {
     pub cli_features: CliFeatures,
 }
 
+const ORIGINAL_MANIFEST_FILE: &str = "Cargo.toml.orig";
 const VCS_INFO_FILE: &str = ".cargo_vcs_info.json";
 
 struct ArchiveFile {
@@ -219,8 +220,8 @@ fn build_ar_list(
         match rel_str.as_ref() {
             "Cargo.toml" => {
                 result.push(ArchiveFile {
-                    rel_path: PathBuf::from("Cargo.toml.orig"),
-                    rel_str: "Cargo.toml.orig".to_string(),
+                    rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
+                    rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
                 result.push(ArchiveFile {
@@ -230,10 +231,9 @@ fn build_ar_list(
                 });
             }
             "Cargo.lock" => continue,
-            VCS_INFO_FILE => anyhow::bail!(
-                "invalid inclusion of reserved file name \
-                     {} in package source",
-                VCS_INFO_FILE
+            VCS_INFO_FILE | ORIGINAL_MANIFEST_FILE => anyhow::bail!(
+                "invalid inclusion of reserved file name {} in package source",
+                rel_str
             ),
             _ => {
                 result.push(ArchiveFile {
@@ -260,46 +260,16 @@ fn build_ar_list(
     }
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
-        let abs_license_path = paths::normalize_path(&pkg.root().join(license_path));
-        if abs_license_path.exists() {
-            match abs_license_path.strip_prefix(&pkg.root()) {
-                Ok(rel_license_path) => {
-                    if !result.iter().any(|ar| ar.rel_path == rel_license_path) {
-                        result.push(ArchiveFile {
-                            rel_path: rel_license_path.to_path_buf(),
-                            rel_str: rel_license_path
-                                .to_str()
-                                .expect("everything was utf8")
-                                .to_string(),
-                            contents: FileContents::OnDisk(abs_license_path),
-                        });
-                    }
-                }
-                Err(_) => {
-                    // The license exists somewhere outside of the package.
-                    let license_name = license_path.file_name().unwrap();
-                    if result
-                        .iter()
-                        .any(|ar| ar.rel_path.file_name().unwrap() == license_name)
-                    {
-                        ws.config().shell().warn(&format!(
-                            "license-file `{}` appears to be a path outside of the package, \
-                            but there is already a file named `{}` in the root of the package. \
-                            The archived crate will contain the copy in the root of the package. \
-                            Update the license-file to point to the path relative \
-                            to the root of the package to remove this warning.",
-                            license_file,
-                            license_name.to_str().unwrap()
-                        ))?;
-                    } else {
-                        result.push(ArchiveFile {
-                            rel_path: PathBuf::from(license_name),
-                            rel_str: license_name.to_str().unwrap().to_string(),
-                            contents: FileContents::OnDisk(abs_license_path),
-                        });
-                    }
-                }
-            }
+        let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
+        if abs_file_path.exists() {
+            check_for_file_and_add(
+                "license-file",
+                license_path,
+                abs_file_path,
+                pkg,
+                &mut result,
+                ws,
+            )?;
         } else {
             let rel_msg = if license_path.is_absolute() {
                 "".to_string()
@@ -316,9 +286,67 @@ fn build_ar_list(
             ))?;
         }
     }
+    if let Some(readme) = &pkg.manifest().metadata().readme {
+        let readme_path = Path::new(readme);
+        let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
+        if abs_file_path.exists() {
+            check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
+        }
+    }
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
 
     Ok(result)
+}
+
+fn check_for_file_and_add(
+    label: &str,
+    file_path: &Path,
+    abs_file_path: PathBuf,
+    pkg: &Package,
+    result: &mut Vec<ArchiveFile>,
+    ws: &Workspace<'_>,
+) -> CargoResult<()> {
+    match abs_file_path.strip_prefix(&pkg.root()) {
+        Ok(rel_file_path) => {
+            if !result.iter().any(|ar| ar.rel_path == rel_file_path) {
+                result.push(ArchiveFile {
+                    rel_path: rel_file_path.to_path_buf(),
+                    rel_str: rel_file_path
+                        .to_str()
+                        .expect("everything was utf8")
+                        .to_string(),
+                    contents: FileContents::OnDisk(abs_file_path),
+                })
+            }
+        }
+        Err(_) => {
+            // The file exists somewhere outside of the package.
+            let file_name = file_path.file_name().unwrap();
+            if result
+                .iter()
+                .any(|ar| ar.rel_path.file_name().unwrap() == file_name)
+            {
+                ws.config().shell().warn(&format!(
+                    "{} `{}` appears to be a path outside of the package, \
+                            but there is already a file named `{}` in the root of the package. \
+                            The archived crate will contain the copy in the root of the package. \
+                            Update the {} to point to the path relative \
+                            to the root of the package to remove this warning.",
+                    label,
+                    file_path.display(),
+                    file_name.to_str().unwrap(),
+                    label,
+                ))?;
+            } else {
+                result.push(ArchiveFile {
+                    rel_path: PathBuf::from(file_name),
+                    rel_str: file_name.to_str().unwrap().to_string(),
+                    contents: FileContents::OnDisk(abs_file_path),
+                })
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Construct `Cargo.lock` for the package to be published.
