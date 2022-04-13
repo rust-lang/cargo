@@ -25,6 +25,7 @@ fn permit_additional_workspace_fields() {
             categories = ["development-tools"]
             publish = false
             edition = "2018"
+            rust-version = "1.60"
 
             [workspace.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
@@ -130,6 +131,7 @@ fn inherit_own_workspace_fields() {
             categories = { workspace = true }
             publish = { workspace = true }
             edition = { workspace = true }
+            rust-version = { workspace = true }
 
             [workspace]
             members = []
@@ -144,6 +146,7 @@ fn inherit_own_workspace_fields() {
             categories = ["development-tools"]
             publish = true
             edition = "2018"
+            rust-version = "1.60"
             [workspace.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
@@ -194,6 +197,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 edition = "2018"
+rust-version = "1.60"
 name = "foo"
 version = "1.2.3"
 authors = ["Rustaceans"]
@@ -590,6 +594,7 @@ fn inherit_workspace_fields() {
             categories = ["development-tools"]
             publish = true
             edition = "2018"
+            rust-version = "1.60"
             [workspace.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
@@ -616,6 +621,7 @@ fn inherit_workspace_fields() {
             categories = { workspace = true }
             publish = { workspace = true }
             edition = { workspace = true }
+            rust-version = { workspace = true }
         "#,
         )
         .file("LICENSE", "license")
@@ -669,6 +675,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 edition = "2018"
+rust-version = "1.60"
 name = "bar"
 version = "1.2.3"
 authors = ["Rustaceans"]

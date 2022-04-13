@@ -1046,7 +1046,7 @@ pub struct TomlWorkspaceField {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlProject {
     edition: Option<MaybeWorkspace<String>>,
-    rust_version: Option<String>,
+    rust_version: Option<MaybeWorkspace<String>>,
     name: InternedString,
     #[serde(deserialize_with = "version_trim_whitespace")]
     version: MaybeWorkspace<semver::Version>,
@@ -1111,6 +1111,8 @@ pub struct TomlWorkspace {
     publish: Option<VecStringOrBool>,
     edition: Option<String>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    #[serde(rename = "rust-version")]
+    rust_version: Option<String>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
@@ -1376,6 +1378,7 @@ impl TomlManifest {
                     config.publish.clone(),
                     config.edition.clone(),
                     config.badges.clone(),
+                    config.rust_version.clone(),
                     package_root.to_path_buf(),
                 );
 
@@ -1441,7 +1444,12 @@ impl TomlManifest {
         }
 
         let rust_version = if let Some(rust_version) = &project.rust_version {
-            let req = match semver::VersionReq::parse(rust_version) {
+            let rust_version = rust_version
+                .clone()
+                .resolve(&features, "rust_version", || {
+                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.rust_version()
+                })?;
+            let req = match semver::VersionReq::parse(&rust_version) {
                 // Exclude semver operators like `^` and pre-release identifiers
                 Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
                 _ => bail!("`rust-version` must be a value like \"1.32\""),
@@ -1843,6 +1851,7 @@ impl TomlManifest {
             .categories
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
+        project.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
 
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
@@ -2064,6 +2073,7 @@ impl TomlManifest {
                     config.publish.clone(),
                     config.edition.clone(),
                     config.badges.clone(),
+                    config.rust_version.clone(),
                     root.to_path_buf(),
                 );
                 WorkspaceConfig::Root(WorkspaceRootConfig::new(
