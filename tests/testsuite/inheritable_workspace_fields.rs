@@ -12,6 +12,7 @@ fn permit_additional_workspace_fields() {
             r#"
             [workspace]
             members = ["bar"]
+            [workspace.package]
             version = "1.2.3"
             authors = ["Rustaceans"]
             description = "This is a crate"
@@ -27,7 +28,7 @@ fn permit_additional_workspace_fields() {
             edition = "2018"
             rust-version = "1.60"
 
-            [workspace.badges]
+            [workspace.package.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
 
             [workspace.dependencies]
@@ -135,6 +136,7 @@ fn inherit_own_workspace_fields() {
 
             [workspace]
             members = []
+            [workspace.package]
             version = "1.2.3"
             authors = ["Rustaceans"]
             description = "This is a crate"
@@ -147,7 +149,7 @@ fn inherit_own_workspace_fields() {
             publish = true
             edition = "2018"
             rust-version = "1.60"
-            [workspace.badges]
+            [workspace.package.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
@@ -501,10 +503,10 @@ fn inherit_from_own_undefined_field() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error inheriting `description` from workspace root manifest's `workspace.description`
+  error inheriting `description` from workspace root manifest's `workspace.package.description`
 
 Caused by:
-  `workspace.description` was not defined
+  `workspace.package.description` was not defined
 ",
         )
         .run();
@@ -581,6 +583,7 @@ fn inherit_workspace_fields() {
             r#"
             [workspace]
             members = ["bar"]
+            [workspace.package]
             version = "1.2.3"
             authors = ["Rustaceans"]
             description = "This is a crate"
@@ -595,7 +598,7 @@ fn inherit_workspace_fields() {
             publish = true
             edition = "2018"
             rust-version = "1.60"
-            [workspace.badges]
+            [workspace.package.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
@@ -1281,7 +1284,7 @@ fn error_no_root_workspace() {
 [ERROR] failed to parse manifest at `[..]/Cargo.toml`
 
 Caused by:
-  error inheriting `description` from workspace root manifest's `workspace.description`
+  error inheriting `description` from workspace root manifest's `workspace.package.description`
 
 Caused by:
   root of a workspace inferred but wasn't a root: [..]/Cargo.toml
