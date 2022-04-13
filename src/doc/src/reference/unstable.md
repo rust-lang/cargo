@@ -1439,7 +1439,7 @@ log2 = { workspace = true }
 Example 2: 
 ```toml
 # in workspace's Cargo.toml
-[workspace]
+[workspace.package]
 version = "1.2.3"
 authors = ["Nice Folks"]
 description = "..."
