@@ -27,6 +27,8 @@ fn permit_additional_workspace_fields() {
             publish = false
             edition = "2018"
             rust-version = "1.60"
+            exclude = ["foo.txt"]
+            include = ["bar.txt", "**/*.rs", "Cargo.toml", "LICENSE", "README.md"]
 
             [workspace.package.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
@@ -133,6 +135,8 @@ fn inherit_own_workspace_fields() {
             publish = { workspace = true }
             edition = { workspace = true }
             rust-version = { workspace = true }
+            exclude = { workspace = true }
+            include = { workspace = true }
 
             [workspace]
             members = []
@@ -149,11 +153,15 @@ fn inherit_own_workspace_fields() {
             publish = true
             edition = "2018"
             rust-version = "1.60"
+            exclude = ["foo.txt"]
+            include = ["bar.txt", "**/*.rs", "Cargo.toml"]
             [workspace.package.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
         .file("src/main.rs", "fn main() {}")
+        .file("foo.txt", "") // should be ignored when packaging
+        .file("bar.txt", "") // should be included when packaging
         .build();
 
     p.cargo("publish --token sekrit")
@@ -190,6 +198,7 @@ fn inherit_own_workspace_fields() {
             "Cargo.toml.orig",
             "src/main.rs",
             ".cargo_vcs_info.json",
+            "bar.txt",
         ],
         &[(
             "Cargo.toml",
@@ -203,6 +212,12 @@ rust-version = "1.60"
 name = "foo"
 version = "1.2.3"
 authors = ["Rustaceans"]
+exclude = ["foo.txt"]
+include = [
+    "bar.txt",
+    "**/*.rs",
+    "Cargo.toml",
+]
 publish = true
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
@@ -598,6 +613,8 @@ fn inherit_workspace_fields() {
             publish = true
             edition = "2018"
             rust-version = "1.60"
+            exclude = ["foo.txt"]
+            include = ["bar.txt", "**/*.rs", "Cargo.toml", "LICENSE", "README.md"]
             [workspace.package.badges]
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
@@ -625,11 +642,15 @@ fn inherit_workspace_fields() {
             publish = { workspace = true }
             edition = { workspace = true }
             rust-version = { workspace = true }
+            exclude = { workspace = true }
+            include = { workspace = true }
         "#,
         )
         .file("LICENSE", "license")
         .file("README.md", "README.md")
         .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/foo.txt", "") // should be ignored when packaging
+        .file("bar/bar.txt", "") // should be included when packaging
         .build();
 
     p.cargo("publish --token sekrit")
@@ -669,6 +690,7 @@ fn inherit_workspace_fields() {
             "README.md",
             "LICENSE",
             ".cargo_vcs_info.json",
+            "bar.txt",
         ],
         &[(
             "Cargo.toml",
@@ -682,6 +704,14 @@ rust-version = "1.60"
 name = "bar"
 version = "1.2.3"
 authors = ["Rustaceans"]
+exclude = ["foo.txt"]
+include = [
+    "bar.txt",
+    "**/*.rs",
+    "Cargo.toml",
+    "LICENSE",
+    "README.md",
+]
 publish = true
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
