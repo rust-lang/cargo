@@ -522,33 +522,51 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
+/// A holder for a user-facing string that helps them run
+/// cargo install --git with correct arguments
+enum InstallSuggestion {
+    /// Hint to append to the error message that the user can
+    /// run to install a package from a Git Repo
+    NormalisedGitUrl(String),
+    /// Failed to generate an install suggestion.
+    None,
+}
+
 /// Returns None if the Registry Dependency was not a GitUrl, otherwise
 /// return a suggestion with the https-normalised GitUrl for user
 /// to rerun cargo install with
-fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> Option<String> {
+fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> InstallSuggestion {
     if dep.source_id().is_registry() {
         if let Ok(git_url) = GitUrl::parse(&dep.package_name()) {
-            let final_git_url: InternedString = match git_url.scheme {
+            let final_git_url: Option<InternedString> = match git_url.scheme {
+                // cargo doesn't support cargo install git@ urls, so
                 Scheme::Ssh | Scheme::Git | Scheme::GitSsh => {
                     if let (Some(host), Some(owner)) = (git_url.host, git_url.owner) {
                         let https_git_url = format!(
                             "https://{host}/{owner}/{repo_name}",
                             repo_name = git_url.name
                         );
-                        InternedString::from(https_git_url)
+                        Some(InternedString::from(https_git_url))
                     } else {
-                        dep.package_name()
+                        None
                     }
                 }
-                _ => dep.package_name(),
+                Scheme::Http | Scheme::Https => Some(dep.package_name()),
+                // otherwise cargo install bar will interpret bar as a file-based
+                // git repo
+                _ => None,
             };
 
-            return Some(format!(
-                "To install a package from a git repository, use `--git {final_git_url}`",
-            ));
+            if let Some(final_git_url) = final_git_url {
+                return InstallSuggestion::NormalisedGitUrl(format!(
+                    "To install a package from a git repository, use `--git {final_git_url}`",
+                ));
+            } else {
+                return InstallSuggestion::None;
+            }
         }
     }
-    return None;
+    return InstallSuggestion::None;
 }
 
 /// Gets a Package based on command-line requirements.
@@ -596,7 +614,9 @@ where
                     source.source_id()
                 )
             } else {
-                if let Some(suggestion) = was_git_url_miscategorised_as_a_registry_dep(&dep) {
+                if let InstallSuggestion::NormalisedGitUrl(suggestion) =
+                    was_git_url_miscategorised_as_a_registry_dep(&dep)
+                {
                     bail!(
                         "could not find `{}` in {} with version `{}`. {}",
                         dep.package_name(),
