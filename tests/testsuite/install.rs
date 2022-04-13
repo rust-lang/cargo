@@ -1419,14 +1419,27 @@ fn test_install_git_cannot_be_a_base_url() {
 }
 
 #[cargo_test]
-fn test_install_from_git_generate_suggestion() {
+fn test_install_from_https_git_generate_suggestion() {
     registry::init();
     cargo_process("install https://github.com/rust-lang/cargo")
         .with_status(101)
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-error: could not find `https://github.com/rust-lang/cargo` in registry `crates-io` with version `*`. Try adding `--git https://github.com/rust-lang/cargo`",
+error: could not find `https://github.com/rust-lang/cargo` in registry `crates-io` with version `*`. To install a package from a git repository, use `--git https://github.com/rust-lang/cargo`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_install_from_git_generate_suggestion() {
+    registry::init();
+    cargo_process("install git@bitbucket.org:jcmoyer/rust-tictactoe.git")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+error: could not find `git@bitbucket.org:jcmoyer/rust-tictactoe.git` in registry `crates-io` with version `*`. To install a package from a git repository, use `--git https://bitbucket.org/jcmoyer/rust-tictactoe`",
         )
         .run();
 }

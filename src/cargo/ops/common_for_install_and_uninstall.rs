@@ -7,9 +7,9 @@ use std::rc::Rc;
 use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
+use git_url_parse::{GitUrl, Scheme};
 use serde::{Deserialize, Serialize};
 use toml_edit::easy as toml;
-use url::Url;
 
 use crate::core::compiler::Freshness;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
@@ -522,23 +522,33 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
-fn is_package_name_a_git_url(package_name: &InternedString) -> bool {
-    if let Ok(url) = Url::parse(package_name) {
-        if let Some(domain) = url.domain() {
-            // REVIEW
-            // Are there any other git services without "git"
-            // in the domain?
-            // bitbucket?
-            // Is it possible to ask the cargo/crates team for
-            // some stats where crates projects are currently hosted on
-            return domain.contains("git");
+/// Returns None if the Registry Dependency was not a GitUrl, otherwise
+/// return a suggestion with the https-normalised GitUrl for user
+/// to rerun cargo install with
+fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> Option<String> {
+    if dep.source_id().is_registry() {
+        if let Ok(git_url) = GitUrl::parse(&dep.package_name()) {
+            let final_git_url: InternedString = match git_url.scheme {
+                Scheme::Ssh | Scheme::Git | Scheme::GitSsh => {
+                    if let (Some(host), Some(owner)) = (git_url.host, git_url.owner) {
+                        let https_git_url = format!(
+                            "https://{host}/{owner}/{repo_name}",
+                            repo_name = git_url.name
+                        );
+                        InternedString::from(https_git_url)
+                    } else {
+                        dep.package_name()
+                    }
+                }
+                _ => dep.package_name(),
+            };
+
+            return Some(format!(
+                "To install a package from a git repository, use `--git {final_git_url}`",
+            ));
         }
     }
-    false
-}
-
-fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> bool {
-    return dep.source_id().is_registry() && is_package_name_a_git_url(&dep.package_name());
+    return None;
 }
 
 /// Gets a Package based on command-line requirements.
@@ -586,13 +596,13 @@ where
                     source.source_id()
                 )
             } else {
-                if was_git_url_miscategorised_as_a_registry_dep(&dep) {
+                if let Some(suggestion) = was_git_url_miscategorised_as_a_registry_dep(&dep) {
                     bail!(
-                        "could not find `{}` in {} with version `{}`. Try adding `--git {}`",
+                        "could not find `{}` in {} with version `{}`. {}",
                         dep.package_name(),
                         source.source_id(),
                         dep.version_req(),
-                        dep.package_name(),
+                        suggestion,
                     )
                 } else {
                     bail!(
