@@ -642,10 +642,6 @@ h1 {
   border-bottom: 1px solid #c0c0c0;
 }
 
-h1 > a {
-  font-size: 14px;
-}
-
 .graph {
   display: block;
 }
@@ -736,7 +732,8 @@ h1 > a {
 </head>
 <body>
 
-<h1>Cargo Build Timings <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Documentation</a></h1>
+<h1>Cargo Build Timings</h1>
+See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Documentation</a>
 "#;
 
 static HTML_CANVAS: &str = r#"
