@@ -1662,6 +1662,7 @@ pub struct InheritableFields {
     publish: Option<VecStringOrBool>,
     edition: Option<String>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    rust_version: Option<String>,
     ws_root: PathBuf,
 }
 
@@ -1682,6 +1683,7 @@ impl InheritableFields {
         publish: Option<VecStringOrBool>,
         edition: Option<String>,
         badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+        rust_version: Option<String>,
         ws_root: PathBuf,
     ) -> InheritableFields {
         Self {
@@ -1700,6 +1702,7 @@ impl InheritableFields {
             publish,
             edition,
             badges,
+            rust_version,
             ws_root,
         }
     }
@@ -1826,6 +1829,13 @@ impl InheritableFields {
             .map_or(Err(anyhow!("`workspace.edition` was not defined")), |d| {
                 Ok(d)
             })
+    }
+
+    pub fn rust_version(&self) -> CargoResult<String> {
+        self.rust_version.clone().map_or(
+            Err(anyhow!("`workspace.rust-version` was not defined")),
+            |d| Ok(d),
+        )
     }
 
     pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
