@@ -2783,43 +2783,6 @@ fn doc_lib_false_dep() {
     assert!(!p.build_dir().join("doc/bar").exists());
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn doc_check_cfg_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustdoc command line
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-
-                [features]
-                default = ["f_a"]
-                f_a = []
-                f_b = []
-            "#,
-        )
-        .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
-        .build();
-
-    p.cargo("doc -v -Zcheck-cfg=features")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.1.0 [..]
-[RUNNING] `rustdoc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-}
-
 #[cargo_test]
 fn link_to_private_item() {
     let main = r#"
