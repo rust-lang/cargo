@@ -2,7 +2,33 @@
 
 use cargo_test_support::{basic_manifest, is_nightly, project};
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
+macro_rules! x {
+    ($tool:tt => $what:tt $(of $who:tt)?) => {{
+        #[cfg(windows)]
+        {
+            concat!("[RUNNING] [..]", $tool, "[..] --check-cfg ",
+                    $what, '(', $($who,)* ')', "[..]")
+        }
+        #[cfg(not(windows))]
+        {
+            concat!("[RUNNING] [..]", $tool, "[..] --check-cfg '",
+                    $what, '(', $($who,)* ')', "'", "[..]")
+        }
+    }};
+    ($tool:tt => $what:tt of $who:tt with $($values:tt)*) => {{
+        #[cfg(windows)]
+        {
+            concat!("[RUNNING] [..]", $tool, "[..] --check-cfg \"",
+                    $what, '(', $who, $(", ", "/\"", $values, "/\"",)* ")", '"', "[..]")
+        }
+        #[cfg(not(windows))]
+        {
+            concat!("[RUNNING] [..]", $tool, "[..] --check-cfg '",
+                    $what, '(', $who, $(", ", "\"", $values, "\"",)* ")", "'", "[..]")
+        }
+    }};
+}
+
 #[cargo_test]
 fn features() {
     if !is_nightly() {
@@ -28,17 +54,10 @@ fn features() {
 
     p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_with_deps() {
     if !is_nightly() {
@@ -69,19 +88,11 @@ fn features_with_deps() {
 
     p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] bar v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature)' [..]
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature"))
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_with_opt_deps() {
     if !is_nightly() {
@@ -113,19 +124,11 @@ fn features_with_opt_deps() {
 
     p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] bar v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature)' [..]
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"bar\", \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature"))
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "bar" "default" "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_with_namespaced_features() {
     if !is_nightly() {
@@ -156,17 +159,10 @@ fn features_with_namespaced_features() {
 
     p.cargo("build -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_names() {
     if !is_nightly() {
@@ -181,17 +177,10 @@ fn well_known_names() {
 
     p.cargo("build -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "names"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_values() {
     if !is_nightly() {
@@ -206,17 +195,10 @@ fn well_known_values() {
 
     p.cargo("build -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn cli_all_options() {
     if !is_nightly() {
@@ -242,10 +224,12 @@ fn cli_all_options() {
 
     p.cargo("build -v -Zcheck-cfg=features,names,values")
         .masquerade_as_nightly_cargo()
+        .with_stderr_contains(x!("rustc" => "names"))
+        .with_stderr_contains(x!("rustc" => "values"))
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_with_cargo_check() {
     if !is_nightly() {
@@ -271,17 +255,10 @@ fn features_with_cargo_check() {
 
     p.cargo("check -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_names_with_check() {
     if !is_nightly() {
@@ -296,17 +273,10 @@ fn well_known_names_with_check() {
 
     p.cargo("check -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "names"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_values_with_check() {
     if !is_nightly() {
@@ -321,17 +291,10 @@ fn well_known_values_with_check() {
 
     p.cargo("check -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_test() {
     if !is_nightly() {
@@ -357,18 +320,10 @@ fn features_test() {
 
     p.cargo("test -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_doctest() {
     if !is_nightly() {
@@ -395,19 +350,11 @@ fn features_doctest() {
 
     p.cargo("test -v --doc -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[DOCTEST] foo
-[RUNNING] `rustdoc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values" of "feature" with "default" "f_a" "f_b"))
+        .with_stderr_contains(x!("rustdoc" => "values" of "feature" with "default" "f_a" "f_b"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_names_test() {
     if !is_nightly() {
@@ -422,18 +369,10 @@ fn well_known_names_test() {
 
     p.cargo("test -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "names"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_values_test() {
     if !is_nightly() {
@@ -448,18 +387,10 @@ fn well_known_values_test() {
 
     p.cargo("test -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_names_doctest() {
     if !is_nightly() {
@@ -474,19 +405,11 @@ fn well_known_names_doctest() {
 
     p.cargo("test -v --doc -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[DOCTEST] foo
-[RUNNING] `rustdoc [..] --check-cfg 'names()' [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "names"))
+        .with_stderr_contains(x!("rustdoc" => "names"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn well_known_values_doctest() {
     if !is_nightly() {
@@ -501,19 +424,11 @@ fn well_known_values_doctest() {
 
     p.cargo("test -v --doc -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[DOCTEST] foo
-[RUNNING] `rustdoc [..] --check-cfg 'values()' [..]
-",
-        )
+        .with_stderr_contains(x!("rustc" => "values"))
+        .with_stderr_contains(x!("rustdoc" => "values"))
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
 fn features_doc() {
     if !is_nightly() {
@@ -540,12 +455,6 @@ fn features_doc() {
 
     p.cargo("doc -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.1.0 [..]
-[RUNNING] `rustdoc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_contains(x!("rustdoc" => "values" of "feature" with "default" "f_a" "f_b"))
         .run();
 }
