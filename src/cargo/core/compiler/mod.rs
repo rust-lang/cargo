@@ -645,7 +645,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     paths::create_dir_all(&doc_dir)?;
 
     rustdoc.arg("-o").arg(&doc_dir);
-    rustdoc.args(&features_args(cx, unit));
+    rustdoc.args(&features_args(unit));
     rustdoc.args(&check_cfg_args(cx, unit));
 
     add_error_format_and_color(cx, &mut rustdoc);
@@ -966,7 +966,7 @@ fn build_base_args(
         cmd.arg("--cfg").arg("test");
     }
 
-    cmd.args(&features_args(cx, unit));
+    cmd.args(&features_args(unit));
     cmd.args(&check_cfg_args(cx, unit));
 
     let meta = cx.files().metadata(unit);
@@ -1042,7 +1042,7 @@ fn build_base_args(
 }
 
 /// All active features for the unit passed as --cfg
-fn features_args(_cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+fn features_args(unit: &Unit) -> Vec<OsString> {
     let mut args = Vec::with_capacity(unit.features.len() * 2);
 
     for feat in &unit.features {
