@@ -3,7 +3,9 @@ Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
 formats; `--timings` without an argument will default to `--timings=html`.
 Specifying an output format (rather than the default) is unstable and requires
-`-Zunstable-options`. Valid output formats:
+`-Zunstable-options`. 
+May also be specified with the `build.timings` [config value](../reference/config.html). 
+Valid output formats:
 
 - `html`: Write a human-readable file `cargo-timing.html` to the
   `target/cargo-timings` directory with a report of the compilation. Also write

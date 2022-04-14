@@ -73,6 +73,7 @@ rustflags = ["…", "…"]        # custom flags to pass to all compiler invocat
 rustdocflags = ["…", "…"]     # custom flags to pass to rustdoc
 incremental = true            # whether or not to enable incremental compilation
 dep-info-basedir = "…"        # path for the base directory for targets in depfiles
+timings = ["…", "…"]          # the output formats of the compile time information
 
 [doc]
 browser = "chromium"          # browser to use with `cargo doc --open`,
@@ -444,6 +445,22 @@ directory.
 ##### `build.pipelining`
 
 This option is deprecated and unused. Cargo always has pipelining enabled.
+
+#### `build.timings`
+* Type: array of strings
+* Default: none
+* Environment: `CARGO_BUILD_TIMINGS`
+
+Output information how long each compilation takes, and track concurrency information over time. Possible values:
+
+* `html`: Write a human-readable file `cargo-timing.html` to the
+  `target/cargo-timings` directory with a report of the compilation. Also write
+  a report to the same directory with a timestamp in the filename if you want
+  to look at older runs. HTML output is suitable for human consumption only,
+  and does not provide machine-readable timing data.
+* `json` (unstable, requires `-Zunstable-options`): Emit machine-readable JSON information about timing information.
+
+Can be overridden with the `--timings` CLI option.
 
 #### `[doc]`
 

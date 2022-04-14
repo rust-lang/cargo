@@ -2201,6 +2201,7 @@ pub struct CargoBuildConfig {
     pub rustc: Option<ConfigRelativePath>,
     pub rustdoc: Option<ConfigRelativePath>,
     pub out_dir: Option<ConfigRelativePath>,
+    pub timings: Option<Vec<String>>,
 }
 
 /// Configuration for `build.target`.

@@ -203,7 +203,9 @@ Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma\-separated list of output
 formats; \fB\-\-timings\fR without an argument will default to \fB\-\-timings=html\fR\&.
 Specifying an output format (rather than the default) is unstable and requires
-\fB\-Zunstable\-options\fR\&. Valid output formats:
+\fB\-Zunstable\-options\fR\&. 
+May also be specified with the \fBbuild.timings\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. 
+Valid output formats:
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the

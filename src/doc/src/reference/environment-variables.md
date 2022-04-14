@@ -83,6 +83,7 @@ supported environment variables are:
 * `CARGO_BUILD_RUSTDOCFLAGS` — Extra `rustdoc` flags, see [`build.rustdocflags`].
 * `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
+* `CARGO_BUILD_TIMINGS` — Compile time information output formats, see [`build.timings`].
 * `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
 * `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notification, see [`future-incompat-report.frequency`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
@@ -142,6 +143,7 @@ supported environment variables are:
 [`build.rustdocflags`]: config.md#buildrustdocflags
 [`build.incremental`]: config.md#buildincremental
 [`build.dep-info-basedir`]: config.md#builddep-info-basedir
+[`build.timings`]: config.md#buildtimings
 [`doc.browser`]: config.md#docbrowser
 [`cargo-new.name`]: config.md#cargo-newname
 [`cargo-new.email`]: config.md#cargo-newemail

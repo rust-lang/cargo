@@ -379,6 +379,58 @@ pub trait ArgMatchesExt {
         self._values_of("target")
     }
 
+    fn get_timing_outputs(&self, config: &Config) -> CargoResult<Vec<TimingOutput>> {
+        let mut timing_outputs = Vec::new();
+        // If `--timings' flag exists, override the configured timings value.
+        if self._contains("timings") {
+            for timing_output in self._values_of("timings") {
+                for timing_output in timing_output.split(',') {
+                    let timing_output = timing_output.to_ascii_lowercase();
+                    let timing_output = match timing_output.as_str() {
+                        "html" => {
+                            config
+                                .cli_unstable()
+                                .fail_if_stable_opt("--timings=html", 7405)?;
+                            TimingOutput::Html
+                        }
+                        "json" => {
+                            config
+                                .cli_unstable()
+                                .fail_if_stable_opt("--timings=json", 7405)?;
+                            TimingOutput::Json
+                        }
+                        s => bail!("invalid timings output specifier: `{}`", s),
+                    };
+                    timing_outputs.push(timing_output);
+                }
+            }
+            // If there is no timings value, the default value is used.
+            if timing_outputs.is_empty() {
+                return Ok(vec![TimingOutput::Html]);
+            }
+        } else {
+            let build_config = config.build_config()?;
+            if let Some(config_timing_outputs) = &build_config.timings {
+                for timing_output in config_timing_outputs {
+                    let timing_output = timing_output.to_ascii_lowercase();
+                    let timing_output = match timing_output.as_str() {
+                        "html" => TimingOutput::Html,
+                        "json" => {
+                            config
+                                .cli_unstable()
+                                .fail_if_stable_opt("--timings=json", 7405)?;
+                            TimingOutput::Json
+                        }
+                        s => bail!("invalid timings output configuration: `{}`", s),
+                    };
+                    timing_outputs.push(timing_output);
+                }
+            }
+        }
+
+        Ok(timing_outputs)
+    }
+
     fn get_profile_name(
         &self,
         config: &Config,
@@ -532,33 +584,7 @@ pub trait ArgMatchesExt {
         build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
-
-        if self._contains("timings") {
-            for timing_output in self._values_of("timings") {
-                for timing_output in timing_output.split(',') {
-                    let timing_output = timing_output.to_ascii_lowercase();
-                    let timing_output = match timing_output.as_str() {
-                        "html" => {
-                            config
-                                .cli_unstable()
-                                .fail_if_stable_opt("--timings=html", 7405)?;
-                            TimingOutput::Html
-                        }
-                        "json" => {
-                            config
-                                .cli_unstable()
-                                .fail_if_stable_opt("--timings=json", 7405)?;
-                            TimingOutput::Json
-                        }
-                        s => bail!("invalid timings output specifier: `{}`", s),
-                    };
-                    build_config.timing_outputs.push(timing_output);
-                }
-            }
-            if build_config.timing_outputs.is_empty() {
-                build_config.timing_outputs.push(TimingOutput::Html);
-            }
-        }
+        build_config.timing_outputs = self.get_timing_outputs(config)?;
 
         if build_config.keep_going {
             config

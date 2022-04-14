@@ -10,6 +10,13 @@ This writes an HTML report in `target/cargo-timings/cargo-timings.html`. This
 also writes a copy of the report to the same directory with a timestamp in the
 filename, if you want to look at older runs.
 
+Alternatively, you can specify it through `.cargo/config.toml`.
+
+```toml
+[build]
+timings = ["html"]
+```
+
 #### Reading the graphs
 
 There are two graphs in the output. The "unit" graph shows the duration of

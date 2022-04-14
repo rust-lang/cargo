@@ -171,7 +171,10 @@ OPTIONS
            comma-separated list of output formats; --timings without an
            argument will default to --timings=html. Specifying an output format
            (rather than the default) is unstable and requires
-           -Zunstable-options. Valid output formats:
+           -Zunstable-options. May also be specified with the build.timings
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>. Valid
+           output formats:
 
            o  html: Write a human-readable file cargo-timing.html to the
               target/cargo-timings directory with a report of the compilation.

@@ -212,7 +212,9 @@ required Rust version as configured in the project's <code>rust-version</code> f
 information over time. Accepts an optional comma-separated list of output
 formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
 Specifying an output format (rather than the default) is unstable and requires
-<code>-Zunstable-options</code>. Valid output formats:</p>
+<code>-Zunstable-options</code>. 
+May also be specified with the <code>build.timings</code> <a href="../reference/config.html">config value</a>. 
+Valid output formats:</p>
 <ul>
 <li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
 <code>target/cargo-timings</code> directory with a report of the compilation. Also write
