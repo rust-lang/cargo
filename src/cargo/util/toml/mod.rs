@@ -1056,8 +1056,8 @@ pub struct TomlProject {
     #[serde(rename = "forced-target")]
     forced_target: Option<String>,
     links: Option<String>,
-    exclude: Option<Vec<String>>,
-    include: Option<Vec<String>>,
+    exclude: Option<MaybeWorkspace<Vec<String>>>,
+    include: Option<MaybeWorkspace<Vec<String>>>,
     publish: Option<MaybeWorkspace<VecStringOrBool>>,
     workspace: Option<String>,
     im_a_teapot: Option<bool>,
@@ -1123,6 +1123,8 @@ pub struct InheritableFields {
     publish: Option<VecStringOrBool>,
     edition: Option<String>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    exclude: Option<Vec<String>>,
+    include: Option<Vec<String>>,
     #[serde(rename = "rust-version")]
     rust_version: Option<String>,
     // We use skip here since it will never be present when deserializing
@@ -1267,6 +1269,20 @@ impl InheritableFields {
     pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
         self.badges.clone().map_or(
             Err(anyhow!("`workspace.package.badges` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn exclude(&self) -> CargoResult<Vec<String>> {
+        self.exclude.clone().map_or(
+            Err(anyhow!("`workspace.package.exclude` was not defined")),
+            |d| Ok(d),
+        )
+    }
+
+    pub fn include(&self) -> CargoResult<Vec<String>> {
+        self.include.clone().map_or(
+            Err(anyhow!("`workspace.package.include` was not defined")),
             |d| Ok(d),
         )
     }
@@ -1824,8 +1840,26 @@ impl TomlManifest {
             }
         }
 
-        let exclude = project.exclude.clone().unwrap_or_default();
-        let include = project.include.clone().unwrap_or_default();
+        let exclude = project
+            .exclude
+            .clone()
+            .map(|mw| {
+                mw.resolve(&features, "exclude", || {
+                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.exclude()
+                })
+            })
+            .transpose()?
+            .unwrap_or_default();
+        let include = project
+            .include
+            .clone()
+            .map(|mw| {
+                mw.resolve(&features, "include", || {
+                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.include()
+                })
+            })
+            .transpose()?
+            .unwrap_or_default();
         let empty_features = BTreeMap::new();
 
         let summary = Summary::new(
@@ -1992,6 +2026,14 @@ impl TomlManifest {
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
         project.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
+        project.exclude = project
+            .exclude
+            .as_ref()
+            .map(|_| MaybeWorkspace::Defined(exclude.clone()));
+        project.include = project
+            .include
+            .as_ref()
+            .map(|_| MaybeWorkspace::Defined(include.clone()));
 
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
