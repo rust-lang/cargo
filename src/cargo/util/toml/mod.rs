@@ -8,6 +8,7 @@ use std::str;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
+use lazycell::LazyCell;
 use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de;
@@ -1496,8 +1497,8 @@ impl TomlManifest {
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
         fn get_ws(
             config: &Config,
-            resolved_path: PathBuf,
-            workspace_config: WorkspaceConfig,
+            resolved_path: &Path,
+            workspace_config: &WorkspaceConfig,
         ) -> CargoResult<InheritableFields> {
             match workspace_config {
                 WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
@@ -1565,9 +1566,14 @@ impl TomlManifest {
 
         let resolved_path = package_root.join("Cargo.toml");
 
-        let version = project.version.clone().resolve(&features, "version", || {
-            get_ws(config, resolved_path.clone(), workspace_config.clone())?.version()
-        })?;
+        let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
+        let inherit =
+            || inherit_cell.try_borrow_with(|| get_ws(config, &resolved_path, &workspace_config));
+
+        let version = project
+            .version
+            .clone()
+            .resolve(&features, "version", || inherit()?.version())?;
 
         project.version = MaybeWorkspace::Defined(version.clone());
 
@@ -1575,9 +1581,7 @@ impl TomlManifest {
 
         let edition = if let Some(edition) = project.edition.clone() {
             let edition: Edition = edition
-                .resolve(&features, "edition", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.edition()
-                })?
+                .resolve(&features, "edition", || inherit()?.edition())?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
             project.edition = Some(MaybeWorkspace::Defined(edition.to_string()));
@@ -1602,9 +1606,7 @@ impl TomlManifest {
         let rust_version = if let Some(rust_version) = &project.rust_version {
             let rust_version = rust_version
                 .clone()
-                .resolve(&features, "rust_version", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.rust_version()
-                })?;
+                .resolve(&features, "rust_version", || inherit()?.rust_version())?;
             let req = match semver::VersionReq::parse(&rust_version) {
                 // Exclude semver operators like `^` and pre-release identifiers
                 Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
@@ -1700,20 +1702,22 @@ impl TomlManifest {
             new_deps: Option<&BTreeMap<String, TomlDependency>>,
             kind: Option<DepKind>,
             workspace_config: &WorkspaceConfig,
+            inherit_cell: &LazyCell<InheritableFields>,
         ) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
             let dependencies = match new_deps {
                 Some(dependencies) => dependencies,
                 None => return Ok(None),
             };
+
+            let inherit = || {
+                inherit_cell.try_borrow_with(|| {
+                    get_ws(cx.config, &cx.root.join("Cargo.toml"), &workspace_config)
+                })
+            };
+
             let mut deps: BTreeMap<String, TomlDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v.clone().resolve(features, n, cx, || {
-                    get_ws(
-                        cx.config,
-                        cx.root.join("Cargo.toml"),
-                        workspace_config.clone(),
-                    )
-                })?;
+                let resolved = v.clone().resolve(features, n, cx, || inherit())?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                 cx.deps.push(dep);
@@ -1729,6 +1733,7 @@ impl TomlManifest {
             me.dependencies.as_ref(),
             None,
             &workspace_config,
+            &inherit_cell,
         )?;
         if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
             warn_on_deprecated("dev-dependencies", package_name, "package", cx.warnings);
@@ -1743,6 +1748,7 @@ impl TomlManifest {
             dev_deps,
             Some(DepKind::Development),
             &workspace_config,
+            &inherit_cell,
         )?;
         if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
             warn_on_deprecated("build-dependencies", package_name, "package", cx.warnings);
@@ -1757,6 +1763,7 @@ impl TomlManifest {
             build_deps,
             Some(DepKind::Build),
             &workspace_config,
+            &inherit_cell,
         )?;
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
@@ -1772,6 +1779,7 @@ impl TomlManifest {
                 platform.dependencies.as_ref(),
                 None,
                 &workspace_config,
+                &inherit_cell,
             )
             .unwrap();
             if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
@@ -1787,6 +1795,7 @@ impl TomlManifest {
                 build_deps,
                 Some(DepKind::Build),
                 &workspace_config,
+                &inherit_cell,
             )
             .unwrap();
             if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
@@ -1802,6 +1811,7 @@ impl TomlManifest {
                 dev_deps,
                 Some(DepKind::Development),
                 &workspace_config,
+                &inherit_cell,
             )
             .unwrap();
             target.insert(
@@ -1843,21 +1853,13 @@ impl TomlManifest {
         let exclude = project
             .exclude
             .clone()
-            .map(|mw| {
-                mw.resolve(&features, "exclude", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.exclude()
-                })
-            })
+            .map(|mw| mw.resolve(&features, "exclude", || inherit()?.exclude()))
             .transpose()?
             .unwrap_or_default();
         let include = project
             .include
             .clone()
-            .map(|mw| {
-                mw.resolve(&features, "include", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.include()
-                })
-            })
+            .map(|mw| mw.resolve(&features, "include", || inherit()?.include()))
             .transpose()?
             .unwrap_or_default();
         let empty_features = BTreeMap::new();
@@ -1874,113 +1876,67 @@ impl TomlManifest {
             description: project
                 .description
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "description", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .description()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "description", || inherit()?.description()))
                 .transpose()?,
             homepage: project
                 .homepage
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "homepage", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.homepage()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "homepage", || inherit()?.homepage()))
                 .transpose()?,
             documentation: project
                 .documentation
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "documentation", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .documentation()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "documentation", || inherit()?.documentation()))
                 .transpose()?,
             readme: readme_for_project(
                 package_root,
                 project
                     .readme
                     .clone()
-                    .map(|mw| {
-                        mw.resolve(&features, "readme", || {
-                            get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                                .readme(package_root)
-                        })
-                    })
+                    .map(|mw| mw.resolve(&features, "readme", || inherit()?.readme(package_root)))
                     .transpose()?,
             ),
             authors: project
                 .authors
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "authors", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.authors()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "authors", || inherit()?.authors()))
                 .transpose()?
                 .unwrap_or_default(),
             license: project
                 .license
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "license", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.license()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "license", || inherit()?.license()))
                 .transpose()?,
             license_file: project
                 .license_file
                 .clone()
                 .map(|mw| {
                     mw.resolve(&features, "license", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .license_file(package_root)
+                        inherit()?.license_file(package_root)
                     })
                 })
                 .transpose()?,
             repository: project
                 .repository
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "repository", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .repository()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "repository", || inherit()?.repository()))
                 .transpose()?,
             keywords: project
                 .keywords
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "keywords", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.keywords()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "keywords", || inherit()?.keywords()))
                 .transpose()?
                 .unwrap_or_default(),
             categories: project
                 .categories
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "categories", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .categories()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "categories", || inherit()?.categories()))
                 .transpose()?
                 .unwrap_or_default(),
             badges: me
                 .badges
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "badges", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.badges()
-                    })
-                })
+                .map(|mw| mw.resolve(&features, "badges", || inherit()?.badges()))
                 .transpose()?
                 .unwrap_or_default(),
             links: project.links.clone(),
@@ -2042,9 +1998,7 @@ impl TomlManifest {
 
         let publish = project.publish.clone().map(|publish| {
             publish
-                .resolve(&features, "publish", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.publish()
-                })
+                .resolve(&features, "publish", || inherit()?.publish())
                 .unwrap()
         });
 
@@ -2490,7 +2444,7 @@ impl TomlDependency {
         cargo_features: &Features,
         label: &str,
         cx: &mut Context<'_, '_>,
-        get_inheritable: impl FnOnce() -> CargoResult<InheritableFields>,
+        get_inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
     ) -> CargoResult<TomlDependency> {
         match self {
             TomlDependency::Detailed(d) => Ok(TomlDependency::Detailed(d)),
