@@ -93,6 +93,8 @@ fn simple(cargo: fn(&Project, &str) -> Execs) {
 
     cargo(&p, "clean").run();
 
+    assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
+
     // Don't download a second time
     cargo(&p, "build")
         .with_stderr(
@@ -150,6 +152,8 @@ fn deps(cargo: fn(&Project, &str) -> Execs) {
 ",
         )
         .run();
+
+    assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 }
 
 #[cargo_test]
@@ -1231,6 +1235,7 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
 ",
         )
         .run();
+    assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 
     p.change_file(
         "a/Cargo.toml",
