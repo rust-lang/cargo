@@ -2247,6 +2247,11 @@ fn add_a_git_dep() {
 
     p.cargo("build").run();
 
+    assert!(paths::home().is_dir());
+    assert!(paths::home().join(".cargo").is_dir());
+    assert!(paths::home().join(".cargo/git").is_dir());
+    assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
+
     p.change_file(
         "a/Cargo.toml",
         &format!(
@@ -2580,6 +2585,7 @@ fn use_the_cli() {
 ";
 
     project.cargo("build -v").with_stderr(stderr).run();
+    assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
 }
 
 #[cargo_test]
