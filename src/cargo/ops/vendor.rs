@@ -317,7 +317,7 @@ fn cp_sources(
     tmp_buf: &mut [u8],
 ) -> CargoResult<()> {
     for p in paths {
-        let relative = p.strip_prefix(&src).unwrap();
+        let relative = paths::strip_prefix_canonical(p as &Path, src).unwrap();
 
         match relative.to_str() {
             // Skip git config files as they're not relevant to builds most of

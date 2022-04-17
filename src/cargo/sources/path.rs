@@ -151,8 +151,9 @@ impl<'cfg> PathSource<'cfg> {
         };
 
         let mut filter = |path: &Path, is_dir: bool| {
-            let relative_path = match path.strip_prefix(root) {
-                Ok(p) => p,
+            let s = paths::strip_prefix_canonical(path, root);
+            let relative_path = match s {
+                Ok(ref p) => p,
                 Err(_) => return false,
             };
 
@@ -229,7 +230,7 @@ impl<'cfg> PathSource<'cfg> {
         let root = repo
             .workdir()
             .ok_or_else(|| anyhow::format_err!("can't list files on a bare repository"))?;
-        let pkg_path = pkg.root();
+        let pkg_path = pkg.root().canonicalize()?;
 
         let mut ret = Vec::<PathBuf>::new();
 
@@ -293,7 +294,7 @@ impl<'cfg> PathSource<'cfg> {
             // Filter out files blatantly outside this package. This is helped a
             // bit above via the `pathspec` function call, but we need to filter
             // the entries in the index as well.
-            if !file_path.starts_with(pkg_path) {
+            if !file_path.starts_with(&pkg_path) {
                 continue;
             }
 
