@@ -1,0 +1,10 @@
+error: failed to load source for dependency `cargo-list-test-fixture`
+
+Caused by:
+  Unable to update [ROOT]/case/tests/fixtures/local
+
+Caused by:
+  failed to read `[ROOT]/case/tests/fixtures/local/Cargo.toml`
+
+Caused by:
+  [..]

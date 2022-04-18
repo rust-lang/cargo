@@ -1,0 +1,9 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dependencies]
+unrelateed-crate = "99999.0.0"
+your-face = { version = "99999.0.0", features = ["eyes", "nose", "mouth", "ears"] }

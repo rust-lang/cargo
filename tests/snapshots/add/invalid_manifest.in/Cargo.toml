@@ -1,0 +1,8 @@
+[workspace]
+
+[package]
+name = "manifest-invalid-test-fixture"
+version = "0.1.0"
+
+[invalid-section]
+key = invalid-value

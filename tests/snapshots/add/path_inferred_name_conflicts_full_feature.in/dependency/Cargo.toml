@@ -1,0 +1,14 @@
+[package]
+name = "your-face"
+version = "0.1.3"
+
+[dependencies]
+toml_edit = "0.1.5"
+atty = "0.2.13"
+optional-dependency = { path = "../optional", optional = true }
+
+[features]
+default = ["mouth"]
+nose = []
+mouth = ["nose"]
+eyes = []
