@@ -39,7 +39,7 @@ _cargo()
 	local opt_common="$opt_help $opt_verbose $opt_quiet $opt_color"
 	local opt_pkg_spec='-p --package --all --exclude --workspace'
 	local opt_pkg='-p --package'
-	local opt_feat='--features --all-features --no-default-features'
+	local opt_feat='-F --features --all-features --no-default-features'
 	local opt_mani='--manifest-path'
 	local opt_parallel='-j --jobs --keep-going'
 	local opt_force='-f --force'
