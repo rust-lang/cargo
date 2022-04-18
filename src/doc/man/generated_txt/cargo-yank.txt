@@ -4,7 +4,7 @@ NAME
        cargo-yank - Remove a pushed crate from the index
 
 SYNOPSIS
-       cargo yank [options] --vers version [crate]
+       cargo yank [options] --version version [crate]
 
 DESCRIPTION
        The yank command removes a previously published crate's version from the
@@ -23,7 +23,7 @@ DESCRIPTION
 
 OPTIONS
    Yank Options
-       --vers version
+       --vers version, --version version
            The version to yank or un-yank.
 
        --undo
@@ -104,7 +104,7 @@ EXIT STATUS
 EXAMPLES
        1. Yank a crate from the index:
 
-              cargo yank --vers 1.0.7 foo
+              cargo yank --version 1.0.7 foo
 
 SEE ALSO
        cargo(1), cargo-login(1), cargo-publish(1)

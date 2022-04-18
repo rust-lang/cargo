@@ -175,7 +175,7 @@ _cargo() {
                         '--rev=[specific commit to use when installing from git]:commit' \
                         '--root=[directory to install packages into]: :_directories' \
                         '--tag=[tag to use when installing from git]:tag' \
-                        '--vers=[version to install from crates.io]:version' \
+                        '--version='[version to install from crates.io]:version' \
                         '--list[list all installed packages and their versions]' \
                         '*: :_guard "^-*" "crate"'
                         ;;
@@ -332,7 +332,7 @@ _cargo() {
 
                 yank)
                     _arguments -s -S $common $registry \
-                        '--vers=[specify yank version]:version' \
+                        '--version=[specify yank version]:version' \
                         '--undo[undo a yank, putting a version back into the index]' \
                         '--index=[specify registry index to yank from]:registry index' \
                         '--token=[specify API token to use when authenticating]:token' \

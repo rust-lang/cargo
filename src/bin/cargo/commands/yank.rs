@@ -8,7 +8,8 @@ pub fn cli() -> App {
         .arg_quiet()
         .arg(Arg::new("crate"))
         .arg(
-            opt("vers", "The version to yank or un-yank")
+            opt("version", "The version to yank or un-yank")
+                .alias("vers")
                 .value_name("VERSION")
                 .required(true),
         )
@@ -30,7 +31,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::yank(
         config,
         args.value_of("crate").map(|s| s.to_string()),
-        args.value_of("vers").map(|s| s.to_string()),
+        args.value_of("version").map(|s| s.to_string()),
         args.value_of("token").map(|s| s.to_string()),
         args.value_of("index").map(|s| s.to_string()),
         args.is_present("undo"),

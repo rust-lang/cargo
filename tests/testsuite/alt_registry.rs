@@ -647,7 +647,7 @@ Caused by:
         "owner",
         "publish",
         "search",
-        "yank --vers 0.0.1",
+        "yank --version 0.0.1",
     ] {
         p.cargo(cmd)
             .arg("--registry")
@@ -726,12 +726,12 @@ fn no_api() {
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("yank --registry alternative --vers=0.0.1 bar")
+    p.cargo("yank --registry alternative --version=0.0.1 bar")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("yank --registry alternative --vers=0.0.1 bar")
+    p.cargo("yank --registry alternative --version=0.0.1 bar")
         .with_stderr_contains(&err)
         .with_status(101)
         .run();
@@ -1311,7 +1311,7 @@ Caused by:
 #[cargo_test]
 fn both_index_and_registry() {
     let p = project().file("src/lib.rs", "").build();
-    for cmd in &["publish", "owner", "search", "yank --vers 1.0.0"] {
+    for cmd in &["publish", "owner", "search", "yank --version 1.0.0"] {
         p.cargo(cmd)
             .arg("--registry=foo")
             .arg("--index=foo")

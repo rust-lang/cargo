@@ -356,7 +356,7 @@ token for `crates-io` has been erased!
 fn yank() {
     let (p, t) = get_token_test();
 
-    p.cargo("yank --vers 0.1.0 --registry alternative -Z credential-process")
+    p.cargo("yank --version 0.1.0 --registry alternative -Z credential-process")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\

@@ -32,9 +32,9 @@ fn simple() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("yank --vers 0.0.1 --token sekrit").run();
+    p.cargo("yank --version 0.0.1 --token sekrit").run();
 
-    p.cargo("yank --undo --vers 0.0.1 --token sekrit")
+    p.cargo("yank --undo --version 0.0.1 --token sekrit")
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index
