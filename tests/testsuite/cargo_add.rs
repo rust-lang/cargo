@@ -1,4 +1,5 @@
 use cargo_test_support::cargo_exe;
+use cargo_test_support::compare::assert;
 
 pub fn cargo_command() -> snapbox::cmd::Command {
     let mut cmd = snapbox::cmd::Command::new(cargo_exe()).with_assert(assert());
@@ -63,28 +64,6 @@ pub fn project_from_template(template_path: impl AsRef<std::path::Path>) -> std:
     let project_root = root.join("case");
     snapbox::path::copy_template(template_path.as_ref(), &project_root).unwrap();
     project_root
-}
-
-pub fn assert() -> snapbox::Assert {
-    let root = cargo_test_support::paths::root();
-    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
-    // put in the users output, rather than hidden in the variable
-    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
-    let root = root.display().to_string();
-
-    let mut subs = snapbox::Substitutions::new();
-    subs.extend([
-        (
-            "[EXE]",
-            std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
-        ),
-        ("[ROOT]", std::borrow::Cow::Owned(root)),
-        ("[ROOTURL]", std::borrow::Cow::Owned(root_url)),
-    ])
-    .unwrap();
-    snapbox::Assert::new()
-        .action_env(snapbox::DEFAULT_ACTION_ENV)
-        .substitutions(subs)
 }
 
 fn init_registry() {
