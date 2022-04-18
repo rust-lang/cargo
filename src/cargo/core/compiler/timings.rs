@@ -733,6 +733,7 @@ h1 {
 <body>
 
 <h1>Cargo Build Timings</h1>
+See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Documentation</a>
 "#;
 
 static HTML_CANVAS: &str = r#"
