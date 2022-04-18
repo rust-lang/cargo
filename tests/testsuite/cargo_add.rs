@@ -1,6 +1,4 @@
-pub fn cargo_exe() -> &'static std::path::Path {
-    snapbox::cmd::cargo_bin!("cargo")
-}
+use cargo_test_support::cargo_exe;
 
 pub fn cargo_command() -> snapbox::cmd::Command {
     let mut cmd = snapbox::cmd::Command::new(cargo_exe()).with_assert(assert());
