@@ -1750,8 +1750,8 @@ fn update_ambiguous() {
 is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the \
 following:
-  bar:0.[..].0
-  bar:0.[..].0
+  bar@0.[..].0
+  bar@0.[..].0
 ",
         )
         .run();

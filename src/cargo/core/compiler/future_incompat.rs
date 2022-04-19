@@ -236,7 +236,7 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
     let mut report: BTreeMap<String, String> = BTreeMap::new();
     for per_package in per_package_reports {
         let package_spec = format!(
-            "{}:{}",
+            "{}@{}",
             per_package.package_id.name(),
             per_package.package_id.version()
         );
@@ -415,10 +415,10 @@ You may want to consider updating them to a newer version to see if the issue ha
             let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
             format!(
                 "
-  - {name}
+  - {package_spec}
   - Repository: {url}
-  - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {name}`",
-                name = format!("{}:{}", package_id.name(), package_id.version()),
+  - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {package_spec}`",
+                package_spec = format!("{}@{}", package_id.name(), package_id.version()),
                 url = manifest
                     .metadata()
                     .repository

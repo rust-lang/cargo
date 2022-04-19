@@ -38,7 +38,7 @@ fn simple() {
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index
-      Unyank foo:0.0.1
+      Unyank foo@0.0.1
 error: failed to undo a yank from the registry at file:///[..]
 
 Caused by:

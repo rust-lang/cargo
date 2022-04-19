@@ -71,7 +71,7 @@ fn profile_override_warnings() {
     p.cargo("build")
         .with_stderr_contains(
             "\
-[WARNING] profile package spec `bar:1.2.3` in profile `dev` \
+[WARNING] profile package spec `bar@1.2.3` in profile `dev` \
     has a version or URL that does not match any of the packages: \
     bar v0.5.0 ([..]/foo/bar)
 [WARNING] profile package spec `bart` in profile `dev` did not match any packages
@@ -262,7 +262,7 @@ fn profile_override_spec_multiple() {
         .with_stderr_contains(
             "\
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found package specs: bar, bar:0.5.0",
+found package specs: bar, bar@0.5.0",
         )
         .run();
 }
