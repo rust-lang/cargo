@@ -61,6 +61,7 @@
         * [cargo test](commands/cargo-test.md)
         * [cargo report](commands/cargo-report.md)
     * [Manifest Commands](commands/manifest-commands.md)
+        * [cargo add](commands/cargo-add.md)
         * [cargo generate-lockfile](commands/cargo-generate-lockfile.md)
         * [cargo locate-project](commands/cargo-locate-project.md)
         * [cargo metadata](commands/cargo-metadata.md)
