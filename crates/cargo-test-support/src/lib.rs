@@ -59,6 +59,10 @@ pub mod publish;
 pub mod registry;
 pub mod tools;
 
+pub mod prelude {
+    pub use crate::ChannelChanger;
+}
+
 /*
  *
  * ===== Builders =====
@@ -1169,12 +1173,19 @@ fn _process(t: &OsStr) -> ProcessBuilder {
     p
 }
 
-pub trait ChannelChanger: Sized {
-    fn masquerade_as_nightly_cargo(&mut self) -> &mut Self;
+/// Enable nightly features for testing
+pub trait ChannelChanger {
+    fn masquerade_as_nightly_cargo(self) -> Self;
 }
 
-impl ChannelChanger for ProcessBuilder {
-    fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
+impl ChannelChanger for &mut ProcessBuilder {
+    fn masquerade_as_nightly_cargo(self) -> Self {
+        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
+    }
+}
+
+impl ChannelChanger for snapbox::cmd::Command {
+    fn masquerade_as_nightly_cargo(self) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }

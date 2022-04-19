@@ -1,5 +1,6 @@
 use cargo_test_support::cargo_exe;
 use cargo_test_support::compare::assert;
+use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
 
 pub fn cargo_command() -> snapbox::cmd::Command {
@@ -48,16 +49,6 @@ pub fn cargo_command() -> snapbox::cmd::Command {
         .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
 
     cmd
-}
-
-pub trait CommandExt {
-    fn masquerade_as_nightly_cargo(self) -> Self;
-}
-
-impl CommandExt for snapbox::cmd::Command {
-    fn masquerade_as_nightly_cargo(self) -> Self {
-        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
-    }
 }
 
 fn init_registry() {
