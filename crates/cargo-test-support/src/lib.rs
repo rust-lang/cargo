@@ -60,6 +60,7 @@ pub mod registry;
 pub mod tools;
 
 pub mod prelude {
+    pub use crate::CargoCommand;
     pub use crate::ChannelChanger;
     pub use crate::TestEnv;
 }
@@ -1226,6 +1227,19 @@ impl TestEnv for snapbox::cmd::Command {
     }
     fn env_remove(self, key: &str) -> Self {
         self.env_remove(key)
+    }
+}
+
+/// Test the cargo command
+pub trait CargoCommand {
+    fn cargo() -> Self;
+}
+
+impl CargoCommand for snapbox::cmd::Command {
+    fn cargo() -> Self {
+        Self::new(cargo_exe())
+            .with_assert(compare::assert())
+            .test_env()
     }
 }
 
