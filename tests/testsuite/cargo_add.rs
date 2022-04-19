@@ -4,51 +4,9 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
 
 pub fn cargo_command() -> snapbox::cmd::Command {
-    let mut cmd = snapbox::cmd::Command::new(cargo_exe()).with_assert(assert());
-
-    // In general just clear out all cargo-specific configuration already in the
-    // environment. Our tests all assume a "default configuration" unless
-    // specified otherwise.
-    for (k, _v) in std::env::vars() {
-        if k.starts_with("CARGO_") {
-            cmd = cmd.env_remove(&k);
-        }
-    }
-
-    cmd = cmd
-        .env("HOME", cargo_test_support::paths::home())
-        .env(
-            "CARGO_HOME",
-            cargo_test_support::paths::home().join(".cargo"),
-        )
-        .env("__CARGO_TEST_ROOT", cargo_test_support::paths::root())
-        // Force Cargo to think it's on the stable channel for all tests, this
-        // should hopefully not surprise us as we add cargo features over time and
-        // cargo rides the trains.
-        .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
-        // For now disable incremental by default as support hasn't ridden to the
-        // stable channel yet. Once incremental support hits the stable compiler we
-        // can switch this to one and then fix the tests.
-        .env("CARGO_INCREMENTAL", "0")
-        .env_remove("__CARGO_DEFAULT_LIB_METADATA")
-        .env_remove("RUSTC")
-        .env_remove("RUSTDOC")
-        .env_remove("RUSTC_WRAPPER")
-        .env_remove("RUSTFLAGS")
-        .env_remove("RUSTDOCFLAGS")
-        .env_remove("XDG_CONFIG_HOME") // see #2345
-        .env("GIT_CONFIG_NOSYSTEM", "1") // keep trying to sandbox ourselves
-        .env_remove("EMAIL")
-        .env_remove("USER") // not set on some rust-lang docker images
-        .env_remove("MFLAGS")
-        .env_remove("MAKEFLAGS")
-        .env_remove("GIT_AUTHOR_NAME")
-        .env_remove("GIT_AUTHOR_EMAIL")
-        .env_remove("GIT_COMMITTER_NAME")
-        .env_remove("GIT_COMMITTER_EMAIL")
-        .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
-
-    cmd
+    snapbox::cmd::Command::new(cargo_exe())
+        .with_assert(assert())
+        .test_env()
 }
 
 fn init_registry() {
