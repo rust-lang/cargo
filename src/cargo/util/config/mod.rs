@@ -1244,9 +1244,27 @@ impl Config {
                     );
                 }
 
-                let toml_v = toml::from_document(doc).with_context(|| {
+                let toml_v: toml::Value = toml::from_document(doc).with_context(|| {
                     format!("failed to parse value from --config argument `{arg}`")
                 })?;
+
+                if toml_v
+                    .get("registry")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.get("token"))
+                    .is_some()
+                {
+                    bail!("registry.token cannot be set through --config for security reasons");
+                } else if let Some((k, _)) = toml_v
+                    .get("registries")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
+                {
+                    bail!(
+                        "registries.{}.token cannot be set through --config for security reasons",
+                        k
+                    );
+                }
 
                 CV::from_toml(Definition::Cli, toml_v)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
