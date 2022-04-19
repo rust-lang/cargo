@@ -60,6 +60,7 @@ pub mod registry;
 pub mod tools;
 
 pub mod prelude {
+    pub use crate::ArgLine;
     pub use crate::CargoCommand;
     pub use crate::ChannelChanger;
     pub use crate::TestEnv;
@@ -391,7 +392,7 @@ impl Project {
     pub fn cargo(&self, cmd: &str) -> Execs {
         let mut execs = self.process(&cargo_exe());
         if let Some(ref mut p) = execs.process_builder {
-            split_and_add_args(p, cmd);
+            p.arg_line(cmd);
         }
         execs
     }
@@ -1243,28 +1244,46 @@ impl CargoCommand for snapbox::cmd::Command {
     }
 }
 
-fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
-    for mut arg in s.split_whitespace() {
-        if (arg.starts_with('"') && arg.ends_with('"'))
-            || (arg.starts_with('\'') && arg.ends_with('\''))
-        {
-            arg = &arg[1..(arg.len() - 1).max(1)];
-        } else if arg.contains(&['"', '\''][..]) {
-            panic!("shell-style argument parsing is not supported")
+/// Add a list of arguments as a line
+pub trait ArgLine: Sized {
+    fn arg_line(mut self, s: &str) -> Self {
+        for mut arg in s.split_whitespace() {
+            if (arg.starts_with('"') && arg.ends_with('"'))
+                || (arg.starts_with('\'') && arg.ends_with('\''))
+            {
+                arg = &arg[1..(arg.len() - 1).max(1)];
+            } else if arg.contains(&['"', '\''][..]) {
+                panic!("shell-style argument parsing is not supported")
+            }
+            self = self.arg(arg);
         }
-        p.arg(arg);
+        self
+    }
+
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self;
+}
+
+impl ArgLine for &mut ProcessBuilder {
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
+        self.arg(s)
+    }
+}
+
+impl ArgLine for snapbox::cmd::Command {
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
+        self.arg(s)
     }
 }
 
 pub fn cargo_process(s: &str) -> Execs {
     let mut p = process(&cargo_exe());
-    split_and_add_args(&mut p, s);
+    p.arg_line(s);
     execs().with_process_builder(p)
 }
 
 pub fn git_process(s: &str) -> ProcessBuilder {
     let mut p = process("git");
-    split_and_add_args(&mut p, s);
+    p.arg_line(s);
     p
 }
 

@@ -94,7 +94,7 @@ fn add_basic() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -113,7 +113,7 @@ fn add_multiple() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2"])
+        .arg_line("my-package1 my-package2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -132,7 +132,7 @@ fn quiet() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--quiet", "your-face"])
+        .arg_line("--quiet your-face")
         .current_dir(cwd)
         .assert()
         .success()
@@ -151,7 +151,7 @@ fn add_normalized_name_external() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["linked_hash_map", "Inflector"])
+        .arg_line("linked_hash_map Inflector")
         .current_dir(cwd)
         .assert()
         .success()
@@ -173,7 +173,7 @@ fn infer_prerelease() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["prerelease_only"])
+        .arg_line("prerelease_only")
         .current_dir(cwd)
         .assert()
         .success()
@@ -192,7 +192,7 @@ fn build() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--build", "my-build-package1", "my-build-package2"])
+        .arg_line("--build my-build-package1 my-build-package2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -211,7 +211,7 @@ fn build_prefer_existing_version() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency", "--build"])
+        .arg_line("cargo-list-test-fixture-dependency --build")
         .current_dir(cwd)
         .assert()
         .success()
@@ -233,7 +233,7 @@ fn default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -252,7 +252,7 @@ fn require_weak() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--no-optional"])
+        .arg_line("your-face --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -342,7 +342,7 @@ fn dev() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--dev", "my-dev-package1", "my-dev-package2"])
+        .arg_line("--dev my-dev-package1 my-dev-package2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -361,7 +361,7 @@ fn dev_build_conflict() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--dev", "--build"])
+        .arg_line("my-package --dev --build")
         .current_dir(cwd)
         .assert()
         .code(1)
@@ -380,7 +380,7 @@ fn dev_prefer_existing_version() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency", "--dev"])
+        .arg_line("cargo-list-test-fixture-dependency --dev")
         .current_dir(cwd)
         .assert()
         .success()
@@ -402,7 +402,7 @@ fn dry_run() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--dry-run"])
+        .arg_line("my-package --dry-run")
         .current_dir(cwd)
         .assert()
         .success()
@@ -421,7 +421,7 @@ fn features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "eyes"])
+        .arg_line("your-face --features eyes")
         .current_dir(cwd)
         .assert()
         .success()
@@ -440,7 +440,7 @@ fn features_empty() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", ""])
+        .arg_line("your-face --features ''")
         .current_dir(cwd)
         .assert()
         .success()
@@ -459,7 +459,7 @@ fn features_multiple_occurrences() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "eyes", "--features", "nose"])
+        .arg_line("your-face --features eyes --features nose")
         .current_dir(cwd)
         .assert()
         .success()
@@ -481,7 +481,7 @@ fn features_preserve() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face"])
+        .arg_line("your-face")
         .current_dir(cwd)
         .assert()
         .success()
@@ -500,7 +500,7 @@ fn features_spaced_values() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "eyes nose"])
+        .arg_line("your-face --features eyes,nose")
         .current_dir(cwd)
         .assert()
         .success()
@@ -522,7 +522,7 @@ fn features_unknown() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "noze"])
+        .arg_line("your-face --features noze")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -868,11 +868,7 @@ fn path() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -891,11 +887,7 @@ fn path_inferred_name() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -915,7 +907,7 @@ fn path_inferred_name_conflicts_full_feature() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--path", "../dependency", "--features", "your-face/nose"])
+        .arg_line("--path ../dependency --features your-face/nose")
         .current_dir(&cwd)
         .assert()
         .code(101)
@@ -939,11 +931,7 @@ fn path_normalized_name() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo_list_test_fixture_dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo_list_test_fixture_dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .failure() // Fuzzy searching for paths isn't supported at this time
@@ -965,7 +953,7 @@ fn invalid_path_name() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["not-at-path", "--path", "../dependency"])
+        .arg_line("not-at-path --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .code(101)
@@ -984,12 +972,7 @@ fn path_dev() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-            "--dev",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency --dev")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1008,7 +991,7 @@ fn invalid_arg() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--flag"])
+        .arg_line("my-package --flag")
         .current_dir(cwd)
         .assert()
         .code(1)
@@ -1120,11 +1103,7 @@ fn invalid_path() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture",
-            "--path",
-            "./tests/fixtures/local",
-        ])
+        .arg_line("cargo-list-test-fixture --path ./tests/fixtures/local")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1143,7 +1122,7 @@ fn invalid_path_self() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture", "--path", "."])
+        .arg_line("cargo-list-test-fixture --path .")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1162,7 +1141,7 @@ fn invalid_manifest() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1181,7 +1160,7 @@ fn invalid_name_external() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["lets_hope_nobody_ever_publishes_this_crate"])
+        .arg_line("lets_hope_nobody_ever_publishes_this_crate")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1203,7 +1182,7 @@ fn invalid_target_empty() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--target", ""])
+        .arg_line("my-package --target ''")
         .current_dir(cwd)
         .assert()
         .code(1)
@@ -1225,7 +1204,7 @@ fn invalid_vers() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package@invalid version string"])
+        .arg_line("my-package@invalid-version-string")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1263,7 +1242,7 @@ fn list_features_path() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--path", "../dependency"])
+        .arg_line("your-face --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1359,7 +1338,7 @@ fn multiple_conflicts_with_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "your-face", "--features", "nose"])
+        .arg_line("my-package1 your-face --features nose")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1414,7 +1393,7 @@ fn multiple_conflicts_with_rename() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2", "--rename", "renamed"])
+        .arg_line("my-package1 my-package2 --rename renamed")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1436,7 +1415,7 @@ fn namever() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1@>=0.1.1", "my-package2@0.2.3", "my-package"])
+        .arg_line("my-package1@>=0.1.1 my-package2@0.2.3 my-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1473,7 +1452,7 @@ fn no_default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1492,7 +1471,7 @@ fn no_optional() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1511,7 +1490,7 @@ fn optional() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1530,7 +1509,7 @@ fn overwrite_default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1554,7 +1533,7 @@ fn overwrite_default_features_with_no_default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1580,7 +1559,7 @@ fn overwrite_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "nose"])
+        .arg_line("your-face --features nose")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1599,11 +1578,7 @@ fn overwrite_git_with_path() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1625,13 +1600,9 @@ fn overwrite_inline_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "unrelateed-crate",
-            "your-face",
-            "--features",
-            "your-face/nose,your-face/mouth",
-            "-Fyour-face/ears",
-        ])
+        .arg_line(
+            "unrelateed-crate your-face --features your-face/nose,your-face/mouth -Fyour-face/ears",
+        )
         .current_dir(cwd)
         .assert()
         .success()
@@ -1721,7 +1692,7 @@ fn overwrite_name_dev_noop() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--dev"])
+        .arg_line("your-face --dev")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1743,7 +1714,7 @@ fn overwrite_name_noop() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face"])
+        .arg_line("your-face")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1762,7 +1733,7 @@ fn overwrite_no_default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1786,7 +1757,7 @@ fn overwrite_no_default_features_with_default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1812,7 +1783,7 @@ fn overwrite_no_optional() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1835,7 +1806,7 @@ fn overwrite_no_optional_with_optional() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1857,7 +1828,7 @@ fn overwrite_optional() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1877,7 +1848,7 @@ fn overwrite_optional_with_no_optional() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1899,7 +1870,7 @@ fn overwrite_path_noop() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--path", "./dependency"])
+        .arg_line("your-face --path ./dependency")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1918,7 +1889,7 @@ fn overwrite_path_with_version() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency@20.0"])
+        .arg_line("cargo-list-test-fixture-dependency@20.0")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1940,7 +1911,7 @@ fn overwrite_rename_with_no_rename() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package"])
+        .arg_line("versioned-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1962,7 +1933,7 @@ fn overwrite_rename_with_rename() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package", "--rename", "a2"])
+        .arg_line("versioned-package --rename a2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1984,7 +1955,7 @@ fn change_rename_target() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package2", "--rename", "some-package"])
+        .arg_line("my-package2 --rename some-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2007,7 +1978,7 @@ fn overwrite_rename_with_rename_noop() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package", "--rename", "a1"])
+        .arg_line("versioned-package --rename a1")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2060,11 +2031,7 @@ fn overwrite_version_with_path() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2086,7 +2053,7 @@ fn overwrite_with_rename() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package", "--rename", "renamed"])
+        .arg_line("versioned-package --rename renamed")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2154,7 +2121,7 @@ fn preserve_sorted() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["toml"])
+        .arg_line("toml")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2173,7 +2140,7 @@ fn preserve_unsorted() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["toml"])
+        .arg_line("toml")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2192,7 +2159,7 @@ fn registry() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2", "--registry", "alternative"])
+        .arg_line("my-package1 my-package2 --registry alternative")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2211,7 +2178,7 @@ fn rename() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--rename", "renamed"])
+        .arg_line("my-package --rename renamed")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2230,12 +2197,7 @@ fn target() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "my-package1",
-            "my-package2",
-            "--target",
-            "i686-unknown-linux-gnu",
-        ])
+        .arg_line("my-package1 my-package2 --target i686-unknown-linux-gnu")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2254,7 +2216,7 @@ fn target_cfg() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2", "--target", "cfg(unix)"])
+        .arg_line("my-package1 my-package2 --target cfg(unix)")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2295,7 +2257,7 @@ fn vers() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package@>=0.1.1"])
+        .arg_line("my-package@>=0.1.1")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2314,11 +2276,7 @@ fn workspace_path() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2337,12 +2295,7 @@ fn workspace_path_dev() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-            "--dev",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency --dev")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2361,7 +2314,7 @@ fn workspace_name() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency"])
+        .arg_line("cargo-list-test-fixture-dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2380,7 +2333,7 @@ fn deprecated_default_features() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(&cwd)
         .assert()
         .failure()
@@ -2402,7 +2355,7 @@ fn deprecated_section() {
 
     snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(&cwd)
         .assert()
         .failure()
