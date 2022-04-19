@@ -132,11 +132,14 @@ pub trait AppExt: Sized {
     }
 
     fn arg_features(self) -> Self {
-        self._arg(multi_opt(
-            "features",
-            "FEATURES",
-            "Space or comma separated list of features to activate",
-        ))
+        self._arg(
+            multi_opt(
+                "features",
+                "FEATURES",
+                "Space or comma separated list of features to activate",
+            )
+            .short('F'),
+        )
         ._arg(opt("all-features", "Activate all available features"))
         ._arg(opt(
             "no-default-features",

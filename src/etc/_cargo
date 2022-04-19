@@ -51,8 +51,8 @@ _cargo() {
     )
 
     features=(
-        '(--all-features)--features=[specify features to activate]:feature'
-        '(--features)--all-features[activate all available features]'
+        '(--all-features)'{-F+,--features=}'[specify features to activate]:feature'
+        '(--features -F)--all-features[activate all available features]'
         "--no-default-features[don't build the default features]"
     )
 
