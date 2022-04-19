@@ -1163,6 +1163,7 @@ pub trait TestEnv: Sized {
         }
 
         self = self
+            .current_dir(&paths::root())
             .env("HOME", paths::home())
             .env("CARGO_HOME", paths::home().join(".cargo"))
             .env("__CARGO_TEST_ROOT", paths::root())
@@ -1198,11 +1199,16 @@ pub trait TestEnv: Sized {
         self
     }
 
+    fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self;
     fn env<S: AsRef<std::ffi::OsStr>>(self, key: &str, value: S) -> Self;
     fn env_remove(self, key: &str) -> Self;
 }
 
 impl TestEnv for &mut ProcessBuilder {
+    fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self {
+        let path = path.as_ref();
+        self.cwd(path)
+    }
     fn env<S: AsRef<std::ffi::OsStr>>(self, key: &str, value: S) -> Self {
         self.env(key, value)
     }
@@ -1212,6 +1218,9 @@ impl TestEnv for &mut ProcessBuilder {
 }
 
 impl TestEnv for snapbox::cmd::Command {
+    fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self {
+        self.current_dir(path)
+    }
     fn env<S: AsRef<std::ffi::OsStr>>(self, key: &str, value: S) -> Self {
         self.env(key, value)
     }
