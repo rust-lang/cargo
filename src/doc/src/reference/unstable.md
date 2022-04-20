@@ -1432,8 +1432,8 @@ wasm-bindgen-cli = { path = "crates/cli" }
 ```toml
 # in a workspace member's Cargo.toml
 [dependencies]
-log = { workspace = true }
-log2 = { workspace = true }
+log.workspace = true
+log2.workspace = true
 ```
 
 Example 2: 

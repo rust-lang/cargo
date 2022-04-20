@@ -251,13 +251,13 @@ fn inherit_own_dependencies() {
             authors = []
 
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             [build-dependencies]
-            dep-build = { workspace = true }
+            dep-build.workspace = true
 
             [dev-dependencies]
-            dep-dev = { workspace = true }
+            dep-dev.workspace = true
 
             [workspace]
             members = []
@@ -393,7 +393,7 @@ fn inherit_own_detailed_dependencies() {
             authors = []
 
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             [workspace]
             members = []
@@ -758,11 +758,11 @@ fn inherit_dependencies() {
             version = "0.2.0"
             authors = []
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
             [build-dependencies]
-            dep-build = { workspace = true }
+            dep-build.workspace = true
             [dev-dependencies]
-            dep-dev = { workspace = true }
+            dep-dev.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -901,9 +901,9 @@ fn inherit_target_dependencies() {
             version = "0.2.0"
             authors = []
             [target.'cfg(unix)'.dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
             [target.'cfg(windows)'.dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1071,7 +1071,7 @@ fn inherit_detailed_dependencies() {
             version = "0.2.0"
             authors = []
             [dependencies]
-            detailed = { workspace = true }
+            detailed.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1116,7 +1116,7 @@ fn inherit_path_dependencies() {
             version = "0.2.0"
             authors = []
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1200,13 +1200,13 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
             workspace = ".."
 
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             [workspace]
             members = ["bar"]
 
             [workspace.dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             "#,
         )
@@ -1221,8 +1221,8 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  `workspace.dependencies.dep` specified `{ workspace = true }`, but workspace dependencies \
-  cannot do this
+  dep was specified as `workspace.dependencies.dep.workspace = true`, but \
+  workspace dependencies cannot specify `workspace = true`
 ",
         )
         .run();
@@ -1347,7 +1347,7 @@ fn error_inherit_unspecified_dependency() {
             version = "1.2.3"
             authors = ["rustaceans"]
             [dependencies]
-            foo = { workspace = true }
+            foo.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")

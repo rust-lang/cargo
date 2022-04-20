@@ -130,8 +130,9 @@ pub fn read_manifest_from_str(
             }
             if let TomlDependency::Workspace(_) = dep {
                 bail!(
-                    "`workspace.dependencies.{}` specified `{{ workspace = true }}`, but \
-                    workspace dependencies cannot do this",
+                    "{} was specified as `workspace.dependencies.{}.workspace = true`, but \
+                    workspace dependencies cannot specify `workspace = true`",
+                    name,
                     name
                 );
             }
