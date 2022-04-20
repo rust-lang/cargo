@@ -1458,16 +1458,16 @@ edition = "2018"
 ```toml
 # in a workspace member's Cargo.toml
 [package]
-version = { workspace = true }
-authors = { workspace = true }
-description = { workspace = true }
-documentation = { workspace = true }
-readme = { workspace = true }
-homepage = { workspace = true }
-repository = { workspace = true }
-license = { workspace = true }
-license-file = { workspace = true }
-keywords = { workspace = true }
-categories = { workspace = true }
-publish = { workspace = true }
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
 ```

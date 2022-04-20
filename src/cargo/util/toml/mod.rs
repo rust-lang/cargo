@@ -225,7 +225,7 @@ pub enum TomlDependency<P: Clone = String> {
     /// In the simple format, only a version is specified, eg.
     /// `package = "<version>"`
     Simple(String),
-    /// `package = { workspace = true }`
+    /// `package.workspace = true`
     Workspace(TomlWorkspaceDependency),
     /// The simple format is equivalent to a detailed dependency
     /// specifying only a version, eg.
@@ -990,7 +990,7 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
-/// Enum that allows for the parsing of { workspace = true } in a Cargo.toml
+/// Enum that allows for the parsing of `field.workspace = true` in a Cargo.toml
 ///
 /// It allows for things to be inherited from a workspace or defined as needed
 #[derive(Deserialize, Serialize, Clone, Debug)]

@@ -1,4 +1,4 @@
-//! Tests for inheriting Cargo.toml fields with { workspace = true }
+//! Tests for inheriting Cargo.toml fields with field.workspace = true
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, git, path2url, paths, project, publish, registry,
@@ -119,24 +119,24 @@ fn inherit_own_workspace_fields() {
             "Cargo.toml",
             r#"
             cargo-features = ["workspace-inheritance"]
-            badges = { workspace = true }
+            badges.workspace = true
 
             [package]
             name = "foo"
-            version = { workspace = true }
-            authors = { workspace = true }
-            description = { workspace = true }
-            documentation = { workspace = true }
-            homepage = { workspace = true }
-            repository = { workspace = true }
-            license = { workspace = true }
-            keywords = { workspace = true }
-            categories = { workspace = true }
-            publish = { workspace = true }
-            edition = { workspace = true }
-            rust-version = { workspace = true }
-            exclude = { workspace = true }
-            include = { workspace = true }
+            version.workspace = true
+            authors.workspace = true
+            description.workspace = true
+            documentation.workspace = true
+            homepage.workspace = true
+            repository.workspace = true
+            license.workspace = true
+            keywords.workspace = true
+            categories.workspace = true
+            publish.workspace = true
+            edition.workspace = true
+            rust-version.workspace = true
+            exclude.workspace = true
+            include.workspace = true
 
             [workspace]
             members = []
@@ -501,7 +501,7 @@ fn inherit_from_own_undefined_field() {
             name = "foo"
             version = "1.2.5"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
 
             [workspace]
             members = []
@@ -623,27 +623,27 @@ fn inherit_workspace_fields() {
         .file(
             "bar/Cargo.toml",
             r#"
-            badges = { workspace = true }
+            badges.workspace = true
             cargo-features = ["workspace-inheritance"]
             [package]
             name = "bar"
             workspace = ".."
-            version = { workspace = true }
-            authors = { workspace = true }
-            description = { workspace = true }
-            documentation = { workspace = true }
-            readme = { workspace = true }
-            homepage = { workspace = true }
-            repository = { workspace = true }
-            license = { workspace = true }
-            license-file = { workspace = true }
-            keywords = { workspace = true }
-            categories = { workspace = true }
-            publish = { workspace = true }
-            edition = { workspace = true }
-            rust-version = { workspace = true }
-            exclude = { workspace = true }
-            include = { workspace = true }
+            version.workspace = true
+            authors.workspace = true
+            description.workspace = true
+            documentation.workspace = true
+            readme.workspace = true
+            homepage.workspace = true
+            repository.workspace = true
+            license.workspace = true
+            license-file.workspace = true
+            keywords.workspace = true
+            categories.workspace = true
+            publish.workspace = true
+            edition.workspace = true
+            rust-version.workspace = true
+            exclude.workspace = true
+            include.workspace = true
         "#,
         )
         .file("LICENSE", "license")
@@ -1298,7 +1298,7 @@ fn error_no_root_workspace() {
             workspace = ".."
             version = "1.2.3"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1385,7 +1385,7 @@ fn workspace_inheritance_not_enabled() {
             name = "foo"
             version = "1.2.5"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
 
             [workspace]
             members = []
@@ -1431,7 +1431,7 @@ fn nightly_required() {
             name = "foo"
             version = "1.2.5"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
 
             [workspace]
             members = []
