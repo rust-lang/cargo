@@ -8,7 +8,7 @@ cargo-install - Build and install a Rust binary
 
 ## SYNOPSIS
 
-`cargo install` [_options_] _crate_...\
+`cargo install` [_options_] _crate_[@_version_]...\
 `cargo install` [_options_] `--path` _path_\
 `cargo install` [_options_] `--git` _url_ [_crate_...]\
 `cargo install` [_options_] `--list`
