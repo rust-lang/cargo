@@ -2247,9 +2247,6 @@ fn add_a_git_dep() {
 
     p.cargo("build").run();
 
-    assert!(paths::home().is_dir());
-    assert!(paths::home().join(".cargo").is_dir());
-    assert!(paths::home().join(".cargo/git").is_dir());
     assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
 
     p.change_file(
