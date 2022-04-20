@@ -53,6 +53,7 @@ fn commit_info() {
         .arg("-1")
         .arg("--date=short")
         .arg("--format=%H %h %cd")
+        .arg("--abbrev=9")
         .output()
     {
         Ok(output) if output.status.success() => output,
