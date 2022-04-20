@@ -1382,12 +1382,59 @@ fn vers_precise() {
 }
 
 #[cargo_test]
-fn version_too() {
+fn version_precise() {
     pkg("foo", "0.1.1");
     pkg("foo", "0.1.2");
 
     cargo_process("install foo --version 0.1.1")
         .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_precise() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo@0.1.1")
+        .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_multiple() {
+    pkg("foo", "0.1.0");
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+    pkg("bar", "0.2.0");
+    pkg("bar", "0.2.1");
+    pkg("bar", "0.2.2");
+
+    cargo_process("install foo@0.1.1 bar@0.2.1")
+        .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
+        .with_stderr_contains("[DOWNLOADED] bar v0.2.1 (registry [..])")
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_without_name() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install @0.1.1")
+        .with_status(101)
+        .with_stderr("error: missing crate name for `@0.1.1`")
+        .run();
+}
+
+#[cargo_test]
+fn inline_and_explicit_version() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo@0.1.1 --version 0.1.1")
+        .with_status(101)
+        .with_stderr("error: cannot specify both `@0.1.1` and `--version`")
         .run();
 }
 
