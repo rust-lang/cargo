@@ -1,4 +1,4 @@
-//! Tests for inheriting Cargo.toml fields with { workspace = true }
+//! Tests for inheriting Cargo.toml fields with field.workspace = true
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, git, path2url, paths, project, publish, registry,
@@ -119,24 +119,24 @@ fn inherit_own_workspace_fields() {
             "Cargo.toml",
             r#"
             cargo-features = ["workspace-inheritance"]
-            badges = { workspace = true }
+            badges.workspace = true
 
             [package]
             name = "foo"
-            version = { workspace = true }
-            authors = { workspace = true }
-            description = { workspace = true }
-            documentation = { workspace = true }
-            homepage = { workspace = true }
-            repository = { workspace = true }
-            license = { workspace = true }
-            keywords = { workspace = true }
-            categories = { workspace = true }
-            publish = { workspace = true }
-            edition = { workspace = true }
-            rust-version = { workspace = true }
-            exclude = { workspace = true }
-            include = { workspace = true }
+            version.workspace = true
+            authors.workspace = true
+            description.workspace = true
+            documentation.workspace = true
+            homepage.workspace = true
+            repository.workspace = true
+            license.workspace = true
+            keywords.workspace = true
+            categories.workspace = true
+            publish.workspace = true
+            edition.workspace = true
+            rust-version.workspace = true
+            exclude.workspace = true
+            include.workspace = true
 
             [workspace]
             members = []
@@ -251,13 +251,13 @@ fn inherit_own_dependencies() {
             authors = []
 
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             [build-dependencies]
-            dep-build = { workspace = true }
+            dep-build.workspace = true
 
             [dev-dependencies]
-            dep-dev = { workspace = true }
+            dep-dev.workspace = true
 
             [workspace]
             members = []
@@ -393,7 +393,7 @@ fn inherit_own_detailed_dependencies() {
             authors = []
 
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             [workspace]
             members = []
@@ -501,7 +501,7 @@ fn inherit_from_own_undefined_field() {
             name = "foo"
             version = "1.2.5"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
 
             [workspace]
             members = []
@@ -623,27 +623,27 @@ fn inherit_workspace_fields() {
         .file(
             "bar/Cargo.toml",
             r#"
-            badges = { workspace = true }
+            badges.workspace = true
             cargo-features = ["workspace-inheritance"]
             [package]
             name = "bar"
             workspace = ".."
-            version = { workspace = true }
-            authors = { workspace = true }
-            description = { workspace = true }
-            documentation = { workspace = true }
-            readme = { workspace = true }
-            homepage = { workspace = true }
-            repository = { workspace = true }
-            license = { workspace = true }
-            license-file = { workspace = true }
-            keywords = { workspace = true }
-            categories = { workspace = true }
-            publish = { workspace = true }
-            edition = { workspace = true }
-            rust-version = { workspace = true }
-            exclude = { workspace = true }
-            include = { workspace = true }
+            version.workspace = true
+            authors.workspace = true
+            description.workspace = true
+            documentation.workspace = true
+            readme.workspace = true
+            homepage.workspace = true
+            repository.workspace = true
+            license.workspace = true
+            license-file.workspace = true
+            keywords.workspace = true
+            categories.workspace = true
+            publish.workspace = true
+            edition.workspace = true
+            rust-version.workspace = true
+            exclude.workspace = true
+            include.workspace = true
         "#,
         )
         .file("LICENSE", "license")
@@ -758,11 +758,11 @@ fn inherit_dependencies() {
             version = "0.2.0"
             authors = []
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
             [build-dependencies]
-            dep-build = { workspace = true }
+            dep-build.workspace = true
             [dev-dependencies]
-            dep-dev = { workspace = true }
+            dep-dev.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -901,9 +901,9 @@ fn inherit_target_dependencies() {
             version = "0.2.0"
             authors = []
             [target.'cfg(unix)'.dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
             [target.'cfg(windows)'.dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1071,7 +1071,7 @@ fn inherit_detailed_dependencies() {
             version = "0.2.0"
             authors = []
             [dependencies]
-            detailed = { workspace = true }
+            detailed.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1116,7 +1116,7 @@ fn inherit_path_dependencies() {
             version = "0.2.0"
             authors = []
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1200,13 +1200,13 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
             workspace = ".."
 
             [dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             [workspace]
             members = ["bar"]
 
             [workspace.dependencies]
-            dep = { workspace = true }
+            dep.workspace = true
 
             "#,
         )
@@ -1221,8 +1221,8 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  `workspace.dependencies.dep` specified `{ workspace = true }`, but workspace dependencies \
-  cannot do this
+  dep was specified as `workspace.dependencies.dep.workspace = true`, but \
+  workspace dependencies cannot specify `workspace = true`
 ",
         )
         .run();
@@ -1298,7 +1298,7 @@ fn error_no_root_workspace() {
             workspace = ".."
             version = "1.2.3"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1347,7 +1347,7 @@ fn error_inherit_unspecified_dependency() {
             version = "1.2.3"
             authors = ["rustaceans"]
             [dependencies]
-            foo = { workspace = true }
+            foo.workspace = true
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1385,7 +1385,7 @@ fn workspace_inheritance_not_enabled() {
             name = "foo"
             version = "1.2.5"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
 
             [workspace]
             members = []
@@ -1431,7 +1431,7 @@ fn nightly_required() {
             name = "foo"
             version = "1.2.5"
             authors = ["rustaceans"]
-            description = { workspace = true }
+            description.workspace = true
 
             [workspace]
             members = []
