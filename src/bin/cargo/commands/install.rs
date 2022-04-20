@@ -97,9 +97,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // but not `Config::reload_rooted_at` which is always cwd)
     let path = path.map(|p| paths::normalize_path(&p));
 
+    let version = args.value_of("version");
     let krates = args
         .values_of("crate")
         .unwrap_or_default()
+        .map(|k| (k, version))
         .collect::<Vec<_>>();
 
     let mut from_cwd = false;
@@ -129,7 +131,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         SourceId::crates_io(config)?
     };
 
-    let version = args.value_of("version");
     let root = args.value_of("root");
 
     // We only provide workspace information for local crate installation from
@@ -166,7 +167,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             krates,
             source,
             from_cwd,
-            version,
             &compile_opts,
             args.is_present("force"),
             args.is_present("no-track"),
