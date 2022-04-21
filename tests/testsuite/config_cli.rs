@@ -369,6 +369,24 @@ b=2` was not a TOML dotted key expression (such as `build.jobs = 2`)",
 }
 
 #[cargo_test]
+fn no_disallowed_values() {
+    let config = ConfigBuilder::new()
+        .config_arg("registry.token=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registry.token cannot be set through --config for security reasons",
+    );
+    let config = ConfigBuilder::new()
+        .config_arg("registries.crates-io.token=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registries.crates-io.token cannot be set through --config for security reasons",
+    );
+}
+
+#[cargo_test]
 fn no_inline_table_value() {
     // Disallow inline tables
     let config = ConfigBuilder::new()
