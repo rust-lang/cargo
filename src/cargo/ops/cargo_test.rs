@@ -200,11 +200,12 @@ fn run_doc_tests(
             p.arg(unit.target.src_path().path().unwrap());
         }
 
+        if let CompileKind::Target(target) = unit.kind {
+            // use `rustc_target()` to properly handle JSON target paths
+            p.arg("--target").arg(target.rustc_target());
+        }
+
         if doctest_xcompile {
-            if let CompileKind::Target(target) = unit.kind {
-                // use `rustc_target()` to properly handle JSON target paths
-                p.arg("--target").arg(target.rustc_target());
-            }
             p.arg("-Zunstable-options");
             p.arg("--enable-per-target-ignores");
             if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
