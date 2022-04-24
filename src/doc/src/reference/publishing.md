@@ -142,8 +142,8 @@ etc.). For situations such as this, Cargo supports a “yank” of a version of 
 crate.
 
 ```console
-$ cargo yank --vers 1.0.1
-$ cargo yank --vers 1.0.1 --undo
+$ cargo yank --version 1.0.1
+$ cargo yank --version 1.0.1 --undo
 ```
 
 A yank **does not** delete any code. This feature is not intended for deleting

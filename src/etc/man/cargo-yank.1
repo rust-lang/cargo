@@ -6,7 +6,7 @@
 .SH "NAME"
 cargo\-yank \- Remove a pushed crate from the index
 .SH "SYNOPSIS"
-\fBcargo yank\fR [\fIoptions\fR] \fB\-\-vers\fR \fIversion\fR [\fIcrate\fR]
+\fBcargo yank\fR [\fIoptions\fR] \fB\-\-version\fR \fIversion\fR [\fIcrate\fR]
 .SH "DESCRIPTION"
 The yank command removes a previously published crate's version from the
 server's index. This command does not delete any data, and the crate will
@@ -24,7 +24,8 @@ current directory.
 .SH "OPTIONS"
 .SS "Yank Options"
 .sp
-\fB\-\-vers\fR \fIversion\fR
+\fB\-\-vers\fR \fIversion\fR, 
+\fB\-\-version\fR \fIversion\fR
 .RS 4
 The version to yank or un\-yank.
 .RE
@@ -138,7 +139,7 @@ details on environment variables that Cargo reads.
 .sp
 .RS 4
 .nf
-cargo yank \-\-vers 1.0.7 foo
+cargo yank \-\-version 1.0.7 foo
 .fi
 .RE
 .RE

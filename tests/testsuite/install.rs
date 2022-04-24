@@ -338,7 +338,7 @@ want to simply build the package.
 #[cargo_test]
 fn bad_version() {
     pkg("foo", "0.0.1");
-    cargo_process("install foo --vers=0.2.0")
+    cargo_process("install foo --version=0.2.0")
         .with_status(101)
         .with_stderr(
             "\
@@ -942,7 +942,7 @@ fn list() {
 
     cargo_process("install --list").with_stdout("").run();
 
-    cargo_process("install bar --vers =0.2.1").run();
+    cargo_process("install bar --version =0.2.1").run();
     cargo_process("install foo").run();
     cargo_process("install --list")
         .with_stdout(

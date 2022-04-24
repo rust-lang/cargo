@@ -6,7 +6,7 @@ cargo-yank - Remove a pushed crate from the index
 
 ## SYNOPSIS
 
-`cargo yank` [_options_] `--vers` _version_ [_crate_]
+`cargo yank` [_options_] `--version` _version_ [_crate_]
 
 ## DESCRIPTION
 
@@ -30,7 +30,7 @@ current directory.
 
 {{#options}}
 
-{{#option "`--vers` _version_" }}
+{{#option "`--vers` _version_" "`--version` _version_" }}
 The version to yank or un-yank.
 {{/option}}
 
@@ -64,7 +64,7 @@ Undo a yank, putting a version back into the index.
 
 1. Yank a crate from the index:
 
-       cargo yank --vers 1.0.7 foo
+       cargo yank --version 1.0.7 foo
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-login" 1}}, {{man "cargo-publish" 1}}

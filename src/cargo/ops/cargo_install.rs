@@ -771,14 +771,14 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
     let first = v
         .chars()
         .next()
-        .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
+        .ok_or_else(|| format_err!("no version provided for the `--version` flag"))?;
 
     let is_req = "<>=^~".contains(first) || v.contains('*');
     if is_req {
         match v.parse::<VersionReq>() {
             Ok(v) => Ok(v),
             Err(_) => bail!(
-                "the `--vers` provided, `{}`, is \
+                "the `--version` provided, `{}`, is \
                      not a valid semver version requirement\n\n\
                      Please have a look at \
                      https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
@@ -791,7 +791,7 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             Ok(v) => Ok(VersionReq::exact(&v)),
             Err(e) => {
                 let mut msg = format!(
-                    "the `--vers` provided, `{}`, is \
+                    "the `--version` provided, `{}`, is \
                          not a valid semver version: {}\n",
                     v, e
                 );
