@@ -554,18 +554,6 @@ impl<'cfg> RegistrySource<'cfg> {
             Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>
         };
 
-        // Before starting to work on the registry, make sure that
-        // `<cargo_home>/registry` is marked as excluded from indexing and
-        // backups. Older versions of Cargo didn't do this, so we do it here
-        // regardless of whether `<cargo_home>` exists.
-        //
-        // This does not use `create_dir_all_excluded_from_backups_atomic` for
-        // the same reason: we want to exclude it even if the directory already
-        // exists.
-        let registry_base = config.registry_base_path();
-        registry_base.create_dir()?;
-        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked())?;
-
         Ok(RegistrySource::new(
             source_id,
             config,
@@ -826,6 +814,18 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
+        // Before starting to work on the registry, make sure that
+        // `<cargo_home>/registry` is marked as excluded from indexing and
+        // backups. Older versions of Cargo didn't do this, so we do it here
+        // regardless of whether `<cargo_home>` exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        let registry_base = self.config.registry_base_path();
+        registry_base.create_dir()?;
+        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked())?;
+
         self.ops.block_until_ready()
     }
 }
