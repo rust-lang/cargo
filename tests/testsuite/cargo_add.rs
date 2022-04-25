@@ -50,6 +50,16 @@ pub fn cargo_command() -> snapbox::cmd::Command {
     cmd
 }
 
+pub trait CommandExt {
+    fn masquerade_as_nightly_cargo(self) -> Self;
+}
+
+impl CommandExt for snapbox::cmd::Command {
+    fn masquerade_as_nightly_cargo(self) -> Self {
+        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
+    }
+}
+
 pub fn project_from_template(template_path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
     let root = cargo_test_support::paths::root();
     let project_root = root.join("case");
@@ -1500,6 +1510,73 @@ fn overwrite_inline_features() {
 
     assert().subset_matches(
         "tests/snapshots/add/overwrite_inline_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_features_noop() {
+    let project_root =
+        project_from_template("tests/snapshots/add/overwrite_inherit_features_noop.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_features_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_noop() {
+    init_registry();
+    let project_root = project_from_template("tests/snapshots/add/overwrite_inherit_noop.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_optional_noop() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/overwrite_inherit_optional_noop.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_optional_noop.out",
         &project_root,
     );
 }

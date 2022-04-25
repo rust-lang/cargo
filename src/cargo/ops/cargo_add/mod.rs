@@ -4,6 +4,7 @@ mod crate_spec;
 mod dependency;
 mod manifest;
 
+use anyhow::Context;
 use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::path::Path;
@@ -31,6 +32,7 @@ use dependency::RegistrySource;
 use dependency::Source;
 use manifest::LocalManifest;
 
+use crate::ops::cargo_add::dependency::MaybeWorkspace;
 pub use manifest::DepTable;
 
 /// Information on what dependencies should be added
@@ -313,7 +315,7 @@ fn resolve_dependency(
         dependency = dependency.clear_version();
     }
 
-    dependency = populate_available_features(dependency, config, registry)?;
+    dependency = populate_available_features(dependency, config, registry, ws)?;
 
     Ok(dependency)
 }
@@ -389,31 +391,40 @@ fn get_latest_dependency(
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
     let query = dependency.query(config)?;
-    let possibilities = loop {
-        let fuzzy = true;
-        match registry.query_vec(&query, fuzzy) {
-            std::task::Poll::Ready(res) => {
-                break res?;
-            }
-            std::task::Poll::Pending => registry.block_until_ready()?,
+    match query {
+        MaybeWorkspace::Workspace(_) => {
+            unreachable!("registry dependencies required, found a workspace dependency");
         }
-    };
-    let latest = possibilities
-        .iter()
-        .max_by_key(|s| {
-            // Fallback to a pre-release if no official release is available by sorting them as
-            // less.
-            let stable = s.version().pre.is_empty();
-            (stable, s.version())
-        })
-        .ok_or_else(|| {
-            anyhow::format_err!("the crate `{dependency}` could not be found in registry index.")
-        })?;
-    let mut dep = Dependency::from(latest);
-    if let Some(reg_name) = dependency.registry.as_deref() {
-        dep = dep.set_registry(reg_name);
+        MaybeWorkspace::Other(query) => {
+            let possibilities = loop {
+                let fuzzy = true;
+                match registry.query_vec(&query, fuzzy) {
+                    std::task::Poll::Ready(res) => {
+                        break res?;
+                    }
+                    std::task::Poll::Pending => registry.block_until_ready()?,
+                }
+            };
+            let latest = possibilities
+                .iter()
+                .max_by_key(|s| {
+                    // Fallback to a pre-release if no official release is available by sorting them as
+                    // less.
+                    let stable = s.version().pre.is_empty();
+                    (stable, s.version())
+                })
+                .ok_or_else(|| {
+                    anyhow::format_err!(
+                        "the crate `{dependency}` could not be found in registry index."
+                    )
+                })?;
+            let mut dep = Dependency::from(latest);
+            if let Some(reg_name) = dependency.registry.as_deref() {
+                dep = dep.set_registry(reg_name);
+            }
+            Ok(dep)
+        }
     }
-    Ok(dep)
 }
 
 fn select_package(
@@ -422,36 +433,43 @@ fn select_package(
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
     let query = dependency.query(config)?;
-    let possibilities = loop {
-        let fuzzy = false; // Returns all for path/git
-        match registry.query_vec(&query, fuzzy) {
-            std::task::Poll::Ready(res) => {
-                break res?;
+    match query {
+        MaybeWorkspace::Workspace(_) => {
+            unreachable!("path or git dependency expected, found workspace dependency");
+        }
+        MaybeWorkspace::Other(query) => {
+            let possibilities = loop {
+                let fuzzy = false; // Returns all for path/git
+                match registry.query_vec(&query, fuzzy) {
+                    std::task::Poll::Ready(res) => {
+                        break res?;
+                    }
+                    std::task::Poll::Pending => registry.block_until_ready()?,
+                }
+            };
+            match possibilities.len() {
+                0 => {
+                    let source = dependency
+                        .source()
+                        .expect("source should be resolved before here");
+                    anyhow::bail!("the crate `{dependency}` could not be found at `{source}`")
+                }
+                1 => {
+                    let mut dep = Dependency::from(&possibilities[0]);
+                    if let Some(reg_name) = dependency.registry.as_deref() {
+                        dep = dep.set_registry(reg_name);
+                    }
+                    Ok(dep)
+                }
+                _ => {
+                    let source = dependency
+                        .source()
+                        .expect("source should be resolved before here");
+                    anyhow::bail!(
+                        "unexpectedly found multiple copies of crate `{dependency}` at `{source}`"
+                    )
+                }
             }
-            std::task::Poll::Pending => registry.block_until_ready()?,
-        }
-    };
-    match possibilities.len() {
-        0 => {
-            let source = dependency
-                .source()
-                .expect("source should be resolved before here");
-            anyhow::bail!("the crate `{dependency}` could not be found at `{source}`")
-        }
-        1 => {
-            let mut dep = Dependency::from(&possibilities[0]);
-            if let Some(reg_name) = dependency.registry.as_deref() {
-                dep = dep.set_registry(reg_name);
-            }
-            Ok(dep)
-        }
-        _ => {
-            let source = dependency
-                .source()
-                .expect("source should be resolved before here");
-            anyhow::bail!(
-                "unexpectedly found multiple copies of crate `{dependency}` at `{source}`"
-            )
         }
     }
 }
@@ -512,12 +530,50 @@ fn populate_available_features(
     mut dependency: Dependency,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
+    ws: &Workspace<'_>,
 ) -> CargoResult<Dependency> {
     if !dependency.available_features.is_empty() {
         return Ok(dependency);
     }
 
     let query = dependency.query(config)?;
+    let query = match query {
+        MaybeWorkspace::Workspace(_workspace) => {
+            let manifest = LocalManifest::try_new(ws.root_manifest())?;
+            let manifest = manifest
+                .data
+                .as_item()
+                .as_table_like()
+                .context("could not make `manifest.data` into a table")?;
+            let workspace = manifest
+                .get("workspace")
+                .context("could not find `workspace`")?
+                .as_table_like()
+                .context("could not make `manifest.data.workspace` into a table")?;
+            let dependencies = workspace
+                .get("dependencies")
+                .context("could not find `dependencies` table in `workspace`")?
+                .as_table_like()
+                .context("could not make `dependencies` into a table")?;
+            let dep_item = dependencies.get(dependency.toml_key()).context(format!(
+                "could not find {} in `workspace.dependencies`",
+                dependency.toml_key()
+            ))?;
+            let dep = Dependency::from_toml(
+                ws.root_manifest().parent().unwrap(),
+                dependency.toml_key(),
+                dep_item,
+            )?;
+            let query = dep.query(config)?;
+            match query {
+                MaybeWorkspace::Workspace(_) => {
+                    unreachable!("This should have been caught when parsing a workspace root")
+                }
+                MaybeWorkspace::Other(query) => query,
+            }
+        }
+        MaybeWorkspace::Other(query) => query,
+    };
     let possibilities = loop {
         match registry.query_vec(&query, true) {
             std::task::Poll::Ready(res) => {
@@ -566,6 +622,9 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
         }
         Some(Source::Git(_)) => {
             write!(message, " (git)")?;
+        }
+        Some(Source::Workspace(_)) => {
+            write!(message, " (workspace)")?;
         }
         None => {}
     }

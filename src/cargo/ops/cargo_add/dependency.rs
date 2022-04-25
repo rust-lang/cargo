@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 use indexmap::IndexSet;
@@ -74,6 +75,7 @@ impl Dependency {
             Some(Source::Git(git)) => {
                 git.version = None;
             }
+            Some(Source::Workspace(_workspace)) => {}
             None => {}
         }
         self
@@ -161,6 +163,7 @@ impl Dependency {
             Source::Registry(src) => Some(src.version.as_str()),
             Source::Path(src) => src.version.as_deref(),
             Source::Git(src) => src.version.as_deref(),
+            Source::Workspace(_) => None,
         }
     }
 
@@ -185,27 +188,45 @@ impl Dependency {
     }
 
     /// Get the SourceID for this dependency
-    pub fn source_id(&self, config: &Config) -> CargoResult<SourceId> {
+    pub fn source_id(&self, config: &Config) -> CargoResult<MaybeWorkspace<SourceId>> {
         match &self.source.as_ref() {
             Some(Source::Registry(_)) | None => {
                 if let Some(r) = self.registry() {
                     let source_id = SourceId::alt_registry(config, r)?;
-                    Ok(source_id)
+                    Ok(MaybeWorkspace::Other(source_id))
                 } else {
                     let source_id = SourceId::crates_io(config)?;
-                    Ok(source_id)
+                    Ok(MaybeWorkspace::Other(source_id))
                 }
             }
-            Some(Source::Path(source)) => source.source_id(),
-            Some(Source::Git(source)) => source.source_id(),
+            Some(Source::Path(source)) => Ok(MaybeWorkspace::Other(source.source_id()?)),
+            Some(Source::Git(source)) => Ok(MaybeWorkspace::Other(source.source_id()?)),
+            Some(Source::Workspace(workspace)) => Ok(MaybeWorkspace::Workspace(workspace.clone())),
         }
     }
 
     /// Query to find this dependency
-    pub fn query(&self, config: &Config) -> CargoResult<crate::core::dependency::Dependency> {
+    pub fn query(
+        &self,
+        config: &Config,
+    ) -> CargoResult<MaybeWorkspace<crate::core::dependency::Dependency>> {
         let source_id = self.source_id(config)?;
-        crate::core::dependency::Dependency::parse(self.name.as_str(), self.version(), source_id)
+        match source_id {
+            MaybeWorkspace::Workspace(workspace) => Ok(MaybeWorkspace::Workspace(workspace)),
+            MaybeWorkspace::Other(source_id) => Ok(MaybeWorkspace::Other(
+                crate::core::dependency::Dependency::parse(
+                    self.name.as_str(),
+                    self.version(),
+                    source_id,
+                )?,
+            )),
+        }
     }
+}
+
+pub enum MaybeWorkspace<T> {
+    Workspace(WorkspaceSource),
+    Other(T),
 }
 
 impl Dependency {
@@ -270,6 +291,15 @@ impl Dependency {
                     let src = RegistrySource::new(version.as_str().ok_or_else(|| {
                         invalid_type(key, "version", version.type_name(), "string")
                     })?);
+                    src.into()
+                } else if let Some(workspace) = table.get("workspace") {
+                    let workspace_bool = workspace.as_bool().ok_or_else(|| {
+                        invalid_type(key, "workspace", workspace.type_name(), "bool")
+                    })?;
+                    if !workspace_bool {
+                        anyhow::bail!("`{key}.workspace = false` is unsupported")
+                    }
+                    let src = WorkspaceSource::new();
                     src.into()
                 } else {
                     anyhow::bail!("Unrecognized dependency source for `{key}`");
@@ -367,6 +397,12 @@ impl Dependency {
                 None,
                 None,
             ) => toml_edit::value(v),
+            (false, None, true, Some(Source::Workspace(WorkspaceSource {})), None, None) => {
+                let mut table = toml_edit::InlineTable::default();
+                table.set_dotted(true);
+                table.insert("workspace", true.into());
+                toml_edit::value(toml_edit::Value::InlineTable(table))
+            }
             // Other cases are represented as an inline table
             (_, _, _, _, _, _) => {
                 let mut table = toml_edit::InlineTable::default();
@@ -396,6 +432,9 @@ impl Dependency {
                         if let Some(r) = src.version.as_deref() {
                             table.insert("version", r.into());
                         }
+                    }
+                    Some(Source::Workspace(_)) => {
+                        table.insert("workspace", true.into());
                     }
                     None => {}
                 }
@@ -436,7 +475,7 @@ impl Dependency {
                 Some(Source::Registry(src)) => {
                     table.insert("version", toml_edit::value(src.version.as_str()));
 
-                    for key in ["path", "git", "branch", "tag", "rev"] {
+                    for key in ["path", "git", "branch", "tag", "rev", "workspace"] {
                         table.remove(key);
                     }
                 }
@@ -449,7 +488,7 @@ impl Dependency {
                         table.remove("version");
                     }
 
-                    for key in ["git", "branch", "tag", "rev"] {
+                    for key in ["git", "branch", "tag", "rev", "workspace"] {
                         table.remove(key);
                     }
                 }
@@ -476,7 +515,23 @@ impl Dependency {
                         table.remove("version");
                     }
 
-                    for key in ["path"] {
+                    for key in ["path", "workspace"] {
+                        table.remove(key);
+                    }
+                }
+                Some(Source::Workspace(_)) => {
+                    table.set_dotted(true);
+                    for key in [
+                        "version",
+                        "registry",
+                        "registry-index",
+                        "path",
+                        "git",
+                        "branch",
+                        "tag",
+                        "rev",
+                        "package",
+                    ] {
                         table.remove(key);
                     }
                 }
@@ -516,12 +571,14 @@ impl Dependency {
                     .unwrap_or_default();
                 features.extend(new_features.iter().map(|s| s.as_str()));
                 let features = toml_edit::value(features.into_iter().collect::<toml_edit::Value>());
+                table.set_dotted(false);
                 table.insert("features", features);
             } else {
                 table.remove("features");
             }
             match self.optional {
                 Some(v) => {
+                    table.set_dotted(false);
                     table.insert("optional", toml_edit::value(v));
                 }
                 None => {
@@ -596,6 +653,8 @@ pub enum Source {
     Path(PathSource),
     /// Dependency from a git repo
     Git(GitSource),
+    /// Dependency from a workspace
+    Workspace(WorkspaceSource),
 }
 
 impl Source {
@@ -624,6 +683,15 @@ impl Source {
             _ => None,
         }
     }
+
+    /// Access the workspace source, if present
+    #[allow(dead_code)]
+    pub fn as_workspace(&self) -> Option<&WorkspaceSource> {
+        match self {
+            Self::Workspace(src) => Some(src),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for Source {
@@ -632,6 +700,7 @@ impl std::fmt::Display for Source {
             Self::Registry(src) => src.fmt(f),
             Self::Path(src) => src.fmt(f),
             Self::Git(src) => src.fmt(f),
+            Self::Workspace(src) => src.fmt(f),
         }
     }
 }
@@ -657,6 +726,12 @@ impl From<PathSource> for Source {
 impl From<GitSource> for Source {
     fn from(inner: GitSource) -> Self {
         Self::Git(inner)
+    }
+}
+
+impl From<WorkspaceSource> for Source {
+    fn from(inner: WorkspaceSource) -> Self {
+        Self::Workspace(inner)
     }
 }
 
@@ -819,6 +894,23 @@ impl std::fmt::Display for GitSource {
         } else {
             write!(f, "{}", self.git)
         }
+    }
+}
+
+/// Dependency from a workspace
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[non_exhaustive]
+pub struct WorkspaceSource;
+
+impl WorkspaceSource {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Display for WorkspaceSource {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        "workspace".fmt(f)
     }
 }
 
