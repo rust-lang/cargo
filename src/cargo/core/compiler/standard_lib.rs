@@ -217,6 +217,7 @@ pub fn generate_std_roots(
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
+                false,
             ));
         }
     }

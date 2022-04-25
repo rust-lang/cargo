@@ -1069,6 +1069,7 @@ fn generate_targets(
                 /*is_std*/ false,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
+                mode.is_doc_scrape() && ws.config().cli_unstable().ignore_scrape_failures,
             );
             units.insert(unit);
         }
@@ -1631,6 +1632,7 @@ fn traverse_and_share(
         unit.is_std,
         new_dep_hash,
         unit.artifact,
+        unit.can_fail,
     );
     assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
     new_graph.entry(new_unit.clone()).or_insert(new_deps);
@@ -1872,6 +1874,7 @@ fn override_rustc_crate_types(
             unit.is_std,
             unit.dep_hash,
             unit.artifact,
+            unit.can_fail,
         )
     };
     units[0] = match unit.target.kind() {

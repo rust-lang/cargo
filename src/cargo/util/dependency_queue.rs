@@ -170,6 +170,10 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         self.dep_map.len()
     }
 
+    pub fn dep_map(&self) -> &HashMap<N, (HashSet<(N, E)>, V)> {
+        &self.dep_map
+    }
+
     /// Indicate that something has finished.
     ///
     /// Calling this function indicates that the `node` has produced `edge`. All

@@ -2646,6 +2646,112 @@ fn scrape_examples_issue_10545() {
 }
 
 #[cargo_test]
+fn scrape_examples_no_fail_bad_example() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("examples/ex1.rs", "DOES NOT COMPILE")
+        .file("examples/ex2.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo(){}")
+        .build();
+
+    p.cargo(
+        "doc -v -Zunstable-options -Z rustdoc-scrape-examples=examples -Z ignore-scrape-failures",
+    )
+    .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+    .with_stderr_unordered(
+        "\
+[CHECKING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo[..]
+[RUNNING] `rustdoc[..] --crate-name ex1[..]
+[RUNNING] `rustdoc[..] --crate-name ex2[..]
+error: expected one of `!` or `::`, found `NOT`
+ --> examples/ex1.rs:1:6
+  |
+1 | DOES NOT COMPILE
+  |      ^^^ expected one of `!` or `::`
+
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[RUNNING] `rustdoc[..] --crate-name foo[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+    )
+    .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+}
+
+#[cargo_test]
+fn scrape_examples_no_fail_bad_dependency() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [workspace]
+                members = ["dep"]
+
+                [dev-dependencies]
+                dep = {path = "dep"}
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo(){}\npub fn bar() { foo(); }")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("dep/src/lib.rs", "DOES NOT COMPILE")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all -Z ignore-scrape-failures")
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+        .with_stderr_unordered(
+            "\
+[CHECKING] dep v0.0.1 ([CWD]/dep)
+error: expected one of `!` or `::`, found `NOT`
+ --> dep/src/lib.rs:1:6
+  |
+1 | DOES NOT COMPILE
+  |      ^^^ expected one of `!` or `::`
+
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(!doc_html.contains("Examples found in repository"));
+}
+
+#[cargo_test]
 fn lib_before_bin() {
     // Checks that the library is documented before the binary.
     // Previously they were built concurrently, which can cause issues

@@ -22,7 +22,7 @@ mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -639,9 +639,9 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let metadata = cx.metadata_for_doc_units[unit];
     rustdoc.arg("-C").arg(format!("metadata={}", metadata));
 
-    let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
+    let scrape_output_path = |unit: &Unit| -> PathBuf {
         let output_dir = cx.files().deps_dir(unit);
-        Ok(output_dir.join(format!("{}.examples", unit.buildkey())))
+        output_dir.join(format!("{}.examples", unit.buildkey()))
     };
 
     if unit.mode.is_doc_scrape() {
@@ -651,7 +651,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
         rustdoc
             .arg("--scrape-examples-output-path")
-            .arg(scrape_output_path(unit)?);
+            .arg(scrape_output_path(unit));
 
         // Only scrape example for items from crates in the workspace, to reduce generated file size
         for pkg in cx.bcx.ws.members() {
@@ -664,18 +664,18 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 rustdoc.arg("--scrape-examples-target-crate").arg(name);
             }
         }
-    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.unit_needs_doc_scrape(unit) {
-        // We only pass scraped examples to packages in the workspace
-        // since examples are only coming from reverse-dependencies of workspace packages
-
-        rustdoc.arg("-Zunstable-options");
-
-        for scrape_unit in &cx.bcx.scrape_units {
-            rustdoc
-                .arg("--with-examples")
-                .arg(scrape_output_path(scrape_unit)?);
-        }
     }
+
+    let should_include_scrape_units =
+        cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.unit_needs_doc_scrape(unit);
+    let scrape_outputs = should_include_scrape_units.then(|| {
+        rustdoc.arg("-Zunstable-options");
+        cx.bcx
+            .scrape_units
+            .iter()
+            .map(|unit| (cx.files().metadata(unit), scrape_output_path(unit)))
+            .collect::<HashMap<_, _>>()
+    });
 
     build_deps_args(&mut rustdoc, cx, unit)?;
     rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
@@ -693,12 +693,27 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
+    let completed_units = Arc::clone(&cx.completed_units);
     Ok(Work::new(move |state| {
         add_custom_flags(
             &mut rustdoc,
             &build_script_outputs.lock().unwrap(),
             script_metadata,
         )?;
+
+        // Add the output of scraped examples to the rustdoc command.
+        // This action must happen after the unit's dependencies have finished,
+        // because some of those deps may be Docscrape units which have failed.
+        // So we dynamically determine which `--with-examples` flags to pass here.
+        if let Some(scrape_outputs) = scrape_outputs {
+            let completed_units = completed_units.lock().unwrap();
+            for (metadata, output_path) in &scrape_outputs {
+                if completed_units[metadata] {
+                    rustdoc.arg("--with-examples").arg(output_path);
+                }
+            }
+        }
+
         let crate_dir = doc_dir.join(&crate_name);
         if crate_dir.exists() {
             // Remove output from a previous build. This ensures that stale
@@ -706,6 +721,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             debug!("removing pre-existing doc directory {:?}", crate_dir);
             paths::remove_dir_all(crate_dir)?;
         }
+
         state.running(&rustdoc);
 
         rustdoc

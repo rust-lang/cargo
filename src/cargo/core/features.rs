@@ -665,6 +665,7 @@ unstable_cli_options!(
     // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
     // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
     rustdoc_scrape_examples: Option<String> = ("Allow rustdoc to scrape examples from reverse-dependencies for documentation"),
+    ignore_scrape_failures: bool = ("When scraping examples for Rustdoc, don't stop compilation if an example fails"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
 );
 
@@ -938,6 +939,7 @@ impl CliUnstable {
                     )
                 }
             }
+            "ignore-scrape-failures" => self.ignore_scrape_failures = parse_empty(k, v)?,
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
             "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
             "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,

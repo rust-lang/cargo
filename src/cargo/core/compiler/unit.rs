@@ -72,6 +72,7 @@ pub struct UnitInner {
     /// This value initially starts as 0, and then is filled in via a
     /// second-pass after all the unit dependencies have been computed.
     pub dep_hash: u64,
+    pub can_fail: bool,
 }
 
 impl UnitInner {
@@ -141,6 +142,7 @@ impl fmt::Debug for Unit {
             .field("artifact", &self.artifact.is_true())
             .field("is_std", &self.is_std)
             .field("dep_hash", &self.dep_hash)
+            .field("can_fail", &self.can_fail)
             .finish()
     }
 }
@@ -184,6 +186,7 @@ impl UnitInterner {
         is_std: bool,
         dep_hash: u64,
         artifact: IsArtifact,
+        can_fail: bool,
     ) -> Unit {
         let target = match (is_std, target.kind()) {
             // This is a horrible hack to support build-std. `libstd` declares
@@ -216,6 +219,7 @@ impl UnitInterner {
             is_std,
             dep_hash,
             artifact,
+            can_fail,
         });
         Unit { inner }
     }

@@ -77,6 +77,13 @@ pub struct Context<'a, 'cfg> {
     /// Map of Doc/Docscrape units to metadata for their -Cmetadata flag.
     /// See Context::find_metadata_units for more details.
     pub metadata_for_doc_units: HashMap<Unit, Metadata>,
+
+    /// Map that tracks whether a unit completed successfully. Used in conjuction
+    /// with the `Unit::can_fail` flag, so jobs can dynamically track at runtime
+    /// whether their dependencies succeeded or failed. Currently used for
+    /// the Rustdoc scrape-examples feature to allow Rustdoc to proceed even if
+    /// examples fail to compile.
+    pub completed_units: Arc<Mutex<HashMap<Metadata, bool>>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -115,6 +122,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             rustc_clients: HashMap::new(),
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
+            completed_units: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 

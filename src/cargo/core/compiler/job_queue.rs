@@ -126,6 +126,10 @@ struct DrainState<'cfg> {
     total_units: usize,
 
     queue: DependencyQueue<Unit, Artifact, Job>,
+    /// Dependency map that is like JobQueue::dep_map, except with Job information removed.
+    /// Used to determine if a unit's dependencies have failed, see
+    /// [`DrainState::spawn_work_if_possible`].
+    dep_map: HashMap<Unit, HashSet<(Unit, Artifact)>>,
     messages: Arc<Queue<Message>>,
     /// Diagnostic deduplication support.
     diag_dedupe: DiagDedupe<'cfg>,
@@ -506,8 +510,15 @@ impl<'cfg> JobQueue<'cfg> {
         self.queue.queue_finished();
 
         let progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
+        let dep_map = self
+            .queue
+            .dep_map()
+            .iter()
+            .map(|(unit, (deps, _))| (unit.clone(), deps.clone()))
+            .collect();
         let state = DrainState {
             total_units: self.queue.len(),
+            dep_map,
             queue: self.queue,
             // 100 here is somewhat arbitrary. It is a few screenfulls of
             // output, and hopefully at most a few megabytes of memory for
@@ -578,6 +589,32 @@ impl<'cfg> DrainState<'cfg> {
         // start requesting job tokens. Each job after the first needs to
         // request a token.
         while let Some((unit, job)) = self.queue.dequeue() {
+            // First, we handle the special case of fallible units. If
+            // this unit is allowed to fail, and any one of its dependencies
+            // has failed, then we should immediately mark it as failed and
+            // skip executing it.
+            if unit.can_fail {
+                let mut completed_units = cx.completed_units.lock().unwrap();
+                let failed_deps = self.dep_map[&unit]
+                    .iter()
+                    .filter(|(dep_unit, _)| {
+                        let dep_meta = cx.files().metadata(dep_unit);
+                        !completed_units[&dep_meta]
+                    })
+                    .map(|(_, artifact)| artifact)
+                    .collect::<HashSet<_>>();
+                if !failed_deps.is_empty() {
+                    // TODO: should put a warning here saying which units were skipped
+                    // due to failed dependencies.
+                    for artifact in failed_deps {
+                        self.queue.finish(&unit, artifact);
+                    }
+                    let unit_meta = cx.files().metadata(&unit);
+                    completed_units.insert(unit_meta, false);
+                    continue;
+                }
+            }
+
             self.pending_queue.push((unit, job));
             if self.active.len() + self.pending_queue.len() > 1 {
                 jobserver_helper.request_token();
@@ -713,7 +750,8 @@ impl<'cfg> DrainState<'cfg> {
                 };
                 debug!("end ({:?}): {:?}", unit, result);
                 match result {
-                    Ok(()) => self.finish(id, &unit, artifact, cx)?,
+                    Ok(()) => self.finish(id, &unit, artifact, cx, true)?,
+                    Err(_) if unit.can_fail => self.finish(id, &unit, artifact, cx, false)?,
                     Err(error) => {
                         let msg = "The following warnings were emitted during compilation:";
                         self.emit_warnings(Some(msg), &unit, cx)?;
@@ -1161,6 +1199,7 @@ impl<'cfg> DrainState<'cfg> {
         unit: &Unit,
         artifact: Artifact,
         cx: &mut Context<'_, '_>,
+        success: bool,
     ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && unit.show_warnings(cx.bcx.config) {
             self.emit_warnings(None, unit, cx)?;
@@ -1170,6 +1209,11 @@ impl<'cfg> DrainState<'cfg> {
             Artifact::All => self.timings.unit_finished(id, unlocked),
             Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
         }
+        cx.completed_units
+            .lock()
+            .unwrap()
+            .insert(cx.files().metadata(unit), success);
+
         Ok(())
     }
 
