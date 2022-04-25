@@ -1,0 +1,5 @@
+[workspace]
+members = ["primary", "dependency"]
+
+[workspace.dependencies]
+foo = { version = "0.0.0", path = "./dependency", features = ["not_recognized"] }

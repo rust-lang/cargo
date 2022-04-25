@@ -106,23 +106,27 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                 )
             }
         }
+
+        let available_features = dep
+            .available_features
+            .keys()
+            .map(|s| s.as_ref())
+            .collect::<BTreeSet<&str>>();
+        let mut unknown_features: Vec<&str> = Vec::new();
         if let Some(req_feats) = dep.features.as_ref() {
             let req_feats: BTreeSet<_> = req_feats.iter().map(|s| s.as_str()).collect();
-
-            let available_features = dep
-                .available_features
-                .keys()
-                .map(|s| s.as_ref())
-                .collect::<BTreeSet<&str>>();
-
-            let mut unknown_features: Vec<&&str> =
-                req_feats.difference(&available_features).collect();
-            unknown_features.sort();
-
-            if !unknown_features.is_empty() {
-                anyhow::bail!("unrecognized features: {unknown_features:?}");
-            }
+            unknown_features.extend(req_feats.difference(&available_features).copied());
         }
+        if let Some(inherited_features) = dep.inherited_features.as_ref() {
+            let inherited_features: BTreeSet<_> =
+                inherited_features.iter().map(|s| s.as_str()).collect();
+            unknown_features.extend(inherited_features.difference(&available_features).copied());
+        }
+        unknown_features.sort();
+        if !unknown_features.is_empty() {
+            anyhow::bail!("unrecognized features: {unknown_features:?}");
+        }
+
         manifest.insert_into_table(&dep_table, &dep)?;
         manifest.gc_dep(dep.toml_key());
     }
@@ -564,6 +568,9 @@ fn populate_available_features(
                 dependency.toml_key(),
                 dep_item,
             )?;
+            if let Some(features) = dep.features.clone() {
+                dependency = dependency.set_inherited_features(features);
+            }
             let query = dep.query(config)?;
             match query {
                 MaybeWorkspace::Workspace(_) => {
@@ -645,6 +652,7 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
     if dep.default_features().unwrap_or(true) {
         activated.insert("default");
     }
+    activated.extend(dep.inherited_features.iter().flatten().map(|s| s.as_str()));
     let mut walk: VecDeque<_> = activated.iter().cloned().collect();
     while let Some(next) = walk.pop_front() {
         walk.extend(

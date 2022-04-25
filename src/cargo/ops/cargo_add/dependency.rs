@@ -28,6 +28,8 @@ pub struct Dependency {
     pub features: Option<IndexSet<String>>,
     /// Whether default features are enabled
     pub default_features: Option<bool>,
+    /// List of features inherited from a workspace dependency
+    pub inherited_features: Option<IndexSet<String>>,
 
     /// Where the dependency comes from
     pub source: Option<Source>,
@@ -50,6 +52,7 @@ impl Dependency {
             optional: None,
             features: None,
             default_features: None,
+            inherited_features: None,
             source: None,
             registry: None,
             rename: None,
@@ -149,6 +152,12 @@ impl Dependency {
     /// Set the value of registry for the dependency
     pub fn set_registry(mut self, registry: impl Into<String>) -> Self {
         self.registry = Some(registry.into());
+        self
+    }
+
+    /// Set features as an array of string (does some basic parsing)
+    pub fn set_inherited_features(mut self, features: IndexSet<String>) -> Self {
+        self.inherited_features = Some(features);
         self
     }
 
@@ -350,6 +359,7 @@ impl Dependency {
                 features,
                 available_features,
                 optional,
+                inherited_features: None,
             };
             Ok(dep)
         } else {
