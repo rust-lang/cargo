@@ -543,31 +543,7 @@ fn populate_available_features(
     let query = dependency.query(config)?;
     let query = match query {
         MaybeWorkspace::Workspace(_workspace) => {
-            let manifest = LocalManifest::try_new(ws.root_manifest())?;
-            let manifest = manifest
-                .data
-                .as_item()
-                .as_table_like()
-                .context("could not make `manifest.data` into a table")?;
-            let workspace = manifest
-                .get("workspace")
-                .context("could not find `workspace`")?
-                .as_table_like()
-                .context("could not make `manifest.data.workspace` into a table")?;
-            let dependencies = workspace
-                .get("dependencies")
-                .context("could not find `dependencies` table in `workspace`")?
-                .as_table_like()
-                .context("could not make `dependencies` into a table")?;
-            let dep_item = dependencies.get(dependency.toml_key()).context(format!(
-                "could not find {} in `workspace.dependencies`",
-                dependency.toml_key()
-            ))?;
-            let dep = Dependency::from_toml(
-                ws.root_manifest().parent().unwrap(),
-                dependency.toml_key(),
-                dep_item,
-            )?;
+            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
             if let Some(features) = dep.features.clone() {
                 dependency = dependency.set_inherited_features(features);
             }
@@ -711,4 +687,28 @@ fn is_sorted(mut it: impl Iterator<Item = impl PartialOrd>) -> bool {
     }
 
     true
+}
+
+fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Dependency> {
+    let manifest = LocalManifest::try_new(root_manifest)?;
+    let manifest = manifest
+        .data
+        .as_item()
+        .as_table_like()
+        .context("could not make `manifest.data` into a table")?;
+    let workspace = manifest
+        .get("workspace")
+        .context("could not find `workspace`")?
+        .as_table_like()
+        .context("could not make `manifest.data.workspace` into a table")?;
+    let dependencies = workspace
+        .get("dependencies")
+        .context("could not find `dependencies` table in `workspace`")?
+        .as_table_like()
+        .context("could not make `dependencies` into a table")?;
+    let dep_item = dependencies.get(toml_key).context(format!(
+        "could not find {} in `workspace.dependencies`",
+        toml_key
+    ))?;
+    Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
 }
