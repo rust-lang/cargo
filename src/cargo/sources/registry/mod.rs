@@ -822,9 +822,12 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // This does not use `create_dir_all_excluded_from_backups_atomic` for
         // the same reason: we want to exclude it even if the directory already
         // exists.
+        //
+        // IO errors in creating and marking it are ignored, e.g. in case we're on a
+        // read-only filesystem.
         let registry_base = self.config.registry_base_path();
-        registry_base.create_dir()?;
-        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked())?;
+        let _ = registry_base.create_dir()?;
+        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
 
         self.ops.block_until_ready()
     }

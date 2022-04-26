@@ -661,11 +661,12 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
 }
 
 /// Mark an existing directory as excluded from backups and indexing.
-pub fn exclude_from_backups_and_indexing(p: impl AsRef<Path>) -> Result<()> {
+///
+/// Errors in marking it are ignored.
+pub fn exclude_from_backups_and_indexing(p: impl AsRef<Path>) {
     let path = p.as_ref();
     exclude_from_backups(path);
     exclude_from_content_indexing(path);
-    Ok(())
 }
 
 /// Marks the directory as excluded from archives/backups.

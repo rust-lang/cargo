@@ -135,7 +135,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         // This does not use `create_dir_all_excluded_from_backups_atomic` for
         // the same reason: we want to exclude it even if the directory already
         // exists.
-        exclude_from_backups_and_indexing(&git_path)?;
+        exclude_from_backups_and_indexing(&git_path);
 
         let db_path = git_path.join("db").join(&self.ident);
 
