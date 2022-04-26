@@ -826,7 +826,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // IO errors in creating and marking it are ignored, e.g. in case we're on a
         // read-only filesystem.
         let registry_base = self.config.registry_base_path();
-        let _ = registry_base.create_dir()?;
+        let _ = registry_base.create_dir();
         exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
 
         self.ops.block_until_ready()
