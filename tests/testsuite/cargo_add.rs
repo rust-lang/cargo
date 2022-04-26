@@ -342,6 +342,74 @@ fn require_weak() {
 }
 
 #[cargo_test]
+fn detect_workspace_inherit() {
+    init_registry();
+    let project_root = project_from_template("tests/snapshots/add/detect_workspace_inherit.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit.stdout")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/detect_workspace_inherit.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn detect_workspace_inherit_features() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/detect_workspace_inherit_features.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar", "--features", "test"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_features.stdout")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_features.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/detect_workspace_inherit_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn detect_workspace_inherit_optional() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/detect_workspace_inherit_optional.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar", "--optional"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_optional.stdout")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_optional.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/detect_workspace_inherit_optional.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn dev() {
     init_registry();
     let project_root = project_from_template("tests/snapshots/add/dev.in");

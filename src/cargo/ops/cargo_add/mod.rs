@@ -32,7 +32,7 @@ use dependency::RegistrySource;
 use dependency::Source;
 use manifest::LocalManifest;
 
-use crate::ops::cargo_add::dependency::MaybeWorkspace;
+use crate::ops::cargo_add::dependency::{MaybeWorkspace, WorkspaceSource};
 pub use manifest::DepTable;
 
 /// Information on what dependencies should be added
@@ -281,7 +281,11 @@ fn resolve_dependency(
     };
 
     if dependency.source().is_none() {
-        if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
+        // Checking for a workspace dependency happens first since a member could be specified
+        // in the workspace dependencies table as a dependency
+        if let Some(_dep) = find_workspace_dep(dependency.toml_key(), ws.root_manifest()).ok() {
+            dependency = dependency.set_source(WorkspaceSource::new());
+        } else if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
             // Only special-case workspaces when the user doesn't provide any extra
             // information, otherwise, trust the user.
             let mut src = PathSource::new(package.root());
