@@ -36,6 +36,9 @@ use crate::util::{
 mod targets;
 use self::targets::targets;
 
+pub use toml_edit::de::Error as TomlDeError;
+pub use toml_edit::TomlError as TomlEditError;
+
 /// Loads a `Cargo.toml` from a file on disk.
 ///
 /// This could result in a real or virtual manifest being returned.
