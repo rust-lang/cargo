@@ -58,7 +58,7 @@ strip-ansi-escapes = "0.1.0"
 tar = { version = "0.4.36", default-features = false }
 tempfile = "3.0"
 termcolor = "1.1"
-toml_edit =  { version = "0.13.4", features = ["serde", "easy"] }
+toml_edit =  { version = "0.14.3", features = ["serde", "easy", "perf"] }
 unicode-xid = "0.2.0"
 url = "2.2.2"
 walkdir = "2.2"
