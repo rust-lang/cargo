@@ -124,7 +124,9 @@ impl<'cfg> Source for GitSource<'cfg> {
         }
 
         let git_fs = self.config.git_path();
-        git_fs.create_dir()?;
+        // Ignore errors creating it, in case this is a read-only filesystem:
+        // perhaps the later operations can succeed anyhow.
+        let _ = git_fs.create_dir();
         let git_path = self.config.assert_package_cache_locked(&git_fs);
 
         // Before getting a checkout, make sure that `<cargo_home>/git` is
