@@ -26,7 +26,7 @@ DESCRIPTION
        +-----------------+--------------------------------------------------+
        | name            | bitflags                                         |
        +-----------------+--------------------------------------------------+
-       | name:version    | bitflags:1.0.4                                   |
+       | name@version    | bitflags@1.0.4                                   |
        +-----------------+--------------------------------------------------+
        | url             | https://github.com/rust-lang/cargo               |
        +-----------------+--------------------------------------------------+
@@ -36,7 +36,7 @@ DESCRIPTION
        |                 | https://github.com/rust-lang/crates.io-index#bitflags |
        +-----------------+--------------------------------------------------+
        |                 |                                                  |
-       | url#name:version | https://github.com/rust-lang/cargo#crates-io:0.21.0 |
+       | url#name:version | https://github.com/rust-lang/cargo#crates-io@0.21.0 |
        +-----------------+--------------------------------------------------+
 
 OPTIONS
@@ -133,7 +133,7 @@ EXAMPLES
 
        2. Retrieve package specification for version 1.0.0 of foo:
 
-              cargo pkgid foo:1.0.0
+              cargo pkgid foo@1.0.0
 
        3. Retrieve package specification for foo from crates.io:
 
