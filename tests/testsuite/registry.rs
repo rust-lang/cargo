@@ -93,6 +93,8 @@ fn simple(cargo: fn(&Project, &str) -> Execs) {
 
     cargo(&p, "clean").run();
 
+    assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
+
     // Don't download a second time
     cargo(&p, "build")
         .with_stderr(
@@ -150,6 +152,8 @@ fn deps(cargo: fn(&Project, &str) -> Execs) {
 ",
         )
         .run();
+
+    assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 }
 
 #[cargo_test]
@@ -1231,6 +1235,13 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
 ",
         )
         .run();
+    assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
+
+    // Now delete the CACHEDIR.TAG file: this is the situation we'll be in after
+    // upgrading from a version of Cargo that doesn't mark this directory, to one that
+    // does. It should be recreated.
+    fs::remove_file(paths::home().join(".cargo/registry/CACHEDIR.TAG"))
+        .expect("remove CACHEDIR.TAG");
 
     p.change_file(
         "a/Cargo.toml",
@@ -1260,6 +1271,11 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
 ",
         )
         .run();
+
+    assert!(
+        paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file(),
+        "CACHEDIR.TAG recreated in existing registry"
+    );
 }
 
 #[cargo_test]

@@ -167,6 +167,7 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use anyhow::Context as _;
+use cargo_util::paths::exclude_from_backups_and_indexing;
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::Version;
@@ -552,6 +553,7 @@ impl<'cfg> RegistrySource<'cfg> {
         } else {
             Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>
         };
+
         Ok(RegistrySource::new(
             source_id,
             config,
@@ -812,6 +814,21 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
+        // Before starting to work on the registry, make sure that
+        // `<cargo_home>/registry` is marked as excluded from indexing and
+        // backups. Older versions of Cargo didn't do this, so we do it here
+        // regardless of whether `<cargo_home>` exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        //
+        // IO errors in creating and marking it are ignored, e.g. in case we're on a
+        // read-only filesystem.
+        let registry_base = self.config.registry_base_path();
+        let _ = registry_base.create_dir();
+        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
+
         self.ops.block_until_ready()
     }
 }
