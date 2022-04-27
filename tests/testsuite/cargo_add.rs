@@ -2109,6 +2109,51 @@ fn overwrite_with_rename() {
 }
 
 #[cargo_test]
+fn overwrite_workspace_dep() {
+    init_registry();
+    let project_root = project_from_template("tests/snapshots/add/overwrite_workspace_dep.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--path", "./dependency", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_workspace_dep.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_workspace_dep_features() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/overwrite_workspace_dep_features.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--path", "./dependency", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep_features.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep_features.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_workspace_dep_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn preserve_sorted() {
     init_registry();
     let project_root = project_from_template("tests/snapshots/add/preserve_sorted.in");

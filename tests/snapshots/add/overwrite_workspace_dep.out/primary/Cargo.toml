@@ -1,0 +1,8 @@
+cargo-features = ["workspace-inheritance"]
+
+[package]
+name = "bar"
+version = "0.0.0"
+
+[dependencies]
+foo = { version = "0.0.0", path = "../dependency" }

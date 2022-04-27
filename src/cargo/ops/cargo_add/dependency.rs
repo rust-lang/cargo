@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 use indexmap::IndexSet;
+use toml_edit::KeyMut;
 
 use super::manifest::str_or_1_len_table;
 use crate::core::FeatureMap;
@@ -476,10 +477,18 @@ impl Dependency {
     }
 
     /// Modify existing entry to match this dependency
-    pub fn update_toml(&self, crate_root: &Path, item: &mut toml_edit::Item) {
+    pub fn update_toml<'k>(
+        &self,
+        crate_root: &Path,
+        key: &mut KeyMut<'k>,
+        item: &mut toml_edit::Item,
+    ) {
         if str_or_1_len_table(item) {
             // Nothing to preserve
             *item = self.to_toml(crate_root);
+            if self.source != Some(Source::Workspace(WorkspaceSource)) {
+                key.fmt();
+            }
         } else if let Some(table) = item.as_table_like_mut() {
             match &self.source {
                 Some(Source::Registry(src)) => {
