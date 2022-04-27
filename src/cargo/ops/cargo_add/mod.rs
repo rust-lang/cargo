@@ -312,6 +312,10 @@ fn resolve_dependency(
         }
     }
 
+    if let Some(Source::Workspace(_)) = dependency.source() {
+        check_invalid_ws_keys(dependency.toml_key(), arg)?;
+    }
+
     let version_required = dependency.source().and_then(|s| s.as_registry()).is_some();
     let version_optional_in_section = section.kind() == DepKind::Development;
     let preserve_existing_version = old_dep
@@ -326,6 +330,40 @@ fn resolve_dependency(
     dependency = populate_available_features(dependency, config, registry, ws)?;
 
     Ok(dependency)
+}
+
+/// When { workspace = true } you cannot define other keys that configure
+/// the source of the dependency such as `version`, `registry`, `registry-index`,
+/// `path`, `git`, `branch`, `tag`, `rev`, or `package`. You can also not define
+/// `default-features`.
+///
+/// Only `default-features`, `registry` and `rename` need to be checked
+///  for currently. This is because `git` and its associated keys, `path`, and
+/// `version`  should all bee checked before this is called. `rename` is checked
+/// for as it turns into `package`
+fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp) -> CargoResult<()> {
+    fn err_msg(toml_key: &str, flag: &str, field: &str) -> String {
+        format!(
+            "cannot override workspace dependency with `{flag}`, \
+            either change `workspace.dependencies.{toml_key}.{field}` \
+            or define the dependency exclusively in the package's manifest"
+        )
+    }
+
+    if arg.default_features.is_some() {
+        anyhow::bail!(
+            "{}",
+            err_msg(toml_key, "--default-features", "default-features")
+        )
+    }
+    if arg.registry.is_some() {
+        anyhow::bail!("{}", err_msg(toml_key, "--registry", "registry"))
+    }
+    // rename is `package`
+    if arg.rename.is_some() {
+        anyhow::bail!("{}", err_msg(toml_key, "--rename", "package"))
+    }
+    Ok(())
 }
 
 /// Provide the existing dependency for the target table

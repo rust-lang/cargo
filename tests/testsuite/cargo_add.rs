@@ -1092,6 +1092,72 @@ fn invalid_git_external() {
 }
 
 #[cargo_test]
+fn invalid_key_inherit_dependency() {
+    let project_root =
+        project_from_template("tests/snapshots/add/invalid_key_inherit_dependency.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--default-features", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/invalid_key_inherit_dependency.stdout")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_inherit_dependency.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/invalid_key_inherit_dependency.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn invalid_key_rename_inherit_dependency() {
+    let project_root =
+        project_from_template("tests/snapshots/add/invalid_key_rename_inherit_dependency.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["--rename", "foo", "foo-alt", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency.stdout")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/invalid_key_rename_inherit_dependency.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn invalid_key_overwrite_inherit_dependency() {
+    let project_root =
+        project_from_template("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--default-features", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.stdout")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/invalid_key_overwrite_inherit_dependency.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn invalid_path() {
     init_registry();
     let project_root = project_from_template("tests/snapshots/add/invalid_path.in");
