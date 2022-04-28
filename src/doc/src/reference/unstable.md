@@ -1233,62 +1233,147 @@ cargo check -Z unstable-options -Z check-cfg-well-known-values
 * RFC: [#2906](https://github.com/rust-lang/rfcs/blob/master/text/2906-cargo-workspace-deduplicate.md)
 * Tracking Issue: [#8415](https://github.com/rust-lang/cargo/issues/8415)
 
-The `workspace-inheritance` feature allows workspace members to inherit fields
-and dependencies from a workspace.
+### The `workspace.package` table
 
-Example 1:
+*Stabilization*: This would be in [`workspaces.md`][workspaces], under
+[The `workspace.metadata` table][workspace-metadata-table]
 
+The `workspace.package` table is where you define keys that can be
+inherited by members of a workspace. These keys can be inherited by
+defining them in the member package with `{key}.workspace = true`.
+
+Keys that are supported:
+
+|                |                 |
+|----------------|-----------------|
+| `authors`      | `categories`    |
+| `description`  | `documentation` |
+| `edition`      | `exclude`       |
+| `homepage`     | `include`       |
+| `keywords`     | `license`       |
+| `license-file` | `publish`       |
+| `readme`       | `repository`    |
+| `rust-version` | `version`       |
+
+- `license-file` and `readme` are relative to the workspace root
+- `include` and `exclude` are relative to your package root
+
+Example:
 ```toml
-# in workspace's Cargo.toml
-[workspace.dependencies]
-log = "0.3.1"
-log2 = { version = "2.0.0", package = "log" }
-serde = { git = 'https://github.com/serde-rs/serde' }
-wasm-bindgen-cli = { path = "crates/cli" }
-```
+# [PROGECT_DIR]/Cargo.toml
+[workspace]
+memebers = ["bar"]
 
-```toml
-# in a workspace member's Cargo.toml
-[dependencies]
-log.workspace = true
-log2.workspace = true
-```
-
-Example 2:
-```toml
-# in workspace's Cargo.toml
 [workspace.package]
 version = "1.2.3"
 authors = ["Nice Folks"]
 description = "..."
 documentation = "https://example.github.io/example"
-readme = "README.md"
-homepage = "https://example.com"
-repository = "https://github.com/example/example"
-license = "MIT"
-license-file = "./LICENSE"
-keywords = ["cli"]
-categories = ["development-tools"]
-publish = false
-edition = "2018"
 ```
 
 ```toml
-# in a workspace member's Cargo.toml
+# [PROGECT_DIR]/bar/Cargo.toml
 [package]
+name = "bar"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
 documentation.workspace = true
-readme.workspace = true
-homepage.workspace = true
-repository.workspace = true
-license.workspace = true
-license-file.workspace = true
-keywords.workspace = true
-categories.workspace = true
-publish.workspace = true
 ```
+
+
+### The `workspace.dependencies` table
+
+The `workspace.dependencies` table is where you define dependencies to be
+inherited by members of a workspace. 
+
+Specifying a workspace dependency is similar to [package dependencies][specifying-dependencies] except:
+- Dependencies from this table cannot be declared as `optional`
+- [`features`][features] declared in this table are additive with the `features` from `[dependencies]`
+
+You can then [inherit the workspace dependency as a package dependency][inheriting-a-dependency-from-a-workspace]
+
+Example:
+```toml
+# [PROGECT_DIR]/Cargo.toml
+[workspace]
+memebers = ["bar"]
+
+[workspace.dependencies]
+dep = { version = "0.1", features = ["fancy"] }
+dep-build = "0.8"
+dep-dev = "0.5.2"
+```
+
+```toml
+# [PROGECT_DIR]/bar/Cargo.toml
+[project]
+name = "bar"
+version = "0.2.0"
+
+[dependencies]
+dep = { workspace = true, features = ["dancy"] }
+
+[build-dependencies]
+dep-build.workspace = true
+
+[dev-dependencies]
+dep-dev.workspace = true
+```
+
+[inheriting-a-dependency-from-a-workspace]: #inheriting-a-dependency-from-a-workspace
+[workspace-metadata-table]: workspaces.md#the-workspacemetadata-table
+[workspaces]: workspaces.md
+
+
+### Inheriting a dependency from a workspace
+
+*Stabilization*: This would be in [`specifying-dependencies.md`][specifying-dependencies],
+under [Renaming dependencies in Cargo.toml][renaming-dependencies-in-cargotoml]
+
+Dependencies can be inherited from a workspace by specifying the
+dependency in the workspace's [`[workspace.dependencies]`][workspace.dependencies] table.
+After that add it to the `[dependencies]` table with `dep.workspace = true`.
+
+The `workspace` key can be defined with:
+- [`optional`][optional]: Note that the`[workspace.dependencies]` table is not allowed to specify `optional`.
+- [`features`][features]: These are additive with the features declared in the `[workspace.dependencies]`
+
+The `workspace` key cannot be defined with:
+
+|                  |                    | 
+|------------------|--------------------|
+| `branch`         | `default-features` |
+| `git`            | `package`          |
+| `path`           | `registry`         |
+| `registry-index` | `rev`              |
+| `tag`            | `version`          |
+
+
+Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and
+`[target."...".dependencies]` sections support the ability to reference the
+`[workspace.dependencies]` definition of dependencies.
+
+Example:
+```toml
+[dependencies]
+dep.workspace = true
+dep2 = { workspace = true, features = ["fancy"] }
+dep3 = { workspace = true, optional = true }
+dep4 = { workspace = true, optional = true, features = ["fancy"] }
+
+[build-dependencies]
+dep-build.workspace = true
+
+[dev-dependencies]
+dep-dev.workspace = true
+```
+
+[features]: features.md
+[optional]: features.md#optional-dependencies
+[workspace.dependencies]: #the-workspacedependencies-table
+[specifying-dependencies]: specifying-dependencies.md
+[renaming-dependencies-in-cargotoml]: specifying-dependencies.md#renaming-dependencies-in-cargotoml
 
 ## Stabilized and removed features
 
