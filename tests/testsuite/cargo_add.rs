@@ -50,6 +50,16 @@ pub fn cargo_command() -> snapbox::cmd::Command {
     cmd
 }
 
+pub trait CommandExt {
+    fn masquerade_as_nightly_cargo(self) -> Self;
+}
+
+impl CommandExt for snapbox::cmd::Command {
+    fn masquerade_as_nightly_cargo(self) -> Self {
+        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
+    }
+}
+
 pub fn project_from_template(template_path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
     let root = cargo_test_support::paths::root();
     let project_root = root.join("case");
@@ -329,6 +339,74 @@ fn require_weak() {
         .stderr_matches_path("tests/snapshots/add/require_weak.stderr");
 
     assert().subset_matches("tests/snapshots/add/require_weak.out", &project_root);
+}
+
+#[cargo_test]
+fn detect_workspace_inherit() {
+    init_registry();
+    let project_root = project_from_template("tests/snapshots/add/detect_workspace_inherit.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit.stdout")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/detect_workspace_inherit.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn detect_workspace_inherit_features() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/detect_workspace_inherit_features.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar", "--features", "test"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_features.stdout")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_features.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/detect_workspace_inherit_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn detect_workspace_inherit_optional() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/detect_workspace_inherit_optional.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar", "--optional"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_optional.stdout")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_optional.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/detect_workspace_inherit_optional.out",
+        &project_root,
+    );
 }
 
 #[cargo_test]
@@ -1014,6 +1092,72 @@ fn invalid_git_external() {
 }
 
 #[cargo_test]
+fn invalid_key_inherit_dependency() {
+    let project_root =
+        project_from_template("tests/snapshots/add/invalid_key_inherit_dependency.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--default-features", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/invalid_key_inherit_dependency.stdout")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_inherit_dependency.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/invalid_key_inherit_dependency.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn invalid_key_rename_inherit_dependency() {
+    let project_root =
+        project_from_template("tests/snapshots/add/invalid_key_rename_inherit_dependency.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["--rename", "foo", "foo-alt", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency.stdout")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/invalid_key_rename_inherit_dependency.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn invalid_key_overwrite_inherit_dependency() {
+    let project_root =
+        project_from_template("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--default-features", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.stdout")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/invalid_key_overwrite_inherit_dependency.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn invalid_path() {
     init_registry();
     let project_root = project_from_template("tests/snapshots/add/invalid_path.in");
@@ -1217,6 +1361,27 @@ fn manifest_path_package() {
 
     assert().subset_matches(
         "tests/snapshots/add/manifest_path_package.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn merge_activated_features() {
+    let project_root = project_from_template("tests/snapshots/add/merge_activated_features.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/merge_activated_features.stdout")
+        .stderr_matches_path("tests/snapshots/add/merge_activated_features.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/merge_activated_features.out",
         &project_root,
     );
 }
@@ -1500,6 +1665,73 @@ fn overwrite_inline_features() {
 
     assert().subset_matches(
         "tests/snapshots/add/overwrite_inline_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_features_noop() {
+    let project_root =
+        project_from_template("tests/snapshots/add/overwrite_inherit_features_noop.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_features_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_noop() {
+    init_registry();
+    let project_root = project_from_template("tests/snapshots/add/overwrite_inherit_noop.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_optional_noop() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/overwrite_inherit_optional_noop.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_optional_noop.out",
         &project_root,
     );
 }
@@ -1877,6 +2109,51 @@ fn overwrite_with_rename() {
 }
 
 #[cargo_test]
+fn overwrite_workspace_dep() {
+    init_registry();
+    let project_root = project_from_template("tests/snapshots/add/overwrite_workspace_dep.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--path", "./dependency", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_workspace_dep.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_workspace_dep_features() {
+    init_registry();
+    let project_root =
+        project_from_template("tests/snapshots/add/overwrite_workspace_dep_features.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "--path", "./dependency", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep_features.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep_features.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_workspace_dep_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn preserve_sorted() {
     init_registry();
     let project_root = project_from_template("tests/snapshots/add/preserve_sorted.in");
@@ -1987,6 +2264,27 @@ fn target_cfg() {
         .stderr_matches_path("tests/snapshots/add/target_cfg.stderr");
 
     assert().subset_matches("tests/snapshots/add/target_cfg.out", &project_root);
+}
+
+#[cargo_test]
+fn unknown_inherited_feature() {
+    let project_root = project_from_template("tests/snapshots/add/unknown_inherited_feature.in");
+    let cwd = &project_root;
+
+    cargo_command()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/unknown_inherited_feature.stdout")
+        .stderr_matches_path("tests/snapshots/add/unknown_inherited_feature.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/unknown_inherited_feature.out",
+        &project_root,
+    );
 }
 
 #[cargo_test]
