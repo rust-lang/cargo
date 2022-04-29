@@ -41,6 +41,57 @@ use std::path::Path;
 use std::str;
 use url::Url;
 
+/// Default `snapbox` Assertions
+///
+/// # Snapshots
+///
+/// Updating of snapshots is controlled with the `SNAPSHOTS` environment variable:
+///
+/// - `skip`: do not run the tests
+/// - `ignore`: run the tests but ignore their failure
+/// - `verify`: run the tests
+/// - `overwrite`: update the snapshots based on the output of the tests
+///
+/// # Patterns
+///
+/// - `[..]` is a character wildcard, stopping at line breaks
+/// - `\n...\n` is a multi-line wildcard
+/// - `[EXE]` matches the exe suffix for the current platform
+/// - `[ROOT]` matches [`paths::root()`][crate::paths::root]
+/// - `[ROOTURL]` matches [`paths::root()`][crate::paths::root] as a URL
+///
+/// # Normalization
+///
+/// In addition to the patterns described above, text is normalized
+/// in such a way to avoid unwanted differences. The normalizations are:
+///
+/// - Backslashes are converted to forward slashes to deal with Windows paths.
+///   This helps so that all tests can be written assuming forward slashes.
+///   Other heuristics are applied to try to ensure Windows-style paths aren't
+///   a problem.
+/// - Carriage returns are removed, which can help when running on Windows.
+pub fn assert() -> snapbox::Assert {
+    let root = paths::root();
+    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
+    // put in the users output, rather than hidden in the variable
+    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
+    let root = root.display().to_string();
+
+    let mut subs = snapbox::Substitutions::new();
+    subs.extend([
+        (
+            "[EXE]",
+            std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
+        ),
+        ("[ROOT]", std::borrow::Cow::Owned(root)),
+        ("[ROOTURL]", std::borrow::Cow::Owned(root_url)),
+    ])
+    .unwrap();
+    snapbox::Assert::new()
+        .action_env(snapbox::DEFAULT_ACTION_ENV)
+        .substitutions(subs)
+}
+
 /// Normalizes the output so that it can be compared against the expected value.
 fn normalize_actual(actual: &str, cwd: Option<&Path>) -> String {
     // It's easier to read tabs in outputs if they don't show up as literal

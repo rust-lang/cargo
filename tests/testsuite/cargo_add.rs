@@ -1,93 +1,6 @@
-pub fn cargo_exe() -> &'static std::path::Path {
-    snapbox::cmd::cargo_bin!("cargo")
-}
-
-pub fn cargo_command() -> snapbox::cmd::Command {
-    let mut cmd = snapbox::cmd::Command::new(cargo_exe()).with_assert(assert());
-
-    // In general just clear out all cargo-specific configuration already in the
-    // environment. Our tests all assume a "default configuration" unless
-    // specified otherwise.
-    for (k, _v) in std::env::vars() {
-        if k.starts_with("CARGO_") {
-            cmd = cmd.env_remove(&k);
-        }
-    }
-
-    cmd = cmd
-        .env("HOME", cargo_test_support::paths::home())
-        .env(
-            "CARGO_HOME",
-            cargo_test_support::paths::home().join(".cargo"),
-        )
-        .env("__CARGO_TEST_ROOT", cargo_test_support::paths::root())
-        // Force Cargo to think it's on the stable channel for all tests, this
-        // should hopefully not surprise us as we add cargo features over time and
-        // cargo rides the trains.
-        .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
-        // For now disable incremental by default as support hasn't ridden to the
-        // stable channel yet. Once incremental support hits the stable compiler we
-        // can switch this to one and then fix the tests.
-        .env("CARGO_INCREMENTAL", "0")
-        .env_remove("__CARGO_DEFAULT_LIB_METADATA")
-        .env_remove("RUSTC")
-        .env_remove("RUSTDOC")
-        .env_remove("RUSTC_WRAPPER")
-        .env_remove("RUSTFLAGS")
-        .env_remove("RUSTDOCFLAGS")
-        .env_remove("XDG_CONFIG_HOME") // see #2345
-        .env("GIT_CONFIG_NOSYSTEM", "1") // keep trying to sandbox ourselves
-        .env_remove("EMAIL")
-        .env_remove("USER") // not set on some rust-lang docker images
-        .env_remove("MFLAGS")
-        .env_remove("MAKEFLAGS")
-        .env_remove("GIT_AUTHOR_NAME")
-        .env_remove("GIT_AUTHOR_EMAIL")
-        .env_remove("GIT_COMMITTER_NAME")
-        .env_remove("GIT_COMMITTER_EMAIL")
-        .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
-
-    cmd
-}
-
-pub trait CommandExt {
-    fn masquerade_as_nightly_cargo(self) -> Self;
-}
-
-impl CommandExt for snapbox::cmd::Command {
-    fn masquerade_as_nightly_cargo(self) -> Self {
-        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
-    }
-}
-
-pub fn project_from_template(template_path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
-    let root = cargo_test_support::paths::root();
-    let project_root = root.join("case");
-    snapbox::path::copy_template(template_path.as_ref(), &project_root).unwrap();
-    project_root
-}
-
-pub fn assert() -> snapbox::Assert {
-    let root = cargo_test_support::paths::root();
-    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
-    // put in the users output, rather than hidden in the variable
-    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
-    let root = root.display().to_string();
-
-    let mut subs = snapbox::Substitutions::new();
-    subs.extend([
-        (
-            "[EXE]",
-            std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
-        ),
-        ("[ROOT]", std::borrow::Cow::Owned(root)),
-        ("[ROOTURL]", std::borrow::Cow::Owned(root_url)),
-    ])
-    .unwrap();
-    snapbox::Assert::new()
-        .action_env(snapbox::DEFAULT_ACTION_ENV)
-        .substitutions(subs)
-}
+use cargo_test_support::compare::assert;
+use cargo_test_support::prelude::*;
+use cargo_test_support::Project;
 
 fn init_registry() {
     cargo_test_support::registry::init();
@@ -175,12 +88,13 @@ fn add_registry_packages(alt: bool) {
 #[cargo_test]
 fn add_basic() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/add_basic.in");
+    let project = Project::from_template("tests/snapshots/add/add_basic.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -193,12 +107,13 @@ fn add_basic() {
 #[cargo_test]
 fn add_multiple() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/add_multiple.in");
+    let project = Project::from_template("tests/snapshots/add/add_multiple.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2"])
+        .arg_line("my-package1 my-package2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -211,12 +126,13 @@ fn add_multiple() {
 #[cargo_test]
 fn quiet() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/quiet.in");
+    let project = Project::from_template("tests/snapshots/add/quiet.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--quiet", "your-face"])
+        .arg_line("--quiet your-face")
         .current_dir(cwd)
         .assert()
         .success()
@@ -229,12 +145,13 @@ fn quiet() {
 #[cargo_test]
 fn add_normalized_name_external() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/add_normalized_name_external.in");
+    let project = Project::from_template("tests/snapshots/add/add_normalized_name_external.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["linked_hash_map", "Inflector"])
+        .arg_line("linked_hash_map Inflector")
         .current_dir(cwd)
         .assert()
         .success()
@@ -250,12 +167,13 @@ fn add_normalized_name_external() {
 #[cargo_test]
 fn infer_prerelease() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/infer_prerelease.in");
+    let project = Project::from_template("tests/snapshots/add/infer_prerelease.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["prerelease_only"])
+        .arg_line("prerelease_only")
         .current_dir(cwd)
         .assert()
         .success()
@@ -268,12 +186,13 @@ fn infer_prerelease() {
 #[cargo_test]
 fn build() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/build.in");
+    let project = Project::from_template("tests/snapshots/add/build.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--build", "my-build-package1", "my-build-package2"])
+        .arg_line("--build my-build-package1 my-build-package2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -286,13 +205,13 @@ fn build() {
 #[cargo_test]
 fn build_prefer_existing_version() {
     init_alt_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/build_prefer_existing_version.in");
+    let project = Project::from_template("tests/snapshots/add/build_prefer_existing_version.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency", "--build"])
+        .arg_line("cargo-list-test-fixture-dependency --build")
         .current_dir(cwd)
         .assert()
         .success()
@@ -308,12 +227,13 @@ fn build_prefer_existing_version() {
 #[cargo_test]
 fn default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/default_features.in");
+    let project = Project::from_template("tests/snapshots/add/default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -326,12 +246,13 @@ fn default_features() {
 #[cargo_test]
 fn require_weak() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/require_weak.in");
+    let project = Project::from_template("tests/snapshots/add/require_weak.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--no-optional"])
+        .arg_line("your-face --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -344,10 +265,11 @@ fn require_weak() {
 #[cargo_test]
 fn detect_workspace_inherit() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/detect_workspace_inherit.in");
+    let project = Project::from_template("tests/snapshots/add/detect_workspace_inherit.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar"])
@@ -366,11 +288,12 @@ fn detect_workspace_inherit() {
 #[cargo_test]
 fn detect_workspace_inherit_features() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/detect_workspace_inherit_features.in");
+    let project =
+        Project::from_template("tests/snapshots/add/detect_workspace_inherit_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar", "--features", "test"])
@@ -389,11 +312,12 @@ fn detect_workspace_inherit_features() {
 #[cargo_test]
 fn detect_workspace_inherit_optional() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/detect_workspace_inherit_optional.in");
+    let project =
+        Project::from_template("tests/snapshots/add/detect_workspace_inherit_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar", "--optional"])
@@ -412,12 +336,13 @@ fn detect_workspace_inherit_optional() {
 #[cargo_test]
 fn dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/dev.in");
+    let project = Project::from_template("tests/snapshots/add/dev.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--dev", "my-dev-package1", "my-dev-package2"])
+        .arg_line("--dev my-dev-package1 my-dev-package2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -430,12 +355,13 @@ fn dev() {
 #[cargo_test]
 fn dev_build_conflict() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/dev_build_conflict.in");
+    let project = Project::from_template("tests/snapshots/add/dev_build_conflict.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--dev", "--build"])
+        .arg_line("my-package --dev --build")
         .current_dir(cwd)
         .assert()
         .code(1)
@@ -448,12 +374,13 @@ fn dev_build_conflict() {
 #[cargo_test]
 fn dev_prefer_existing_version() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/dev_prefer_existing_version.in");
+    let project = Project::from_template("tests/snapshots/add/dev_prefer_existing_version.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency", "--dev"])
+        .arg_line("cargo-list-test-fixture-dependency --dev")
         .current_dir(cwd)
         .assert()
         .success()
@@ -469,12 +396,13 @@ fn dev_prefer_existing_version() {
 #[cargo_test]
 fn dry_run() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/dry_run.in");
+    let project = Project::from_template("tests/snapshots/add/dry_run.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--dry-run"])
+        .arg_line("my-package --dry-run")
         .current_dir(cwd)
         .assert()
         .success()
@@ -487,12 +415,13 @@ fn dry_run() {
 #[cargo_test]
 fn features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features.in");
+    let project = Project::from_template("tests/snapshots/add/features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "eyes"])
+        .arg_line("your-face --features eyes")
         .current_dir(cwd)
         .assert()
         .success()
@@ -505,12 +434,13 @@ fn features() {
 #[cargo_test]
 fn features_empty() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_empty.in");
+    let project = Project::from_template("tests/snapshots/add/features_empty.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", ""])
+        .arg_line("your-face --features ''")
         .current_dir(cwd)
         .assert()
         .success()
@@ -523,13 +453,13 @@ fn features_empty() {
 #[cargo_test]
 fn features_multiple_occurrences() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/features_multiple_occurrences.in");
+    let project = Project::from_template("tests/snapshots/add/features_multiple_occurrences.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "eyes", "--features", "nose"])
+        .arg_line("your-face --features eyes --features nose")
         .current_dir(cwd)
         .assert()
         .success()
@@ -545,12 +475,13 @@ fn features_multiple_occurrences() {
 #[cargo_test]
 fn features_preserve() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_preserve.in");
+    let project = Project::from_template("tests/snapshots/add/features_preserve.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face"])
+        .arg_line("your-face")
         .current_dir(cwd)
         .assert()
         .success()
@@ -563,12 +494,13 @@ fn features_preserve() {
 #[cargo_test]
 fn features_spaced_values() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_spaced_values.in");
+    let project = Project::from_template("tests/snapshots/add/features_spaced_values.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "eyes nose"])
+        .arg_line("your-face --features eyes,nose")
         .current_dir(cwd)
         .assert()
         .success()
@@ -584,12 +516,13 @@ fn features_spaced_values() {
 #[cargo_test]
 fn features_unknown() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_unknown.in");
+    let project = Project::from_template("tests/snapshots/add/features_unknown.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "noze"])
+        .arg_line("your-face --features noze")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -602,7 +535,8 @@ fn features_unknown() {
 #[cargo_test]
 fn git() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git.in");
+    let project = Project::from_template("tests/snapshots/add/git.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -614,7 +548,7 @@ fn git() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url])
         .current_dir(cwd)
@@ -629,7 +563,8 @@ fn git() {
 #[cargo_test]
 fn git_inferred_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_inferred_name.in");
+    let project = Project::from_template("tests/snapshots/add/git_inferred_name.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -641,7 +576,7 @@ fn git_inferred_name() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--git", &git_url])
         .current_dir(cwd)
@@ -656,7 +591,8 @@ fn git_inferred_name() {
 #[cargo_test]
 fn git_inferred_name_multiple() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_inferred_name_multiple.in");
+    let project = Project::from_template("tests/snapshots/add/git_inferred_name_multiple.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -673,7 +609,7 @@ fn git_inferred_name_multiple() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--git", &git_url])
         .current_dir(cwd)
@@ -691,7 +627,8 @@ fn git_inferred_name_multiple() {
 #[cargo_test]
 fn git_normalized_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_normalized_name.in");
+    let project = Project::from_template("tests/snapshots/add/git_normalized_name.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -703,7 +640,7 @@ fn git_normalized_name() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git_package", "--git", &git_url])
         .current_dir(cwd)
@@ -718,7 +655,8 @@ fn git_normalized_name() {
 #[cargo_test]
 fn invalid_git_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_git_name.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_git_name.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -730,7 +668,7 @@ fn invalid_git_name() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["not-in-git", "--git", &git_url])
         .current_dir(cwd)
@@ -745,7 +683,8 @@ fn invalid_git_name() {
 #[cargo_test]
 fn git_branch() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_branch.in");
+    let project = Project::from_template("tests/snapshots/add/git_branch.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
         project
@@ -760,7 +699,7 @@ fn git_branch() {
     git_repo.branch(branch, &find_head(), false).unwrap();
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--branch", branch])
         .current_dir(cwd)
@@ -775,10 +714,11 @@ fn git_branch() {
 #[cargo_test]
 fn git_conflicts_namever() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_conflicts_namever.in");
+    let project = Project::from_template("tests/snapshots/add/git_conflicts_namever.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "my-package@0.4.3",
@@ -800,7 +740,8 @@ fn git_conflicts_namever() {
 #[cargo_test]
 fn git_registry() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_registry.in");
+    let project = Project::from_template("tests/snapshots/add/git_registry.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("versioned-package", |project| {
         project
@@ -812,7 +753,7 @@ fn git_registry() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "versioned-package",
@@ -833,7 +774,8 @@ fn git_registry() {
 #[cargo_test]
 fn git_dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_dev.in");
+    let project = Project::from_template("tests/snapshots/add/git_dev.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -845,7 +787,7 @@ fn git_dev() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--dev"])
         .current_dir(cwd)
@@ -860,7 +802,8 @@ fn git_dev() {
 #[cargo_test]
 fn git_rev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_rev.in");
+    let project = Project::from_template("tests/snapshots/add/git_rev.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
         project
@@ -874,7 +817,7 @@ fn git_rev() {
     let head = find_head().id().to_string();
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--rev", &head])
         .current_dir(cwd)
@@ -889,7 +832,8 @@ fn git_rev() {
 #[cargo_test]
 fn git_tag() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_tag.in");
+    let project = Project::from_template("tests/snapshots/add/git_tag.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
         project
@@ -903,7 +847,7 @@ fn git_tag() {
     cargo_test_support::git::tag(&git_repo, tag);
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--tag", tag])
         .current_dir(cwd)
@@ -918,16 +862,13 @@ fn git_tag() {
 #[cargo_test]
 fn path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path.in");
+    let project = Project::from_template("tests/snapshots/add/path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -940,16 +881,13 @@ fn path() {
 #[cargo_test]
 fn path_inferred_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path_inferred_name.in");
+    let project = Project::from_template("tests/snapshots/add/path_inferred_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -962,13 +900,14 @@ fn path_inferred_name() {
 #[cargo_test]
 fn path_inferred_name_conflicts_full_feature() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/path_inferred_name_conflicts_full_feature.in");
+    let project =
+        Project::from_template("tests/snapshots/add/path_inferred_name_conflicts_full_feature.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["--path", "../dependency", "--features", "your-face/nose"])
+        .arg_line("--path ../dependency --features your-face/nose")
         .current_dir(&cwd)
         .assert()
         .code(101)
@@ -986,16 +925,13 @@ fn path_inferred_name_conflicts_full_feature() {
 #[cargo_test]
 fn path_normalized_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path_normalized_name.in");
+    let project = Project::from_template("tests/snapshots/add/path_normalized_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo_list_test_fixture_dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo_list_test_fixture_dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .failure() // Fuzzy searching for paths isn't supported at this time
@@ -1011,12 +947,13 @@ fn path_normalized_name() {
 #[cargo_test]
 fn invalid_path_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_path_name.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["not-at-path", "--path", "../dependency"])
+        .arg_line("not-at-path --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .code(101)
@@ -1029,17 +966,13 @@ fn invalid_path_name() {
 #[cargo_test]
 fn path_dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path_dev.in");
+    let project = Project::from_template("tests/snapshots/add/path_dev.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-            "--dev",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency --dev")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1052,12 +985,13 @@ fn path_dev() {
 #[cargo_test]
 fn invalid_arg() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_arg.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_arg.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--flag"])
+        .arg_line("my-package --flag")
         .current_dir(cwd)
         .assert()
         .code(1)
@@ -1070,13 +1004,14 @@ fn invalid_arg() {
 #[cargo_test]
 fn invalid_git_external() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_git_external.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_git_external.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_url = url::Url::from_directory_path(cwd.join("does-not-exist"))
         .unwrap()
         .to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["fake-git", "--git", &git_url])
         .current_dir(cwd)
@@ -1093,11 +1028,11 @@ fn invalid_git_external() {
 
 #[cargo_test]
 fn invalid_key_inherit_dependency() {
-    let project_root =
-        project_from_template("tests/snapshots/add/invalid_key_inherit_dependency.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_key_inherit_dependency.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "--default-features", "-p", "bar"])
@@ -1115,11 +1050,12 @@ fn invalid_key_inherit_dependency() {
 
 #[cargo_test]
 fn invalid_key_rename_inherit_dependency() {
-    let project_root =
-        project_from_template("tests/snapshots/add/invalid_key_rename_inherit_dependency.in");
+    let project =
+        Project::from_template("tests/snapshots/add/invalid_key_rename_inherit_dependency.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["--rename", "foo", "foo-alt", "-p", "bar"])
@@ -1137,11 +1073,12 @@ fn invalid_key_rename_inherit_dependency() {
 
 #[cargo_test]
 fn invalid_key_overwrite_inherit_dependency() {
-    let project_root =
-        project_from_template("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.in");
+    let project =
+        Project::from_template("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "--default-features", "-p", "bar"])
@@ -1160,16 +1097,13 @@ fn invalid_key_overwrite_inherit_dependency() {
 #[cargo_test]
 fn invalid_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_path.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture",
-            "--path",
-            "./tests/fixtures/local",
-        ])
+        .arg_line("cargo-list-test-fixture --path ./tests/fixtures/local")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1182,12 +1116,13 @@ fn invalid_path() {
 #[cargo_test]
 fn invalid_path_self() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_path_self.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path_self.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture", "--path", "."])
+        .arg_line("cargo-list-test-fixture --path .")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1200,12 +1135,13 @@ fn invalid_path_self() {
 #[cargo_test]
 fn invalid_manifest() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_manifest.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_manifest.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1218,12 +1154,13 @@ fn invalid_manifest() {
 #[cargo_test]
 fn invalid_name_external() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_name_external.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_name_external.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["lets_hope_nobody_ever_publishes_this_crate"])
+        .arg_line("lets_hope_nobody_ever_publishes_this_crate")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1239,12 +1176,13 @@ fn invalid_name_external() {
 #[cargo_test]
 fn invalid_target_empty() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_target_empty.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_target_empty.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--target", ""])
+        .arg_line("my-package --target ''")
         .current_dir(cwd)
         .assert()
         .code(1)
@@ -1260,12 +1198,13 @@ fn invalid_target_empty() {
 #[cargo_test]
 fn invalid_vers() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_vers.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_vers.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package@invalid version string"])
+        .arg_line("my-package@invalid-version-string")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1278,10 +1217,11 @@ fn invalid_vers() {
 #[cargo_test]
 fn list_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/list_features.in");
+    let project = Project::from_template("tests/snapshots/add/list_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face"])
         .current_dir(cwd)
@@ -1296,12 +1236,13 @@ fn list_features() {
 #[cargo_test]
 fn list_features_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/list_features_path.in");
+    let project = Project::from_template("tests/snapshots/add/list_features_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--path", "../dependency"])
+        .arg_line("your-face --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1314,11 +1255,11 @@ fn list_features_path() {
 #[cargo_test]
 fn list_features_path_no_default() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/list_features_path_no_default.in");
+    let project = Project::from_template("tests/snapshots/add/list_features_path_no_default.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "your-face",
@@ -1341,10 +1282,11 @@ fn list_features_path_no_default() {
 #[cargo_test]
 fn manifest_path_package() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/manifest_path_package.in");
+    let project = Project::from_template("tests/snapshots/add/manifest_path_package.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "--manifest-path",
@@ -1367,10 +1309,11 @@ fn manifest_path_package() {
 
 #[cargo_test]
 fn merge_activated_features() {
-    let project_root = project_from_template("tests/snapshots/add/merge_activated_features.in");
+    let project = Project::from_template("tests/snapshots/add/merge_activated_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar"])
@@ -1389,13 +1332,13 @@ fn merge_activated_features() {
 #[cargo_test]
 fn multiple_conflicts_with_features() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/multiple_conflicts_with_features.in");
+    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "your-face", "--features", "nose"])
+        .arg_line("my-package1 your-face --features nose")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1411,7 +1354,8 @@ fn multiple_conflicts_with_features() {
 #[cargo_test]
 fn git_multiple_names() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_multiple_names.in");
+    let project = Project::from_template("tests/snapshots/add/git_multiple_names.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -1428,7 +1372,7 @@ fn git_multiple_names() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2", "--git", &git_url])
         .current_dir(cwd)
@@ -1443,13 +1387,13 @@ fn git_multiple_names() {
 #[cargo_test]
 fn multiple_conflicts_with_rename() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/multiple_conflicts_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2", "--rename", "renamed"])
+        .arg_line("my-package1 my-package2 --rename renamed")
         .current_dir(cwd)
         .assert()
         .code(101)
@@ -1465,12 +1409,13 @@ fn multiple_conflicts_with_rename() {
 #[cargo_test]
 fn namever() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/namever.in");
+    let project = Project::from_template("tests/snapshots/add/namever.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1@>=0.1.1", "my-package2@0.2.3", "my-package"])
+        .arg_line("my-package1@>=0.1.1 my-package2@0.2.3 my-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1483,10 +1428,11 @@ fn namever() {
 #[cargo_test]
 fn no_args() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/no_args.in");
+    let project = Project::from_template("tests/snapshots/add/no_args.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .current_dir(cwd)
         .assert()
@@ -1500,12 +1446,13 @@ fn no_args() {
 #[cargo_test]
 fn no_default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/no_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/no_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1518,12 +1465,13 @@ fn no_default_features() {
 #[cargo_test]
 fn no_optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/no_optional.in");
+    let project = Project::from_template("tests/snapshots/add/no_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1536,12 +1484,13 @@ fn no_optional() {
 #[cargo_test]
 fn optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/optional.in");
+    let project = Project::from_template("tests/snapshots/add/optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1554,12 +1503,13 @@ fn optional() {
 #[cargo_test]
 fn overwrite_default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1575,14 +1525,15 @@ fn overwrite_default_features() {
 #[cargo_test]
 fn overwrite_default_features_with_no_default_features() {
     init_registry();
-    let project_root = project_from_template(
+    let project = Project::from_template(
         "tests/snapshots/add/overwrite_default_features_with_no_default_features.in",
     );
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1602,12 +1553,13 @@ fn overwrite_default_features_with_no_default_features() {
 #[cargo_test]
 fn overwrite_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--features", "nose"])
+        .arg_line("your-face --features nose")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1620,16 +1572,13 @@ fn overwrite_features() {
 #[cargo_test]
 fn overwrite_git_with_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_git_with_path.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_git_with_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1645,18 +1594,15 @@ fn overwrite_git_with_path() {
 #[cargo_test]
 fn overwrite_inline_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_inline_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inline_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "unrelateed-crate",
-            "your-face",
-            "--features",
-            "your-face/nose,your-face/mouth",
-            "-Fyour-face/ears",
-        ])
+        .arg_line(
+            "unrelateed-crate your-face --features your-face/nose,your-face/mouth -Fyour-face/ears",
+        )
         .current_dir(cwd)
         .assert()
         .success()
@@ -1671,11 +1617,11 @@ fn overwrite_inline_features() {
 
 #[cargo_test]
 fn overwrite_inherit_features_noop() {
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_inherit_features_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_features_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar"])
@@ -1694,10 +1640,11 @@ fn overwrite_inherit_features_noop() {
 #[cargo_test]
 fn overwrite_inherit_noop() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_inherit_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar"])
@@ -1716,11 +1663,11 @@ fn overwrite_inherit_noop() {
 #[cargo_test]
 fn overwrite_inherit_optional_noop() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_inherit_optional_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_optional_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar"])
@@ -1739,12 +1686,13 @@ fn overwrite_inherit_optional_noop() {
 #[cargo_test]
 fn overwrite_name_dev_noop() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_name_dev_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_name_dev_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--dev"])
+        .arg_line("your-face --dev")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1760,12 +1708,13 @@ fn overwrite_name_dev_noop() {
 #[cargo_test]
 fn overwrite_name_noop() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_name_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_name_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face"])
+        .arg_line("your-face")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1778,13 +1727,13 @@ fn overwrite_name_noop() {
 #[cargo_test]
 fn overwrite_no_default_features() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_no_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_no_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1800,14 +1749,15 @@ fn overwrite_no_default_features() {
 #[cargo_test]
 fn overwrite_no_default_features_with_default_features() {
     init_registry();
-    let project_root = project_from_template(
+    let project = Project::from_template(
         "tests/snapshots/add/overwrite_no_default_features_with_default_features.in",
     );
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--default-features"])
+        .arg_line("my-package1 my-package2@0.4.1 --default-features")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1827,12 +1777,13 @@ fn overwrite_no_default_features_with_default_features() {
 #[cargo_test]
 fn overwrite_no_optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_no_optional.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_no_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1848,13 +1799,14 @@ fn overwrite_no_optional() {
 #[cargo_test]
 fn overwrite_no_optional_with_optional() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_no_optional_with_optional.in");
+    let project =
+        Project::from_template("tests/snapshots/add/overwrite_no_optional_with_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1870,12 +1822,13 @@ fn overwrite_no_optional_with_optional() {
 #[cargo_test]
 fn overwrite_optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_optional.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1888,13 +1841,14 @@ fn overwrite_optional() {
 #[cargo_test]
 fn overwrite_optional_with_no_optional() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_optional_with_no_optional.in");
+    let project =
+        Project::from_template("tests/snapshots/add/overwrite_optional_with_no_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
+        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1910,12 +1864,13 @@ fn overwrite_optional_with_no_optional() {
 #[cargo_test]
 fn overwrite_path_noop() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_path_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_path_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["your-face", "--path", "./dependency"])
+        .arg_line("your-face --path ./dependency")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1928,12 +1883,13 @@ fn overwrite_path_noop() {
 #[cargo_test]
 fn overwrite_path_with_version() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_path_with_version.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_path_with_version.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency@20.0"])
+        .arg_line("cargo-list-test-fixture-dependency@20.0")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -1949,13 +1905,13 @@ fn overwrite_path_with_version() {
 #[cargo_test]
 fn overwrite_rename_with_no_rename() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_rename_with_no_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_no_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package"])
+        .arg_line("versioned-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1971,12 +1927,13 @@ fn overwrite_rename_with_no_rename() {
 #[cargo_test]
 fn overwrite_rename_with_rename() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_rename_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package", "--rename", "a2"])
+        .arg_line("versioned-package --rename a2")
         .current_dir(cwd)
         .assert()
         .success()
@@ -1992,12 +1949,13 @@ fn overwrite_rename_with_rename() {
 #[cargo_test]
 fn change_rename_target() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/change_rename_target.in");
+    let project = Project::from_template("tests/snapshots/add/change_rename_target.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package2", "--rename", "some-package"])
+        .arg_line("my-package2 --rename some-package")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2013,13 +1971,14 @@ fn change_rename_target() {
 #[cargo_test]
 fn overwrite_rename_with_rename_noop() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_rename_with_rename_noop.in");
+    let project =
+        Project::from_template("tests/snapshots/add/overwrite_rename_with_rename_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package", "--rename", "a1"])
+        .arg_line("versioned-package --rename a1")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2035,7 +1994,8 @@ fn overwrite_rename_with_rename_noop() {
 #[cargo_test]
 fn overwrite_version_with_git() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_version_with_git.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_git.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("versioned-package", |project| {
         project
@@ -2047,7 +2007,7 @@ fn overwrite_version_with_git() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["versioned-package", "--git", &git_url])
         .current_dir(cwd)
@@ -2065,16 +2025,13 @@ fn overwrite_version_with_git() {
 #[cargo_test]
 fn overwrite_version_with_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_version_with_path.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2090,12 +2047,13 @@ fn overwrite_version_with_path() {
 #[cargo_test]
 fn overwrite_with_rename() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_with_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["versioned-package", "--rename", "renamed"])
+        .arg_line("versioned-package --rename renamed")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2111,10 +2069,11 @@ fn overwrite_with_rename() {
 #[cargo_test]
 fn overwrite_workspace_dep() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_workspace_dep.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_workspace_dep.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "--path", "./dependency", "-p", "bar"])
@@ -2133,11 +2092,11 @@ fn overwrite_workspace_dep() {
 #[cargo_test]
 fn overwrite_workspace_dep_features() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_workspace_dep_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_workspace_dep_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "--path", "./dependency", "-p", "bar"])
@@ -2156,12 +2115,13 @@ fn overwrite_workspace_dep_features() {
 #[cargo_test]
 fn preserve_sorted() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/preserve_sorted.in");
+    let project = Project::from_template("tests/snapshots/add/preserve_sorted.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["toml"])
+        .arg_line("toml")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2174,12 +2134,13 @@ fn preserve_sorted() {
 #[cargo_test]
 fn preserve_unsorted() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/preserve_unsorted.in");
+    let project = Project::from_template("tests/snapshots/add/preserve_unsorted.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["toml"])
+        .arg_line("toml")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2192,12 +2153,13 @@ fn preserve_unsorted() {
 #[cargo_test]
 fn registry() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/registry.in");
+    let project = Project::from_template("tests/snapshots/add/registry.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2", "--registry", "alternative"])
+        .arg_line("my-package1 my-package2 --registry alternative")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2210,12 +2172,13 @@ fn registry() {
 #[cargo_test]
 fn rename() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/rename.in");
+    let project = Project::from_template("tests/snapshots/add/rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package", "--rename", "renamed"])
+        .arg_line("my-package --rename renamed")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2228,17 +2191,13 @@ fn rename() {
 #[cargo_test]
 fn target() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/target.in");
+    let project = Project::from_template("tests/snapshots/add/target.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "my-package1",
-            "my-package2",
-            "--target",
-            "i686-unknown-linux-gnu",
-        ])
+        .arg_line("my-package1 my-package2 --target i686-unknown-linux-gnu")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2251,12 +2210,13 @@ fn target() {
 #[cargo_test]
 fn target_cfg() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/target_cfg.in");
+    let project = Project::from_template("tests/snapshots/add/target_cfg.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package1", "my-package2", "--target", "cfg(unix)"])
+        .arg_line("my-package1 my-package2 --target cfg(unix)")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2268,10 +2228,11 @@ fn target_cfg() {
 
 #[cargo_test]
 fn unknown_inherited_feature() {
-    let project_root = project_from_template("tests/snapshots/add/unknown_inherited_feature.in");
+    let project = Project::from_template("tests/snapshots/add/unknown_inherited_feature.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .masquerade_as_nightly_cargo()
         .arg("add")
         .args(["foo", "-p", "bar"])
@@ -2290,12 +2251,13 @@ fn unknown_inherited_feature() {
 #[cargo_test]
 fn vers() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/vers.in");
+    let project = Project::from_template("tests/snapshots/add/vers.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package@>=0.1.1"])
+        .arg_line("my-package@>=0.1.1")
         .current_dir(cwd)
         .assert()
         .success()
@@ -2308,16 +2270,13 @@ fn vers() {
 #[cargo_test]
 fn workspace_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/workspace_path.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2330,17 +2289,13 @@ fn workspace_path() {
 #[cargo_test]
 fn workspace_path_dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/workspace_path_dev.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_path_dev.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args([
-            "cargo-list-test-fixture-dependency",
-            "--path",
-            "../dependency",
-            "--dev",
-        ])
+        .arg_line("cargo-list-test-fixture-dependency --path ../dependency --dev")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2353,12 +2308,13 @@ fn workspace_path_dev() {
 #[cargo_test]
 fn workspace_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/workspace_name.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["cargo-list-test-fixture-dependency"])
+        .arg_line("cargo-list-test-fixture-dependency")
         .current_dir(&cwd)
         .assert()
         .success()
@@ -2371,12 +2327,13 @@ fn workspace_name() {
 #[cargo_test]
 fn deprecated_default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/deprecated_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/deprecated_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(&cwd)
         .assert()
         .failure()
@@ -2392,12 +2349,13 @@ fn deprecated_default_features() {
 #[cargo_test]
 fn deprecated_section() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/deprecated_section.in");
+    let project = Project::from_template("tests/snapshots/add/deprecated_section.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
-        .args(["my-package"])
+        .arg_line("my-package")
         .current_dir(&cwd)
         .assert()
         .failure()
