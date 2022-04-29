@@ -175,7 +175,7 @@ _cargo() {
                         '--rev=[specific commit to use when installing from git]:commit' \
                         '--root=[directory to install packages into]: :_directories' \
                         '--tag=[tag to use when installing from git]:tag' \
-                        '--version='[version to install from crates.io]:version' \
+                        '--version=[version to install from crates.io]:version' \
                         '--list[list all installed packages and their versions]' \
                         '*: :_guard "^-*" "crate"'
                         ;;
