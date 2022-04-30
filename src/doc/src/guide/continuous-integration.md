@@ -46,7 +46,7 @@ jobs:
           - beta
           - nightly
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
