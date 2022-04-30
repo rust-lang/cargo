@@ -53,7 +53,7 @@ jobs:
           rust: nightly-gnu
           other: i686-pc-windows-gnu
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Update Rustup (temporary workaround)
       run: rustup self update
       shell: bash
@@ -103,14 +103,14 @@ jobs:
   resolver:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: rustup update stable && rustup default stable
     - run: cargo test --manifest-path crates/resolver-tests/Cargo.toml
 
   build_std:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: rustup update nightly && rustup default nightly
     - run: rustup component add rust-src
     - run: cargo build
@@ -120,7 +120,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: rustup update nightly && rustup default nightly
     - run: rustup update stable
     - run: rustup component add rust-docs
