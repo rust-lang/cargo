@@ -1,15 +1,10 @@
 //! Tests for the `cargo init` command.
 
-use cargo_test_support::{command_is_available, paths, Execs};
-use std::env;
+use cargo_test_support::compare::assert;
+use cargo_test_support::prelude::*;
+use cargo_test_support::{command_is_available, paths, Project};
 use std::fs;
 use std::process::Command;
-
-fn cargo_process(s: &str) -> Execs {
-    let mut execs = cargo_test_support::cargo_process(s);
-    execs.cwd(&paths::root()).env("HOME", &paths::home());
-    execs
-}
 
 fn mercurial_available() -> bool {
     let result = Command::new("hg")
@@ -25,573 +20,578 @@ fn mercurial_available() -> bool {
 
 #[cargo_test]
 fn simple_lib() {
-    cargo_process("init --lib --vcs none --edition 2015")
-        .with_stderr("[CREATED] library package")
-        .run();
+    let project = Project::from_template("tests/snapshots/init/simple_lib.in");
+    let project_root = &project.root();
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(!paths::root().join(".gitignore").is_file());
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs none --edition 2015")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/simple_lib.stdout")
+        .stderr_matches_path("tests/snapshots/init/simple_lib.stderr");
 
-    cargo_process("build").run();
+    assert().subset_matches("tests/snapshots/init/simple_lib.out", project_root);
+    assert!(!project_root.join(".gitignore").is_file());
+
+    project.cargo("build").run();
+    assert!(!project.bin("foo").is_file());
 }
 
 #[cargo_test]
 fn simple_bin() {
-    let path = paths::root().join("foo");
-    fs::create_dir(&path).unwrap();
-    cargo_process("init --bin --vcs none --edition 2015")
-        .cwd(&path)
-        .with_stderr("[CREATED] binary (application) package")
-        .run();
+    let project = Project::from_template("tests/snapshots/init/simple_bin.in");
+    let project_root = &project.root();
 
-    assert!(paths::root().join("foo/Cargo.toml").is_file());
-    assert!(paths::root().join("foo/src/main.rs").is_file());
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --bin --vcs none --edition 2015")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/simple_bin.stdout")
+        .stderr_matches_path("tests/snapshots/init/simple_bin.stderr");
 
-    cargo_process("build").cwd(&path).run();
-    assert!(paths::root()
-        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
-        .is_file());
+    assert().subset_matches("tests/snapshots/init/simple_bin.out", project_root);
+    assert!(!project_root.join(".gitignore").is_file());
+
+    project.cargo("build").run();
+    assert!(project.bin("case").is_file());
 }
 
 #[cargo_test]
 fn simple_git_ignore_exists() {
-    // write a .gitignore file with two entries
-    fs::create_dir_all(paths::root().join("foo")).unwrap();
-    fs::write(
-        paths::root().join("foo/.gitignore"),
-        "/target\n**/some.file",
-    )
-    .unwrap();
+    let project = Project::from_template("tests/snapshots/init/simple_git_ignore_exists.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib foo --edition 2015").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --edition 2015")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/simple_git_ignore_exists.stdout")
+        .stderr_matches_path("tests/snapshots/init/simple_git_ignore_exists.stderr");
 
-    assert!(paths::root().is_dir());
-    assert!(paths::root().join("foo/Cargo.toml").is_file());
-    assert!(paths::root().join("foo/src/lib.rs").is_file());
-    assert!(paths::root().join("foo/.git").is_dir());
-    assert!(paths::root().join("foo/.gitignore").is_file());
-
-    let fp = paths::root().join("foo/.gitignore");
-    let contents = fs::read_to_string(fp).unwrap();
-    assert_eq!(
-        contents,
-        "/target\n\
-         **/some.file\n\n\
-         # Added by cargo\n\
-         #\n\
-         # already existing elements were commented out\n\
-         \n\
-         #/target\n\
-         /Cargo.lock\n",
+    assert().subset_matches(
+        "tests/snapshots/init/simple_git_ignore_exists.out",
+        project_root,
     );
+    assert!(project_root.join(".git").is_dir());
 
-    cargo_process("build").cwd(&paths::root().join("foo")).run();
+    project.cargo("build").run();
 }
 
 #[cargo_test]
 fn git_ignore_exists_no_conflicting_entries() {
-    // write a .gitignore file with one entry
-    fs::create_dir_all(paths::root().join("foo")).unwrap();
-    fs::write(paths::root().join("foo/.gitignore"), "**/some.file").unwrap();
+    let project =
+        Project::from_template("tests/snapshots/init/git_ignore_exists_no_conflicting_entries.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib foo --edition 2015").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --edition 2015")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/git_ignore_exists_no_conflicting_entries.stdout")
+        .stderr_matches_path(
+            "tests/snapshots/init/git_ignore_exists_no_conflicting_entries.stderr",
+        );
 
-    let fp = paths::root().join("foo/.gitignore");
-    let contents = fs::read_to_string(&fp).unwrap();
-    assert_eq!(
-        contents,
-        "**/some.file\n\n\
-         # Added by cargo\n\
-         \n\
-         /target\n\
-         /Cargo.lock\n",
+    assert().subset_matches(
+        "tests/snapshots/init/git_ignore_exists_no_conflicting_entries.out",
+        project_root,
     );
+    assert!(project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn both_lib_and_bin() {
-    cargo_process("init --lib --bin")
-        .with_status(101)
-        .with_stderr("[ERROR] can't specify both lib and binary outputs")
-        .run();
-}
+    let cwd = paths::root();
 
-fn bin_already_exists(explicit: bool, rellocation: &str) {
-    let path = paths::root().join("foo");
-    fs::create_dir_all(&path.join("src")).unwrap();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --bin")
+        .current_dir(&cwd)
+        .assert()
+        .code(101)
+        .stdout_matches_path("tests/snapshots/init/both_lib_and_bin.stdout")
+        .stderr_matches_path("tests/snapshots/init/both_lib_and_bin.stderr");
 
-    let sourcefile_path = path.join(rellocation);
-
-    let content = r#"
-        fn main() {
-            println!("Hello, world 2!");
-        }
-    "#;
-
-    fs::write(&sourcefile_path, content).unwrap();
-
-    if explicit {
-        cargo_process("init --bin --vcs none").cwd(&path).run();
-    } else {
-        cargo_process("init --vcs none").cwd(&path).run();
-    }
-
-    assert!(paths::root().join("foo/Cargo.toml").is_file());
-    assert!(!paths::root().join("foo/src/lib.rs").is_file());
-
-    // Check that our file is not overwritten
-    let new_content = fs::read_to_string(&sourcefile_path).unwrap();
-    assert_eq!(content, new_content);
+    assert!(!cwd.join("Cargo.toml").is_file());
 }
 
 #[cargo_test]
 fn bin_already_exists_explicit() {
-    bin_already_exists(true, "src/main.rs")
+    let project = Project::from_template("tests/snapshots/init/bin_already_exists_explicit.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --bin --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_explicit.stdout")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_explicit.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/bin_already_exists_explicit.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
 fn bin_already_exists_implicit() {
-    bin_already_exists(false, "src/main.rs")
+    let project = Project::from_template("tests/snapshots/init/bin_already_exists_implicit.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit.stdout")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/bin_already_exists_implicit.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
 fn bin_already_exists_explicit_nosrc() {
-    bin_already_exists(true, "main.rs")
+    let project =
+        Project::from_template("tests/snapshots/init/bin_already_exists_explicit_nosrc.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --bin --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_explicit_nosrc.stdout")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_explicit_nosrc.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/bin_already_exists_explicit_nosrc.out",
+        project_root,
+    );
+    assert!(!project_root.join("src").is_dir());
 }
 
 #[cargo_test]
 fn bin_already_exists_implicit_nosrc() {
-    bin_already_exists(false, "main.rs")
+    let project =
+        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_nosrc.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_nosrc.stdout")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_nosrc.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/bin_already_exists_implicit_nosrc.out",
+        project_root,
+    );
+    assert!(!project_root.join("src").is_dir());
 }
 
 #[cargo_test]
 fn bin_already_exists_implicit_namenosrc() {
-    bin_already_exists(false, "foo.rs")
+    let project =
+        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_namenosrc.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_namenosrc.stdout")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_namenosrc.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/bin_already_exists_implicit_namenosrc.out",
+        project_root,
+    );
+    assert!(!project_root.join("src").is_dir());
 }
 
 #[cargo_test]
 fn bin_already_exists_implicit_namesrc() {
-    bin_already_exists(false, "src/foo.rs")
+    let project =
+        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_namesrc.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_namesrc.stdout")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_namesrc.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/bin_already_exists_implicit_namesrc.out",
+        project_root,
+    );
+    assert!(!project_root.join("src/main.rs").is_file());
 }
 
 #[cargo_test]
 fn confused_by_multiple_lib_files() {
-    let path = paths::root().join("foo");
-    fs::create_dir_all(&path.join("src")).unwrap();
+    let project = Project::from_template("tests/snapshots/init/confused_by_multiple_lib_files.in");
+    let project_root = &project.root();
 
-    let path1 = path.join("src/lib.rs");
-    fs::write(path1, r#"fn qqq () { println!("Hello, world 2!"); }"#).unwrap();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .code(101)
+        .stdout_matches_path("tests/snapshots/init/confused_by_multiple_lib_files.stdout")
+        .stderr_matches_path("tests/snapshots/init/confused_by_multiple_lib_files.stderr");
 
-    let path2 = path.join("lib.rs");
-    fs::write(path2, r#" fn qqq () { println!("Hello, world 3!"); }"#).unwrap();
-
-    cargo_process("init --vcs none")
-        .cwd(&path)
-        .with_status(101)
-        .with_stderr(
-            "[ERROR] cannot have a package with multiple libraries, \
-            found both `src/lib.rs` and `lib.rs`",
-        )
-        .run();
-
-    assert!(!paths::root().join("foo/Cargo.toml").is_file());
+    assert().subset_matches(
+        "tests/snapshots/init/confused_by_multiple_lib_files.out",
+        project_root,
+    );
+    assert!(!project_root.join("Cargo.toml").is_file());
 }
 
 #[cargo_test]
 fn multibin_project_name_clash() {
-    let path = paths::root().join("foo");
-    fs::create_dir(&path).unwrap();
+    let project = Project::from_template("tests/snapshots/init/multibin_project_name_clash.in");
+    let project_root = &project.root();
 
-    let path1 = path.join("foo.rs");
-    fs::write(path1, r#"fn main () { println!("Hello, world 2!"); }"#).unwrap();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .code(101)
+        .stdout_matches_path("tests/snapshots/init/multibin_project_name_clash.stdout")
+        .stderr_matches_path("tests/snapshots/init/multibin_project_name_clash.stderr");
 
-    let path2 = path.join("main.rs");
-    fs::write(path2, r#"fn main () { println!("Hello, world 3!"); }"#).unwrap();
-
-    cargo_process("init --lib --vcs none")
-        .cwd(&path)
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] multiple possible binary sources found:
-  main.rs
-  foo.rs
-cannot automatically generate Cargo.toml as the main target would be ambiguous
-",
-        )
-        .run();
-
-    assert!(!paths::root().join("foo/Cargo.toml").is_file());
-}
-
-fn lib_already_exists(rellocation: &str) {
-    let path = paths::root().join("foo");
-    fs::create_dir_all(&path.join("src")).unwrap();
-
-    let sourcefile_path = path.join(rellocation);
-
-    let content = "pub fn qqq() {}";
-    fs::write(&sourcefile_path, content).unwrap();
-
-    cargo_process("init --vcs none").cwd(&path).run();
-
-    assert!(paths::root().join("foo/Cargo.toml").is_file());
-    assert!(!paths::root().join("foo/src/main.rs").is_file());
-
-    // Check that our file is not overwritten
-    let new_content = fs::read_to_string(&sourcefile_path).unwrap();
-    assert_eq!(content, new_content);
+    assert().subset_matches(
+        "tests/snapshots/init/multibin_project_name_clash.out",
+        project_root,
+    );
+    assert!(!project_root.join("Cargo.toml").is_file());
 }
 
 #[cargo_test]
 fn lib_already_exists_src() {
-    lib_already_exists("src/lib.rs");
+    let project = Project::from_template("tests/snapshots/init/lib_already_exists_src.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/lib_already_exists_src.stdout")
+        .stderr_matches_path("tests/snapshots/init/lib_already_exists_src.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/lib_already_exists_src.out",
+        project_root,
+    );
+    assert!(!project_root.join("src/main.rs").is_file());
 }
 
 #[cargo_test]
 fn lib_already_exists_nosrc() {
-    lib_already_exists("lib.rs");
+    let project = Project::from_template("tests/snapshots/init/lib_already_exists_nosrc.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/lib_already_exists_nosrc.stdout")
+        .stderr_matches_path("tests/snapshots/init/lib_already_exists_nosrc.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/lib_already_exists_nosrc.out",
+        project_root,
+    );
+    assert!(!project_root.join("src/main.rs").is_file());
 }
 
 #[cargo_test]
 fn simple_git() {
-    cargo_process("init --lib --vcs git").run();
+    let project = Project::from_template("tests/snapshots/init/simple_git.in");
+    let project_root = &project.root();
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(paths::root().join(".git").is_dir());
-    assert!(paths::root().join(".gitignore").is_file());
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs git")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/simple_git.stdout")
+        .stderr_matches_path("tests/snapshots/init/simple_git.stderr");
+
+    assert().subset_matches("tests/snapshots/init/simple_git.out", project_root);
+    assert!(project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn auto_git() {
-    cargo_process("init --lib").run();
+    let project = Project::from_template("tests/snapshots/init/auto_git.in");
+    let project_root = &project.root();
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(paths::root().join(".git").is_dir());
-    assert!(paths::root().join(".gitignore").is_file());
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/auto_git.stdout")
+        .stderr_matches_path("tests/snapshots/init/auto_git.stderr");
+
+    assert().subset_matches("tests/snapshots/init/auto_git.out", &project_root);
+    assert!(project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn invalid_dir_name() {
     let foo = &paths::root().join("foo.bar");
-    fs::create_dir_all(&foo).unwrap();
-    cargo_process("init")
-        .cwd(foo.clone())
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] invalid character `.` in package name: `foo.bar`, [..]
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"foo.bar\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/foo.bar.rs` \
-or change the name in Cargo.toml with:
+    fs::create_dir_all(foo).unwrap();
 
-    [[bin]]
-    name = \"foo.bar\"
-    path = \"src/main.rs\"
-
-",
-        )
-        .run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init")
+        .current_dir(foo)
+        .assert()
+        .code(101)
+        .stdout_matches_path("tests/snapshots/init/invalid_dir_name.stdout")
+        .stderr_matches_path("tests/snapshots/init/invalid_dir_name.stderr");
 
     assert!(!foo.join("Cargo.toml").is_file());
 }
 
 #[cargo_test]
 fn reserved_name() {
-    let test = &paths::root().join("test");
-    fs::create_dir_all(&test).unwrap();
-    cargo_process("init")
-        .cwd(test.clone())
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the name `test` cannot be used as a package name, it conflicts [..]\n\
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"test\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/test.rs` \
-or change the name in Cargo.toml with:
+    let project_root = &paths::root().join("test");
+    fs::create_dir_all(project_root).unwrap();
 
-    [[bin]]
-    name = \"test\"
-    path = \"src/main.rs\"
+    snapbox::cmd::Command::cargo()
+        .arg_line("init")
+        .current_dir(project_root)
+        .assert()
+        .code(101)
+        .stdout_matches_path("tests/snapshots/init/reserved_name.stdout")
+        .stderr_matches_path("tests/snapshots/init/reserved_name.stderr");
 
-",
-        )
-        .run();
-
-    assert!(!test.join("Cargo.toml").is_file());
+    assert!(!project_root.join("Cargo.toml").is_file());
 }
 
 #[cargo_test]
 fn git_autodetect() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
+    let project_root = &paths::root().join("foo");
+    fs::create_dir_all(project_root.join(".git")).unwrap();
 
-    cargo_process("init --lib").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/git_autodetect.stdout")
+        .stderr_matches_path("tests/snapshots/init/git_autodetect.stderr");
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(paths::root().join(".git").is_dir());
-    let path = paths::root().join(".gitignore");
-    assert!(paths::root().join(&path).is_file());
-    assert_eq!(fs::read_to_string(&path).unwrap(), "/target\n/Cargo.lock\n",);
+    assert().subset_matches("tests/snapshots/init/git_autodetect.out", project_root);
+    assert!(project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn mercurial_autodetect() {
-    fs::create_dir(&paths::root().join(".hg")).unwrap();
+    let project = Project::from_template("tests/snapshots/init/mercurial_autodetect.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/mercurial_autodetect.stdout")
+        .stderr_matches_path("tests/snapshots/init/mercurial_autodetect.stderr");
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(!paths::root().join(".git").is_dir());
-    let path = paths::root().join(".hgignore");
-    assert!(paths::root().join(&path).is_file());
-    assert_eq!(
-        fs::read_to_string(&path).unwrap(),
-        "^target/\n^Cargo.lock$\n",
+    assert().subset_matches(
+        "tests/snapshots/init/mercurial_autodetect.out",
+        project_root,
     );
+    assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn fossil_autodetect() {
-    fs::create_dir(&paths::root().join(".fossil")).unwrap();
+    let project = Project::from_template("tests/snapshots/init/fossil_autodetect.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/fossil_autodetect.stdout")
+        .stderr_matches_path("tests/snapshots/init/fossil_autodetect.stderr");
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(!paths::root().join(".git").is_dir());
-    for path in [
-        ".fossil-settings/ignore-glob",
-        ".fossil-settings/clean-glob",
-    ] {
-        let path = paths::root().join(path);
-        assert!(paths::root().join(&path).is_file());
-        assert_eq!(fs::read_to_string(&path).unwrap(), "target\nCargo.lock\n",);
-    }
+    assert().subset_matches("tests/snapshots/init/fossil_autodetect.out", project_root);
+    assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn pijul_autodetect() {
-    fs::create_dir(&paths::root().join(".pijul")).unwrap();
+    let project = Project::from_template("tests/snapshots/init/pijul_autodetect.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/pijul_autodetect.stdout")
+        .stderr_matches_path("tests/snapshots/init/pijul_autodetect.stderr");
 
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(!paths::root().join(".git").is_dir());
-    let path = paths::root().join(".ignore");
-    assert!(paths::root().join(&path).is_file());
-    assert_eq!(fs::read_to_string(&path).unwrap(), "/target\n/Cargo.lock\n",);
+    assert().subset_matches("tests/snapshots/init/pijul_autodetect.out", project_root);
+    assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
-fn gitignore_appended_not_replaced() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
-
-    fs::write(&paths::root().join(".gitignore"), "qqqqqq\n").unwrap();
-
-    cargo_process("init --lib").run();
-
-    assert!(paths::root().join("Cargo.toml").is_file());
-    assert!(paths::root().join("src/lib.rs").is_file());
-    assert!(paths::root().join(".git").is_dir());
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(contents.contains("qqqqqq"));
-}
-
-#[cargo_test]
-fn gitignore_added_newline_in_existing() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
-
-    fs::write(&paths::root().join(".gitignore"), "first").unwrap();
-
-    cargo_process("init --lib").run();
-
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(contents.starts_with("first\n"));
-}
-
-#[cargo_test]
-fn gitignore_no_newline_in_new() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
-
-    cargo_process("init --lib").run();
-
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(!contents.starts_with('\n'));
-}
-
-#[cargo_test]
-fn mercurial_added_newline_in_existing() {
-    fs::create_dir(&paths::root().join(".hg")).unwrap();
-
-    fs::write(&paths::root().join(".hgignore"), "first").unwrap();
-
-    cargo_process("init --lib").run();
-
-    assert!(paths::root().join(".hgignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
-    assert!(contents.starts_with("first\n"));
-}
-
-#[cargo_test]
-fn mercurial_no_newline_in_new() {
-    fs::create_dir(&paths::root().join(".hg")).unwrap();
-
-    cargo_process("init --lib").run();
-
-    assert!(paths::root().join(".hgignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
-    assert!(!contents.starts_with('\n'));
-}
-
-#[cargo_test]
-fn terminating_newline_in_new_git_ignore() {
-    cargo_process("init --vcs git --lib").run();
-
-    let content = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-
-    let mut last_chars = content.chars().rev();
-    assert_eq!(last_chars.next(), Some('\n'));
-    assert_ne!(last_chars.next(), Some('\n'));
-}
-
-#[cargo_test]
-fn terminating_newline_in_new_mercurial_ignore() {
+fn simple_hg() {
     if !mercurial_available() {
         return;
     }
-    cargo_process("init --vcs hg --lib").run();
 
-    let content = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
+    let project = Project::from_template("tests/snapshots/init/simple_hg.in");
+    let project_root = &project.root();
 
-    let mut last_chars = content.chars().rev();
-    assert_eq!(last_chars.next(), Some('\n'));
-    assert_ne!(last_chars.next(), Some('\n'));
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs hg")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/simple_hg.stdout")
+        .stderr_matches_path("tests/snapshots/init/simple_hg.stderr");
+
+    assert().subset_matches("tests/snapshots/init/simple_hg.out", project_root);
+    assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
-fn terminating_newline_in_existing_git_ignore() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
-    fs::write(&paths::root().join(".gitignore"), b"first").unwrap();
+fn simple_hg_ignore_exists() {
+    let project = Project::from_template("tests/snapshots/init/simple_hg_ignore_exists.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/simple_hg_ignore_exists.stdout")
+        .stderr_matches_path("tests/snapshots/init/simple_hg_ignore_exists.stderr");
 
-    let content = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-
-    let mut last_chars = content.chars().rev();
-    assert_eq!(last_chars.next(), Some('\n'));
-    assert_ne!(last_chars.next(), Some('\n'));
+    assert().subset_matches(
+        "tests/snapshots/init/simple_hg_ignore_exists.out",
+        project_root,
+    );
+    assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
-fn terminating_newline_in_existing_mercurial_ignore() {
-    fs::create_dir(&paths::root().join(".hg")).unwrap();
-    fs::write(&paths::root().join(".hgignore"), b"first").unwrap();
+fn inferred_lib_with_git() {
+    let project = Project::from_template("tests/snapshots/init/inferred_lib_with_git.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs git")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/inferred_lib_with_git.stdout")
+        .stderr_matches_path("tests/snapshots/init/inferred_lib_with_git.stderr");
 
-    let content = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
-
-    let mut last_chars = content.chars().rev();
-    assert_eq!(last_chars.next(), Some('\n'));
-    assert_ne!(last_chars.next(), Some('\n'));
+    assert().subset_matches(
+        "tests/snapshots/init/inferred_lib_with_git.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
-fn cargo_lock_gitignored_if_lib1() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
+fn explicit_bin_with_git() {
+    let project = Project::from_template("tests/snapshots/init/explicit_bin_with_git.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib --vcs git").run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs git --bin")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/explicit_bin_with_git.stdout")
+        .stderr_matches_path("tests/snapshots/init/explicit_bin_with_git.stderr");
 
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(contents.contains(r#"Cargo.lock"#));
+    assert().subset_matches(
+        "tests/snapshots/init/explicit_bin_with_git.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
-fn cargo_lock_gitignored_if_lib2() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
+fn inferred_bin_with_git() {
+    let project = Project::from_template("tests/snapshots/init/inferred_bin_with_git.in");
+    let project_root = &project.root();
 
-    fs::write(&paths::root().join("lib.rs"), "").unwrap();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --vcs git")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/inferred_bin_with_git.stdout")
+        .stderr_matches_path("tests/snapshots/init/inferred_bin_with_git.stderr");
 
-    cargo_process("init --vcs git").run();
-
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(contents.contains(r#"Cargo.lock"#));
-}
-
-#[cargo_test]
-fn cargo_lock_not_gitignored_if_bin1() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
-
-    cargo_process("init --vcs git --bin").run();
-
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(!contents.contains(r#"Cargo.lock"#));
-}
-
-#[cargo_test]
-fn cargo_lock_not_gitignored_if_bin2() {
-    fs::create_dir(&paths::root().join(".git")).unwrap();
-
-    fs::write(&paths::root().join("main.rs"), "").unwrap();
-
-    cargo_process("init --vcs git").run();
-
-    assert!(paths::root().join(".gitignore").is_file());
-
-    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
-    assert!(!contents.contains(r#"Cargo.lock"#));
+    assert().subset_matches(
+        "tests/snapshots/init/inferred_bin_with_git.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
 fn with_argument() {
-    cargo_process("init foo --vcs none").run();
-    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    let project = Project::from_template("tests/snapshots/init/with_argument.in");
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init foo --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/with_argument.stdout")
+        .stderr_matches_path("tests/snapshots/init/with_argument.stderr");
+
+    assert().subset_matches("tests/snapshots/init/with_argument.out", project_root);
 }
 
 #[cargo_test]
 fn unknown_flags() {
-    cargo_process("init foo --flag")
-        .with_status(1)
-        .with_stderr_contains(
-            "error: Found argument '--flag' which wasn't expected, or isn't valid in this context",
-        )
-        .run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init foo --flag")
+        .current_dir(paths::root())
+        .assert()
+        .code(1)
+        .stdout_matches_path("tests/snapshots/init/unknown_flags.stdout")
+        .stderr_matches_path("tests/snapshots/init/unknown_flags.stderr");
 }
 
 #[cfg(not(windows))]
 #[cargo_test]
 fn no_filename() {
-    cargo_process("init /")
-        .with_status(101)
-        .with_stderr(
-            "[ERROR] cannot auto-detect package name from path \"/\" ; use --name to override"
-                .to_string(),
-        )
-        .run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init /")
+        .current_dir(paths::root())
+        .assert()
+        .code(101)
+        .stdout_matches_path("tests/snapshots/init/no_filename.stdout")
+        .stderr_matches_path("tests/snapshots/init/no_filename.stderr");
 }
 
 #[cargo_test]
@@ -600,114 +600,127 @@ fn formats_source() {
         return;
     }
 
-    fs::write(&paths::root().join("rustfmt.toml"), "tab_spaces = 2").unwrap();
+    let project = Project::from_template("tests/snapshots/init/formats_source.in");
+    let project_root = &project.root();
 
-    cargo_process("init --lib")
-        .with_stderr("[CREATED] library package")
-        .run();
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/formats_source.stdout")
+        .stderr_matches_path("tests/snapshots/init/formats_source.stderr");
 
-    assert_eq!(
-        fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
-        r#"#[cfg(test)]
-mod tests {
-  #[test]
-  fn it_works() {
-    let result = 2 + 2;
-    assert_eq!(result, 4);
-  }
-}
-"#
-    );
+    assert().subset_matches("tests/snapshots/init/formats_source.out", project_root);
 }
 
 #[cargo_test]
 fn ignores_failure_to_format_source() {
-    cargo_process("init --lib")
-        .env("PATH", "") // pretend that `rustfmt` is missing
-        .with_stderr("[CREATED] library package")
-        .run();
+    let project =
+        Project::from_template("tests/snapshots/init/ignores_failure_to_format_source.in");
+    let project_root = &project.root();
 
-    assert_eq!(
-        fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
-        r#"#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
-"#
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs none")
+        .env("PATH", "") // pretend that `rustfmt` is missing
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/ignores_failure_to_format_source.stdout")
+        .stderr_matches_path("tests/snapshots/init/ignores_failure_to_format_source.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/ignores_failure_to_format_source.out",
+        project_root,
     );
 }
 
 #[cargo_test]
-fn creates_binary_when_instructed_and_has_lib_file_no_warning() {
-    let path = paths::root().join("foo");
-    fs::create_dir(&path).unwrap();
-    fs::write(path.join("foo.rs"), "fn not_main() {}").unwrap();
-    cargo_process("init --bin")
-        .cwd(&path)
-        .with_stderr(
-            "\
-[WARNING] file `foo.rs` seems to be a library file
-[CREATED] binary (application) package
-",
-        )
-        .run();
+fn creates_binary_when_instructed_and_has_lib_file() {
+    let project = Project::from_template(
+        "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.in",
+    );
+    let project_root = &project.root();
 
-    let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
-    assert!(cargo_toml.contains("[[bin]]"));
-    assert!(!cargo_toml.contains("[lib]"));
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --bin --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path(
+            "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.stdout",
+        )
+        .stderr_matches_path(
+            "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.stderr",
+        );
+
+    assert().subset_matches(
+        "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
 fn creates_library_when_instructed_and_has_bin_file() {
-    let path = paths::root().join("foo");
-    fs::create_dir(&path).unwrap();
-    fs::write(path.join("foo.rs"), "fn main() {}").unwrap();
-    cargo_process("init --lib")
-        .cwd(&path)
-        .with_stderr(
-            "\
-[WARNING] file `foo.rs` seems to be a binary (application) file
-[CREATED] library package
-",
-        )
-        .run();
+    let project = Project::from_template(
+        "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.in",
+    );
+    let project_root = &project.root();
 
-    let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
-    assert!(!cargo_toml.contains("[[bin]]"));
-    assert!(cargo_toml.contains("[lib]"));
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path(
+            "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.stdout",
+        )
+        .stderr_matches_path(
+            "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.stderr",
+        );
+
+    assert().subset_matches(
+        "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
 fn creates_binary_when_both_binlib_present() {
-    let path = paths::root().join("foo");
-    fs::create_dir(&path).unwrap();
-    fs::write(path.join("foo.rs"), "fn main() {}").unwrap();
-    fs::write(path.join("lib.rs"), "fn notmain() {}").unwrap();
-    cargo_process("init --bin")
-        .cwd(&path)
-        .with_stderr("[CREATED] binary (application) package")
-        .run();
+    let project =
+        Project::from_template("tests/snapshots/init/creates_binary_when_both_binlib_present.in");
+    let project_root = &project.root();
 
-    let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
-    assert!(cargo_toml.contains("[[bin]]"));
-    assert!(cargo_toml.contains("[lib]"));
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --bin --vcs none")
+        .current_dir(project_root)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/init/creates_binary_when_both_binlib_present.stdout")
+        .stderr_matches_path("tests/snapshots/init/creates_binary_when_both_binlib_present.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/init/creates_binary_when_both_binlib_present.out",
+        project_root,
+    );
 }
 
 #[cargo_test]
 fn cant_create_library_when_both_binlib_present() {
-    let path = paths::root().join("foo");
-    fs::create_dir(&path).unwrap();
-    fs::write(path.join("foo.rs"), "fn main() {}").unwrap();
-    fs::write(path.join("lib.rs"), "fn notmain() {}").unwrap();
-    cargo_process("init --lib")
-        .cwd(&path)
-        .with_status(101)
-        .with_stderr(
-            "[ERROR] cannot have a package with multiple libraries, found both `foo.rs` and `lib.rs`"
-            )
-        .run();
+    let project = Project::from_template(
+        "tests/snapshots/init/cant_create_library_when_both_binlib_present.in",
+    );
+    let project_root = &project.root();
+
+    snapbox::cmd::Command::cargo()
+        .arg_line("init --lib")
+        .current_dir(project_root)
+        .assert()
+        .code(101)
+        .stdout_matches_path(
+            "tests/snapshots/init/cant_create_library_when_both_binlib_present.stdout",
+        )
+        .stderr_matches_path(
+            "tests/snapshots/init/cant_create_library_when_both_binlib_present.stderr",
+        );
 }
