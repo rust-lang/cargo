@@ -1789,10 +1789,13 @@ fn output_separate_lines_new() {
                 fn main() {
                     println!("cargo:rustc-link-search=foo");
                     println!("cargo:rustc-link-lib=static=foo");
+                    println!("cargo:rustc-link-lib=bar");
+                    println!("cargo:rustc-link-search=bar");
                 }
             "#,
         )
         .build();
+    // The order of the arguments passed to rustc is important.
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(
@@ -1800,7 +1803,7 @@ fn output_separate_lines_new() {
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/foo-[..]/build-script-build`
-[RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
+[RUNNING] `rustc --crate-name foo [..] -L foo -L bar -l static=foo -l bar`
 [ERROR] could not find native static library [..]
 ",
         )
