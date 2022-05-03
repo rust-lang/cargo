@@ -42,6 +42,7 @@ the workspace:
 [workspace]
 members = ["member1", "path/to/member2", "crates/*"]
 exclude = ["crates/foo", "path/to/other"]
+resolver = "2"
 ```
 
 All [`path` dependencies] residing in the workspace directory automatically
@@ -85,6 +86,7 @@ used:
 [workspace]
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
+resolver = "2"
 ```
 
 When specified, `default-members` must expand to a subset of `members`.
@@ -98,6 +100,7 @@ configuration in `Cargo.toml`. For example:
 ```toml
 [workspace]
 members = ["member1", "member2"]
+resolver = "2"
 
 [workspace.metadata.webcontents]
 root = "path/to/webproject"
