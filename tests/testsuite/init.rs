@@ -401,6 +401,7 @@ fn reserved_name() {
 #[cargo_test]
 fn git_autodetect() {
     let project_root = &paths::root().join("foo");
+    // Need to create `.git` dir manually because it cannot be tracked under a git repo
     fs::create_dir_all(project_root.join(".git")).unwrap();
 
     snapbox::cmd::Command::cargo()
