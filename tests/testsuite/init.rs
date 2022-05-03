@@ -34,7 +34,11 @@ fn simple_lib() {
     assert().subset_matches("tests/snapshots/init/simple_lib.out", project_root);
     assert!(!project_root.join(".gitignore").is_file());
 
-    project.cargo("build").run();
+    snapbox::cmd::Command::cargo()
+        .current_dir(project_root)
+        .arg("build")
+        .assert()
+        .success();
     assert!(!project.bin("foo").is_file());
 }
 
@@ -54,7 +58,11 @@ fn simple_bin() {
     assert().subset_matches("tests/snapshots/init/simple_bin.out", project_root);
     assert!(!project_root.join(".gitignore").is_file());
 
-    project.cargo("build").run();
+    snapbox::cmd::Command::cargo()
+        .current_dir(project_root)
+        .arg("build")
+        .assert()
+        .success();
     assert!(project.bin("case").is_file());
 }
 
@@ -77,7 +85,11 @@ fn simple_git_ignore_exists() {
     );
     assert!(project_root.join(".git").is_dir());
 
-    project.cargo("build").run();
+    snapbox::cmd::Command::cargo()
+        .current_dir(project_root)
+        .arg("build")
+        .assert()
+        .success();
 }
 
 #[cargo_test]
