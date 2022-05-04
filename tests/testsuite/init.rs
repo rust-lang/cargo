@@ -20,7 +20,7 @@ fn mercurial_available() -> bool {
 
 #[cargo_test]
 fn simple_lib() {
-    let project = Project::from_template("tests/snapshots/init/simple_lib.in");
+    let project = Project::from_template("tests/snapshots/init/simple_lib/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -28,10 +28,10 @@ fn simple_lib() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/simple_lib.stdout")
-        .stderr_matches_path("tests/snapshots/init/simple_lib.stderr");
+        .stdout_matches_path("tests/snapshots/init/simple_lib/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/simple_lib/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/simple_lib.out", project_root);
+    assert().subset_matches("tests/snapshots/init/simple_lib/out", project_root);
     assert!(!project_root.join(".gitignore").is_file());
 
     snapbox::cmd::Command::cargo()
@@ -44,7 +44,7 @@ fn simple_lib() {
 
 #[cargo_test]
 fn simple_bin() {
-    let project = Project::from_template("tests/snapshots/init/simple_bin.in");
+    let project = Project::from_template("tests/snapshots/init/simple_bin/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -52,10 +52,10 @@ fn simple_bin() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/simple_bin.stdout")
-        .stderr_matches_path("tests/snapshots/init/simple_bin.stderr");
+        .stdout_matches_path("tests/snapshots/init/simple_bin/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/simple_bin/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/simple_bin.out", project_root);
+    assert().subset_matches("tests/snapshots/init/simple_bin/out", project_root);
     assert!(!project_root.join(".gitignore").is_file());
 
     snapbox::cmd::Command::cargo()
@@ -68,7 +68,7 @@ fn simple_bin() {
 
 #[cargo_test]
 fn simple_git_ignore_exists() {
-    let project = Project::from_template("tests/snapshots/init/simple_git_ignore_exists.in");
+    let project = Project::from_template("tests/snapshots/init/simple_git_ignore_exists/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -76,11 +76,11 @@ fn simple_git_ignore_exists() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/simple_git_ignore_exists.stdout")
-        .stderr_matches_path("tests/snapshots/init/simple_git_ignore_exists.stderr");
+        .stdout_matches_path("tests/snapshots/init/simple_git_ignore_exists/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/simple_git_ignore_exists/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/simple_git_ignore_exists.out",
+        "tests/snapshots/init/simple_git_ignore_exists/out",
         project_root,
     );
     assert!(project_root.join(".git").is_dir());
@@ -95,7 +95,7 @@ fn simple_git_ignore_exists() {
 #[cargo_test]
 fn git_ignore_exists_no_conflicting_entries() {
     let project =
-        Project::from_template("tests/snapshots/init/git_ignore_exists_no_conflicting_entries.in");
+        Project::from_template("tests/snapshots/init/git_ignore_exists_no_conflicting_entries/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -103,13 +103,15 @@ fn git_ignore_exists_no_conflicting_entries() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/git_ignore_exists_no_conflicting_entries.stdout")
+        .stdout_matches_path(
+            "tests/snapshots/init/git_ignore_exists_no_conflicting_entries/stdout.log",
+        )
         .stderr_matches_path(
-            "tests/snapshots/init/git_ignore_exists_no_conflicting_entries.stderr",
+            "tests/snapshots/init/git_ignore_exists_no_conflicting_entries/stderr.log",
         );
 
     assert().subset_matches(
-        "tests/snapshots/init/git_ignore_exists_no_conflicting_entries.out",
+        "tests/snapshots/init/git_ignore_exists_no_conflicting_entries/out",
         project_root,
     );
     assert!(project_root.join(".git").is_dir());
@@ -124,15 +126,15 @@ fn both_lib_and_bin() {
         .current_dir(&cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/init/both_lib_and_bin.stdout")
-        .stderr_matches_path("tests/snapshots/init/both_lib_and_bin.stderr");
+        .stdout_matches_path("tests/snapshots/init/both_lib_and_bin/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/both_lib_and_bin/stderr.log");
 
     assert!(!cwd.join("Cargo.toml").is_file());
 }
 
 #[cargo_test]
 fn bin_already_exists_explicit() {
-    let project = Project::from_template("tests/snapshots/init/bin_already_exists_explicit.in");
+    let project = Project::from_template("tests/snapshots/init/bin_already_exists_explicit/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -140,18 +142,18 @@ fn bin_already_exists_explicit() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/bin_already_exists_explicit.stdout")
-        .stderr_matches_path("tests/snapshots/init/bin_already_exists_explicit.stderr");
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_explicit/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_explicit/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/bin_already_exists_explicit.out",
+        "tests/snapshots/init/bin_already_exists_explicit/out",
         project_root,
     );
 }
 
 #[cargo_test]
 fn bin_already_exists_implicit() {
-    let project = Project::from_template("tests/snapshots/init/bin_already_exists_implicit.in");
+    let project = Project::from_template("tests/snapshots/init/bin_already_exists_implicit/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -159,11 +161,11 @@ fn bin_already_exists_implicit() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit.stdout")
-        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit.stderr");
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/bin_already_exists_implicit.out",
+        "tests/snapshots/init/bin_already_exists_implicit/out",
         project_root,
     );
 }
@@ -171,7 +173,7 @@ fn bin_already_exists_implicit() {
 #[cargo_test]
 fn bin_already_exists_explicit_nosrc() {
     let project =
-        Project::from_template("tests/snapshots/init/bin_already_exists_explicit_nosrc.in");
+        Project::from_template("tests/snapshots/init/bin_already_exists_explicit_nosrc/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -179,11 +181,11 @@ fn bin_already_exists_explicit_nosrc() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/bin_already_exists_explicit_nosrc.stdout")
-        .stderr_matches_path("tests/snapshots/init/bin_already_exists_explicit_nosrc.stderr");
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_explicit_nosrc/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_explicit_nosrc/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/bin_already_exists_explicit_nosrc.out",
+        "tests/snapshots/init/bin_already_exists_explicit_nosrc/out",
         project_root,
     );
     assert!(!project_root.join("src").is_dir());
@@ -192,7 +194,7 @@ fn bin_already_exists_explicit_nosrc() {
 #[cargo_test]
 fn bin_already_exists_implicit_nosrc() {
     let project =
-        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_nosrc.in");
+        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_nosrc/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -200,11 +202,11 @@ fn bin_already_exists_implicit_nosrc() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_nosrc.stdout")
-        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_nosrc.stderr");
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_nosrc/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_nosrc/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/bin_already_exists_implicit_nosrc.out",
+        "tests/snapshots/init/bin_already_exists_implicit_nosrc/out",
         project_root,
     );
     assert!(!project_root.join("src").is_dir());
@@ -213,7 +215,7 @@ fn bin_already_exists_implicit_nosrc() {
 #[cargo_test]
 fn bin_already_exists_implicit_namenosrc() {
     let project =
-        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_namenosrc.in");
+        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_namenosrc/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -221,11 +223,15 @@ fn bin_already_exists_implicit_namenosrc() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_namenosrc.stdout")
-        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_namenosrc.stderr");
+        .stdout_matches_path(
+            "tests/snapshots/init/bin_already_exists_implicit_namenosrc/stdout.log",
+        )
+        .stderr_matches_path(
+            "tests/snapshots/init/bin_already_exists_implicit_namenosrc/stderr.log",
+        );
 
     assert().subset_matches(
-        "tests/snapshots/init/bin_already_exists_implicit_namenosrc.out",
+        "tests/snapshots/init/bin_already_exists_implicit_namenosrc/out",
         project_root,
     );
     assert!(!project_root.join("src").is_dir());
@@ -234,7 +240,7 @@ fn bin_already_exists_implicit_namenosrc() {
 #[cargo_test]
 fn bin_already_exists_implicit_namesrc() {
     let project =
-        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_namesrc.in");
+        Project::from_template("tests/snapshots/init/bin_already_exists_implicit_namesrc/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -242,11 +248,11 @@ fn bin_already_exists_implicit_namesrc() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_namesrc.stdout")
-        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_namesrc.stderr");
+        .stdout_matches_path("tests/snapshots/init/bin_already_exists_implicit_namesrc/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/bin_already_exists_implicit_namesrc/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/bin_already_exists_implicit_namesrc.out",
+        "tests/snapshots/init/bin_already_exists_implicit_namesrc/out",
         project_root,
     );
     assert!(!project_root.join("src/main.rs").is_file());
@@ -254,7 +260,7 @@ fn bin_already_exists_implicit_namesrc() {
 
 #[cargo_test]
 fn confused_by_multiple_lib_files() {
-    let project = Project::from_template("tests/snapshots/init/confused_by_multiple_lib_files.in");
+    let project = Project::from_template("tests/snapshots/init/confused_by_multiple_lib_files/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -262,11 +268,11 @@ fn confused_by_multiple_lib_files() {
         .current_dir(project_root)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/init/confused_by_multiple_lib_files.stdout")
-        .stderr_matches_path("tests/snapshots/init/confused_by_multiple_lib_files.stderr");
+        .stdout_matches_path("tests/snapshots/init/confused_by_multiple_lib_files/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/confused_by_multiple_lib_files/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/confused_by_multiple_lib_files.out",
+        "tests/snapshots/init/confused_by_multiple_lib_files/out",
         project_root,
     );
     assert!(!project_root.join("Cargo.toml").is_file());
@@ -274,7 +280,7 @@ fn confused_by_multiple_lib_files() {
 
 #[cargo_test]
 fn multibin_project_name_clash() {
-    let project = Project::from_template("tests/snapshots/init/multibin_project_name_clash.in");
+    let project = Project::from_template("tests/snapshots/init/multibin_project_name_clash/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -282,11 +288,11 @@ fn multibin_project_name_clash() {
         .current_dir(project_root)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/init/multibin_project_name_clash.stdout")
-        .stderr_matches_path("tests/snapshots/init/multibin_project_name_clash.stderr");
+        .stdout_matches_path("tests/snapshots/init/multibin_project_name_clash/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/multibin_project_name_clash/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/multibin_project_name_clash.out",
+        "tests/snapshots/init/multibin_project_name_clash/out",
         project_root,
     );
     assert!(!project_root.join("Cargo.toml").is_file());
@@ -294,7 +300,7 @@ fn multibin_project_name_clash() {
 
 #[cargo_test]
 fn lib_already_exists_src() {
-    let project = Project::from_template("tests/snapshots/init/lib_already_exists_src.in");
+    let project = Project::from_template("tests/snapshots/init/lib_already_exists_src/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -302,11 +308,11 @@ fn lib_already_exists_src() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/lib_already_exists_src.stdout")
-        .stderr_matches_path("tests/snapshots/init/lib_already_exists_src.stderr");
+        .stdout_matches_path("tests/snapshots/init/lib_already_exists_src/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/lib_already_exists_src/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/lib_already_exists_src.out",
+        "tests/snapshots/init/lib_already_exists_src/out",
         project_root,
     );
     assert!(!project_root.join("src/main.rs").is_file());
@@ -314,7 +320,7 @@ fn lib_already_exists_src() {
 
 #[cargo_test]
 fn lib_already_exists_nosrc() {
-    let project = Project::from_template("tests/snapshots/init/lib_already_exists_nosrc.in");
+    let project = Project::from_template("tests/snapshots/init/lib_already_exists_nosrc/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -322,11 +328,11 @@ fn lib_already_exists_nosrc() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/lib_already_exists_nosrc.stdout")
-        .stderr_matches_path("tests/snapshots/init/lib_already_exists_nosrc.stderr");
+        .stdout_matches_path("tests/snapshots/init/lib_already_exists_nosrc/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/lib_already_exists_nosrc/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/lib_already_exists_nosrc.out",
+        "tests/snapshots/init/lib_already_exists_nosrc/out",
         project_root,
     );
     assert!(!project_root.join("src/main.rs").is_file());
@@ -334,7 +340,7 @@ fn lib_already_exists_nosrc() {
 
 #[cargo_test]
 fn simple_git() {
-    let project = Project::from_template("tests/snapshots/init/simple_git.in");
+    let project = Project::from_template("tests/snapshots/init/simple_git/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -342,16 +348,16 @@ fn simple_git() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/simple_git.stdout")
-        .stderr_matches_path("tests/snapshots/init/simple_git.stderr");
+        .stdout_matches_path("tests/snapshots/init/simple_git/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/simple_git/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/simple_git.out", project_root);
+    assert().subset_matches("tests/snapshots/init/simple_git/out", project_root);
     assert!(project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn auto_git() {
-    let project = Project::from_template("tests/snapshots/init/auto_git.in");
+    let project = Project::from_template("tests/snapshots/init/auto_git/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -359,10 +365,10 @@ fn auto_git() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/auto_git.stdout")
-        .stderr_matches_path("tests/snapshots/init/auto_git.stderr");
+        .stdout_matches_path("tests/snapshots/init/auto_git/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/auto_git/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/auto_git.out", &project_root);
+    assert().subset_matches("tests/snapshots/init/auto_git/out", &project_root);
     assert!(project_root.join(".git").is_dir());
 }
 
@@ -376,8 +382,8 @@ fn invalid_dir_name() {
         .current_dir(foo)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/init/invalid_dir_name.stdout")
-        .stderr_matches_path("tests/snapshots/init/invalid_dir_name.stderr");
+        .stdout_matches_path("tests/snapshots/init/invalid_dir_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/invalid_dir_name/stderr.log");
 
     assert!(!foo.join("Cargo.toml").is_file());
 }
@@ -392,8 +398,8 @@ fn reserved_name() {
         .current_dir(project_root)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/init/reserved_name.stdout")
-        .stderr_matches_path("tests/snapshots/init/reserved_name.stderr");
+        .stdout_matches_path("tests/snapshots/init/reserved_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/reserved_name/stderr.log");
 
     assert!(!project_root.join("Cargo.toml").is_file());
 }
@@ -409,16 +415,16 @@ fn git_autodetect() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/git_autodetect.stdout")
-        .stderr_matches_path("tests/snapshots/init/git_autodetect.stderr");
+        .stdout_matches_path("tests/snapshots/init/git_autodetect/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/git_autodetect/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/git_autodetect.out", project_root);
+    assert().subset_matches("tests/snapshots/init/git_autodetect/out", project_root);
     assert!(project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn mercurial_autodetect() {
-    let project = Project::from_template("tests/snapshots/init/mercurial_autodetect.in");
+    let project = Project::from_template("tests/snapshots/init/mercurial_autodetect/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -426,11 +432,11 @@ fn mercurial_autodetect() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/mercurial_autodetect.stdout")
-        .stderr_matches_path("tests/snapshots/init/mercurial_autodetect.stderr");
+        .stdout_matches_path("tests/snapshots/init/mercurial_autodetect/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/mercurial_autodetect/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/mercurial_autodetect.out",
+        "tests/snapshots/init/mercurial_autodetect/out",
         project_root,
     );
     assert!(!project_root.join(".git").is_dir());
@@ -438,7 +444,7 @@ fn mercurial_autodetect() {
 
 #[cargo_test]
 fn fossil_autodetect() {
-    let project = Project::from_template("tests/snapshots/init/fossil_autodetect.in");
+    let project = Project::from_template("tests/snapshots/init/fossil_autodetect/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -446,16 +452,16 @@ fn fossil_autodetect() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/fossil_autodetect.stdout")
-        .stderr_matches_path("tests/snapshots/init/fossil_autodetect.stderr");
+        .stdout_matches_path("tests/snapshots/init/fossil_autodetect/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/fossil_autodetect/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/fossil_autodetect.out", project_root);
+    assert().subset_matches("tests/snapshots/init/fossil_autodetect/out", project_root);
     assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn pijul_autodetect() {
-    let project = Project::from_template("tests/snapshots/init/pijul_autodetect.in");
+    let project = Project::from_template("tests/snapshots/init/pijul_autodetect/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -463,10 +469,10 @@ fn pijul_autodetect() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/pijul_autodetect.stdout")
-        .stderr_matches_path("tests/snapshots/init/pijul_autodetect.stderr");
+        .stdout_matches_path("tests/snapshots/init/pijul_autodetect/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/pijul_autodetect/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/pijul_autodetect.out", project_root);
+    assert().subset_matches("tests/snapshots/init/pijul_autodetect/out", project_root);
     assert!(!project_root.join(".git").is_dir());
 }
 
@@ -476,7 +482,7 @@ fn simple_hg() {
         return;
     }
 
-    let project = Project::from_template("tests/snapshots/init/simple_hg.in");
+    let project = Project::from_template("tests/snapshots/init/simple_hg/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -484,16 +490,16 @@ fn simple_hg() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/simple_hg.stdout")
-        .stderr_matches_path("tests/snapshots/init/simple_hg.stderr");
+        .stdout_matches_path("tests/snapshots/init/simple_hg/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/simple_hg/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/simple_hg.out", project_root);
+    assert().subset_matches("tests/snapshots/init/simple_hg/out", project_root);
     assert!(!project_root.join(".git").is_dir());
 }
 
 #[cargo_test]
 fn simple_hg_ignore_exists() {
-    let project = Project::from_template("tests/snapshots/init/simple_hg_ignore_exists.in");
+    let project = Project::from_template("tests/snapshots/init/simple_hg_ignore_exists/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -501,11 +507,11 @@ fn simple_hg_ignore_exists() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/simple_hg_ignore_exists.stdout")
-        .stderr_matches_path("tests/snapshots/init/simple_hg_ignore_exists.stderr");
+        .stdout_matches_path("tests/snapshots/init/simple_hg_ignore_exists/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/simple_hg_ignore_exists/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/simple_hg_ignore_exists.out",
+        "tests/snapshots/init/simple_hg_ignore_exists/out",
         project_root,
     );
     assert!(!project_root.join(".git").is_dir());
@@ -513,7 +519,7 @@ fn simple_hg_ignore_exists() {
 
 #[cargo_test]
 fn inferred_lib_with_git() {
-    let project = Project::from_template("tests/snapshots/init/inferred_lib_with_git.in");
+    let project = Project::from_template("tests/snapshots/init/inferred_lib_with_git/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -521,18 +527,18 @@ fn inferred_lib_with_git() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/inferred_lib_with_git.stdout")
-        .stderr_matches_path("tests/snapshots/init/inferred_lib_with_git.stderr");
+        .stdout_matches_path("tests/snapshots/init/inferred_lib_with_git/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/inferred_lib_with_git/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/inferred_lib_with_git.out",
+        "tests/snapshots/init/inferred_lib_with_git/out",
         project_root,
     );
 }
 
 #[cargo_test]
 fn explicit_bin_with_git() {
-    let project = Project::from_template("tests/snapshots/init/explicit_bin_with_git.in");
+    let project = Project::from_template("tests/snapshots/init/explicit_bin_with_git/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -540,18 +546,18 @@ fn explicit_bin_with_git() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/explicit_bin_with_git.stdout")
-        .stderr_matches_path("tests/snapshots/init/explicit_bin_with_git.stderr");
+        .stdout_matches_path("tests/snapshots/init/explicit_bin_with_git/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/explicit_bin_with_git/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/explicit_bin_with_git.out",
+        "tests/snapshots/init/explicit_bin_with_git/out",
         project_root,
     );
 }
 
 #[cargo_test]
 fn inferred_bin_with_git() {
-    let project = Project::from_template("tests/snapshots/init/inferred_bin_with_git.in");
+    let project = Project::from_template("tests/snapshots/init/inferred_bin_with_git/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -559,18 +565,18 @@ fn inferred_bin_with_git() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/inferred_bin_with_git.stdout")
-        .stderr_matches_path("tests/snapshots/init/inferred_bin_with_git.stderr");
+        .stdout_matches_path("tests/snapshots/init/inferred_bin_with_git/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/inferred_bin_with_git/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/inferred_bin_with_git.out",
+        "tests/snapshots/init/inferred_bin_with_git/out",
         project_root,
     );
 }
 
 #[cargo_test]
 fn with_argument() {
-    let project = Project::from_template("tests/snapshots/init/with_argument.in");
+    let project = Project::from_template("tests/snapshots/init/with_argument/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -578,10 +584,10 @@ fn with_argument() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/with_argument.stdout")
-        .stderr_matches_path("tests/snapshots/init/with_argument.stderr");
+        .stdout_matches_path("tests/snapshots/init/with_argument/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/with_argument/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/with_argument.out", project_root);
+    assert().subset_matches("tests/snapshots/init/with_argument/out", project_root);
 }
 
 #[cargo_test]
@@ -591,8 +597,8 @@ fn unknown_flags() {
         .current_dir(paths::root())
         .assert()
         .code(1)
-        .stdout_matches_path("tests/snapshots/init/unknown_flags.stdout")
-        .stderr_matches_path("tests/snapshots/init/unknown_flags.stderr");
+        .stdout_matches_path("tests/snapshots/init/unknown_flags/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/unknown_flags/stderr.log");
 }
 
 #[cfg(not(windows))]
@@ -603,8 +609,8 @@ fn no_filename() {
         .current_dir(paths::root())
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/init/no_filename.stdout")
-        .stderr_matches_path("tests/snapshots/init/no_filename.stderr");
+        .stdout_matches_path("tests/snapshots/init/no_filename/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/no_filename/stderr.log");
 }
 
 #[cargo_test]
@@ -613,7 +619,7 @@ fn formats_source() {
         return;
     }
 
-    let project = Project::from_template("tests/snapshots/init/formats_source.in");
+    let project = Project::from_template("tests/snapshots/init/formats_source/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -621,16 +627,16 @@ fn formats_source() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/formats_source.stdout")
-        .stderr_matches_path("tests/snapshots/init/formats_source.stderr");
+        .stdout_matches_path("tests/snapshots/init/formats_source/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/formats_source/stderr.log");
 
-    assert().subset_matches("tests/snapshots/init/formats_source.out", project_root);
+    assert().subset_matches("tests/snapshots/init/formats_source/out", project_root);
 }
 
 #[cargo_test]
 fn ignores_failure_to_format_source() {
     let project =
-        Project::from_template("tests/snapshots/init/ignores_failure_to_format_source.in");
+        Project::from_template("tests/snapshots/init/ignores_failure_to_format_source/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -639,11 +645,11 @@ fn ignores_failure_to_format_source() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/ignores_failure_to_format_source.stdout")
-        .stderr_matches_path("tests/snapshots/init/ignores_failure_to_format_source.stderr");
+        .stdout_matches_path("tests/snapshots/init/ignores_failure_to_format_source/stdout.log")
+        .stderr_matches_path("tests/snapshots/init/ignores_failure_to_format_source/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/init/ignores_failure_to_format_source.out",
+        "tests/snapshots/init/ignores_failure_to_format_source/out",
         project_root,
     );
 }
@@ -651,7 +657,7 @@ fn ignores_failure_to_format_source() {
 #[cargo_test]
 fn creates_binary_when_instructed_and_has_lib_file() {
     let project = Project::from_template(
-        "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.in",
+        "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file/in",
     );
     let project_root = &project.root();
 
@@ -661,14 +667,14 @@ fn creates_binary_when_instructed_and_has_lib_file() {
         .assert()
         .success()
         .stdout_matches_path(
-            "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.stdout",
+            "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file/stdout.log",
         )
         .stderr_matches_path(
-            "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.stderr",
+            "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file/stderr.log",
         );
 
     assert().subset_matches(
-        "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file.out",
+        "tests/snapshots/init/creates_binary_when_instructed_and_has_lib_file/out",
         project_root,
     );
 }
@@ -676,7 +682,7 @@ fn creates_binary_when_instructed_and_has_lib_file() {
 #[cargo_test]
 fn creates_library_when_instructed_and_has_bin_file() {
     let project = Project::from_template(
-        "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.in",
+        "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file/in",
     );
     let project_root = &project.root();
 
@@ -686,14 +692,14 @@ fn creates_library_when_instructed_and_has_bin_file() {
         .assert()
         .success()
         .stdout_matches_path(
-            "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.stdout",
+            "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file/stdout.log",
         )
         .stderr_matches_path(
-            "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.stderr",
+            "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file/stderr.log",
         );
 
     assert().subset_matches(
-        "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file.out",
+        "tests/snapshots/init/creates_library_when_instructed_and_has_bin_file/out",
         project_root,
     );
 }
@@ -701,7 +707,7 @@ fn creates_library_when_instructed_and_has_bin_file() {
 #[cargo_test]
 fn creates_binary_when_both_binlib_present() {
     let project =
-        Project::from_template("tests/snapshots/init/creates_binary_when_both_binlib_present.in");
+        Project::from_template("tests/snapshots/init/creates_binary_when_both_binlib_present/in");
     let project_root = &project.root();
 
     snapbox::cmd::Command::cargo()
@@ -709,11 +715,15 @@ fn creates_binary_when_both_binlib_present() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/init/creates_binary_when_both_binlib_present.stdout")
-        .stderr_matches_path("tests/snapshots/init/creates_binary_when_both_binlib_present.stderr");
+        .stdout_matches_path(
+            "tests/snapshots/init/creates_binary_when_both_binlib_present/stdout.log",
+        )
+        .stderr_matches_path(
+            "tests/snapshots/init/creates_binary_when_both_binlib_present/stderr.log",
+        );
 
     assert().subset_matches(
-        "tests/snapshots/init/creates_binary_when_both_binlib_present.out",
+        "tests/snapshots/init/creates_binary_when_both_binlib_present/out",
         project_root,
     );
 }
@@ -721,7 +731,7 @@ fn creates_binary_when_both_binlib_present() {
 #[cargo_test]
 fn cant_create_library_when_both_binlib_present() {
     let project = Project::from_template(
-        "tests/snapshots/init/cant_create_library_when_both_binlib_present.in",
+        "tests/snapshots/init/cant_create_library_when_both_binlib_present/in",
     );
     let project_root = &project.root();
 
@@ -731,9 +741,9 @@ fn cant_create_library_when_both_binlib_present() {
         .assert()
         .code(101)
         .stdout_matches_path(
-            "tests/snapshots/init/cant_create_library_when_both_binlib_present.stdout",
+            "tests/snapshots/init/cant_create_library_when_both_binlib_present/stdout.log",
         )
         .stderr_matches_path(
-            "tests/snapshots/init/cant_create_library_when_both_binlib_present.stderr",
+            "tests/snapshots/init/cant_create_library_when_both_binlib_present/stderr.log",
         );
 }

@@ -88,7 +88,7 @@ fn add_registry_packages(alt: bool) {
 #[cargo_test]
 fn add_basic() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/add_basic.in");
+    let project = Project::from_template("tests/snapshots/add/add_basic/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -98,16 +98,16 @@ fn add_basic() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/add_basic.stdout")
-        .stderr_matches_path("tests/snapshots/add/add_basic.stderr");
+        .stdout_matches_path("tests/snapshots/add/add_basic/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/add_basic/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/add_basic.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/add_basic/out", &project_root);
 }
 
 #[cargo_test]
 fn add_multiple() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/add_multiple.in");
+    let project = Project::from_template("tests/snapshots/add/add_multiple/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -117,16 +117,16 @@ fn add_multiple() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/add_multiple.stdout")
-        .stderr_matches_path("tests/snapshots/add/add_multiple.stderr");
+        .stdout_matches_path("tests/snapshots/add/add_multiple/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/add_multiple/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/add_multiple.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/add_multiple/out", &project_root);
 }
 
 #[cargo_test]
 fn quiet() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/quiet.in");
+    let project = Project::from_template("tests/snapshots/add/quiet/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -136,16 +136,16 @@ fn quiet() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/quiet.stdout")
-        .stderr_matches_path("tests/snapshots/add/quiet.stderr");
+        .stdout_matches_path("tests/snapshots/add/quiet/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/quiet/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/quiet.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/quiet/out", &project_root);
 }
 
 #[cargo_test]
 fn add_normalized_name_external() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/add_normalized_name_external.in");
+    let project = Project::from_template("tests/snapshots/add/add_normalized_name_external/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -155,11 +155,11 @@ fn add_normalized_name_external() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/add_normalized_name_external.stdout")
-        .stderr_matches_path("tests/snapshots/add/add_normalized_name_external.stderr");
+        .stdout_matches_path("tests/snapshots/add/add_normalized_name_external/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/add_normalized_name_external/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/add_normalized_name_external.out",
+        "tests/snapshots/add/add_normalized_name_external/out",
         &project_root,
     );
 }
@@ -167,7 +167,7 @@ fn add_normalized_name_external() {
 #[cargo_test]
 fn infer_prerelease() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/infer_prerelease.in");
+    let project = Project::from_template("tests/snapshots/add/infer_prerelease/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -177,16 +177,16 @@ fn infer_prerelease() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/infer_prerelease.stdout")
-        .stderr_matches_path("tests/snapshots/add/infer_prerelease.stderr");
+        .stdout_matches_path("tests/snapshots/add/infer_prerelease/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/infer_prerelease/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/infer_prerelease.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/infer_prerelease/out", &project_root);
 }
 
 #[cargo_test]
 fn build() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/build.in");
+    let project = Project::from_template("tests/snapshots/add/build/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -196,16 +196,16 @@ fn build() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/build.stdout")
-        .stderr_matches_path("tests/snapshots/add/build.stderr");
+        .stdout_matches_path("tests/snapshots/add/build/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/build/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/build.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/build/out", &project_root);
 }
 
 #[cargo_test]
 fn build_prefer_existing_version() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/build_prefer_existing_version.in");
+    let project = Project::from_template("tests/snapshots/add/build_prefer_existing_version/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -215,11 +215,11 @@ fn build_prefer_existing_version() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/build_prefer_existing_version.stdout")
-        .stderr_matches_path("tests/snapshots/add/build_prefer_existing_version.stderr");
+        .stdout_matches_path("tests/snapshots/add/build_prefer_existing_version/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/build_prefer_existing_version/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/build_prefer_existing_version.out",
+        "tests/snapshots/add/build_prefer_existing_version/out",
         &project_root,
     );
 }
@@ -227,7 +227,7 @@ fn build_prefer_existing_version() {
 #[cargo_test]
 fn default_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/default_features.in");
+    let project = Project::from_template("tests/snapshots/add/default_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -237,16 +237,16 @@ fn default_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/default_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/default_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/default_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/default_features/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/default_features.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/default_features/out", &project_root);
 }
 
 #[cargo_test]
 fn require_weak() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/require_weak.in");
+    let project = Project::from_template("tests/snapshots/add/require_weak/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -256,16 +256,16 @@ fn require_weak() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/require_weak.stdout")
-        .stderr_matches_path("tests/snapshots/add/require_weak.stderr");
+        .stdout_matches_path("tests/snapshots/add/require_weak/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/require_weak/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/require_weak.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/require_weak/out", &project_root);
 }
 
 #[cargo_test]
 fn detect_workspace_inherit() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/detect_workspace_inherit.in");
+    let project = Project::from_template("tests/snapshots/add/detect_workspace_inherit/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -276,11 +276,11 @@ fn detect_workspace_inherit() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit.stdout")
-        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit.stderr");
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/detect_workspace_inherit.out",
+        "tests/snapshots/add/detect_workspace_inherit/out",
         &project_root,
     );
 }
@@ -289,7 +289,7 @@ fn detect_workspace_inherit() {
 fn detect_workspace_inherit_features() {
     init_registry();
     let project =
-        Project::from_template("tests/snapshots/add/detect_workspace_inherit_features.in");
+        Project::from_template("tests/snapshots/add/detect_workspace_inherit_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -300,11 +300,11 @@ fn detect_workspace_inherit_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/detect_workspace_inherit_features.out",
+        "tests/snapshots/add/detect_workspace_inherit_features/out",
         &project_root,
     );
 }
@@ -313,7 +313,7 @@ fn detect_workspace_inherit_features() {
 fn detect_workspace_inherit_optional() {
     init_registry();
     let project =
-        Project::from_template("tests/snapshots/add/detect_workspace_inherit_optional.in");
+        Project::from_template("tests/snapshots/add/detect_workspace_inherit_optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -324,11 +324,11 @@ fn detect_workspace_inherit_optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/detect_workspace_inherit_optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/detect_workspace_inherit_optional/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/detect_workspace_inherit_optional.out",
+        "tests/snapshots/add/detect_workspace_inherit_optional/out",
         &project_root,
     );
 }
@@ -336,7 +336,7 @@ fn detect_workspace_inherit_optional() {
 #[cargo_test]
 fn dev() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/dev.in");
+    let project = Project::from_template("tests/snapshots/add/dev/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -346,16 +346,16 @@ fn dev() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/dev.stdout")
-        .stderr_matches_path("tests/snapshots/add/dev.stderr");
+        .stdout_matches_path("tests/snapshots/add/dev/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/dev/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/dev.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/dev/out", &project_root);
 }
 
 #[cargo_test]
 fn dev_build_conflict() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/dev_build_conflict.in");
+    let project = Project::from_template("tests/snapshots/add/dev_build_conflict/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -365,16 +365,16 @@ fn dev_build_conflict() {
         .current_dir(cwd)
         .assert()
         .code(1)
-        .stdout_matches_path("tests/snapshots/add/dev_build_conflict.stdout")
-        .stderr_matches_path("tests/snapshots/add/dev_build_conflict.stderr");
+        .stdout_matches_path("tests/snapshots/add/dev_build_conflict/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/dev_build_conflict/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/dev_build_conflict.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/dev_build_conflict/out", &project_root);
 }
 
 #[cargo_test]
 fn dev_prefer_existing_version() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/dev_prefer_existing_version.in");
+    let project = Project::from_template("tests/snapshots/add/dev_prefer_existing_version/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -384,11 +384,11 @@ fn dev_prefer_existing_version() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/dev_prefer_existing_version.stdout")
-        .stderr_matches_path("tests/snapshots/add/dev_prefer_existing_version.stderr");
+        .stdout_matches_path("tests/snapshots/add/dev_prefer_existing_version/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/dev_prefer_existing_version/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/dev_prefer_existing_version.out",
+        "tests/snapshots/add/dev_prefer_existing_version/out",
         &project_root,
     );
 }
@@ -396,7 +396,7 @@ fn dev_prefer_existing_version() {
 #[cargo_test]
 fn dry_run() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/dry_run.in");
+    let project = Project::from_template("tests/snapshots/add/dry_run/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -406,16 +406,16 @@ fn dry_run() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/dry_run.stdout")
-        .stderr_matches_path("tests/snapshots/add/dry_run.stderr");
+        .stdout_matches_path("tests/snapshots/add/dry_run/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/dry_run/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/dry_run.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/dry_run/out", &project_root);
 }
 
 #[cargo_test]
 fn features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/features.in");
+    let project = Project::from_template("tests/snapshots/add/features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -425,16 +425,16 @@ fn features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/features.stdout")
-        .stderr_matches_path("tests/snapshots/add/features.stderr");
+        .stdout_matches_path("tests/snapshots/add/features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/features/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/features.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/features/out", &project_root);
 }
 
 #[cargo_test]
 fn features_empty() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/features_empty.in");
+    let project = Project::from_template("tests/snapshots/add/features_empty/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -444,16 +444,16 @@ fn features_empty() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/features_empty.stdout")
-        .stderr_matches_path("tests/snapshots/add/features_empty.stderr");
+        .stdout_matches_path("tests/snapshots/add/features_empty/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/features_empty/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/features_empty.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/features_empty/out", &project_root);
 }
 
 #[cargo_test]
 fn features_multiple_occurrences() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/features_multiple_occurrences.in");
+    let project = Project::from_template("tests/snapshots/add/features_multiple_occurrences/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -463,11 +463,11 @@ fn features_multiple_occurrences() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/features_multiple_occurrences.stdout")
-        .stderr_matches_path("tests/snapshots/add/features_multiple_occurrences.stderr");
+        .stdout_matches_path("tests/snapshots/add/features_multiple_occurrences/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/features_multiple_occurrences/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/features_multiple_occurrences.out",
+        "tests/snapshots/add/features_multiple_occurrences/out",
         &project_root,
     );
 }
@@ -475,7 +475,7 @@ fn features_multiple_occurrences() {
 #[cargo_test]
 fn features_preserve() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/features_preserve.in");
+    let project = Project::from_template("tests/snapshots/add/features_preserve/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -485,16 +485,16 @@ fn features_preserve() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/features_preserve.stdout")
-        .stderr_matches_path("tests/snapshots/add/features_preserve.stderr");
+        .stdout_matches_path("tests/snapshots/add/features_preserve/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/features_preserve/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/features_preserve.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/features_preserve/out", &project_root);
 }
 
 #[cargo_test]
 fn features_spaced_values() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/features_spaced_values.in");
+    let project = Project::from_template("tests/snapshots/add/features_spaced_values/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -504,11 +504,11 @@ fn features_spaced_values() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/features_spaced_values.stdout")
-        .stderr_matches_path("tests/snapshots/add/features_spaced_values.stderr");
+        .stdout_matches_path("tests/snapshots/add/features_spaced_values/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/features_spaced_values/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/features_spaced_values.out",
+        "tests/snapshots/add/features_spaced_values/out",
         &project_root,
     );
 }
@@ -516,7 +516,7 @@ fn features_spaced_values() {
 #[cargo_test]
 fn features_unknown() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/features_unknown.in");
+    let project = Project::from_template("tests/snapshots/add/features_unknown/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -526,16 +526,16 @@ fn features_unknown() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/features_unknown.stdout")
-        .stderr_matches_path("tests/snapshots/add/features_unknown.stderr");
+        .stdout_matches_path("tests/snapshots/add/features_unknown/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/features_unknown/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/features_unknown.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/features_unknown/out", &project_root);
 }
 
 #[cargo_test]
 fn git() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git.in");
+    let project = Project::from_template("tests/snapshots/add/git/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -554,16 +554,16 @@ fn git() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git.stdout")
-        .stderr_matches_path("tests/snapshots/add/git.stderr");
+        .stdout_matches_path("tests/snapshots/add/git/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git/out", &project_root);
 }
 
 #[cargo_test]
 fn git_inferred_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_inferred_name.in");
+    let project = Project::from_template("tests/snapshots/add/git_inferred_name/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -582,16 +582,16 @@ fn git_inferred_name() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_inferred_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_inferred_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_inferred_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_inferred_name/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_inferred_name.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_inferred_name/out", &project_root);
 }
 
 #[cargo_test]
 fn git_inferred_name_multiple() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_inferred_name_multiple.in");
+    let project = Project::from_template("tests/snapshots/add/git_inferred_name_multiple/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -615,11 +615,11 @@ fn git_inferred_name_multiple() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/git_inferred_name_multiple.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_inferred_name_multiple.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_inferred_name_multiple/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_inferred_name_multiple/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/git_inferred_name_multiple.out",
+        "tests/snapshots/add/git_inferred_name_multiple/out",
         &project_root,
     );
 }
@@ -627,7 +627,7 @@ fn git_inferred_name_multiple() {
 #[cargo_test]
 fn git_normalized_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_normalized_name.in");
+    let project = Project::from_template("tests/snapshots/add/git_normalized_name/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -646,16 +646,16 @@ fn git_normalized_name() {
         .current_dir(cwd)
         .assert()
         .failure() // Fuzzy searching for paths isn't supported at this time
-        .stdout_matches_path("tests/snapshots/add/git_normalized_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_normalized_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_normalized_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_normalized_name/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_normalized_name.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_normalized_name/out", &project_root);
 }
 
 #[cargo_test]
 fn invalid_git_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_git_name.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_git_name/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -674,16 +674,16 @@ fn invalid_git_name() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_git_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_git_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_git_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_git_name/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_git_name.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_git_name/out", &project_root);
 }
 
 #[cargo_test]
 fn git_branch() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_branch.in");
+    let project = Project::from_template("tests/snapshots/add/git_branch/in");
     let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
@@ -705,16 +705,16 @@ fn git_branch() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_branch.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_branch.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_branch/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_branch/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_branch.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_branch/out", &project_root);
 }
 
 #[cargo_test]
 fn git_conflicts_namever() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_conflicts_namever.in");
+    let project = Project::from_template("tests/snapshots/add/git_conflicts_namever/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -728,11 +728,11 @@ fn git_conflicts_namever() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/git_conflicts_namever.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_conflicts_namever.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_conflicts_namever/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_conflicts_namever/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/git_conflicts_namever.out",
+        "tests/snapshots/add/git_conflicts_namever/out",
         &project_root,
     );
 }
@@ -740,7 +740,7 @@ fn git_conflicts_namever() {
 #[cargo_test]
 fn git_registry() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/git_registry.in");
+    let project = Project::from_template("tests/snapshots/add/git_registry/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("versioned-package", |project| {
@@ -765,16 +765,16 @@ fn git_registry() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_registry.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_registry.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_registry/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_registry/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_registry.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_registry/out", &project_root);
 }
 
 #[cargo_test]
 fn git_dev() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_dev.in");
+    let project = Project::from_template("tests/snapshots/add/git_dev/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -793,16 +793,16 @@ fn git_dev() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_dev.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_dev.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_dev/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_dev/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_dev.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_dev/out", &project_root);
 }
 
 #[cargo_test]
 fn git_rev() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_rev.in");
+    let project = Project::from_template("tests/snapshots/add/git_rev/in");
     let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
@@ -823,16 +823,16 @@ fn git_rev() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_rev.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_rev.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_rev/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_rev/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_rev.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_rev/out", &project_root);
 }
 
 #[cargo_test]
 fn git_tag() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_tag.in");
+    let project = Project::from_template("tests/snapshots/add/git_tag/in");
     let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
@@ -853,16 +853,16 @@ fn git_tag() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_tag.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_tag.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_tag/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_tag/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_tag.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_tag/out", &project_root);
 }
 
 #[cargo_test]
 fn path() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/path.in");
+    let project = Project::from_template("tests/snapshots/add/path/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -872,16 +872,16 @@ fn path() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/path.stdout")
-        .stderr_matches_path("tests/snapshots/add/path.stderr");
+        .stdout_matches_path("tests/snapshots/add/path/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/path/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/path.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/path/out", &project_root);
 }
 
 #[cargo_test]
 fn path_inferred_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/path_inferred_name.in");
+    let project = Project::from_template("tests/snapshots/add/path_inferred_name/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -891,17 +891,17 @@ fn path_inferred_name() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/path_inferred_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/path_inferred_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/path_inferred_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/path_inferred_name/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/path_inferred_name.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/path_inferred_name/out", &project_root);
 }
 
 #[cargo_test]
 fn path_inferred_name_conflicts_full_feature() {
     init_registry();
     let project =
-        Project::from_template("tests/snapshots/add/path_inferred_name_conflicts_full_feature.in");
+        Project::from_template("tests/snapshots/add/path_inferred_name_conflicts_full_feature/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -911,13 +911,15 @@ fn path_inferred_name_conflicts_full_feature() {
         .current_dir(&cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/path_inferred_name_conflicts_full_feature.stdout")
+        .stdout_matches_path(
+            "tests/snapshots/add/path_inferred_name_conflicts_full_feature/stdout.log",
+        )
         .stderr_matches_path(
-            "tests/snapshots/add/path_inferred_name_conflicts_full_feature.stderr",
+            "tests/snapshots/add/path_inferred_name_conflicts_full_feature/stderr.log",
         );
 
     assert().subset_matches(
-        "tests/snapshots/add/path_inferred_name_conflicts_full_feature.out",
+        "tests/snapshots/add/path_inferred_name_conflicts_full_feature/out",
         &project_root,
     );
 }
@@ -925,7 +927,7 @@ fn path_inferred_name_conflicts_full_feature() {
 #[cargo_test]
 fn path_normalized_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/path_normalized_name.in");
+    let project = Project::from_template("tests/snapshots/add/path_normalized_name/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -935,11 +937,11 @@ fn path_normalized_name() {
         .current_dir(&cwd)
         .assert()
         .failure() // Fuzzy searching for paths isn't supported at this time
-        .stdout_matches_path("tests/snapshots/add/path_normalized_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/path_normalized_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/path_normalized_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/path_normalized_name/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/path_normalized_name.out",
+        "tests/snapshots/add/path_normalized_name/out",
         &project_root,
     );
 }
@@ -947,7 +949,7 @@ fn path_normalized_name() {
 #[cargo_test]
 fn invalid_path_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_path_name.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path_name/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -957,16 +959,16 @@ fn invalid_path_name() {
         .current_dir(&cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_path_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_path_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_path_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_path_name/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_path_name.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_path_name/out", &project_root);
 }
 
 #[cargo_test]
 fn path_dev() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/path_dev.in");
+    let project = Project::from_template("tests/snapshots/add/path_dev/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -976,16 +978,16 @@ fn path_dev() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/path_dev.stdout")
-        .stderr_matches_path("tests/snapshots/add/path_dev.stderr");
+        .stdout_matches_path("tests/snapshots/add/path_dev/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/path_dev/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/path_dev.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/path_dev/out", &project_root);
 }
 
 #[cargo_test]
 fn invalid_arg() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_arg.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_arg/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -995,16 +997,16 @@ fn invalid_arg() {
         .current_dir(cwd)
         .assert()
         .code(1)
-        .stdout_matches_path("tests/snapshots/add/invalid_arg.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_arg.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_arg/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_arg/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_arg.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_arg/out", &project_root);
 }
 
 #[cargo_test]
 fn invalid_git_external() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_git_external.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_git_external/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_url = url::Url::from_directory_path(cwd.join("does-not-exist"))
@@ -1017,18 +1019,18 @@ fn invalid_git_external() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_git_external.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_git_external.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_git_external/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_git_external/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/invalid_git_external.out",
+        "tests/snapshots/add/invalid_git_external/out",
         &project_root,
     );
 }
 
 #[cargo_test]
 fn invalid_key_inherit_dependency() {
-    let project = Project::from_template("tests/snapshots/add/invalid_key_inherit_dependency.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_key_inherit_dependency/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1039,11 +1041,11 @@ fn invalid_key_inherit_dependency() {
         .current_dir(cwd)
         .assert()
         .failure()
-        .stdout_matches_path("tests/snapshots/add/invalid_key_inherit_dependency.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_key_inherit_dependency.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_key_inherit_dependency/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_key_inherit_dependency/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/invalid_key_inherit_dependency.out",
+        "tests/snapshots/add/invalid_key_inherit_dependency/out",
         &project_root,
     );
 }
@@ -1051,7 +1053,7 @@ fn invalid_key_inherit_dependency() {
 #[cargo_test]
 fn invalid_key_rename_inherit_dependency() {
     let project =
-        Project::from_template("tests/snapshots/add/invalid_key_rename_inherit_dependency.in");
+        Project::from_template("tests/snapshots/add/invalid_key_rename_inherit_dependency/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1062,11 +1064,13 @@ fn invalid_key_rename_inherit_dependency() {
         .current_dir(cwd)
         .assert()
         .failure()
-        .stdout_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_key_rename_inherit_dependency/stdout.log")
+        .stderr_matches_path(
+            "tests/snapshots/add/invalid_key_rename_inherit_dependency/stderr.log",
+        );
 
     assert().subset_matches(
-        "tests/snapshots/add/invalid_key_rename_inherit_dependency.out",
+        "tests/snapshots/add/invalid_key_rename_inherit_dependency/out",
         &project_root,
     );
 }
@@ -1074,7 +1078,7 @@ fn invalid_key_rename_inherit_dependency() {
 #[cargo_test]
 fn invalid_key_overwrite_inherit_dependency() {
     let project =
-        Project::from_template("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.in");
+        Project::from_template("tests/snapshots/add/invalid_key_overwrite_inherit_dependency/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1085,11 +1089,15 @@ fn invalid_key_overwrite_inherit_dependency() {
         .current_dir(cwd)
         .assert()
         .failure()
-        .stdout_matches_path("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_key_overwrite_inherit_dependency.stderr");
+        .stdout_matches_path(
+            "tests/snapshots/add/invalid_key_overwrite_inherit_dependency/stdout.log",
+        )
+        .stderr_matches_path(
+            "tests/snapshots/add/invalid_key_overwrite_inherit_dependency/stderr.log",
+        );
 
     assert().subset_matches(
-        "tests/snapshots/add/invalid_key_overwrite_inherit_dependency.out",
+        "tests/snapshots/add/invalid_key_overwrite_inherit_dependency/out",
         &project_root,
     );
 }
@@ -1097,7 +1105,7 @@ fn invalid_key_overwrite_inherit_dependency() {
 #[cargo_test]
 fn invalid_path() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_path.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1107,16 +1115,16 @@ fn invalid_path() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_path.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_path.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_path/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_path/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_path.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_path/out", &project_root);
 }
 
 #[cargo_test]
 fn invalid_path_self() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_path_self.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path_self/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1126,16 +1134,16 @@ fn invalid_path_self() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_path_self.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_path_self.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_path_self/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_path_self/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_path_self.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_path_self/out", &project_root);
 }
 
 #[cargo_test]
 fn invalid_manifest() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_manifest.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_manifest/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1145,16 +1153,16 @@ fn invalid_manifest() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_manifest.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_manifest.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_manifest/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_manifest/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_manifest.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_manifest/out", &project_root);
 }
 
 #[cargo_test]
 fn invalid_name_external() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_name_external.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_name_external/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1164,11 +1172,11 @@ fn invalid_name_external() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_name_external.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_name_external.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_name_external/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_name_external/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/invalid_name_external.out",
+        "tests/snapshots/add/invalid_name_external/out",
         &project_root,
     );
 }
@@ -1176,7 +1184,7 @@ fn invalid_name_external() {
 #[cargo_test]
 fn invalid_target_empty() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_target_empty.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_target_empty/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1186,11 +1194,11 @@ fn invalid_target_empty() {
         .current_dir(cwd)
         .assert()
         .code(1)
-        .stdout_matches_path("tests/snapshots/add/invalid_target_empty.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_target_empty.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_target_empty/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_target_empty/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/invalid_target_empty.out",
+        "tests/snapshots/add/invalid_target_empty/out",
         &project_root,
     );
 }
@@ -1198,7 +1206,7 @@ fn invalid_target_empty() {
 #[cargo_test]
 fn invalid_vers() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/invalid_vers.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_vers/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1208,16 +1216,16 @@ fn invalid_vers() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/invalid_vers.stdout")
-        .stderr_matches_path("tests/snapshots/add/invalid_vers.stderr");
+        .stdout_matches_path("tests/snapshots/add/invalid_vers/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/invalid_vers/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/invalid_vers.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/invalid_vers/out", &project_root);
 }
 
 #[cargo_test]
 fn list_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/list_features.in");
+    let project = Project::from_template("tests/snapshots/add/list_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1227,16 +1235,16 @@ fn list_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/list_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/list_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/list_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/list_features/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/list_features.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/list_features/out", &project_root);
 }
 
 #[cargo_test]
 fn list_features_path() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/list_features_path.in");
+    let project = Project::from_template("tests/snapshots/add/list_features_path/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -1246,16 +1254,16 @@ fn list_features_path() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/list_features_path.stdout")
-        .stderr_matches_path("tests/snapshots/add/list_features_path.stderr");
+        .stdout_matches_path("tests/snapshots/add/list_features_path/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/list_features_path/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/list_features_path.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/list_features_path/out", &project_root);
 }
 
 #[cargo_test]
 fn list_features_path_no_default() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/list_features_path_no_default.in");
+    let project = Project::from_template("tests/snapshots/add/list_features_path_no_default/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -1270,11 +1278,11 @@ fn list_features_path_no_default() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/list_features_path_no_default.stdout")
-        .stderr_matches_path("tests/snapshots/add/list_features_path_no_default.stderr");
+        .stdout_matches_path("tests/snapshots/add/list_features_path_no_default/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/list_features_path_no_default/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/list_features_path_no_default.out",
+        "tests/snapshots/add/list_features_path_no_default/out",
         &project_root,
     );
 }
@@ -1282,7 +1290,7 @@ fn list_features_path_no_default() {
 #[cargo_test]
 fn manifest_path_package() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/manifest_path_package.in");
+    let project = Project::from_template("tests/snapshots/add/manifest_path_package/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1298,18 +1306,18 @@ fn manifest_path_package() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/manifest_path_package.stdout")
-        .stderr_matches_path("tests/snapshots/add/manifest_path_package.stderr");
+        .stdout_matches_path("tests/snapshots/add/manifest_path_package/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/manifest_path_package/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/manifest_path_package.out",
+        "tests/snapshots/add/manifest_path_package/out",
         &project_root,
     );
 }
 
 #[cargo_test]
 fn merge_activated_features() {
-    let project = Project::from_template("tests/snapshots/add/merge_activated_features.in");
+    let project = Project::from_template("tests/snapshots/add/merge_activated_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1320,11 +1328,11 @@ fn merge_activated_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/merge_activated_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/merge_activated_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/merge_activated_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/merge_activated_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/merge_activated_features.out",
+        "tests/snapshots/add/merge_activated_features/out",
         &project_root,
     );
 }
@@ -1332,7 +1340,7 @@ fn merge_activated_features() {
 #[cargo_test]
 fn multiple_conflicts_with_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_features.in");
+    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1342,11 +1350,11 @@ fn multiple_conflicts_with_features() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/multiple_conflicts_with_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/multiple_conflicts_with_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/multiple_conflicts_with_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/multiple_conflicts_with_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/multiple_conflicts_with_features.out",
+        "tests/snapshots/add/multiple_conflicts_with_features/out",
         &project_root,
     );
 }
@@ -1354,7 +1362,7 @@ fn multiple_conflicts_with_features() {
 #[cargo_test]
 fn git_multiple_names() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/git_multiple_names.in");
+    let project = Project::from_template("tests/snapshots/add/git_multiple_names/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
@@ -1378,16 +1386,16 @@ fn git_multiple_names() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/git_multiple_names.stdout")
-        .stderr_matches_path("tests/snapshots/add/git_multiple_names.stderr");
+        .stdout_matches_path("tests/snapshots/add/git_multiple_names/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/git_multiple_names/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/git_multiple_names.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/git_multiple_names/out", &project_root);
 }
 
 #[cargo_test]
 fn multiple_conflicts_with_rename() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_rename/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1397,11 +1405,11 @@ fn multiple_conflicts_with_rename() {
         .current_dir(cwd)
         .assert()
         .code(101)
-        .stdout_matches_path("tests/snapshots/add/multiple_conflicts_with_rename.stdout")
-        .stderr_matches_path("tests/snapshots/add/multiple_conflicts_with_rename.stderr");
+        .stdout_matches_path("tests/snapshots/add/multiple_conflicts_with_rename/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/multiple_conflicts_with_rename/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/multiple_conflicts_with_rename.out",
+        "tests/snapshots/add/multiple_conflicts_with_rename/out",
         &project_root,
     );
 }
@@ -1409,7 +1417,7 @@ fn multiple_conflicts_with_rename() {
 #[cargo_test]
 fn namever() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/namever.in");
+    let project = Project::from_template("tests/snapshots/add/namever/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1419,16 +1427,16 @@ fn namever() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/namever.stdout")
-        .stderr_matches_path("tests/snapshots/add/namever.stderr");
+        .stdout_matches_path("tests/snapshots/add/namever/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/namever/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/namever.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/namever/out", &project_root);
 }
 
 #[cargo_test]
 fn no_args() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/no_args.in");
+    let project = Project::from_template("tests/snapshots/add/no_args/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1437,16 +1445,16 @@ fn no_args() {
         .current_dir(cwd)
         .assert()
         .code(1)
-        .stdout_matches_path("tests/snapshots/add/no_args.stdout")
-        .stderr_matches_path("tests/snapshots/add/no_args.stderr");
+        .stdout_matches_path("tests/snapshots/add/no_args/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/no_args/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/no_args.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/no_args/out", &project_root);
 }
 
 #[cargo_test]
 fn no_default_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/no_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/no_default_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1456,16 +1464,16 @@ fn no_default_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/no_default_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/no_default_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/no_default_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/no_default_features/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/no_default_features.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/no_default_features/out", &project_root);
 }
 
 #[cargo_test]
 fn no_optional() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/no_optional.in");
+    let project = Project::from_template("tests/snapshots/add/no_optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1475,16 +1483,16 @@ fn no_optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/no_optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/no_optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/no_optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/no_optional/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/no_optional.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/no_optional/out", &project_root);
 }
 
 #[cargo_test]
 fn optional() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/optional.in");
+    let project = Project::from_template("tests/snapshots/add/optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1494,16 +1502,16 @@ fn optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/optional/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/optional.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/optional/out", &project_root);
 }
 
 #[cargo_test]
 fn overwrite_default_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_default_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1513,11 +1521,11 @@ fn overwrite_default_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_default_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_default_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_default_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_default_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_default_features.out",
+        "tests/snapshots/add/overwrite_default_features/out",
         &project_root,
     );
 }
@@ -1526,7 +1534,7 @@ fn overwrite_default_features() {
 fn overwrite_default_features_with_no_default_features() {
     init_registry();
     let project = Project::from_template(
-        "tests/snapshots/add/overwrite_default_features_with_no_default_features.in",
+        "tests/snapshots/add/overwrite_default_features_with_no_default_features/in",
     );
     let project_root = project.root();
     let cwd = &project_root;
@@ -1538,14 +1546,14 @@ fn overwrite_default_features_with_no_default_features() {
         .assert()
         .success()
         .stdout_matches_path(
-            "tests/snapshots/add/overwrite_default_features_with_no_default_features.stdout",
+            "tests/snapshots/add/overwrite_default_features_with_no_default_features/stdout.log",
         )
         .stderr_matches_path(
-            "tests/snapshots/add/overwrite_default_features_with_no_default_features.stderr",
+            "tests/snapshots/add/overwrite_default_features_with_no_default_features/stderr.log",
         );
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_default_features_with_no_default_features.out",
+        "tests/snapshots/add/overwrite_default_features_with_no_default_features/out",
         &project_root,
     );
 }
@@ -1553,7 +1561,7 @@ fn overwrite_default_features_with_no_default_features() {
 #[cargo_test]
 fn overwrite_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1563,16 +1571,16 @@ fn overwrite_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_features/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/overwrite_features.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/overwrite_features/out", &project_root);
 }
 
 #[cargo_test]
 fn overwrite_git_with_path() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_git_with_path.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_git_with_path/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -1582,11 +1590,11 @@ fn overwrite_git_with_path() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_git_with_path.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_git_with_path.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_git_with_path/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_git_with_path/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_git_with_path.out",
+        "tests/snapshots/add/overwrite_git_with_path/out",
         &project_root,
     );
 }
@@ -1594,7 +1602,7 @@ fn overwrite_git_with_path() {
 #[cargo_test]
 fn overwrite_inline_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_inline_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inline_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1606,18 +1614,18 @@ fn overwrite_inline_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_inline_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_inline_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_inline_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inline_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_inline_features.out",
+        "tests/snapshots/add/overwrite_inline_features/out",
         &project_root,
     );
 }
 
 #[cargo_test]
 fn overwrite_inherit_features_noop() {
-    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_features_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_features_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1628,11 +1636,11 @@ fn overwrite_inherit_features_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_features_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_features_noop/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_inherit_features_noop.out",
+        "tests/snapshots/add/overwrite_inherit_features_noop/out",
         &project_root,
     );
 }
@@ -1640,7 +1648,7 @@ fn overwrite_inherit_features_noop() {
 #[cargo_test]
 fn overwrite_inherit_noop() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1651,11 +1659,11 @@ fn overwrite_inherit_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_noop/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_inherit_noop.out",
+        "tests/snapshots/add/overwrite_inherit_noop/out",
         &project_root,
     );
 }
@@ -1663,7 +1671,7 @@ fn overwrite_inherit_noop() {
 #[cargo_test]
 fn overwrite_inherit_optional_noop() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_optional_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_optional_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1674,11 +1682,11 @@ fn overwrite_inherit_optional_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_inherit_optional_noop.out",
+        "tests/snapshots/add/overwrite_inherit_optional_noop/out",
         &project_root,
     );
 }
@@ -1686,7 +1694,7 @@ fn overwrite_inherit_optional_noop() {
 #[cargo_test]
 fn overwrite_name_dev_noop() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_name_dev_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_name_dev_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1696,11 +1704,11 @@ fn overwrite_name_dev_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_name_dev_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_name_dev_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_name_dev_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_name_dev_noop/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_name_dev_noop.out",
+        "tests/snapshots/add/overwrite_name_dev_noop/out",
         &project_root,
     );
 }
@@ -1708,7 +1716,7 @@ fn overwrite_name_dev_noop() {
 #[cargo_test]
 fn overwrite_name_noop() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_name_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_name_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1718,16 +1726,16 @@ fn overwrite_name_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_name_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_name_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_name_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_name_noop/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/overwrite_name_noop.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/overwrite_name_noop/out", &project_root);
 }
 
 #[cargo_test]
 fn overwrite_no_default_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_no_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_no_default_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1737,11 +1745,11 @@ fn overwrite_no_default_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_no_default_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_no_default_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_no_default_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_no_default_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_no_default_features.out",
+        "tests/snapshots/add/overwrite_no_default_features/out",
         &project_root,
     );
 }
@@ -1750,7 +1758,7 @@ fn overwrite_no_default_features() {
 fn overwrite_no_default_features_with_default_features() {
     init_registry();
     let project = Project::from_template(
-        "tests/snapshots/add/overwrite_no_default_features_with_default_features.in",
+        "tests/snapshots/add/overwrite_no_default_features_with_default_features/in",
     );
     let project_root = project.root();
     let cwd = &project_root;
@@ -1762,14 +1770,14 @@ fn overwrite_no_default_features_with_default_features() {
         .assert()
         .success()
         .stdout_matches_path(
-            "tests/snapshots/add/overwrite_no_default_features_with_default_features.stdout",
+            "tests/snapshots/add/overwrite_no_default_features_with_default_features/stdout.log",
         )
         .stderr_matches_path(
-            "tests/snapshots/add/overwrite_no_default_features_with_default_features.stderr",
+            "tests/snapshots/add/overwrite_no_default_features_with_default_features/stderr.log",
         );
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_no_default_features_with_default_features.out",
+        "tests/snapshots/add/overwrite_no_default_features_with_default_features/out",
         &project_root,
     );
 }
@@ -1777,7 +1785,7 @@ fn overwrite_no_default_features_with_default_features() {
 #[cargo_test]
 fn overwrite_no_optional() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_no_optional.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_no_optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1787,11 +1795,11 @@ fn overwrite_no_optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_no_optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_no_optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_no_optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_no_optional/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_no_optional.out",
+        "tests/snapshots/add/overwrite_no_optional/out",
         &project_root,
     );
 }
@@ -1800,7 +1808,7 @@ fn overwrite_no_optional() {
 fn overwrite_no_optional_with_optional() {
     init_registry();
     let project =
-        Project::from_template("tests/snapshots/add/overwrite_no_optional_with_optional.in");
+        Project::from_template("tests/snapshots/add/overwrite_no_optional_with_optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1810,11 +1818,11 @@ fn overwrite_no_optional_with_optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_no_optional_with_optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_no_optional_with_optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_no_optional_with_optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_no_optional_with_optional/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_no_optional_with_optional.out",
+        "tests/snapshots/add/overwrite_no_optional_with_optional/out",
         &project_root,
     );
 }
@@ -1822,7 +1830,7 @@ fn overwrite_no_optional_with_optional() {
 #[cargo_test]
 fn overwrite_optional() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_optional.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1832,17 +1840,17 @@ fn overwrite_optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_optional/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/overwrite_optional.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/overwrite_optional/out", &project_root);
 }
 
 #[cargo_test]
 fn overwrite_optional_with_no_optional() {
     init_registry();
     let project =
-        Project::from_template("tests/snapshots/add/overwrite_optional_with_no_optional.in");
+        Project::from_template("tests/snapshots/add/overwrite_optional_with_no_optional/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1852,11 +1860,11 @@ fn overwrite_optional_with_no_optional() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_optional_with_no_optional.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_optional_with_no_optional.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_optional_with_no_optional/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_optional_with_no_optional/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_optional_with_no_optional.out",
+        "tests/snapshots/add/overwrite_optional_with_no_optional/out",
         &project_root,
     );
 }
@@ -1864,7 +1872,7 @@ fn overwrite_optional_with_no_optional() {
 #[cargo_test]
 fn overwrite_path_noop() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_path_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_path_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1874,16 +1882,16 @@ fn overwrite_path_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_path_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_path_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_path_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_path_noop/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/overwrite_path_noop.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/overwrite_path_noop/out", &project_root);
 }
 
 #[cargo_test]
 fn overwrite_path_with_version() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_path_with_version.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_path_with_version/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -1893,11 +1901,11 @@ fn overwrite_path_with_version() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_path_with_version.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_path_with_version.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_path_with_version/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_path_with_version/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_path_with_version.out",
+        "tests/snapshots/add/overwrite_path_with_version/out",
         &project_root,
     );
 }
@@ -1905,7 +1913,7 @@ fn overwrite_path_with_version() {
 #[cargo_test]
 fn overwrite_rename_with_no_rename() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_no_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_no_rename/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1915,11 +1923,11 @@ fn overwrite_rename_with_no_rename() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_rename_with_no_rename.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_rename_with_no_rename.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_rename_with_no_rename/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_rename_with_no_rename/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_rename_with_no_rename.out",
+        "tests/snapshots/add/overwrite_rename_with_no_rename/out",
         &project_root,
     );
 }
@@ -1927,7 +1935,7 @@ fn overwrite_rename_with_no_rename() {
 #[cargo_test]
 fn overwrite_rename_with_rename() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_rename/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1937,11 +1945,11 @@ fn overwrite_rename_with_rename() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_rename_with_rename.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_rename_with_rename.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_rename_with_rename/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_rename_with_rename/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_rename_with_rename.out",
+        "tests/snapshots/add/overwrite_rename_with_rename/out",
         &project_root,
     );
 }
@@ -1949,7 +1957,7 @@ fn overwrite_rename_with_rename() {
 #[cargo_test]
 fn change_rename_target() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/change_rename_target.in");
+    let project = Project::from_template("tests/snapshots/add/change_rename_target/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1959,11 +1967,11 @@ fn change_rename_target() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/change_rename_target.stdout")
-        .stderr_matches_path("tests/snapshots/add/change_rename_target.stderr");
+        .stdout_matches_path("tests/snapshots/add/change_rename_target/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/change_rename_target/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/change_rename_target.out",
+        "tests/snapshots/add/change_rename_target/out",
         &project_root,
     );
 }
@@ -1972,7 +1980,7 @@ fn change_rename_target() {
 fn overwrite_rename_with_rename_noop() {
     init_registry();
     let project =
-        Project::from_template("tests/snapshots/add/overwrite_rename_with_rename_noop.in");
+        Project::from_template("tests/snapshots/add/overwrite_rename_with_rename_noop/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -1982,11 +1990,11 @@ fn overwrite_rename_with_rename_noop() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_rename_with_rename_noop.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_rename_with_rename_noop.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_rename_with_rename_noop/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_rename_with_rename_noop/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_rename_with_rename_noop.out",
+        "tests/snapshots/add/overwrite_rename_with_rename_noop/out",
         &project_root,
     );
 }
@@ -1994,7 +2002,7 @@ fn overwrite_rename_with_rename_noop() {
 #[cargo_test]
 fn overwrite_version_with_git() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_git.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_git/in");
     let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("versioned-package", |project| {
@@ -2013,11 +2021,11 @@ fn overwrite_version_with_git() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_version_with_git.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_version_with_git.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_version_with_git/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_version_with_git/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_version_with_git.out",
+        "tests/snapshots/add/overwrite_version_with_git/out",
         &project_root,
     );
 }
@@ -2025,7 +2033,7 @@ fn overwrite_version_with_git() {
 #[cargo_test]
 fn overwrite_version_with_path() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_path.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_path/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -2035,11 +2043,11 @@ fn overwrite_version_with_path() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_version_with_path.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_version_with_path.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_version_with_path/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_version_with_path/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_version_with_path.out",
+        "tests/snapshots/add/overwrite_version_with_path/out",
         &project_root,
     );
 }
@@ -2047,7 +2055,7 @@ fn overwrite_version_with_path() {
 #[cargo_test]
 fn overwrite_with_rename() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_with_rename/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2057,11 +2065,11 @@ fn overwrite_with_rename() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_with_rename.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_with_rename.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_with_rename/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_with_rename/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_with_rename.out",
+        "tests/snapshots/add/overwrite_with_rename/out",
         &project_root,
     );
 }
@@ -2069,7 +2077,7 @@ fn overwrite_with_rename() {
 #[cargo_test]
 fn overwrite_workspace_dep() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_workspace_dep.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_workspace_dep/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2080,11 +2088,11 @@ fn overwrite_workspace_dep() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_workspace_dep.out",
+        "tests/snapshots/add/overwrite_workspace_dep/out",
         &project_root,
     );
 }
@@ -2092,7 +2100,7 @@ fn overwrite_workspace_dep() {
 #[cargo_test]
 fn overwrite_workspace_dep_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/overwrite_workspace_dep_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_workspace_dep_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2103,11 +2111,11 @@ fn overwrite_workspace_dep_features() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/overwrite_workspace_dep_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/overwrite_workspace_dep_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/overwrite_workspace_dep_features.out",
+        "tests/snapshots/add/overwrite_workspace_dep_features/out",
         &project_root,
     );
 }
@@ -2115,7 +2123,7 @@ fn overwrite_workspace_dep_features() {
 #[cargo_test]
 fn preserve_sorted() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/preserve_sorted.in");
+    let project = Project::from_template("tests/snapshots/add/preserve_sorted/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2125,16 +2133,16 @@ fn preserve_sorted() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/preserve_sorted.stdout")
-        .stderr_matches_path("tests/snapshots/add/preserve_sorted.stderr");
+        .stdout_matches_path("tests/snapshots/add/preserve_sorted/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/preserve_sorted/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/preserve_sorted.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/preserve_sorted/out", &project_root);
 }
 
 #[cargo_test]
 fn preserve_unsorted() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/preserve_unsorted.in");
+    let project = Project::from_template("tests/snapshots/add/preserve_unsorted/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2144,16 +2152,16 @@ fn preserve_unsorted() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/preserve_unsorted.stdout")
-        .stderr_matches_path("tests/snapshots/add/preserve_unsorted.stderr");
+        .stdout_matches_path("tests/snapshots/add/preserve_unsorted/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/preserve_unsorted/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/preserve_unsorted.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/preserve_unsorted/out", &project_root);
 }
 
 #[cargo_test]
 fn registry() {
     init_alt_registry();
-    let project = Project::from_template("tests/snapshots/add/registry.in");
+    let project = Project::from_template("tests/snapshots/add/registry/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2163,16 +2171,16 @@ fn registry() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/registry.stdout")
-        .stderr_matches_path("tests/snapshots/add/registry.stderr");
+        .stdout_matches_path("tests/snapshots/add/registry/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/registry/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/registry.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/registry/out", &project_root);
 }
 
 #[cargo_test]
 fn rename() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/rename.in");
+    let project = Project::from_template("tests/snapshots/add/rename/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2182,16 +2190,16 @@ fn rename() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/rename.stdout")
-        .stderr_matches_path("tests/snapshots/add/rename.stderr");
+        .stdout_matches_path("tests/snapshots/add/rename/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/rename/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/rename.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/rename/out", &project_root);
 }
 
 #[cargo_test]
 fn target() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/target.in");
+    let project = Project::from_template("tests/snapshots/add/target/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2201,16 +2209,16 @@ fn target() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/target.stdout")
-        .stderr_matches_path("tests/snapshots/add/target.stderr");
+        .stdout_matches_path("tests/snapshots/add/target/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/target/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/target.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/target/out", &project_root);
 }
 
 #[cargo_test]
 fn target_cfg() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/target_cfg.in");
+    let project = Project::from_template("tests/snapshots/add/target_cfg/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2220,15 +2228,15 @@ fn target_cfg() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/target_cfg.stdout")
-        .stderr_matches_path("tests/snapshots/add/target_cfg.stderr");
+        .stdout_matches_path("tests/snapshots/add/target_cfg/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/target_cfg/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/target_cfg.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/target_cfg/out", &project_root);
 }
 
 #[cargo_test]
 fn unknown_inherited_feature() {
-    let project = Project::from_template("tests/snapshots/add/unknown_inherited_feature.in");
+    let project = Project::from_template("tests/snapshots/add/unknown_inherited_feature/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2239,11 +2247,11 @@ fn unknown_inherited_feature() {
         .current_dir(cwd)
         .assert()
         .failure()
-        .stdout_matches_path("tests/snapshots/add/unknown_inherited_feature.stdout")
-        .stderr_matches_path("tests/snapshots/add/unknown_inherited_feature.stderr");
+        .stdout_matches_path("tests/snapshots/add/unknown_inherited_feature/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/unknown_inherited_feature/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/unknown_inherited_feature.out",
+        "tests/snapshots/add/unknown_inherited_feature/out",
         &project_root,
     );
 }
@@ -2251,7 +2259,7 @@ fn unknown_inherited_feature() {
 #[cargo_test]
 fn vers() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/vers.in");
+    let project = Project::from_template("tests/snapshots/add/vers/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2261,16 +2269,16 @@ fn vers() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/vers.stdout")
-        .stderr_matches_path("tests/snapshots/add/vers.stderr");
+        .stdout_matches_path("tests/snapshots/add/vers/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/vers/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/vers.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/vers/out", &project_root);
 }
 
 #[cargo_test]
 fn workspace_path() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/workspace_path.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_path/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -2280,16 +2288,16 @@ fn workspace_path() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/workspace_path.stdout")
-        .stderr_matches_path("tests/snapshots/add/workspace_path.stderr");
+        .stdout_matches_path("tests/snapshots/add/workspace_path/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/workspace_path/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/workspace_path.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/workspace_path/out", &project_root);
 }
 
 #[cargo_test]
 fn workspace_path_dev() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/workspace_path_dev.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_path_dev/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -2299,16 +2307,16 @@ fn workspace_path_dev() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/workspace_path_dev.stdout")
-        .stderr_matches_path("tests/snapshots/add/workspace_path_dev.stderr");
+        .stdout_matches_path("tests/snapshots/add/workspace_path_dev/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/workspace_path_dev/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/workspace_path_dev.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/workspace_path_dev/out", &project_root);
 }
 
 #[cargo_test]
 fn workspace_name() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/workspace_name.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_name/in");
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
@@ -2318,16 +2326,16 @@ fn workspace_name() {
         .current_dir(&cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/snapshots/add/workspace_name.stdout")
-        .stderr_matches_path("tests/snapshots/add/workspace_name.stderr");
+        .stdout_matches_path("tests/snapshots/add/workspace_name/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/workspace_name/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/workspace_name.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/workspace_name/out", &project_root);
 }
 
 #[cargo_test]
 fn deprecated_default_features() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/deprecated_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/deprecated_default_features/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2337,11 +2345,11 @@ fn deprecated_default_features() {
         .current_dir(&cwd)
         .assert()
         .failure()
-        .stdout_matches_path("tests/snapshots/add/deprecated_default_features.stdout")
-        .stderr_matches_path("tests/snapshots/add/deprecated_default_features.stderr");
+        .stdout_matches_path("tests/snapshots/add/deprecated_default_features/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/deprecated_default_features/stderr.log");
 
     assert().subset_matches(
-        "tests/snapshots/add/deprecated_default_features.out",
+        "tests/snapshots/add/deprecated_default_features/out",
         &project_root,
     );
 }
@@ -2349,7 +2357,7 @@ fn deprecated_default_features() {
 #[cargo_test]
 fn deprecated_section() {
     init_registry();
-    let project = Project::from_template("tests/snapshots/add/deprecated_section.in");
+    let project = Project::from_template("tests/snapshots/add/deprecated_section/in");
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -2359,8 +2367,8 @@ fn deprecated_section() {
         .current_dir(&cwd)
         .assert()
         .failure()
-        .stdout_matches_path("tests/snapshots/add/deprecated_section.stdout")
-        .stderr_matches_path("tests/snapshots/add/deprecated_section.stderr");
+        .stdout_matches_path("tests/snapshots/add/deprecated_section/stdout.log")
+        .stderr_matches_path("tests/snapshots/add/deprecated_section/stderr.log");
 
-    assert().subset_matches("tests/snapshots/add/deprecated_section.out", &project_root);
+    assert().subset_matches("tests/snapshots/add/deprecated_section/out", &project_root);
 }
