@@ -1,3 +1,4 @@
+use crate::core::compiler::standard_lib;
 use crate::core::compiler::{BuildConfig, CompileMode, RustcTargetData};
 use crate::core::{PackageSet, Resolve, Workspace};
 use crate::ops;
@@ -17,7 +18,7 @@ pub fn fetch<'a>(
     options: &FetchOptions<'a>,
 ) -> CargoResult<(Resolve, PackageSet<'a>)> {
     ws.emit_warnings()?;
-    let (packages, resolve) = ops::resolve_ws(ws)?;
+    let (mut packages, resolve) = ops::resolve_ws(ws)?;
 
     let jobs = Some(1);
     let keep_going = false;
@@ -64,6 +65,14 @@ pub fn fetch<'a>(
             .map(|(id, _deps)| id);
         deps_to_fetch.extend(deps);
     }
+
+    // If -Zbuild-std was passed, download dependencies for the standard library.
+    // We don't know ahead of time what jobs we'll be running, so tell `std_crates` that.
+    if let Some(crates) = standard_lib::std_crates(config, None) {
+        let (std_package_set, _, _) = standard_lib::resolve_std(ws, &data, &build_config, &crates)?;
+        packages.add_set(std_package_set);
+    }
+
     packages.get_many(to_download)?;
 
     Ok((resolve, packages))

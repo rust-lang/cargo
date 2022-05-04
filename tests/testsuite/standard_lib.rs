@@ -690,3 +690,22 @@ fn proc_macro_only() {
         .with_stderr_contains("[FINISHED] [..]")
         .run();
 }
+
+#[cargo_test]
+fn fetch() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("fetch")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[DOWNLOADED] [..]")
+        .run();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_does_not_contain("[DOWNLOADED] [..]")
+        .run();
+}
