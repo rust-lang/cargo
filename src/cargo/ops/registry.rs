@@ -558,16 +558,16 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
-    if let Some(client_ssl_cert) = &http.client_ssl_cert{
-        let client_ssl_cert= client_ssl_cert.resolve_path(config);
+    if let Some(client_ssl_cert) = &http.client_ssl_cert {
+        let client_ssl_cert = client_ssl_cert.resolve_path(config);
         handle.ssl_cert(&client_ssl_cert)?;
         handle.ssl_cert_type("PEM")?;
     }
-    if let Some(client_ssl_key) = &http.client_ssl_key{
-        let client_ssl_key= client_ssl_key.resolve_path(config);
+    if let Some(client_ssl_key) = &http.client_ssl_key {
+        let client_ssl_key = client_ssl_key.resolve_path(config);
         handle.ssl_key(&client_ssl_key)?;
     }
-    if let Some(client_ssl_key_password) = &http.client_ssl_key_password{
+    if let Some(client_ssl_key_password) = &http.client_ssl_key_password {
         handle.key_password(client_ssl_key_password.as_str())?;
     }
     if let Some(cainfo) = &http.cainfo {
