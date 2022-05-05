@@ -36,16 +36,18 @@ system:
   invocations that Cargo performs. In contrast with [`cargo rustdoc`], this is
   useful for passing a flag to *all* `rustdoc` instances. See
   [`build.rustdocflags`] for some more ways to set flags. This string is
-  split by whitespace; for a more robust encoding of multiple arguments,
-  set `CARGO_ENCODED_RUSTDOCFLAGS` instead with arguments separated by
-  `0x1f` (ASCII Unit Separator).
+  split by whitespace; for a more robust encoding of multiple arguments, 
+  see `CARGO_ENCODED_RUSTDOCFLAGS`.
+* `CARGO_ENCODED_RUSTDOCFLAGS` -  A list of custom flags separated by `0x1f` 
+  (ASCII Unit Separator) to pass to all `rustdoc` invocations that Cargo performs.
 * `RUSTFLAGS` — A space-separated list of custom flags to pass to all compiler
   invocations that Cargo performs. In contrast with [`cargo rustc`], this is
   useful for passing a flag to *all* compiler instances. See
   [`build.rustflags`] for some more ways to set flags. This string is
-  split by whitespace; for a more robust encoding of multiple arguments,
-  set `CARGO_ENCODED_RUSTFLAGS` instead with arguments separated by
-  `0x1f` (ASCII Unit Separator).
+  split by whitespace; for a more robust encoding of multiple arguments, 
+  see `CARGO_ENCODED_RUSTFLAGS`.
+* `CARGO_ENCODED_RUSTFLAGS` - A list of custom flags separated by `0x1f` 
+  (ASCII Unit Separator) to pass to all compiler invocations that Cargo performs.
 * `CARGO_INCREMENTAL` — If this is set to 1 then Cargo will force [incremental
   compilation] to be enabled for the current compilation, and when set to 0 it
   will force disabling it. If this env var isn't present then cargo's defaults

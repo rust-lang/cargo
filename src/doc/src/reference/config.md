@@ -363,7 +363,7 @@ Can be overridden with the `--target-dir` CLI option.
 ##### `build.rustflags`
 * Type: string or array of strings
 * Default: none
-* Environment: `CARGO_BUILD_RUSTFLAGS` or `RUSTFLAGS`
+* Environment: `CARGO_BUILD_RUSTFLAGS` or `CARGO_ENCODED_RUSTFLAGS` or `RUSTFLAGS`
 
 Extra command-line flags to pass to `rustc`. The value may be a array of
 strings or a space-separated string.
@@ -371,10 +371,11 @@ strings or a space-separated string.
 There are three mutually exclusive sources of extra flags. They are checked in
 order, with the first one being used:
 
-1. `RUSTFLAGS` environment variable.
-2. All matching `target.<triple>.rustflags` and `target.<cfg>.rustflags`
+1. `CARGO_ENCODED_RUSTFLAGS` environment variable.
+2. `RUSTFLAGS` environment variable.
+3. All matching `target.<triple>.rustflags` and `target.<cfg>.rustflags`
    config entries joined together.
-3. `build.rustflags` config value.
+4. `build.rustflags` config value.
 
 Additional flags may also be passed with the [`cargo rustc`] command.
 
@@ -399,7 +400,7 @@ appropriate profile setting.
 ##### `build.rustdocflags`
 * Type: string or array of strings
 * Default: none
-* Environment: `CARGO_BUILD_RUSTDOCFLAGS` or `RUSTDOCFLAGS`
+* Environment: `CARGO_BUILD_RUSTDOCFLAGS` or `CARGO_ENCODED_RUSTDOCFLAGS` or `RUSTDOCFLAGS`
 
 Extra command-line flags to pass to `rustdoc`. The value may be a array of
 strings or a space-separated string.
@@ -407,8 +408,9 @@ strings or a space-separated string.
 There are two mutually exclusive sources of extra flags. They are checked in
 order, with the first one being used:
 
-1. `RUSTDOCFLAGS` environment variable.
-2. `build.rustdocflags` config value.
+1. `CARGO_ENCODED_RUSTDOCFLAGS` environment variable.
+2. `RUSTDOCFLAGS` environment variable.
+3. `build.rustdocflags` config value.
 
 Additional flags may also be passed with the [`cargo rustdoc`] command.
 
