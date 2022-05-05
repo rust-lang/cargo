@@ -57,6 +57,10 @@ workspace. This can be useful if some path dependencies aren't desired to be
 in the workspace at all, or using a glob pattern and you want to remove a
 directory.
 
+The [`resolver`] key effects how a package that is depended on in multiple
+ways with different features are resolved. Some libraries depend on it being
+set to 2.
+
 An empty `[workspace]` table can be used with a `[package]` to conveniently
 create a workspace with the package and all of its path dependencies.
 
@@ -118,6 +122,7 @@ if that makes sense for the tool in question.
 [package]: manifest.md#the-package-section
 [package-metadata]: manifest.md#the-metadata-table
 [output directory]: ../guide/build-cache.md
+[`resolver`]: resolver.md#feature-resolver-version-2
 [patch]: overriding-dependencies.md#the-patch-section
 [replace]: overriding-dependencies.md#the-replace-section
 [profiles]: profiles.md
