@@ -2819,3 +2819,24 @@ fn doc_check_cfg_features() {
         )
         .run();
 }
+
+#[cargo_test]
+fn link_to_private_item() {
+    let main = r#"
+    //! [bar]
+    #[allow(dead_code)]
+    fn bar() {}
+    "#;
+    let p = project().file("src/lib.rs", main).build();
+    p.cargo("doc")
+        .with_stderr_contains("[..] documentation for `foo` links to private item `bar`")
+        .run();
+    // Check that binaries don't emit a private_intra_doc_links warning.
+    fs::rename(p.root().join("src/lib.rs"), p.root().join("src/main.rs")).unwrap();
+    p.cargo("doc")
+        .with_stderr(
+            "[DOCUMENTING] foo [..]\n\
+             [FINISHED] [..]",
+        )
+        .run();
+}

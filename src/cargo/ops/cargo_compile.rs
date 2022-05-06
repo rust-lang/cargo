@@ -623,6 +623,12 @@ pub fn create_bcx<'a, 'cfg>(
             if rustdoc_document_private_items || unit.target.is_bin() {
                 let mut args = extra_args.take().unwrap_or_default();
                 args.push("--document-private-items".into());
+                if unit.target.is_bin() {
+                    // This warning only makes sense if it's possible to document private items
+                    // sometimes and ignore them at other times. But cargo consistently passes
+                    // `--document-private-items`, so the warning isn't useful.
+                    args.push("-Arustdoc::private-intra-doc-links".into());
+                }
                 extra_args = Some(args);
             }
 
