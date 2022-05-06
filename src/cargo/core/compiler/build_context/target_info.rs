@@ -606,22 +606,35 @@ fn env_args(
     kind: CompileKind,
     flags: Flags,
 ) -> CargoResult<Vec<String>> {
+    let targeted_rustflags = config.cli_unstable().targeted_rustflags;
     let target_applies_to_host = config.target_applies_to_host()?;
 
     // Host artifacts should not generally pick up rustflags from anywhere except [host].
     //
     // The one exception to this is if `target-applies-to-host = true`, which opts into a
     // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
-    // set elsewhere when `--target` isn't passed.
+    // set elsewhere when `--target` isn't passed. Or, phrased differently, with
+    // `target-applies-to-host = false`, no `--target` behaves the same as `--target <host>`, and
+    // host artifacts are always "special" (they don't pick up `target.*` or `RUSTFLAGS` for
+    // example).
     if kind.is_host() {
         if target_applies_to_host && requested_kinds == [CompileKind::Host] {
             // This is the past Cargo behavior where we fall back to the same logic as for other
             // artifacts without --target.
+        } else if let Some(v) = rustflags_from_env(
+            targeted_rustflags,
+            host_triple,
+            kind,
+            false,
+            target_applies_to_host,
+            flags,
+        ) {
+            // An environment variable that specifically applies to host artifacts was given.
+            // Use that!
+            return Ok(v);
         } else {
-            // In all other cases, host artifacts just get flags from [host], regardless of
-            // --target. Or, phrased differently, no `--target` behaves the same as `--target
-            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
-            // example).
+            // Otherwise, check [host], which is the only other place that can specify rustflags
+            // that will apply to host artifacts.
             return Ok(rustflags_from_host(config, flags, host_triple)?.unwrap_or_else(Vec::new));
         }
     }
@@ -630,7 +643,14 @@ fn env_args(
     // NOTE: It is impossible to have a [host] section and reach this logic with kind.is_host(),
     // since [host] implies `target-applies-to-host = false`, which always early-returns above.
 
-    if let Some(rustflags) = rustflags_from_env(flags) {
+    if let Some(rustflags) = rustflags_from_env(
+        targeted_rustflags,
+        host_triple,
+        kind,
+        true,
+        target_applies_to_host,
+        flags,
+    ) {
         Ok(rustflags)
     } else if let Some(rustflags) =
         rustflags_from_target(config, host_triple, target_cfg, kind, flags)?
@@ -643,28 +663,115 @@ fn env_args(
     }
 }
 
-fn rustflags_from_env(flags: Flags) -> Option<Vec<String>> {
-    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
-    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
-    if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", flags.as_env())) {
-        if a.is_empty() {
-            return Some(Vec::new());
-        }
-        return Some(a.split('\x1f').map(str::to_string).collect());
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Specificity {
+    Generic = 0,
+    Kind = 1,
+    Target = 2,
+}
+
+fn get_var_variants(
+    targeted_rustflags: bool,
+    var_base: &str,
+    host_triple: &str,
+    kind: CompileKind,
+    allow_generic: bool,
+    target_applies_to_host: bool,
+) -> Option<(Specificity, String)> {
+    if !targeted_rustflags {
+        return if allow_generic {
+            env::var(var_base).ok().map(|v| (Specificity::Generic, v))
+        } else {
+            None
+        };
     }
 
-    // Then try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(flags.as_env()) {
+    let compiling_for = match &kind {
+        CompileKind::Host => host_triple,
+        CompileKind::Target(target) => target.short_name(),
+    };
+    let target_in_env: String = compiling_for
+        .chars()
+        .flat_map(|c| c.to_uppercase())
+        .map(|c| if c == '-' { '_' } else { c })
+        .collect();
+    if !kind.is_host() || target_applies_to_host {
+        if let Ok(v) = env::var(format!("{}_{}", var_base, target_in_env)) {
+            return Some((Specificity::Target, v));
+        }
+    }
+    let kind = if kind.is_host() { "HOST" } else { "TARGET" };
+    if let Ok(v) = env::var(format!("{}_{}", kind, var_base)) {
+        return Some((Specificity::Kind, v));
+    }
+    // NOTE: TARGET_RUSTFLAGS never applies to host artifacts, even when
+    // target-applies-to-host = true, and even if --target isn't passed.
+    if allow_generic {
+        env::var(var_base).ok().map(|v| (Specificity::Generic, v))
+    } else {
+        None
+    }
+}
+
+fn rustflags_from_env(
+    targeted_rustflags: bool,
+    host_triple: &str,
+    kind: CompileKind,
+    allow_generic: bool,
+    target_applies_to_host: bool,
+    flag: Flags,
+) -> Option<Vec<String>> {
+    let encoded = get_var_variants(
+        targeted_rustflags,
+        &format!("CARGO_ENCODED_{}", flag.as_env()),
+        host_triple,
+        kind,
+        allow_generic,
+        target_applies_to_host,
+    )
+    .map(|(s, a)| {
+        if a.is_empty() {
+            (s, Vec::new())
+        } else {
+            (s, a.split('\x1f').map(str::to_string).collect())
+        }
+    });
+    let spacesep = get_var_variants(
+        targeted_rustflags,
+        flag.as_env(),
+        host_triple,
+        kind,
+        allow_generic,
+        target_applies_to_host,
+    )
+    .map(|(s, a)| {
         let args = a
             .split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
-        return Some(args.collect());
-    }
+        (s, args.collect())
+    });
 
-    // No rustflags to be collected from the environment
-    None
+    match (encoded, spacesep) {
+        (Some((_, v)), None) | (None, Some((_, v))) => {
+            // If just one is set, use that.
+            Some(v)
+        }
+        (None, None) => {
+            // If neither is set, well, there's nothing to do here.
+            None
+        }
+        (Some((enc_s, enc_v)), Some((spc_s, spc_v))) => {
+            // If _both_ are set, prefer the more specific one.
+            // Ties go to CARGO_ENCODED_RUSTFLAGS since it's less prone to encoding errors.
+            if enc_s >= spc_s {
+                Some(enc_v)
+            } else {
+                Some(spc_v)
+            }
+        }
+    }
 }
 
 fn rustflags_from_target(
