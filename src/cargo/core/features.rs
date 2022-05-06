@@ -641,9 +641,7 @@ unstable_cli_options!(
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
-    check_cfg_features: bool = ("Enable compile-time checking of features in `cfg`"),
-    check_cfg_well_known_names: bool = ("Enable compile-time checking of well known names in `cfg`"),
-    check_cfg_well_known_values: bool = ("Enable compile-time checking of well known values in `cfg`"),
+    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -785,6 +783,27 @@ impl CliUnstable {
             }
         }
 
+        fn parse_check_cfg(value: Option<&str>) -> CargoResult<Option<(bool, bool, bool)>> {
+            if let Some(value) = value {
+                let mut features = false;
+                let mut well_known_names = false;
+                let mut well_known_values = false;
+
+                for e in value.split(',') {
+                    match e {
+                        "features" => features = true,
+                        "names" => well_known_names = true,
+                        "values" => well_known_values = true,
+                        _ => bail!("flag -Zcheck-cfg only takes `features`, `names` or `values` as valid inputs"),
+                    }
+                }
+
+                Ok(Some((features, well_known_names, well_known_values)))
+            } else {
+                Ok(None)
+            }
+        }
+
         // Asserts that there is no argument to the flag.
         fn parse_empty(key: &str, value: Option<&str>) -> CargoResult<bool> {
             if let Some(v) = value {
@@ -842,9 +861,7 @@ impl CliUnstable {
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
-            "check-cfg-features" => self.check_cfg_features = parse_empty(k, v)?,
-            "check-cfg-well-known-names" => self.check_cfg_well_known_names = parse_empty(k, v)?,
-            "check-cfg-well-known-values" => self.check_cfg_well_known_values = parse_empty(k, v)?,
+            "check-cfg" => self.check_cfg = parse_check_cfg(v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,

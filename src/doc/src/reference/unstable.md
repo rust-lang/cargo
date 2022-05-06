@@ -1188,44 +1188,27 @@ For instance:
 cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
 ```
 
-### check-cfg-features
+### check-cfg
 
 * RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
+* Tracking Issue: [#10554](https://github.com/rust-lang/cargo/issues/10554)
 
-The `-Z check-cfg-features` argument tells Cargo to pass all possible features of a package to
-`rustc` and `rustdoc` unstable `--check-cfg` command line as `--check-cfg=values(feature, ...)`.
-This enables compile time checking of feature values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
-Note than this command line options will probably become the default when stabilizing.
+`-Z check-cfg` command line enables compile time checking of name and values in `#[cfg]`, `cfg!`,
+`#[link]` and `#[cfg_attr]` with the `rustc` and `rustdoc` unstable `--check-cfg` command line.
+
+It's values are:
+ - `features`: enables features checking via `--check-cfg=values(feature, ...)`.
+    Note than this command line options will probably become the default when stabilizing.
+ - `names`: enables well known names checking via `--check-cfg=names()`.
+ - `values`: enables well known values checking via `--check-cfg=values()`.
+
 For instance:
 
 ```
-cargo check -Z unstable-options -Z check-cfg-features
-```
-
-### check-cfg-well-known-names
-
-* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
-
-The `-Z check-cfg-well-known-names` argument tells Cargo to activate `rustc` and `rustdoc` unstable
-`--check-cfg` command line as `--check-cfg=names()`.
-This enables compile time checking of well known names in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
-For instance:
-
-```
-cargo check -Z unstable-options -Z check-cfg-well-known-names
-```
-
-### check-cfg-well-known-values
-
-* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
-
-The `-Z check-cfg-well-known-values` argument tells Cargo to activate `rustc` and `rustdoc` unstable
-`--check-cfg` command line as `--check-cfg=values()`.
-This enables compile time checking of well known values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
-For instance:
-
-```
-cargo check -Z unstable-options -Z check-cfg-well-known-values
+cargo check -Z unstable-options -Z check-cfg=features
+cargo check -Z unstable-options -Z check-cfg=names
+cargo check -Z unstable-options -Z check-cfg=values
+cargo check -Z unstable-options -Z check-cfg=features,names,values
 ```
 
 ### workspace-inheritance
