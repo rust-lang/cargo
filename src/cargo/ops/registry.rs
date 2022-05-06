@@ -896,10 +896,9 @@ pub fn yank(
     let (mut registry, _, _) =
         registry(config, token, index.as_deref(), reg.as_deref(), true, true)?;
 
+    let package_spec = format!("{}@{}", name, version);
     if undo {
-        config
-            .shell()
-            .status("Unyank", format!("{}:{}", name, version))?;
+        config.shell().status("Unyank", package_spec)?;
         registry.unyank(&name, &version).with_context(|| {
             format!(
                 "failed to undo a yank from the registry at {}",
@@ -907,9 +906,7 @@ pub fn yank(
             )
         })?;
     } else {
-        config
-            .shell()
-            .status("Yank", format!("{}:{}", name, version))?;
+        config.shell().status("Yank", package_spec)?;
         registry
             .yank(&name, &version)
             .with_context(|| format!("failed to yank from the registry at {}", registry.host()))?;

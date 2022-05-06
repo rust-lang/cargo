@@ -361,7 +361,7 @@ fn yank() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[YANK] foo:0.1.0
+[YANK] foo@0.1.0
 ",
         )
         .run();

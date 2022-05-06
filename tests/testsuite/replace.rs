@@ -645,7 +645,7 @@ fn override_wrong_name() {
 [ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([..])`
 
 Caused by:
-  no matching package for override `[..]baz:0.1.0` found
+  no matching package for override `[..]baz@0.1.0` found
   location searched: file://[..]
   version required: =0.1.0
 ",
@@ -729,7 +729,7 @@ fn override_wrong_version() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  replacements cannot specify a version requirement, but found one for `[..]bar:0.1.0`
+  replacements cannot specify a version requirement, but found one for `[..]bar@0.1.0`
 ",
         )
         .run();
@@ -826,8 +826,8 @@ fn test_override_dep() {
             "\
 error: There are multiple `bar` packages in your project, and the [..]
 Please re-run this command with [..]
-  [..]#bar:0.1.0
-  [..]#bar:0.1.0
+  [..]#bar@0.1.0
+  [..]#bar@0.1.0
 ",
         )
         .run();
@@ -1082,7 +1082,7 @@ fn overriding_nonexistent_no_spurious() {
     p.cargo("build")
         .with_stderr(
             "\
-[WARNING] package replacement is not used: [..]baz:0.1.0
+[WARNING] package replacement is not used: [..]baz@0.1.0
 [FINISHED] [..]
 ",
         )
