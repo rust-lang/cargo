@@ -162,7 +162,7 @@ error: no such subcommand: `C`
 }
 
 #[cargo_test]
-fn find_closest_captial_b_to_b() {
+fn find_closest_capital_b_to_b() {
     cargo_process("B")
         .with_status(101)
         .with_stderr_contains(

@@ -47,7 +47,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Unconditionaly enable nightly features, even on stable channels.
+    /// Unconditionally enable nightly features, even on stable channels.
     pub fn nightly_features_allowed(&mut self, allowed: bool) -> &mut Self {
         self.enable_nightly_features = allowed;
         self
@@ -1128,7 +1128,7 @@ unstable.print-im-a-teapot = true
 }
 
 #[cargo_test]
-/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// Assert that attempting to set an unstable flag that doesn't exist via config
 /// is ignored on stable
 fn unstable_invalid_flag_ignored_on_stable() {
     write_config(
