@@ -32,6 +32,13 @@ macro_rules! t {
     };
 }
 
+#[macro_export]
+macro_rules! curr_dir {
+    () => {
+        std::path::Path::new(file!()).parent().unwrap()
+    };
+}
+
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     let err = err.into();
