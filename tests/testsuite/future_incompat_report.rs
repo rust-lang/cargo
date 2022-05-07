@@ -111,7 +111,7 @@ fn test_single_crate() {
         write_config_toml("");
         check_has_future_compat();
 
-        // Check that we show a message with `frequence = "always"`
+        // Check that we show a message with `frequency = "always"`
         write_config_toml(
             "\
 [future-incompat-report]

@@ -111,7 +111,7 @@ Caused by:
         )
         .run();
 
-    // Bad file URL with simliar name.
+    // Bad file URL with similar name.
     p.cargo("pkgid './cratesio'")
         .with_status(101)
         .with_stderr(
