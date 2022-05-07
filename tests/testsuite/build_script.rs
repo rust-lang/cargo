@@ -4,7 +4,7 @@ use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
+use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project, project_in};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;
@@ -3176,6 +3176,69 @@ fn generate_good_d_files() {
     assert!(!dot_d
         .split_whitespace()
         .any(|v| v == "barkbarkbark" || v == "build.rs"));
+}
+
+#[cargo_test]
+fn generate_good_d_files_for_external_tools() {
+    // This tests having a relative paths going out of the
+    // project root in config's dep-info-basedir
+    let p = project_in("rust_things")
+        .file(
+            "awoo/Cargo.toml",
+            r#"
+                [project]
+                name = "awoo"
+                version = "0.5.0"
+                build = "build.rs"
+            "#,
+        )
+        .file("awoo/src/lib.rs", "")
+        .file(
+            "awoo/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    println!("cargo:rerun-if-changed=barkbarkbark");
+                }
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "meow"
+                version = "0.5.0"
+                [dependencies]
+                awoo = { path = "awoo" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                dep-info-basedir="../.."
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+
+    let dot_d_path = p.bin("meow").with_extension("d");
+    let dot_d = fs::read_to_string(&dot_d_path).unwrap();
+
+    println!("*.d file content with dep-info-basedir*: {}", &dot_d);
+
+    assert_match_exact(
+        concat!(
+            "rust_things/foo/target/debug/meow[EXE]:",
+            " rust_things/foo/awoo/barkbarkbark",
+            " rust_things/foo/awoo/build.rs",
+            " rust_things/foo/awoo/src/lib.rs",
+            " rust_things/foo/src/main.rs",
+        ),
+        &dot_d,
+    );
 }
 
 #[cargo_test]
