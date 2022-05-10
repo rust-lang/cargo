@@ -1256,6 +1256,8 @@ documentation = "https://example.github.io/example"
 
 ```toml
 # [PROGECT_DIR]/bar/Cargo.toml
+cargo-features = ["workspace-inheritance"]
+
 [package]
 name = "bar"
 version.workspace = true
@@ -1290,6 +1292,8 @@ dep-dev = "0.5.2"
 
 ```toml
 # [PROGECT_DIR]/bar/Cargo.toml
+cargo-features = ["workspace-inheritance"]
+
 [project]
 name = "bar"
 version = "0.2.0"
