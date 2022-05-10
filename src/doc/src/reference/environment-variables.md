@@ -84,7 +84,7 @@ supported environment variables are:
 * `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
 * `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
-* `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notifcation, see [`future-incompat-report.frequency`].
+* `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notification, see [`future-incompat-report.frequency`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
 * `CARGO_HTTP_PROXY` — Enables HTTP proxy, see [`http.proxy`].
 * `CARGO_HTTP_TIMEOUT` — The HTTP timeout, see [`http.timeout`].

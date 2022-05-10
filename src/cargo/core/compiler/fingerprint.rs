@@ -1830,7 +1830,7 @@ pub fn translate_dep_info(
 
     // This is a bit of a tricky statement, but here we're *removing* the
     // dependency on environment variables that were defined specifically for
-    // the command itself. Environment variables returend by `get_envs` includes
+    // the command itself. Environment variables returned by `get_envs` includes
     // environment variables like:
     //
     // * `OUT_DIR` if applicable

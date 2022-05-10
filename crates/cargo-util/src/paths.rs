@@ -250,7 +250,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // race with unlinking?). Regardless, if Cargo can't
                         // read it, the build script probably can't either.
                         log::debug!(
-                            "failed to determine mtime while fetching symlink metdata of {}: {}",
+                            "failed to determine mtime while fetching symlink metadata of {}: {}",
                             e.path().display(),
                             err
                         );
@@ -541,7 +541,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
         if cfg!(target_os = "macos") {
             // This is a work-around for a bug on macos. There seems to be a race condition
             // with APFS when hard-linking binaries. Gatekeeper does not have signing or
-            // hash informations stored in kernel when running the process. Therefore killing it.
+            // hash information stored in kernel when running the process. Therefore killing it.
             // This problem does not appear when copying files as kernel has time to process it.
             // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
             // as fast as hardlinking.

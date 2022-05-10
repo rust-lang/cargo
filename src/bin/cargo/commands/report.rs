@@ -25,7 +25,7 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     match args.subcommand() {
-        Some(("future-incompatibilities", args)) => report_future_incompatibilies(config, args),
+        Some(("future-incompatibilities", args)) => report_future_incompatibilities(config, args),
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)
         }
@@ -35,7 +35,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 }
 
-fn report_future_incompatibilies(config: &Config, args: &ArgMatches) -> CliResult {
+fn report_future_incompatibilities(config: &Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let reports = OnDiskReports::load(&ws)?;
     let id = args

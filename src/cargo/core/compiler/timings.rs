@@ -30,7 +30,7 @@ pub struct Timings<'cfg> {
     start_str: String,
     /// A summary of the root units.
     ///
-    /// Tuples of `(package_description, target_descrptions)`.
+    /// Tuples of `(package_description, target_descriptions)`.
     root_targets: Vec<(String, Vec<String>)>,
     /// The build profile.
     profile: String,

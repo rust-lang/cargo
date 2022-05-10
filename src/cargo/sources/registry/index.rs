@@ -409,7 +409,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()))
     }
 
-    /// Clears the in-memory summmaries cache.
+    /// Clears the in-memory summaries cache.
     pub fn clear_summaries_cache(&mut self) {
         self.summaries_cache.clear();
     }

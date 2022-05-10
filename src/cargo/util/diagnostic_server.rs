@@ -18,7 +18,7 @@ use crate::core::Edition;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
 
-const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
+const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 const PLEASE_REPORT_THIS_BUG: &str =
     "This likely indicates a bug in either rustc or cargo itself,\n\
      and we would appreciate a bug report! You're likely to see \n\
@@ -63,7 +63,7 @@ pub enum Message {
 impl Message {
     pub fn post(&self) -> Result<(), Error> {
         let addr =
-            env::var(DIAGNOSICS_SERVER_VAR).context("diagnostics collector misconfigured")?;
+            env::var(DIAGNOSTICS_SERVER_VAR).context("diagnostics collector misconfigured")?;
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 
@@ -240,7 +240,7 @@ impl RustfixDiagnosticServer {
     }
 
     pub fn configure(&self, process: &mut ProcessBuilder) {
-        process.env(DIAGNOSICS_SERVER_VAR, self.addr.to_string());
+        process.env(DIAGNOSTICS_SERVER_VAR, self.addr.to_string());
     }
 
     pub fn start<F>(self, on_message: F) -> Result<StartedServer, Error>
