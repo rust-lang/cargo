@@ -313,7 +313,6 @@
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
 use std::collections::hash_map::{Entry, HashMap};
-use std::convert::TryInto;
 use std::env;
 use std::hash::{self, Hash, Hasher};
 use std::io;
