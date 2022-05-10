@@ -6,6 +6,7 @@ cargo-yank - Remove a pushed crate from the index
 
 ## SYNOPSIS
 
+`cargo yank` [_options_] _crate_@_version_\
 `cargo yank` [_options_] `--version` _version_ [_crate_]
 
 ## DESCRIPTION
@@ -140,7 +141,7 @@ details on environment variables that Cargo reads.
 
 1. Yank a crate from the index:
 
-       cargo yank --version 1.0.7 foo
+       cargo yank foo@1.0.7
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-login(1)](cargo-login.html), [cargo-publish(1)](cargo-publish.html)
