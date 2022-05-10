@@ -76,7 +76,6 @@ use cargo_util::{paths, registry::make_dep_path};
 use log::{debug, info};
 use semver::Version;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Path;

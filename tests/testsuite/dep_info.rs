@@ -8,7 +8,6 @@ use cargo_test_support::{
     basic_bin_manifest, basic_manifest, is_nightly, main_file, project, rustc_host, Project,
 };
 use filetime::FileTime;
-use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use std::str;
