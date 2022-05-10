@@ -592,17 +592,33 @@ fn no_cross_doctests() {
 
     println!("b");
     let target = rustc_host();
-    p.cargo("test --target")
+    p.cargo("test -v --target")
         .arg(&target)
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
+[RUNNING] `rustc --crate-name foo [..]--test[..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
+[RUNNING] `[CWD]/target/{target}/debug/deps/foo-[..][EXE]`
 [DOCTEST] foo
+[RUNNING] `rustdoc [..]--target {target}[..]`
 ",
-            triple = target
         ))
+        .with_stdout(
+            "
+running 0 tests
+
+test result: ok. 0 passed[..]
+
+
+running 1 test
+test src/lib.rs - (line 2) ... ok
+
+test result: ok. 1 passed[..]
+
+",
+        )
         .run();
 
     println!("c");
