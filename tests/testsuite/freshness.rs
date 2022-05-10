@@ -1256,7 +1256,7 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // So a cleaner can remove files associated with a fingerprint
     // if all the files in the fingerprint's folder are older then a time stamp without
     // effecting any builds that happened since that time stamp.
-    let mut cleand = false;
+    let mut cleaned = false;
     dir.push(".fingerprint");
     for fing in fs::read_dir(&dir).unwrap() {
         let fing = fing.unwrap();
@@ -1270,12 +1270,12 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
             println!("remove: {:?}", fing.path());
             // a real cleaner would remove the big files in deps and build as well
             // but fingerprint is sufficient for our tests
-            cleand = true;
+            cleaned = true;
         } else {
         }
     }
     assert!(
-        cleand,
+        cleaned,
         "called fingerprint_cleaner, but there was nothing to remove"
     );
 }

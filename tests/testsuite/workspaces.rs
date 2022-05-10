@@ -1221,7 +1221,7 @@ fn workspace_in_git() {
 }
 
 #[cargo_test]
-fn lockfile_can_specify_nonexistant_members() {
+fn lockfile_can_specify_nonexistent_members() {
     let p = project()
         .file(
             "Cargo.toml",

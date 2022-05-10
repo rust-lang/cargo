@@ -2397,7 +2397,7 @@ fn found_multiple_target_files() {
 
     p.cargo("build -v")
         .with_status(101)
-        // Don't assert the inferred pathes since the order is non-deterministic.
+        // Don't assert the inferred paths since the order is non-deterministic.
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -5088,7 +5088,7 @@ fn same_metadata_different_directory() {
 }
 
 #[cargo_test]
-fn building_a_dependent_crate_witout_bin_should_fail() {
+fn building_a_dependent_crate_without_bin_should_fail() {
     Package::new("testless", "0.1.0")
         .file(
             "Cargo.toml",

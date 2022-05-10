@@ -1243,9 +1243,9 @@ Keys that are supported:
 
 Example:
 ```toml
-# [PROGECT_DIR]/Cargo.toml
+# [PROJECT_DIR]/Cargo.toml
 [workspace]
-memebers = ["bar"]
+members = ["bar"]
 
 [workspace.package]
 version = "1.2.3"
@@ -1255,7 +1255,7 @@ documentation = "https://example.github.io/example"
 ```
 
 ```toml
-# [PROGECT_DIR]/bar/Cargo.toml
+# [PROGJCT_DIR]/bar/Cargo.toml
 cargo-features = ["workspace-inheritance"]
 
 [package]
@@ -1280,9 +1280,9 @@ You can then [inherit the workspace dependency as a package dependency][inheriti
 
 Example:
 ```toml
-# [PROGECT_DIR]/Cargo.toml
+# [PROJECT_DIR]/Cargo.toml
 [workspace]
-memebers = ["bar"]
+members = ["bar"]
 
 [workspace.dependencies]
 dep = { version = "0.1", features = ["fancy"] }
@@ -1291,7 +1291,7 @@ dep-dev = "0.5.2"
 ```
 
 ```toml
-# [PROGECT_DIR]/bar/Cargo.toml
+# [PROJECT_DIR]/bar/Cargo.toml
 cargo-features = ["workspace-inheritance"]
 
 [project]

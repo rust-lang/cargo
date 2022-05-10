@@ -802,7 +802,7 @@ impl CompileFilter {
     /// Constructs a filter that includes all test targets.
     ///
     /// Being different from the behavior of [`CompileFilter::Default`], this
-    /// function only recongnizes test targets, which means cargo might compile
+    /// function only recognizes test targets, which means cargo might compile
     /// all targets with `tested` flag on, whereas [`CompileFilter::Default`]
     /// may include additional example targets to ensure they can be compiled.
     ///

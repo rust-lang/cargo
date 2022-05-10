@@ -1428,7 +1428,7 @@ fn uninstall_multiple_and_specifying_bin() {
 }
 
 #[cargo_test]
-fn uninstall_with_empty_pakcage_option() {
+fn uninstall_with_empty_package_option() {
     cargo_process("uninstall -p")
         .with_status(101)
         .with_stderr(

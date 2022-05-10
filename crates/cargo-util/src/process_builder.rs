@@ -457,7 +457,7 @@ impl ProcessBuilder {
         Ok((cmd, tmp))
     }
 
-    /// Builds a command from `ProcessBuilder` for everythings but not `args`.
+    /// Builds a command from `ProcessBuilder` for everything but not `args`.
     fn build_command_without_args(&self) -> Command {
         let mut command = {
             let mut iter = self.wrappers.iter().rev().chain(once(&self.program));
