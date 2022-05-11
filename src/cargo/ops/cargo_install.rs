@@ -556,10 +556,9 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
 pub fn install(
     config: &Config,
     root: Option<&str>,
-    krates: Vec<&str>,
+    krates: Vec<(&str, Option<&str>)>,
     source_id: SourceId,
     from_cwd: bool,
-    vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
@@ -569,18 +568,13 @@ pub fn install(
     let map = SourceConfigMap::new(config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
+        let (krate, vers) = krates
+            .into_iter()
+            .next()
+            .map(|(k, v)| (Some(k), v))
+            .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
-            config,
-            root,
-            map,
-            krates.into_iter().next(),
-            source_id,
-            from_cwd,
-            vers,
-            opts,
-            force,
-            no_track,
-            true,
+            config, root, map, krate, source_id, from_cwd, vers, opts, force, no_track, true,
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -596,7 +590,7 @@ pub fn install(
 
         let pkgs_to_install: Vec<_> = krates
             .into_iter()
-            .filter_map(|krate| {
+            .filter_map(|(krate, vers)| {
                 let root = root.clone();
                 let map = map.clone();
                 match InstallablePackage::new(

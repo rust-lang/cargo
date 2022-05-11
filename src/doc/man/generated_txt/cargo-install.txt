@@ -4,7 +4,7 @@ NAME
        cargo-install - Build and install a Rust binary
 
 SYNOPSIS
-       cargo install [options] crate...
+       cargo install [options] crate[@version]...
        cargo install [options] --path path
        cargo install [options] --git url [crate...]
        cargo install [options] --list

@@ -97,10 +97,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // but not `Config::reload_rooted_at` which is always cwd)
     let path = path.map(|p| paths::normalize_path(&p));
 
+    let version = args.value_of("version");
     let krates = args
         .values_of("crate")
         .unwrap_or_default()
-        .collect::<Vec<_>>();
+        .map(|k| resolve_crate(k, version))
+        .collect::<crate::CargoResult<Vec<_>>>()?;
 
     let mut from_cwd = false;
 
@@ -129,7 +131,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         SourceId::crates_io(config)?
     };
 
-    let version = args.value_of("version");
     let root = args.value_of("root");
 
     // We only provide workspace information for local crate installation from
@@ -166,11 +167,28 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             krates,
             source,
             from_cwd,
-            version,
             &compile_opts,
             args.is_present("force"),
             args.is_present("no-track"),
         )?;
     }
     Ok(())
+}
+
+fn resolve_crate<'k>(
+    mut krate: &'k str,
+    mut version: Option<&'k str>,
+) -> crate::CargoResult<(&'k str, Option<&'k str>)> {
+    if let Some((k, v)) = krate.split_once('@') {
+        if version.is_some() {
+            anyhow::bail!("cannot specify both `@{v}` and `--version`");
+        }
+        if k.is_empty() {
+            // by convention, arguments starting with `@` are response files
+            anyhow::bail!("missing crate name for `@{v}`");
+        }
+        krate = k;
+        version = Some(v);
+    }
+    Ok((krate, version))
 }
