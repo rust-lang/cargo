@@ -594,10 +594,11 @@ fn no_cross_doctests() {
     let target = rustc_host();
     p.cargo("test -v --target")
         .arg(&target)
-        .with_stderr(&format!(
+        // Unordered since the two `rustc` invocations happen concurrently.
+        .with_stderr_unordered(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo [..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
 [RUNNING] `rustc --crate-name foo [..]--test[..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/{target}/debug/deps/foo-[..][EXE]`
