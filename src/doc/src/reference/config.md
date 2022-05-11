@@ -368,7 +368,7 @@ Can be overridden with the `--target-dir` CLI option.
 Extra command-line flags to pass to `rustc`. The value may be a array of
 strings or a space-separated string.
 
-There are three mutually exclusive sources of extra flags. They are checked in
+There are four mutually exclusive sources of extra flags. They are checked in
 order, with the first one being used:
 
 1. `CARGO_ENCODED_RUSTFLAGS` environment variable.
@@ -405,7 +405,7 @@ appropriate profile setting.
 Extra command-line flags to pass to `rustdoc`. The value may be a array of
 strings or a space-separated string.
 
-There are two mutually exclusive sources of extra flags. They are checked in
+There are three mutually exclusive sources of extra flags. They are checked in
 order, with the first one being used:
 
 1. `CARGO_ENCODED_RUSTDOCFLAGS` environment variable.
