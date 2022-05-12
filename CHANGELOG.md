@@ -1,6 +1,6 @@
 # Changelog
 
-## Cargo 1.62 (2022-05-19)
+## Cargo 1.62 (2022-06-30)
 [1ef1e0a1...HEAD](https://github.com/rust-lang/cargo/compare/1ef1e0a1...HEAD)
 
 ### Added
@@ -16,7 +16,7 @@
 ### Nightly only
 
 
-## Cargo 1.61 (2022-04-07)
+## Cargo 1.61 (2022-05-19)
 [ea2a21c9...rust-1.61.0](https://github.com/rust-lang/cargo/compare/ea2a21c9...rust-1.61.0)
 
 ### Added
