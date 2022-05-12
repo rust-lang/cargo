@@ -5,3 +5,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang/cargo"
 description = "Embed metadata into a Cargo subcommand, so that `cargo --list` can show a description of the subcommand"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+memmap = { version = "0.7", optional = true }
+object = { version = "0.28", optional = true }
+
+[features]
+parse = ["memmap", "object"]

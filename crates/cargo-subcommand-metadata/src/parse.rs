@@ -1,6 +1,6 @@
 use std::path::Path;
 
-pub(crate) fn description(path: &Path) -> Option<String> {
+pub fn description(path: &Path) -> Option<String> {
     implementation::description(path)
 }
 
@@ -29,9 +29,8 @@ mod implementation {
             if section_header.name(endian, string_table).ok() == Some(b".note.cargo.subcommand") {
                 if let Ok(Some(mut notes)) = section_header.notes(endian, data) {
                     while let Ok(Some(note)) = notes.next() {
-                        if note.name() == cargo_subcommand_metadata::ELF_NOTE_NAME.as_bytes()
-                            && note.n_type(endian)
-                                == cargo_subcommand_metadata::ElfNoteType::Description as u32
+                        if note.name() == crate::ELF_NOTE_NAME.as_bytes()
+                            && note.n_type(endian) == crate::ElfNoteType::Description as u32
                         {
                             if description.is_some() {
                                 return None;

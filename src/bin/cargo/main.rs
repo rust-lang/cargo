@@ -13,7 +13,6 @@ use std::path::{Path, PathBuf};
 
 mod cli;
 mod commands;
-mod subcommand_metadata;
 
 use crate::command_prelude::*;
 

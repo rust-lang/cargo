@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
+use cargo_subcommand_metadata as subcommand_metadata;
 use clap::{Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -12,7 +13,6 @@ use std::fmt::Write;
 use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
-use crate::subcommand_metadata;
 use cargo::core::features::HIDDEN;
 
 lazy_static::lazy_static! {
@@ -122,7 +122,7 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
                 CommandInfo::External { path } => {
                     if let Some(desc) = known_external_desc {
                         drop_println!(config, "    {:<20} {}", name, desc);
-                    } else if let Some(desc) = subcommand_metadata::description(&path) {
+                    } else if let Some(desc) = subcommand_metadata::parse::description(&path) {
                         drop_println!(config, "    {:<20} {}", name, desc);
                     } else if is_verbose {
                         drop_println!(config, "    {:<20} {}", name, path.display());

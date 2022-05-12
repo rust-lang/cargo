@@ -1,3 +1,6 @@
+#[cfg(feature = "parse")]
+pub mod parse;
+
 /// Cargo's name for the purpose of ELF notes.
 ///
 /// The `name` field of an ELF note is designated to hold the entry's "owner" or
@@ -82,16 +85,14 @@ macro_rules! description {
 
                 #[used]
                 #[link_section = ".note.cargo.subcommand"]
-                static ELF_NOTE: ElfNote = {
-                    ElfNote {
-                        namesz: $crate::ELF_NOTE_NAME.len() as u32 + 1,
-                        descsz: CARGO_SUBCOMMAND_DESCRIPTION.len() as u32,
-                        ty: $crate::ElfNoteType::Description,
-                        name: unsafe { *$crate::ELF_NOTE_NAME.as_ptr().cast() },
-                        name_padding: $crate::private::padding(),
-                        desc: unsafe { *CARGO_SUBCOMMAND_DESCRIPTION.as_ptr().cast() },
-                        desc_padding: $crate::private::padding(),
-                    }
+                static ELF_NOTE: ElfNote = ElfNote {
+                    namesz: $crate::ELF_NOTE_NAME.len() as u32 + 1,
+                    descsz: CARGO_SUBCOMMAND_DESCRIPTION.len() as u32,
+                    ty: $crate::ElfNoteType::Description,
+                    name: unsafe { *$crate::ELF_NOTE_NAME.as_ptr().cast() },
+                    name_padding: $crate::private::padding(),
+                    desc: unsafe { *CARGO_SUBCOMMAND_DESCRIPTION.as_ptr().cast() },
+                    desc_padding: $crate::private::padding(),
                 };
             };
         };
