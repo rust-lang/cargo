@@ -1,0 +1,7 @@
+[package]
+name = "cargo-subcommand-metadata"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rust-lang/cargo"
+description = "Embed metadata into a Cargo subcommand, so that `cargo --list` can show a description of the subcommand"

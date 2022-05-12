@@ -73,6 +73,11 @@ itertools = "0.10.0"
 # for more information.
 rustc-workspace-hack = "1.0.0"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+cargo-subcommand-metadata = { path = "crates/cargo-subcommand-metadata", version = "0.1.0" }
+memmap = "0.7"
+object = "0.28"
+
 [target.'cfg(windows)'.dependencies]
 fwdansi = "1.1.0"
 
