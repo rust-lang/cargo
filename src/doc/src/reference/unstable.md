@@ -1215,6 +1215,37 @@ cargo check -Z unstable-options -Z check-cfg=features,names,values
 
 * RFC: [#2906](https://github.com/rust-lang/rfcs/blob/master/text/2906-cargo-workspace-deduplicate.md)
 * Tracking Issue: [#8415](https://github.com/rust-lang/cargo/issues/8415)
+* [Status](https://github.com/rust-lang/cargo/issues/8415#issuecomment-1112618913)
+* [Example Port](https://github.com/clap-rs/clap/pull/3719)
+
+### Testing notes
+
+Target audience for testing
+* Maintainer who has a workspace
+* *(optional)* Project depends on nightly toolchain
+
+In preparing to stabilize, we are wanting to better understand
+* If there were any pain points in porting your project
+* Any errors or bugs that you found in testing
+* Performance concerns
+* Gaps in documentation
+* Thoughts on how you feel this feature will work in practice
+
+Please provide feedback on the [tracking issue](https://github.com/rust-lang/cargo/issues/8415)
+or create an issue for any bugs encountered.
+
+To get started
+1. Have a (recent) nightly version installed
+2. Place `cargo-features = ["workspace-inheritance"]` at the top of any `Cargo.toml` you 
+plan to use this feature in
+3. Create a `[workspace.package]` and `[workspace.dependencies]` in your workspace `Cargo.toml`
+4. Move any package keys or dependencies you feel should be shared between crates to their 
+respective workspace table
+5. Change any keys you want to inherit to `{key}.workspace = true` in the member `Cargo.toml`
+6. run `cargo +nightly check`
+
+An example port has been made [in this PR](https://github.com/clap-rs/clap/pull/3719) as
+a "real-life" guide.
 
 ### The `workspace.package` table
 
