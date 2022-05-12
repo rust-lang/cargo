@@ -35,8 +35,21 @@ macro_rules! t {
 #[macro_export]
 macro_rules! curr_dir {
     () => {
-        std::path::Path::new(file!()).parent().unwrap()
+        $crate::_curr_dir(std::path::Path::new(file!()));
     };
+}
+
+#[doc(hidden)]
+pub fn _curr_dir(mut file_path: &'static Path) -> &'static Path {
+    if !file_path.exists() {
+        // HACK: Must be running in the rust-lang/rust workspace, adjust the paths accordingly.
+        let prefix = PathBuf::from("src").join("tools").join("cargo");
+        if let Ok(crate_relative) = file_path.strip_prefix(prefix) {
+            file_path = crate_relative
+        }
+    }
+    assert!(file_path.exists(), "{} does not exist", file_path.display());
+    file_path.parent().unwrap()
 }
 
 #[track_caller]
