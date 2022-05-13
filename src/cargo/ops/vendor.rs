@@ -60,7 +60,7 @@ struct VendorConfig {
 #[serde(rename_all = "lowercase", untagged)]
 enum VendorSource {
     Directory {
-        directory: PathBuf,
+        directory: String,
     },
     Registry {
         registry: Option<String>,
@@ -298,7 +298,7 @@ fn sync(
         config.insert(
             merged_source_name.to_string(),
             VendorSource::Directory {
-                directory: opts.destination.to_path_buf(),
+                directory: opts.destination.to_string_lossy().replace("\\", "/"),
             },
         );
     } else if !dest_dir_already_exists {
