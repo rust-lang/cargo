@@ -117,7 +117,7 @@ fn package_exclude() {
         .publish();
 
     p.cargo("vendor --respect-source-config").run();
-    let csum = dbg!(p.read_file("vendor/bar/.cargo-checksum.json"));
+    let csum = p.read_file("vendor/bar/.cargo-checksum.json");
     assert!(csum.contains(".include"));
     assert!(!csum.contains(".exclude"));
     assert!(!csum.contains(".dotdir/exclude"));
