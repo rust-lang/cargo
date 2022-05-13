@@ -69,6 +69,53 @@ directory = "vendor"
         .run();
 }
 
+#[cargo_test]
+fn vendor_path_specified() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    let path = if cfg!(windows) {
+        r#"deps\.vendor"#
+    } else {
+        "deps/.vendor"
+    };
+
+    let output = p
+        .cargo("vendor --respect-source-config")
+        .arg(path)
+        .exec_with_output()
+        .unwrap();
+    // Assert against original output to ensure that
+    // path is normalized by `ops::vendor` on Windows.
+    assert_eq!(
+        &String::from_utf8(output.stdout).unwrap(),
+        r#"
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "deps/.vendor"
+"#
+    );
+
+    let lock = p.read_file("deps/.vendor/log/Cargo.toml");
+    assert!(lock.contains("version = \"0.3.5\""));
+}
+
 fn add_vendor_config(p: &Project) {
     p.change_file(
         ".cargo/config",
