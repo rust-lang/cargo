@@ -655,6 +655,16 @@ impl TomlProfile {
             }
         }
 
+        if let Some(StringOrBool::String(arg)) = &self.lto {
+            if arg == "true" || arg == "false" {
+                bail!(
+                    "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
+                     a valid setting, must be a boolean (`true`/`false`) or a string \
+                    (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
+                );
+            }
+        }
+
         Ok(())
     }
 
