@@ -106,7 +106,7 @@ one detailed below.
   flags to a linker for examples.
 * [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) – Passes custom
   flags to a linker for benchmarks.
-* [`cargo:rustc-link-lib=[KIND=]NAME`](#rustc-link-lib) — Adds a library to
+* [`cargo:rustc-link-lib=LIB`](#rustc-link-lib) — Adds a library to
   link.
 * [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Adds to the
   library search path.
@@ -153,11 +153,15 @@ to set a linker script or other linker options.
 
 
 <a id="rustc-link-lib"></a>
-#### `cargo:rustc-link-lib=[KIND=]NAME`
+#### `cargo:rustc-link-lib=LIB`
 
 The `rustc-link-lib` instruction tells Cargo to link the given library using
 the compiler's [`-l` flag][option-link]. This is typically used to link a
 native library using [FFI].
+
+The `LIB` string is passed directly to rustc, so it supports any syntax that
+`-l` does. \
+Currently the full supported syntax for `LIB` is `[KIND[:MODIFIERS]=]NAME[:RENAME]`.
 
 The `-l` flag is only passed to the library target of the package, unless
 there is no library target, in which case it is passed to all targets. This is
