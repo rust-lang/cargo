@@ -1449,6 +1449,7 @@ impl<'cfg> Workspace<'cfg> {
 
         let ms: Vec<_> = self
             .members()
+            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
             .filter_map(|member| {
                 let member_id = member.package_id();
                 match self.current_opt() {

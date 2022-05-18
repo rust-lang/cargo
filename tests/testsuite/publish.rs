@@ -56,7 +56,7 @@ fn validate_upload_foo() {
     );
 }
 
-fn validate_upload_bar() {
+fn validate_upload_li() {
     publish::validate_upload(
         r#"
         {
@@ -64,7 +64,7 @@ fn validate_upload_bar() {
           "badges": {},
           "categories": [],
           "deps": [],
-          "description": "bar",
+          "description": "li",
           "documentation": null,
           "features": {},
           "homepage": null,
@@ -72,14 +72,14 @@ fn validate_upload_bar() {
           "license": "MIT",
           "license_file": null,
           "links": null,
-          "name": "bar",
+          "name": "li",
           "readme": null,
           "readme_file": null,
           "repository": null,
           "vers": "0.0.1"
           }
         "#,
-        "bar-0.0.1.crate",
+        "li-0.0.1.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
@@ -1665,7 +1665,52 @@ Caused by:
 }
 
 #[cargo_test]
-fn in_workspace() {
+fn in_package_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+                [workspace]
+                members = ["li"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+
+    validate_upload_li();
+}
+
+#[cargo_test]
+fn in_virtual_workspace() {
     registry::init();
 
     let p = project()
@@ -1673,7 +1718,7 @@ fn in_workspace() {
             "Cargo.toml",
             r#"
                 [workspace]
-                members = ["foo", "bar"]
+                members = ["foo"]
             "#,
         )
         .file(
@@ -1688,46 +1733,106 @@ fn in_workspace() {
             "#,
         )
         .file("foo/src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [project]
-                name = "bar"
-                version = "0.0.1"
-                authors = []
-                license = "MIT"
-                description = "bar"
-                workspace = ".."
-            "#,
-        )
-        .file("bar/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --token sekrit -p foo")
+        .with_status(101)
+        .with_stderr("error: can't use \"--package <SPEC>\" in virtual manifest")
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_not_found() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+                [workspace]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "li"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit ")
+        .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD]/foo)
-[UPLOADING] foo v0.0.1 ([CWD]/foo)
+error: not found `li` in manifest members. Check in manifest path `[CWD]`
 ",
         )
         .run();
+}
 
-    validate_upload_foo();
+#[cargo_test]
+fn in_package_workspace_found_mutilate() {
+    registry::init();
 
-    p.cargo("publish --no-verify --token sekrit -p bar")
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+                [workspace]
+                members = ["li","lii"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "li"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .file(
+            "lii/Cargo.toml",
+            r#"
+                [package]
+                name = "lii"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "lii"
+            "#,
+        )
+        .file("lii/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li* --no-verify --token sekrit ")
+        .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] bar v0.0.1 ([CWD]/bar)
-[UPLOADING] bar v0.0.1 ([CWD]/bar)
+error: found mutilate `li*` in manifest members. Check in manifest path `[CWD]`
 ",
         )
         .run();
-
-    validate_upload_bar();
 }
