@@ -109,7 +109,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         }
         if matched_packages.len() > 1 {
             bail!(
-                "found mutilate `{}` in manifest members. Check in manifest path `{}`",
+                "found multiple `{}` in manifest members. Check in manifest path `{}`",
                 opt_in.get(0).unwrap(),
                 ws.root().display()
             )

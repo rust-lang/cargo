@@ -1831,7 +1831,7 @@ fn in_package_workspace_found_mutilate() {
         .with_status(101)
         .with_stderr(
             "\
-error: found mutilate `li*` in manifest members. Check in manifest path `[CWD]`
+error: found multiple `li*` in manifest members. Check in manifest path `[CWD]`
 ",
         )
         .run();
