@@ -23,6 +23,7 @@ use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
+use crate::ops::Packages::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
@@ -90,6 +91,31 @@ pub struct PublishOpts<'cfg> {
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let specs = opts.to_publish.to_package_id_specs(ws)?;
+
+    if let Packages(opt_in) = &opts.to_publish {
+        if ws.is_virtual() {
+            bail!("can't use \"--package <SPEC>\" in virtual manifest")
+        }
+        let matched_packages = ws
+            .members()
+            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+            .collect::<Vec<_>>();
+        if matched_packages.is_empty() {
+            bail!(
+                "not found `{}` in manifest members. Check in manifest path `{}`",
+                opt_in.get(0).unwrap(),
+                ws.root().display()
+            )
+        }
+        if matched_packages.len() > 1 {
+            bail!(
+                "found mutilate `{}` in manifest members. Check in manifest path `{}`",
+                opt_in.get(0).unwrap(),
+                ws.root().display()
+            )
+        }
+    }
+
     let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
 
     let (pkg, cli_features) = pkgs.pop().unwrap();

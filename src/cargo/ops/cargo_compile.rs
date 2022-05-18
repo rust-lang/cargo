@@ -146,15 +146,10 @@ impl Packages {
                 emit_pattern_not_found(ws, patterns, true).or_else(warn)?;
                 specs
             }
+            Packages::Packages(packages) if packages.is_empty() => {
+                vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
+            }
             Packages::Packages(opt_in) => {
-                if ws.is_virtual() {
-                    bail!("can't use \"--package <SPEC>\" in virtual manifest")
-                }
-                if opt_in.is_empty() {
-                    return Ok(vec![PackageIdSpec::from_package_id(
-                        ws.current()?.package_id(),
-                    )]);
-                }
                 let (mut patterns, packages) = opt_patterns_and_names(opt_in)?;
                 let mut specs = packages
                     .iter()
@@ -169,25 +164,6 @@ impl Packages {
                     specs.extend(matched_pkgs);
                 }
                 emit_pattern_not_found(ws, patterns, false)?;
-                let matched_packages = ws
-                    .members()
-                    .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
-                    .collect::<Vec<_>>();
-                if matched_packages.is_empty() {
-                    bail!(
-                        "not found `{}` in manifest members. Check in manifest path `{}`",
-                        opt_in.get(0).unwrap(),
-                        ws.root().display()
-                    )
-                }
-                if matched_packages.len() > 1 {
-                    bail!(
-                        "found mutilate `{}` in manifest members. Check in manifest path `{}`",
-                        opt_in.get(0).unwrap(),
-                        ws.root().display()
-                    )
-                }
-
                 specs
             }
             Packages::Default => ws
