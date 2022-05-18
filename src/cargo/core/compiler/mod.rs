@@ -292,7 +292,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, script_metadata);
+            add_custom_flags(&mut rustc, &script_outputs, script_metadata)?;
         }
 
         for output in outputs.iter() {
@@ -408,15 +408,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
 
             if key.0 == current_id {
-                for cfg in &output.cfgs {
-                    rustc.arg("--cfg").arg(cfg);
-                }
-                if !output.check_cfgs.is_empty() {
-                    rustc.arg("-Zunstable-options");
-                    for check_cfg in &output.check_cfgs {
-                        rustc.arg("--check-cfg").arg(check_cfg);
-                    }
-                }
                 if pass_l_flag {
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);
@@ -436,22 +427,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
         }
         Ok(())
-    }
-
-    // Add all custom environment variables present in `state` (after they've
-    // been put there by one of the `build_scripts`) to the command provided.
-    fn add_custom_env(
-        rustc: &mut ProcessBuilder,
-        build_script_outputs: &BuildScriptOutputs,
-        metadata: Option<Metadata>,
-    ) {
-        if let Some(metadata) = metadata {
-            if let Some(output) = build_script_outputs.get(metadata) {
-                for &(ref name, ref value) in output.env.iter() {
-                    rustc.env(name, value);
-                }
-            }
-        }
     }
 }
 
@@ -719,22 +694,11 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
     Ok(Work::new(move |state| {
-        if let Some(script_metadata) = script_metadata {
-            if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
-                for cfg in output.cfgs.iter() {
-                    rustdoc.arg("--cfg").arg(cfg);
-                }
-                if !output.check_cfgs.is_empty() {
-                    rustdoc.arg("-Zunstable-options");
-                    for check_cfg in &output.check_cfgs {
-                        rustdoc.arg("--check-cfg").arg(check_cfg);
-                    }
-                }
-                for &(ref name, ref value) in output.env.iter() {
-                    rustdoc.env(name, value);
-                }
-            }
-        }
+        add_custom_flags(
+            &mut rustdoc,
+            &build_script_outputs.lock().unwrap(),
+            script_metadata,
+        )?;
         let crate_dir = doc_dir.join(&crate_name);
         if crate_dir.exists() {
             // Remove output from a previous build. This ensures that stale
@@ -1191,6 +1155,32 @@ fn build_deps_args(
     // requiring nightly rust
     if unstable_opts {
         cmd.arg("-Z").arg("unstable-options");
+    }
+
+    Ok(())
+}
+
+/// Add custom flags from the output a of build-script to a `ProcessBuilder`
+fn add_custom_flags(
+    cmd: &mut ProcessBuilder,
+    build_script_outputs: &BuildScriptOutputs,
+    metadata: Option<Metadata>,
+) -> CargoResult<()> {
+    if let Some(metadata) = metadata {
+        if let Some(output) = build_script_outputs.get(metadata) {
+            for cfg in output.cfgs.iter() {
+                cmd.arg("--cfg").arg(cfg);
+            }
+            if !output.check_cfgs.is_empty() {
+                cmd.arg("-Zunstable-options");
+                for check_cfg in &output.check_cfgs {
+                    cmd.arg("--check-cfg").arg(check_cfg);
+                }
+            }
+            for &(ref name, ref value) in output.env.iter() {
+                cmd.env(name, value);
+            }
+        }
     }
 
     Ok(())
