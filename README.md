@@ -28,6 +28,7 @@ Cargo requires the following tools and packages to build:
 * `curl` (on Unix)
 * `pkg-config` (on Unix, used to figure out the `libssl` headers/libraries)
 * OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
+* A C compiler [for your platform](https://github.com/rust-lang/cc-rs#compile-time-requirements)
 * `cargo` and `rustc`
 
 First, you'll want to check out this repository
