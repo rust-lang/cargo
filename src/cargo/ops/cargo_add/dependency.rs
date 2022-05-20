@@ -539,7 +539,9 @@ impl Dependency {
                     }
                 }
                 Some(Source::Workspace(_)) => {
+                    table.insert("workspace", toml_edit::value(true));
                     table.set_dotted(true);
+                    key.fmt();
                     for key in [
                         "version",
                         "registry",
@@ -550,6 +552,7 @@ impl Dependency {
                         "tag",
                         "rev",
                         "package",
+                        "default-features",
                     ] {
                         table.remove(key);
                     }
