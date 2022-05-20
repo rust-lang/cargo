@@ -641,7 +641,7 @@ unstable_cli_options!(
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
-    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
+    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -783,22 +783,29 @@ impl CliUnstable {
             }
         }
 
-        fn parse_check_cfg(value: Option<&str>) -> CargoResult<Option<(bool, bool, bool)>> {
+        fn parse_check_cfg(value: Option<&str>) -> CargoResult<Option<(bool, bool, bool, bool)>> {
             if let Some(value) = value {
                 let mut features = false;
                 let mut well_known_names = false;
                 let mut well_known_values = false;
+                let mut output = false;
 
                 for e in value.split(',') {
                     match e {
                         "features" => features = true,
                         "names" => well_known_names = true,
                         "values" => well_known_values = true,
-                        _ => bail!("flag -Zcheck-cfg only takes `features`, `names` or `values` as valid inputs"),
+                        "output" => output = true,
+                        _ => bail!("flag -Zcheck-cfg only takes `features`, `names`, `values` or `output` as valid inputs"),
                     }
                 }
 
-                Ok(Some((features, well_known_names, well_known_values)))
+                Ok(Some((
+                    features,
+                    well_known_names,
+                    well_known_values,
+                    output,
+                )))
             } else {
                 Ok(None)
             }

@@ -29,6 +29,8 @@ pub struct BuildOutput {
     pub linker_args: Vec<(LinkType, String)>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
+    /// Various `--check-cfg` flags to pass to the compiler.
+    pub check_cfgs: Vec<String>,
     /// Additional environment variables to run the compiler with.
     pub env: Vec<(String, String)>,
     /// Metadata to pass to the immediate dependencies.
@@ -322,6 +324,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_out_dir)?;
 
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
+    let extra_check_cfg = match cx.bcx.config.cli_unstable().check_cfg {
+        Some((_, _, _, output)) => output,
+        None => false,
+    };
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
     // Need a separate copy for the fresh closure.
     let targets_fresh = targets.clone();
@@ -432,6 +438,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             &pkg_descr,
             &script_out_dir,
             &script_out_dir,
+            extra_check_cfg,
             nightly_features_allowed,
             &targets,
         )?;
@@ -459,6 +466,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
+                extra_check_cfg,
                 nightly_features_allowed,
                 &targets_fresh,
             )?,
@@ -511,6 +519,7 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
+        extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
     ) -> CargoResult<BuildOutput> {
@@ -521,6 +530,7 @@ impl BuildOutput {
             pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
+            extra_check_cfg,
             nightly_features_allowed,
             targets,
         )
@@ -536,6 +546,7 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
+        extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
     ) -> CargoResult<BuildOutput> {
@@ -543,6 +554,7 @@ impl BuildOutput {
         let mut library_links = Vec::new();
         let mut linker_args = Vec::new();
         let mut cfgs = Vec::new();
+        let mut check_cfgs = Vec::new();
         let mut env = Vec::new();
         let mut metadata = Vec::new();
         let mut rerun_if_changed = Vec::new();
@@ -669,6 +681,13 @@ impl BuildOutput {
                     linker_args.push((LinkType::All, value));
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
+                "rustc-check-cfg" => {
+                    if extra_check_cfg {
+                        check_cfgs.push(value.to_string());
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zcheck-cfg=output flag", key));
+                    }
+                }
                 "rustc-env" => {
                     let (key, val) = BuildOutput::parse_rustc_env(&value, &whence)?;
                     // Build scripts aren't allowed to set RUSTC_BOOTSTRAP.
@@ -728,6 +747,7 @@ impl BuildOutput {
             library_links,
             linker_args,
             cfgs,
+            check_cfgs,
             env,
             metadata,
             rerun_if_changed,
@@ -968,6 +988,10 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
+            match cx.bcx.config.cli_unstable().check_cfg {
+                Some((_, _, _, output)) => output,
+                None => false,
+            },
             cx.bcx.config.nightly_features_allowed,
             unit.pkg.targets(),
         )

@@ -458,3 +458,174 @@ fn features_doc() {
         .with_stderr_contains(x!("rustdoc" => "values" of "feature" with "default" "f_a" "f_b"))
         .run();
 }
+
+#[cargo_test]
+fn build_script_feedback() {
+    if !is_nightly() {
+        // rustc-check-cfg: is only availaible on nightly
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo:rustc-check-cfg=names(foo)"); }"#,
+        )
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=output")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(x!("rustc" => "names" of "foo"))
+        .run();
+}
+
+#[cargo_test]
+fn build_script_doc() {
+    if !is_nightly() {
+        // rustc-check-cfg: is only availaible on nightly
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo:rustc-check-cfg=names(foo)"); }"#,
+        )
+        .build();
+    p.cargo("doc -v -Zcheck-cfg=output")
+        .with_stderr_does_not_contain("rustc [..] --check-cfg [..]")
+        .with_stderr_contains(x!("rustdoc" => "names" of "foo"))
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..] build.rs [..]`
+[RUNNING] `[..]/build-script-build`
+[DOCUMENTING] foo [..]
+[RUNNING] `rustdoc [..] src/main.rs [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn build_script_override() {
+    if !is_nightly() {
+        // rustc-check-cfg: is only availaible on nightly
+        return;
+    }
+    let target = cargo_test_support::rustc_host();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                links = "a"
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [target.{}.a]
+                    rustc-check-cfg = ["names(foo)"]
+                "#,
+                target
+            ),
+        )
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=output")
+        .with_stderr_contains(x!("rustc" => "names" of "foo"))
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn build_script_test() {
+    if !is_nightly() {
+        // rustc-check-cfg: is only availaible on nightly
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"fn main() { 
+                println!("cargo:rustc-check-cfg=names(foo)");
+                println!("cargo:rustc-cfg=foo");
+            }"#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                ///
+                /// ```
+                /// extern crate foo;
+                ///
+                /// fn main() {
+                ///     foo::foo()
+                /// }
+                /// ```
+                ///
+                #[cfg(foo)]
+                pub fn foo() {}
+
+                #[cfg(foo)]
+                #[test]
+                fn test_foo() {
+                    foo()
+                }
+            "#,
+        )
+        .file("tests/test.rs", "#[cfg(foo)] #[test] fn test_bar() {}")
+        .build();
+
+    p.cargo("test -v -Zcheck-cfg=output")
+        .with_stderr_contains(x!("rustc" => "names" of "foo"))
+        .with_stderr_contains(x!("rustdoc" => "names" of "foo"))
+        .with_stdout_contains("test test_foo ... ok")
+        .with_stdout_contains("test test_bar ... ok")
+        .with_stdout_contains_n("test [..] ... ok", 3)
+        .masquerade_as_nightly_cargo()
+        .run();
+}
