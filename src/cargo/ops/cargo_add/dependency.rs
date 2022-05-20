@@ -552,6 +552,7 @@ impl Dependency {
                         "tag",
                         "rev",
                         "package",
+                        "default-features",
                     ] {
                         table.remove(key);
                     }
