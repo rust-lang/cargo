@@ -3,7 +3,7 @@
 ### Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use [crates.io], like npm or Rubygems do with
-npmjs.org and rubygems.org.
+[npmjs.com][1] and [rubygems.org][3].
 
 We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
@@ -23,8 +23,9 @@ central registry model as well as a Git-based model, and most packages
 are downloaded through the registry in those ecosystems, with an
 important minority of packages making use of git-based packages.
 
-[1]: https://www.npmjs.org
+[1]: https://www.npmjs.com
 [2]: https://bundler.io
+[3]: https://rubygems.org
 
 Some of the advantages that make a central registry popular in other
 languages include:
