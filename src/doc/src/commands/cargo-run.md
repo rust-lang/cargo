@@ -65,7 +65,7 @@ for more details.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-run--F"><a class="option-anchor" href="#option-cargo-run--F"></a><code>-F</code> <em>features</em></dt>
+<dt class="option-term" id="option-cargo-run--f"><a class="option-anchor" href="#option-cargo-run--f"></a><code>-f</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-run---features"><a class="option-anchor" href="#option-cargo-run---features"></a><code>--features</code> <em>features</em></dt>
 <dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
