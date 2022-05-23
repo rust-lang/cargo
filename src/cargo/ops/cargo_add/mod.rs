@@ -284,6 +284,7 @@ fn resolve_dependency(
         // Checking for a workspace dependency happens first since a member could be specified
         // in the workspace dependencies table as a dependency
         if let Some(_dep) = find_workspace_dep(dependency.toml_key(), ws.root_manifest()).ok() {
+            check_invalid_ws_keys(dependency.toml_key(), arg)?;
             dependency = dependency.set_source(WorkspaceSource::new());
         } else if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
             // Only special-case workspaces when the user doesn't provide any extra
@@ -565,7 +566,7 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
     }
 
     if let Some(rename) = &arg.rename {
-        dependency = dependency.set_rename(rename);
+        dependency = dependency.set_rename(rename).unwrap();
     }
 
     dependency
