@@ -1839,7 +1839,6 @@ error: the `-p` argument must be specified to select a single package to publish
         .run();
 }
 
-
 #[cargo_test]
 // https://github.com/rust-lang/cargo/issues/10536
 fn publish_path_dependency_without_workspace() {
@@ -1884,4 +1883,3 @@ error: package ID specification `bar` did not match any packages
         )
         .run();
 }
-
