@@ -98,7 +98,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         }
     } else {
         if ws.is_virtual() {
-            bail!("must use `-p` argument in virtual manifest")
+            bail!("the `-p` argument must be specified in the root of a virtual workspace")
         }
     }
     let member_ids = ws.members().map(|p| p.package_id());
