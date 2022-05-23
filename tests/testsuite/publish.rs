@@ -1675,7 +1675,7 @@ fn in_package_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
-                edition = "2018"
+                edition = "2021"
                 [workspace]
                 members = ["li"]
             "#,
@@ -1735,9 +1735,9 @@ fn in_virtual_workspace() {
         .file("foo/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify --token sekrit -p foo")
+    p.cargo("publish --no-verify --token sekrit")
         .with_status(101)
-        .with_stderr("error: can't use \"--package <SPEC>\" in virtual manifest")
+        .with_stderr("error: must use `-p` argument in virtual manifest")
         .run();
 }
 
@@ -1752,7 +1752,7 @@ fn in_package_workspace_not_found() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
-                edition = "2018"
+                edition = "2021"
                 [workspace]
             "#,
         )
@@ -1776,14 +1776,16 @@ fn in_package_workspace_not_found() {
         .with_status(101)
         .with_stderr(
             "\
-error: not found `li` in manifest members. Check in manifest path `[CWD]`
+error: package ID specification `li` did not match any packages
+
+<tab>Did you mean `foo`?
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn in_package_workspace_found_mutilate() {
+fn in_package_workspace_found_multiple() {
     registry::init();
 
     let p = project()
@@ -1793,7 +1795,7 @@ fn in_package_workspace_found_mutilate() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
-                edition = "2018"
+                edition = "2021"
                 [workspace]
                 members = ["li","lii"]
             "#,
@@ -1831,8 +1833,55 @@ fn in_package_workspace_found_mutilate() {
         .with_status(101)
         .with_stderr(
             "\
-error: found multiple `li*` in manifest members. Check in manifest path `[CWD]`
+error: the `-p` argument must be specified to select a single package to publish
 ",
         )
         .run();
 }
+
+
+#[cargo_test]
+// https://github.com/rust-lang/cargo/issues/10536
+fn publish_path_dependency_without_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "bar"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p bar --no-verify --token sekrit ")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+}
+
