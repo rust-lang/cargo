@@ -4,8 +4,8 @@ use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem};
 use cargo_util::{paths, Sha256};
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::io::{self, prelude::*};
 use std::path::Path;
 use std::task::Poll;
 
@@ -54,8 +54,17 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         _index_version: Option<&str>,
     ) -> Poll<CargoResult<LoadResponse>> {
         if self.updated {
+            let raw_data = match paths::read_bytes(&root.join(path)) {
+                Err(e)
+                    if e.downcast_ref::<io::Error>()
+                        .map_or(false, |ioe| ioe.kind() == io::ErrorKind::NotFound) =>
+                {
+                    return Poll::Ready(Ok(LoadResponse::NotFound));
+                }
+                r => r,
+            }?;
             Poll::Ready(Ok(LoadResponse::Data {
-                raw_data: paths::read_bytes(&root.join(path))?,
+                raw_data,
                 index_version: None,
             }))
         } else {
