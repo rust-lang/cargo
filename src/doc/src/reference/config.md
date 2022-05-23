@@ -365,7 +365,7 @@ Can be overridden with the `--target-dir` CLI option.
 * Default: none
 * Environment: `CARGO_BUILD_RUSTFLAGS` or `CARGO_ENCODED_RUSTFLAGS` or `RUSTFLAGS`
 
-Extra command-line flags to pass to `rustc`. The value may be a array of
+Extra command-line flags to pass to `rustc`. The value may be an array of
 strings or a space-separated string.
 
 There are four mutually exclusive sources of extra flags. They are checked in
@@ -402,7 +402,7 @@ appropriate profile setting.
 * Default: none
 * Environment: `CARGO_BUILD_RUSTDOCFLAGS` or `CARGO_ENCODED_RUSTDOCFLAGS` or `RUSTDOCFLAGS`
 
-Extra command-line flags to pass to `rustdoc`. The value may be a array of
+Extra command-line flags to pass to `rustdoc`. The value may be an array of
 strings or a space-separated string.
 
 There are three mutually exclusive sources of extra flags. They are checked in
@@ -974,7 +974,7 @@ the `<triple>` will take precedence. It is an error if more than one
 * Environment: `CARGO_TARGET_<triple>_RUSTFLAGS`
 
 Passes a set of custom flags to the compiler for this `<triple>`. The value
-may be a array of strings or a space-separated string.
+may be an array of strings or a space-separated string.
 
 See [`build.rustflags`](#buildrustflags) for more details on the different
 ways to specific extra flags.
