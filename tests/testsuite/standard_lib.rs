@@ -396,14 +396,119 @@ fn target_proc_macro() {
             "src/lib.rs",
             r#"
                 extern crate proc_macro;
-                pub fn f() {
+                fn f() {
                     let _ts = proc_macro::TokenStream::new();
                 }
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
             "#,
         )
         .build();
 
     p.cargo("build -v").build_std(&setup).target_host().run();
+}
+
+// We already have `basic` which uses `proc_macro::custom_api()`. This case attempts to use
+// `TokenStream` which would error because we are using the sysroot version.
+#[cargo_test]
+fn non_proc_macro_crate_uses_non_sysroot_proc_macro() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate proc_macro;
+                fn f() {
+                    let _ts = proc_macro::TokenStream::new();
+                }
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+            "#,
+        )
+        .build();
+    p.cargo("build -v")
+        .build_std(&setup)
+        .target_host()
+        .run_expect_error();
+}
+
+#[cargo_test]
+fn intergrated_proc_macro() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("The answer is {}", pm::m!());
+                }
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                extern crate proc_macro;
+                use proc_macro::TokenStream;
+
+                #[proc_macro]
+                pub fn m(_item: TokenStream) -> TokenStream {
+                   "42".parse().unwrap()
+                }
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["pm"]
+
+                [dependencies]
+                pm = { path = "./pm" }
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .build();
+
+    p.cargo("run -v")
+        .build_std(&setup)
+        .target_host()
+        .with_stdout_contains("The answer is 42")
+        .run();
 }
 
 #[cargo_test]
