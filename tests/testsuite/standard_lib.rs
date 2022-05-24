@@ -246,6 +246,10 @@ fn basic() {
     p.cargo("build").build_std(&setup).target_host().run();
     p.cargo("run").build_std(&setup).target_host().run();
     p.cargo("test").build_std(&setup).target_host().run();
+    p.cargo("check -v").build_std(&setup).run();
+    p.cargo("build").build_std(&setup).run();
+    p.cargo("run").build_std(&setup).run();
+    p.cargo("test").build_std(&setup).run();
 }
 
 #[cargo_test]
@@ -414,7 +418,7 @@ fn target_proc_macro() {
         )
         .build();
 
-    p.cargo("build -v").build_std(&setup).target_host().run();
+    p.cargo("build -v").build_std(&setup).run();
 }
 
 // We already have `basic` which uses `proc_macro::custom_api()`. This case attempts to use
@@ -444,10 +448,7 @@ fn non_proc_macro_crate_uses_non_sysroot_proc_macro() {
             "#,
         )
         .build();
-    p.cargo("build -v")
-        .build_std(&setup)
-        .target_host()
-        .run_expect_error();
+    p.cargo("build -v").build_std(&setup).run_expect_error();
 }
 
 #[cargo_test]
@@ -506,7 +507,6 @@ fn intergrated_proc_macro() {
 
     p.cargo("run -v")
         .build_std(&setup)
-        .target_host()
         .with_stdout_contains("The answer is 42")
         .run();
 }
