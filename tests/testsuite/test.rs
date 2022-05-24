@@ -1353,6 +1353,22 @@ fn test_no_run() {
 }
 
 #[cargo_test]
+fn test_no_run_emit_json() {
+    let p = project()
+        .file("src/lib.rs", "#[test] fn foo() { panic!() }")
+        .build();
+
+    p.cargo("test --no-run --message-format json")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_run_specific_bin_target() {
     let prj = project()
         .file(

@@ -22,7 +22,10 @@ pub fn run_tests(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        display_no_run_information(ws, test_args, &compilation, "unittests")?;
+        if !options.compile_opts.build_config.emit_json() {
+            display_no_run_information(ws, test_args, &compilation, "unittests")?;
+        }
+
         return Ok(None);
     }
     let (test, mut errors) = run_unit_tests(ws.config(), options, test_args, &compilation)?;
@@ -50,7 +53,10 @@ pub fn run_benches(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        display_no_run_information(ws, args, &compilation, "benches")?;
+        if !options.compile_opts.build_config.emit_json() {
+            display_no_run_information(ws, args, &compilation, "benches")?;
+        }
+
         return Ok(None);
     }
 
