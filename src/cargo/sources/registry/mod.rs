@@ -546,10 +546,7 @@ impl<'cfg> RegistrySource<'cfg> {
     ) -> CargoResult<RegistrySource<'cfg>> {
         let name = short_name(source_id);
         let ops = if source_id.url().scheme().starts_with("sparse+") {
-            if !config.cli_unstable().http_registry {
-                anyhow::bail!("Usage of HTTP-based registries requires `-Z http-registry`");
-            }
-            Box::new(http_remote::HttpRegistry::new(source_id, config, &name)) as Box<_>
+            Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
         } else {
             Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>
         };
