@@ -126,16 +126,25 @@ struct CompletedDownload {
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
-    pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> HttpRegistry<'cfg> {
-        let url = source_id
-            .url()
-            .to_string()
+    pub fn new(
+        source_id: SourceId,
+        config: &'cfg Config,
+        name: &str,
+    ) -> CargoResult<HttpRegistry<'cfg>> {
+        if !config.cli_unstable().http_registry {
+            anyhow::bail!("usage of HTTP-based registries requires `-Z http-registry`");
+        }
+        let url = source_id.url().as_str();
+        // Ensure the url ends with a slash so we can concatenate paths.
+        if !url.ends_with('/') {
+            anyhow::bail!("registry url must end in a slash `/`: {url}")
+        }
+        let url = url
             .trim_start_matches("sparse+")
-            .trim_end_matches('/')
             .into_url()
             .expect("a url with the protocol stripped should still be valid");
 
-        HttpRegistry {
+        Ok(HttpRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
@@ -149,7 +158,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                 pending_ids: HashMap::new(),
                 results: HashMap::new(),
                 progress: RefCell::new(Some(Progress::with_style(
-                    "Fetching",
+                    "Fetch",
                     ProgressStyle::Ratio,
                     config,
                 ))),
@@ -159,7 +168,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             requested_update: false,
             fetch_started: false,
             registry_config: None,
-        }
+        })
     }
 
     fn handle_http_header(buf: &[u8]) -> Option<(&str, &str)> {
@@ -245,7 +254,8 @@ impl<'cfg> HttpRegistry<'cfg> {
     }
 
     fn full_url(&self, path: &Path) -> String {
-        format!("{}/{}", self.url, path.display())
+        // self.url always ends with a slash.
+        format!("{}{}", self.url, path.display())
     }
 
     fn is_fresh(&self, path: &Path) -> bool {

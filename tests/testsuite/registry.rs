@@ -41,7 +41,7 @@ fn configure_source_replacement_for_http(addr: &str) {
             replace-with = 'dummy-registry'
 
             [source.dummy-registry]
-            registry = 'sparse+http://{}'
+            registry = 'sparse+http://{}/'
         ",
             addr
         )
@@ -2680,6 +2680,15 @@ fn http_requires_z_flag() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("  Usage of HTTP-based registries requires `-Z http-registry`")
+        .with_stderr_contains("  usage of HTTP-based registries requires `-Z http-registry`")
         .run();
+}
+
+#[cargo_test]
+fn http_requires_trailing_slash() {
+    cargo_process("-Z http-registry install bar --index sparse+https://index.crates.io")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] registry url must end in a slash `/`: sparse+https://index.crates.io")
+        .run()
 }
