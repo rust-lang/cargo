@@ -1217,6 +1217,39 @@ fn test_bench_no_run() {
 }
 
 #[cargo_test]
+fn test_bench_no_run_emit_json() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "benches/bbaz.rs",
+            r#"
+                #![feature(test)]
+
+                extern crate test;
+
+                use test::Bencher;
+
+                #[bench]
+                fn bench_baz(_: &mut Bencher) {}
+            "#,
+        )
+        .build();
+
+    p.cargo("bench --no-run --message-format json")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] bench [optimized] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_bench_no_fail_fast() {
     if !is_nightly() {
         return;

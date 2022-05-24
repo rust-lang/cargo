@@ -53,7 +53,10 @@ pub fn run_benches(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        display_no_run_information(ws, args, &compilation, "benches")?;
+        if !options.compile_opts.build_config.emit_json() {
+            display_no_run_information(ws, args, &compilation, "benches")?;
+        }
+
         return Ok(None);
     }
 
