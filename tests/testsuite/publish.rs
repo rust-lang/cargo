@@ -1737,7 +1737,9 @@ fn in_virtual_workspace() {
 
     p.cargo("publish --no-verify --token sekrit")
         .with_status(101)
-        .with_stderr("error: the `-p` argument must be specified in the root of a virtual workspace")
+        .with_stderr(
+            "error: the `-p` argument must be specified in the root of a virtual workspace",
+        )
         .run();
 }
 

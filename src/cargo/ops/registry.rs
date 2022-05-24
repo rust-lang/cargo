@@ -168,7 +168,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             cli_features: cli_features,
         },
     )?
-        .unwrap();
+    .unwrap();
 
     opts.config
         .shell()
@@ -262,7 +262,7 @@ fn transmit(
                     DepKind::Build => "build",
                     DepKind::Development => "dev",
                 }
-                    .to_string(),
+                .to_string(),
                 registry: dep_registry,
                 explicit_name_in_toml: dep.explicit_name_in_toml().map(|s| s.to_string()),
             })
