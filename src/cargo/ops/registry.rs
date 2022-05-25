@@ -23,7 +23,7 @@ use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
-use crate::ops::Packages::Packages;
+use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
@@ -91,21 +91,31 @@ pub struct PublishOpts<'cfg> {
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let specs = opts.to_publish.to_package_id_specs(ws)?;
-
-    if let Packages(_) = &opts.to_publish {
-        if specs.len() > 1 {
-            bail!("the `-p` argument must be specified to select a single package to publish");
+    if specs.len() > 1 {
+        match opts.to_publish {
+            Packages::Default => {
+                bail!("must be specified to select a single package to publish. Check `default-members` or using `-p` argument")
+            }
+            Packages::Packages(_) => {
+                bail!("the `-p` argument must be specified to select a single package to publish")
+            }
+            _ => {}
         }
-    } else {
-        if ws.is_virtual() {
-            bail!("the `-p` argument must be specified in the root of a virtual workspace")
-        }
+    }
+    if Packages::Packages(vec![]) != opts.to_publish && ws.is_virtual() {
+        bail!("the `-p` argument must be specified in the root of a virtual workspace")
     }
     let member_ids = ws.members().map(|p| p.package_id());
     // Check that the spec matches exactly one member.
     specs[0].query(member_ids)?;
     let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
-    // Double check
+    // In `members_with_features_old`, it will add "current" package(determined by the cwd). Line:1455 in workspace.rs.
+    // So we need filter
+    pkgs = pkgs
+        .into_iter()
+        .filter(|(m, _)| specs.iter().any(|spec| spec.matches(m.package_id())))
+        .collect();
+    // Double check. It is safe theoretically, unless logic has updated.
     assert_eq!(pkgs.len(), 1);
 
     let (pkg, cli_features) = pkgs.pop().unwrap();
