@@ -77,6 +77,15 @@ Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo:` as an instruction that will
 influence compilation of the package. All other lines are ignored.
 
+> Note: The order of `cargo:` instructions printed by the build script *may*
+> affect the order of arguments that `cargo` passes to `rustc`. In turn, the
+> order of arguments passed to `rustc` may affect the order of arguments passed
+> to the linker. Therefore, you will want to pay attention to the order of the
+> build script's instructions. For example, if object `foo` needs to link against
+> library `bar`, you may want to make sure that library `bar`'s
+> [`cargo:rustc-link-lib`](#rustc-link-lib) instruction appears *after*
+> instructions to link object `foo`.
+
 The output of the script is hidden from the terminal during normal
 compilation. If you would like to see the output directly in your terminal,
 invoke Cargo as "very verbose" with the `-vv` flag. This only happens when the
