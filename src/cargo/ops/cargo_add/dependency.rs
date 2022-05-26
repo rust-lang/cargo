@@ -486,9 +486,7 @@ impl Dependency {
         if str_or_1_len_table(item) {
             // Nothing to preserve
             *item = self.to_toml(crate_root);
-            if self.source != Some(Source::Workspace(WorkspaceSource)) {
-                key.fmt();
-            }
+            key.fmt();
         } else if let Some(table) = item.as_table_like_mut() {
             match &self.source {
                 Some(Source::Registry(src)) => {
@@ -940,6 +938,7 @@ impl Display for WorkspaceSource {
 mod tests {
     use std::path::Path;
 
+    use crate::ops::cargo_add::manifest::LocalManifest;
     use cargo_util::paths;
 
     use super::*;
@@ -1121,6 +1120,25 @@ mod tests {
         assert_eq!(got, relpath);
 
         verify_roundtrip(&crate_root, key, &item);
+    }
+
+    #[test]
+    fn overwrite_with_workspace_source_fmt_key() {
+        let crate_root =
+            paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("./")));
+        let toml = "dep = \"1.0\"\n";
+        let manifest = toml.parse().unwrap();
+        let mut local = LocalManifest {
+            path: crate_root.clone(),
+            manifest,
+        };
+        assert_eq!(local.manifest.to_string(), toml);
+        for (key, item) in local.data.clone().iter() {
+            let dep = Dependency::from_toml(&crate_root, key, item).unwrap();
+            let dep = dep.set_source(WorkspaceSource::new());
+            local.insert_into_table(&vec![], &dep).unwrap();
+            assert_eq!(local.data.to_string(), "dep.workspace = true\n");
+        }
     }
 
     #[test]
