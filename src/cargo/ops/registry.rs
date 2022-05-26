@@ -92,24 +92,16 @@ pub struct PublishOpts<'cfg> {
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let specs = opts.to_publish.to_package_id_specs(ws)?;
     if specs.len() > 1 {
-        match opts.to_publish {
-            Packages::Default => {
-                bail!("must be specified to select a single package to publish. Check `default-members` or using `-p` argument")
-            }
-            Packages::Packages(_) => {
-                bail!("the `-p` argument must be specified to select a single package to publish")
-            }
-            _ => {}
-        }
+        bail!("the `-p` argument must be specified to select a single package to publish")
     }
-    if Packages::Packages(vec![]) != opts.to_publish && ws.is_virtual() {
+    if Packages::Default == opts.to_publish && ws.is_virtual() {
         bail!("the `-p` argument must be specified in the root of a virtual workspace")
     }
     let member_ids = ws.members().map(|p| p.package_id());
     // Check that the spec matches exactly one member.
     specs[0].query(member_ids)?;
     let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
-    // In `members_with_features_old`, it will add "current" package(determined by the cwd). Line:1455 in workspace.rs.
+    // In `members_with_features_old`, it will add "current" package (determined by the cwd)
     // So we need filter
     pkgs = pkgs
         .into_iter()

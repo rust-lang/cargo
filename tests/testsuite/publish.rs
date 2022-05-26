@@ -1754,7 +1754,7 @@ fn with_duplicate_spec_in_members() {
     p.cargo("publish --no-verify --token sekrit")
         .with_status(101)
         .with_stderr(
-            "error: must be specified to select a single package to publish. Check `default-members` or using `-p` argument",
+            "error: the `-p` argument must be specified to select a single package to publish",
         )
         .run();
 }
@@ -1833,6 +1833,56 @@ fn in_virtual_workspace() {
         .with_status(101)
         .with_stderr(
             "error: the `-p` argument must be specified in the root of a virtual workspace",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_virtual_workspace_with_p() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo","li"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
         )
         .run();
 }
