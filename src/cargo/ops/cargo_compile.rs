@@ -174,13 +174,13 @@ impl Packages {
         };
         if specs.is_empty() {
             if ws.is_virtual() {
-                anyhow::bail!(
+                bail!(
                     "manifest path `{}` contains no package: The manifest is virtual, \
                      and the workspace has no members.",
                     ws.root().display()
                 )
             }
-            anyhow::bail!("no packages to compile")
+            bail!("no packages to compile")
         }
         Ok(specs)
     }

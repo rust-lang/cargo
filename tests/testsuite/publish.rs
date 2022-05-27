@@ -56,7 +56,7 @@ fn validate_upload_foo() {
     );
 }
 
-fn validate_upload_bar() {
+fn validate_upload_li() {
     publish::validate_upload(
         r#"
         {
@@ -64,7 +64,7 @@ fn validate_upload_bar() {
           "badges": {},
           "categories": [],
           "deps": [],
-          "description": "bar",
+          "description": "li",
           "documentation": null,
           "features": {},
           "homepage": null,
@@ -72,14 +72,14 @@ fn validate_upload_bar() {
           "license": "MIT",
           "license_file": null,
           "links": null,
-          "name": "bar",
+          "name": "li",
           "readme": null,
           "readme_file": null,
           "repository": null,
           "vers": "0.0.1"
           }
         "#,
-        "bar-0.0.1.crate",
+        "li-0.0.1.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
@@ -1665,7 +1665,146 @@ Caused by:
 }
 
 #[cargo_test]
-fn in_workspace() {
+fn in_package_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [workspace]
+                members = ["li"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+
+    validate_upload_li();
+}
+
+#[cargo_test]
+fn with_duplicate_spec_in_members() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [workspace]
+                resolver = "2"
+                members = ["li","bar"]
+                default-members = ["li","bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                description = "bar"
+                license = "MIT"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .with_status(101)
+        .with_stderr(
+            "error: the `-p` argument must be specified to select a single package to publish",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_with_members_with_features_old() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [workspace]
+                members = ["li"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+
+    validate_upload_li();
+}
+
+#[cargo_test]
+fn in_virtual_workspace() {
     registry::init();
 
     let p = project()
@@ -1673,7 +1812,41 @@ fn in_workspace() {
             "Cargo.toml",
             r#"
                 [workspace]
-                members = ["foo", "bar"]
+                members = ["foo"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .with_status(101)
+        .with_stderr(
+            "error: the `-p` argument must be specified in the root of a virtual workspace",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_virtual_workspace_with_p() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo","li"]
             "#,
         )
         .file(
@@ -1689,45 +1862,170 @@ fn in_workspace() {
         )
         .file("foo/src/main.rs", "fn main() {}")
         .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_not_found() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [workspace]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "li"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit ")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `li` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_found_multiple() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [workspace]
+                members = ["li","lii"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "li"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .file(
+            "lii/Cargo.toml",
+            r#"
+                [package]
+                name = "lii"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "lii"
+            "#,
+        )
+        .file("lii/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li* --no-verify --token sekrit ")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the `-p` argument must be specified to select a single package to publish
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+// https://github.com/rust-lang/cargo/issues/10536
+fn publish_path_dependency_without_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2021"
                 authors = []
                 license = "MIT"
                 description = "bar"
-                workspace = ".."
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify --token sekrit -p foo")
+    p.cargo("publish -p bar --no-verify --token sekrit ")
+        .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD]/foo)
-[UPLOADING] foo v0.0.1 ([CWD]/foo)
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
 ",
         )
         .run();
-
-    validate_upload_foo();
-
-    p.cargo("publish --no-verify --token sekrit -p bar")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] bar v0.0.1 ([CWD]/bar)
-[UPLOADING] bar v0.0.1 ([CWD]/bar)
-",
-        )
-        .run();
-
-    validate_upload_bar();
 }
