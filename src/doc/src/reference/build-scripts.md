@@ -328,7 +328,9 @@ list of files controlled by the [`exclude` and `include` fields]). For most
 cases, this is not a good choice, so it is recommended that every build script
 emit at least one of the `rerun-if` instructions (described below). If these
 are emitted, then Cargo will only re-run the script if the given value has
-changed.
+changed. If Cargo is re-running the build scripts of your own crate or a
+dependency and you don't know why, see ["Why is Cargo rebuilding my code?" in the
+FAQ](../faq.md#why-is-cargo-rebuilding-my-code).
 
 [`exclude` and `include` fields]: manifest.md#the-exclude-and-include-fields
 
