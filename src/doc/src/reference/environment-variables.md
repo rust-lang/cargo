@@ -214,6 +214,9 @@ corresponding environment variable is set to the empty string, `""`.
 * `CARGO_PKG_REPOSITORY` — The repository from the manifest of your package.
 * `CARGO_PKG_LICENSE` — The license from the manifest of your package.
 * `CARGO_PKG_LICENSE_FILE` — The license file from the manifest of your package.
+* `CARGO_PKG_RUST_VERSION` — The Rust version from the manifest of your package.
+  Note that this is the minimum Rust version supported by the package, not the
+  current Rust version.
 * `CARGO_CRATE_NAME` — The name of the crate that is currently being compiled.
 * `CARGO_BIN_NAME` — The name of the binary that is currently being compiled (if it is a binary). This name does not include any file extension, such as `.exe`.
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
