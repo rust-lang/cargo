@@ -211,6 +211,14 @@ These may be used in environments where you want to assert that the
 access.
 .RE
 .sp
+\fB\-\-lock\-ro\fR
+.RS 4
+Prevents Cargo from updating the \fBCargo.lock\fR file. Unlike the \fB\-\-frozen\fR
+and \fB\-\-locked\fR flags, this flag does not produce an error when the lock
+file needs to be updated. Instead, the lock file update is transparently
+discarded. This is intended to allow Cargo to handle read only file systems.
+.RE
+.sp
 \fB\-\-offline\fR
 .RS 4
 Prevents Cargo from accessing the network for any reason. Without this

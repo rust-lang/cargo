@@ -202,6 +202,13 @@ attempting to access the network to determine if it is out-of-date.</p>
 access.</dd>
 
 
+<dt class="option-term" id="option-cargo-package---lock-ro"><a class="option-anchor" href="#option-cargo-package---lock-ro"></a><code>--lock-ro</code></dt>
+<dd class="option-desc">Prevents Cargo from updating the <code>Cargo.lock</code> file. Unlike the <code>--frozen</code>
+and <code>--locked</code> flags, this flag does not produce an error when the lock
+file needs to be updated. Instead, the lock file update is transparently
+discarded. This is intended to allow Cargo to handle read only file systems.</dd>
+
+
 <dt class="option-term" id="option-cargo-package---offline"><a class="option-anchor" href="#option-cargo-package---offline"></a><code>--offline</code></dt>
 <dd class="option-desc">Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and

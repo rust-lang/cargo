@@ -9,6 +9,13 @@ These may be used in environments where you want to assert that the
 access.
 {{/option}}
 
+{{#option "`--lock-ro`"}}
+Prevents Cargo from updating the `Cargo.lock` file. Unlike the `--frozen`
+and `--locked` flags, this flag does not produce an error when the lock
+file needs to be updated. Instead, the lock file update is transparently
+discarded. This is intended to allow Cargo to handle read only file systems.
+{{/option}}
+
 {{#option "`--offline`"}}
 Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
