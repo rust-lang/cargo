@@ -228,6 +228,7 @@ fn make_config(ws_root: &Path) -> Config {
             false,
             false,
             false,
+            false,
             &Some(target_dir()),
             &[],
             &[],
