@@ -149,6 +149,10 @@ pub struct Config {
     /// `locked` is set if we should not update lock files. If the lock file
     /// is missing, or needs to be updated, an error is produced.
     locked: bool,
+    /// `lock_ro` is set if we should not update lock files. It behaves like
+    /// `locked`, but does not produce an error and silently discards lock
+    /// file changes. Intended for read-only file systems.
+    lock_ro: bool,
     /// `offline` is set if we should never access the network, but otherwise
     /// continue operating if possible.
     offline: bool,
@@ -257,6 +261,7 @@ impl Config {
             extra_verbose: false,
             frozen: false,
             locked: false,
+            lock_ro: false,
             offline: false,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
@@ -875,6 +880,7 @@ impl Config {
         color: Option<&str>,
         frozen: bool,
         locked: bool,
+        lock_ro: bool,
         offline: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
@@ -938,6 +944,7 @@ impl Config {
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
+        self.lock_ro = lock_ro;
         self.offline = offline
             || self
                 .net_config()
@@ -992,6 +999,10 @@ impl Config {
 
     pub fn locked(&self) -> bool {
         self.locked
+    }
+
+    pub fn lock_ro(&self) -> bool {
+        self.lock_ro
     }
 
     pub fn lock_update_allowed(&self) -> bool {

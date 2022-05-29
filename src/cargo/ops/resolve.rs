@@ -203,7 +203,7 @@ fn resolve_with_registry<'cfg>(
         true,
     )?;
 
-    if !ws.is_ephemeral() && ws.require_optional_deps() {
+    if !ws.is_ephemeral() && ws.require_optional_deps() && !ws.is_prevent_lock_write() {
         ops::write_pkg_lockfile(ws, &mut resolve)?;
     }
     Ok(resolve)

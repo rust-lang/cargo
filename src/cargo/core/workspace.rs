@@ -98,6 +98,10 @@ pub struct Workspace<'cfg> {
 
     /// Workspace-level custom metadata
     custom_metadata: Option<toml::Value>,
+
+    // If `true`, then the resolver will not write to `Cargo.lock` files.
+    // This is set by the `--lock-ro` command line flag.
+    is_prevent_lock_write: bool,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -197,6 +201,7 @@ impl<'cfg> Workspace<'cfg> {
             ignore_lock: false,
             resolve_behavior: ResolveBehavior::V1,
             custom_metadata: None,
+            is_prevent_lock_write: config.lock_ro(),
         }
     }
 
@@ -560,6 +565,10 @@ impl<'cfg> Workspace<'cfg> {
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {
         self.custom_metadata.as_ref()
+    }
+
+    pub fn is_prevent_lock_write(&self) -> bool {
+        self.is_prevent_lock_write
     }
 
     pub fn load_workspace_config(&mut self) -> CargoResult<Option<WorkspaceRootConfig>> {

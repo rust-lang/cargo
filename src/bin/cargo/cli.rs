@@ -341,6 +341,7 @@ fn config_configure(
     let color = args.value_of("color").or_else(|| global_color.as_deref());
     let frozen = args.is_present("frozen") || global_args.frozen;
     let locked = args.is_present("locked") || global_args.locked;
+    let lock_ro = args.is_present("lock-ro") || global_args.lock_ro;
     let offline = args.is_present("offline") || global_args.offline;
     let mut unstable_flags = global_args.unstable_flags;
     if let Some(values) = args.values_of("unstable-features") {
@@ -356,6 +357,7 @@ fn config_configure(
         color,
         frozen,
         locked,
+        lock_ro,
         offline,
         arg_target_dir,
         &unstable_flags,
@@ -381,6 +383,7 @@ struct GlobalArgs {
     color: Option<String>,
     frozen: bool,
     locked: bool,
+    lock_ro: bool,
     offline: bool,
     unstable_flags: Vec<String>,
     config_args: Vec<String>,
@@ -394,6 +397,7 @@ impl GlobalArgs {
             color: args.value_of("color").map(|s| s.to_string()),
             frozen: args.is_present("frozen"),
             locked: args.is_present("locked"),
+            lock_ro: args.is_present("lock-ro"),
             offline: args.is_present("offline"),
             unstable_flags: args
                 .values_of_lossy("unstable-features")
@@ -470,6 +474,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
+        .arg(opt("lock-ro", "Assume Cargo.lock is read only").global(true))
         .arg(opt("offline", "Run without accessing the network").global(true))
         .arg(
             multi_opt(
