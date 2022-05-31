@@ -370,6 +370,18 @@ impl<'a> GitCheckout<'a> {
                 anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
             })?;
 
+            // Skip the submodule if the config says not to update it.
+            if child.update_strategy() == git2::SubmoduleUpdate::None {
+                cargo_config.shell().status(
+                    "Skipping",
+                    format!(
+                        "git submodule `{}` due to update strategy in .gitmodules",
+                        url
+                    ),
+                )?;
+                return Ok(());
+            }
+
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
             let head = match child.head_id() {

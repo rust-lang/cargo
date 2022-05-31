@@ -1024,6 +1024,60 @@ Caused by:
 }
 
 #[cargo_test]
+fn dep_with_skipped_submodule() {
+    // Ensure we skip dependency submodules if their update strategy is `none`.
+    let qux = git::new("qux", |project| {
+        project.no_manifest().file("README", "skip me")
+    });
+
+    let bar = git::new("bar", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
+            .file("src/lib.rs", "")
+    });
+
+    // `qux` is a submodule of `bar`, but we don't want to update it.
+    let repo = git2::Repository::open(&bar.root()).unwrap();
+    git::add_submodule(&repo, qux.url().as_str(), Path::new("qux"));
+
+    let mut conf = git2::Config::open(&bar.root().join(".gitmodules")).unwrap();
+    conf.set_str("submodule.qux.update", "none").unwrap();
+
+    git::add(&repo);
+    git::commit(&repo);
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
+
+                    [dependencies.bar]
+                    git = "{}"
+                "#,
+                bar.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository `file://[..]/bar`
+[SKIPPING] git submodule `file://[..]/qux` [..]
+[COMPILING] bar [..]
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn dep_ambiguous() {
     let project = project();
     let git_project = git::new("dep", |project| {
