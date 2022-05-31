@@ -1024,6 +1024,52 @@ Caused by:
 }
 
 #[cargo_test]
+fn dep_ambiguous() {
+    let project = project();
+    let git_project = git::new("dep", |project| {
+        project
+            .file("aaa/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+            .file("aaa/src/lib.rs", "")
+            .file("bbb/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+            .file("bbb/src/lib.rs", "")
+            .file("ccc/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+            .file("ccc/src/lib.rs", "")
+    });
+
+    let p = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {  }")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] skipping duplicate package `bar` found at `[..]`
+[WARNING] skipping duplicate package `bar` found at `[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn two_deps_only_update_one() {
     let project = project();
     let git1 = git::new("dep1", |project| {

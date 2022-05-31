@@ -870,6 +870,7 @@ fn override_and_depend() {
         .cwd("b")
         .with_stderr(
             "\
+[WARNING] skipping duplicate package `a2` found at `[..]`
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])

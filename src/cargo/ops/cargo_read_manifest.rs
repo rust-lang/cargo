@@ -183,11 +183,11 @@ fn read_nested_packages(
             v.insert(pkg);
         }
         Entry::Occupied(_) => {
-            info!(
-                "skipping nested package `{}` found at `{}`",
+            let _ = config.shell().warn(format!(
+                "skipping duplicate package `{}` found at `{}`",
                 pkg.name(),
                 path.to_string_lossy()
-            );
+            ));
         }
     }
 
