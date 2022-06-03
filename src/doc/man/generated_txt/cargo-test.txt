@@ -36,11 +36,21 @@ DESCRIPTION
        target manifest settings, in which case your code will need to provide
        its own main function to handle running tests.
 
+   Documentation tests
        Documentation tests are also run by default, which is handled by
        rustdoc. It extracts code samples from documentation comments of the
-       library target, and then executes them. See the rustdoc book
-       <https://doc.rust-lang.org/rustdoc/> for more information on writing doc
-       tests.
+       library target, and then executes them.
+
+       Different from normal test targets, each code block compiles to a
+       doctest executable on the fly with rustc. These executables runs in
+       parallel in separate processes. The compilation of a code block is in
+       fact a part of test function controlled by libtest, so some options such
+       as --jobs might not take effect. Note that this execution model of
+       doctests is an undocumented implementation details, beware of depending
+       on it.
+
+       See the rustdoc book <https://doc.rust-lang.org/rustdoc/> for more
+       information on writing doc tests.
 
 OPTIONS
    Test Options

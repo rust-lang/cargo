@@ -39,11 +39,20 @@ special executable as aforementioned, and then is run serially.
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
 function to handle running tests.
-.sp
+.SS "Documentation tests"
 Documentation tests are also run by default, which is handled by \fBrustdoc\fR\&. It
 extracts code samples from documentation comments of the library target, and
-then executes them. See the \fIrustdoc book\fR <https://doc.rust\-lang.org/rustdoc/>
-for more information on writing doc tests.
+then executes them.
+.sp
+Different from normal test targets, each code block compiles to a doctest
+executable on the fly with \fBrustc\fR\&. These executables runs in parallel in
+separate processes. The compilation of a code block is in fact a part of test
+function controlled by libtest, so some options such as \fB\-\-jobs\fR might not
+take effect. Note that this execution model of doctests is an undocumented
+implementation details, beware of depending on it.
+.sp
+See the \fIrustdoc book\fR <https://doc.rust\-lang.org/rustdoc/> for more information
+on writing doc tests.
 .SH "OPTIONS"
 .SS "Test Options"
 .sp
