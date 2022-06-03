@@ -38,9 +38,9 @@ manifest settings, in which case your code will need to provide its own `main`
 function to handle running tests.
 
 Documentation tests are also run by default, which is handled by `rustdoc`. It
-extracts code samples from documentation comments and executes them. See the
-[rustdoc book](https://doc.rust-lang.org/rustdoc/) for more information on
-writing doc tests.
+extracts code samples from documentation comments of the library target, and
+then executes them. See the [rustdoc book](https://doc.rust-lang.org/rustdoc/)
+for more information on writing doc tests.
 
 ## OPTIONS
 
