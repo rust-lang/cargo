@@ -47,11 +47,11 @@ extracts code samples from documentation comments of the library target, and
 then executes them.
 
 Different from normal test targets, each code block compiles to a doctest
-executable on the fly with `rustc`. These executables runs in parallel in
+executable on the fly with `rustc`. These executables run in parallel in
 separate processes. The compilation of a code block is in fact a part of test
 function controlled by libtest, so some options such as `--jobs` might not
-take effect. Note that this execution model of doctests is an undocumented
-implementation details, beware of depending on it.
+take effect. Note that this execution model of doctests is not guaranteed
+and may change in the future; beware of depending on it.
 
 See the [rustdoc book](https://doc.rust-lang.org/rustdoc/) for more information
 on writing doc tests.

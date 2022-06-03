@@ -54,8 +54,9 @@ When no target selection options are given, `cargo rustc` will build all
 binary and library targets of the selected package.
 
 Binary targets are automatically built if there is an integration test or
-benchmark. This allows an integration test to execute the binary to exercise
-and test its behavior. The `CARGO_BIN_EXE_<name>`
+benchmark being selected to build. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The `CARGO_BIN_EXE_<name>`
 [environment variable](../reference/environment-variables.html#environment-variables-cargo-sets-for-crates)
 is set when the integration test is built so that it can use the
 [`env` macro](https://doc.rust-lang.org/std/macro.env.html) to locate the

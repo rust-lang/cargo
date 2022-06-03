@@ -30,9 +30,9 @@ cargo bench \-\- foo \-\-exact
 .sp
 Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates a
 special executable by linking your code with libtest. The executable
-automatically runs all functions annotated with the \fB#[test]\fR attribute.
-Cargo passes the \fB\-\-bench\fR flag to the test harness to tell it to run only 
-benchmarks.
+automatically runs all functions annotated with \fB#[test]\fR and \fB#[bench]\fR
+attributes. Cargo passes the \fB\-\-bench\fR flag to the test harness to tell
+it to run only benchmarks.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
@@ -145,8 +145,9 @@ target by name ignore the \fBbench\fR flag and will always benchmark the given
 target.
 .sp
 Binary targets are automatically built if there is an integration test or
-benchmark. This allows an integration test to execute the binary to exercise
-and test its behavior. The \fBCARGO_BIN_EXE_<name>\fR
+benchmark being selected to benchmark. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The \fBCARGO_BIN_EXE_<name>\fR
 \fIenvironment variable\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#environment\-variables\-cargo\-sets\-for\-crates>
 is set when the integration test is built so that it can use the
 \fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> to locate the
