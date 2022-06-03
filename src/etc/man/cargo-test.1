@@ -8,7 +8,7 @@ cargo\-test \- Execute unit and integration tests of a package
 .SH "SYNOPSIS"
 \fBcargo test\fR [\fIoptions\fR] [\fItestname\fR] [\fB\-\-\fR \fItest\-options\fR]
 .SH "DESCRIPTION"
-Compile and execute unit and integration tests.
+Compile and execute unit, integration, and documentation tests.
 .sp
 The test filtering argument \fBTESTNAME\fR and all the arguments following the two
 dashes (\fB\-\-\fR) are passed to the test binaries and thus to \fIlibtest\fR (rustc's
@@ -27,11 +27,14 @@ cargo test foo \-\- \-\-test\-threads 3
 .fi
 .RE
 .sp
-Tests are built with the \fB\-\-test\fR option to \fBrustc\fR which creates an
-executable with a \fBmain\fR function that automatically runs all functions
-annotated with the \fB#[test]\fR attribute in multiple threads. \fB#[bench]\fR
-annotated functions will also be run with one iteration to verify that they
-are functional.
+Tests are built with the \fB\-\-test\fR option to \fBrustc\fR which creates a special
+executable by linking your code with libtest. The executable automatically
+runs all functions annotated with the \fB#[test]\fR attribute in multiple threads.
+\fB#[bench]\fR annotated functions will also be run with one iteration to verify
+that they are functional.
+.sp
+If the package contains multiple test targets, each target compiles to a
+special executable as aforementioned, and then is run serially.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR

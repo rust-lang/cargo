@@ -12,7 +12,7 @@ cargo-test - Execute unit and integration tests of a package
 
 ## DESCRIPTION
 
-Compile and execute unit and integration tests.
+Compile and execute unit, integration, and documentation tests.
 
 The test filtering argument `TESTNAME` and all the arguments following the two
 dashes (`--`) are passed to the test binaries and thus to _libtest_ (rustc's
@@ -27,11 +27,14 @@ on 3 threads in parallel:
 
     cargo test foo -- --test-threads 3
 
-Tests are built with the `--test` option to `rustc` which creates an
-executable with a `main` function that automatically runs all functions
-annotated with the `#[test]` attribute in multiple threads. `#[bench]`
-annotated functions will also be run with one iteration to verify that they
-are functional.
+Tests are built with the `--test` option to `rustc` which creates a special
+executable by linking your code with libtest. The executable automatically
+runs all functions annotated with the `#[test]` attribute in multiple threads.
+`#[bench]` annotated functions will also be run with one iteration to verify
+that they are functional.
+
+If the package contains multiple test targets, each target compiles to a
+special executable as aforementioned, and then is run serially.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
