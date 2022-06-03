@@ -81,6 +81,8 @@ them from being benchmarked by default. Target selection options that take a
 target by name ignore the `bench` flag and will always benchmark the given
 target.
 
+{{> options-targets-bin-auto-built }}
+
 {{> options-targets }}
 
 {{> section-features }}
