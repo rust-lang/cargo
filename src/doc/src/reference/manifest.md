@@ -364,7 +364,8 @@ script guide.
 ```toml
 [package]
 # ...
-links = "foo"
+# this package links with a native library called "git2", e.g. "libgit2.a" on Linux
+links = "git2"
 ```
 
 <a id="the-exclude-and-include-fields-optional"></a>
