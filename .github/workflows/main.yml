@@ -54,6 +54,8 @@ jobs:
           other: i686-pc-windows-gnu
     steps:
     - uses: actions/checkout@v3
+    - name: Dump Environment
+      run: ci/dump-environment.sh
     - name: Update Rustup (temporary workaround)
       run: rustup self update
       shell: bash
@@ -97,6 +99,13 @@ jobs:
         # download all workspaces.
         cargo test --manifest-path benches/benchsuite/Cargo.toml --all-targets -- cargo
         cargo check --manifest-path benches/capture/Cargo.toml
+    # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    # running out of disk space.
+    - name: Clear test output
+      run: |
+        df -h
+        rm -rf target/tmp
+        df -h
     - name: Fetch smoke test
       run: ci/fetch-smoke-test.sh
 
