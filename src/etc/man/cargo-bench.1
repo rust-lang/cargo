@@ -30,9 +30,9 @@ cargo bench \-\- foo \-\-exact
 .sp
 Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates a
 special executable by linking your code with libtest. The executable
-automatically runs all functions annotated with \fB#[test]\fR and \fB#[bench]\fR
-attributes. Cargo passes the \fB\-\-bench\fR flag to the test harness to tell
-it to run only benchmarks.
+automatically runs all functions annotated with \fB#[bench]\fR attribute.
+Cargo passes the \fB\-\-bench\fR flag to the test harness to tell it to run
+only benchmarks.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
