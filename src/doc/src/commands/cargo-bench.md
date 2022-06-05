@@ -30,7 +30,7 @@ similarly named benchmarks like `foobar`):
 
 Benchmarks are built with the `--test` option to `rustc` which creates a
 special executable by linking your code with libtest. The executable
-automatically runs all functions annotated with `#[bench]` attribute.
+automatically runs all functions annotated with the `#[bench]` attribute.
 Cargo passes the `--bench` flag to the test harness to tell it to run
 only benchmarks.
 
