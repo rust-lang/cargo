@@ -35,6 +35,8 @@ To pass flags to all compiler processes spawned by Cargo, use the `RUSTFLAGS`
 When no target selection options are given, `cargo rustc` will build all
 binary and library targets of the selected package.
 
+{{> options-targets-bin-auto-built }}
+
 {{> options-targets }}
 
 {{> section-features }}

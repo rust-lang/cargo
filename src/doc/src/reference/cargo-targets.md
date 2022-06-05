@@ -100,7 +100,13 @@ parallel, reporting the success and failure of each test. See [the `harness`
 field](#the-harness-field) if you want to use a different harness or test
 strategy.
 
+> **Note**: There is another special style of test in Cargo:
+> [documentation tests][documentation examples].
+> They are handled by `rustdoc` and have a slightly different execution model.
+> For more information, please see [`cargo test`][cargo-test-documentation-tests].
+
 [libtest harness]: ../../rustc/tests/index.html
+[cargo-test-documentation-tests]: ../commands/cargo-test.md#documentation-tests
 
 #### Integration tests
 

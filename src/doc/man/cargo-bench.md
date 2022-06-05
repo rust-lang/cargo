@@ -28,10 +28,11 @@ similarly named benchmarks like `foobar`):
 
     cargo bench -- foo --exact
 
-Benchmarks are built with the `--test` option to `rustc` which creates an
-executable with a `main` function that automatically runs all functions
-annotated with the `#[bench]` attribute. Cargo passes the `--bench` flag to
-the test harness to tell it to run only benchmarks.
+Benchmarks are built with the `--test` option to `rustc` which creates a
+special executable by linking your code with libtest. The executable
+automatically runs all functions annotated with the `#[bench]` attribute.
+Cargo passes the `--bench` flag to the test harness to tell it to run
+only benchmarks.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
@@ -80,6 +81,8 @@ run the example as a benchmark. Setting targets to `bench = false` will stop
 them from being benchmarked by default. Target selection options that take a
 target by name ignore the `bench` flag and will always benchmark the given
 target.
+
+{{> options-targets-bin-auto-built }}
 
 {{> options-targets }}
 
