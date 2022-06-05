@@ -324,6 +324,37 @@ fn profile_in_virtual_manifest_works() {
 }
 
 #[cargo_test]
+fn profile_lto_string_bool_dev() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [profile.dev]
+                lto = "true"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  `lto` setting of string `\"true\"` for `dev` profile is not a valid setting, \
+must be a boolean (`true`/`false`) or a string (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn profile_panic_test_bench() {
     let p = project()
         .file(
