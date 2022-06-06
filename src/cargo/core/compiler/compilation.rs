@@ -347,6 +347,10 @@ impl<'cfg> Compilation<'cfg> {
                 metadata.license_file.as_ref().unwrap_or(&String::new()),
             )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
+            .env(
+                "CARGO_PKG_RUST_VERSION",
+                &pkg.rust_version().unwrap_or(&String::new()),
+            )
             .cwd(pkg.root());
 
         // Apply any environment variables from the config
