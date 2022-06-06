@@ -177,7 +177,9 @@ impl GitDatabase {
             Some(c) => c,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
-        checkout.update_submodules(cargo_config)?;
+        if !cargo_config.offline() {
+            checkout.update_submodules(cargo_config)?;
+        }
         Ok(checkout)
     }
 
