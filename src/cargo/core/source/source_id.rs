@@ -1,4 +1,5 @@
 use crate::core::PackageId;
+use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
@@ -206,6 +207,18 @@ impl SourceId {
         })
     }
 
+    /// Returns the `SourceId` corresponding to the main repository, using the
+    /// http index if allowed.
+    pub fn crates_io_maybe_http(config: &Config) -> CargoResult<SourceId> {
+        if config.cli_unstable().http_registry {
+            config.check_registry_index_not_set()?;
+            let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
+            SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
+        } else {
+            Self::crates_io(config)
+        }
+    }
+
     /// Gets the `SourceId` associated with given name of the remote registry.
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
@@ -356,7 +369,8 @@ impl SourceId {
             SourceKind::Registry => {}
             _ => return false,
         }
-        self.inner.url.as_str() == CRATES_IO_INDEX
+        let url = self.inner.url.as_str();
+        url == CRATES_IO_INDEX || url == CRATES_IO_HTTP_INDEX
     }
 
     /// Hashes `self`.
