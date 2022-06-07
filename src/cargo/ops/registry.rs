@@ -196,6 +196,10 @@ fn verify_dependencies(
         if super::check_dep_has_version(dep, true)? {
             continue;
         }
+        // Allow publishing to crates.io with index.crates.io as a source replacement.
+        if registry_src.is_default_registry() && dep.source_id().is_default_registry() {
+            continue;
+        }
         // TomlManifest::prepare_for_publish will rewrite the dependency
         // to be just the `version` field.
         if dep.source_id() != registry_src {
