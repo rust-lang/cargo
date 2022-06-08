@@ -7,9 +7,9 @@ pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
         .arg_quiet()
-        .arg(opt("workspace", "Only update the workspace packages").short('w'))
+        .arg(flag("workspace", "Only update the workspace packages").short('w'))
         .arg_package_spec_simple("Package to update")
-        .arg(opt(
+        .arg(flag(
             "aggressive",
             "Force updating all dependencies of SPEC as well when used with -p",
         ))
@@ -33,11 +33,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 
     let update_opts = UpdateOptions {
-        aggressive: args.is_present("aggressive"),
-        precise: args.value_of("precise"),
+        aggressive: args.flag("aggressive"),
+        precise: args.get_one::<String>("precise").map(String::as_str),
         to_update: values(args, "package"),
-        dry_run: args.is_present("dry-run"),
-        workspace: args.is_present("workspace"),
+        dry_run: args.dry_run(),
+        workspace: args.flag("workspace"),
         config,
     };
     ops::update_lockfile(&ws, &update_opts)?;

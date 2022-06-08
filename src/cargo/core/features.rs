@@ -158,7 +158,7 @@ impl Edition {
     ///
     /// This requires a static value due to the way clap works, otherwise I
     /// would have built this dynamically.
-    pub const CLI_VALUES: &'static [&'static str] = &["2015", "2018", "2021"];
+    pub const CLI_VALUES: [&'static str; 3] = ["2015", "2018", "2021"];
 
     /// Returns the first version that a particular edition was released on
     /// stable.

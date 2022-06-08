@@ -29,8 +29,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         spec: values(args, "package"),
         targets: args.targets(),
         requested_profile: args.get_profile_name(config, "dev", ProfileChecking::Custom)?,
-        profile_specified: args.is_present("profile") || args.is_present("release"),
-        doc: args.is_present("doc"),
+        profile_specified: args.contains_id("profile") || args.flag("release"),
+        doc: args.flag("doc"),
     };
     ops::clean(&ws, &opts)?;
     Ok(())
