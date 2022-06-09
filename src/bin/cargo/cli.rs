@@ -112,7 +112,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
         return Ok(());
     }
 
-    let is_verbose = expanded_args.occurrences_of("verbose") > 0;
+    let is_verbose = expanded_args.verbose() > 0;
     if expanded_args.is_present("version") {
         let version = get_version_string(is_verbose);
         drop_print!(config, "{}", version);
@@ -331,7 +331,7 @@ fn config_configure(
         ._is_valid_arg("target-dir")
         .then(|| subcommand_args.value_of_path("target-dir", config))
         .flatten();
-    let verbose = global_args.verbose + args.occurrences_of("verbose") as u32;
+    let verbose = global_args.verbose + args.verbose();
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
     let quiet = args.is_present("quiet")
@@ -389,7 +389,7 @@ struct GlobalArgs {
 impl GlobalArgs {
     fn new(args: &ArgMatches) -> GlobalArgs {
         GlobalArgs {
-            verbose: args.occurrences_of("verbose") as u32,
+            verbose: args.verbose(),
             quiet: args.is_present("quiet"),
             color: args.value_of("color").map(|s| s.to_string()),
             frozen: args.is_present("frozen"),

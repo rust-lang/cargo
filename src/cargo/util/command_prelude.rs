@@ -360,6 +360,10 @@ pub trait ArgMatchesExt {
         self.value_of_u32("jobs")
     }
 
+    fn verbose(&self) -> u32 {
+        self._occurrences("verbose")
+    }
+
     fn keep_going(&self) -> bool {
         self._is_present("keep-going")
     }
@@ -729,6 +733,8 @@ pub trait ArgMatchesExt {
 
     fn _values_of_os(&self, name: &str) -> Vec<OsString>;
 
+    fn _occurrences(&self, name: &str) -> u32;
+
     fn _is_present(&self, name: &str) -> bool;
 
     fn _is_valid_arg(&self, name: &str) -> bool;
@@ -755,6 +761,10 @@ impl<'a> ArgMatchesExt for ArgMatches {
             .unwrap_or_default()
             .map(|s| s.to_os_string())
             .collect()
+    }
+
+    fn _occurrences(&self, name: &str) -> u32 {
+        self.occurrences_of(name) as u32
     }
 
     fn _is_present(&self, name: &str) -> bool {
