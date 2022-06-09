@@ -569,6 +569,12 @@ impl Execs {
         self
     }
 
+    /// Writes the given lines to stdin.
+    pub fn with_stdin<S: ToString>(&mut self, expected: S) -> &mut Self {
+        self.expect_stdin = Some(expected.to_string());
+        self
+    }
+
     /// Verifies the exit code from the process.
     ///
     /// This is not necessary if the expected exit code is `0`.
@@ -820,7 +826,10 @@ impl Execs {
     #[track_caller]
     pub fn run(&mut self) {
         self.ran = true;
-        let p = (&self.process_builder).clone().unwrap();
+        let mut p = (&self.process_builder).clone().unwrap();
+        if let Some(stdin) = self.expect_stdin.take() {
+            p.stdin(stdin);
+        }
         if let Err(e) = self.match_process(&p) {
             panic_error(&format!("test failed running {}", p), e);
         }

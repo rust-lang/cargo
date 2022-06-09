@@ -2,7 +2,7 @@
 
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
-use cargo_test_support::registry::{self, registry_url, Package};
+use cargo_test_support::registry::{self, Package, Response};
 use cargo_test_support::{basic_manifest, no_such_file_err_msg, project, publish};
 use std::fs;
 
@@ -187,7 +187,7 @@ See [..]
 
 #[cargo_test]
 fn simple_with_index() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project()
         .file(
@@ -205,7 +205,7 @@ fn simple_with_index() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .run();
 
     validate_upload_foo();
@@ -287,7 +287,7 @@ the `path` specification will be removed from the dependency declaration.
 
 #[cargo_test]
 fn unpublishable_crate() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project()
         .file(
@@ -306,7 +306,7 @@ fn unpublishable_crate() {
         .build();
 
     p.cargo("publish --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr(
             "\
@@ -526,7 +526,7 @@ fn new_crate_rejected() {
 
 #[cargo_test]
 fn dry_run() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project()
         .file(
@@ -544,7 +544,7 @@ fn dry_run() {
         .build();
 
     p.cargo("publish --dry-run --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1330,7 +1330,7 @@ fn credentials_ambiguous_filename() {
 fn index_requires_token() {
     // --index will not load registry.token to avoid possibly leaking
     // crates.io token to another server.
-    registry::init();
+    let registry = registry::init();
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
 
@@ -1350,7 +1350,7 @@ fn index_requires_token() {
         .build();
 
     p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr(
             "\
@@ -1440,9 +1440,15 @@ Caused by:
 #[cargo_test]
 fn api_error_json() {
     // Registry returns an API error.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| {
-        (403, &r#"{"errors": [{"detail": "you must be logged in"}]}"#)
-    });
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: br#"{"errors": [{"detail": "you must be logged in"}]}"#.to_vec(),
+            code: 403,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1476,19 +1482,20 @@ Caused by:
 ",
         )
         .run();
-
-    t.join().unwrap();
 }
 
 #[cargo_test]
 fn api_error_200() {
     // Registry returns an API error with a 200 status code.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| {
-        (
-            200,
-            &r#"{"errors": [{"detail": "max upload size is 123"}]}"#,
-        )
-    });
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: br#"{"errors": [{"detail": "max upload size is 123"}]}"#.to_vec(),
+            code: 200,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1522,14 +1529,20 @@ Caused by:
 ",
         )
         .run();
-
-    t.join().unwrap();
 }
 
 #[cargo_test]
 fn api_error_code() {
     // Registry returns an error code without a JSON message.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| (400, &"go away"));
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: br#"go away"#.to_vec(),
+            code: 400,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1569,15 +1582,18 @@ Caused by:
 ",
         )
         .run();
-
-    t.join().unwrap();
 }
 
 #[cargo_test]
 fn api_curl_error() {
     // Registry has a network error.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| panic!("broke!"));
-
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| {
+            panic!("broke");
+        })
+        .build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -1615,15 +1631,20 @@ Caused by:
 ",
         )
         .run();
-
-    let e = t.join().unwrap_err();
-    assert_eq!(*e.downcast::<&str>().unwrap(), "broke!");
 }
 
 #[cargo_test]
 fn api_other_error() {
     // Registry returns an invalid response.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| (200, b"\xff"));
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: b"\xff".to_vec(),
+            code: 200,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1660,8 +1681,6 @@ Caused by:
 ",
         )
         .run();
-
-    t.join().unwrap();
 }
 
 #[cargo_test]
