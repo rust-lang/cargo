@@ -2,6 +2,7 @@
 // test and enforce them.
 #![warn(rust_2018_idioms)]
 #![cfg_attr(feature = "deny-warnings", deny(warnings))]
+#![cfg_attr(feature = "deny-warnings", allow(deprecated))]
 // Due to some of the default clippy lints being somewhat subjective and not
 // necessarily an improvement, we prefer to not use them at this time.
 #![allow(clippy::all)]
