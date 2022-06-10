@@ -115,6 +115,7 @@ mod rustdoc;
 mod rustdoc_extern_html;
 mod rustdocflags;
 mod rustflags;
+mod safe_directories;
 mod search;
 mod shell_quoting;
 mod standard_lib;
