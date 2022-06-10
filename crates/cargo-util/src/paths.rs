@@ -1,5 +1,8 @@
 //! Various utilities for working with files and paths.
 
+mod ownership;
+
+pub use self::ownership::{validate_ownership, OwnershipError};
 use anyhow::{Context, Result};
 use filetime::FileTime;
 use std::env;
