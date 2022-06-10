@@ -21,6 +21,7 @@ use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
+use crate::util::important_paths;
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
 use crate::util::toml::{read_manifest, InheritableFields, TomlDependency, TomlProfiles};
@@ -1707,7 +1708,9 @@ fn find_workspace_root_with_loader(
     config: &Config,
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
+    let safe_directories = config.safe_directories()?;
     for ances_manifest_path in find_root_iter(manifest_path, config) {
+        important_paths::check_safe_manifest_path(config, &safe_directories, &ances_manifest_path)?;
         debug!("find_root - trying {}", ances_manifest_path.display());
         if let Some(ws_root_path) = loader(&ances_manifest_path)? {
             return Ok(Some(ws_root_path));
