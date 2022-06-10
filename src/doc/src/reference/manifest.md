@@ -361,10 +361,13 @@ script guide.
 
 [links]: build-scripts.md#the-links-manifest-key
 
+For example, a crate that links a native library called "git2" (e.g. `libgit2.a`
+on Linux) may specify:
+
 ```toml
 [package]
 # ...
-links = "foo"
+links = "git2"
 ```
 
 <a id="the-exclude-and-include-fields-optional"></a>
