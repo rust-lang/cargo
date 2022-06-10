@@ -2,10 +2,12 @@
 
 use crate::core::{TargetKind, Workspace};
 use crate::ops::CompileOptions;
-use anyhow::Error;
+use crate::Config;
+use anyhow::{format_err, Error};
 use cargo_util::ProcessError;
+use std::borrow::Cow;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub type CargoResult<T> = anyhow::Result<T>;
 
@@ -344,4 +346,59 @@ impl From<std::io::Error> for CliError {
 
 pub fn internal<S: fmt::Display>(error: S) -> anyhow::Error {
     InternalError::new(anyhow::format_err!("{}", error)).into()
+}
+
+/// Converts an `OwnershipError` into an `anyhow::Error` with a human-readable
+/// explanation of what to do.
+pub fn ownership_error(
+    e: &cargo_util::paths::OwnershipError,
+    what: &str,
+    to_add: &Path,
+    config: &Config,
+) -> anyhow::Error {
+    let to_approve = if std::env::var_os("RUSTUP_TOOLCHAIN").is_some() {
+        // FIXME: shell_escape doesn't handle powershell (and possibly other shells)
+        let escaped = shell_escape::escape(Cow::Borrowed(to_add.to_str().expect("utf-8 path")));
+        format!(
+            "To approve this directory, run:\n\
+            \n    \
+            rustup set safe-directories add {escaped}\n\
+            \n\
+            See https://rust-lang.github.io/rustup/safe-directories.html for more information.",
+        )
+    } else {
+        let home = config.home().clone().into_path_unlocked();
+        let home_config = if home.join("config").exists() {
+            home.join("config")
+        } else {
+            home.join("config.toml")
+        };
+        format!(
+            "To approve this directory, set the CARGO_SAFE_DIRECTORIES environment\n\
+            variable to \"{}\" or edit\n\
+            `{}` and add:\n\
+            \n    \
+            [safe]\n    \
+            directories = [{}]\n\
+            \n\
+            See https://doc.rust-lang.org/nightly/cargo/reference/config.html#safedirectories\n\
+            for more information.",
+            to_add.display(),
+            home_config.display(),
+            toml_edit::easy::Value::String(to_add.to_str().expect("utf-8 path").to_string())
+        )
+    };
+    format_err!(
+        "`{}` is owned by a different user\n\
+        For safety reasons, Cargo does not allow opening {what} by\n\
+        a different user, unless explicitly approved.\n\
+        \n\
+        {to_approve}\n\
+        \n\
+        Current user: {}\n\
+        Owner of file: {}",
+        e.path.display(),
+        e.current_user,
+        e.owner
+    )
 }
