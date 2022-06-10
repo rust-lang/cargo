@@ -211,18 +211,26 @@ pub fn open<P: AsRef<Path>>(path: P) -> Result<File> {
     File::open(path).with_context(|| format!("failed to open file `{}`", path.display()))
 }
 
+/// Returns the metadata of the path (follows symlinks).
+pub fn metadata(path: &Path) -> Result<fs::Metadata> {
+    fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))
+}
+
+/// Returns the metadata of the path (does not follow symlinks).
+pub fn symlink_metadata(path: &Path) -> Result<fs::Metadata> {
+    fs::symlink_metadata(path).with_context(|| format!("failed to lstat `{}`", path.display()))
+}
+
 /// Returns the last modification time of a file.
 pub fn mtime(path: &Path) -> Result<FileTime> {
-    let meta =
-        fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))?;
+    let meta = metadata(path)?;
     Ok(FileTime::from_last_modification_time(&meta))
 }
 
 /// Returns the maximum mtime of the given path, recursing into
 /// subdirectories, and following symlinks.
 pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
-    let meta =
-        fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))?;
+    let meta = metadata(path)?;
     if !meta.is_dir() {
         return Ok(FileTime::from_last_modification_time(&meta));
     }
