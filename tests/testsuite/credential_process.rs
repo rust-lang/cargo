@@ -1,8 +1,8 @@
 //! Tests for credential-process.
 
+use cargo_test_support::registry::TestRegistry;
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
 use std::fs;
-use std::thread;
 
 fn toml_bin(proj: &Project, name: &str) -> String {
     proj.bin(name).display().to_string().replace('\\', "\\\\")
@@ -10,9 +10,13 @@ fn toml_bin(proj: &Project, name: &str) -> String {
 
 #[cargo_test]
 fn gated() {
-    registry::RegistryBuilder::new()
-        .alternative(true)
-        .add_tokens(false)
+    let _alternative = registry::RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
+        .build();
+
+    let _cratesio = registry::RegistryBuilder::new()
+        .no_configure_token()
         .build();
 
     let p = project()
@@ -61,9 +65,9 @@ fn gated() {
 #[cargo_test]
 fn warn_both_token_and_process() {
     // Specifying both credential-process and a token in config should issue a warning.
-    registry::RegistryBuilder::new()
-        .alternative(true)
-        .add_tokens(false)
+    let _server = registry::RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
         .build();
     let p = project()
         .file(
@@ -134,19 +138,15 @@ Only one of these values may be set, remove one or the other to proceed.
 /// * Create a simple `foo` project to run the test against.
 /// * Configure the credential-process config.
 ///
-/// Returns a thread handle for the API server, the test should join it when
-/// finished. Also returns the simple `foo` project to test against.
-fn get_token_test() -> (Project, thread::JoinHandle<()>) {
+/// Returns returns the simple `foo` project to test against and the API server handle.
+fn get_token_test() -> (Project, TestRegistry) {
     // API server that checks that the token is included correctly.
     let server = registry::RegistryBuilder::new()
-        .add_tokens(false)
-        .build_api_server(&|headers| {
-            assert!(headers
-                .iter()
-                .any(|header| header == "Authorization: sekrit"));
-
-            (200, &r#"{"ok": true, "msg": "completed!"}"#)
-        });
+        .no_configure_token()
+        .token("sekrit")
+        .alternative()
+        .http_api()
+        .build();
 
     // The credential process to use.
     let cred_proj = project()
@@ -165,7 +165,7 @@ fn get_token_test() -> (Project, thread::JoinHandle<()>) {
                     index = "{}"
                     credential-process = ["{}"]
                 "#,
-                registry::alt_registry_url(),
+                server.index_url(),
                 toml_bin(&cred_proj, "test-cred")
             ),
         )
@@ -189,7 +189,7 @@ fn get_token_test() -> (Project, thread::JoinHandle<()>) {
 #[cargo_test]
 fn publish() {
     // Checks that credential-process is used for `cargo publish`.
-    let (p, t) = get_token_test();
+    let (p, _t) = get_token_test();
 
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
         .masquerade_as_nightly_cargo()
@@ -201,14 +201,14 @@ fn publish() {
 ",
         )
         .run();
-
-    t.join().ok().unwrap();
 }
 
 #[cargo_test]
 fn basic_unsupported() {
     // Non-action commands don't support login/logout.
-    registry::RegistryBuilder::new().add_tokens(false).build();
+    let _server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .build();
     cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         br#"
@@ -246,7 +246,9 @@ the credential-process configuration value must pass the \
 
 #[cargo_test]
 fn login() {
-    registry::init();
+    let server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .build();
     // The credential process to use.
     let cred_proj = project()
         .at("cred_proj")
@@ -266,7 +268,7 @@ fn login() {
                     std::fs::write("token-store", buffer).unwrap();
                 }
             "#
-            .replace("__API__", &registry::api_url().to_string()),
+            .replace("__API__", server.api_url().as_str()),
         )
         .build();
     cred_proj.cargo("build").run();
@@ -301,7 +303,9 @@ fn login() {
 
 #[cargo_test]
 fn logout() {
-    registry::RegistryBuilder::new().add_tokens(false).build();
+    let _server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .build();
     // The credential process to use.
     let cred_proj = project()
         .at("cred_proj")
@@ -354,7 +358,7 @@ token for `crates-io` has been erased!
 
 #[cargo_test]
 fn yank() {
-    let (p, t) = get_token_test();
+    let (p, _t) = get_token_test();
 
     p.cargo("yank --version 0.1.0 --registry alternative -Z credential-process")
         .masquerade_as_nightly_cargo()
@@ -365,13 +369,11 @@ fn yank() {
 ",
         )
         .run();
-
-    t.join().ok().unwrap();
 }
 
 #[cargo_test]
 fn owner() {
-    let (p, t) = get_token_test();
+    let (p, _t) = get_token_test();
 
     p.cargo("owner --add username --registry alternative -Z credential-process")
         .masquerade_as_nightly_cargo()
@@ -382,14 +384,14 @@ fn owner() {
 ",
         )
         .run();
-
-    t.join().ok().unwrap();
 }
 
 #[cargo_test]
 fn libexec_path() {
     // cargo: prefixed names use the sysroot
-    registry::RegistryBuilder::new().add_tokens(false).build();
+    let _server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .build();
     cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         br#"
@@ -420,9 +422,9 @@ Caused by:
 #[cargo_test]
 fn invalid_token_output() {
     // Error when credential process does not output the expected format for a token.
-    registry::RegistryBuilder::new()
-        .alternative(true)
-        .add_tokens(false)
+    let _server = registry::RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
         .build();
     let cred_proj = project()
         .at("cred_proj")

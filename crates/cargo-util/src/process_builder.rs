@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::io;
+use std::io::{self, Write};
 use std::iter::once;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Output, Stdio};
@@ -39,6 +39,8 @@ pub struct ProcessBuilder {
     /// `true` to retry with an argfile if hitting "command line too big" error.
     /// See [`ProcessBuilder::retry_with_argfile`] for more information.
     retry_with_argfile: bool,
+    /// Data to write to stdin.
+    stdin: Vec<u8>,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -80,6 +82,7 @@ impl ProcessBuilder {
             jobserver: None,
             display_env_vars: false,
             retry_with_argfile: false,
+            stdin: Vec::new(),
         }
     }
 
@@ -207,6 +210,12 @@ impl ProcessBuilder {
         self
     }
 
+    /// Sets a value that will be written to stdin of the process on launch.
+    pub fn stdin<T: Into<Vec<u8>>>(&mut self, stdin: T) -> &mut Self {
+        self.stdin = stdin.into();
+        self
+    }
+
     fn should_retry_with_argfile(&self, err: &io::Error) -> bool {
         self.retry_with_argfile && imp::command_line_too_big(err)
     }
@@ -278,11 +287,16 @@ impl ProcessBuilder {
             match piped(&mut cmd).spawn() {
                 Err(ref e) if self.should_retry_with_argfile(e) => {}
                 Err(e) => return Err(e),
-                Ok(child) => return child.wait_with_output(),
+                Ok(mut child) => {
+                    child.stdin.take().unwrap().write_all(&self.stdin)?;
+                    return child.wait_with_output();
+                }
             }
         }
         let (mut cmd, argfile) = self.build_command_with_argfile()?;
-        let output = piped(&mut cmd).spawn()?.wait_with_output();
+        let mut child = piped(&mut cmd).spawn()?;
+        child.stdin.take().unwrap().write_all(&self.stdin)?;
+        let output = child.wait_with_output();
         close_tempfile_and_log_error(argfile);
         output
     }
@@ -527,11 +541,11 @@ fn debug_force_argfile(retry_enabled: bool) -> bool {
     cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
 }
 
-/// Creates new pipes for stderr and stdout. Ignores stdin.
+/// Creates new pipes for stderr, stdout and stdin.
 fn piped(cmd: &mut Command) -> &mut Command {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .stdin(Stdio::null())
+        .stdin(Stdio::piped())
 }
 
 fn close_tempfile_and_log_error(file: NamedTempFile) {

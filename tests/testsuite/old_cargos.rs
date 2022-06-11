@@ -113,6 +113,7 @@ fn default_toolchain_is_stable() -> bool {
 #[ignore]
 #[cargo_test]
 fn new_features() {
+    let registry = registry::init();
     if std::process::Command::new("rustup").output().is_err() {
         panic!("old_cargos requires rustup to be installed");
     }
@@ -153,7 +154,7 @@ fn new_features() {
 
     let lock_bar_to = |toolchain_version: &Version, bar_version| {
         let lock = if toolchain_version < &Version::new(1, 12, 0) {
-            let url = registry::registry_url();
+            let url = registry.index_url();
             match bar_version {
                 100 => format!(
                     r#"
@@ -314,7 +315,7 @@ fn new_features() {
                         [registry]
                         index = "{}"
                     "#,
-                    registry::registry_url()
+                    registry.index_url()
                 ),
             )
             .unwrap();
@@ -330,7 +331,7 @@ fn new_features() {
                         [source.dummy-registry]
                         registry = '{}'
                     ",
-                    registry::registry_url()
+                    registry.index_url()
                 ),
             )
             .unwrap();

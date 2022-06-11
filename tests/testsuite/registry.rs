@@ -1,18 +1,16 @@
 //! Tests for normal registry dependencies.
 
 use cargo::core::SourceId;
+use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{
-    self, registry_path, serve_registry, Dependency, Package, RegistryServer,
+    self, registry_path, Dependency, Package, RegistryBuilder, TestRegistry,
 };
 use cargo_test_support::{basic_manifest, project, Execs, Project};
-use cargo_test_support::{cargo_process, registry::registry_url};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
-use std::process::Stdio;
 
 fn cargo_http(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
@@ -24,28 +22,8 @@ fn cargo_stable(p: &Project, s: &str) -> Execs {
     p.cargo(s)
 }
 
-fn setup_http() -> RegistryServer {
-    let server = serve_registry(registry_path());
-    configure_source_replacement_for_http(&server.addr().to_string());
-    server
-}
-
-fn configure_source_replacement_for_http(addr: &str) {
-    let root = paths::root();
-    t!(fs::create_dir(&root.join(".cargo")));
-    t!(fs::write(
-        root.join(".cargo/config"),
-        format!(
-            "
-            [source.crates-io]
-            replace-with = 'dummy-registry'
-
-            [source.dummy-registry]
-            registry = 'sparse+http://{}/'
-        ",
-            addr
-        )
-    ));
+fn setup_http() -> TestRegistry {
+    RegistryBuilder::new().http_index().build()
 }
 
 #[cargo_test]
@@ -1121,26 +1099,10 @@ fn login_with_token_on_stdin() {
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
     cargo_process("login lmao -v").run();
-    let mut cargo = cargo_process("login").build_command();
-    cargo
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    let mut child = cargo.spawn().unwrap();
-    let out = BufReader::new(child.stdout.as_mut().unwrap())
-        .lines()
-        .next()
-        .unwrap()
-        .unwrap();
-    assert!(out.starts_with("please paste the API Token found on "));
-    assert!(out.ends_with("/me below"));
-    child
-        .stdin
-        .as_ref()
-        .unwrap()
-        .write_all(b"some token\n")
-        .unwrap();
-    child.wait().unwrap();
+    cargo_process("login")
+        .with_stdout("please paste the API Token found on [..]/me below")
+        .with_stdin("some token")
+        .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"some token\"\n");
 }
@@ -2584,6 +2546,7 @@ Use `[source]` replacement to alter the default index for crates.io.
 
 #[cargo_test]
 fn package_lock_inside_package_is_overwritten() {
+    let registry = registry::init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -2607,7 +2570,7 @@ fn package_lock_inside_package_is_overwritten() {
 
     p.cargo("build").run();
 
-    let id = SourceId::for_registry(&registry_url()).unwrap();
+    let id = SourceId::for_registry(registry.index_url()).unwrap();
     let hash = cargo::util::hex::short_hash(&id);
     let ok = cargo_home()
         .join("registry")

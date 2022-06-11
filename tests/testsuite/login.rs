@@ -1,10 +1,9 @@
 //! Tests for the `cargo login` command.
 
 use cargo_test_support::install::cargo_home;
-use cargo_test_support::registry;
-use cargo_test_support::{cargo_process, paths, t};
-use std::fs::{self, OpenOptions};
-use std::io::prelude::*;
+use cargo_test_support::registry::RegistryBuilder;
+use cargo_test_support::{cargo_process, t};
+use std::fs::{self};
 use std::path::PathBuf;
 use toml_edit::easy as toml;
 
@@ -62,27 +61,11 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
 
 #[cargo_test]
 fn registry_credentials() {
-    registry::alt_init();
+    let _alternative = RegistryBuilder::new().alternative().build();
+    let _alternative2 = RegistryBuilder::new()
+        .alternative_named("alternative2")
+        .build();
 
-    let config = paths::home().join(".cargo/config");
-    let mut f = OpenOptions::new().append(true).open(config).unwrap();
-    t!(f.write_all(
-        format!(
-            r#"
-                [registries.alternative2]
-                index = '{}'
-            "#,
-            registry::generate_url("alternative2-registry")
-        )
-        .as_bytes(),
-    ));
-
-    registry::init_registry(
-        registry::generate_path("alternative2-registry"),
-        registry::generate_alt_dl_url("alt2_dl"),
-        registry::generate_url("alt2_api"),
-        registry::generate_path("alt2_api"),
-    );
     setup_new_credentials();
 
     let reg = "alternative";
