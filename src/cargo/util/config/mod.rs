@@ -1165,6 +1165,7 @@ impl Config {
             Some(cli_args) => cli_args,
             None => return Ok(loaded_args),
         };
+        let mut seen = HashSet::new();
         for arg in cli_args {
             let arg_as_path = self.cwd.join(arg);
             let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
@@ -1175,9 +1176,8 @@ impl Config {
                         anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
                     })?
                     .to_string();
-                let value = CV::String(str_path, Definition::Cli);
-                let map = HashMap::from([("include".to_string(), value)]);
-                CV::Table(map, Definition::Cli)
+                self._load_file(&self.cwd().join(&str_path), &mut seen, true)
+                    .with_context(|| format!("failed to load config from `{}`", str_path))?
             } else {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
                 // expressions followed by a value that's not an "inline table"
