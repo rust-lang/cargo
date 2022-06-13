@@ -55,10 +55,6 @@ impl ConfigBuilder {
 
     /// Passes a `--config` flag.
     pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
-        if !self.unstable.iter().any(|s| s == "unstable-options") {
-            // --config is current unstable
-            self.unstable_flag("unstable-options");
-        }
         self.config_args.push(arg.into());
         self
     }

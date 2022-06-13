@@ -96,7 +96,6 @@ Each new feature described below should explain how to use it.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
-    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
     * [config-include](#config-include) — Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
 * Registries
@@ -473,40 +472,6 @@ The `-Z unstable-options` command-line option must be used in order to use
 
 ```console
 cargo check --keep-going -Z unstable-options
-```
-
-### config-cli
-* Tracking Issue: [#7722](https://github.com/rust-lang/cargo/issues/7722)
-
-The `--config` CLI option allows arbitrary config values to be passed
-in via the command-line. The argument should be in TOML syntax of KEY=VALUE:
-
-```console
-cargo +nightly -Zunstable-options --config net.git-fetch-with-cli=true fetch
-```
-
-The `--config` option may be specified multiple times, in which case the
-values are merged in left-to-right order, using the same merging logic that
-multiple config files use. CLI values take precedence over environment
-variables, which take precedence over config files.
-
-Some examples of what it looks like using Bourne shell syntax:
-
-```console
-# Most shells will require escaping.
-cargo --config http.proxy=\"http://example.com\" …
-
-# Spaces may be used.
-cargo --config "net.git-fetch-with-cli = true" …
-
-# TOML array example. Single quotes make it easier to read and write.
-cargo --config 'build.rustdocflags = ["--html-in-header", "header.html"]' …
-
-# Example of a complex TOML key.
-cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.runner = 'my-runner'" …
-
-# Example of overriding a profile setting.
-cargo --config profile.dev.package.image.opt-level=3 …
 ```
 
 ### config-include
@@ -1598,3 +1563,9 @@ See the [Features chapter](features.md#dependency-features) for more information
 The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
 (`--timings=html` and the machine-readable `--timings=json` output remain
 unstable and require `-Zunstable-options`.)
+
+### config-cli
+
+The `--config` CLI option has been stabilized in the 1.63 release. See
+the [config documentation](config.html#command-line-overrides) for more
+information.

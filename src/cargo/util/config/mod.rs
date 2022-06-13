@@ -892,7 +892,6 @@ impl Config {
             self.unstable_flags_cli = Some(unstable_flags.to_vec());
         }
         if !cli_config.is_empty() {
-            self.unstable_flags.fail_if_stable_opt("--config", 6699)?;
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
             self.merge_cli_args()?;
         }

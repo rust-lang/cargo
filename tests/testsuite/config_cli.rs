@@ -2,25 +2,8 @@
 
 use super::config::{assert_error, assert_match, read_output, write_config, ConfigBuilder};
 use cargo::util::config::Definition;
-use cargo_test_support::{paths, project};
+use cargo_test_support::paths;
 use std::{collections::HashMap, fs};
-
-#[cargo_test]
-fn config_gated() {
-    // Requires -Zunstable-options
-    let p = project().file("src/lib.rs", "").build();
-
-    p.cargo("build --config --config build.jobs=1")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the `--config` flag is unstable, [..]
-See [..]
-See [..]
-",
-        )
-        .run();
-}
 
 #[cargo_test]
 fn basic() {
@@ -470,5 +453,32 @@ Caused by:
 Caused by:
   failed to merge config value from `--config cli option` into `--config cli option`: \
   expected string, but found array",
+    );
+}
+
+#[cargo_test]
+fn cli_path() {
+    // --config path_to_file
+    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
+    let config = ConfigBuilder::new()
+        .cwd(paths::root())
+        .config_arg("myconfig.toml")
+        .build();
+    assert_eq!(config.get::<u32>("key").unwrap(), 123);
+
+    let config = ConfigBuilder::new().config_arg("missing.toml").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to parse value from --config argument `missing.toml` as a dotted key expression
+
+Caused by:
+  TOML parse error at line 1, column 13
+  |
+1 | missing.toml
+  |             ^
+Unexpected end of input
+Expected `.` or `=`
+",
     );
 }
