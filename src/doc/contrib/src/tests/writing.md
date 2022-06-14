@@ -6,65 +6,69 @@ tests is also encouraged!
 ## Testsuite
 
 Cargo has a wide variety of integration tests that execute the `cargo` binary
-and verify its behavior, located in the [`testsuite`] directory. The
-[`support`] crate contains many helpers to make this process easy.
+and verify its behavior, located in the [`testsuite`] directory.  The
+[`support`] crate and [`snapbox`] contain many helpers to make this process easy.
+
+There are two styles of tests that can roughly be categorized as
+- functional tests
+  - The fixture is programmatically defined
+  - The assertions are regular string comparisons
+  - Easier to share in an issue as a code block is completely self-contained
+  - More resilient to insignificant changes though ui tests are easy to update when a change does occur
+- ui tests
+  - The fixture is file-based
+  - The assertions use file-backed snapshots that can be updated with an env variable
+  - Easier to review the expected behavior of the command as more details are included
+  - Easier to get up and running from an existing project
+  - Easier to reason about as everything is just files in the repo
 
 These tests typically work by creating a temporary "project" with a
 `Cargo.toml` file, executing the `cargo` binary process, and checking the
 stdout and stderr output against the expected output.
 
-### `cargo_test` attribute
+### Functional Tests
 
-Cargo's tests use the `#[cargo_test]` attribute instead of `#[test]`. This
-attribute injects some code which does some setup before starting the test,
-creating the little "sandbox" described below.
-
-### Basic test structure
-
-The general form of a test involves creating a "project", running `cargo`, and
-checking the result. Projects are created with the [`ProjectBuilder`] where
-you specify some files to create. The general form looks like this:
-
+Generally, a functional test will be placed in `tests/testsuite/<command>.rs` and will look roughly like:
 ```rust,ignore
-let p = project()
-    .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
-    .build();
+#[cargo_test]
+fn <description>() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+        .build();
+
+    p.cargo("run --bin foo")
+        .with_stderr(
+            "\
+    [COMPILING] foo [..]
+    [FINISHED] [..]
+    [RUNNING] `target/debug/foo`
+    ",
+        )
+        .with_stdout("hi!")
+        .run();
+    }
+}
 ```
 
-The project creates a mini sandbox under the "cargo integration test"
-directory with each test getting a separate directory such as
-`/path/to/cargo/target/cit/t123/`. Each project appears as a separate
-directory. There is also an empty `home` directory created that will be used
-as a home directory instead of your normal home directory.
+`#[cargo_test]`:
+- This is used in place of `#[test]`
+- This attribute injects code which does some setup before starting the
+  test, creating a filesystem "sandbox" under the "cargo integration test"
+  directory for each test such as
+  `/path/to/cargo/target/cit/t123/`
+- The sandbox will contain a `home` directory that will be used instead of your normal home directory
 
-If you do not specify a `Cargo.toml` manifest using `file()`, one is
-automatically created with a project name of `foo` using `basic_manifest()`.
+[`ProjectBuilder`] via `project()`:
+- Each project is in a separate directory in the sandbox
+- If you do not specify a `Cargo.toml` manifest using `file()`, one is
+  automatically created with a project name of `foo` using `basic_manifest()`.
 
-To run Cargo, call the `cargo` method and make assertions on the execution:
+[`Execs`] via `p.cargo(...)`:
+- This executes the command and evaluates different assertions
+  - See [`support::compare`] for an explanation of the string pattern matching.
+    Patterns are used to make it easier to match against the expected output.
 
-```rust,ignore
-p.cargo("run --bin foo")
-    .with_stderr(
-        "\
-[COMPILING] foo [..]
-[FINISHED] [..]
-[RUNNING] `target/debug/foo`
-",
-    )
-    .with_stdout("hi!")
-    .run();
-```
-
-This uses the [`Execs`] struct to build up a command to execute, along with
-the expected output.
-
-See [`support::compare`] for an explanation of the string pattern matching.
-Patterns are used to make it easier to match against the expected output.
-
-Browse the `pub` functions and modules in the [`support`] crate for a variety
-of other helpful utilities.
-
-### Testing Nightly Features
+#### Testing Nightly Features
 
 If you are testing a Cargo feature that only works on "nightly" Cargo, then
 you need to call `masquerade_as_nightly_cargo` on the process builder like
@@ -85,17 +89,7 @@ if !is_nightly() {
 }
 ```
 
-### Platform-specific Notes
-
-When checking output, use `/` for paths even on Windows: the actual output
-of `\` on Windows will be replaced with `/`.
-
-Be careful when executing binaries on Windows. You should not rename, delete,
-or overwrite a binary immediately after running it. Under some conditions
-Windows will fail with errors like "directory not empty" or "failed to remove"
-or "access is denied".
-
-### Specifying Dependencies
+#### Specifying Dependencies
 
 You should not write any tests that use the network such as contacting
 crates.io. Typically, simple path dependencies are the easiest way to add a
@@ -122,6 +116,110 @@ If you need to test with registry dependencies, see
 
 If you need to test git dependencies, see [`support::git`] to create a git
 dependency.
+
+### UI Tests
+
+UI Tests are a bit more spread out and generally look like:
+
+`tests/testsuite/<command>/mod.rs`:
+```rust,ignore
+mod <case>;
+```
+
+`tests/testsuite/<command>/<case>/mod.rs`:
+```rust,ignore
+use cargo_test_support::prelude::*;
+use cargo_test_support::compare::assert;
+use cargo_test_support::Project;
+use cargo_test_support::curr_dir;
+
+#[cargo_test]
+fn <name>() {
+    let project = Project::from_template(curr_dir!().join("in"));
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo()
+        .arg("run")
+        .arg_line("--bin foo")
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path(curr_dir!().join("stdout.log"))
+        .stderr_matches_path(curr_dir!().join("stderr.log"));
+
+    assert().subset_matches(curr_dir!().join("out"), &project_root);
+}
+```
+
+Then populate
+- `tests/testsuite/<command>/<case>/in` with the project's directory structure
+- `tests/testsuite/<command>/<case>/out` with the files you want verified
+- `tests/testsuite/<command>/<case>/stdout.log` with nothing
+- `tests/testsuite/<command>/<case>/stderr.log` with nothing
+
+`#[cargo_test]`:
+- This is used in place of `#[test]`
+- This attribute injects code which does some setup before starting the
+  test, creating a filesystem "sandbox" under the "cargo integration test"
+  directory for each test such as
+  `/path/to/cargo/target/cit/t123/`
+- The sandbox will contain a `home` directory that will be used instead of your normal home directory
+
+`Project`:
+- The project is copied from a directory in the repo
+- Each project is in a separate directory in the sandbox
+
+[`Command`] via `Command::cargo()`:
+- Set up and run a command.
+
+[`OutputAssert`] via `Command::assert()`:
+- Perform assertions on the result of the [`Command`]
+
+[`Assert`] via `assert()`:
+- Verify the command modified the file system as expected
+
+#### Updating Snapshots
+
+The project, stdout, and stderr snapshots can be updated by running with the
+`SNAPSHOTS=overwrite` environment variable, like:
+```console
+$ SNAPSHOTS=overwrite cargo test
+```
+
+Be sure to check the snapshots to make sure they make sense.
+
+#### Testing Nightly Features
+
+If you are testing a Cargo feature that only works on "nightly" Cargo, then
+you need to call `masquerade_as_nightly_cargo` on the process builder like
+this:
+
+```rust,ignore
+    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo()
+```
+
+If you are testing a feature that only works on *nightly rustc* (such as
+benchmarks), then you should exit the test if it is not running with nightly
+rust, like this:
+
+```rust,ignore
+if !is_nightly() {
+    // Add a comment here explaining why this is necessary.
+    return;
+}
+```
+
+### Platform-specific Notes
+
+When checking output, use `/` for paths even on Windows: the actual output
+of `\` on Windows will be replaced with `/`.
+
+Be careful when executing binaries on Windows. You should not rename, delete,
+or overwrite a binary immediately after running it. Under some conditions
+Windows will fail with errors like "directory not empty" or "failed to remove"
+or "access is denied".
 
 ## Debugging tests
 
@@ -159,3 +257,7 @@ environment. The general process is:
 [`support::registry::Package`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/registry.rs#L73-L149
 [`support::git`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs
 [Running Cargo]: ../process/working-on-cargo.md#running-cargo
+[`snapbox`]: https://docs.rs/snapbox/latest/snapbox/
+[`Command`]: https://docs.rs/snapbox/latest/snapbox/cmd/struct.Command.html
+[`OutputAssert`]: https://docs.rs/snapbox/latest/snapbox/cmd/struct.OutputAssert.html
+[`Assert`]: https://docs.rs/snapbox/latest/snapbox/struct.Assert.html
