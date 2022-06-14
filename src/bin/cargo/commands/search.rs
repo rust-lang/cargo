@@ -26,7 +26,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let index = args.index()?;
     let limit = args.value_of_u32("limit")?;
     let limit = min(100, limit.unwrap_or(10));
-    let query: Vec<&str> = args.values_of("query").unwrap_or_default().collect();
+    let query: Vec<&str> = args
+        .get_many::<String>("query")
+        .unwrap_or_default()
+        .map(String::as_str)
+        .collect();
     let query: String = query.join("+");
     ops::search(&query, config, index, limit, registry)?;
     Ok(())

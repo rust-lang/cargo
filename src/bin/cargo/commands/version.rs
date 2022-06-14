@@ -9,7 +9,7 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let verbose = args.occurrences_of("verbose") > 0;
+    let verbose = args.verbose() > 0;
     let version = cli::get_version_string(verbose);
     cargo::drop_print!(config, "{}", version);
     Ok(())

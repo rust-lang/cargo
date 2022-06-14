@@ -14,7 +14,7 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let root = args.value_of("root");
+    let root = args.get_one::<String>("root").map(String::as_str);
 
     if args.is_present_with_zero_values("package") {
         return Err(anyhow::anyhow!(
@@ -25,8 +25,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 
     let specs = args
-        .values_of("spec")
-        .unwrap_or_else(|| args.values_of("package").unwrap_or_default())
+        .get_many::<String>("spec")
+        .unwrap_or_else(|| args.get_many::<String>("package").unwrap_or_default())
+        .map(String::as_str)
         .collect();
     ops::uninstall(root, specs, &values(args, "bin"), config)?;
     Ok(())

@@ -8,7 +8,7 @@ pub fn cli() -> App {
         // .alias("d")
         .about("Build a package's documentation")
         .arg_quiet()
-        .arg(opt(
+        .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",
         ))
@@ -17,8 +17,11 @@ pub fn cli() -> App {
             "Document all packages in the workspace",
             "Exclude packages from the build",
         )
-        .arg(opt("no-deps", "Don't build documentation for dependencies"))
-        .arg(opt("document-private-items", "Document private items"))
+        .arg(flag(
+            "no-deps",
+            "Don't build documentation for dependencies",
+        ))
+        .arg(flag("document-private-items", "Document private items"))
         .arg_jobs()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
@@ -43,14 +46,14 @@ pub fn cli() -> App {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = CompileMode::Doc {
-        deps: !args.is_present("no-deps"),
+        deps: !args.flag("no-deps"),
     };
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
-    compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    compile_opts.rustdoc_document_private_items = args.flag("document-private-items");
 
     let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+        open_result: args.flag("open"),
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;

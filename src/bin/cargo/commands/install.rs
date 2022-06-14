@@ -12,7 +12,7 @@ pub fn cli() -> App {
         .arg_quiet()
         .arg(
             Arg::new("crate")
-                .forbid_empty_values(true)
+                .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .multiple_values(true),
         )
         .arg(
@@ -46,16 +46,16 @@ pub fn cli() -> App {
                 .value_name("PATH")
                 .conflicts_with_all(&["git", "index", "registry"]),
         )
-        .arg(opt(
+        .arg(flag(
             "list",
             "list all installed packages and their versions",
         ))
         .arg_jobs()
-        .arg(opt("force", "Force overwriting existing crates or binaries").short('f'))
-        .arg(opt("no-track", "Do not save tracking information"))
+        .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
+        .arg(flag("no-track", "Do not save tracking information"))
         .arg_features()
         .arg_profile("Install artifacts with the specified profile")
-        .arg(opt("debug", "Build in debug mode instead of release mode"))
+        .arg(flag("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",
@@ -97,23 +97,23 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // but not `Config::reload_rooted_at` which is always cwd)
     let path = path.map(|p| paths::normalize_path(&p));
 
-    let version = args.value_of("version");
+    let version = args.get_one::<String>("version").map(String::as_str);
     let krates = args
-        .values_of("crate")
+        .get_many::<String>("crate")
         .unwrap_or_default()
         .map(|k| resolve_crate(k, version))
         .collect::<crate::CargoResult<Vec<_>>>()?;
 
     let mut from_cwd = false;
 
-    let source = if let Some(url) = args.value_of("git") {
+    let source = if let Some(url) = args.get_one::<String>("git") {
         let url = url.into_url()?;
-        let gitref = if let Some(branch) = args.value_of("branch") {
-            GitReference::Branch(branch.to_string())
-        } else if let Some(tag) = args.value_of("tag") {
-            GitReference::Tag(tag.to_string())
-        } else if let Some(rev) = args.value_of("rev") {
-            GitReference::Rev(rev.to_string())
+        let gitref = if let Some(branch) = args.get_one::<String>("branch") {
+            GitReference::Branch(branch.clone())
+        } else if let Some(tag) = args.get_one::<String>("tag") {
+            GitReference::Tag(tag.clone())
+        } else if let Some(rev) = args.get_one::<String>("rev") {
+            GitReference::Rev(rev.clone())
         } else {
             GitReference::DefaultBranch
         };
@@ -125,13 +125,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         SourceId::for_path(config.cwd())?
     } else if let Some(registry) = args.registry(config)? {
         SourceId::alt_registry(config, &registry)?
-    } else if let Some(index) = args.value_of("index") {
+    } else if let Some(index) = args.get_one::<String>("index") {
         SourceId::for_registry(&index.into_url()?)?
     } else {
         SourceId::crates_io(config)?
     };
 
-    let root = args.value_of("root");
+    let root = args.get_one::<String>("root").map(String::as_str);
 
     // We only provide workspace information for local crate installation from
     // one of the following sources:
@@ -158,7 +158,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     compile_opts.build_config.requested_profile =
         args.get_profile_name(config, "release", ProfileChecking::Custom)?;
 
-    if args.is_present("list") {
+    if args.flag("list") {
         ops::install_list(root, config)?;
     } else {
         ops::install(
@@ -168,8 +168,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             source,
             from_cwd,
             &compile_opts,
-            args.is_present("force"),
-            args.is_present("no-track"),
+            args.flag("force"),
+            args.flag("no-track"),
         )?;
     }
     Ok(())

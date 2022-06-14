@@ -8,11 +8,11 @@ pub fn cli() -> App {
         .arg_quiet()
         .arg_index()
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
-        .arg(opt(
+        .arg(flag(
             "no-verify",
             "Don't verify the contents by building them",
         ))
-        .arg(opt(
+        .arg(flag(
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
@@ -38,15 +38,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         &ws,
         &PublishOpts {
             config,
-            token: args.value_of("token").map(|s| s.to_string()),
+            token: args.get_one::<String>("token").map(|s| s.to_string()),
             index,
-            verify: !args.is_present("no-verify"),
-            allow_dirty: args.is_present("allow-dirty"),
+            verify: !args.flag("no-verify"),
+            allow_dirty: args.flag("allow-dirty"),
             to_publish: args.packages_from_flags()?,
             targets: args.targets(),
             jobs: args.jobs()?,
             keep_going: args.keep_going(),
-            dry_run: args.is_present("dry-run"),
+            dry_run: args.dry_run(),
             registry,
             cli_features: args.cli_features()?,
         },

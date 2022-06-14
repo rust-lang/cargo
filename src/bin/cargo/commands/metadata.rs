@@ -15,7 +15,7 @@ pub fn cli() -> App {
             "TRIPLE",
             "Only include resolve dependencies matching the given target-triple",
         ))
-        .arg(opt(
+        .arg(flag(
             "no-deps",
             "Output information only about the workspace members \
              and don't fetch dependencies",
@@ -24,7 +24,7 @@ pub fn cli() -> App {
         .arg(
             opt("format-version", "Format version")
                 .value_name("VERSION")
-                .possible_value("1"),
+                .value_parser(["1"]),
         )
         .after_help("Run `cargo help metadata` for more detailed information.\n")
 }
@@ -32,7 +32,7 @@ pub fn cli() -> App {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let version = match args.value_of("format-version") {
+    let version = match args.get_one::<String>("format-version") {
         None => {
             config.shell().warn(
                 "please specify `--format-version` flag explicitly \
@@ -45,7 +45,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let options = OutputMetadataOptions {
         cli_features: args.cli_features()?,
-        no_deps: args.is_present("no-deps"),
+        no_deps: args.flag("no-deps"),
         filter_platforms: args._values_of("filter-platform"),
         version,
     };

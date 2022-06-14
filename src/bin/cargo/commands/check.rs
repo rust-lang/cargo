@@ -43,7 +43,10 @@ pub fn cli() -> App {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     // This is a legacy behavior that causes `cargo check` to pass `--test`.
-    let test = matches!(args.value_of("profile"), Some("test"));
+    let test = matches!(
+        args.get_one::<String>("profile").map(String::as_str),
+        Some("test")
+    );
     let mode = CompileMode::Check { test };
     let compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;

@@ -28,7 +28,7 @@ pub fn cli() -> App {
             "Benchmark all benches",
             "Benchmark all targets",
         )
-        .arg(opt("no-run", "Compile, but don't run benchmarks"))
+        .arg(flag("no-run", "Compile, but don't run benchmarks"))
         .arg_package_spec(
             "Package to run benchmarks for",
             "Benchmark all packages in the workspace",
@@ -42,7 +42,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg(opt(
+        .arg(flag(
             "no-fail-fast",
             "Run all benchmarks regardless of failure",
         ))
@@ -64,14 +64,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         args.get_profile_name(config, "bench", ProfileChecking::Custom)?;
 
     let ops = TestOptions {
-        no_run: args.is_present("no-run"),
-        no_fail_fast: args.is_present("no-fail-fast"),
+        no_run: args.flag("no-run"),
+        no_fail_fast: args.flag("no-fail-fast"),
         compile_opts,
     };
 
-    let bench_args = args.value_of("BENCHNAME").into_iter();
-    let bench_args = bench_args.chain(args.values_of("args").unwrap_or_default());
-    let bench_args = bench_args.collect::<Vec<_>>();
+    let bench_args = args.get_one::<String>("BENCHNAME").into_iter();
+    let bench_args = bench_args.chain(args.get_many::<String>("args").unwrap_or_default());
+    let bench_args = bench_args.map(String::as_str).collect::<Vec<_>>();
 
     let err = ops::run_benches(&ws, &ops, &bench_args)?;
     match err {

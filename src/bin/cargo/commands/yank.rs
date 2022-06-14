@@ -12,7 +12,7 @@ pub fn cli() -> App {
                 .alias("vers")
                 .value_name("VERSION"),
         )
-        .arg(opt(
+        .arg(flag(
             "undo",
             "Undo a yank, putting a version back into the index",
         ))
@@ -27,7 +27,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let registry = args.registry(config)?;
 
-    let (krate, version) = resolve_crate(args.value_of("crate"), args.value_of("version"))?;
+    let (krate, version) = resolve_crate(
+        args.get_one::<String>("crate").map(String::as_str),
+        args.get_one::<String>("version").map(String::as_str),
+    )?;
     if version.is_none() {
         return Err(anyhow::format_err!("`--version` is required").into());
     }
@@ -36,9 +39,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         config,
         krate.map(|s| s.to_string()),
         version.map(|s| s.to_string()),
-        args.value_of("token").map(|s| s.to_string()),
-        args.value_of("index").map(|s| s.to_string()),
-        args.is_present("undo"),
+        args.get_one::<String>("token").cloned(),
+        args.get_one::<String>("index").cloned(),
+        args.flag("undo"),
         registry,
     )?;
     Ok(())
