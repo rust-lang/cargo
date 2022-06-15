@@ -103,6 +103,8 @@ Each new feature described below should explain how to use it.
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
     * [http-registry](#http-registry) — Adds support for fetching from http registries (`sparse+`)
+* Misc
+    * [safe-directories](#safe-directories) — Adds a security check for file discovery.
 
 ### allow-features
 
@@ -1416,6 +1418,33 @@ dep-dev.workspace = true
 [workspace.dependencies]: #the-workspacedependencies-table
 [specifying-dependencies]: specifying-dependencies.md
 [renaming-dependencies-in-cargotoml]: specifying-dependencies.md#renaming-dependencies-in-cargotoml
+
+### safe-directories
+* Tracking Issue: TODO
+* RFC: [#3279](https://github.com/rust-lang/rfcs/pull/3279)
+
+The `CARGO_UNSTABLE_SAFE_DIRECTORIES=true` environment variable enables a mode where Cargo will check the ownership of `Cargo.toml` and `config.toml` files.
+If the files are owned by a user different from the current user,
+then Cargo will generate an error.
+This is a security mechanism to ensure that a malicious user doesn't add one of those files in a parent directory of wherever you run `cargo`.
+See the RFC for more details.
+
+The ownership check can be overridden with the `safe.directories` configuration setting.
+This is an array of paths that you explicitly trust even if they are owned by another user.
+
+```toml
+[safe]
+directories = ["/path/to/project"]
+```
+
+This config setting may only be set in the [Cargo home directory](../guide/cargo-home.md).
+Other file locations are not allowed.
+
+This config option can also be set with the `CARGO_SAFE_DIRECTORIES` or `RUSTUP_SAFE_DIRECTORIES` environment variables.
+Multiple paths may be separated with `:` on Unix-like environments or `;` for Windows environments.
+
+An entry of an asterisk (such as `CARGO_SAFE_DIRECTORIES=*`) entirely disables the ownership check for all paths.
+
 
 ## Stabilized and removed features
 

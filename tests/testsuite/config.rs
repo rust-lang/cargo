@@ -1181,10 +1181,7 @@ fn table_merge_failure() {
     assert_error(
         config.get::<Table>("table").unwrap_err(),
         "\
-could not load Cargo configuration
-
-Caused by:
-  failed to merge configuration at `[..]/.cargo/config`
+failed to merge configuration at `[ROOT]/foo`
 
 Caused by:
   failed to merge key `table` between [..]/foo/.cargo/config and [..]/.cargo/config

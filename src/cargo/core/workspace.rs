@@ -21,6 +21,7 @@ use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
+use crate::util::important_paths;
 use crate::util::interning::InternedString;
 use crate::util::lev_distance;
 use crate::util::toml::{read_manifest, InheritableFields, TomlDependency, TomlProfiles};
@@ -130,6 +131,34 @@ impl WorkspaceConfig {
     pub fn inheritable(&self) -> Option<&InheritableFields> {
         match self {
             WorkspaceConfig::Root(root) => Some(&root.inheritable_fields),
+            WorkspaceConfig::Member { .. } => None,
+        }
+    }
+
+    /// Returns the path of the workspace root based on this `[workspace]` configuration.
+    ///
+    /// Returns `None` if the root is not explicitly known.
+    ///
+    /// * `self_path` is the path of the manifest this `WorkspaceConfig` is located.
+    /// * `look_from` is the path where discovery started (usually the current
+    ///   working directory), used for `workspace.exclude` checking.
+    fn get_ws_root(&self, self_path: &Path, look_from: &Path) -> Option<PathBuf> {
+        match self {
+            WorkspaceConfig::Root(ances_root_config) => {
+                debug!("find_root - found a root checking exclusion");
+                if !ances_root_config.is_excluded(look_from) {
+                    debug!("find_root - found!");
+                    Some(self_path.to_owned())
+                } else {
+                    None
+                }
+            }
+            WorkspaceConfig::Member {
+                root: Some(path_to_root),
+            } => {
+                debug!("find_root - found pointer");
+                Some(read_root_pointer(self_path, path_to_root))
+            }
             WorkspaceConfig::Member { .. } => None,
         }
     }
@@ -606,26 +635,13 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        for ances_manifest_path in find_root_iter(manifest_path, self.config) {
-            debug!("find_root - trying {}", ances_manifest_path.display());
-            match *self.packages.load(&ances_manifest_path)?.workspace_config() {
-                WorkspaceConfig::Root(ref ances_root_config) => {
-                    debug!("find_root - found a root checking exclusion");
-                    if !ances_root_config.is_excluded(manifest_path) {
-                        debug!("find_root - found!");
-                        return Ok(Some(ances_manifest_path));
-                    }
-                }
-                WorkspaceConfig::Member {
-                    root: Some(ref path_to_root),
-                } => {
-                    debug!("find_root - found pointer");
-                    return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
-                }
-                WorkspaceConfig::Member { .. } => {}
-            }
-        }
-        Ok(None)
+        find_workspace_root_with_loader(manifest_path, self.config, |self_path| {
+            Ok(self
+                .packages
+                .load(self_path)?
+                .workspace_config()
+                .get_ws_root(self_path, manifest_path))
+        })
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -1669,31 +1685,35 @@ pub fn resolve_relative_path(
     }
 }
 
-fn parse_manifest(manifest_path: &Path, config: &Config) -> CargoResult<EitherManifest> {
-    let key = manifest_path.parent().unwrap();
-    let source_id = SourceId::for_path(key)?;
-    let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, config)?;
-    Ok(manifest)
+/// Finds the path of the root of the workspace.
+pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
+    // FIXME(ehuss): Loading and parsing manifests just to find the root seems
+    // very inefficient. I think this should be reconsidered.
+    find_workspace_root_with_loader(manifest_path, config, |self_path| {
+        let key = self_path.parent().unwrap();
+        let source_id = SourceId::for_path(key)?;
+        let (manifest, _nested_paths) = read_manifest(self_path, source_id, config)?;
+        Ok(manifest
+            .workspace_config()
+            .get_ws_root(self_path, manifest_path))
+    })
 }
 
-pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
+/// Finds the path of the root of the workspace.
+///
+/// This uses a callback to determine if the given path tells us what the
+/// workspace root is.
+fn find_workspace_root_with_loader(
+    manifest_path: &Path,
+    config: &Config,
+    mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
+) -> CargoResult<Option<PathBuf>> {
+    let safe_directories = config.safe_directories()?;
     for ances_manifest_path in find_root_iter(manifest_path, config) {
+        important_paths::check_safe_manifest_path(config, &safe_directories, &ances_manifest_path)?;
         debug!("find_root - trying {}", ances_manifest_path.display());
-        match *parse_manifest(&ances_manifest_path, config)?.workspace_config() {
-            WorkspaceConfig::Root(ref ances_root_config) => {
-                debug!("find_root - found a root checking exclusion");
-                if !ances_root_config.is_excluded(manifest_path) {
-                    debug!("find_root - found!");
-                    return Ok(Some(ances_manifest_path));
-                }
-            }
-            WorkspaceConfig::Member {
-                root: Some(ref path_to_root),
-            } => {
-                debug!("find_root - found pointer");
-                return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
-            }
-            WorkspaceConfig::Member { .. } => {}
+        if let Some(ws_root_path) = loader(&ances_manifest_path)? {
+            return Ok(Some(ws_root_path));
         }
     }
     Ok(None)

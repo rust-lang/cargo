@@ -73,9 +73,10 @@ impl ConfigKey {
 
     /// Rewinds this `ConfigKey` back to the state it was at before the last
     /// `push` method being called.
-    pub fn pop(&mut self) {
-        let (_part, env) = self.parts.pop().unwrap();
+    pub fn pop(&mut self) -> String {
+        let (part, env) = self.parts.pop().unwrap();
         self.env.truncate(env);
+        part
     }
 
     /// Returns the corresponding environment variable key for this

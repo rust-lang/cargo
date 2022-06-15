@@ -347,7 +347,7 @@ pub trait ArgMatchesExt {
             }
             return Ok(path);
         }
-        find_root_manifest_for_wd(config.cwd())
+        find_root_manifest_for_wd(config)
     }
 
     fn workspace<'a>(&self, config: &'a Config) -> CargoResult<Workspace<'a>> {

@@ -70,7 +70,7 @@ use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use crate::util::errors::CargoResult;
+use crate::util::errors::{ownership_error, CargoResult};
 use crate::util::toml as cargo_toml;
 use crate::util::validate_package_name;
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
@@ -186,6 +186,7 @@ pub struct Config {
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
     env_config: LazyCell<EnvConfig>,
+    safe_directories: LazyCell<HashSet<PathBuf>>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -284,6 +285,7 @@ impl Config {
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
+            safe_directories: LazyCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
         }
     }
@@ -1004,18 +1006,19 @@ impl Config {
     }
 
     pub(crate) fn load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
+        self._load_values_unmerged()
+            .with_context(|| "could not load Cargo configuration")
+    }
+
+    fn _load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
+        let (cvs, mut seen) = self.walk_tree(&self.cwd, false)?;
         let mut result = Vec::new();
-        let mut seen = HashSet::new();
-        let home = self.home_path.clone().into_path_unlocked();
-        self.walk_tree(&self.cwd, &home, |path| {
-            let mut cv = self._load_file(path, &mut seen, false)?;
+        for mut cv in cvs {
             if self.cli_unstable().config_include {
                 self.load_unmerged_include(&mut cv, &mut seen, &mut result)?;
             }
             result.push(cv);
-            Ok(())
-        })
-        .with_context(|| "could not load Cargo configuration")?;
+        }
         Ok(result)
     }
 
@@ -1037,24 +1040,120 @@ impl Config {
     }
 
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
+        let (cvs, _) = self
+            .walk_tree(path, true)
+            .with_context(|| "could not load Cargo configuration")?;
+
+        // Merge all the files together.
         // This definition path is ignored, this is just a temporary container
         // representing the entire file.
         let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
-        let home = self.home_path.clone().into_path_unlocked();
-
-        self.walk_tree(path, &home, |path| {
-            let value = self.load_file(path, true)?;
-            cfg.merge(value, false).with_context(|| {
+        for cv in cvs {
+            cfg.merge(cv, false).with_context(|| {
                 format!("failed to merge configuration at `{}`", path.display())
             })?;
-            Ok(())
-        })
-        .with_context(|| "could not load Cargo configuration")?;
-
+        }
         match cfg {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
         }
+    }
+
+    /// Checks if the given path is owned by a different user.
+    fn check_safe_dir(&self, path: &Path, safe_directories: &HashSet<PathBuf>) -> CargoResult<()> {
+        if !self.safe_directories_enabled() {
+            return Ok(());
+        }
+        paths::validate_ownership(path, safe_directories).map_err(|e| {
+            match e.downcast_ref::<paths::OwnershipError>() {
+                Some(e) => {
+                    let mut to_add = e.path.parent().unwrap();
+                    if to_add.file_name().and_then(|f| f.to_str()) == Some(".cargo") {
+                        to_add = to_add.parent().unwrap();
+                    }
+                    ownership_error(e, "config files", to_add, self)
+                }
+                None => e,
+            }
+        })
+    }
+
+    /// Returns whether or not the nightly-only safe.directories behavior is enabled.
+    pub fn safe_directories_enabled(&self) -> bool {
+        // Because the config is loaded before the CLI options are available
+        // (primarily to handle aliases), this can't be gated on a `-Z` flag.
+        // So for now, this is only enabled via an environment variable. This
+        // has some downsides (such as not supporting the "allow" list), but
+        // should be fine for a one-off exception.
+        self.env
+            .get("CARGO_UNSTABLE_SAFE_DIRECTORIES")
+            .map(|s| s.as_str())
+            == Some("true")
+            && self.nightly_features_allowed
+    }
+
+    /// Returns the `safe.directories` config setting.
+    pub fn safe_directories(&self) -> CargoResult<&HashSet<PathBuf>> {
+        self.safe_directories.try_borrow_with(|| {
+            if !self.safe_directories_enabled() {
+                return Ok(HashSet::new());
+            }
+            let mut safe_directories: HashSet<PathBuf> = self
+                .get_list("safe.directories")?
+                .map(|dirs| {
+                    dirs.val
+                        .iter()
+                        .map(|(s, def)| def.root(self).join(s))
+                        .collect()
+                })
+                .unwrap_or_default();
+            self.extend_safe_directories_env(&mut safe_directories);
+            Ok(safe_directories)
+        })
+    }
+
+    fn extend_safe_directories_env(&self, safe_directories: &mut HashSet<PathBuf>) {
+        // Note: Unlike other Cargo environment variables, this does not
+        // assume paths relative to the current directory (only absolute paths
+        // are supported). This is intended as an extra layer of safety.
+        if let Some(dirs) = self.env.get("CARGO_SAFE_DIRECTORIES") {
+            safe_directories.extend(env::split_paths(dirs));
+        }
+        if let Some(dirs) = self.env.get("RUSTUP_SAFE_DIRECTORIES") {
+            safe_directories.extend(env::split_paths(dirs));
+        }
+    }
+
+    /// Loads the `safe.directories` setting directly from a `ConfigValue`
+    /// (which should be a Table of the root of the config file).
+    fn safe_directories_from_cv(
+        &self,
+        root: Option<&ConfigValue>,
+    ) -> CargoResult<HashSet<PathBuf>> {
+        if !self.safe_directories_enabled() {
+            return Ok(HashSet::new());
+        }
+        let mut safe_directories: HashSet<PathBuf> = root
+            .map(|root| root.get("safe.directories"))
+            .transpose()?
+            .flatten()
+            .map(|cv| cv.list("safe.directories"))
+            .transpose()?
+            .map(|dirs| {
+                dirs.iter()
+                    .map(|(dir, def)| {
+                        if dir != "*" {
+                            def.root(self).join(dir)
+                        } else {
+                            PathBuf::from(dir)
+                        }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        self.extend_safe_directories_env(&mut safe_directories);
+        Ok(safe_directories)
     }
 
     fn load_file(&self, path: &Path, includes: bool) -> CargoResult<ConfigValue> {
@@ -1281,6 +1380,7 @@ impl Config {
                 .merge(tmp_table, true)
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
+        reject_cli_unsupported(&loaded_args)?;
         Ok(loaded_args)
     }
 
@@ -1355,29 +1455,50 @@ impl Config {
         }
     }
 
-    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
-    where
-        F: FnMut(&Path) -> CargoResult<()>,
-    {
-        let mut stash: HashSet<PathBuf> = HashSet::new();
+    /// Walks from the given path upwards, loading `config.toml` files along the way.
+    ///
+    /// `includes` indicates whether or not `includes` directives should be loaded.
+    ///
+    /// Returns a `Vec` of each config file in the order they were loaded (home directory is last).
+    fn walk_tree(&self, pwd: &Path, includes: bool) -> CargoResult<(Vec<CV>, HashSet<PathBuf>)> {
+        let mut seen: HashSet<PathBuf> = HashSet::new();
+        // Load "home" first so that safe.directories can be loaded. However,
+        // "home" will be last in the result.
+        let home = self.home_path.clone().into_path_unlocked();
+        let home_cv = if let Some(path) = self.get_file_path(&home, "config", true)? {
+            Some(self._load_file(&path, &mut seen, includes)?)
+        } else {
+            None
+        };
+        let safe_directories = self.safe_directories_from_cv(home_cv.as_ref())?;
+
+        let mut result = Vec::new();
 
         for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
-            if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
-                walk(&path)?;
-                stash.insert(path);
+            let dot_cargo = current.join(".cargo");
+            if dot_cargo == home {
+                // home is already loaded, don't load again.
+                continue;
+            }
+            if let Some(path) = self.get_file_path(&dot_cargo, "config", true)? {
+                self.check_safe_dir(&path, &safe_directories)?;
+                let cv = self._load_file(&path, &mut seen, includes)?;
+                if let Some(safe) = cv.get("safe.directories")? {
+                    bail!(
+                        "safe.directories may only be configured from Cargo's home directory\n\
+                         Found `safe.directories` in {}\n\
+                         Cargo's home directory is {}\n",
+                        safe.definition(),
+                        home.display()
+                    );
+                }
+                result.push(cv);
             }
         }
-
-        // Once we're done, also be sure to walk the home directory even if it's not
-        // in our history to be sure we pick up that standard location for
-        // information.
-        if let Some(path) = self.get_file_path(home, "config", true)? {
-            if !stash.contains(&path) {
-                walk(&path)?;
-            }
+        if let Some(home_cv) = home_cv {
+            result.push(home_cv);
         }
-
-        Ok(())
+        Ok((result, seen))
     }
 
     /// Gets the index for a registry.
@@ -1972,6 +2093,28 @@ impl ConfigValue {
             self.definition()
         )
     }
+
+    /// Retrieve a `ConfigValue` using a dotted key notation.
+    ///
+    /// This is similar to `Config::get`, but can be used directly on a root
+    /// `ConfigValue::Table`. This does *not* look at environment variables.
+    fn get(&self, key: &str) -> CargoResult<Option<&ConfigValue>> {
+        let mut key = ConfigKey::from_str(key);
+        let last = key.pop();
+        let (mut table, _def) = self.table("")?;
+        let mut key_so_far = ConfigKey::new();
+        for part in key.parts() {
+            key_so_far.push(part);
+            match table.get(part) {
+                Some(cv) => match cv {
+                    CV::Table(t, _def) => table = t,
+                    _ => cv.expected("table", &key_so_far.to_string())?,
+                },
+                None => return Ok(None),
+            }
+        }
+        Ok(table.get(&last))
+    }
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
@@ -2462,4 +2605,18 @@ macro_rules! drop_eprint {
     ($config:expr, $($arg:tt)*) => (
         $crate::__shell_print!($config, err, false, $($arg)*)
     );
+}
+
+/// Rejects config entries set on the CLI that are not supported.
+fn reject_cli_unsupported(root: &CV) -> CargoResult<()> {
+    let (root, _) = root.table("")?;
+    // safe.directories cannot be set on the CLI because the config is loaded
+    // before the CLI is parsed (primarily to handle aliases).
+    if let Some(cv) = root.get("safe") {
+        let (safe, _) = cv.table("safe")?;
+        if safe.contains_key("directories") {
+            bail!("safe.directories cannot be set via the CLI");
+        }
+    }
+    Ok(())
 }
