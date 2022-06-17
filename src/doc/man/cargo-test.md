@@ -1,6 +1,7 @@
 # cargo-test(1)
 {{*set actionverb="Test"}}
 {{*set nouns="tests"}}
+{{*set multitarget=true}}
 
 ## NAME
 

@@ -1,5 +1,6 @@
 # cargo-rustc(1)
 {{*set actionverb="Build"}}
+{{*set multitarget=true}}
 
 ## NAME
 

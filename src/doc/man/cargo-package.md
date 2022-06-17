@@ -1,6 +1,7 @@
 # cargo-package(1)
 {{*set actionverb="Package"}}
 {{*set noall=true}}
+{{*set multitarget=true}}
 
 ## NAME
 
