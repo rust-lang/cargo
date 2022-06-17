@@ -16,6 +16,9 @@ flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
 tar = { version = "0.4.38", default-features = false }
 url = "2.2.2"
 
+[lib]
+bench = false
+
 [[bench]]
 name = "resolve"
 harness = false
