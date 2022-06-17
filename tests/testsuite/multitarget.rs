@@ -3,56 +3,6 @@
 use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host};
 
 #[cargo_test]
-fn double_target_rejected() {
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build --target a --target b")
-        .with_stderr("[ERROR] specifying multiple `--target` flags requires `-Zmultitarget`")
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
-fn array_of_target_rejected_with_config() {
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
-        .file("src/main.rs", "fn main() {}")
-        .file(
-            ".cargo/config.toml",
-            r#"
-                [build]
-                target = ["a", "b"]
-            "#,
-        )
-        .build();
-
-    p.cargo("build")
-        .with_stderr(
-            "[ERROR] specifying an array in `build.target` config value requires `-Zmultitarget`",
-        )
-        .with_status(101)
-        .run();
-
-    p.change_file(
-        ".cargo/config.toml",
-        r#"
-            [build]
-            target = ["a"]
-        "#,
-    );
-
-    p.cargo("build")
-        .with_stderr(
-            "[ERROR] specifying an array in `build.target` config value requires `-Zmultitarget`",
-        )
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn simple_build() {
     if cross_compile::disabled() {
         return;
@@ -64,12 +14,11 @@ fn simple_build() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z multitarget")
+    p.cargo("build")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo(&["multitarget"])
         .run();
 
     assert!(p.target_bin(t1, "foo").is_file());
@@ -90,8 +39,6 @@ fn simple_build_with_config() {
             ".cargo/config.toml",
             &format!(
                 r#"
-                    [unstable]
-                    multitarget = true
                     [build]
                     target = ["{t1}", "{t2}"]
                 "#
@@ -99,9 +46,7 @@ fn simple_build_with_config() {
         )
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&["multitarget"])
-        .run();
+    p.cargo("build").run();
 
     assert!(p.target_bin(t1, "foo").is_file());
     assert!(p.target_bin(t2, "foo").is_file());
@@ -119,12 +64,11 @@ fn simple_test() {
         .file("src/lib.rs", "fn main() {}")
         .build();
 
-    p.cargo("test -Z multitarget")
+    p.cargo("test")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo(&["multitarget"])
         .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t1))
         .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t2))
         .run();
@@ -137,10 +81,9 @@ fn simple_run() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("run -Z multitarget --target a --target b")
+    p.cargo("run --target a --target b")
         .with_stderr("[ERROR] only one `--target` argument is supported")
         .with_status(101)
-        .masquerade_as_nightly_cargo(&["multitarget"])
         .run();
 }
 
@@ -156,12 +99,11 @@ fn simple_doc() {
         .file("src/lib.rs", "//! empty lib")
         .build();
 
-    p.cargo("doc -Z multitarget")
+    p.cargo("doc")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo(&["multitarget"])
         .run();
 
     assert!(p.build_dir().join(&t1).join("doc/foo/index.html").is_file());
@@ -180,12 +122,11 @@ fn simple_check() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z multitarget")
+    p.cargo("check")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo(&["multitarget"])
         .run();
 }
 
@@ -200,12 +141,11 @@ fn same_value_twice() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z multitarget")
+    p.cargo("build")
         .arg("--target")
         .arg(&t)
         .arg("--target")
         .arg(&t)
-        .masquerade_as_nightly_cargo(&["multitarget"])
         .run();
 
     assert!(p.target_bin(t, "foo").is_file());
@@ -224,8 +164,6 @@ fn same_value_twice_with_config() {
             ".cargo/config.toml",
             &format!(
                 r#"
-                    [unstable]
-                    multitarget = true
                     [build]
                     target = ["{t}", "{t}"]
                 "#
@@ -233,9 +171,7 @@ fn same_value_twice_with_config() {
         )
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&["multitarget"])
-        .run();
+    p.cargo("build").run();
 
     assert!(p.target_bin(t, "foo").is_file());
 }
@@ -253,8 +189,6 @@ fn works_with_config_in_both_string_or_list() {
             ".cargo/config.toml",
             &format!(
                 r#"
-                    [unstable]
-                    multitarget = true
                     [build]
                     target = "{t}"
                 "#
@@ -262,9 +196,7 @@ fn works_with_config_in_both_string_or_list() {
         )
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&["multitarget"])
-        .run();
+    p.cargo("build").run();
 
     assert!(p.target_bin(t, "foo").is_file());
 
@@ -274,17 +206,13 @@ fn works_with_config_in_both_string_or_list() {
         ".cargo/config.toml",
         &format!(
             r#"
-                [unstable]
-                multitarget = true
                 [build]
                 target = ["{t}"]
             "#
         ),
     );
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&["multitarget"])
-        .run();
+    p.cargo("build").run();
 
     assert!(p.target_bin(t, "foo").is_file());
 }
