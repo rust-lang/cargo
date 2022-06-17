@@ -208,9 +208,9 @@ impl SourceId {
     }
 
     /// Returns the `SourceId` corresponding to the main repository, using the
-    /// http index if allowed.
-    pub fn crates_io_maybe_http(config: &Config) -> CargoResult<SourceId> {
-        if config.cli_unstable().http_registry {
+    /// sparse HTTP index if allowed.
+    pub fn crates_io_maybe_sparse_http(config: &Config) -> CargoResult<SourceId> {
+        if config.cli_unstable().sparse_registry {
             config.check_registry_index_not_set()?;
             let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
             SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
