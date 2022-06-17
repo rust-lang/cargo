@@ -2643,7 +2643,7 @@ fn http_requires_z_flag() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("  usage of HTTP-based registries requires `-Z sparse-registry`")
+        .with_stderr_contains("  usage of sparse registries requires `-Z sparse-registry`")
         .run();
 }
 
