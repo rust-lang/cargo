@@ -10,6 +10,7 @@ description = "Benchmarking suite for Cargo."
 
 [dependencies]
 cargo = { path = "../.." }
+cargo-test-support = { path = "../../crates/cargo-test-support" }
 # Consider removing html_reports in 0.4 and switching to `cargo criterion`.
 criterion = { version = "0.3.5", features = ["html_reports"] }
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
@@ -21,4 +22,8 @@ bench = false
 
 [[bench]]
 name = "resolve"
+harness = false
+
+[[bench]]
+name = "workspace_initialization"
 harness = false
