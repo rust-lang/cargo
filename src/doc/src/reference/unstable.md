@@ -87,7 +87,6 @@ Each new feature described below should explain how to use it.
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
