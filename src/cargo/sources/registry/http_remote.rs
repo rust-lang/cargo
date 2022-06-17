@@ -131,8 +131,8 @@ impl<'cfg> HttpRegistry<'cfg> {
         config: &'cfg Config,
         name: &str,
     ) -> CargoResult<HttpRegistry<'cfg>> {
-        if !config.cli_unstable().http_registry {
-            anyhow::bail!("usage of HTTP-based registries requires `-Z http-registry`");
+        if !config.cli_unstable().sparse_registry {
+            anyhow::bail!("usage of HTTP-based registries requires `-Z sparse-registry`");
         }
         let url = source_id.url().as_str();
         // Ensure the url ends with a slash so we can concatenate paths.

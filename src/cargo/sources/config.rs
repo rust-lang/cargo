@@ -91,11 +91,11 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 replace_with: None,
             },
         )?;
-        if config.cli_unstable().http_registry {
+        if config.cli_unstable().sparse_registry {
             base.add(
                 CRATES_IO_REGISTRY,
                 SourceConfig {
-                    id: SourceId::crates_io_maybe_http(config)?,
+                    id: SourceId::crates_io_maybe_sparse_http(config)?,
                     replace_with: None,
                 },
             )?;
@@ -257,7 +257,7 @@ restore the source replacement configuration to continue the build
             check_not_set("rev", def.rev)?;
         }
         if name == CRATES_IO_REGISTRY && srcs.is_empty() {
-            srcs.push(SourceId::crates_io_maybe_http(self.config)?);
+            srcs.push(SourceId::crates_io_maybe_sparse_http(self.config)?);
         }
 
         match srcs.len() {

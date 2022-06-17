@@ -157,7 +157,7 @@
 - Start work on inheriting manifest values in a workspace.
   [#10497](https://github.com/rust-lang/cargo/pull/10497)
   [#10517](https://github.com/rust-lang/cargo/pull/10517)
-- Added support for HTTP registries.
+- Added support for sparse HTTP registries.
   [#10470](https://github.com/rust-lang/cargo/pull/10470)
   [#10064](https://github.com/rust-lang/cargo/pull/10064)
 - Fixed panic when artifact target is used for `[target.'cfg(<target>)'.dependencies]`

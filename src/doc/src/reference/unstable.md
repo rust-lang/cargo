@@ -102,7 +102,7 @@ Each new feature described below should explain how to use it.
 * Registries
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
-    * [http-registry](#http-registry) — Adds support for fetching from http registries (`sparse+`)
+    * [sparse-registry](#sparse-registry) — Adds support for fetching from static-file HTTP registries (`sparse+`)
 
 ### allow-features
 
@@ -909,18 +909,18 @@ fn main() {
 }
 ```
 
-### http-registry
+### sparse-registry
 * Tracking Issue: [9069](https://github.com/rust-lang/cargo/issues/9069)
 * RFC: [#2789](https://github.com/rust-lang/rfcs/pull/2789)
 
-The `http-registry` feature allows cargo to interact with remote registries served
-over http rather than git. These registries can be identified by urls starting with
+The `sparse-registry` feature allows cargo to interact with remote registries served
+over plain HTTP rather than git. These registries can be identified by urls starting with
 `sparse+http://` or `sparse+https://`.
 
-When fetching index metadata over http, cargo only downloads the metadata for relevant
+When fetching index metadata over HTTP, cargo only downloads the metadata for relevant
 crates, which can save significant time and bandwidth.
 
-The format of the http index is identical to a checkout of a git-based index.
+The format of the sparse index is identical to a checkout of a git-based index.
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
