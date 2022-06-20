@@ -250,11 +250,11 @@ environment. The general process is:
         3. Run with arguments: `r check`
 
 [`testsuite`]: https://github.com/rust-lang/cargo/tree/master/tests/testsuite/
-[`ProjectBuilder`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L225-L231
-[`Execs`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/lib.rs#L558-L579
+[`ProjectBuilder`]: https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/lib.rs#L196-L202
+[`Execs`]: https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/lib.rs#L531-L550
 [`support`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs
 [`support::compare`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/compare.rs
-[`support::registry::Package`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/crates/cargo-test-support/src/registry.rs#L73-L149
+[`support::registry::Package`]: https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/registry.rs#L311-L389
 [`support::git`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs
 [Running Cargo]: ../process/working-on-cargo.md#running-cargo
 [`snapbox`]: https://docs.rs/snapbox/latest/snapbox/
