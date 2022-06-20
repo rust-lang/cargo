@@ -917,7 +917,7 @@ The `sparse-registry` feature allows cargo to interact with remote registries se
 over plain HTTP rather than git. These registries can be identified by urls starting with
 `sparse+http://` or `sparse+https://`.
 
-When fetching index metadata over HTTP, cargo only downloads the metadata for relevant
+When fetching index metadata over HTTP, Cargo only downloads the metadata for relevant
 crates, which can save significant time and bandwidth.
 
 The format of the sparse index is identical to a checkout of a git-based index.
