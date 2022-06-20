@@ -408,6 +408,12 @@ pub fn resolve_with_previous<'cfg>(
         registry.lock_patches();
     }
 
+    // Some packages are already loaded when setting up a workspace. This
+    // makes it so anything that was already loaded will not be loaded again.
+    // Without this there were cases where members would be parsed multiple times
+    ws.preload(registry);
+
+    // In case any members were not already loaded or the Workspace is_ephemeral.
     for member in ws.members() {
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
