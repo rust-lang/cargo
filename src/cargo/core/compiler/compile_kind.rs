@@ -182,13 +182,19 @@ impl CompileTarget {
     /// See [`CompileKind::fingerprint_hash`].
     pub fn fingerprint_hash(&self) -> u64 {
         let mut hasher = StableHasher::new();
-        self.name.hash(&mut hasher);
-        if self.name.ends_with(".json") {
-            // This may have some performance concerns, since it is called
-            // fairly often. If that ever seems worth fixing, consider
-            // embedding this in `CompileTarget`.
-            if let Ok(contents) = fs::read_to_string(self.name) {
+        match self
+            .name
+            .ends_with(".json")
+            .then(|| fs::read_to_string(self.name))
+        {
+            Some(Ok(contents)) => {
+                // This may have some performance concerns, since it is called
+                // fairly often. If that ever seems worth fixing, consider
+                // embedding this in `CompileTarget`.
                 contents.hash(&mut hasher);
+            }
+            _ => {
+                self.name.hash(&mut hasher);
             }
         }
         hasher.finish()

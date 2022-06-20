@@ -234,3 +234,42 @@ fn changing_spec_relearns_crate_types() {
         )
         .run();
 }
+
+#[cargo_test]
+fn custom_target_ignores_filepath() {
+    // Changing the path of the .json file will not trigger a rebuild.
+    if !is_nightly() {
+        // Requires features no_core, lang_items
+        return;
+    }
+    let p = project()
+        .file(
+            "src/lib.rs",
+            &"
+                __MINIMAL_LIB__
+
+                pub fn foo() -> u32 {
+                    42
+                }
+            "
+            .replace("__MINIMAL_LIB__", MINIMAL_LIB),
+        )
+        .file("b/custom-target.json", SIMPLE_SPEC)
+        .file("a/custom-target.json", SIMPLE_SPEC)
+        .build();
+
+    // Should build the library the first time.
+    p.cargo("build --lib --target a/custom-target.json")
+        .with_stderr(
+            "\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    // But not the second time, even though the path to the custom target is dfferent.
+    p.cargo("build --lib --target b/custom-target.json")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+}
