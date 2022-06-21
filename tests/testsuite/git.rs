@@ -1078,16 +1078,34 @@ fn dep_with_skipped_submodule() {
 }
 
 #[cargo_test]
-fn dep_ambiguous() {
+fn ambiguous_published_deps() {
     let project = project();
     let git_project = git::new("dep", |project| {
         project
-            .file("aaa/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+            .file(
+                "aaa/Cargo.toml",
+                &format!(
+                    r#"
+                    [project]
+                    name = "bar"
+                    version = "0.5.0"
+                    publish = true
+                "#
+                ),
+            )
             .file("aaa/src/lib.rs", "")
-            .file("bbb/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+            .file(
+                "bbb/Cargo.toml",
+                &format!(
+                    r#"
+                    [project]
+                    name = "bar"
+                    version = "0.5.0"
+                    publish = true
+                "#
+                ),
+            )
             .file("bbb/src/lib.rs", "")
-            .file("ccc/Cargo.toml", &basic_manifest("bar", "0.5.0"))
-            .file("ccc/src/lib.rs", "")
     });
 
     let p = project
@@ -1114,7 +1132,6 @@ fn dep_ambiguous() {
     p.cargo("run")
         .with_stderr(
             "\
-[WARNING] skipping duplicate package `bar` found at `[..]`
 [WARNING] skipping duplicate package `bar` found at `[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
