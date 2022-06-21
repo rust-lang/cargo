@@ -2357,6 +2357,8 @@ enum EnvConfigValueInner {
         force: bool,
         #[serde(default)]
         relative: bool,
+        #[serde(default)]
+        apply_to_subcommands: bool,
     },
 }
 
@@ -2371,6 +2373,16 @@ impl EnvConfigValue {
         match self.inner.val {
             EnvConfigValueInner::Simple(_) => false,
             EnvConfigValueInner::WithOptions { force, .. } => force,
+        }
+    }
+
+    pub fn applies_to_subcommands(&self) -> bool {
+        match self.inner.val {
+            EnvConfigValueInner::Simple(_) => true,
+            EnvConfigValueInner::WithOptions {
+                apply_to_subcommands,
+                ..
+            } => apply_to_subcommands,
         }
     }
 
