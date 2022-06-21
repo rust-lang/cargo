@@ -183,11 +183,16 @@ fn read_nested_packages(
             v.insert(pkg);
         }
         Entry::Occupied(_) => {
-            let _ = config.shell().warn(format!(
-                "skipping duplicate package `{}` found at `{}`",
-                pkg.name(),
-                path.to_string_lossy()
-            ));
+            // We can assume a package with publish = false isn't intended to be seen
+            // by users so we can hide the warning about those since the user is unlikely
+            // to care about those cases.
+            if pkg.publish().is_none() {
+                let _ = config.shell().warn(format!(
+                    "skipping duplicate package `{}` found at `{}`",
+                    pkg.name(),
+                    path.display()
+                ));
+            }
         }
     }
 
