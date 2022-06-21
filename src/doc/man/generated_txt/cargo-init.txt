@@ -87,6 +87,9 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
+
        -h, --help
            Prints help information.
 
