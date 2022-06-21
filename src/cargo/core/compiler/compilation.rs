@@ -355,14 +355,15 @@ impl<'cfg> Compilation<'cfg> {
 
         // Apply any environment variables from the config
         for (key, value) in self.config.env_config()?.iter() {
+            // fail on invalid env options, skip vars that exist in the env
+            if !config::env_config_valid(key, value)? {
+                continue;
+            }
             // never override a value that has already been set by cargo
             if cmd.get_envs().contains_key(key) {
                 continue;
             }
-
-            if value.is_force() || env::var_os(key).is_none() {
-                cmd.env(key, value.resolve(self.config));
-            }
+            cmd.env(key, value.resolve(self.config));
         }
 
         Ok(cmd)

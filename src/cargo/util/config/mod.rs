@@ -2395,6 +2395,18 @@ impl EnvConfigValue {
 
 pub type EnvConfig = HashMap<String, EnvConfigValue>;
 
+/// Whether a given pair (k, v) repredenting an environment variable coming from the [env] section
+/// of Cargo's config is valid and should be used.
+pub fn env_config_valid(k: &str, v: &EnvConfigValue) -> CargoResult<bool> {
+    if k.starts_with("CARGO_") {
+        bail!("setting CARGO_ variables from [env] is not allowed.");
+    }
+    if !v.is_force() && env::var_os(k).is_some() {
+        return Ok(false);
+    }
+    Ok(true)
+}
+
 /// A type to deserialize a list of strings from a toml file.
 ///
 /// Supports deserializing either a whitespace-separated list of arguments in a
