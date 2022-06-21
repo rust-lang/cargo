@@ -129,7 +129,7 @@ mod <case>;
 `tests/testsuite/<command>/<case>/mod.rs`:
 ```rust,ignore
 use cargo_test_support::prelude::*;
-use cargo_test_support::compare::assert;
+use cargo_test_support::compare::assert_ui;
 use cargo_test_support::Project;
 use cargo_test_support::curr_dir;
 
@@ -139,7 +139,7 @@ fn <name>() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg("run")
         .arg_line("--bin foo")
         .current_dir(cwd)
@@ -148,7 +148,7 @@ fn <name>() {
         .stdout_matches_path(curr_dir!().join("stdout.log"))
         .stderr_matches_path(curr_dir!().join("stderr.log"));
 
-    assert().subset_matches(curr_dir!().join("out"), &project_root);
+    assert_ui().subset_matches(curr_dir!().join("out"), &project_root);
 }
 ```
 
@@ -170,13 +170,13 @@ Then populate
 - The project is copied from a directory in the repo
 - Each project is in a separate directory in the sandbox
 
-[`Command`] via `Command::cargo()`:
+[`Command`] via `Command::cargo_ui()`:
 - Set up and run a command.
 
 [`OutputAssert`] via `Command::assert()`:
 - Perform assertions on the result of the [`Command`]
 
-[`Assert`] via `assert()`:
+[`Assert`] via `assert_ui()`:
 - Verify the command modified the file system as expected
 
 #### Updating Snapshots

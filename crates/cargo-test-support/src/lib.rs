@@ -1262,13 +1262,13 @@ impl TestEnv for snapbox::cmd::Command {
 
 /// Test the cargo command
 pub trait CargoCommand {
-    fn cargo() -> Self;
+    fn cargo_ui() -> Self;
 }
 
 impl CargoCommand for snapbox::cmd::Command {
-    fn cargo() -> Self {
+    fn cargo_ui() -> Self {
         Self::new(cargo_exe())
-            .with_assert(compare::assert())
+            .with_assert(compare::assert_ui())
             .test_env()
     }
 }
