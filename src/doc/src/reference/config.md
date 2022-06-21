@@ -484,7 +484,7 @@ repository. Can be overridden with the `--vcs` CLI option.
 ### `[env]`
 
 The `[env]` section allows you to set additional environment variables for
-build scripts, rustc invocations, `cargo run` and `cargo build`.
+build scripts, rustc invocations, subcommands, `cargo run` and `cargo build`.
 
 ```toml
 [env]
