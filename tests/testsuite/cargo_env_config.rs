@@ -186,3 +186,29 @@ fn env_external_subcommand() {
     p.cargo("install --path .").run();
     p.cargo("fake-subcommand").run();
 }
+
+#[cargo_test]
+fn env_no_cargo_vars() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        fn main() {
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [env]
+                CARGO_HOME = { value = "/dev/null", force = true }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr("[..]setting CARGO_ variables from [env] is not allowed.")
+        .run();
+}
