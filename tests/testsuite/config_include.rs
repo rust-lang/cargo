@@ -1,8 +1,7 @@
 //! Tests for `include` config field.
 
 use super::config::{assert_error, write_config, write_config_at, ConfigBuilder};
-use cargo_test_support::{no_such_file_err_msg, paths, project};
-use std::fs;
+use cargo_test_support::{no_such_file_err_msg, project};
 
 #[cargo_test]
 fn gated() {
@@ -253,36 +252,5 @@ failed to merge --config key `foo` into `[..]/.cargo/config`
 Caused by:
   failed to merge config value from `[..]/.cargo/other` into `[..]/.cargo/config`: \
   expected array, but found string",
-    );
-}
-
-#[cargo_test]
-fn cli_path() {
-    // --config path_to_file
-    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
-    let config = ConfigBuilder::new()
-        .cwd(paths::root())
-        .unstable_flag("config-include")
-        .config_arg("myconfig.toml")
-        .build();
-    assert_eq!(config.get::<u32>("key").unwrap(), 123);
-
-    let config = ConfigBuilder::new()
-        .unstable_flag("config-include")
-        .config_arg("missing.toml")
-        .build_err();
-    assert_error(
-        config.unwrap_err(),
-        "\
-failed to parse value from --config argument `missing.toml` as a dotted key expression
-
-Caused by:
-  TOML parse error at line 1, column 13
-  |
-1 | missing.toml
-  |             ^
-Unexpected end of input
-Expected `.` or `=`
-",
     );
 }

@@ -195,6 +195,46 @@ support environment variables.
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
+### Command-line overrides
+
+Cargo also accepts arbitrary configuration overrides through the
+`--config` command-line option. The argument should be in TOML syntax of
+`KEY=VALUE`:
+
+```console
+cargo --config net.git-fetch-with-cli=true fetch
+```
+
+The `--config` option may be specified multiple times, in which case the
+values are merged in left-to-right order, using the same merging logic
+that is used when multiple configuration files apply. Configuration
+values specified this way take precedence over environment variables,
+which take precedence over configuration files.
+
+Some examples of what it looks like using Bourne shell syntax:
+
+```console
+# Most shells will require escaping.
+cargo --config http.proxy=\"http://example.com\" …
+
+# Spaces may be used.
+cargo --config "net.git-fetch-with-cli = true" …
+
+# TOML array example. Single quotes make it easier to read and write.
+cargo --config 'build.rustdocflags = ["--html-in-header", "header.html"]' …
+
+# Example of a complex TOML key.
+cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.runner = 'my-runner'" …
+
+# Example of overriding a profile setting.
+cargo --config profile.dev.package.image.opt-level=3 …
+```
+
+The `--config` option can also be used to pass paths to extra
+configuration files that Cargo should use for a specific invocation.
+Options from configuration files loaded this way follow the same
+precedence rules as other options specified directly with `--config`.
+
 ### Config-relative paths
 
 Paths in config files may be absolute, relative, or a bare name without any

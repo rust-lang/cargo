@@ -476,14 +476,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
         .arg(flag("offline", "Run without accessing the network").global(true))
-        .arg(
-            multi_opt(
-                "config",
-                "KEY=VALUE",
-                "Override a configuration value (unstable)",
-            )
-            .global(true),
-        )
+        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
         .arg(
             Arg::new("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
