@@ -184,3 +184,36 @@ fn env_no_cargo_vars() {
         .with_stderr("[..]setting CARGO_ variables from [env] is not allowed.")
         .run();
 }
+
+#[cargo_test]
+fn env_build_script() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            "fn main() {}",
+        )
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+
+                fn main() {
+                    // env should be set during the build script's build and execution.
+                    assert_eq!(env!("ENV_TEST_VAR"), "TEST_VAR_VALUE");
+                    assert_eq!(env::var("ENV_TEST_VAR").unwrap(), "TEST_VAR_VALUE");
+                }
+            "#
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [env]
+                ENV_TEST_VAR = "TEST_VAR_VALUE"
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .run();
+}
