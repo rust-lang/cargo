@@ -154,3 +154,35 @@ fn env_no_override() {
         .with_stdout_contains("CARGO_PKG_NAME:unchanged")
         .run();
 }
+
+#[cargo_test]
+fn env_external_subcommand() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("cargo-fake-subcommand"))
+        .file(
+            "src/main.rs",
+            r#"
+            use std::env;
+            fn main() {
+                // ENV_TEST_SUB should be available to the build AND to the subcommand.
+                assert_eq!(env!("ENV_TEST_SUB"), "TEST_VALUE");
+                assert_eq!(&env::var("ENV_TEST_SUB").unwrap(), "TEST_VALUE");
+
+                // ENV_TEST_NOSUB should be available to the build, but not to the subcommand.
+                assert!(env::var_os("ENV_TEST_NOSUB").is_none());
+                assert_eq!(env!("ENV_TEST_NOSUB"), "TEST_VALUE");
+            }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [env]
+                ENV_TEST_SUB = "TEST_VALUE"
+                ENV_TEST_NOSUB = { value = "TEST_VALUE", apply_to_subcommands = false }
+            "#,
+        )
+        .build();
+    p.cargo("install --path .").run();
+    p.cargo("fake-subcommand").run();
+}
