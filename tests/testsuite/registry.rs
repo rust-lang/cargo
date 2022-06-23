@@ -1923,7 +1923,7 @@ fn upstream_warnings_on_extra_verbose(cargo: fn(&Project, &str) -> Execs) {
         .publish();
 
     cargo(&p, "build -vv")
-        .with_stderr_contains("[..]warning: function is never used[..]")
+        .with_stderr_contains("[WARNING] [..]unused[..]")
         .run();
 }
 
