@@ -690,7 +690,9 @@ impl<'cfg> Workspace<'cfg> {
             for path in default {
                 let normalized_path = paths::normalize_path(&path);
                 let manifest_path = normalized_path.join("Cargo.toml");
-                if !self.members.contains(&manifest_path) {
+                if !self.members.contains(&manifest_path)
+                    && (self.is_virtual() || manifest_path != root_manifest_path)
+                {
                     // default-members are allowed to be excluded, but they
                     // still must be referred to by the original (unfiltered)
                     // members list. Note that we aren't testing against the
