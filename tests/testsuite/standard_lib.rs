@@ -316,7 +316,7 @@ fn check_core() {
     p.cargo("check -v")
         .build_std_arg(&setup, "core")
         .target_host()
-        .with_stderr_contains("[WARNING] [..]unused_fn[..]`")
+        .with_stderr_contains("[WARNING] [..]unused_fn[..]")
         .run();
 }
 

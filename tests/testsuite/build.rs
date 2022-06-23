@@ -647,7 +647,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
         .build();
 
     p.cargo("build")
-        .with_stderr_contains("[..]function is never used: `dead`[..]")
+        .with_stderr_contains("[WARNING] [..]dead[..]")
         .run();
 }
 
@@ -686,7 +686,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         .build();
 
     p.cargo("build")
-        .with_stderr_contains("[..]function is never used: `dead`[..]")
+        .with_stderr_contains("[WARNING] [..]dead[..]")
         .run();
 
     assert!(p.bin("foo").is_file());
