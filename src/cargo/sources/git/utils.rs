@@ -815,8 +815,11 @@ pub fn fetch(
         }
 
         GitReference::Rev(rev) => {
+            let is_github = || Url::parse(url).map_or(false, |url| is_github(&url));
             if rev.starts_with("refs/") {
                 refspecs.push(format!("+{0}:{0}", rev));
+            } else if is_github() && is_long_hash(rev) {
+                refspecs.push(format!("+{0}:refs/commit/{0}", rev));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
@@ -1036,7 +1039,7 @@ fn github_up_to_date(
     config: &Config,
 ) -> CargoResult<bool> {
     let url = Url::parse(url)?;
-    if url.host_str() != Some("github.com") {
+    if !is_github(&url) {
         return Ok(false);
     }
 
@@ -1047,6 +1050,8 @@ fn github_up_to_date(
         GitReference::Rev(rev) => {
             if rev.starts_with("refs/") {
                 rev
+            } else if is_long_hash(rev) {
+                return Ok(reference.resolve(repo).is_ok());
             } else {
                 debug!("can't use github fast path with `rev = \"{}\"`", rev);
                 return Ok(false);
@@ -1088,4 +1093,12 @@ fn github_up_to_date(
     handle.http_headers(headers)?;
     handle.perform()?;
     Ok(handle.response_code()? == 304)
+}
+
+fn is_github(url: &Url) -> bool {
+    url.host_str() == Some("github.com")
+}
+
+fn is_long_hash(rev: &str) -> bool {
+    rev.len() == 40 && rev.chars().all(|ch| ch.is_ascii_hexdigit())
 }
