@@ -1,4 +1,4 @@
-use cargo_test_support::compare::assert;
+use cargo_test_support::compare::assert_ui;
 use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
 
@@ -12,7 +12,7 @@ fn overwrite_inline_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg("add")
         .arg_line(
             "unrelateed-crate your-face --features your-face/nose,your-face/mouth -Fyour-face/ears",
@@ -23,5 +23,5 @@ fn overwrite_inline_features() {
         .stdout_matches_path(curr_dir!().join("stdout.log"))
         .stderr_matches_path(curr_dir!().join("stderr.log"));
 
-    assert().subset_matches(curr_dir!().join("out"), &project_root);
+    assert_ui().subset_matches(curr_dir!().join("out"), &project_root);
 }

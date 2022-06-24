@@ -9,7 +9,7 @@ fn invalid_dir_name() {
     let foo = &paths::root().join("foo.bar");
     fs::create_dir_all(foo).unwrap();
 
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg_line("init")
         .current_dir(foo)
         .assert()

@@ -9,7 +9,7 @@ fn reserved_name() {
     let project_root = &paths::root().join("test");
     fs::create_dir_all(project_root).unwrap();
 
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg_line("init")
         .current_dir(project_root)
         .assert()

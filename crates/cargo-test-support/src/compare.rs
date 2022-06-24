@@ -70,7 +70,7 @@ use url::Url;
 ///   Other heuristics are applied to try to ensure Windows-style paths aren't
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
-pub fn assert() -> snapbox::Assert {
+pub fn assert_ui() -> snapbox::Assert {
     let root = paths::root();
     // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
     // put in the users output, rather than hidden in the variable

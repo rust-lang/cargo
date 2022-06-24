@@ -5,7 +5,7 @@ use cargo_test_support::curr_dir;
 
 #[cargo_test]
 fn unknown_flags() {
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg_line("init foo --flag")
         .current_dir(paths::root())
         .assert()

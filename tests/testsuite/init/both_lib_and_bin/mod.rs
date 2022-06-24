@@ -7,7 +7,7 @@ use cargo_test_support::curr_dir;
 fn both_lib_and_bin() {
     let cwd = paths::root();
 
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg_line("init --lib --bin")
         .current_dir(&cwd)
         .assert()

@@ -1,4 +1,4 @@
-use cargo_test_support::compare::assert;
+use cargo_test_support::compare::assert_ui;
 use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use std::fs;
@@ -11,7 +11,7 @@ fn git_autodetect() {
     // Need to create `.git` dir manually because it cannot be tracked under a git repo
     fs::create_dir_all(project_root.join(".git")).unwrap();
 
-    snapbox::cmd::Command::cargo()
+    snapbox::cmd::Command::cargo_ui()
         .arg_line("init --lib")
         .current_dir(project_root)
         .assert()
@@ -19,6 +19,6 @@ fn git_autodetect() {
         .stdout_matches_path(curr_dir!().join("stdout.log"))
         .stderr_matches_path(curr_dir!().join("stderr.log"));
 
-    assert().subset_matches(curr_dir!().join("out"), project_root);
+    assert_ui().subset_matches(curr_dir!().join("out"), project_root);
     assert!(project_root.join(".git").is_dir());
 }
