@@ -641,6 +641,7 @@ unstable_cli_options!(
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
+    #[serde(deserialize_with = "deserialize_check_cfg")]
     check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
@@ -733,6 +734,47 @@ where
     ))
 }
 
+fn deserialize_check_cfg<'de, D>(
+    deserializer: D,
+) -> Result<Option<(bool, bool, bool, bool)>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
+        Some(list) => list,
+        None => return Ok(None),
+    };
+
+    parse_check_cfg(crates.into_iter()).map_err(D::Error::custom)
+}
+
+fn parse_check_cfg(
+    it: impl Iterator<Item = impl AsRef<str>>,
+) -> CargoResult<Option<(bool, bool, bool, bool)>> {
+    let mut features = false;
+    let mut well_known_names = false;
+    let mut well_known_values = false;
+    let mut output = false;
+
+    for e in it {
+        match e.as_ref() {
+            "features" => features = true,
+            "names" => well_known_names = true,
+            "values" => well_known_values = true,
+            "output" => output = true,
+            _ => bail!("unstable check-cfg only takes `features`, `names`, `values` or `output` as valid inputs"),
+        }
+    }
+
+    Ok(Some((
+        features,
+        well_known_names,
+        well_known_values,
+        output,
+    )))
+}
+
 impl CliUnstable {
     pub fn parse(
         &mut self,
@@ -780,34 +822,6 @@ impl CliUnstable {
                 None => Vec::new(),
                 Some("") => Vec::new(),
                 Some(v) => v.split(',').map(|s| s.to_string()).collect(),
-            }
-        }
-
-        fn parse_check_cfg(value: Option<&str>) -> CargoResult<Option<(bool, bool, bool, bool)>> {
-            if let Some(value) = value {
-                let mut features = false;
-                let mut well_known_names = false;
-                let mut well_known_values = false;
-                let mut output = false;
-
-                for e in value.split(',') {
-                    match e {
-                        "features" => features = true,
-                        "names" => well_known_names = true,
-                        "values" => well_known_values = true,
-                        "output" => output = true,
-                        _ => bail!("flag -Zcheck-cfg only takes `features`, `names`, `values` or `output` as valid inputs"),
-                    }
-                }
-
-                Ok(Some((
-                    features,
-                    well_known_names,
-                    well_known_values,
-                    output,
-                )))
-            } else {
-                Ok(None)
             }
         }
 
@@ -868,7 +882,9 @@ impl CliUnstable {
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
-            "check-cfg" => self.check_cfg = parse_check_cfg(v)?,
+            "check-cfg" => {
+                self.check_cfg = v.map_or(Ok(None), |v| parse_check_cfg(v.split(',')))?
+            }
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
