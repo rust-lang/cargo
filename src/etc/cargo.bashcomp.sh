@@ -138,7 +138,7 @@ _cargo()
 			--target)
 				COMPREPLY=( $( compgen -W "$(_get_targets)" -- "$cur" ) )
 				;;
-			--target-dir)
+			--target-dir|--path)
 				_filedir -d
 				;;
 			help)
