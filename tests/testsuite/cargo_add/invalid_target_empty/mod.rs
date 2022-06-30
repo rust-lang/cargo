@@ -6,6 +6,7 @@ use crate::cargo_add::init_registry;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
+#[ignore]
 fn invalid_target_empty() {
     init_registry();
     let project = Project::from_template(curr_dir!().join("in"));
