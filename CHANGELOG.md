@@ -1,19 +1,85 @@
 # Changelog
 
-## Cargo 1.63 (2022-08-11)
-[3f052d8e...HEAD](https://github.com/rust-lang/cargo/compare/3f052d8e...HEAD)
+## Cargo 1.64 (2022-09-22)
+[a5e08c47...HEAD](https://github.com/rust-lang/cargo/compare/a5e08c47...HEAD)
 
 ### Added
 
 ### Changed
+- Bash completion of `cargo install --path` now supports path completion.
+  [#10798](https://github.com/rust-lang/cargo/pull/10798)
+- Significantly improved the performance fetching git dependencies from GitHub
+  when using a hash in the `rev` field.
+  [#10079](https://github.com/rust-lang/cargo/pull/10079)
 
 ### Fixed
+- The `os` output in `cargo --version --verbose` now supports more platforms.
+  [#10802](https://github.com/rust-lang/cargo/pull/10802)
+
+
+### Nightly only
+- Fixed deserialization of unstable `check-cfg` in `config.toml`.
+  [#10799](https://github.com/rust-lang/cargo/pull/10799)
+
+
+## Cargo 1.63 (2022-08-11)
+[3f052d8e...rust-1.63.0](https://github.com/rust-lang/cargo/compare/3f052d8e...rust-1.63.0)
+
+### Added
+
+- 🎉 Added the `--config` CLI option to pass config options directly on the CLI.
+  [#10755](https://github.com/rust-lang/cargo/pull/10755)
+- The `CARGO_PKG_RUST_VERSION` environment variable is now set when compiling
+  a crate if the manifest has the `rust-version` field set.
+  [#10713](https://github.com/rust-lang/cargo/pull/10713)
+
+
+### Changed
+- A warning is emitted when encountering multiple packages with the same name
+  in a git dependency. This will ignore packages with `publish=false`.
+  [#10701](https://github.com/rust-lang/cargo/pull/10701)
+  [#10767](https://github.com/rust-lang/cargo/pull/10767)
+- Change tracking now uses the contents of a `.json` target spec file instead
+  of its path. This should help avoid rebuilds if the path changes.
+  [#10746](https://github.com/rust-lang/cargo/pull/10746)
+- Git dependencies with a submodule configured with the `update=none` strategy
+  in `.gitmodules` is now honored, and the submodule will not be fetched.
+  [#10717](https://github.com/rust-lang/cargo/pull/10717)
+- Crate files now use a more recent date (Jul 23, 2006 instead of Nov 29, 1973)
+  for deterministic behavior.
+  [#10720](https://github.com/rust-lang/cargo/pull/10720)
+- The initial template used for `cargo new` now includes a slightly more
+  realistic test structure that has `use super::*;` in the test module.
+  [#10706](https://github.com/rust-lang/cargo/pull/10706)
+- Updated the internal HTTP library libcurl with various small fixes and updates.
+  [#10696](https://github.com/rust-lang/cargo/pull/10696)
+
+### Fixed
+- Fix zsh completions for `cargo add` and `cargo locate-project`
+  [#10810](https://github.com/rust-lang/cargo/pull/10810)
+  [#10811](https://github.com/rust-lang/cargo/pull/10811)
+- Fixed `-p` being ignored with `cargo publish` in the root of a virtual
+  workspace. Some additional checks were also added to generate an error if
+  multiple packages were selected (previously it would pick the first one).
+  [#10677](https://github.com/rust-lang/cargo/pull/10677)
+- The human-readable executable name is no longer displayed for `cargo test`
+  when using JSON output.
+  [#10691](https://github.com/rust-lang/cargo/pull/10691)
 
 ### Nightly only
 
 - Added `-Zcheck-cfg=output` to support build-scripts declaring their
   supported set of `cfg` values with `cargo:rustc-check-cfg`.
   [#10539](https://github.com/rust-lang/cargo/pull/10539)
+- `-Z http-registry` now uses https://index.crates.io/ when accessing crates-io.
+  [#10725](https://github.com/rust-lang/cargo/pull/10725)
+- Fixed formatting of `.workspace` key in `cargo add` for workspace inheritance.
+  [#10705](https://github.com/rust-lang/cargo/pull/10705)
+- Sparse HTTP registry URLs must now end with a `/`.
+  [#10698](https://github.com/rust-lang/cargo/pull/10698)
+- Fixed issue with `cargo add` and workspace inheritance of the `default-features` key.
+  [#10685](https://github.com/rust-lang/cargo/pull/10685)
+
 
 
 ## Cargo 1.62 (2022-06-30)
@@ -78,6 +144,10 @@
 - The `build.dep-info-basedir` configuration setting now properly supports the
   use of `..` in the path to refer to a parent directory.
   [#10281](https://github.com/rust-lang/cargo/pull/10281)
+- Fixed regression in automatic detection of the default number of CPUs to use
+  on systems using cgroups v1.
+  [#10737](https://github.com/rust-lang/cargo/pull/10737)
+  [#10739](https://github.com/rust-lang/cargo/pull/10739)
 
 
 ### Nightly only
