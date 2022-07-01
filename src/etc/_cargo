@@ -68,16 +68,16 @@ _cargo() {
             case ${words[1]} in
                 add)
                     _arguments -s -A "^--" $common $manifest $registry \
-                        {-F+,--features=}'[specify features to activate]:feature'
-                        "--default-features[enable the default features]"
-                        "--no-default-features[don't enable the default features]"
-                        "--optional[mark the dependency as optional]"
-                        "--no-optional[mark the dependency as required]"
-                        "--dev[add as a dev dependency]"
-                        "--build[add as a build dependency]"
-                        "--target=[add as a dependency to the given target platform]"
-                        "--rename=[rename the dependency]"
-                        "--dry-run[don't actually write the manifest]"
+                        {-F+,--features=}'[specify features to activate]:feature' \
+                        "--default-features[enable the default features]" \
+                        "--no-default-features[don't enable the default features]" \
+                        "--optional[mark the dependency as optional]" \
+                        "--no-optional[mark the dependency as required]" \
+                        "--dev[add as a dev dependency]" \
+                        "--build[add as a build dependency]" \
+                        "--target=[add as a dependency to the given target platform]" \
+                        "--rename=[rename the dependency]" \
+                        "--dry-run[don't actually write the manifest]" \
                         '--branch=[branch to use when adding from git]:branch' \
                         '--git=[specify URL from which to add the crate]:url:_urls' \
                         '--path=[local filesystem path to crate to add]: :_directories' \
@@ -182,7 +182,7 @@ _cargo() {
 
                 locate-project)
                     _arguments -s -S $common $manifest \
-                        '--message-format=[specify output representation]:output representation [json]:(json plain)'
+                        '--message-format=[specify output representation]:output representation [json]:(json plain)' \
                         '--workspace[locate Cargo.toml of the workspace root]'
                         ;;
 
