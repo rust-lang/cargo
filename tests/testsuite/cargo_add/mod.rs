@@ -56,6 +56,7 @@ mod namever;
 mod no_args;
 mod no_default_features;
 mod no_optional;
+mod offline_empty_cache;
 mod optional;
 mod overwrite_default_features;
 mod overwrite_default_features_with_no_default_features;
