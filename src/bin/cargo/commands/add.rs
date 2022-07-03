@@ -81,9 +81,6 @@ Example uses:
                 .takes_value(true)
                 .value_name("SPEC")
                 .help("Package to modify"),
-            clap::Arg::new("offline")
-                .long("offline")
-                .help("Run without accessing the network")
         ])
         .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
