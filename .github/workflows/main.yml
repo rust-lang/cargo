@@ -9,6 +9,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read
+
 jobs:
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
@@ -149,6 +152,8 @@ jobs:
         sh linkcheck.sh --all cargo
 
   success:
+    permissions:
+      contents: none
     name: bors build finished
     needs: [docs, rustfmt, test, resolver, build_std]
     runs-on: ubuntu-latest
@@ -156,6 +161,8 @@ jobs:
     steps:
     - run: echo ok
   failure:
+    permissions:
+      contents: none
     name: bors build finished
     needs: [docs, rustfmt, test, resolver, build_std]
     runs-on: ubuntu-latest
