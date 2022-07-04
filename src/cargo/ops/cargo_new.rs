@@ -717,6 +717,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     ignore.push("/target", "^target/", "target");
     if !opts.bin {
         ignore.push("/Cargo.lock", "^Cargo.lock$", "Cargo.lock");
+        ignore.push("/.DS_Store", "^.DS_Store$", ".DS_Store");
     }
 
     let vcs = opts.version_control.unwrap_or_else(|| {
