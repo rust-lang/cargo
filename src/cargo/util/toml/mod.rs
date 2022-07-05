@@ -1549,18 +1549,23 @@ impl TomlManifest {
         let project = &mut project.ok_or_else(|| anyhow!("no `package` section found"))?;
 
         let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
-            (Some(config), None) => {
-                let mut inheritable = config.package.clone().unwrap_or_default();
+            (Some(toml_config), None) => {
+                let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
-                inheritable.update_deps(config.dependencies.clone());
-                WorkspaceConfig::Root(WorkspaceRootConfig::new(
+                inheritable.update_deps(toml_config.dependencies.clone());
+                let ws_root_config = WorkspaceRootConfig::new(
                     package_root,
-                    &config.members,
-                    &config.default_members,
-                    &config.exclude,
+                    &toml_config.members,
+                    &toml_config.default_members,
+                    &toml_config.exclude,
                     &Some(inheritable),
-                    &config.metadata,
-                ))
+                    &toml_config.metadata,
+                );
+                config
+                    .ws_roots
+                    .borrow_mut()
+                    .insert(package_root.to_path_buf(), ws_root_config.clone());
+                WorkspaceConfig::Root(ws_root_config)
             }
             (None, root) => WorkspaceConfig::Member {
                 root: root.cloned(),
@@ -2206,18 +2211,23 @@ impl TomlManifest {
             .map(|r| ResolveBehavior::from_manifest(r))
             .transpose()?;
         let workspace_config = match me.workspace {
-            Some(ref config) => {
-                let mut inheritable = config.package.clone().unwrap_or_default();
+            Some(ref toml_config) => {
+                let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
-                inheritable.update_deps(config.dependencies.clone());
-                WorkspaceConfig::Root(WorkspaceRootConfig::new(
+                inheritable.update_deps(toml_config.dependencies.clone());
+                let ws_root_config = WorkspaceRootConfig::new(
                     root,
-                    &config.members,
-                    &config.default_members,
-                    &config.exclude,
+                    &toml_config.members,
+                    &toml_config.default_members,
+                    &toml_config.exclude,
                     &Some(inheritable),
-                    &config.metadata,
-                ))
+                    &toml_config.metadata,
+                );
+                config
+                    .ws_roots
+                    .borrow_mut()
+                    .insert(root.to_path_buf(), ws_root_config.clone());
+                WorkspaceConfig::Root(ws_root_config)
             }
             None => {
                 bail!("virtual manifests must be configured with [workspace]");
@@ -2334,16 +2344,30 @@ impl TomlManifest {
 
 fn inheritable_from_path(
     config: &Config,
-    resolved_path: PathBuf,
+    workspace_path: PathBuf,
 ) -> CargoResult<InheritableFields> {
-    let key = resolved_path.parent().unwrap();
-    let source_id = SourceId::for_path(key)?;
-    let (man, _) = read_manifest(&resolved_path, source_id, config)?;
+    // Workspace path should have Cargo.toml at the end
+    let workspace_path_root = workspace_path.parent().unwrap();
+
+    // Let the borrow exit scope so that it can be picked up if there is a need to
+    // read a manifest
+    if let Some(ws_root) = config.ws_roots.borrow().get(workspace_path_root) {
+        return Ok(ws_root.inheritable().clone());
+    };
+
+    let source_id = SourceId::for_path(workspace_path_root)?;
+    let (man, _) = read_manifest(&workspace_path, source_id, config)?;
     match man.workspace_config() {
-        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        WorkspaceConfig::Root(root) => {
+            config
+                .ws_roots
+                .borrow_mut()
+                .insert(workspace_path, root.clone());
+            Ok(root.inheritable().clone())
+        }
         _ => bail!(
             "root of a workspace inferred but wasn't a root: {}",
-            resolved_path.display()
+            workspace_path.display()
         ),
     }
 }
