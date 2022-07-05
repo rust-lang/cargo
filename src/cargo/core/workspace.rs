@@ -620,27 +620,23 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
+        let current = self.packages.load(manifest_path)?;
+        match current
+            .workspace_config()
+            .get_ws_root(manifest_path, manifest_path)
         {
-            let current = self.packages.load(manifest_path)?;
-            match *current.workspace_config() {
-                WorkspaceConfig::Root(_) => {
-                    debug!("find_root - is root {}", manifest_path.display());
-                    return Ok(Some(manifest_path.to_path_buf()));
-                }
-                WorkspaceConfig::Member {
-                    root: Some(ref path_to_root),
-                } => return Ok(Some(read_root_pointer(manifest_path, path_to_root))),
-                WorkspaceConfig::Member { root: None } => {}
+            Some(root_path) => {
+                debug!("find_root - is root {}", manifest_path.display());
+                Ok(Some(root_path))
             }
+            None => find_workspace_root_with_loader(manifest_path, self.config, |self_path| {
+                Ok(self
+                    .packages
+                    .load(self_path)?
+                    .workspace_config()
+                    .get_ws_root(self_path, manifest_path))
+            }),
         }
-
-        find_workspace_root_with_loader(manifest_path, self.config, |self_path| {
-            Ok(self
-                .packages
-                .load(self_path)?
-                .workspace_config()
-                .get_ws_root(self_path, manifest_path))
-        })
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -1686,8 +1682,6 @@ pub fn resolve_relative_path(
 
 /// Finds the path of the root of the workspace.
 pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
-    // FIXME(ehuss): Loading and parsing manifests just to find the root seems
-    // very inefficient. I think this should be reconsidered.
     find_workspace_root_with_loader(manifest_path, config, |self_path| {
         let key = self_path.parent().unwrap();
         let source_id = SourceId::for_path(key)?;
@@ -1707,6 +1701,14 @@ fn find_workspace_root_with_loader(
     config: &Config,
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
+    // Check if there are any workspace roots that have already been found that would work
+    for (ws_root, ws_root_config) in config.ws_roots.borrow().iter() {
+        if manifest_path.starts_with(ws_root) && !ws_root_config.is_excluded(manifest_path) {
+            // Add `Cargo.toml` since ws_root is the root and not the file
+            return Ok(Some(ws_root.join("Cargo.toml").clone()));
+        }
+    }
+
     for ances_manifest_path in find_root_iter(manifest_path, config) {
         debug!("find_root - trying {}", ances_manifest_path.display());
         if let Some(ws_root_path) = loader(&ances_manifest_path)? {
