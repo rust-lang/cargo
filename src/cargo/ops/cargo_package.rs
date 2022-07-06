@@ -5,6 +5,7 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::CliFeatures;
@@ -722,16 +723,34 @@ fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) ->
     let _lock = config.acquire_package_cache_lock()?;
 
     let mut sources = pkg_set.sources_mut();
-    for pkg_id in resolve.iter() {
-        if let Some(source) = sources.get_mut(pkg_id.source_id()) {
-            if source.is_yanked(pkg_id)? {
-                config.shell().warn(format!(
-                    "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                     consider updating to a version that is not yanked",
-                    pkg_id,
-                    pkg_id.source_id().display_registry_name()
-                ))?;
+    let mut pending: Vec<PackageId> = resolve.iter().collect();
+    let mut results = Vec::new();
+    for (_id, source) in sources.sources_mut() {
+        source.invalidate_cache();
+    }
+    while !pending.is_empty() {
+        pending.retain(|pkg_id| {
+            if let Some(source) = sources.get_mut(pkg_id.source_id()) {
+                match source.is_yanked(*pkg_id) {
+                    Poll::Ready(result) => results.push((*pkg_id, result)),
+                    Poll::Pending => return true,
+                }
             }
+            false
+        });
+        for (_id, source) in sources.sources_mut() {
+            source.block_until_ready()?;
+        }
+    }
+
+    for (pkg_id, is_yanked) in results {
+        if is_yanked? {
+            config.shell().warn(format!(
+                "package `{}` in Cargo.lock is yanked in registry `{}`, \
+                 consider updating to a version that is not yanked",
+                pkg_id,
+                pkg_id.source_id().display_registry_name()
+            ))?;
         }
     }
     Ok(())

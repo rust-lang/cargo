@@ -134,7 +134,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.add_to_yanked_whitelist(&pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
         self.inner.is_yanked(pkg)
     }
 

@@ -801,14 +801,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.yanked_whitelist.extend(pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
-        self.invalidate_cache();
-        loop {
-            match self.index.is_yanked(pkg, &mut *self.ops)? {
-                Poll::Ready(yanked) => return Ok(yanked),
-                Poll::Pending => self.block_until_ready()?,
-            }
-        }
+    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
+        self.index.is_yanked(pkg, &mut *self.ops)
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
