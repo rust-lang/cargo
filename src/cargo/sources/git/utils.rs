@@ -151,30 +151,16 @@ impl GitDatabase {
         dest: &Path,
         cargo_config: &Config,
     ) -> CargoResult<GitCheckout<'_>> {
-        let mut checkout = None;
-        if let Ok(repo) = git2::Repository::open(dest) {
-            let mut co = GitCheckout::new(dest, self, rev, repo);
-            if !co.is_fresh() {
-                // After a successful fetch operation the subsequent reset can
-                // fail sometimes for corrupt repositories where the fetch
-                // operation succeeds but the object isn't actually there in one
-                // way or another. In these situations just skip the error and
-                // try blowing away the whole repository and trying with a
-                // clone.
-                co.fetch(cargo_config)?;
-                match co.reset(cargo_config) {
-                    Ok(()) => {
-                        assert!(co.is_fresh());
-                        checkout = Some(co);
-                    }
-                    Err(e) => debug!("failed reset after fetch {:?}", e),
-                }
-            } else {
-                checkout = Some(co);
-            }
-        };
-        let checkout = match checkout {
-            Some(c) => c,
+        // If the existing checkout exists, and it is fresh, use it.
+        // A non-fresh checkout can happen if the checkout operation was
+        // interrupted. In that case, the checkout gets deleted and a new
+        // clone is created.
+        let checkout = match git2::Repository::open(dest)
+            .ok()
+            .map(|repo| GitCheckout::new(dest, self, rev, repo))
+            .filter(|co| co.is_fresh())
+        {
+            Some(co) => co,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
         checkout.update_submodules(cargo_config)?;
@@ -309,14 +295,6 @@ impl<'a> GitCheckout<'a> {
             }
             _ => false,
         }
-    }
-
-    fn fetch(&mut self, cargo_config: &Config) -> CargoResult<()> {
-        info!("fetch {}", self.repo.path().display());
-        let url = self.database.path.into_url()?;
-        let reference = GitReference::Rev(self.revision.to_string());
-        fetch(&mut self.repo, url.as_str(), &reference, cargo_config)?;
-        Ok(())
     }
 
     fn reset(&self, config: &Config) -> CargoResult<()> {
