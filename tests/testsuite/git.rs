@@ -3510,3 +3510,65 @@ fn git_with_force_push() {
     amend_commit("awesome-four");
     verify("awesome-four");
 }
+
+#[cargo_test]
+fn corrupted_checkout() {
+    // Test what happens if the checkout is corrupted somehow.
+    _corrupted_checkout(false);
+}
+
+#[cargo_test]
+fn corrupted_checkout_with_cli() {
+    // Test what happens if the checkout is corrupted somehow with git cli.
+    if disable_git_cli() {
+        return;
+    }
+    _corrupted_checkout(true);
+}
+
+fn _corrupted_checkout(with_cli: bool) {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").run();
+
+    let mut paths = t!(glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/dep1-*/*")
+            .to_str()
+            .unwrap()
+    ));
+    let path = paths.next().unwrap().unwrap();
+    let ok = path.join(".cargo-ok");
+
+    // Deleting this file simulates an interrupted checkout.
+    t!(fs::remove_file(&ok));
+
+    // This should refresh the checkout.
+    let mut e = p.cargo("fetch");
+    if with_cli {
+        e.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
+    }
+    e.run();
+    assert!(ok.exists());
+}
