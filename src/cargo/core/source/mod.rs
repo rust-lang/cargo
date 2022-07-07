@@ -103,7 +103,7 @@ pub trait Source {
 
     /// Query if a package is yanked. Only registry sources can mark packages
     /// as yanked. This ignores the yanked whitelist.
-    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool>;
+    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>>;
 
     /// Block until all outstanding Poll::Pending requests are `Poll::Ready`.
     ///
@@ -190,7 +190,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).add_to_yanked_whitelist(pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
         (**self).is_yanked(pkg)
     }
 
@@ -260,7 +260,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).add_to_yanked_whitelist(pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
         (**self).is_yanked(pkg)
     }
 
