@@ -4,6 +4,7 @@ use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
 
+use cargo::ops::{CompileFilter, FilterRule, LibRule};
 use cargo_util::paths;
 
 pub fn cli() -> App {
@@ -161,6 +162,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if args.flag("list") {
         ops::install_list(root, config)?;
     } else {
+        if !compile_opts.filter.is_specific() {
+            compile_opts.filter = CompileFilter::Only {
+                all_targets: false,
+                lib: LibRule::False,
+                bins: FilterRule::All,
+                examples: FilterRule::none(),
+                tests: FilterRule::none(),
+                benches: FilterRule::none(),
+            };
+        }
+
         ops::install(
             config,
             root,
