@@ -793,11 +793,11 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
         ) {
             // Terminal width explicitly provided - only useful for testing.
             (Some(Some(width)), _) => {
-                cmd.arg(format!("-Zterminal-width={}", width));
+                cmd.arg(format!("--diagnostic-width={}", width));
             }
             // Terminal width was not explicitly provided but flag was provided - common case.
             (Some(None), Some(width)) => {
-                cmd.arg(format!("-Zterminal-width={}", width));
+                cmd.arg(format!("--diagnostic-width={}", width));
             }
             // User didn't opt-in.
             _ => (),
