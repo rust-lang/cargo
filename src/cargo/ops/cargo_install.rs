@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::task::Poll;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
@@ -531,44 +530,12 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // duplicate "Updating", but since `source` is taken by value, then it
         // wouldn't be available for `compile_ws`.
         let (pkg_set, resolve) = ops::resolve_ws(&self.ws)?;
-
-        // Checking the yanked status involves taking a look at the registry and
-        // maybe updating files, so be sure to lock it here.
-        let _lock = self.ws.config().acquire_package_cache_lock()?;
-
-        let mut sources = pkg_set.sources_mut();
-        let mut pending: Vec<PackageId> = resolve.iter().collect();
-        let mut results = Vec::new();
-        for (_id, source) in sources.sources_mut() {
-            source.invalidate_cache();
-        }
-        while !pending.is_empty() {
-            pending.retain(|pkg_id| {
-                if let Some(source) = sources.get_mut(pkg_id.source_id()) {
-                    match source.is_yanked(*pkg_id) {
-                        Poll::Ready(result) => results.push((*pkg_id, result)),
-                        Poll::Pending => return true,
-                    }
-                }
-                false
-            });
-            for (_id, source) in sources.sources_mut() {
-                source.block_until_ready()?;
-            }
-        }
-
-        for (pkg_id, is_yanked) in results {
-            if is_yanked? {
-                self.ws.config().shell().warn(format!(
-                    "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                     consider running without --locked",
-                    pkg_id,
-                    pkg_id.source_id().display_registry_name()
-                ))?;
-            }
-        }
-
-        Ok(())
+        ops::check_yanked(
+            self.ws.config(),
+            &pkg_set,
+            &resolve,
+            "consider running without --locked",
+        )
     }
 }
 

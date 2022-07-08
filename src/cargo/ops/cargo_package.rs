@@ -375,7 +375,12 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
     }
-    check_yanked(config, &pkg_set, &new_resolve)?;
+    check_yanked(
+        config,
+        &pkg_set,
+        &new_resolve,
+        "consider updating to a version that is not yanked",
+    )?;
 
     ops::resolve_to_string(&tmp_ws, &mut new_resolve)
 }
@@ -717,7 +722,12 @@ fn compare_resolve(
     Ok(())
 }
 
-fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) -> CargoResult<()> {
+pub fn check_yanked(
+    config: &Config,
+    pkg_set: &PackageSet<'_>,
+    resolve: &Resolve,
+    hint: &str,
+) -> CargoResult<()> {
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
     let _lock = config.acquire_package_cache_lock()?;
@@ -746,10 +756,10 @@ fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) ->
     for (pkg_id, is_yanked) in results {
         if is_yanked? {
             config.shell().warn(format!(
-                "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                 consider updating to a version that is not yanked",
+                "package `{}` in Cargo.lock is yanked in registry `{}`, {}",
                 pkg_id,
-                pkg_id.source_id().display_registry_name()
+                pkg_id.source_id().display_registry_name(),
+                hint
             ))?;
         }
     }
