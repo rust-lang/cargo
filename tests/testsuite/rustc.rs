@@ -135,20 +135,6 @@ fn fails_with_args_to_all_binaries() {
 }
 
 #[cargo_test]
-fn fails_with_crate_type_and_without_unstable_options() {
-    let p = project().file("src/lib.rs", r#" "#).build();
-
-    p.cargo("rustc --crate-type lib")
-        .masquerade_as_nightly_cargo(&["crate-type"])
-        .with_status(101)
-        .with_stderr(
-            "[ERROR] the `crate-type` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/10083 for more information about the `crate-type` flag.",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn fails_with_crate_type_to_multi_binaries() {
     let p = project()
         .file("src/bin/foo.rs", "fn main() {}")
@@ -157,8 +143,7 @@ fn fails_with_crate_type_to_multi_binaries() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("rustc --crate-type lib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc --crate-type lib")
         .with_status(101)
         .with_stderr(
             "[ERROR] crate types to rustc can only be passed to one target, consider filtering
@@ -191,8 +176,7 @@ fn fails_with_crate_type_to_multi_examples() {
         .file("examples/ex2.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex1 --example ex2 --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --example ex1 --example ex2 --crate-type lib,cdylib")
         .with_status(101)
         .with_stderr(
             "[ERROR] crate types to rustc can only be passed to one target, consider filtering
@@ -205,8 +189,7 @@ the package by passing, e.g., `--lib` or `--example` to specify a single target"
 fn fails_with_crate_type_to_binary() {
     let p = project().file("src/bin/foo.rs", "fn main() {}").build();
 
-    p.cargo("rustc --crate-type lib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc --crate-type lib")
         .with_status(101)
         .with_stderr(
             "[ERROR] crate types can only be specified for libraries and example libraries.
@@ -219,8 +202,7 @@ Binaries, tests, and benchmarks are always the `bin` crate type",
 fn build_with_crate_type_for_foo() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustc -v --crate-type cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --crate-type cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -257,8 +239,7 @@ fn build_with_crate_type_for_foo_with_deps() {
         .file("a/src/lib.rs", "pub fn hello() {}")
         .build();
 
-    p.cargo("rustc -v --crate-type cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --crate-type cdylib")
         .with_stderr(
             "\
 [COMPILING] a v0.1.0 ([CWD]/a)
@@ -275,8 +256,7 @@ fn build_with_crate_type_for_foo_with_deps() {
 fn build_with_crate_types_for_foo() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustc -v --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --crate-type lib,cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -307,8 +287,7 @@ fn build_with_crate_type_to_example() {
         .file("examples/ex.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex --crate-type cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --example ex --crate-type cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -340,8 +319,7 @@ fn build_with_crate_types_to_example() {
         .file("examples/ex.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --example ex --crate-type lib,cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -377,8 +355,7 @@ fn build_with_crate_types_to_one_of_multi_examples() {
         .file("examples/ex2.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex1 --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["crate-type"])
+    p.cargo("rustc -v --example ex1 --crate-type lib,cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
