@@ -70,6 +70,19 @@ See the [the reference](../reference/profiles.html) for more details on profiles
 
 {{> options-timings }}
 
+{{#option "`--crate-type` _crate-type_"}}
+Build for the given crate type. This flag accepts a comma-separated list of
+1 or more crate types, of which the allowed values are the same as `crate-type`
+field in the manifest for configurating a Cargo target. See
+[`crate-type` field](../reference/cargo-targets.html#the-crate-type-field)
+for possible values.
+
+If the manifest contains a list, and `--crate-type` is provided,
+the command-line argument value will override what is in the manifest.
+
+This flag only works when building a `lib` or `example` library target.
+{{/option}}
+
 {{/options}}
 
 ### Output Options
@@ -122,6 +135,10 @@ See the [the reference](../reference/profiles.html) for more details on profiles
    the size of every type:
 
        cargo rustc --lib -- -Z print-type-sizes
+
+3. Override `crate-type` field in Cargo.toml with command-line option:
+
+       cargo rustc --lib --crate-type lib,cdylib
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-build" 1}}, {{man "rustc" 1}}
