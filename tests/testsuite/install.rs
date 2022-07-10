@@ -725,12 +725,14 @@ fn no_binaries() {
     cargo_process("install --path")
         .arg(p.root())
         .arg("foo")
-        .with_status(101)
+        .with_status(0)
         .with_stderr(
             "\
-[ERROR] there is nothing to install in `foo v0.0.1 ([..])`, because it has no binaries[..]
-[..]
-[..]",
+[INSTALLING] foo v0.0.1 ([..])
+warning: Target filter `bins` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+warning: none of the package's binaries are available for install using the selected features
+",
         )
         .run();
 }

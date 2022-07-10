@@ -653,6 +653,7 @@ fn install_default_features() {
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
+warning: Target filter `bins` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
 ",
@@ -805,6 +806,7 @@ fn install_multiple_required_features() {
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
+warning: Target filter `bins` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
 ",
@@ -1093,6 +1095,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
+warning: Target filter `bins` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
 ",
