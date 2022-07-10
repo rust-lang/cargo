@@ -331,7 +331,10 @@ pub trait ArgMatchesExt {
         let arg = match self._value_of(name) {
             None => None,
             Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
-                clap::Error::value_validation_auto(format!("could not parse `{}` as a number", arg))
+                clap::Error::raw(
+                    clap::ErrorKind::ValueValidation,
+                    format!("Invalid value: could not parse `{}` as a number", arg),
+                )
             })?),
         };
         Ok(arg)
