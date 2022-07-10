@@ -6107,7 +6107,7 @@ fn target_directory_backup_exclusion() {
 #[cargo_test]
 fn simple_terminal_width() {
     if !is_nightly() {
-        // --terminal-width is unstable
+        // --diagnostic-width is stabilized in 1.64
         return;
     }
     let p = project()

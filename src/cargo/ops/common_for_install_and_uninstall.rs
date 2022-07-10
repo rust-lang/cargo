@@ -553,8 +553,20 @@ where
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
-                PackageId::new(dep.package_name(), &version[1..], source.source_id())
-                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+                if let Ok(pkg_id) =
+                    PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                {
+                    source.invalidate_cache();
+                    loop {
+                        match source.is_yanked(pkg_id) {
+                            Poll::Ready(Ok(is_yanked)) => break is_yanked,
+                            Poll::Ready(Err(_)) => break false,
+                            Poll::Pending => source.block_until_ready()?,
+                        }
+                    }
+                } else {
+                    false
+                }
             } else {
                 false
             };

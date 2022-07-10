@@ -530,26 +530,12 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // duplicate "Updating", but since `source` is taken by value, then it
         // wouldn't be available for `compile_ws`.
         let (pkg_set, resolve) = ops::resolve_ws(&self.ws)?;
-        let mut sources = pkg_set.sources_mut();
-
-        // Checking the yanked status involves taking a look at the registry and
-        // maybe updating files, so be sure to lock it here.
-        let _lock = self.ws.config().acquire_package_cache_lock()?;
-
-        for pkg_id in resolve.iter() {
-            if let Some(source) = sources.get_mut(pkg_id.source_id()) {
-                if source.is_yanked(pkg_id)? {
-                    self.ws.config().shell().warn(format!(
-                        "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                         consider running without --locked",
-                        pkg_id,
-                        pkg_id.source_id().display_registry_name()
-                    ))?;
-                }
-            }
-        }
-
-        Ok(())
+        ops::check_yanked(
+            self.ws.config(),
+            &pkg_set,
+            &resolve,
+            "consider running without --locked",
+        )
     }
 }
 
