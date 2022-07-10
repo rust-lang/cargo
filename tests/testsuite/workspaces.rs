@@ -408,7 +408,10 @@ fn invalid_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+[ERROR] failed to load manifest for workspace member `[..]/foo`
+
+Caused by:
+  failed to read `[..]foo/foo/Cargo.toml`
 
 Caused by:
   [..]
@@ -1031,7 +1034,6 @@ fn new_warns_you_this_will_not_work() {
     let p = p.build();
 
     p.cargo("new --lib bar")
-        .env("USER", "foo")
         .with_stderr(
             "\
 warning: compiling this new package may not work due to invalid workspace configuration
@@ -1053,7 +1055,6 @@ root: [..]
 fn new_warning_with_corrupt_ws() {
     let p = project().file("Cargo.toml", "asdf").build();
     p.cargo("new bar")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] compiling this new package may not work due to invalid workspace configuration
@@ -1064,7 +1065,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1 column 5
+  TOML parse error at line 1, column 5
+    |
+  1 | asdf
+    |     ^
+  Unexpected end of input
+  Expected `.` or `=`
      Created binary (application) `bar` package
 ",
         )
@@ -1215,7 +1221,7 @@ fn workspace_in_git() {
 }
 
 #[cargo_test]
-fn lockfile_can_specify_nonexistant_members() {
+fn lockfile_can_specify_nonexistent_members() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1871,7 +1877,10 @@ fn glob_syntax_invalid_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+[ERROR] failed to load manifest for workspace member `[..]/crates/bar`
+
+Caused by:
+  failed to read `[..]foo/crates/bar/Cargo.toml`
 
 Caused by:
   [..]
@@ -2312,6 +2321,55 @@ Caused by:
 
 Caused by:
   failed to read `[..]foo/x/Cargo.toml`
+
+Caused by:
+  [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn member_dep_missing() {
+    // Make sure errors are not suppressed with -q.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                baz = { path = "baz" }
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -q")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to load manifest for workspace member `[..]/bar`
+
+Caused by:
+  failed to load manifest for dependency `baz`
+
+Caused by:
+  failed to read `[..]foo/bar/baz/Cargo.toml`
 
 Caused by:
   [..]

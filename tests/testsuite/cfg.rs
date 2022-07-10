@@ -440,3 +440,36 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn exclusive_dep_kinds() {
+    // Checks for a bug where the same package with different cfg expressions
+    // was not being filtered correctly.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [target.'cfg(abc)'.dependencies]
+                bar = "1.0"
+
+                [target.'cfg(not(abc))'.build-dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "extern crate bar; fn main() {}")
+        .build();
+
+    p.cargo("check").run();
+    p.change_file("src/lib.rs", "extern crate bar;");
+    p.cargo("check")
+        .with_status(101)
+        // can't find crate for `bar`
+        .with_stderr_contains("[..]E0463[..]")
+        .run();
+}

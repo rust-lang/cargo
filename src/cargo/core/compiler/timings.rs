@@ -4,11 +4,13 @@
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
 use crate::core::compiler::job_queue::JobId;
-use crate::core::compiler::BuildContext;
+use crate::core::compiler::{BuildContext, Context, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
-use crate::util::{paths, CargoResult, CargoResultExt, Config};
+use crate::util::{CargoResult, Config};
+use anyhow::Context as _;
+use cargo_util::paths;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::time::{Duration, Instant, SystemTime};
@@ -19,8 +21,6 @@ pub struct Timings<'cfg> {
     enabled: bool,
     /// If true, saves an HTML report to disk.
     report_html: bool,
-    /// If true, reports unit completion to stderr.
-    report_info: bool,
     /// If true, emits JSON information with timing information.
     report_json: bool,
     /// When Cargo started.
@@ -29,7 +29,7 @@ pub struct Timings<'cfg> {
     start_str: String,
     /// A summary of the root units.
     ///
-    /// Tuples of `(package_description, target_descrptions)`.
+    /// Tuples of `(package_description, target_descriptions)`.
     root_targets: Vec<(String, Vec<String>)>,
     /// The build profile.
     profile: String,
@@ -92,17 +92,10 @@ struct Concurrency {
 
 impl<'cfg> Timings<'cfg> {
     pub fn new(bcx: &BuildContext<'_, 'cfg>, root_units: &[Unit]) -> Timings<'cfg> {
-        let has_report = |what| {
-            bcx.config
-                .cli_unstable()
-                .timings
-                .as_ref()
-                .map_or(false, |t| t.iter().any(|opt| opt == what))
-        };
-        let report_html = has_report("html");
-        let report_info = has_report("info");
-        let report_json = has_report("json");
-        let enabled = report_html | report_info | report_json;
+        let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
+        let report_html = has_report(TimingOutput::Html);
+        let report_json = has_report(TimingOutput::Json);
+        let enabled = report_html | report_json;
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
@@ -137,7 +130,6 @@ impl<'cfg> Timings<'cfg> {
             config: bcx.config,
             enabled,
             report_html,
-            report_info,
             report_json,
             start: bcx.config.creation_time(),
             start_str,
@@ -174,6 +166,7 @@ impl<'cfg> Timings<'cfg> {
             CompileMode::Bench => target.push_str(" (bench)"),
             CompileMode::Doc { .. } => target.push_str(" (doc)"),
             CompileMode::Doctest => target.push_str(" (doc test)"),
+            CompileMode::Docscrape => target.push_str(" (doc scrape)"),
             CompileMode::RunCustomBuild => target.push_str(" (run)"),
         }
         let unit_time = UnitTime {
@@ -224,18 +217,6 @@ impl<'cfg> Timings<'cfg> {
         unit_time
             .unlocked_units
             .extend(unlocked.iter().cloned().cloned());
-        if self.report_info {
-            let msg = format!(
-                "{}{} in {:.1}s",
-                unit_time.name_ver(),
-                unit_time.target,
-                unit_time.duration
-            );
-            let _ = self
-                .config
-                .shell()
-                .status_with_color("Completed", msg, termcolor::Color::Cyan);
-        }
         if self.report_json {
             let msg = machine_message::TimingInfo {
                 package_id: unit_time.unit.pkg.package_id(),
@@ -312,7 +293,7 @@ impl<'cfg> Timings<'cfg> {
     /// Call this when all units are finished.
     pub fn finished(
         &mut self,
-        bcx: &BuildContext<'_, '_>,
+        cx: &Context<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         if !self.enabled {
@@ -322,21 +303,19 @@ impl<'cfg> Timings<'cfg> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(bcx, error)
-                .chain_err(|| "failed to save timing report")?;
+            self.report_html(cx, error)
+                .with_context(|| "failed to save timing report")?;
         }
         Ok(())
     }
 
     /// Save HTML report to disk.
-    fn report_html(
-        &self,
-        bcx: &BuildContext<'_, '_>,
-        error: &Option<anyhow::Error>,
-    ) -> CargoResult<()> {
+    fn report_html(&self, cx: &Context<'_, '_>, error: &Option<anyhow::Error>) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let filename = format!("cargo-timing-{}.html", timestamp);
+        let timings_path = cx.files().host_root().join("cargo-timings");
+        paths::create_dir_all(&timings_path)?;
+        let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
         let roots: Vec<&str> = self
             .root_targets
@@ -344,7 +323,7 @@ impl<'cfg> Timings<'cfg> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, bcx, error)?;
+        self.write_summary_table(&mut f, duration, cx.bcx, error)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         // It helps with pixel alignment to use whole numbers.
@@ -372,7 +351,8 @@ impl<'cfg> Timings<'cfg> {
                 .join(&filename)
                 .display()
         );
-        paths::link_or_copy(&filename, "cargo-timing.html")?;
+        let unstamped_filename = timings_path.join("cargo-timing.html");
+        paths::link_or_copy(&filename, &unstamped_filename)?;
         self.config
             .shell()
             .status_with_color("Timing", msg, termcolor::Color::Cyan)?;
@@ -527,7 +507,7 @@ impl<'cfg> Timings<'cfg> {
                     target: ut.target.clone(),
                     start: round(ut.start),
                     duration: round(ut.duration),
-                    rmeta_time: ut.rmeta_time.map(|t| round(t)),
+                    rmeta_time: ut.rmeta_time.map(round),
                     unlocked_units,
                     unlocked_rmeta_units,
                 }
@@ -641,7 +621,7 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
 static HTML_TMPL: &str = r#"
 <html>
 <head>
-  <title>Cargo Build Timings — {ROOTS}</title>
+  <title>Cargo Build Timings — {ROOTS}</title>
   <meta charset="utf-8">
 <style type="text/css">
 html {
@@ -749,6 +729,7 @@ h1 {
 <body>
 
 <h1>Cargo Build Timings</h1>
+See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Documentation</a>
 "#;
 
 static HTML_CANVAS: &str = r#"

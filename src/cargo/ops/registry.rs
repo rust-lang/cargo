@@ -4,26 +4,31 @@ use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::path::PathBuf;
 use std::str;
+use std::task::Poll;
 use std::time::Duration;
 use std::{cmp, env};
 
-use anyhow::{bail, format_err};
+use anyhow::{bail, format_err, Context as _};
+use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use termcolor::Color::Green;
+use termcolor::ColorSpec;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
+use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
-use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
+use crate::ops::Packages;
+use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::IntoUrl;
-use crate::util::{paths, validate_package_name};
 use crate::{drop_print, drop_println, version};
 
 mod auth;
@@ -32,13 +37,41 @@ mod auth;
 ///
 /// This is loaded based on the `--registry` flag and the config settings.
 #[derive(Debug)]
-pub struct RegistryConfig {
-    /// The index URL. If `None`, use crates.io.
-    pub index: Option<String>,
+pub enum RegistryConfig {
+    None,
     /// The authentication token.
-    pub token: Option<String>,
+    Token(String),
     /// Process used for fetching a token.
-    pub credential_process: Option<(PathBuf, Vec<String>)>,
+    Process((PathBuf, Vec<String>)),
+}
+
+impl RegistryConfig {
+    /// Returns `true` if the credential is [`None`].
+    ///
+    /// [`None`]: Credential::None
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+    /// Returns `true` if the credential is [`Token`].
+    ///
+    /// [`Token`]: Credential::Token
+    pub fn is_token(&self) -> bool {
+        matches!(self, Self::Token(..))
+    }
+    pub fn as_token(&self) -> Option<&str> {
+        if let Self::Token(v) = self {
+            Some(&*v)
+        } else {
+            None
+        }
+    }
+    pub fn as_process(&self) -> Option<&(PathBuf, Vec<String>)> {
+        if let Self::Process(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 pub struct PublishOpts<'cfg> {
@@ -48,18 +81,38 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<i32>,
+    pub keep_going: bool,
+    pub to_publish: ops::Packages,
     pub targets: Vec<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
-    pub features: Vec<String>,
-    pub all_features: bool,
-    pub no_default_features: bool,
+    pub cli_features: CliFeatures,
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
-    let pkg = ws.current()?;
-    let mut publish_registry = opts.registry.clone();
+    let specs = opts.to_publish.to_package_id_specs(ws)?;
+    if specs.len() > 1 {
+        bail!("the `-p` argument must be specified to select a single package to publish")
+    }
+    if Packages::Default == opts.to_publish && ws.is_virtual() {
+        bail!("the `-p` argument must be specified in the root of a virtual workspace")
+    }
+    let member_ids = ws.members().map(|p| p.package_id());
+    // Check that the spec matches exactly one member.
+    specs[0].query(member_ids)?;
+    let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
+    // In `members_with_features_old`, it will add "current" package (determined by the cwd)
+    // So we need filter
+    pkgs = pkgs
+        .into_iter()
+        .filter(|(m, _)| specs.iter().any(|spec| spec.matches(m.package_id())))
+        .collect();
+    // Double check. It is safe theoretically, unless logic has updated.
+    assert_eq!(pkgs.len(), 1);
 
+    let (pkg, cli_features) = pkgs.pop().unwrap();
+
+    let mut publish_registry = opts.registry.clone();
     if let Some(ref allowed_registries) = *pkg.publish() {
         if publish_registry.is_none() && allowed_registries.len() == 1 {
             // If there is only one allowed registry, push to that one directly,
@@ -92,8 +145,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let (mut registry, _reg_cfg, reg_id) = registry(
         opts.config,
         opts.token.clone(),
-        opts.index.clone(),
-        publish_registry,
+        opts.index.as_deref(),
+        publish_registry.as_deref(),
         true,
         !opts.dry_run,
     )?;
@@ -101,24 +154,24 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
-    let tarball = ops::package(
+    let tarball = ops::package_one(
         ws,
+        pkg,
         &ops::PackageOpts {
             config: opts.config,
             verify: opts.verify,
             list: false,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
+            to_package: ops::Packages::Default,
             targets: opts.targets.clone(),
             jobs: opts.jobs,
-            features: opts.features.clone(),
-            all_features: opts.all_features,
-            no_default_features: opts.no_default_features,
+            keep_going: opts.keep_going,
+            cli_features: cli_features,
         },
     )?
     .unwrap();
 
-    // Upload said tarball to the specified destination
     opts.config
         .shell()
         .status("Uploading", pkg.package_id().to_string())?;
@@ -140,34 +193,12 @@ fn verify_dependencies(
     registry_src: SourceId,
 ) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
-        if dep.source_id().is_path() || dep.source_id().is_git() {
-            if !dep.specified_req() {
-                if !dep.is_transitive() {
-                    // dev-dependencies will be stripped in TomlManifest::prepare_for_publish
-                    continue;
-                }
-                let which = if dep.source_id().is_path() {
-                    "path"
-                } else {
-                    "git"
-                };
-                let dep_version_source = dep.registry_id().map_or_else(
-                    || "crates.io".to_string(),
-                    |registry_id| registry_id.display_registry_name(),
-                );
-                bail!(
-                    "all dependencies must have a version specified when publishing.\n\
-                     dependency `{}` does not specify a version\n\
-                     Note: The published dependency will use the version from {},\n\
-                     the `{}` specification will be removed from the dependency declaration.",
-                    dep.package_name(),
-                    dep_version_source,
-                    which,
-                )
-            }
+        if super::check_dep_has_version(dep, true)? {
+            continue;
+        }
         // TomlManifest::prepare_for_publish will rewrite the dependency
         // to be just the `version` field.
-        } else if dep.source_id() != registry_src {
+        if dep.source_id() != registry_src {
             if !dep.source_id().is_registry() {
                 // Consider making SourceId::kind a public type that we can
                 // exhaustively match on. Using match can help ensure that
@@ -258,7 +289,7 @@ fn transmit(
         .as_ref()
         .map(|readme| {
             paths::read(&pkg.root().join(readme))
-                .chain_err(|| format!("failed to read `readme` file for package `{}`", pkg))
+                .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
         })
         .transpose()?;
     if let Some(ref file) = *license_file {
@@ -286,65 +317,61 @@ fn transmit(
         None => BTreeMap::new(),
     };
 
-    let publish = registry.publish(
-        &NewCrate {
-            name: pkg.name().to_string(),
-            vers: pkg.version().to_string(),
-            deps,
-            features: string_features,
-            authors: authors.clone(),
-            description: description.clone(),
-            homepage: homepage.clone(),
-            documentation: documentation.clone(),
-            keywords: keywords.clone(),
-            categories: categories.clone(),
-            readme: readme_content,
-            readme_file: readme.clone(),
-            repository: repository.clone(),
-            license: license.clone(),
-            license_file: license_file.clone(),
-            badges: badges.clone(),
-            links: links.clone(),
-            v: None,
-        },
-        tarball,
-    );
+    let warnings = registry
+        .publish(
+            &NewCrate {
+                name: pkg.name().to_string(),
+                vers: pkg.version().to_string(),
+                deps,
+                features: string_features,
+                authors: authors.clone(),
+                description: description.clone(),
+                homepage: homepage.clone(),
+                documentation: documentation.clone(),
+                keywords: keywords.clone(),
+                categories: categories.clone(),
+                readme: readme_content,
+                readme_file: readme.clone(),
+                repository: repository.clone(),
+                license: license.clone(),
+                license_file: license_file.clone(),
+                badges: badges.clone(),
+                links: links.clone(),
+            },
+            tarball,
+        )
+        .with_context(|| format!("failed to publish to registry at {}", registry.host()))?;
 
-    match publish {
-        Ok(warnings) => {
-            if !warnings.invalid_categories.is_empty() {
-                let msg = format!(
-                    "the following are not valid category slugs and were \
-                     ignored: {}. Please see https://crates.io/category_slugs \
-                     for the list of all category slugs. \
-                     ",
-                    warnings.invalid_categories.join(", ")
-                );
-                config.shell().warn(&msg)?;
-            }
-
-            if !warnings.invalid_badges.is_empty() {
-                let msg = format!(
-                    "the following are not valid badges and were ignored: {}. \
-                     Either the badge type specified is unknown or a required \
-                     attribute is missing. Please see \
-                     https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
-                     for valid badge types and their required attributes.",
-                    warnings.invalid_badges.join(", ")
-                );
-                config.shell().warn(&msg)?;
-            }
-
-            if !warnings.other.is_empty() {
-                for msg in warnings.other {
-                    config.shell().warn(&msg)?;
-                }
-            }
-
-            Ok(())
-        }
-        Err(e) => Err(e),
+    if !warnings.invalid_categories.is_empty() {
+        let msg = format!(
+            "the following are not valid category slugs and were \
+             ignored: {}. Please see https://crates.io/category_slugs \
+             for the list of all category slugs. \
+             ",
+            warnings.invalid_categories.join(", ")
+        );
+        config.shell().warn(&msg)?;
     }
+
+    if !warnings.invalid_badges.is_empty() {
+        let msg = format!(
+            "the following are not valid badges and were ignored: {}. \
+             Either the badge type specified is unknown or a required \
+             attribute is missing. Please see \
+             https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
+             for valid badge types and their required attributes.",
+            warnings.invalid_badges.join(", ")
+        );
+        config.shell().warn(&msg)?;
+    }
+
+    if !warnings.other.is_empty() {
+        for msg in warnings.other {
+            config.shell().warn(&msg)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Returns the index and token from the config file for the given registry.
@@ -357,22 +384,18 @@ pub fn registry_configuration(
 ) -> CargoResult<RegistryConfig> {
     let err_both = |token_key: &str, proc_key: &str| {
         Err(format_err!(
-            "both `{TOKEN_KEY}` and `{PROC_KEY}` \
+            "both `{token_key}` and `{proc_key}` \
              were specified in the config\n\
              Only one of these values may be set, remove one or the other to proceed.",
-            TOKEN_KEY = token_key,
-            PROC_KEY = proc_key,
         ))
     };
     // `registry.default` is handled in command-line parsing.
-    let (index, token, process) = match registry {
+    let (token, process) = match registry {
         Some(registry) => {
-            validate_package_name(registry, "registry name", "")?;
-            let index = Some(config.get_registry_index(registry)?.to_string());
-            let token_key = format!("registries.{}.token", registry);
+            let token_key = format!("registries.{registry}.token");
             let token = config.get_string(&token_key)?.map(|p| p.val);
             let process = if config.cli_unstable().credential_process {
-                let mut proc_key = format!("registries.{}.credential-process", registry);
+                let mut proc_key = format!("registries.{registry}.credential-process");
                 let mut process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
                 if process.is_none() && token.is_none() {
                     // This explicitly ignores the global credential-process if
@@ -386,7 +409,7 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (index, token, process)
+            (token, process)
         }
         None => {
             // Use crates.io default.
@@ -402,17 +425,18 @@ pub fn registry_configuration(
             } else {
                 None
             };
-            (None, token, process)
+            (token, process)
         }
     };
 
     let credential_process =
         process.map(|process| (process.path.resolve_program(config), process.args));
 
-    Ok(RegistryConfig {
-        index,
-        token,
-        credential_process,
+    Ok(match (token, credential_process) {
+        (None, None) => RegistryConfig::None,
+        (None, Some(process)) => RegistryConfig::Process(process),
+        (Some(x), None) => RegistryConfig::Token(x),
+        (Some(_), Some(_)) => unreachable!("Only one of these values may be set."),
     })
 }
 
@@ -430,8 +454,8 @@ pub fn registry_configuration(
 fn registry(
     config: &Config,
     token: Option<String>,
-    index: Option<String>,
-    registry: Option<String>,
+    index: Option<&str>,
+    registry: Option<&str>,
     force_update: bool,
     validate_token: bool,
 ) -> CargoResult<(Registry, RegistryConfig, SourceId)> {
@@ -440,9 +464,12 @@ fn registry(
         bail!("both `--index` and `--registry` should not be set at the same time");
     }
     // Parse all configuration options
-    let reg_cfg = registry_configuration(config, registry.as_deref())?;
-    let opt_index = reg_cfg.index.as_ref().or_else(|| index.as_ref());
-    let sid = get_source_id(config, opt_index, registry.as_ref())?;
+    let reg_cfg = registry_configuration(config, registry)?;
+    let opt_index = registry
+        .map(|r| config.get_registry_index(r))
+        .transpose()?
+        .map(|u| u.to_string());
+    let sid = get_source_id(config, opt_index.as_deref().or(index), registry)?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
@@ -452,19 +479,18 @@ fn registry(
     }
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
-        let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
+        let mut src = RegistrySource::remote(sid, &HashSet::new(), config)?;
         // Only update the index if the config is not available or `force` is set.
-        let cfg = src.config();
-        let mut updated_cfg = || {
-            src.update()
-                .chain_err(|| format!("failed to update {}", sid))?;
-            src.config()
-        };
-
-        let cfg = if force_update {
-            updated_cfg()?
-        } else {
-            cfg.or_else(|_| updated_cfg())?
+        if force_update {
+            src.invalidate_cache()
+        }
+        let cfg = loop {
+            match src.config()? {
+                Poll::Pending => src
+                    .block_until_ready()
+                    .with_context(|| format!("failed to update {}", sid))?,
+                Poll::Ready(cfg) => break cfg,
+            }
         };
 
         cfg.and_then(|cfg| cfg.api)
@@ -482,7 +508,7 @@ fn registry(
             // people. It will affect those using source replacement, but
             // hopefully that's a relatively small set of users.
             if token.is_none()
-                && reg_cfg.token.is_some()
+                && reg_cfg.is_token()
                 && registry.is_none()
                 && !sid.is_default_registry()
                 && !crates_io::is_url_crates_io(&api_host)
@@ -494,17 +520,10 @@ fn registry(
                         see <https://github.com/rust-lang/cargo/issues/xxx>.\n\
                         Use the --token command-line flag to remove this warning.",
                 )?;
-                reg_cfg.token.clone()
+                reg_cfg.as_token().map(|t| t.to_owned())
             } else {
-                let token = auth::auth_token(
-                    config,
-                    token.as_deref(),
-                    reg_cfg.token.as_deref(),
-                    reg_cfg.credential_process.as_ref(),
-                    registry.as_deref(),
-                    &api_host,
-                )?;
-                log::debug!("found token {:?}", token);
+                let token =
+                    auth::auth_token(config, token.as_deref(), &reg_cfg, registry, &api_host)?;
                 Some(token)
             }
         }
@@ -512,6 +531,13 @@ fn registry(
         None
     };
     let handle = http_handle(config)?;
+    // Workaround for the sparse+https://index.crates.io replacement index. Use the non-replaced
+    // source_id so that the original (github) url is used when publishing a crate.
+    let sid = if sid.is_default_registry() {
+        SourceId::crates_io(config)?
+    } else {
+        sid
+    };
     Ok((Registry::new_handle(api_host, token, handle), reg_cfg, sid))
 }
 
@@ -529,8 +555,11 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
              specified"
         )
     }
-    if !config.network_allowed() {
-        bail!("can't make HTTP request in the offline mode")
+    if config.offline() {
+        bail!(
+            "attempting to make an HTTP request, but --offline was \
+             specified"
+        )
     }
 
     // The timeout option for libcurl by default times out the entire transfer,
@@ -565,7 +594,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(user_agent) = &http.user_agent {
         handle.useragent(user_agent)?;
     } else {
-        handle.useragent(&version().to_string())?;
+        handle.useragent(&format!("cargo {}", version()))?;
     }
 
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
@@ -716,7 +745,8 @@ pub fn registry_login(
     token: Option<String>,
     reg: Option<String>,
 ) -> CargoResult<()> {
-    let (registry, reg_cfg, _) = registry(config, token.clone(), None, reg.clone(), false, false)?;
+    let (registry, reg_cfg, _) =
+        registry(config, token.clone(), None, reg.as_deref(), false, false)?;
 
     let token = match token {
         Some(token) => token,
@@ -731,14 +761,14 @@ pub fn registry_login(
             input
                 .lock()
                 .read_line(&mut line)
-                .chain_err(|| "failed to read stdin")
-                .map_err(anyhow::Error::from)?;
-            // Automatically remove `cargo login` from an inputted token to allow direct pastes from `registry.host()`/me.
+                .with_context(|| "failed to read stdin")?;
+            // Automatically remove `cargo login` from an inputted token to
+            // allow direct pastes from `registry.host()`/me.
             line.replace("cargo login", "").trim().to_string()
         }
     };
 
-    if let Some(old_token) = &reg_cfg.token {
+    if let RegistryConfig::Token(old_token) = &reg_cfg {
         if old_token == &token {
             config.shell().status("Login", "already logged in")?;
             return Ok(());
@@ -748,7 +778,7 @@ pub fn registry_login(
     auth::login(
         config,
         token,
-        reg_cfg.credential_process.as_ref(),
+        reg_cfg.as_process(),
         reg.as_deref(),
         registry.host(),
     )?;
@@ -757,16 +787,16 @@ pub fn registry_login(
         "Login",
         format!(
             "token for `{}` saved",
-            reg.as_ref().map_or("crates.io", String::as_str)
+            reg.as_ref().map_or(CRATES_IO_DOMAIN, String::as_str)
         ),
     )?;
     Ok(())
 }
 
 pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> {
-    let (registry, reg_cfg, _) = registry(config, None, None, reg.clone(), false, false)?;
-    let reg_name = reg.as_deref().unwrap_or("crates.io");
-    if reg_cfg.credential_process.is_none() && reg_cfg.token.is_none() {
+    let (registry, reg_cfg, _) = registry(config, None, None, reg.as_deref(), false, false)?;
+    let reg_name = reg.as_deref().unwrap_or(CRATES_IO_DOMAIN);
+    if reg_cfg.is_none() {
         config.shell().status(
             "Logout",
             format!("not currently logged in to `{}`", reg_name),
@@ -775,7 +805,7 @@ pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> 
     }
     auth::logout(
         config,
-        reg_cfg.credential_process.as_ref(),
+        reg_cfg.as_process(),
         reg.as_deref(),
         registry.host(),
     )?;
@@ -812,17 +842,21 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let (mut registry, _, _) = registry(
         config,
         opts.token.clone(),
-        opts.index.clone(),
-        opts.registry.clone(),
+        opts.index.as_deref(),
+        opts.registry.as_deref(),
         true,
         true,
     )?;
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry
-            .add_owners(&name, &v)
-            .map_err(|e| format_err!("failed to invite owners to crate {}: {}", name, e))?;
+        let msg = registry.add_owners(&name, &v).with_context(|| {
+            format!(
+                "failed to invite owners to crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
 
         config.shell().status("Owner", msg)?;
     }
@@ -832,15 +866,23 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         config
             .shell()
             .status("Owner", format!("removing {:?} from crate {}", v, name))?;
-        registry
-            .remove_owners(&name, &v)
-            .chain_err(|| format!("failed to remove owners from crate {}", name))?;
+        registry.remove_owners(&name, &v).with_context(|| {
+            format!(
+                "failed to remove owners from crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
     }
 
     if opts.list {
-        let owners = registry
-            .list_owners(&name)
-            .chain_err(|| format!("failed to list owners of crate {}", name))?;
+        let owners = registry.list_owners(&name).with_context(|| {
+            format!(
+                "failed to list owners of crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
         for owner in owners.iter() {
             drop_print!(config, "{}", owner.login);
             match (owner.name.as_ref(), owner.email.as_ref()) {
@@ -876,22 +918,23 @@ pub fn yank(
         None => bail!("a version must be specified to yank"),
     };
 
-    let (mut registry, _, _) = registry(config, token, index, reg, true, true)?;
+    let (mut registry, _, _) =
+        registry(config, token, index.as_deref(), reg.as_deref(), true, true)?;
 
+    let package_spec = format!("{}@{}", name, version);
     if undo {
-        config
-            .shell()
-            .status("Unyank", format!("{}:{}", name, version))?;
-        registry
-            .unyank(&name, &version)
-            .chain_err(|| "failed to undo a yank")?;
+        config.shell().status("Unyank", package_spec)?;
+        registry.unyank(&name, &version).with_context(|| {
+            format!(
+                "failed to undo a yank from the registry at {}",
+                registry.host()
+            )
+        })?;
     } else {
-        config
-            .shell()
-            .status("Yank", format!("{}:{}", name, version))?;
+        config.shell().status("Yank", package_spec)?;
         registry
             .yank(&name, &version)
-            .chain_err(|| "failed to yank")?;
+            .with_context(|| format!("failed to yank from the registry at {}", registry.host()))?;
     }
 
     Ok(())
@@ -901,11 +944,7 @@ pub fn yank(
 ///
 /// The `index` and `reg` values are from the command-line or config settings.
 /// If both are None, returns the source for crates.io.
-fn get_source_id(
-    config: &Config,
-    index: Option<&String>,
-    reg: Option<&String>,
-) -> CargoResult<SourceId> {
+fn get_source_id(config: &Config, index: Option<&str>, reg: Option<&str>) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, r),
         (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
@@ -936,10 +975,14 @@ pub fn search(
         prefix
     }
 
-    let (mut registry, _, source_id) = registry(config, None, index, reg, false, false)?;
-    let (crates, total_crates) = registry
-        .search(query, limit)
-        .chain_err(|| "failed to retrieve search results from the registry")?;
+    let (mut registry, _, source_id) =
+        registry(config, None, index.as_deref(), reg.as_deref(), false, false)?;
+    let (crates, total_crates) = registry.search(query, limit).with_context(|| {
+        format!(
+            "failed to retrieve search results from the registry at {}",
+            registry.host()
+        )
+    })?;
 
     let names = crates
         .iter()
@@ -967,15 +1010,26 @@ pub fn search(
             }
             None => name,
         };
-        drop_println!(config, "{}", line);
+        let mut fragments = line.split(query).peekable();
+        while let Some(fragment) = fragments.next() {
+            let _ = config.shell().write_stdout(fragment, &ColorSpec::new());
+            if fragments.peek().is_some() {
+                let _ = config
+                    .shell()
+                    .write_stdout(query, &ColorSpec::new().set_bold(true).set_fg(Some(Green)));
+            }
+        }
+        let _ = config.shell().write_stdout("\n", &ColorSpec::new());
     }
 
     let search_max_limit = 100;
     if total_crates > limit && limit < search_max_limit {
-        drop_println!(
-            config,
-            "... and {} crates more (use --limit N to see more)",
-            total_crates - limit
+        let _ = config.shell().write_stdout(
+            format_args!(
+                "... and {} crates more (use --limit N to see more)\n",
+                total_crates - limit
+            ),
+            &ColorSpec::new(),
         );
     } else if total_crates > limit && limit >= search_max_limit {
         let extra = if source_id.is_default_registry() {
@@ -986,11 +1040,9 @@ pub fn search(
         } else {
             String::new()
         };
-        drop_println!(
-            config,
-            "... and {} crates more{}",
-            total_crates - limit,
-            extra
+        let _ = config.shell().write_stdout(
+            format_args!("... and {} crates more{}\n", total_crates - limit, extra),
+            &ColorSpec::new(),
         );
     }
 

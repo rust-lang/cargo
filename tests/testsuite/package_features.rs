@@ -1,8 +1,9 @@
 //! Tests for feature selection on the command-line.
 
 use super::features2::switch_to_resolver_2;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
+use std::fmt::Write;
 
 #[cargo_test]
 fn virtual_no_default_features() {
@@ -64,15 +65,53 @@ fn virtual_no_default_features() {
         .run();
 
     p.cargo("check --features foo")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] none of the selected packages contains these features: foo")
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: foo, did you mean: f1?",
+        )
         .run();
 
     p.cargo("check --features a/dep1,b/f1,b/f2,f2")
+        .with_status(101)
+        .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2, did you mean: f1?")
+        .run();
+
+    p.cargo("check --features a/dep,b/f1,b/f2,f2")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2")
+        .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, b/f2, f2, did you mean: a/dep1, f1?")
+        .run();
+
+    p.cargo("check --features a/dep,a/dep1")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, did you mean: b/f1?")
+        .run();
+}
+
+#[cargo_test]
+fn virtual_typo_member_feature() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            resolver = "2"
+
+            [features]
+            deny-warnings = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build()
+        .cargo("check --features a/deny-warning")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] none of the selected packages contains these features: a/deny-warning, did you mean: a/deny-warnings?",
+        )
         .run();
 }
 
@@ -272,6 +311,48 @@ fn other_member_from_current() {
 }
 
 #[cargo_test]
+fn feature_default_resolver() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+
+            [features]
+            test = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    if cfg!(feature = "test") {
+                        println!("feature set");
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check --features testt")
+        .with_status(101)
+        .with_stderr("[ERROR] Package `a[..]` does not have the feature `testt`")
+        .run();
+
+    p.cargo("run --features test")
+        .with_status(0)
+        .with_stdout("feature set")
+        .run();
+
+    p.cargo("run --features a/test")
+        .with_status(101)
+        .with_stderr("[ERROR] package `a[..]` does not have a dependency named `a`")
+        .run();
+}
+
+#[cargo_test]
 fn virtual_member_slash() {
     // member slash feature syntax
     let p = project()
@@ -456,5 +537,172 @@ fn resolver1_member_features() {
     p.cargo("run -p member1 --features member1/m1-feature")
         .cwd("member2")
         .with_stdout("m1-feature set")
+        .run();
+
+    p.cargo("check -p member1 --features member1/m2-feature")
+        .cwd("member2")
+        .with_status(101)
+        .with_stderr("[ERROR] Package `member1[..]` does not have the feature `m2-feature`")
+        .run();
+}
+
+#[cargo_test]
+fn non_member_feature() {
+    // --features for a non-member
+    Package::new("jazz", "1.0.0").publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("jazz", "1.0").optional(true))
+        .publish();
+    let make_toml = |resolver, optional| {
+        let mut s = String::new();
+        write!(
+            s,
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                resolver = "{}"
+
+                [dependencies]
+            "#,
+            resolver
+        )
+        .unwrap();
+        if optional {
+            s.push_str(r#"bar = { version = "1.0", optional = true } "#);
+        } else {
+            s.push_str(r#"bar = "1.0""#)
+        }
+        s.push('\n');
+        s
+    };
+    let p = project()
+        .file("Cargo.toml", &make_toml("1", false))
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").run();
+    ///////////////////////// V1 non-optional
+    eprintln!("V1 non-optional");
+    p.cargo("check -p bar")
+        .with_stderr(
+            "\
+[CHECKING] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check --features bar/jazz")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] jazz v1.0.0 [..]
+[CHECKING] jazz v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check -p bar --features bar/jazz -v")
+        .with_stderr(
+            "\
+[FRESH] jazz v1.0.0
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    ///////////////////////// V1 optional
+    eprintln!("V1 optional");
+    p.change_file("Cargo.toml", &make_toml("1", true));
+
+    // This error isn't great, but is probably unlikely to be common in
+    // practice, so I'm not going to put much effort into improving it.
+    p.cargo("check -p bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+
+    p.cargo("check -p bar --features bar -v")
+        .with_stderr(
+            "\
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check -p bar --features bar/jazz -v")
+        .with_stderr(
+            "\
+[FRESH] jazz v1.0.0
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    ///////////////////////// V2 non-optional
+    eprintln!("V2 non-optional");
+    p.change_file("Cargo.toml", &make_toml("2", false));
+    // TODO: This should not be allowed (future warning?)
+    p.cargo("check --features bar/jazz -v")
+        .with_stderr(
+            "\
+[FRESH] jazz v1.0.0
+[FRESH] bar v1.0.0
+[FRESH] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check -p bar -v")
+        .with_stderr(
+            "\
+[FRESH] bar v1.0.0
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check -p bar --features bar/jazz")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
+
+    ///////////////////////// V2 optional
+    eprintln!("V2 optional");
+    p.change_file("Cargo.toml", &make_toml("2", true));
+    p.cargo("check -p bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+    // New --features behavior does not look at cwd.
+    p.cargo("check -p bar --features bar")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
+    p.cargo("check -p bar --features bar/jazz")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
+        .run();
+    p.cargo("check -p bar --features foo/bar")
+        .with_status(101)
+        .with_stderr("error: cannot specify features for packages outside of workspace")
         .run();
 }

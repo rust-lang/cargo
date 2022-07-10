@@ -2,11 +2,16 @@
 
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
-Learn more at https://doc.rust-lang.org/cargo/
+**To start using Cargo**, learn more at [The Cargo Book].
+
+**To start developing Cargo itself**, read the [Cargo Contributor Guide].
+
+[The Cargo Book]: https://doc.rust-lang.org/cargo/
+[Cargo Contributor Guide]: https://rust-lang.github.io/cargo/contrib/
 
 ## Code Status
 
-[![Build Status](https://dev.azure.com/rust-lang/cargo/_apis/build/status/rust-lang.cargo?branchName=auto-cargo)](https://dev.azure.com/rust-lang/cargo/_build?definitionId=18)
+[![CI](https://github.com/rust-lang/cargo/actions/workflows/main.yml/badge.svg?branch=auto-cargo)](https://github.com/rust-lang/cargo/actions/workflows/main.yml)
 
 Code documentation: https://docs.rs/cargo/
 
@@ -23,6 +28,7 @@ Cargo requires the following tools and packages to build:
 * `curl` (on Unix)
 * `pkg-config` (on Unix, used to figure out the `libssl` headers/libraries)
 * OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
+* A C compiler [for your platform](https://github.com/rust-lang/cc-rs#compile-time-requirements)
 * `cargo` and `rustc`
 
 First, you'll want to check out this repository
@@ -68,8 +74,6 @@ Please report all issues on the GitHub [issue tracker][issues].
 
 See the **[Cargo Contributor Guide]** for a complete introduction
 to contributing to Cargo.
-
-[Cargo Contributor Guide]: https://rust-lang.github.io/cargo/contrib/
 
 ## License
 

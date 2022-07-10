@@ -2,15 +2,17 @@ use crate::core::shell::Verbosity;
 use crate::core::{GitReference, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
-use crate::util::Sha256;
-use crate::util::{paths, CargoResult, CargoResultExt, Config};
-use anyhow::bail;
+use crate::sources::CRATES_IO_REGISTRY;
+use crate::util::{CargoResult, Config};
+use anyhow::{bail, Context as _};
+use cargo_util::{paths, Sha256};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use toml_edit::easy as toml;
 
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
@@ -28,15 +30,22 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
         extra_workspaces.push(ws);
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
-    let vendor_config =
-        sync(config, &workspaces, opts).chain_err(|| "failed to sync".to_string())?;
+    let vendor_config = sync(config, &workspaces, opts).with_context(|| "failed to sync")?;
 
     if config.shell().verbosity() != Verbosity::Quiet {
-        crate::drop_eprint!(
-            config,
-            "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
-        );
-        crate::drop_print!(config, "{}", &toml::to_string(&vendor_config).unwrap());
+        if vendor_config.source.is_empty() {
+            crate::drop_eprintln!(config, "There is no dependency to vendor in this project.");
+        } else {
+            crate::drop_eprint!(
+                config,
+                "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
+            );
+            crate::drop_print!(
+                config,
+                "{}",
+                &toml::to_string_pretty(&vendor_config).unwrap()
+            );
+        }
     }
 
     Ok(())
@@ -75,6 +84,7 @@ fn sync(
 ) -> CargoResult<VendorConfig> {
     let canonical_destination = opts.destination.canonicalize();
     let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
+    let dest_dir_already_exists = canonical_destination.exists();
 
     paths::create_dir_all(&canonical_destination)?;
     let mut to_remove = HashSet::new();
@@ -104,11 +114,11 @@ fn sync(
     // crate to work with.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(ws).chain_err(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws).with_context(|| "failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
-            .chain_err(|| "failed to download packages")?;
+            .with_context(|| "failed to download packages")?;
 
         for pkg in resolve.iter() {
             // Don't delete actual source code!
@@ -136,11 +146,11 @@ fn sync(
     // tables about them.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(ws).chain_err(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws).with_context(|| "failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
-            .chain_err(|| "failed to download packages")?;
+            .with_context(|| "failed to download packages")?;
 
         for pkg in resolve.iter() {
             // No need to vendor path crates since they're already in the
@@ -152,7 +162,7 @@ fn sync(
                 pkg,
                 packages
                     .get_one(pkg)
-                    .chain_err(|| "failed to fetch package")?
+                    .with_context(|| "failed to fetch package")?
                     .clone(),
             );
 
@@ -216,7 +226,7 @@ fn sync(
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
         cp_sources(src, &paths, &dst, &mut map, &mut tmp_buf)
-            .chain_err(|| format!("failed to copy over vendored sources for: {}", id))?;
+            .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
 
         // Finally, emit the metadata about this package
         let json = serde_json::json!({
@@ -239,17 +249,11 @@ fn sync(
     let mut config = BTreeMap::new();
 
     let merged_source_name = "vendored-sources";
-    config.insert(
-        merged_source_name.to_string(),
-        VendorSource::Directory {
-            directory: opts.destination.to_path_buf(),
-        },
-    );
 
     // replace original sources with vendor
     for source_id in sources {
         let name = if source_id.is_default_registry() {
-            "crates-io".to_string()
+            CRATES_IO_REGISTRY.to_string()
         } else {
             source_id.url().to_string()
         };
@@ -288,6 +292,18 @@ fn sync(
             panic!("Invalid source ID: {}", source_id)
         };
         config.insert(name, source);
+    }
+
+    if !config.is_empty() {
+        config.insert(
+            merged_source_name.to_string(),
+            VendorSource::Directory {
+                directory: opts.destination.to_path_buf(),
+            },
+        );
+    } else if !dest_dir_already_exists {
+        // Nothing to vendor. Remove the destination dir we've just created.
+        paths::remove_dir(canonical_destination)?;
     }
 
     Ok(VendorConfig { source: config })
@@ -341,7 +357,7 @@ fn cp_sources(
 }
 
 fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoResult<String> {
-    let mut src = File::open(src_path).chain_err(|| format!("failed to open {:?}", src_path))?;
+    let mut src = File::open(src_path).with_context(|| format!("failed to open {:?}", src_path))?;
     let mut dst_opts = OpenOptions::new();
     dst_opts.write(true).create(true).truncate(true);
     #[cfg(unix)]
@@ -349,25 +365,25 @@ fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoR
         use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
         let src_metadata = src
             .metadata()
-            .chain_err(|| format!("failed to stat {:?}", src_path))?;
+            .with_context(|| format!("failed to stat {:?}", src_path))?;
         dst_opts.mode(src_metadata.mode());
     }
     let mut dst = dst_opts
         .open(dst_path)
-        .chain_err(|| format!("failed to create {:?}", dst_path))?;
+        .with_context(|| format!("failed to create {:?}", dst_path))?;
     // Not going to bother setting mode on pre-existing files, since there
     // shouldn't be any under normal conditions.
     let mut cksum = Sha256::new();
     loop {
         let n = src
             .read(buf)
-            .chain_err(|| format!("failed to read from {:?}", src_path))?;
+            .with_context(|| format!("failed to read from {:?}", src_path))?;
         if n == 0 {
             break Ok(cksum.finish_hex());
         }
         let data = &buf[..n];
         cksum.update(data);
         dst.write_all(data)
-            .chain_err(|| format!("failed to write to {:?}", dst_path))?;
+            .with_context(|| format!("failed to write to {:?}", dst_path))?;
     }
 }

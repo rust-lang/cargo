@@ -3,7 +3,7 @@
 ### Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use [crates.io], like npm or Rubygems do with
-npmjs.org and rubygems.org.
+[npmjs.com][1] and [rubygems.org][3].
 
 We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
@@ -23,8 +23,9 @@ central registry model as well as a Git-based model, and most packages
 are downloaded through the registry in those ecosystems, with an
 important minority of packages making use of git-based packages.
 
-[1]: https://www.npmjs.org
+[1]: https://www.npmjs.com
 [2]: https://bundler.io
+[3]: https://rubygems.org
 
 Some of the advantages that make a central registry popular in other
 languages include:
@@ -125,7 +126,7 @@ compatibility). If Cargo used all of the dependencies' `Cargo.lock` files,
 then multiple copies of the library could be used, and perhaps even a version
 conflict.
 
-In other words, libraries specify semver requirements for their dependencies but
+In other words, libraries specify SemVer requirements for their dependencies but
 cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
 
@@ -135,9 +136,9 @@ picture to decide what versions of dependencies should be used.
 with wildcard dependency constraints.**
 
 While libraries _can_, strictly speaking, they should not. A version requirement
-of `*` says “This will work with every version ever,” which is never going
+of `*` says “This will work with every version ever”, which is never going
 to be true. Libraries should always specify the range that they do work with,
-even if it’s something as general as “every 1.x.y version.”
+even if it’s something as general as “every 1.x.y version”.
 
 ### Why `Cargo.toml`?
 
@@ -165,7 +166,7 @@ are often surprised when Cargo attempts to fetch resources from the network, and
 hence the request for Cargo to work offline comes up frequently.
 
 Cargo, at its heart, will not attempt to access the network unless told to do
-so. That is, if no crates comes from crates.io, a git repository, or some other
+so. That is, if no crates come from crates.io, a git repository, or some other
 network location, Cargo will never attempt to make a network connection. As a
 result, if Cargo attempts to touch the network, then it's because it needs to
 fetch a required resource.
@@ -204,7 +205,7 @@ replacement][replace].
 ### Why is Cargo rebuilding my code?
 
 Cargo is responsible for incrementally compiling crates in your project. This
-means that if you type `cargo build` twice the second one shouldn't rebuild you
+means that if you type `cargo build` twice the second one shouldn't rebuild your
 crates.io dependencies, for example. Nevertheless bugs arise and Cargo can
 sometimes rebuild code when you're not expecting it!
 
@@ -245,7 +246,7 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
   uses timestamps on files to govern whether rebuilding needs to happen, but if
   you're using a nonstandard filesystem it may be affecting the timestamps
   somehow (e.g. truncating them, causing them to drift, etc). In this scenario,
-  feel free to open an issue and we can see if we can accomodate the filesystem
+  feel free to open an issue and we can see if we can accommodate the filesystem
   somehow.
 
 * A concurrent build process is either deleting artifacts or modifying files.
@@ -257,4 +258,4 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
 
 If after trying to debug your issue, however, you're still running into problems
 then feel free to [open an
-issue](https://github.com/rust-lang/cargo/issuses/new)!
+issue](https://github.com/rust-lang/cargo/issues/new)!

@@ -1,7 +1,4 @@
 pub use self::dependency::Dependency;
-pub use self::features::{
-    enable_nightly_features, maybe_allow_nightly_features, nightly_features_allowed,
-};
 pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{Manifest, Target, TargetKind};
@@ -13,7 +10,11 @@ pub use self::resolver::{Resolve, ResolveVersion};
 pub use self::shell::{Shell, Verbosity};
 pub use self::source::{GitReference, Source, SourceId, SourceMap};
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
-pub use self::workspace::{Members, Workspace, WorkspaceConfig, WorkspaceRootConfig};
+pub use self::workspace::{
+    find_workspace_root, resolve_relative_path, MaybePackage, Workspace, WorkspaceConfig,
+    WorkspaceRootConfig,
+};
+pub use crate::util::toml::InheritableFields;
 
 pub mod compiler;
 pub mod dependency;

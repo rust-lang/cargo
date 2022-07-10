@@ -22,28 +22,33 @@
 //! dependencies are not included under the assumption that changes to them can
 //! be detected via changes to `Cargo.lock`.
 
+use cargo_util::paths::normalize_path;
 use std::collections::{BTreeSet, HashSet};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use log::debug;
-
 use super::{fingerprint, Context, FileFlavor, Unit};
-use crate::util::paths;
 use crate::util::{internal, CargoResult};
+use cargo_util::paths;
+use log::debug;
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
-    let relpath = match basedir {
-        None => path,
-        Some(base) => match path.strip_prefix(base) {
-            Ok(relpath) => relpath,
-            _ => path,
-        },
-    };
-    relpath
-        .to_str()
-        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", relpath)))
+    if let Some(basedir) = basedir {
+        let norm_path = normalize_path(path);
+        let norm_basedir = normalize_path(basedir.as_ref());
+        match norm_path.strip_prefix(norm_basedir) {
+            Ok(relpath) => wrap_path(relpath),
+            _ => wrap_path(path),
+        }
+    } else {
+        wrap_path(path)
+    }
+}
+
+fn wrap_path(path: &Path) -> CargoResult<String> {
+    path.to_str()
+        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
         .map(|f| f.replace(" ", "\\ "))
 }
 
@@ -82,7 +87,10 @@ fn add_deps_for_unit(
     if let Some(metadata) = cx.find_build_script_metadata(unit) {
         if let Some(output) = cx.build_script_outputs.lock().unwrap().get(metadata) {
             for path in &output.rerun_if_changed {
-                deps.insert(path.into());
+                // The paths we have saved from the unit are of arbitrary relativeness and may be
+                // relative to the crate root of the dependency.
+                let path = unit.pkg.root().join(path);
+                deps.insert(path);
             }
         }
     }
@@ -90,7 +98,7 @@ fn add_deps_for_unit(
     // Recursively traverse all transitive dependencies
     let unit_deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in unit_deps {
-        if unit.is_local() {
+        if dep.unit.is_local() {
             add_deps_for_unit(deps, cx, &dep.unit, visited)?;
         }
     }

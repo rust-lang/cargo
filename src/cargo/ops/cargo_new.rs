@@ -1,18 +1,18 @@
 use crate::core::{Edition, Shell, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{paths, restricted_names, Config};
-use git2::Config as GitConfig;
-use git2::Repository as GitRepository;
+use crate::util::{restricted_names, Config};
+use anyhow::Context as _;
+use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::env;
 use std::fmt;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::{from_utf8, FromStr};
+use toml_edit::easy as toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl {
@@ -52,6 +52,7 @@ impl<'de> de::Deserialize<'de> for VersionControl {
 pub struct NewOptions {
     pub version_control: Option<VersionControl>,
     pub kind: NewProjectKind,
+    pub auto_detect_kind: bool,
     /// Absolute path to the directory for the new package
     pub path: PathBuf,
     pub name: Option<String>,
@@ -107,16 +108,18 @@ impl NewOptions {
         edition: Option<String>,
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
+        let auto_detect_kind = !bin && !lib;
+
         let kind = match (bin, lib) {
             (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
-            // default to bin
             (_, false) => NewProjectKind::Bin,
         };
 
         let opts = NewOptions {
             version_control,
             kind,
+            auto_detect_kind,
             path,
             name,
             edition,
@@ -128,8 +131,14 @@ impl NewOptions {
 
 #[derive(Deserialize)]
 struct CargoNewConfig {
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[allow(dead_code)]
     name: Option<String>,
+
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[allow(dead_code)]
     email: Option<String>,
+
     #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
 }
@@ -177,7 +186,7 @@ fn check_name(
                 This can be done by setting the binary filename to `src/bin/{name}.rs` \
                 or change the name in Cargo.toml with:\n\
                 \n    \
-                [bin]\n    \
+                [[bin]]\n    \
                 name = \"{name}\"\n    \
                 path = \"src/main.rs\"\n\
             ",
@@ -384,6 +393,26 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
     }
 }
 
+fn calculate_new_project_kind(
+    requested_kind: NewProjectKind,
+    auto_detect_kind: bool,
+    found_files: &Vec<SourceFileInformation>,
+) -> NewProjectKind {
+    let bin_file = found_files.iter().find(|x| x.bin);
+
+    let kind_from_files = if !found_files.is_empty() && bin_file.is_none() {
+        NewProjectKind::Lib
+    } else {
+        NewProjectKind::Bin
+    };
+
+    if auto_detect_kind {
+        return kind_from_files;
+    }
+
+    requested_kind
+}
+
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
     if path.exists() {
@@ -394,26 +423,23 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
+    let is_bin = opts.kind.is_bin();
+
     let name = get_name(path, opts)?;
-    check_name(
-        name,
-        opts.name.is_none(),
-        opts.kind.is_bin(),
-        &mut config.shell(),
-    )?;
+    check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path,
         name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
-        bin: opts.kind.is_bin(),
+        bin: is_bin,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).chain_err(|| {
-        anyhow::format_err!(
+    mk(config, &mkopts).with_context(|| {
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -422,7 +448,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
+pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
     if std::env::var_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
         return Err(crate::util::internal("internal error test"));
@@ -440,14 +466,34 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
+    let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
+    let has_bin = kind.is_bin();
+
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
-    } else {
-        // --bin option may be ignored if lib.rs or src/lib.rs present
-        // Maybe when doing `cargo init --bin` inside a library package stub,
-        // user may mean "initialize for library, but also add binary target"
+        src_paths_types.push(plan_new_source_file(has_bin, name.to_string()));
+    } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
+        // we've found the only file and it's not the type user wants. Change the type and warn
+        let file_type = if src_paths_types[0].bin {
+            NewProjectKind::Bin
+        } else {
+            NewProjectKind::Lib
+        };
+        config.shell().warn(format!(
+            "file `{}` seems to be a {} file",
+            src_paths_types[0].relative_path, file_type
+        ))?;
+        src_paths_types[0].bin = has_bin
+    } else if src_paths_types.len() > 1 && !has_bin {
+        // We have found both lib and bin files and the user would like us to treat both as libs
+        anyhow::bail!(
+            "cannot have a package with \
+             multiple libraries, \
+             found both `{}` and `{}`",
+            src_paths_types[0].relative_path,
+            src_paths_types[1].relative_path
+        )
     }
-    let has_bin = src_paths_types.iter().any(|x| x.bin);
+
     check_name(name, opts.name.is_none(), has_bin, &mut config.shell())?;
 
     let mut version_control = opts.version_control;
@@ -496,14 +542,14 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).chain_err(|| {
-        anyhow::format_err!(
+    mk(config, &mkopts).with_context(|| {
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
         )
     })?;
-    Ok(())
+    Ok(kind)
 }
 
 /// IgnoreList
@@ -512,6 +558,8 @@ struct IgnoreList {
     ignore: Vec<String>,
     /// mercurial formatted entries
     hg_ignore: Vec<String>,
+    /// Fossil-formatted entries.
+    fossil_ignore: Vec<String>,
 }
 
 impl IgnoreList {
@@ -520,15 +568,17 @@ impl IgnoreList {
         IgnoreList {
             ignore: Vec::new(),
             hg_ignore: Vec::new(),
+            fossil_ignore: Vec::new(),
         }
     }
 
-    /// add a new entry to the ignore list. Requires two arguments with the
-    /// entry in two different formats. One for "git style" entries and one for
-    /// "mercurial like" entries.
-    fn push(&mut self, ignore: &str, hg_ignore: &str) {
+    /// Add a new entry to the ignore list. Requires three arguments with the
+    /// entry in possibly three different formats. One for "git style" entries,
+    /// one for "mercurial style" entries and one for "fossil style" entries.
+    fn push(&mut self, ignore: &str, hg_ignore: &str, fossil_ignore: &str) {
         self.ignore.push(ignore.to_string());
         self.hg_ignore.push(hg_ignore.to_string());
+        self.fossil_ignore.push(fossil_ignore.to_string());
     }
 
     /// Return the correctly formatted content of the ignore file for the given
@@ -536,6 +586,7 @@ impl IgnoreList {
     fn format_new(&self, vcs: VersionControl) -> String {
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
+            VersionControl::Fossil => &self.fossil_ignore,
             _ => &self.ignore,
         };
 
@@ -552,20 +603,30 @@ impl IgnoreList {
 
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
+            VersionControl::Fossil => &self.fossil_ignore,
             _ => &self.ignore,
         };
 
-        let mut out = "\n\n# Added by cargo\n".to_string();
-        if ignore_items
-            .iter()
-            .any(|item| existing_items.contains(item))
-        {
-            out.push_str("#\n# already existing elements were commented out\n");
+        let mut out = String::new();
+
+        // Fossil does not support `#` comments.
+        if vcs != VersionControl::Fossil {
+            out.push_str("\n\n# Added by cargo\n");
+            if ignore_items
+                .iter()
+                .any(|item| existing_items.contains(item))
+            {
+                out.push_str("#\n# already existing elements were commented out\n");
+            }
+            out.push('\n');
         }
-        out.push('\n');
 
         for item in ignore_items {
             if existing_items.contains(item) {
+                if vcs == VersionControl::Fossil {
+                    // Just merge for Fossil.
+                    continue;
+                }
                 out.push('#');
             }
             out.push_str(item);
@@ -579,30 +640,35 @@ impl IgnoreList {
 /// Writes the ignore file to the given directory. If the ignore file for the
 /// given vcs system already exists, its content is read and duplicate ignore
 /// file entries are filtered out.
-fn write_ignore_file(
-    base_path: &Path,
-    list: &IgnoreList,
-    vcs: VersionControl,
-) -> CargoResult<String> {
-    let fp_ignore = match vcs {
-        VersionControl::Git => base_path.join(".gitignore"),
-        VersionControl::Hg => base_path.join(".hgignore"),
-        VersionControl::Pijul => base_path.join(".ignore"),
-        VersionControl::Fossil => return Ok("".to_string()),
-        VersionControl::NoVcs => return Ok("".to_string()),
-    };
+fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -> CargoResult<()> {
+    // Fossil only supports project-level settings in a dedicated subdirectory.
+    if vcs == VersionControl::Fossil {
+        paths::create_dir_all(base_path.join(".fossil-settings"))?;
+    }
 
-    let ignore: String = match paths::open(&fp_ignore) {
-        Err(err) => match err.downcast_ref::<std::io::Error>() {
-            Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
-            _ => return Err(err),
-        },
-        Ok(file) => list.format_existing(BufReader::new(file), vcs),
-    };
+    for fp_ignore in match vcs {
+        VersionControl::Git => vec![base_path.join(".gitignore")],
+        VersionControl::Hg => vec![base_path.join(".hgignore")],
+        VersionControl::Pijul => vec![base_path.join(".ignore")],
+        // Fossil has a cleaning functionality configured in a separate file.
+        VersionControl::Fossil => vec![
+            base_path.join(".fossil-settings/ignore-glob"),
+            base_path.join(".fossil-settings/clean-glob"),
+        ],
+        VersionControl::NoVcs => return Ok(()),
+    } {
+        let ignore: String = match paths::open(&fp_ignore) {
+            Err(err) => match err.downcast_ref::<std::io::Error>() {
+                Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
+                _ => return Err(err),
+            },
+            Ok(file) => list.format_existing(BufReader::new(file), vcs),
+        };
 
-    paths::append(&fp_ignore, ignore.as_bytes())?;
+        paths::append(&fp_ignore, ignore.as_bytes())?;
+    }
 
-    Ok(ignore)
+    Ok(())
 }
 
 /// Initializes the correct VCS system based on the provided config.
@@ -645,12 +711,12 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = config.get::<CargoNewConfig>("cargo-new")?;
 
-    // Using the push method with two arguments ensures that the entries for
-    // both `ignore` and `hgignore` are in sync.
+    // Using the push method with multiple arguments ensures that the entries
+    // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
-    ignore.push("/target", "^target/");
+    ignore.push("/target", "^target/", "target");
     if !opts.bin {
-        ignore.push("Cargo.lock", "glob:Cargo.lock");
+        ignore.push("/Cargo.lock", "^Cargo.lock$", "Cargo.lock");
     }
 
     let vcs = opts.version_control.unwrap_or_else(|| {
@@ -664,32 +730,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
 
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
-
-    let (discovered_name, discovered_email) = discover_author(path);
-
-    // "Name <email>" or "Name" or "<email>" or None if neither name nor email is obtained
-    // cfg takes priority over the discovered ones
-    let author_name = cfg.name.or(discovered_name);
-    let author_email = cfg.email.or(discovered_email);
-
-    let author = match (author_name, author_email) {
-        (Some(name), Some(email)) => {
-            if email.is_empty() {
-                Some(name)
-            } else {
-                Some(format!("{} <{}>", name, email))
-            }
-        }
-        (Some(name), None) => Some(name),
-        (None, Some(email)) => {
-            if email.is_empty() {
-                None
-            } else {
-                Some(format!("<{}>", email))
-            }
-        }
-        (None, None) => None,
-    };
 
     let mut cargotoml_path_specifier = String::new();
 
@@ -729,7 +769,6 @@ path = {}
             r#"[package]
 name = "{}"
 version = "0.1.0"
-authors = [{}]
 edition = {}
 {}
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -737,10 +776,6 @@ edition = {}
 [dependencies]
 {}"#,
             name,
-            match author {
-                Some(value) => format!("{}", toml::Value::String(value)),
-                None => format!(""),
-            },
             match opts.edition {
                 Some(edition) => toml::Value::String(edition.to_string()),
                 None => toml::Value::String(Edition::LATEST_STABLE.to_string()),
@@ -774,11 +809,18 @@ fn main() {
 "
         } else {
             b"\
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let result = add(2, 2);
+        assert_eq!(result, 4);
     }
 }
 "
@@ -809,77 +851,4 @@ mod tests {
     }
 
     Ok(())
-}
-
-fn get_environment_variable(variables: &[&str]) -> Option<String> {
-    variables.iter().filter_map(|var| env::var(var).ok()).next()
-}
-
-fn discover_author(path: &Path) -> (Option<String>, Option<String>) {
-    let git_config = find_git_config(path);
-    let git_config = git_config.as_ref();
-
-    let name_variables = [
-        "CARGO_NAME",
-        "GIT_AUTHOR_NAME",
-        "GIT_COMMITTER_NAME",
-        "USER",
-        "USERNAME",
-        "NAME",
-    ];
-    let name = get_environment_variable(&name_variables[0..3])
-        .or_else(|| git_config.and_then(|g| g.get_string("user.name").ok()))
-        .or_else(|| get_environment_variable(&name_variables[3..]));
-
-    let name = name.map(|namestr| namestr.trim().to_string());
-
-    let email_variables = [
-        "CARGO_EMAIL",
-        "GIT_AUTHOR_EMAIL",
-        "GIT_COMMITTER_EMAIL",
-        "EMAIL",
-    ];
-    let email = get_environment_variable(&email_variables[0..3])
-        .or_else(|| git_config.and_then(|g| g.get_string("user.email").ok()))
-        .or_else(|| get_environment_variable(&email_variables[3..]));
-
-    let email = email.map(|s| {
-        let mut s = s.trim();
-
-        // In some cases emails will already have <> remove them since they
-        // are already added when needed.
-        if s.starts_with('<') && s.ends_with('>') {
-            s = &s[1..s.len() - 1];
-        }
-
-        s.to_string()
-    });
-
-    (name, email)
-}
-
-fn find_git_config(path: &Path) -> Option<GitConfig> {
-    match env::var("__CARGO_TEST_ROOT") {
-        Ok(_) => find_tests_git_config(path),
-        Err(_) => find_real_git_config(path),
-    }
-}
-
-fn find_tests_git_config(path: &Path) -> Option<GitConfig> {
-    // Don't escape the test sandbox when looking for a git repository.
-    // NOTE: libgit2 has support to define the path ceiling in
-    // git_repository_discover, but the git2 bindings do not expose that.
-    for path in paths::ancestors(path, None) {
-        if let Ok(repo) = GitRepository::open(path) {
-            return Some(repo.config().expect("test repo should have valid config"));
-        }
-    }
-    GitConfig::open_default().ok()
-}
-
-fn find_real_git_config(path: &Path) -> Option<GitConfig> {
-    GitRepository::discover(path)
-        .and_then(|repo| repo.config())
-        .or_else(|_| GitConfig::open_default())
-        .ok()
 }

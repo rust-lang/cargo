@@ -38,7 +38,9 @@ or the `build.rustdocflags` [config value](../reference/config.html).
 
 <dt class="option-term" id="option-cargo-rustdoc---open"><a class="option-anchor" href="#option-cargo-rustdoc---open"></a><code>--open</code></dt>
 <dd class="option-desc">Open the docs in a browser after building them. This will use your default
-browser unless you define another one in the <code>BROWSER</code> environment variable.</dd>
+browser unless you define another one in the <code>BROWSER</code> environment variable
+or use the <a href="../reference/config.html#docbrowser"><code>doc.browser</code></a> configuration
+option.</dd>
 
 
 </dl>
@@ -147,6 +149,7 @@ for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-rustdoc--F"><a class="option-anchor" href="#option-cargo-rustdoc--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-rustdoc---features"><a class="option-anchor" href="#option-cargo-rustdoc---features"></a><code>--features</code> <em>features</em></dt>
 <dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
@@ -169,8 +172,7 @@ be specified multiple times, which enables all specified features.</dd>
 <dl>
 
 <dt class="option-term" id="option-cargo-rustdoc---target"><a class="option-anchor" href="#option-cargo-rustdoc---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Document for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Document for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
@@ -181,10 +183,41 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-rustdoc--r"><a class="option-anchor" href="#option-cargo-rustdoc--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-rustdoc---release"><a class="option-anchor" href="#option-cargo-rustdoc---release"></a><code>--release</code></dt>
-<dd class="option-desc">Document optimized artifacts with the <code>release</code> profile. See the
-<a href="#profiles">PROFILES</a> section for details on how this affects profile
-selection.</dd>
+<dd class="option-desc">Document optimized artifacts with the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-rustdoc---profile"><a class="option-anchor" href="#option-cargo-rustdoc---profile"></a><code>--profile</code> <em>name</em></dt>
+<dd class="option-desc">Document with the given profile.
+See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-rustdoc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-rustdoc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Document the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-rustdoc---timings=fmts"><a class="option-anchor" href="#option-cargo-rustdoc---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma-separated list of output
+formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about timing information.</li>
+</ul></dd>
+
 
 
 
@@ -215,7 +248,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-rustdoc--q"><a class="option-anchor" href="#option-cargo-rustdoc--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-rustdoc---quiet"><a class="option-anchor" href="#option-cargo-rustdoc---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustdoc---color"><a class="option-anchor" href="#option-cargo-rustdoc---color"></a><code>--color</code> <em>when</em></dt>
@@ -303,6 +338,10 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-rustdoc---config"><a class="option-anchor" href="#option-cargo-rustdoc---config"></a><code>--config</code> KEY=VALUE</dt>
+<dd class="option-desc">Overrides a Cargo configuration value.</dd>
+
+
 <dt class="option-term" id="option-cargo-rustdoc--h"><a class="option-anchor" href="#option-cargo-rustdoc--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-rustdoc---help"><a class="option-anchor" href="#option-cargo-rustdoc---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -325,25 +364,13 @@ for more information about how toolchain overrides work.</dd>
 the number of CPUs.</dd>
 
 
+<dt class="option-term" id="option-cargo-rustdoc---keep-going"><a class="option-anchor" href="#option-cargo-rustdoc---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+<code>-Zunstable-options</code>.</dd>
+
+
 </dl>
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See [the reference](../reference/profiles.html) for more
-details.
-
-Profile selection depends on the target and crate being built. By default the
-`dev` or `test` profiles are used. If the `--release` flag is given, then the
-`release` or `bench` profiles are used.
-
-Target | Default Profile | `--release` Profile
--------|-----------------|---------------------
-lib, bin, example | `dev` | `release`
-test, bench, or any target in "test" or "bench" mode | `test` | `bench`
-
-Dependencies use the `dev`/`release` profiles.
-
 
 ## ENVIRONMENT
 

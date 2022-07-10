@@ -1,5 +1,5 @@
+use crate::compare::{assert_match_exact, find_json_mismatch};
 use crate::registry::{self, alt_api_path};
-use crate::{find_json_mismatch, lines_match};
 use flate2::read::GzDecoder;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -76,7 +76,7 @@ fn _validate_upload(
     let actual_json = serde_json::from_slice(&json_bytes).expect("uploaded JSON should be valid");
     let expected_json = serde_json::from_str(expected_json).expect("expected JSON does not parse");
 
-    if let Err(e) = find_json_mismatch(&expected_json, &actual_json) {
+    if let Err(e) = find_json_mismatch(&expected_json, &actual_json, None) {
         panic!("{}", e);
     }
 
@@ -151,16 +151,7 @@ pub fn validate_crate_contents(
             let actual_contents = files
                 .get(&full_e_name)
                 .unwrap_or_else(|| panic!("file `{}` missing in archive", e_file_name));
-            if !lines_match(e_file_contents, actual_contents) {
-                panic!(
-                    "Crate contents mismatch for {:?}:\n\
-                     --- expected\n\
-                     {}\n\
-                     --- actual \n\
-                     {}\n",
-                    e_file_name, e_file_contents, actual_contents
-                );
-            }
+            assert_match_exact(e_file_contents, actual_contents);
         }
     }
 }

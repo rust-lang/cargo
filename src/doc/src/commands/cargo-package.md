@@ -1,6 +1,7 @@
 # cargo-package(1)
 
 
+
 ## NAME
 
 cargo-package - Assemble the local package into a distributable tarball
@@ -42,6 +43,22 @@ fields in the manifest.
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
 
+### .cargo_vcs_info.json format
+
+Will generate a `.cargo_vcs_info.json` in the following format
+
+```javascript
+{
+ "git": {
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+ },
+ "path_in_vcs": ""
+}
+```
+
+`path_in_vcs` will be set to a repo-relative path for packages
+in subdirectories of the version control repository.
+
 ## OPTIONS
 
 ### Package Options
@@ -68,13 +85,53 @@ or the license).</dd>
 
 </dl>
 
+### Package Selection
+
+By default, when no package selection options are given, the packages selected
+depend on the selected manifest file (based on the current working directory if
+`--manifest-path` is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.
+
+The default members of a workspace can be set explicitly with the
+`workspace.default-members` key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+`--workspace`), and a non-virtual workspace will include only the root crate itself.
+
+<dl>
+
+<dt class="option-term" id="option-cargo-package--p"><a class="option-anchor" href="#option-cargo-package--p"></a><code>-p</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-package---package"><a class="option-anchor" href="#option-cargo-package---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dd class="option-desc">Package only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---workspace"><a class="option-anchor" href="#option-cargo-package---workspace"></a><code>--workspace</code></dt>
+<dd class="option-desc">Package all members in the workspace.</dd>
+
+
+
+
+<dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
+<dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
+<code>--workspace</code> flag. This flag may be specified multiple times and supports
+common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.</dd>
+
+
+</dl>
+
+
 ### Compilation Options
 
 <dl>
 
 <dt class="option-term" id="option-cargo-package---target"><a class="option-anchor" href="#option-cargo-package---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Package for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Package for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
@@ -106,6 +163,7 @@ for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-package--F"><a class="option-anchor" href="#option-cargo-package--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-package---features"><a class="option-anchor" href="#option-cargo-package---features"></a><code>--features</code> <em>features</em></dt>
 <dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
@@ -170,6 +228,12 @@ offline.</p>
 the number of CPUs.</dd>
 
 
+<dt class="option-term" id="option-cargo-package---keep-going"><a class="option-anchor" href="#option-cargo-package---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+<code>-Zunstable-options</code>.</dd>
+
+
 </dl>
 
 ### Display Options
@@ -185,7 +249,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-package--q"><a class="option-anchor" href="#option-cargo-package--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-package---quiet"><a class="option-anchor" href="#option-cargo-package---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---color"><a class="option-anchor" href="#option-cargo-package---color"></a><code>--color</code> <em>when</em></dt>
@@ -212,6 +278,10 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---config"><a class="option-anchor" href="#option-cargo-package---config"></a><code>--config</code> KEY=VALUE</dt>
+<dd class="option-desc">Overrides a Cargo configuration value.</dd>
 
 
 <dt class="option-term" id="option-cargo-package--h"><a class="option-anchor" href="#option-cargo-package--h"></a><code>-h</code></dt>

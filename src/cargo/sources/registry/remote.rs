@@ -1,33 +1,21 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
+use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{
-    RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
-    VERSION_TEMPLATE,
-};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::paths;
-use crate::util::{Config, Filesystem, Sha256};
+use crate::util::{Config, Filesystem};
+use anyhow::Context as _;
+use cargo_util::paths;
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
-use std::fmt::Write as FmtWrite;
-use std::fs::{self, File, OpenOptions};
-use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
-
-fn make_dep_prefix(name: &str) -> String {
-    match name.len() {
-        1 => String::from("1"),
-        2 => String::from("2"),
-        3 => format!("3/{}", &name[..1]),
-        _ => format!("{}/{}", &name[0..2], &name[2..4]),
-    }
-}
+use std::task::Poll;
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are
@@ -43,6 +31,8 @@ pub struct RemoteRegistry<'cfg> {
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
     current_sha: Cell<Option<InternedString>>,
+    needs_update: bool, // Does this registry need to be updated?
+    updated: bool,      // Has this registry been updated this session?
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -58,6 +48,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
             repo: LazyCell::new(),
             head: Cell::new(None),
             current_sha: Cell::new(None),
+            needs_update: false,
+            updated: false,
         }
     }
 
@@ -96,8 +88,9 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     // things that we don't want.
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
-                    Ok(git2::Repository::init_opts(&path, &opts)
-                        .chain_err(|| "failed to initialize index git repository")?)
+                    Ok(git2::Repository::init_opts(&path, &opts).with_context(|| {
+                        format!("failed to initialize index git repository (in {:?})", path)
+                    })?)
                 }
             }
         })
@@ -140,8 +133,13 @@ impl<'cfg> RemoteRegistry<'cfg> {
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
 
-    fn filename(&self, pkg: PackageId) -> String {
-        format!("{}-{}.crate", pkg.name(), pkg.version())
+    fn current_version(&self) -> Option<InternedString> {
+        if let Some(sha) = self.current_sha.get() {
+            return Some(sha);
+        }
+        let sha = InternedString::new(&self.head().ok()?.to_string());
+        self.current_sha.set(Some(sha));
+        Some(sha)
     }
 }
 
@@ -161,49 +159,107 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.config.assert_package_cache_locked(path)
     }
 
-    fn current_version(&self) -> Option<InternedString> {
-        if let Some(sha) = self.current_sha.get() {
-            return Some(sha);
-        }
-        let sha = InternedString::new(&self.head().ok()?.to_string());
-        self.current_sha.set(Some(sha));
-        Some(sha)
-    }
-
+    // `index_version` Is a string representing the version of the file used to construct the cached copy.
+    // Older versions of Cargo used the single value of the hash of the HEAD commit as a `index_version`.
+    // This is technically correct but a little too conservative. If a new commit is fetched all cached
+    // files need to be regenerated even if a particular file was not changed.
+    // Cargo now reads the `index_version` in two parts the cache file is considered valid if `index_version`
+    // ends with the hash of the HEAD commit OR if it starts with the hash of the file's contents.
+    // In the future cargo can write cached files with `index_version` = `git_file_hash + ":" + `git_commit_hash`,
+    // but for now it still uses `git_commit_hash` to be compatible with older Cargoes.
     fn load(
-        &self,
+        &mut self,
         _root: &Path,
         path: &Path,
-        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
-    ) -> CargoResult<()> {
+        index_version: Option<&str>,
+    ) -> Poll<CargoResult<LoadResponse>> {
+        if self.needs_update {
+            return Poll::Pending;
+        }
+        // Check if the cache is valid.
+        let git_commit_hash = self.current_version();
+        if let (Some(c), Some(i)) = (git_commit_hash, index_version) {
+            if i.ends_with(c.as_str()) {
+                return Poll::Ready(Ok(LoadResponse::CacheValid));
+            }
+        }
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
-        let repo = self.repo()?;
-        let tree = self.tree()?;
-        let entry = tree.get_path(path)?;
-        let object = entry.to_object(repo)?;
-        let blob = match object.as_blob() {
-            Some(blob) => blob,
-            None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
-        };
-        data(blob.content())
+        fn load_helper(
+            registry: &RemoteRegistry<'_>,
+            path: &Path,
+            index_version: Option<&str>,
+            git_commit_hash: Option<&str>,
+        ) -> CargoResult<LoadResponse> {
+            let repo = registry.repo()?;
+            let tree = registry.tree()?;
+            let entry = tree.get_path(path);
+            let entry = entry?;
+            let git_file_hash = entry.id().to_string();
+
+            if let Some(i) = index_version {
+                if i.starts_with(git_file_hash.as_str()) {
+                    return Ok(LoadResponse::CacheValid);
+                }
+            }
+
+            let object = entry.to_object(repo)?;
+            let blob = match object.as_blob() {
+                Some(blob) => blob,
+                None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
+            };
+
+            Ok(LoadResponse::Data {
+                raw_data: blob.content().to_vec(),
+                index_version: git_commit_hash.map(String::from),
+                // TODO: When the reading code has been stable for long enough (Say 8/2022)
+                // change to `git_file_hash + ":" + git_commit_hash`
+            })
+        }
+
+        match load_helper(&self, path, index_version, git_commit_hash.as_deref()) {
+            Ok(result) => Poll::Ready(Ok(result)),
+            Err(_) if !self.updated => {
+                // If git returns an error and we haven't updated the repo, return
+                // pending to allow an update to try again.
+                self.needs_update = true;
+                Poll::Pending
+            }
+            Err(e)
+                if e.downcast_ref::<git2::Error>()
+                    .map(|e| e.code() == git2::ErrorCode::NotFound)
+                    .unwrap_or_default() =>
+            {
+                // The repo has been updated and the file does not exist.
+                Poll::Ready(Ok(LoadResponse::NotFound))
+            }
+            Err(e) => Poll::Ready(Err(e)),
+        }
     }
 
-    fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
+    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         debug!("loading config");
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
-        let mut config = None;
-        self.load(Path::new(""), Path::new("config.json"), &mut |json| {
-            config = Some(serde_json::from_slice(json)?);
-            Ok(())
-        })?;
-        trace!("config loaded");
-        Ok(config)
+        match self.load(Path::new(""), Path::new("config.json"), None)? {
+            Poll::Ready(LoadResponse::Data { raw_data, .. }) => {
+                trace!("config loaded");
+                Poll::Ready(Ok(Some(serde_json::from_slice(&raw_data)?)))
+            }
+            Poll::Ready(_) => Poll::Ready(Ok(None)),
+            Poll::Pending => Poll::Pending,
+        }
     }
 
-    fn update_index(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if !self.needs_update {
+            return Ok(());
+        }
+
+        self.updated = true;
+        self.needs_update = false;
+
         if self.config.offline() {
             return Ok(());
         }
@@ -241,7 +297,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url();
         let repo = self.repo.borrow_mut().unwrap();
         git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
-            .chain_err(|| format!("failed to fetch `{}`", url))?;
+            .with_context(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
 
         // Create a dummy file to record the mtime for when we updated the
@@ -251,44 +307,31 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
-        let filename = self.filename(pkg);
+    fn invalidate_cache(&mut self) {
+        if !self.updated {
+            self.needs_update = true;
+        }
+    }
 
-        // Attempt to open an read-only copy first to avoid an exclusive write
-        // lock and also work with read-only filesystems. Note that we check the
-        // length of the file like below to handle interrupted downloads.
-        //
-        // If this fails then we fall through to the exclusive path where we may
-        // have to redownload the file.
-        let path = self.cache_path.join(&filename);
-        let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(dst) = File::open(&path) {
-            let meta = dst.metadata()?;
-            if meta.len() > 0 {
-                return Ok(MaybeLock::Ready(dst));
+    fn is_updated(&self) -> bool {
+        self.updated
+    }
+
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+        let registry_config = loop {
+            match self.config()? {
+                Poll::Pending => self.block_until_ready()?,
+                Poll::Ready(cfg) => break cfg.unwrap(),
             }
-        }
+        };
 
-        let config = self.config()?.unwrap();
-        let mut url = config.dl;
-        if !url.contains(CRATE_TEMPLATE)
-            && !url.contains(VERSION_TEMPLATE)
-            && !url.contains(PREFIX_TEMPLATE)
-            && !url.contains(LOWER_PREFIX_TEMPLATE)
-        {
-            write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
-        }
-        let prefix = make_dep_prefix(&*pkg.name());
-        let url = url
-            .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase());
-
-        Ok(MaybeLock::Download {
-            url,
-            descriptor: pkg.to_string(),
-        })
+        download::download(
+            &self.cache_path,
+            &self.config,
+            pkg,
+            checksum,
+            registry_config,
+        )
     }
 
     fn finish_download(
@@ -297,42 +340,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         checksum: &str,
         data: &[u8],
     ) -> CargoResult<File> {
-        // Verify what we just downloaded
-        let actual = Sha256::new().update(data).finish_hex();
-        if actual != checksum {
-            anyhow::bail!("failed to verify the checksum of `{}`", pkg)
-        }
-
-        let filename = self.filename(pkg);
-        self.cache_path.create_dir()?;
-        let path = self.cache_path.join(&filename);
-        let path = self.config.assert_package_cache_locked(&path);
-        let mut dst = OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(&path)
-            .chain_err(|| format!("failed to open `{}`", path.display()))?;
-        let meta = dst.metadata()?;
-        if meta.len() > 0 {
-            return Ok(dst);
-        }
-
-        dst.write_all(data)?;
-        dst.seek(SeekFrom::Start(0))?;
-        Ok(dst)
+        download::finish_download(&self.cache_path, &self.config, pkg, checksum, data)
     }
 
     fn is_crate_downloaded(&self, pkg: PackageId) -> bool {
-        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let path = Path::new(&filename);
-
-        let path = self.cache_path.join(path);
-        let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(meta) = fs::metadata(path) {
-            return meta.len() > 0;
-        }
-        false
+        download::is_crate_downloaded(&self.cache_path, &self.config, pkg)
     }
 }
 
@@ -340,20 +352,5 @@ impl<'cfg> Drop for RemoteRegistry<'cfg> {
     fn drop(&mut self) {
         // Just be sure to drop this before our other fields
         self.tree.borrow_mut().take();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::make_dep_prefix;
-
-    #[test]
-    fn dep_prefix() {
-        assert_eq!(make_dep_prefix("a"), "1");
-        assert_eq!(make_dep_prefix("ab"), "2");
-        assert_eq!(make_dep_prefix("abc"), "3/a");
-        assert_eq!(make_dep_prefix("Abc"), "3/A");
-        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
-        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
     }
 }

@@ -227,7 +227,7 @@ fn plugin_and_proc_macro() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
                 #![feature(proc_macro, proc_macro_lib)]
 
                 extern crate rustc_driver;
@@ -236,8 +236,8 @@ fn plugin_and_proc_macro() {
                 extern crate proc_macro;
                 use proc_macro::TokenStream;
 
-                #[plugin_registrar]
-                pub fn plugin_registrar(reg: &mut Registry) {}
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(reg: &mut Registry) {}
 
                 #[proc_macro_derive(Questionable)]
                 pub fn questionable(input: TokenStream) -> TokenStream {
@@ -384,6 +384,31 @@ fn proc_macro_crate_type_warning() {
     foo.cargo("build")
         .with_stderr_contains(
             "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
+        .run();
+}
+
+#[cargo_test]
+fn proc_macro_conflicting_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [lib]
+                proc-macro = false
+                proc_macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr_contains(
+"[WARNING] conflicting between `proc-macro` and `proc_macro` in the `foo` library target.\n
+        `proc_macro` is ignored and not recommended for use in the future",
+        )
         .run();
 }
 

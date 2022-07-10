@@ -12,6 +12,7 @@ from urllib.error import HTTPError
 
 TO_PUBLISH = [
     'crates/cargo-platform',
+    'crates/cargo-util',
     'crates/crates-io',
     '.',
 ]

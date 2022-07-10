@@ -1,6 +1,6 @@
 //! Tests for configuration values that point to programs.
 
-use cargo_test_support::{basic_lib_manifest, no_such_file_err_msg, project, rustc_host};
+use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -262,17 +262,16 @@ second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
 
 #[cargo_test]
 fn custom_runner_env() {
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
+        // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
+        // On Windows, changing to a custom executable resolver has changed the
+        // error messages.
         .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
@@ -281,9 +280,8 @@ fn custom_runner_env() {
 [ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
 
 Caused by:
-  {}
-",
-            no_such_file_err_msg()
+  [..]
+"
         ))
         .run();
 }
@@ -305,10 +303,7 @@ fn custom_runner_env_overrides_config() {
         )
         .build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "should-run --foo")
@@ -322,13 +317,9 @@ fn custom_runner_env_overrides_config() {
 fn custom_runner_env_true() {
     // Check for a bug where "true" was interpreted as a boolean instead of
     // the executable.
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "true")
@@ -338,13 +329,9 @@ fn custom_runner_env_true() {
 
 #[cargo_test]
 fn custom_linker_env() {
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_LINKER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
 
     p.cargo("build -v")
         .env(&key, "nonexistent-linker")
@@ -363,22 +350,16 @@ fn target_in_environment_contains_lower_case() {
         target.to_lowercase().replace('-', "_")
     );
 
-    let mut execs = p.cargo("build -v --target");
-    execs.arg(target).env(&env_key, "nonexistent-linker");
-    if cfg!(windows) {
-        // Windows env keys are case insensitive, so no warning, but it will
-        // fail due to the missing linker.
-        execs
-            .with_stderr_does_not_contain("warning:[..]")
-            .with_status(101);
-    } else {
-        execs.with_stderr_contains(format!(
-            "warning: Environment variables are expected to use uppercase letters and underscores, \
-            the variable `{}` will be ignored and have no effect",
+    p.cargo("build -v --target")
+        .arg(target)
+        .env(&env_key, "nonexistent-linker")
+        .with_stderr_contains(format!(
+            "warning: Environment variables are expected to use uppercase \
+             letters and underscores, the variable `{}` will be ignored and \
+             have no effect",
             env_key
-        ));
-    }
-    execs.run();
+        ))
+        .run();
 }
 
 #[cargo_test]

@@ -10,8 +10,7 @@
 //! These tests are all disabled on rust-lang/rust's CI, but run in Cargo's CI.
 
 use crate::{basic_manifest, main_file, project};
-use cargo::util::ProcessError;
-use cargo::CargoResult;
+use cargo_util::ProcessError;
 use std::env;
 use std::fmt::Write;
 use std::process::{Command, Output};
@@ -41,7 +40,7 @@ pub fn disabled() -> bool {
 
     let cross_target = alternate();
 
-    let run_cross_test = || -> CargoResult<Output> {
+    let run_cross_test = || -> anyhow::Result<Output> {
         let p = project()
             .at("cross_test")
             .file("Cargo.toml", &basic_manifest("cross_test", "1.0.0"))
@@ -180,11 +179,31 @@ rustup does not appear to be installed. Make sure that the appropriate
     panic!("{}", message);
 }
 
+/// The arch triple of the test-running host.
+pub fn native() -> &'static str {
+    env!("NATIVE_ARCH")
+}
+
+pub fn native_arch() -> &'static str {
+    match native()
+        .split("-")
+        .next()
+        .expect("Target triple has unexpected format")
+    {
+        "x86_64" => "x86_64",
+        "aarch64" => "aarch64",
+        "i686" => "x86",
+        _ => panic!("This test should be gated on cross_compile::disabled."),
+    }
+}
+
 /// The alternate target-triple to build with.
 ///
 /// Only use this function on tests that check `cross_compile::disabled`.
 pub fn alternate() -> &'static str {
-    if cfg!(target_os = "macos") {
+    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "x86_64-apple-darwin"
+    } else if cfg!(target_os = "macos") {
         "x86_64-apple-ios"
     } else if cfg!(target_os = "linux") {
         "i686-unknown-linux-gnu"
@@ -203,6 +222,15 @@ pub fn alternate_arch() -> &'static str {
     } else {
         "x86"
     }
+}
+
+/// A target-triple that is neither the host nor the target.
+///
+/// Rustc may not work with it and it's alright, apart from being a
+/// valid target triple it is supposed to be used only as a
+/// placeholder for targets that should not be considered.
+pub fn unused() -> &'static str {
+    "wasm32-unknown-unknown"
 }
 
 /// Whether or not the host can run cross-compiled executables.

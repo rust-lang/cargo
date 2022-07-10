@@ -50,6 +50,12 @@ Run the specified example.
 
 {{> options-release }}
 
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
+
 {{/options}}
 
 ### Output Options
@@ -84,9 +90,8 @@ Run the specified example.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

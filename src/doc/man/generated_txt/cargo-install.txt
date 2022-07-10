@@ -4,7 +4,7 @@ NAME
        cargo-install - Build and install a Rust binary
 
 SYNOPSIS
-       cargo install [options] crate...
+       cargo install [options] crate[@version]...
        cargo install [options] --path path
        cargo install [options] --git url [crate...]
        cargo install [options] --list
@@ -51,7 +51,7 @@ DESCRIPTION
 
        o  The chosen features.
 
-       o  The release mode (--debug).
+       o  The profile (--profile).
 
        o  The target (--target).
 
@@ -157,7 +157,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -197,7 +197,31 @@ OPTIONS
            workspace of the local crate unless --target-dir is specified.
 
        --debug
-           Build with the dev profile instead the release profile.
+           Build with the dev profile instead the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Install with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
+
+       --timings=fmts
+           Output information how long each compilation takes, and track
+           concurrency information over time. Accepts an optional
+           comma-separated list of output formats; --timings without an
+           argument will default to --timings=html. Specifying an output format
+           (rather than the default) is unstable and requires
+           -Zunstable-options. Valid output formats:
+
+           o  html: Write a human-readable file cargo-timing.html to the
+              target/cargo-timings directory with a report of the compilation.
+              Also write a report to the same directory with a timestamp in the
+              filename if you want to look at older runs. HTML output is
+              suitable for human consumption only, and does not provide
+              machine-readable timing data.
+
+           o  json (unstable, requires -Zunstable-options): Emit
+              machine-readable JSON information about timing information.
 
    Manifest Options
        --frozen, --locked
@@ -233,6 +257,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
+       --keep-going
+           Build as many crates in the dependency graph as possible, rather
+           than aborting the build on the first one that fails to build.
+           Unstable, requires -Zunstable-options.
+
    Display Options
        -v, --verbose
            Use verbose output. May be specified twice for "very verbose" output
@@ -241,7 +270,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -256,6 +287,34 @@ OPTIONS
            May also be specified with the term.color config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
 
+       --message-format fmt
+           The output format for diagnostic messages. Can be specified multiple
+           times and consists of comma-separated values. Valid values:
+
+           o  human (default): Display in a human-readable text format.
+              Conflicts with short and json.
+
+           o  short: Emit shorter, human-readable text messages. Conflicts with
+              human and json.
+
+           o  json: Emit JSON messages to stdout. See the reference
+              <https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages>
+              for more details. Conflicts with human and short.
+
+           o  json-diagnostic-short: Ensure the rendered field of JSON messages
+              contains the "short" rendering from rustc. Cannot be used with
+              human or short.
+
+           o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
+              messages contains embedded ANSI color codes for respecting
+              rustc's default color scheme. Cannot be used with human or short.
+
+           o  json-render-diagnostics: Instruct Cargo to not include rustc
+              diagnostics in in JSON messages printed, but instead Cargo itself
+              should render the JSON diagnostics coming from rustc. Cargo's own
+              JSON diagnostics and others coming from rustc are still emitted.
+              Cannot be used with human or short.
+
    Common Options
        +toolchain
            If Cargo has been installed with rustup, and the first argument to
@@ -263,6 +322,9 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
 
        -h, --help
            Prints help information.

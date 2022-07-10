@@ -31,8 +31,12 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         };
 
-        let mut new_body =
-            to_token_stream("let _test_guard = cargo_test_support::paths::init_root();");
+        let mut new_body = to_token_stream(
+            r#"let _test_guard = {
+                let tmp_dir = option_env!("CARGO_TARGET_TMPDIR");
+                cargo_test_support::paths::init_root(tmp_dir)
+            };"#,
+        );
 
         // If this is a `build_std` test (aka `tests/build-std/*.rs`) then they
         // only run on nightly and they only run when specifically instructed to

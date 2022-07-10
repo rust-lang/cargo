@@ -4,7 +4,7 @@ use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{is_nightly, rustc_host};
+use cargo_test_support::{is_nightly, rustc_host, symlink_supported, tools};
 use std::fs;
 use std::str;
 
@@ -223,9 +223,15 @@ fn doc_multiple_targets_same_name_lib() {
 
     p.cargo("doc --workspace")
         .with_status(101)
-        .with_stderr_contains("[..] library `foo_lib` is specified [..]")
-        .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
-        .with_stderr_contains("[..] `bar v0.1.0[..]` [..]")
+        .with_stderr(
+            "\
+error: document output filename collision
+The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
+the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Only one may be documented at once since they output to the same path.
+Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+",
+        )
         .run();
 }
 
@@ -265,13 +271,22 @@ fn doc_multiple_targets_same_name() {
         .build();
 
     p.cargo("doc --workspace")
-        .with_stderr_contains("[DOCUMENTING] foo v0.1.0 ([CWD]/foo)")
-        .with_stderr_contains("[DOCUMENTING] bar v0.1.0 ([CWD]/bar)")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_unordered(
+            "\
+warning: output filename collision.
+The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` \
+has the same output filename as the lib target `foo_lib` in package \
+`bar v0.1.0 ([ROOT]/foo/bar)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo_lib/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+[DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
+[DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
+[FINISHED] [..]
+",
+        )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    let doc_file = p.root().join("target/doc/foo_lib/index.html");
-    assert!(doc_file.is_file());
 }
 
 #[cargo_test]
@@ -290,29 +305,31 @@ fn doc_multiple_targets_same_name_bin() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
-                [[bin]]
-                name = "foo-cli"
             "#,
         )
-        .file("foo/src/foo-cli.rs", "")
+        .file("foo/src/bin/foo-cli.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
                 [package]
                 name = "bar"
                 version = "0.1.0"
-                [[bin]]
-                name = "foo-cli"
             "#,
         )
-        .file("bar/src/foo-cli.rs", "")
+        .file("bar/src/bin/foo-cli.rs", "")
         .build();
 
     p.cargo("doc --workspace")
         .with_status(101)
-        .with_stderr_contains("[..] binary `foo_cli` is specified [..]")
-        .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
-        .with_stderr_contains("[..] `bar v0.1.0[..]` [..]")
+        .with_stderr(
+            "\
+error: document output filename collision
+The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
+the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Only one may be documented at once since they output to the same path.
+Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+",
+        )
         .run();
 }
 
@@ -447,8 +464,17 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         .build();
 
     p.cargo("doc --bin foo")
-        .with_stderr(
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
             "\
+warning: output filename collision.
+The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` \
+has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -483,8 +509,17 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         .build();
 
     p.cargo("doc --bins")
-        .with_stderr(
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
             "\
+warning: output filename collision.
+The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` \
+has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -494,6 +529,112 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
     let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(!doc_html.contains("Library"));
     assert!(doc_html.contains("Binary"));
+}
+
+#[cargo_test]
+fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                //! Binary documentation
+                extern crate foo;
+                fn main() {
+                    foo::foo();
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                //! Library documentation
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "examples/ex1.rs",
+            r#"
+                //! Example1 documentation
+                pub fn x() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --example ex1")
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/ex1/index.html");
+    assert!(!doc_html.contains("Library"));
+    assert!(!doc_html.contains("Binary"));
+    assert!(doc_html.contains("Example1"));
+}
+
+#[cargo_test]
+fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                //! Binary documentation
+                extern crate foo;
+                fn main() {
+                    foo::foo();
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                //! Library documentation
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "examples/ex1.rs",
+            r#"
+                //! Example1 documentation
+                pub fn example1() { f(); }
+            "#,
+        )
+        .file(
+            "examples/ex2.rs",
+            r#"
+                //! Example2 documentation
+                pub fn example2() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --examples")
+        // The checking/documenting lines are sometimes swapped since they run
+        // concurrently.
+        .with_stderr_unordered(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+
+    let example_doc_html_1 = p.read_file("target/doc/ex1/index.html");
+    let example_doc_html_2 = p.read_file("target/doc/ex2/index.html");
+
+    assert!(!example_doc_html_1.contains("Library"));
+    assert!(!example_doc_html_1.contains("Binary"));
+
+    assert!(!example_doc_html_2.contains("Library"));
+    assert!(!example_doc_html_2.contains("Binary"));
+
+    assert!(example_doc_html_1.contains("Example1"));
+    assert!(example_doc_html_2.contains("Example2"));
 }
 
 #[cargo_test]
@@ -684,7 +825,7 @@ fn output_not_captured() {
             "a/src/lib.rs",
             "
             /// ```
-            /// ☃
+            /// `
             /// ```
             pub fn foo() {}
         ",
@@ -692,9 +833,7 @@ fn output_not_captured() {
         .build();
 
     p.cargo("doc")
-        .without_status()
-        .with_stderr_contains("[..]☃")
-        .with_stderr_contains(r"[..]unknown start of token: \u{2603}")
+        .with_stderr_contains("[..]unknown start of token: `")
         .run();
 }
 
@@ -863,8 +1002,42 @@ fn features() {
             r#"#[cfg(feature = "bar")] pub fn bar() {}"#,
         )
         .build();
-    p.cargo("doc --features foo").run();
+    p.cargo("doc --features foo")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 [..]
+[DOCUMENTING] bar v0.0.1 [..]
+[DOCUMENTING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
     assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
+    // Check that turning the feature off will remove the files.
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 [..]
+[DOCUMENTING] bar v0.0.1 [..]
+[DOCUMENTING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    assert!(!p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(!p.root().join("target/doc/bar/fn.bar.html").is_file());
+    // And switching back will rebuild and bring them back.
+    p.cargo("doc --features foo")
+        .with_stderr(
+            "\
+[DOCUMENTING] bar v0.0.1 [..]
+[DOCUMENTING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
     assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
@@ -1091,13 +1264,28 @@ fn doc_all_member_dependency_same_name() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("doc --workspace")
-        .with_stderr_contains("[..] Updating `[..]` index")
-        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+warning: output filename collision.
+The lib target `bar` in package `bar v0.1.0` has the same output filename as \
+the lib target `bar` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+Colliding filename is: [ROOT]/foo/target/doc/bar/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+[DOCUMENTING] bar v0.1.0
+[CHECKING] bar v0.1.0
+[DOCUMENTING] bar v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_help_message() {
     let p = project()
         .file(
@@ -1115,15 +1303,73 @@ fn doc_workspace_open_help_message() {
 
     // The order in which bar is compiled or documented is not deterministic
     p.cargo("doc --workspace --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [..]/foo/index.html")
+        .with_stderr_contains("[..] Opening [..]/bar/index.html")
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
+fn doc_extern_map_local() {
+    if !is_nightly() {
+        // -Zextern-html-root-url is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(".cargo/config.toml", "doc.extern-map.std = 'local'")
+        .build();
+
+    p.cargo("doc -v --no-deps -Zrustdoc-map --open")
+        .env("BROWSER", tools::echo())
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.1.0 [..]
+[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 0.1.0`
+[FINISHED] [..]
+     Opening [CWD]/target/doc/foo/index.html
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn open_no_doc_crate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            doc = false
+        "#,
+        )
+        .file("src/lib.rs", "#[cfg(feature)] pub fn f();")
+        .build();
+
+    p.cargo("doc --open")
+        .env("BROWSER", "do_not_run_me")
+        .with_status(101)
+        .with_stderr_contains("error: no crates with documentation")
+        .run();
+}
+
+#[cargo_test]
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
@@ -1147,14 +1393,31 @@ fn doc_workspace_open_different_library_and_package_names() {
         .build();
 
     p.cargo("doc --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
+        .with_stdout_contains("[CWD]/target/doc/foolib/index.html")
+        .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+                [doc]
+                browser = ["{}", "a"]
+            "#,
+            tools::echo().display().to_string().replace('\\', "\\\\")
+        ),
+    );
+
+    // check that the cargo config overrides the browser env var
+    p.cargo("doc --open")
+        .env("BROWSER", "do_not_run_me")
+        .with_stdout_contains("a [CWD]/target/doc/foolib/index.html")
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_binary() {
     let p = project()
         .file(
@@ -1179,14 +1442,13 @@ fn doc_workspace_open_binary() {
         .build();
 
     p.cargo("doc --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] Opening [CWD]/target/doc/foobin/index.html")
         .run();
 }
 
 #[cargo_test]
-#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_binary_and_library() {
     let p = project()
         .file(
@@ -1214,7 +1476,7 @@ fn doc_workspace_open_binary_and_library() {
         .build();
 
     p.cargo("doc --open")
-        .env("BROWSER", "echo")
+        .env("BROWSER", tools::echo())
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] Opening [CWD]/target/doc/foolib/index.html")
         .run();
@@ -1329,7 +1591,7 @@ fn doc_private_ws() {
         .file("a/src/lib.rs", "fn p() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "fn p2() {}")
-        .file("b/src/main.rs", "fn main() {}")
+        .file("b/src/bin/b-cli.rs", "fn main() {}")
         .build();
     p.cargo("doc --workspace --bins --lib --document-private-items -v")
         .with_stderr_contains(
@@ -1339,7 +1601,7 @@ fn doc_private_ws() {
             "[RUNNING] `rustdoc [..] b/src/lib.rs [..]--document-private-items[..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustdoc [..] b/src/main.rs [..]--document-private-items[..]",
+            "[RUNNING] `rustdoc [..] b/src/bin/b-cli.rs [..]--document-private-items[..]",
         )
         .run();
 }
@@ -1409,15 +1671,99 @@ fn doc_message_format() {
                     "children": "{...}",
                     "code": "{...}",
                     "level": "error",
-                    "message": "[..]",
-                    "rendered": "[..]",
+                    "message": "{...}",
+                    "rendered": "{...}",
                     "spans": "{...}"
                 },
                 "package_id": "foo [..]",
+                "manifest_path": "[..]",
                 "reason": "compiler-message",
                 "target": "{...}"
             }
             "#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_json_artifacts() {
+    // Checks the output of json artifact messages.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("src/bin/somebin.rs", "fn main() {}")
+        .build();
+
+    p.cargo("doc --message-format=json")
+        .with_json_contains_unordered(
+            r#"
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/debug/deps/libfoo-[..].rmeta"],
+    "executable": null,
+    "fresh": false
+}
+
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/foo/index.html"],
+    "executable": null,
+    "fresh": false
+}
+
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["bin"],
+        "crate_types": ["bin"],
+        "name": "somebin",
+        "src_path": "[ROOT]/foo/src/bin/somebin.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": false,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/somebin/index.html"],
+    "executable": null,
+    "fresh": false
+}
+
+{"reason":"build-finished","success":true}
+"#,
         )
         .run();
 }
@@ -1465,6 +1811,70 @@ fn doc_example() {
         .build_dir()
         .join("doc")
         .join("ex1")
+        .join("fn.x.html")
+        .exists());
+}
+
+#[cargo_test]
+fn doc_example_with_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [[example]]
+            crate-type = ["lib"]
+            name = "ex"
+            doc = true
+
+            [dev-dependencies]
+            a = {path = "a"}
+            b = {path = "b"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "examples/ex.rs",
+            r#"
+            use a::fun;
+
+            /// Example
+            pub fn x() { fun(); }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+
+            [dependencies]
+            b = {path = "../b"}
+            "#,
+        )
+        .file("a/src/fun.rs", "pub fn fun() {}")
+        .file("a/src/lib.rs", "pub mod fun;")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc --examples").run();
+    assert!(p
+        .build_dir()
+        .join("doc")
+        .join("ex")
         .join("fn.x.html")
         .exists());
 }
@@ -1799,7 +2209,6 @@ LLVM version: 9.0
     );
 }
 
-#[cfg(target_os = "linux")]
 #[cargo_test]
 fn doc_fingerprint_respects_target_paths() {
     // Random rustc verbose version
@@ -1830,9 +2239,7 @@ LLVM version: 9.0
         .file("src/lib.rs", "//! These are the docs!")
         .build();
 
-    dummy_project
-        .cargo("doc --target x86_64-unknown-linux-gnu")
-        .run();
+    dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
     let fingerprint: RustDocFingerprint =
         serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
@@ -1862,7 +2269,8 @@ LLVM version: 9.0
     fs::write(
         dummy_project
             .build_dir()
-            .join("x86_64-unknown-linux-gnu/doc/bogus_file"),
+            .join(rustc_host())
+            .join("doc/bogus_file"),
         String::from("This is a bogus file and should be removed!"),
     )
     .expect("Error writing test bogus file");
@@ -1871,13 +2279,12 @@ LLVM version: 9.0
     // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
     // and generating another one with the actual version.
     // It should also remove the bogus file we created above.
-    dummy_project
-        .cargo("doc --target x86_64-unknown-linux-gnu")
-        .run();
+    dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
     assert!(!dummy_project
         .build_dir()
-        .join("x86_64-unknown-linux-gnu/doc/bogus_file")
+        .join(rustc_host())
+        .join("doc/bogus_file")
         .exists());
 
     let fingerprint: RustDocFingerprint =
@@ -1890,4 +2297,509 @@ LLVM version: 9.0
         fingerprint.rustc_vv,
         (String::from_utf8_lossy(&output.stdout).as_ref())
     );
+}
+
+#[cargo_test]
+fn doc_fingerprint_unusual_behavior() {
+    // Checks for some unusual circumstances with clearing the doc directory.
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.build_dir().mkdir_p();
+    let real_doc = p.root().join("doc");
+    real_doc.mkdir_p();
+    let build_doc = p.build_dir().join("doc");
+    p.symlink(&real_doc, &build_doc);
+    fs::write(real_doc.join("somefile"), "test").unwrap();
+    fs::write(real_doc.join(".hidden"), "test").unwrap();
+    p.cargo("doc").run();
+    // Make sure for the first run, it does not delete any files and does not
+    // break the symlink.
+    assert!(build_doc.join("somefile").exists());
+    assert!(real_doc.join("somefile").exists());
+    assert!(real_doc.join(".hidden").exists());
+    assert!(real_doc.join("foo/index.html").exists());
+    // Pretend that the last build was generated by an older version.
+    p.change_file(
+        "target/.rustdoc_fingerprint.json",
+        "{\"rustc_vv\": \"I am old\"}",
+    );
+    // Change file to trigger a new build.
+    p.change_file("src/lib.rs", "// changed");
+    p.cargo("doc")
+        .with_stderr(
+            "[DOCUMENTING] foo [..]\n\
+             [FINISHED] [..]",
+        )
+        .run();
+    // This will delete somefile, but not .hidden.
+    assert!(!real_doc.join("somefile").exists());
+    assert!(real_doc.join(".hidden").exists());
+    assert!(real_doc.join("foo/index.html").exists());
+    // And also check the -Z flag behavior.
+    p.change_file(
+        "target/.rustdoc_fingerprint.json",
+        "{\"rustc_vv\": \"I am old\"}",
+    );
+    // Change file to trigger a new build.
+    p.change_file("src/lib.rs", "// changed2");
+    fs::write(real_doc.join("somefile"), "test").unwrap();
+    p.cargo("doc -Z skip-rustdoc-fingerprint")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "[DOCUMENTING] foo [..]\n\
+             [FINISHED] [..]",
+        )
+        .run();
+    // Should not have deleted anything.
+    assert!(build_doc.join("somefile").exists());
+    assert!(real_doc.join("somefile").exists());
+}
+
+#[cargo_test]
+fn scrape_examples_basic() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+    assert!(doc_html.contains("More examples"));
+
+    // Ensure that the reverse-dependency has its sources generated
+    assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
+}
+
+#[cargo_test]
+fn scrape_examples_avoid_build_script_cycle() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        // package with build dependency
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                links = "foo"
+
+                [workspace]
+                members = ["bar"]
+
+                [build-dependencies]
+                bar = {path = "bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main(){}")
+        // dependency
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                links = "bar"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main(){}")
+        .build();
+
+    p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn scrape_examples_complex_reverse_dependencies() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dev-dependencies]
+                a = {path = "a", features = ["feature"]}
+                b = {path = "b"}
+
+                [workspace]
+                members = ["b"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "fn main() { a::f(); }")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                b = {path = "../b"}
+
+                [features]
+                feature = []
+            "#,
+        )
+        .file("a/src/lib.rs", "#[cfg(feature)] pub fn f();")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn scrape_examples_crate_with_dash() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "da-sh"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("examples/a.rs", "fn main() { da_sh::foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+}
+
+#[cargo_test]
+fn scrape_examples_missing_flag() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "//! These are the docs!")
+        .build();
+    p.cargo("doc -Zrustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
+        .run();
+}
+
+#[cargo_test]
+fn scrape_examples_configure_profile() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [profile.dev]
+                panic = "abort"
+            "#,
+        )
+        .file("examples/ex.rs", "fn main() { foo::foo(); }")
+        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+    assert!(doc_html.contains("More examples"));
+}
+
+#[cargo_test]
+fn scrape_examples_issue_10545() {
+    if !is_nightly() {
+        // -Z rustdoc-scrape-examples is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"                
+                [workspace]
+                resolver = "2"
+                members = ["a", "b"]              
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+            edition = "2021"
+
+            [features]
+            default = ["foo"]
+            foo = []
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn lib_before_bin() {
+    // Checks that the library is documented before the binary.
+    // Previously they were built concurrently, which can cause issues
+    // if the bin has intra-doc links to the lib.
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                /// Hi
+                pub fn abc() {}
+            "#,
+        )
+        .file(
+            "src/bin/somebin.rs",
+            r#"
+                //! See [`foo::abc`]
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    // Run check first. This just helps ensure that the test clearly shows the
+    // order of the rustdoc commands.
+    p.cargo("check").run();
+
+    // The order of output here should be deterministic.
+    p.cargo("doc -v")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo [..]
+[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]
+[RUNNING] `rustdoc --crate-type bin --crate-name somebin src/bin/somebin.rs [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // And the link should exist.
+    let bin_html = p.read_file("target/doc/somebin/index.html");
+    assert!(bin_html.contains("../foo/fn.abc.html"));
+}
+
+#[cargo_test]
+fn doc_lib_false() {
+    // doc = false for a library
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+
+                [dependencies]
+                bar = {path = "bar"}
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file("src/bin/some-bin.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 [..]
+[CHECKING] foo v0.1.0 [..]
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert!(!p.build_dir().join("doc/foo").exists());
+    assert!(!p.build_dir().join("doc/bar").exists());
+    assert!(p.build_dir().join("doc/some_bin").exists());
+}
+
+#[cargo_test]
+fn doc_lib_false_dep() {
+    // doc = false for a dependency
+    // Ensures that the rmeta gets produced
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [lib]
+                doc = false
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 [..]
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    assert!(p.build_dir().join("doc/foo").exists());
+    assert!(!p.build_dir().join("doc/bar").exists());
+}
+
+#[cargo_test]
+fn link_to_private_item() {
+    let main = r#"
+    //! [bar]
+    #[allow(dead_code)]
+    fn bar() {}
+    "#;
+    let p = project().file("src/lib.rs", main).build();
+    p.cargo("doc")
+        .with_stderr_contains("[..] documentation for `foo` links to private item `bar`")
+        .run();
+    // Check that binaries don't emit a private_intra_doc_links warning.
+    fs::rename(p.root().join("src/lib.rs"), p.root().join("src/main.rs")).unwrap();
+    p.cargo("doc")
+        .with_stderr(
+            "[DOCUMENTING] foo [..]\n\
+             [FINISHED] [..]",
+        )
+        .run();
 }

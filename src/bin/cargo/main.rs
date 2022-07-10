@@ -1,16 +1,15 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![allow(clippy::redundant_closure)] // there's a false positive
-#![warn(clippy::needless_borrow)]
-#![warn(clippy::redundant_clone)]
+#![allow(clippy::all)]
 
-use std::collections::{BTreeMap, BTreeSet};
+use cargo::core::shell::Shell;
+use cargo::util::toml::StringOrVec;
+use cargo::util::CliError;
+use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
+use cargo_util::{ProcessBuilder, ProcessError};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-use cargo::core::shell::Shell;
-use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
-use cargo::util::{CliError, ProcessError};
 
 mod cli;
 mod commands;
@@ -22,7 +21,6 @@ fn main() {
     pretty_env_logger::init_custom_env("CARGO_LOG");
     #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init_from_env("CARGO_LOG");
-    cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {
         Ok(cfg) => cfg,
@@ -32,7 +30,7 @@ fn main() {
         }
     };
 
-    let result = match cargo::ops::fix_maybe_exec_rustc() {
+    let result = match cargo::ops::fix_maybe_exec_rustc(&config) {
         Ok(true) => Ok(()),
         Ok(false) => {
             let _token = cargo::util::job::setup();
@@ -49,9 +47,10 @@ fn main() {
 
 /// Table for defining the aliases which come builtin in `Cargo`.
 /// The contents are structured as: `(alias, aliased_command, description)`.
-const BUILTIN_ALIASES: [(&str, &str, &str); 4] = [
+const BUILTIN_ALIASES: [(&str, &str, &str); 5] = [
     ("b", "build", "alias: build"),
     ("c", "check", "alias: check"),
+    ("d", "doc", "alias: doc"),
     ("r", "run", "alias: run"),
     ("t", "test", "alias: test"),
 ];
@@ -83,10 +82,10 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
 }
 
 /// List all runnable commands
-fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
+fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
-    let mut commands = BTreeSet::new();
+    let mut commands = BTreeMap::new();
     for dir in search_directories(config) {
         let entries = match fs::read_dir(dir) {
             Ok(entries) => entries,
@@ -103,64 +102,79 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
-                commands.insert(CommandInfo::External {
-                    name: filename[prefix.len()..end].to_string(),
-                    path: path.clone(),
-                });
+                commands.insert(
+                    filename[prefix.len()..end].to_string(),
+                    CommandInfo::External { path: path.clone() },
+                );
             }
         }
     }
 
     for cmd in commands::builtin() {
-        commands.insert(CommandInfo::BuiltIn {
-            name: cmd.get_name().to_string(),
-            about: cmd.p.meta.about.map(|s| s.to_string()),
-        });
+        commands.insert(
+            cmd.get_name().to_string(),
+            CommandInfo::BuiltIn {
+                about: cmd.get_about().map(|s| s.to_string()),
+            },
+        );
     }
 
     // Add the builtin_aliases and them descriptions to the
-    // `commands` `BTreeSet`.
+    // `commands` `BTreeMap`.
     for command in &BUILTIN_ALIASES {
-        commands.insert(CommandInfo::BuiltIn {
-            name: command.0.to_string(),
-            about: Some(command.2.to_string()),
-        });
+        commands.insert(
+            command.0.to_string(),
+            CommandInfo::BuiltIn {
+                about: Some(command.2.to_string()),
+            },
+        );
     }
+
+    // Add the user-defined aliases
+    if let Ok(aliases) = config.get::<BTreeMap<String, StringOrVec>>("alias") {
+        for (name, target) in aliases.iter() {
+            commands.insert(
+                name.to_string(),
+                CommandInfo::Alias {
+                    target: target.clone(),
+                },
+            );
+        }
+    }
+
+    // `help` is special, so it needs to be inserted separately.
+    commands.insert(
+        "help".to_string(),
+        CommandInfo::BuiltIn {
+            about: Some("Displays help for a cargo subcommand".to_string()),
+        },
+    );
 
     commands
 }
 
-/// List all runnable aliases
-fn list_aliases(config: &Config) -> Vec<String> {
-    match config.get::<BTreeMap<String, String>>("alias") {
-        Ok(aliases) => aliases.keys().map(|a| a.to_string()).collect(),
-        Err(_) => Vec::new(),
-    }
+fn find_external_subcommand(config: &Config, cmd: &str) -> Option<PathBuf> {
+    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
+    search_directories(config)
+        .iter()
+        .map(|dir| dir.join(&command_exe))
+        .find(|file| is_executable(file))
 }
 
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
-    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
-    let path = search_directories(config)
-        .iter()
-        .map(|dir| dir.join(&command_exe))
-        .find(|file| is_executable(file));
+    let path = find_external_subcommand(config, cmd);
     let command = match path {
         Some(command) => command,
         None => {
-            let commands: Vec<String> = list_commands(config)
-                .iter()
-                .map(|c| c.name().to_string())
-                .collect();
-            let aliases = list_aliases(config);
-            let suggestions = commands.iter().chain(aliases.iter());
-            let did_you_mean = closest_msg(cmd, suggestions, |c| c);
+            let suggestions = list_commands(config);
+            let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
             let err = anyhow::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
             return Err(CliError::new(err, 101));
         }
     };
 
     let cargo_exe = config.cargo_exe()?;
-    let err = match util::process(&command)
+    let err = match ProcessBuilder::new(&command)
         .env(cargo::CARGO_ENV, cargo_exe)
         .args(args)
         .exec_replace()

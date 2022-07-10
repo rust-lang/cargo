@@ -10,31 +10,36 @@
 //! This module impl that cache in all the gory details
 
 use crate::core::resolver::context::Context;
-use crate::core::resolver::errors::describe_path;
+use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
-use crate::core::resolver::{ActivateError, ActivateResult, ResolveOpts};
+use crate::core::resolver::{
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
+    VersionPreferences,
+};
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+
+use anyhow::Context as _;
 use log::debug;
-use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
+use std::task::Poll;
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
-    try_to_use: &'a HashSet<PackageId>,
+    version_prefs: &'a VersionPreferences,
     /// If set the list of dependency candidates will be sorted by minimal
     /// versions first. That allows `cargo update -Z minimal-versions` which will
     /// specify minimum dependency versions to be used.
     minimal_versions: bool,
     /// a cache of `Candidate`s that fulfil a `Dependency`
-    registry_cache: HashMap<Dependency, Rc<Vec<Summary>>>,
+    registry_cache: HashMap<Dependency, Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
         (Option<PackageId>, Summary, ResolveOpts),
-        Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
+        (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
@@ -44,18 +49,35 @@ impl<'a> RegistryQueryer<'a> {
     pub fn new(
         registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
-        try_to_use: &'a HashSet<PackageId>,
+        version_prefs: &'a VersionPreferences,
         minimal_versions: bool,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
-            try_to_use,
+            version_prefs,
             minimal_versions,
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
         }
+    }
+
+    pub fn reset_pending(&mut self) -> bool {
+        let mut all_ready = true;
+        self.registry_cache.retain(|_, r| {
+            if !r.is_ready() {
+                all_ready = false;
+            }
+            r.is_ready()
+        });
+        self.summary_cache.retain(|_, (_, r)| {
+            if !*r {
+                all_ready = false;
+            }
+            *r
+        });
+        all_ready
     }
 
     pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
@@ -72,19 +94,23 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
+    pub fn query(&mut self, dep: &Dependency) -> Poll<CargoResult<Rc<Vec<Summary>>>> {
         if let Some(out) = self.registry_cache.get(dep).cloned() {
-            return Ok(out);
+            return out.map(Result::Ok);
         }
 
         let mut ret = Vec::new();
-        self.registry.query(
+        let ready = self.registry.query(
             dep,
             &mut |s| {
                 ret.push(s);
             },
             false,
         )?;
+        if ready.is_pending() {
+            self.registry_cache.insert(dep.clone(), Poll::Pending);
+            return Poll::Pending;
+        }
         for summary in ret.iter_mut() {
             let mut potential_matches = self
                 .replacements
@@ -101,7 +127,13 @@ impl<'a> RegistryQueryer<'a> {
                 dep.version_req()
             );
 
-            let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
+            let mut summaries = match self.registry.query_vec(dep, false)? {
+                Poll::Ready(s) => s.into_iter(),
+                Poll::Pending => {
+                    self.registry_cache.insert(dep.clone(), Poll::Pending);
+                    return Poll::Pending;
+                }
+            };
             let s = summaries.next().ok_or_else(|| {
                 anyhow::format_err!(
                     "no matching package for override `{}` found\n\
@@ -118,13 +150,13 @@ impl<'a> RegistryQueryer<'a> {
                     .iter()
                     .map(|s| format!("  * {}", s.package_id()))
                     .collect::<Vec<_>>();
-                anyhow::bail!(
+                return Poll::Ready(Err(anyhow::anyhow!(
                     "the replacement specification `{}` matched \
                      multiple packages:\n  * {}\n{}",
                     spec,
                     s.package_id(),
                     bullets.join("\n")
-                );
+                )));
             }
 
             // The dependency should be hard-coded to have the same name and an
@@ -143,13 +175,13 @@ impl<'a> RegistryQueryer<'a> {
 
             // Make sure no duplicates
             if let Some(&(ref spec, _)) = potential_matches.next() {
-                anyhow::bail!(
+                return Poll::Ready(Err(anyhow::anyhow!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
                     matched_spec,
                     spec,
                     summary.package_id()
-                );
+                )));
             }
 
             for dep in summary.dependencies() {
@@ -160,34 +192,22 @@ impl<'a> RegistryQueryer<'a> {
             }
         }
 
-        // When we attempt versions for a package we'll want to do so in a
-        // sorted fashion to pick the "best candidates" first. Currently we try
-        // prioritized summaries (those in `try_to_use`) and failing that we
-        // list everything from the maximum version to the lowest version.
-        ret.sort_unstable_by(|a, b| {
-            let a_in_previous = self.try_to_use.contains(&a.package_id());
-            let b_in_previous = self.try_to_use.contains(&b.package_id());
-            let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
-            match previous_cmp {
-                Ordering::Equal => {
-                    let cmp = a.version().cmp(b.version());
-                    if self.minimal_versions {
-                        // Lower version ordered first.
-                        cmp
-                    } else {
-                        // Higher version ordered first.
-                        cmp.reverse()
-                    }
-                }
-                _ => previous_cmp,
-            }
-        });
+        // When we attempt versions for a package we'll want to do so in a sorted fashion to pick
+        // the "best candidates" first. VersionPreferences implements this notion.
+        self.version_prefs.sort_summaries(
+            &mut ret,
+            if self.minimal_versions {
+                VersionOrdering::MinimumVersionsFirst
+            } else {
+                VersionOrdering::MaximumVersionsFirst
+            },
+        );
 
-        let out = Rc::new(ret);
+        let out = Poll::Ready(Rc::new(ret));
 
         self.registry_cache.insert(dep.clone(), out.clone());
 
-        Ok(out)
+        out.map(Result::Ok)
     }
 
     /// Find out what dependencies will be added by activating `candidate`,
@@ -206,9 +226,8 @@ impl<'a> RegistryQueryer<'a> {
         if let Some(out) = self
             .summary_cache
             .get(&(parent, candidate.clone(), opts.clone()))
-            .cloned()
         {
-            return Ok(out);
+            return Ok(out.0.clone());
         }
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
@@ -217,17 +236,24 @@ impl<'a> RegistryQueryer<'a> {
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
+        let mut all_ready = true;
         let mut deps = deps
             .into_iter()
-            .map(|(dep, features)| {
-                let candidates = self.query(&dep).chain_err(|| {
-                    anyhow::format_err!(
+            .filter_map(|(dep, features)| match self.query(&dep) {
+                Poll::Ready(Ok(candidates)) => Some(Ok((dep, candidates, features))),
+                Poll::Pending => {
+                    all_ready = false;
+                    // we can ignore Pending deps, resolve will be repeatedly called
+                    // until there are none to ignore
+                    None
+                }
+                Poll::Ready(Err(e)) => Some(Err(e).with_context(|| {
+                    format!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),
-                        describe_path(&cx.parents.path_to_bottom(&candidate.package_id())),
+                        describe_path_in_context(cx, &candidate.package_id()),
                     )
-                })?;
-                Ok((dep, candidates, features))
+                })),
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 
@@ -241,8 +267,10 @@ impl<'a> RegistryQueryer<'a> {
 
         // If we succeed we add the result to the cache so we can use it again next time.
         // We don't cache the failure cases as they don't impl Clone.
-        self.summary_cache
-            .insert((parent, candidate.clone(), opts.clone()), out.clone());
+        self.summary_cache.insert(
+            (parent, candidate.clone(), opts.clone()),
+            (out.clone(), all_ready),
+        );
 
         Ok(out)
     }
@@ -281,15 +309,6 @@ pub fn resolve_features<'b>(
             .unwrap_or(&default_dep)
             .clone();
         base.extend(dep.features().iter());
-        for feature in base.iter() {
-            if feature.contains('/') {
-                return Err(anyhow::format_err!(
-                    "feature names may not contain slashes: `{}`",
-                    feature
-                )
-                .into());
-            }
-        }
         ret.push((dep.clone(), Rc::new(base)));
     }
 
@@ -297,10 +316,12 @@ pub fn resolve_features<'b>(
     // dep_name/feat_name` where `dep_name` does not exist. All other
     // validation is done either in `build_requirements` or
     // `build_feature_map`.
-    for dep_name in reqs.deps.keys() {
-        if !valid_dep_names.contains(dep_name) {
-            let e = RequirementError::MissingDependency(*dep_name);
-            return Err(e.into_activate_error(parent, s));
+    if parent.is_none() {
+        for dep_name in reqs.deps.keys() {
+            if !valid_dep_names.contains(dep_name) {
+                let e = RequirementError::MissingDependency(*dep_name);
+                return Err(e.into_activate_error(parent, s));
+            }
         }
     }
 
@@ -317,30 +338,46 @@ fn build_requirements<'a, 'b: 'a>(
 ) -> ActivateResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
-    if opts.features.all_features {
-        for key in s.features().keys() {
-            if let Err(e) = reqs.require_feature(*key) {
+    let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
+        if uses_default_features && s.features().contains_key("default") {
+            if let Err(e) = reqs.require_feature(InternedString::new("default")) {
                 return Err(e.into_activate_error(parent, s));
             }
         }
-    } else {
-        for &f in opts.features.features.iter() {
-            let fv = FeatureValue::new(f);
-            if fv.has_dep_prefix() {
-                return Err(ActivateError::Fatal(anyhow::format_err!(
-                    "feature value `{}` is not allowed to use explicit `dep:` syntax",
-                    fv
-                )));
-            }
-            if let Err(e) = reqs.require_value(&fv) {
-                return Err(e.into_activate_error(parent, s));
-            }
-        }
-    }
+        Ok(())
+    };
 
-    if opts.features.uses_default_features && s.features().contains_key("default") {
-        if let Err(e) = reqs.require_feature(InternedString::new("default")) {
-            return Err(e.into_activate_error(parent, s));
+    match &opts.features {
+        RequestedFeatures::CliFeatures(CliFeatures {
+            features,
+            all_features,
+            uses_default_features,
+        }) => {
+            if *all_features {
+                for key in s.features().keys() {
+                    if let Err(e) = reqs.require_feature(*key) {
+                        return Err(e.into_activate_error(parent, s));
+                    }
+                }
+            }
+
+            for fv in features.iter() {
+                if let Err(e) = reqs.require_value(fv) {
+                    return Err(e.into_activate_error(parent, s));
+                }
+            }
+            handle_default(*uses_default_features, &mut reqs)?;
+        }
+        RequestedFeatures::DepFeatures {
+            features,
+            uses_default_features,
+        } => {
+            for feature in features.iter() {
+                if let Err(e) = reqs.require_feature(*feature) {
+                    return Err(e.into_activate_error(parent, s));
+                }
+            }
+            handle_default(*uses_default_features, &mut reqs)?;
         }
     }
 
@@ -394,12 +431,12 @@ impl Requirements<'_> {
         &mut self,
         package: InternedString,
         feat: InternedString,
-        dep_prefix: bool,
+        weak: bool,
     ) -> Result<(), RequirementError> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if !dep_prefix
+        if !weak
             && self
                 .summary
                 .dependencies()
@@ -445,12 +482,11 @@ impl Requirements<'_> {
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix,
                 // Weak features are always activated in the dependency
                 // resolver. They will be narrowed inside the new feature
                 // resolver.
-                weak: _,
-            } => self.require_dep_feature(*dep_name, *dep_feature, *dep_prefix)?,
+                weak,
+            } => self.require_dep_feature(*dep_name, *dep_feature, *weak)?,
         };
         Ok(())
     }

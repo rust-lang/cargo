@@ -1,7 +1,7 @@
 //! Tests for the `cargo run` command.
 
-use cargo::util::paths::dylib_path_envvar;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
+use cargo_util::paths::dylib_path_envvar;
 
 #[cargo_test]
 fn simple() {
@@ -22,18 +22,21 @@ fn simple() {
 }
 
 #[cargo_test]
-fn simple_quiet() {
+fn quiet_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q").with_stdout("hello").run();
+    p.cargo("run -q").with_stderr("").with_stdout("hello").run();
 
-    p.cargo("run --quiet").with_stdout("hello").run();
+    p.cargo("run --quiet")
+        .with_stderr("")
+        .with_stdout("hello")
+        .run();
 }
 
 #[cargo_test]
-fn simple_quiet_and_verbose() {
+fn quiet_arg_and_verbose_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
@@ -45,7 +48,7 @@ fn simple_quiet_and_verbose() {
 }
 
 #[cargo_test]
-fn quiet_and_verbose_config() {
+fn quiet_arg_and_verbose_config() {
     let p = project()
         .file(
             ".cargo/config",
@@ -57,7 +60,93 @@ fn quiet_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    p.cargo("run -q").run();
+    p.cargo("run -q").with_stderr("").with_stdout("hello").run();
+}
+
+#[cargo_test]
+fn verbose_arg_and_quiet_config() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run -v")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn quiet_config_alone() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run").with_stderr("").with_stdout("hello").run();
+}
+
+#[cargo_test]
+fn verbose_config_alone() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                verbose = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn quiet_config_and_verbose_config() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [term]
+                verbose = true
+                quiet = true
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr("[ERROR] cannot set both `term.verbose` and `term.quiet`")
+        .run();
 }
 
 #[cargo_test]
@@ -118,7 +207,7 @@ fn exit_code() {
     );
     if !cfg!(unix) {
         output.push_str(
-            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
+            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit [..]: 2)",
         );
     }
     p.cargo("run").with_status(2).with_stderr(output).run();
@@ -140,7 +229,7 @@ fn exit_code_verbose() {
     );
     if !cfg!(unix) {
         output.push_str(
-            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
+            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit [..]: 2)",
         );
     }
 
@@ -724,6 +813,196 @@ fn run_dylib_dep() {
 }
 
 #[cargo_test]
+fn run_with_bin_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("bar/src/main.rs", r#"fn main() { println!("bar"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar` which is missing a lib target
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn run_with_bin_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar1]
+                path = "bar1"
+                [dependencies.bar2]
+                path = "bar2"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "bar1/Cargo.toml",
+            r#"
+                [package]
+                name = "bar1"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar1"
+            "#,
+        )
+        .file("bar1/src/main.rs", r#"fn main() { println!("bar1"); }"#)
+        .file(
+            "bar2/Cargo.toml",
+            r#"
+                [package]
+                name = "bar2"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar2"
+            "#,
+        )
+        .file("bar2/src/main.rs", r#"fn main() { println!("bar2"); }"#)
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar1` which is missing a lib target
+[WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar2` which is missing a lib target
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn run_with_bin_dep_in_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo1", "foo2"]
+            "#,
+        )
+        .file(
+            "foo1/Cargo.toml",
+            r#"
+                [package]
+                name = "foo1"
+                version = "0.0.1"
+
+                [dependencies.bar1]
+                path = "bar1"
+            "#,
+        )
+        .file("foo1/src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "foo1/bar1/Cargo.toml",
+            r#"
+                [package]
+                name = "bar1"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar1"
+            "#,
+        )
+        .file(
+            "foo1/bar1/src/main.rs",
+            r#"fn main() { println!("bar1"); }"#,
+        )
+        .file(
+            "foo2/Cargo.toml",
+            r#"
+                [package]
+                name = "foo2"
+                version = "0.0.1"
+
+                [dependencies.bar2]
+                path = "bar2"
+            "#,
+        )
+        .file("foo2/src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(
+            "foo2/bar2/Cargo.toml",
+            r#"
+                [package]
+                name = "bar2"
+                version = "0.0.1"
+                authors = []
+
+                [[bin]]
+                name = "bar2"
+            "#,
+        )
+        .file(
+            "foo2/bar2/src/main.rs",
+            r#"fn main() { println!("bar2"); }"#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `cargo run` could not determine which binary to run[..]
+available binaries: bar1, bar2, foo1, foo2",
+        )
+        .run();
+
+    p.cargo("run --bin foo1")
+        .with_stderr(
+            "\
+[WARNING] foo1 v0.0.1 ([CWD]/foo1) ignoring invalid dependency `bar1` which is missing a lib target
+[WARNING] foo2 v0.0.1 ([CWD]/foo2) ignoring invalid dependency `bar2` which is missing a lib target
+[COMPILING] foo1 v0.0.1 ([CWD]/foo1)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo1[EXE]`",
+        )
+        .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
 fn release_works() {
     let p = project()
         .file(
@@ -735,6 +1014,29 @@ fn release_works() {
         .build();
 
     p.cargo("run --release")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] `target/release/foo[EXE]`
+",
+        )
+        .run();
+    assert!(p.release_bin("foo").is_file());
+}
+
+#[cargo_test]
+fn release_short_works() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() { if cfg!(debug_assertions) { panic!() } }
+            "#,
+        )
+        .build();
+
+    p.cargo("run -r")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -990,7 +1292,7 @@ fn run_multiple_packages() {
 
     cargo().arg("-p").arg("d1").arg("-p").arg("d2")
                     .with_status(1)
-                    .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times").run();
+                    .with_stderr_contains("error: The argument '--package [<SPEC>...]' was provided more than once, but cannot be used multiple times").run();
 
     cargo()
         .arg("-p")

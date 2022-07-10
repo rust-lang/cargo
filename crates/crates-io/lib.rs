@@ -1,5 +1,4 @@
-#![allow(unknown_lints)]
-#![allow(clippy::identity_op)] // used for vertical alignment
+#![allow(clippy::all)]
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -56,8 +55,6 @@ pub struct NewCrate {
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub v: Option<u32>,
 }
 
 #[derive(Serialize)]
@@ -155,13 +152,13 @@ impl fmt::Display for ResponseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ResponseError::Curl(e) => write!(f, "{}", e),
-            ResponseError::Api { code, errors } => write!(
-                f,
-                "api errors (status {} {}): {}",
-                code,
-                reason(*code),
-                errors.join(", ")
-            ),
+            ResponseError::Api { code, errors } => {
+                f.write_str("the remote server responded with an error")?;
+                if *code != 200 {
+                    write!(f, " (status {} {})", code, reason(*code))?;
+                };
+                write!(f, ": {}", errors.join(", "))
+            }
             ResponseError::Code {
                 code,
                 headers,

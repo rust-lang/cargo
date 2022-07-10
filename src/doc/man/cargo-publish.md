@@ -63,6 +63,8 @@ which defaults to `crates-io`.
 
 {{/options}}
 
+{{> section-options-package }}
+
 ### Compilation Options
 
 {{#options}}
@@ -89,6 +91,7 @@ which defaults to `crates-io`.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 ### Display Options

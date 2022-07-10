@@ -1,100 +1,8 @@
 //! Tests for namespaced features.
 
+use super::features2::switch_to_resolver_2;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{project, publish};
-
-#[cargo_test]
-fn gated() {
-    // Need namespaced-features to use `dep:` syntax.
-    Package::new("bar", "1.0.0").publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = { version = "1.0", optional = true }
-
-                [features]
-                foo = ["dep:bar"]
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
-
-Caused by:
-  namespaced features with the `dep:` prefix are only allowed on the nightly channel \
-  and requires the `-Z namespaced-features` flag on the command-line
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn dependency_gate_ignored() {
-    // Dependencies with `dep:` features are ignored in the registry if not on nightly.
-    Package::new("baz", "1.0.0").publish();
-    Package::new("bar", "1.0.0")
-        .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat", &["dep:baz"])
-        .publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = "1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no matching package named `bar` found
-location searched: registry `https://github.com/rust-lang/crates.io-index`
-required by package `foo v0.1.0 ([..]/foo)`
-",
-        )
-        .run();
-
-    // Publish a version without namespaced features, it should ignore 1.0.0
-    // an use this instead.
-    Package::new("bar", "1.0.1")
-        .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat", &["baz"])
-        .publish();
-    p.cargo("check")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar [..]
-[CHECKING] bar v1.0.1
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-}
 
 #[cargo_test]
 fn dependency_with_crate_syntax() {
@@ -119,8 +27,7 @@ fn dependency_with_crate_syntax() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -155,8 +62,7 @@ fn namespaced_invalid_feature() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -187,8 +93,7 @@ fn namespaced_invalid_dependency() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -222,8 +127,8 @@ fn namespaced_non_optional_dependency() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
+
         .with_status(101)
         .with_stderr(
             "\
@@ -260,8 +165,7 @@ fn namespaced_implicit_feature() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -270,8 +174,7 @@ fn namespaced_implicit_feature() {
 ",
         )
         .run();
-    p.cargo("check -Z namespaced-features --features baz")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features baz")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -306,8 +209,7 @@ fn namespaced_shadowed_dep() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -343,9 +245,7 @@ fn namespaced_shadowed_non_optional() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -369,7 +269,7 @@ fn namespaced_implicit_non_optional() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z namespaced-features").masquerade_as_nightly_cargo().with_status(101).with_stderr(
+    p.cargo("build").with_status(101).with_stderr(
         "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -410,8 +310,7 @@ fn namespaced_same_name() {
         )
         .build();
 
-    p.cargo("run -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -423,8 +322,7 @@ fn namespaced_same_name() {
         .with_stdout("")
         .run();
 
-    p.cargo("run -Z namespaced-features --features baz")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run --features baz")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -472,8 +370,7 @@ fn no_implicit_feature() {
         )
         .build();
 
-    p.cargo("run -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -485,8 +382,7 @@ fn no_implicit_feature() {
         .with_stdout("")
         .run();
 
-    p.cargo("run -Z namespaced-features --features regex")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run --features regex")
         .with_stderr_unordered(
             "\
 [DOWNLOADING] crates ...
@@ -502,8 +398,7 @@ fn no_implicit_feature() {
         .with_stdout("regex")
         .run();
 
-    p.cargo("run -Z namespaced-features --features lazy_static")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run --features lazy_static")
         .with_stderr(
             "\
 [ERROR] Package `foo v0.1.0 [..]` does not have feature `lazy_static`. \
@@ -512,61 +407,6 @@ syntax in the features table, so it does not have an implicit feature with that 
 ",
         )
         .with_status(101)
-        .run();
-}
-
-#[cargo_test]
-fn crate_feature_explicit() {
-    // dep:name/feature syntax shouldn't set implicit feature.
-    Package::new("bar", "1.0.0")
-        .file(
-            "src/lib.rs",
-            r#"
-                #[cfg(not(feature="feat"))]
-                compile_error!{"feat missing"}
-            "#,
-        )
-        .feature("feat", &[])
-        .publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = {version = "1.0", optional=true}
-
-                [features]
-                f1 = ["dep:bar/feat"]
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                #[cfg(not(feature="f1"))]
-                compile_error!{"f1 missing"}
-
-                #[cfg(feature="bar")]
-                compile_error!{"bar should not be set"}
-            "#,
-        )
-        .build();
-
-    p.cargo("check -Z namespaced-features --features f1")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 [..]
-[CHECKING] bar v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
         .run();
 }
 
@@ -592,8 +432,7 @@ fn crate_syntax_bad_name() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features --features dep:bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features dep:bar")
         .with_status(101)
         .with_stderr(
             "\
@@ -628,13 +467,15 @@ fn crate_syntax_in_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[ERROR] feature value `dep:baz` is not allowed to use explicit `dep:` syntax
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  feature `dep:baz` in dependency `bar` is not allowed to use explicit `dep:` syntax
+  If you want to enable [..]
 ",
         )
         .run();
@@ -659,13 +500,21 @@ fn crate_syntax_cli() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features --features dep:bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features dep:bar")
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
-[ERROR] feature value `dep:bar` is not allowed to use explicit `dep:` syntax
+[ERROR] feature `dep:bar` is not allowed to use explicit `dep:` syntax
+",
+        )
+        .run();
+
+    switch_to_resolver_2(&p);
+    p.cargo("check --features dep:bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] feature `dep:bar` is not allowed to use explicit `dep:` syntax
 ",
         )
         .run();
@@ -694,8 +543,7 @@ fn crate_required_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -726,8 +574,7 @@ fn json_exposed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("metadata -Z namespaced-features --no-deps")
-        .masquerade_as_nightly_cargo()
+    p.cargo("metadata --no-deps")
         .with_json(
             r#"
                 {
@@ -752,9 +599,11 @@ fn json_exposed() {
                       "publish": null,
                       "authors": [],
                       "categories": [],
+                      "default_run": null,
                       "keywords": [],
                       "readme": null,
                       "repository": null,
+                      "rust_version": null,
                       "edition": "2015",
                       "links": null
                     }
@@ -814,8 +663,7 @@ fn crate_feature_with_explicit() {
         )
         .build();
 
-    p.cargo("check -Z namespaced-features --features f1")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --features f1")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -853,8 +701,7 @@ fn optional_explicit_without_crate() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -889,20 +736,17 @@ fn tree() {
 
                 [features]
                 a = ["bar/feat2"]
-                b = ["dep:bar/feat2"]
                 bar = ["dep:bar"]
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features")
         .with_stdout("foo v0.1.0 ([ROOT]/foo)")
         .run();
 
-    p.cargo("tree -e features --features a -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features --features a")
         .with_stdout(
             "\
 foo v0.1.0 ([ROOT]/foo)
@@ -916,8 +760,7 @@ foo v0.1.0 ([ROOT]/foo)
         )
         .run();
 
-    p.cargo("tree -e features --features a -i bar -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features --features a -i bar")
         .with_stdout(
             "\
 bar v1.0.0
@@ -935,8 +778,7 @@ bar v1.0.0
         )
         .run();
 
-    p.cargo("tree -e features --features b -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features --features bar")
         .with_stdout(
             "\
 foo v0.1.0 ([ROOT]/foo)
@@ -950,40 +792,7 @@ foo v0.1.0 ([ROOT]/foo)
         )
         .run();
 
-    p.cargo("tree -e features --features b -i bar -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-bar v1.0.0
-├── bar feature \"default\"
-│   └── foo v0.1.0 ([ROOT]/foo)
-│       ├── foo feature \"b\" (command-line)
-│       └── foo feature \"default\" (command-line)
-├── bar feature \"feat1\"
-│   └── foo v0.1.0 ([ROOT]/foo) (*)
-└── bar feature \"feat2\"
-    └── foo feature \"b\" (command-line)
-",
-        )
-        .run();
-
-    p.cargo("tree -e features --features bar -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-foo v0.1.0 ([ROOT]/foo)
-├── bar feature \"default\"
-│   └── bar v1.0.0
-│       └── baz feature \"default\"
-│           └── baz v1.0.0
-└── bar feature \"feat1\"
-    └── bar v1.0.0 (*)
-",
-        )
-        .run();
-
-    p.cargo("tree -e features --features bar -i bar -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("tree -e features --features bar -i bar")
         .with_stdout(
             "\
 bar v1.0.0
@@ -993,6 +802,55 @@ bar v1.0.0
 │       └── foo feature \"default\" (command-line)
 └── bar feature \"feat1\"
     └── foo v0.1.0 ([ROOT]/foo) (*)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn tree_no_implicit() {
+    // tree without an implicit feature
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { version = "1.0", optional=true }
+
+                [features]
+                a = ["dep:bar"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features")
+        .with_stdout("foo v0.1.0 ([ROOT]/foo)")
+        .run();
+
+    p.cargo("tree -e features --all-features")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar feature \"default\"
+    └── bar v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree -e features -i bar --all-features")
+        .with_stdout(
+            "\
+bar v1.0.0
+└── bar feature \"default\"
+    └── foo v0.1.0 ([ROOT]/foo)
+        ├── foo feature \"a\" (command-line)
+        └── foo feature \"default\" (command-line)
 ",
         )
         .run();
@@ -1085,13 +943,15 @@ fn publish_no_implicit() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+
 [dependencies.opt-dep1]
 version = "1.0"
 optional = true
@@ -1103,6 +963,8 @@ optional = true
 [features]
 feat = ["opt-dep1"]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }
@@ -1134,8 +996,7 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --token sekrit -Z namespaced-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --token sekrit")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -1189,13 +1050,15 @@ fn publish() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+
 [dependencies.bar]
 version = "1.0"
 optional = true
@@ -1205,6 +1068,8 @@ feat1 = []
 feat2 = ["dep:bar"]
 feat3 = ["feat2"]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }

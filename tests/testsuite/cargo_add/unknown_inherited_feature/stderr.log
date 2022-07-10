@@ -1,0 +1,12 @@
+      Adding foo (workspace) to dependencies.
+             Features:
+             + default-base
+             + default-merge-base
+             + default-test-base
+             + not_recognized
+             + test
+             + test-base
+             - merge
+             - merge-base
+             - unrelated
+error: unrecognized features: ["not_recognized"]

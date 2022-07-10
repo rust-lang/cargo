@@ -7,34 +7,50 @@ SYNOPSIS
        cargo test [options] [testname] [-- test-options]
 
 DESCRIPTION
-       Compile and execute unit and integration tests.
+       Compile and execute unit, integration, and documentation tests.
 
        The test filtering argument TESTNAME and all the arguments following the
        two dashes (--) are passed to the test binaries and thus to libtest
        (rustc's built in unit-test and micro-benchmarking framework). If you're
        passing arguments to both Cargo and the binary, the ones after -- go to
        the binary, the ones before go to Cargo. For details about libtest's
-       arguments see the output of cargo test -- --help.
+       arguments see the output of cargo test -- --help and check out the rustc
+       book's chapter on how tests work at
+       <https://doc.rust-lang.org/rustc/tests/index.html>.
 
        As an example, this will filter for tests with foo in their name and run
        them on 3 threads in parallel:
 
            cargo test foo -- --test-threads 3
 
-       Tests are built with the --test option to rustc which creates an
-       executable with a main function that automatically runs all functions
-       annotated with the #[test] attribute in multiple threads. #[bench]
-       annotated functions will also be run with one iteration to verify that
-       they are functional.
+       Tests are built with the --test option to rustc which creates a special
+       executable by linking your code with libtest. The executable
+       automatically runs all functions annotated with the #[test] attribute in
+       multiple threads. #[bench] annotated functions will also be run with one
+       iteration to verify that they are functional.
+
+       If the package contains multiple test targets, each target compiles to a
+       special executable as aforementioned, and then is run serially.
 
        The libtest harness may be disabled by setting harness = false in the
        target manifest settings, in which case your code will need to provide
        its own main function to handle running tests.
 
+   Documentation tests
        Documentation tests are also run by default, which is handled by
-       rustdoc. It extracts code samples from documentation comments and
-       executes them. See the rustdoc book <https://doc.rust-lang.org/rustdoc/>
-       for more information on writing doc tests.
+       rustdoc. It extracts code samples from documentation comments of the
+       library target, and then executes them.
+
+       Different from normal test targets, each code block compiles to a
+       doctest executable on the fly with rustc. These executables run in
+       parallel in separate processes. The compilation of a code block is in
+       fact a part of test function controlled by libtest, so some options such
+       as --jobs might not take effect. Note that this execution model of
+       doctests is not guaranteed and may change in the future; beware of
+       depending on it.
+
+       See the rustdoc book <https://doc.rust-lang.org/rustdoc/> for more
+       information on writing doc tests.
 
 OPTIONS
    Test Options
@@ -114,9 +130,9 @@ OPTIONS
        the library in the manifest.
 
        Binary targets are automatically built if there is an integration test
-       or benchmark. This allows an integration test to execute the binary to
-       exercise and test its behavior. The CARGO_BIN_EXE_<name> environment
-       variable
+       or benchmark being selected to test. This allows an integration test to
+       execute the binary to exercise and test its behavior. The
+       CARGO_BIN_EXE_<name> environment variable
        <https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates>
        is set when the integration test is built so that it can use the env
        macro <https://doc.rust-lang.org/std/macro.env.html> to locate the
@@ -189,7 +205,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -217,9 +233,37 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
-       --release
-           Test optimized artifacts with the release profile. See the PROFILES
-           section for details on how this affects profile selection.
+       -r, --release
+           Test optimized artifacts with the release profile. See also the
+           --profile option for choosing a specific profile by name.
+
+       --profile name
+           Test with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
+
+       --ignore-rust-version
+           Test the target even if the selected Rust compiler is older than the
+           required Rust version as configured in the project's rust-version
+           field.
+
+       --timings=fmts
+           Output information how long each compilation takes, and track
+           concurrency information over time. Accepts an optional
+           comma-separated list of output formats; --timings without an
+           argument will default to --timings=html. Specifying an output format
+           (rather than the default) is unstable and requires
+           -Zunstable-options. Valid output formats:
+
+           o  html: Write a human-readable file cargo-timing.html to the
+              target/cargo-timings directory with a report of the compilation.
+              Also write a report to the same directory with a timestamp in the
+              filename if you want to look at older runs. HTML output is
+              suitable for human consumption only, and does not provide
+              machine-readable timing data.
+
+           o  json (unstable, requires -Zunstable-options): Emit
+              machine-readable JSON information about timing information.
 
    Output Options
        --target-dir directory
@@ -243,7 +287,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -325,6 +371,9 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
+
        -h, --help
            Prints help information.
 
@@ -345,35 +394,16 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
+       --keep-going
+           Build as many crates in the dependency graph as possible, rather
+           than aborting the build on the first one that fails to build.
+           Unstable, requires -Zunstable-options.
 
-       Profile selection depends on the target and crate being built. By
-       default the dev or test profiles are used. If the --release flag is
-       given, then the release or bench profiles are used.
+       --future-incompat-report
+           Displays a future-incompat report for any future-incompatible
+           warnings produced during execution of this command
 
-       +----------------------------------------+-------------+--------------+
-       | Target                                 | Default     | --release    |
-       |                                        | Profile     | Profile      |
-       +----------------------------------------+-------------+--------------+
-       | lib, bin, example                      | dev         | release      |
-       +----------------------------------------+-------------+--------------+
-       | test, bench, or any target in "test"   | test        | bench        |
-       | or "bench" mode                        |             |              |
-       +----------------------------------------+-------------+--------------+
-
-       Dependencies use the dev/release profiles.
-
-       Unit tests are separate executable artifacts which use the test/bench
-       profiles. Example targets are built the same as with cargo build (using
-       the dev/release profiles) unless you are building them with the test
-       harness (by setting test = true in the manifest or using the --example
-       flag) in which case they use the test/bench profiles. Library targets
-       are built with the dev/release profiles when linked to an integration
-       test, binary, or doctest.
+           See cargo-report(1)
 
 ENVIRONMENT
        See the reference
@@ -399,5 +429,7 @@ EXAMPLES
               cargo test --test int_test_name -- modname::test_name
 
 SEE ALSO
-       cargo(1), cargo-bench(1)
+       cargo(1), cargo-bench(1), types of tests
+       <https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests>,
+       how to write tests <https://doc.rust-lang.org/rustc/tests/index.html>
 

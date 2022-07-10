@@ -59,6 +59,13 @@ OPTIONS
            package's reverse dependencies only with the subtree of the package
            given to -p.
 
+       --prune spec
+           Prune the given package from the display of the dependency tree.
+
+       --depth depth
+           Maximum display depth of the dependency tree. A depth of 1 displays
+           the direct dependencies, for example.
+
        --no-dedupe
            Do not de-duplicate repeated dependencies. Usually, when a package
            has already displayed its dependencies, further occurrences will not
@@ -99,8 +106,10 @@ OPTIONS
 
            o  no-dev — Do not include development dependencies.
 
-           The no- prefixed options cannot be mixed with the other dependency
-           kinds.
+           o  no-proc-macro — Do not include procedural macro dependencies.
+
+           The normal, build, dev, and all dependency kinds cannot be mixed
+           with no-normal, no-build, or no-dev dependency kinds.
 
            The default is normal,build,dev.
 
@@ -128,6 +137,9 @@ OPTIONS
 
            o  {f} — Comma-separated list of package features that are
               enabled.
+
+           o  {lib} — The name, as used in a use statement, of the package's
+              library.
 
        --prefix prefix
            Sets how each line is displayed. The prefix value can be one of:
@@ -212,7 +224,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -232,7 +244,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -254,6 +268,9 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
 
        -h, --help
            Prints help information.

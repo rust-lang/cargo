@@ -1,0 +1,2 @@
+    Updating git repository `[ROOTURL]/git-package`
+error: the crate `git_package@[ROOTURL]/git-package` could not be found at `[ROOTURL]/git-package`

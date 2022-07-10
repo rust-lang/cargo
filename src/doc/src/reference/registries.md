@@ -100,9 +100,9 @@ A full-featured registry that supports publishing will additionally need to
 have a web API service that conforms to the API used by Cargo. The web API is
 documented below.
 
-At this time, there is no widely used software for running a custom registry.
-There is interest in documenting projects that implement registry support, or
-existing package caches that add support for Cargo.
+Commercial and community projects are available for building and running a
+registry. See <https://github.com/rust-lang/cargo/wiki/Third-party-registries>
+for a list of what is available.
 
 ### Index Format
 
@@ -135,6 +135,7 @@ The keys are:
   - `{prefix}`: A directory prefix computed from the crate name. For example,
     a crate named `cargo` has a prefix of `ca/rg`. See below for details.
   - `{lowerprefix}`: Lowercase variant of `{prefix}`.
+  - `{sha256-checksum}`: The crate's sha256 checksum.
 
   If none of the markers are present, then the value
   `/{crate}/{version}/download` is appended to the end.
@@ -178,7 +179,7 @@ in (harmless-but-inelegant) directory aliasing.  For example, `crate` and
 `CrateTwo` have `{prefix}` values of `cr/at` and `Cr/at`; these are distinct on
 Unix machines but alias to the same directory on Windows.  Using directories
 with normalized case avoids aliasing, but on case-sensitive filesystems it's
-harder to suport older versions of Cargo that lack `{prefix}`/`{lowerprefix}`.
+harder to support older versions of Cargo that lack `{prefix}`/`{lowerprefix}`.
 For example, nginx rewrite rules can easily construct `{prefix}` but can't
 perform case-conversion to construct `{lowerprefix}`.
 
@@ -221,9 +222,9 @@ explaining the format of the entry.
             // this is the new name. The original package name is stored in
             // the `package` field.
             "name": "rand",
-            // The semver requirement for this dependency.
+            // The SemVer requirement for this dependency.
             // This must be a valid version requirement defined at
-            // https://github.com/steveklabnik/semver#requirements.
+            // https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html.
             "req": "^0.6",
             // Array of features (as strings) enabled for this dependency.
             "features": ["i128_support"],
@@ -262,7 +263,45 @@ explaining the format of the entry.
     "yanked": false,
     // The `links` string value from the package's manifest, or null if not
     // specified. This field is optional and defaults to null.
-    "links": null
+    "links": null,
+    // An unsigned 32-bit integer value indicating the schema version of this
+    // entry.
+    //
+    // If this not specified, it should be interpreted as the default of 1.
+    //
+    // Cargo (starting with version 1.51) will ignore versions it does not
+    // recognize. This provides a method to safely introduce changes to index
+    // entries and allow older versions of cargo to ignore newer entries it
+    // doesn't understand. Versions older than 1.51 ignore this field, and
+    // thus may misinterpret the meaning of the index entry.
+    //
+    // The current values are:
+    //
+    // * 1: The schema as documented here, not including newer additions.
+    //      This is honored in Rust version 1.51 and newer.
+    // * 2: The addition of the `features2` field.
+    //      This is honored in Rust version 1.60 and newer.
+    "v": 2,
+    // This optional field contains features with new, extended syntax.
+    // Specifically, namespaced features (`dep:`) and weak dependencies
+    // (`pkg?/feat`).
+    //
+    // This is separated from `features` because versions older than 1.19
+    // will fail to load due to not being able to parse the new syntax, even
+    // with a `Cargo.lock` file.
+    //
+    // Cargo will merge any values listed here with the "features" field.
+    //
+    // If this field is included, the "v" field should be set to at least 2.
+    //
+    // Registries are not required to use this field for extended feature
+    // syntax, they are allowed to include those in the "features" field.
+    // Using this is only necessary if the registry wants to support cargo
+    // versions older than 1.19, which in practice is only crates.io since
+    // those older versions do not support other registries.
+    "features2": {
+        "serde": ["dep:serde", "chrono?/serde"]
+    }
 }
 ```
 
@@ -385,7 +424,7 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
         "extras": ["rand/simd_support"]
     },
     // List of strings of the authors.
-    // May be empty. crates.io requires at least one entry.
+    // May be empty.
     "authors": ["Alice <a@example.com>"],
     // Description field from the manifest.
     // May be null. crates.io requires at least some content.

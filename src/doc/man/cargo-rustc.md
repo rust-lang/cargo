@@ -35,6 +35,8 @@ To pass flags to all compiler processes spawned by Cargo, use the `RUSTFLAGS`
 When no target selection options are given, `cargo rustc` will build all
 binary and library targets of the selected package.
 
+{{> options-targets-bin-auto-built }}
+
 {{> options-targets }}
 
 {{> section-features }}
@@ -46,6 +48,27 @@ binary and library targets of the selected package.
 {{> options-target-triple }}
 
 {{> options-release }}
+
+{{#option "`--profile` _name_" }}
+Build with the given profile.
+
+The `rustc` subcommand will treat the following named profiles with special behaviors:
+
+* `check` — Builds in the same way as the {{man "cargo-check" 1}} command with
+  the `dev` profile.
+* `test` — Builds in the same way as the {{man "cargo-test" 1}} command,
+  enabling building in test mode which will enable tests and enable the `test`
+  cfg option. See [rustc
+  tests](https://doc.rust-lang.org/rustc/tests/index.html) for more detail.
+* `bench` — Builds in the same was as the {{man "cargo-bench" 1}} command,
+  similar to the `test` profile.
+
+See the [the reference](../reference/profiles.html) for more details on profiles.
+{{/option}}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -81,9 +104,9 @@ binary and library targets of the selected package.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
+{{> options-future-incompat }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

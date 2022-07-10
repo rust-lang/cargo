@@ -2,7 +2,7 @@
 
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
-use cargo_test_support::registry::{self, registry_path, registry_url, Package};
+use cargo_test_support::registry::{self, Package, Response};
 use cargo_test_support::{basic_manifest, no_such_file_err_msg, project, publish};
 use std::fs;
 
@@ -56,6 +56,34 @@ fn validate_upload_foo() {
     );
 }
 
+fn validate_upload_li() {
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "li",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "li",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "li-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
 fn validate_upload_foo_clean() {
     publish::validate_upload(
         CLEAN_FOO_JSON,
@@ -90,16 +118,15 @@ fn simple() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = registry::registry_path().to_str().unwrap()
-        ))
+        )
         .run();
 
     validate_upload_foo();
@@ -141,9 +168,9 @@ fn old_token_location() {
     fs::write(&credentials, r#"token = "api-token""#).unwrap();
 
     p.cargo("publish --no-verify")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] `{reg}` index
+[UPDATING] `dummy-registry` index
 [WARNING] using `registry.token` config value with source replacement is deprecated
 This may become a hard error in the future[..]
 Use the --token command-line flag to remove this warning.
@@ -152,65 +179,15 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = registry_path().to_str().unwrap()
-        ))
-        .run();
-
-    validate_upload_foo();
-}
-
-// TODO: Deprecated
-// remove once it has been decided --host can be removed
-#[cargo_test]
-fn simple_with_host() {
-    registry::init();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                license = "MIT"
-                description = "foo"
-            "#,
         )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("publish --no-verify --token sekrit --host")
-        .arg(registry_url().to_string())
-        .with_stderr(&format!(
-            "\
-[WARNING] The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.
-[UPDATING] `{reg}` index
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-            reg = registry_path().to_str().unwrap()
-        ))
         .run();
 
     validate_upload_foo();
 }
 
-// TODO: Deprecated
-// remove once it has been decided --host can be removed
 #[cargo_test]
-fn simple_with_index_and_host() {
-    registry::init();
+fn simple_with_index() {
+    let registry = registry::init();
 
     let p = project()
         .file(
@@ -228,28 +205,7 @@ fn simple_with_index_and_host() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit --index")
-        .arg(registry_url().to_string())
-        .arg("--host")
-        .arg(registry_url().to_string())
-        .with_stderr(&format!(
-            "\
-[WARNING] The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.
-[UPDATING] `{reg}` index
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-            reg = registry_path().to_str().unwrap()
-        ))
+        .arg(registry.index_url().as_str())
         .run();
 
     validate_upload_foo();
@@ -331,7 +287,7 @@ the `path` specification will be removed from the dependency declaration.
 
 #[cargo_test]
 fn unpublishable_crate() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project()
         .file(
@@ -350,7 +306,7 @@ fn unpublishable_crate() {
         .build();
 
     p.cargo("publish --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr(
             "\
@@ -570,7 +526,7 @@ fn new_crate_rejected() {
 
 #[cargo_test]
 fn dry_run() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project()
         .file(
@@ -588,7 +544,7 @@ fn dry_run() {
         .build();
 
     p.cargo("publish --dry-run --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1213,22 +1169,42 @@ fn publish_git_with_version() {
             (
                 "Cargo.toml",
                 // Check that only `version` is included in Cargo.toml.
-                "[..]\n\
-                 [dependencies.dep1]\n\
-                 version = \"1.0\"\n\
-                 ",
+                &format!(
+                    "{}\n\
+                     [package]\n\
+                     edition = \"2018\"\n\
+                     name = \"foo\"\n\
+                     version = \"0.1.0\"\n\
+                     authors = []\n\
+                     description = \"foo\"\n\
+                     license = \"MIT\"\n\
+                     \n\
+                     [dependencies.dep1]\n\
+                     version = \"1.0\"\n\
+                    ",
+                    cargo::core::package::MANIFEST_PREAMBLE
+                ),
             ),
             (
                 "Cargo.lock",
                 // The important check here is that it is 1.0.1 in the registry.
-                "[..]\n\
+                "# This file is automatically @generated by Cargo.\n\
+                 # It is not intended for manual editing.\n\
+                 version = 3\n\
+                 \n\
+                 [[package]]\n\
+                 name = \"dep1\"\n\
+                 version = \"1.0.1\"\n\
+                 source = \"registry+https://github.com/rust-lang/crates.io-index\"\n\
+                 checksum = \"[..]\"\n\
+                 \n\
                  [[package]]\n\
                  name = \"foo\"\n\
                  version = \"0.1.0\"\n\
                  dependencies = [\n\
                  \x20\"dep1\",\n\
                  ]\n\
-                 [..]",
+                 ",
             ),
         ],
     );
@@ -1297,7 +1273,8 @@ fn publish_dev_dep_no_version() {
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[(
             "Cargo.toml",
-            r#"[..]
+            &format!(
+                r#"{}
 [package]
 name = "foo"
 version = "0.1.0"
@@ -1310,6 +1287,8 @@ repository = "foo"
 
 [dev-dependencies]
 "#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
         )],
     );
 }
@@ -1351,7 +1330,7 @@ fn credentials_ambiguous_filename() {
 fn index_requires_token() {
     // --index will not load registry.token to avoid possibly leaking
     // crates.io token to another server.
-    registry::init();
+    let registry = registry::init();
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
 
@@ -1371,7 +1350,7 @@ fn index_requires_token() {
         .build();
 
     p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr(
             "\
@@ -1461,9 +1440,15 @@ Caused by:
 #[cargo_test]
 fn api_error_json() {
     // Registry returns an API error.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| {
-        (403, &r#"{"errors": [{"detail": "you must be logged in"}]}"#)
-    });
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: br#"{"errors": [{"detail": "you must be logged in"}]}"#.to_vec(),
+            code: 403,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1490,18 +1475,74 @@ fn api_error_json() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] api errors (status 403 Forbidden): you must be logged in
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  the remote server responded with an error (status 403 Forbidden): you must be logged in
 ",
         )
         .run();
+}
 
-    t.join().unwrap();
+#[cargo_test]
+fn api_error_200() {
+    // Registry returns an API error with a 200 status code.
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: br#"{"errors": [{"detail": "max upload size is 123"}]}"#.to_vec(),
+            code: 200,
+            headers: vec![],
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 [..]
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  the remote server responded with an error: max upload size is 123
+",
+        )
+        .run();
 }
 
 #[cargo_test]
 fn api_error_code() {
     // Registry returns an error code without a JSON message.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| (400, &"go away"));
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: br#"go away"#.to_vec(),
+            code: 400,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1528,25 +1569,31 @@ fn api_error_code() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] failed to get a 200 OK response, got 400
-headers:
-<tab>HTTP/1.1 400
-<tab>Content-Length: 7
-<tab>
-body:
-go away
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  failed to get a 200 OK response, got 400
+  headers:
+  <tab>HTTP/1.1 400
+  <tab>Content-Length: 7
+  <tab>
+  body:
+  go away
 ",
         )
         .run();
-
-    t.join().unwrap();
 }
 
 #[cargo_test]
 fn api_curl_error() {
     // Registry has a network error.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| panic!("broke!"));
-
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| {
+            panic!("broke");
+        })
+        .build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -1577,19 +1624,27 @@ fn api_curl_error() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] [52] [..]
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  [52] [..]
 ",
         )
         .run();
-
-    let e = t.join().unwrap_err();
-    assert_eq!(*e.downcast::<&str>().unwrap(), "broke!");
 }
 
 #[cargo_test]
 fn api_other_error() {
     // Registry returns an invalid response.
-    let t = registry::RegistryBuilder::new().build_api_server(&|_headers| (200, b"\xff"));
+    let _registry = registry::RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_| Response {
+            body: b"\xff".to_vec(),
+            code: 200,
+            headers: vec![],
+        })
+        .build();
 
     let p = project()
         .file(
@@ -1616,13 +1671,380 @@ fn api_other_error() {
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 [..]
-[ERROR] invalid response from server
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  invalid response from server
 
 Caused by:
   response body was not valid utf-8
 ",
         )
         .run();
+}
 
-    t.join().unwrap();
+#[cargo_test]
+fn in_package_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [workspace]
+                members = ["li"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+
+    validate_upload_li();
+}
+
+#[cargo_test]
+fn with_duplicate_spec_in_members() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [workspace]
+                resolver = "2"
+                members = ["li","bar"]
+                default-members = ["li","bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                description = "bar"
+                license = "MIT"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .with_status(101)
+        .with_stderr(
+            "error: the `-p` argument must be specified to select a single package to publish",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_with_members_with_features_old() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [workspace]
+                members = ["li"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+
+    validate_upload_li();
+}
+
+#[cargo_test]
+fn in_virtual_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .with_status(101)
+        .with_stderr(
+            "error: the `-p` argument must be specified in the root of a virtual workspace",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_virtual_workspace_with_p() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo","li"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] manifest has no documentation, homepage or repository.
+See [..]
+[PACKAGING] li v0.0.1 ([CWD]/li)
+[UPLOADING] li v0.0.1 ([CWD]/li)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_not_found() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [workspace]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "li"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li --no-verify --token sekrit ")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `li` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn in_package_workspace_found_multiple() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [workspace]
+                members = ["li","lii"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "li"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .file(
+            "lii/Cargo.toml",
+            r#"
+                [package]
+                name = "lii"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "lii"
+            "#,
+        )
+        .file("lii/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p li* --no-verify --token sekrit ")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the `-p` argument must be specified to select a single package to publish
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+// https://github.com/rust-lang/cargo/issues/10536
+fn publish_path_dependency_without_workspace() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "bar"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish -p bar --no-verify --token sekrit ")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `bar` did not match any packages
+
+<tab>Did you mean `foo`?
+",
+        )
+        .run();
 }

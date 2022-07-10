@@ -67,6 +67,8 @@ structure:
     "reason": "compiler-message",
     /* The Package ID, a unique identifier for referring to the package. */
     "package_id": "my-package 0.1.0 (path+file:///path/to/my-package)",
+    /* Absolute path to the package manifest. */
+    "manifest_path": "/path/to/my-package/Cargo.toml",
     /* The Cargo target (lib, bin, example, etc.) that generated the message. */
     "target": {
         /* Array of target kinds.
@@ -129,6 +131,8 @@ following structure:
     "reason": "compiler-artifact",
     /* The Package ID, a unique identifier for referring to the package. */
     "package_id": "my-package 0.1.0 (path+file:///path/to/my-package)",
+    /* Absolute path to the package manifest. */
+    "manifest_path": "/path/to/my-package/Cargo.toml",
     /* The Cargo target (lib, bin, example, etc.) that generated the artifacts.
        See the definition above for `compiler-message` for details.
     */

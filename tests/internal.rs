@@ -1,10 +1,13 @@
 //! Tests for internal code checks.
+
+#![allow(clippy::all)]
+
 use std::fs;
 
 #[test]
 fn check_forbidden_code() {
     // Do not use certain macros, functions, etc.
-    if !cargo::util::is_ci() {
+    if !cargo_util::is_ci() {
         // Only check these on CI, otherwise it could be annoying.
         use std::io::Write;
         writeln!(

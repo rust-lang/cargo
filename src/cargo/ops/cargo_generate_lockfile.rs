@@ -1,15 +1,14 @@
-use std::collections::{BTreeMap, HashSet};
-
-use log::debug;
-use termcolor::Color::{self, Cyan, Green, Red};
-
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::ResolveOpts;
+use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::{PackageId, PackageIdSpec};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::util::config::Config;
 use crate::util::CargoResult;
+use anyhow::Context;
+use log::debug;
+use std::collections::{BTreeMap, HashSet};
+use termcolor::Color::{self, Cyan, Green, Red};
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
@@ -25,7 +24,8 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        &ResolveOpts::everything(),
+        &CliFeatures::new_all(true),
+        HasDevUnits::Yes,
         None,
         None,
         &[],
@@ -42,10 +42,6 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
     if ws.members().count() == 0 {
         anyhow::bail!("you can't generate a lockfile for an empty workspace.")
-    }
-
-    if opts.config.offline() {
-        anyhow::bail!("you can't update in the offline mode");
     }
 
     // Updates often require a lot of modifications to the registry, so ensure
@@ -65,7 +61,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     ops::resolve_with_previous(
                         &mut registry,
                         ws,
-                        &ResolveOpts::everything(),
+                        &CliFeatures::new_all(true),
+                        HasDevUnits::Yes,
                         None,
                         None,
                         &[],
@@ -97,6 +94,9 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         //       seems like a pretty hokey reason to single out
                         //       the registry as well.
                         let precise = if dep.source_id().is_registry() {
+                            semver::Version::parse(precise).with_context(|| {
+                                format!("invalid version format for precise version `{}`", precise)
+                            })?;
                             format!("{}={}->{}", dep.name(), dep.version(), precise)
                         } else {
                             precise.to_string()
@@ -119,7 +119,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        &ResolveOpts::everything(),
+        &CliFeatures::new_all(true),
+        HasDevUnits::Yes,
         Some(&previous_resolve),
         Some(&to_avoid),
         &[],

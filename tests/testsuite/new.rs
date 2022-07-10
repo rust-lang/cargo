@@ -1,21 +1,32 @@
 //! Tests for the `cargo new` command.
 
-use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::{cargo_process, git_process};
+use cargo_test_support::cargo_process;
+use cargo_test_support::paths;
 use std::env;
 use std::fs::{self, File};
 
-fn create_empty_gitconfig() {
+fn create_default_gitconfig() {
     // This helps on Windows where libgit2 is very aggressive in attempting to
     // find a git config file.
     let gitconfig = paths::home().join(".gitconfig");
     File::create(gitconfig).unwrap();
+
+    // If we're running this under a user account that has a different default branch set up
+    // then tests that assume the default branch is master will fail. We set the default branch
+    // to master explicitly so that tests that rely on this behavior still pass.
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+        [init]
+            defaultBranch = master
+        "#,
+    )
+    .unwrap();
 }
 
 #[cargo_test]
 fn simple_lib() {
     cargo_process("new --lib foo --vcs none --edition 2015")
-        .env("USER", "foo")
         .with_stderr("[CREATED] library `foo` package")
         .run();
 
@@ -28,11 +39,18 @@ fn simple_lib() {
     let contents = fs::read_to_string(&lib).unwrap();
     assert_eq!(
         contents,
-        r#"#[cfg(test)]
+        r#"pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
+#[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let result = add(2, 2);
+        assert_eq!(result, 4);
     }
 }
 "#
@@ -44,7 +62,6 @@ mod tests {
 #[cargo_test]
 fn simple_bin() {
     cargo_process("new --bin foo --edition 2015")
-        .env("USER", "foo")
         .with_stderr("[CREATED] binary (application) `foo` package")
         .run();
 
@@ -61,7 +78,6 @@ fn simple_bin() {
 #[cargo_test]
 fn both_lib_and_bin() {
     cargo_process("new --lib --bin foo")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr("[ERROR] can't specify both lib and binary outputs")
         .run();
@@ -69,9 +85,7 @@ fn both_lib_and_bin() {
 
 #[cargo_test]
 fn simple_git() {
-    cargo_process("new --lib foo --edition 2015")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new --lib foo --edition 2015").run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("foo/Cargo.toml").is_file());
@@ -81,7 +95,7 @@ fn simple_git() {
 
     let fp = paths::root().join("foo/.gitignore");
     let contents = fs::read_to_string(&fp).unwrap();
-    assert_eq!(contents, "/target\nCargo.lock\n",);
+    assert_eq!(contents, "/target\n/Cargo.lock\n",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
@@ -125,7 +139,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/foo.rs.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"foo.rs\"
     path = \"src/main.rs\"
 
@@ -147,7 +161,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/test.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"test\"
     path = \"src/main.rs\"
 
@@ -169,7 +183,6 @@ If you need a package name to not match the directory name, consider using --nam
         .run();
 
     cargo_process("new --lib incremental")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] the name `incremental` will not support binary executables with that name, \
@@ -193,7 +206,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/pub.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"pub\"
     path = \"src/main.rs\"
 
@@ -205,7 +218,6 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn std_name() {
     cargo_process("new core")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] the name `core` is part of Rust's standard library
@@ -216,7 +228,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/core.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"core\"
     path = \"src/main.rs\"
 
@@ -224,256 +236,6 @@ or change the name in Cargo.toml with:
 ",
         )
         .run();
-}
-
-#[cargo_test]
-fn finds_author_user() {
-    create_empty_gitconfig();
-    cargo_process("new foo").env("USER", "foo").run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo"]"#));
-}
-
-#[cargo_test]
-fn author_without_user_or_email() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env_remove("USER")
-        .env_remove("USERNAME")
-        .env_remove("NAME")
-        .env_remove("EMAIL")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = []"#));
-}
-
-#[cargo_test]
-fn finds_author_email_only() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env_remove("USER")
-        .env_remove("USERNAME")
-        .env_remove("NAME")
-        .env_remove("EMAIL")
-        .env("EMAIL", "baz")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["<baz>"]"#));
-}
-
-#[cargo_test]
-fn finds_author_user_escaped() {
-    create_empty_gitconfig();
-    cargo_process("new foo").env("USER", "foo \"bar\"").run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo \"bar\""]"#));
-}
-
-#[cargo_test]
-fn finds_author_username() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env_remove("USER")
-        .env("USERNAME", "foo")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo"]"#));
-}
-
-#[cargo_test]
-fn finds_author_name() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env_remove("USERNAME")
-        .env("NAME", "foo")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo"]"#));
-}
-
-#[cargo_test]
-fn finds_author_priority() {
-    cargo_process("new foo")
-        .env("USER", "bar2")
-        .env("EMAIL", "baz2")
-        .env("CARGO_NAME", "bar")
-        .env("CARGO_EMAIL", "baz")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-}
-
-#[cargo_test]
-fn finds_author_email() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env("USER", "bar")
-        .env("EMAIL", "baz")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-}
-
-#[cargo_test]
-fn finds_author_git() {
-    git_process("config --global user.name bar").exec().unwrap();
-    git_process("config --global user.email baz")
-        .exec()
-        .unwrap();
-    cargo_process("new foo").env("USER", "foo").run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-}
-
-#[cargo_test]
-fn finds_local_author_git() {
-    git_process("init").exec_with_output().unwrap();
-    git_process("config --global user.name foo").exec().unwrap();
-    git_process("config --global user.email foo@bar")
-        .exec()
-        .unwrap();
-
-    // Set local git user config
-    git_process("config user.name bar").exec().unwrap();
-    git_process("config user.email baz").exec().unwrap();
-    cargo_process("init").env("USER", "foo").run();
-
-    let toml = paths::root().join("Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-}
-
-#[cargo_test]
-fn finds_git_author() {
-    cargo_process("new foo")
-        .env("GIT_AUTHOR_NAME", "foo")
-        .env("GIT_AUTHOR_EMAIL", "gitfoo")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(
-        contents.contains(r#"authors = ["foo <gitfoo>"]"#),
-        "{}",
-        contents
-    );
-}
-
-#[cargo_test]
-fn finds_git_author_in_included_config() {
-    let included_gitconfig = paths::root().join("foo").join(".gitconfig");
-    included_gitconfig.parent().unwrap().mkdir_p();
-    fs::write(
-        &included_gitconfig,
-        r#"
-        [user]
-            name = foo
-            email = bar
-        "#,
-    )
-    .unwrap();
-
-    let gitconfig = paths::home().join(".gitconfig");
-    fs::write(
-        &gitconfig,
-        format!(
-            r#"
-            [includeIf "gitdir/i:{}"]
-                path = {}
-            "#,
-            included_gitconfig
-                .parent()
-                .unwrap()
-                .join("")
-                .display()
-                .to_string()
-                .replace("\\", "/"),
-            included_gitconfig.display().to_string().replace("\\", "/"),
-        )
-        .as_bytes(),
-    )
-    .unwrap();
-
-    cargo_process("new foo/bar").run();
-    let toml = paths::root().join("foo/bar/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(
-        contents.contains(r#"authors = ["foo <bar>"]"#),
-        "{}",
-        contents
-    );
-}
-
-#[cargo_test]
-fn finds_git_committer() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env_remove("USER")
-        .env("GIT_COMMITTER_NAME", "foo")
-        .env("GIT_COMMITTER_EMAIL", "gitfoo")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#));
-}
-
-#[cargo_test]
-fn author_prefers_cargo() {
-    git_process("config --global user.name foo").exec().unwrap();
-    git_process("config --global user.email bar")
-        .exec()
-        .unwrap();
-    let root = paths::root();
-    fs::create_dir(&root.join(".cargo")).unwrap();
-    fs::write(
-        &root.join(".cargo/config"),
-        r#"
-            [cargo-new]
-            name = "new-foo"
-            email = "new-bar"
-            vcs = "none"
-        "#,
-    )
-    .unwrap();
-
-    cargo_process("new foo").env("USER", "foo").run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["new-foo <new-bar>"]"#));
-    assert!(!root.join("foo/.gitignore").exists());
-}
-
-#[cargo_test]
-fn strip_angle_bracket_author_email() {
-    create_empty_gitconfig();
-    cargo_process("new foo")
-        .env("USER", "bar")
-        .env("EMAIL", "<baz>")
-        .run();
-
-    let toml = paths::root().join("foo/Cargo.toml");
-    let contents = fs::read_to_string(&toml).unwrap();
-    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
 #[cargo_test]
@@ -491,22 +253,23 @@ fn git_prefers_command_line() {
     )
     .unwrap();
 
-    cargo_process("new foo --vcs git").env("USER", "foo").run();
+    cargo_process("new foo --vcs git").run();
     assert!(paths::root().join("foo/.gitignore").exists());
+    assert!(!fs::read_to_string(paths::root().join("foo/Cargo.toml"))
+        .unwrap()
+        .contains("authors ="));
 }
 
 #[cargo_test]
 fn subpackage_no_git() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     assert!(paths::root().join("foo/.git").is_dir());
     assert!(paths::root().join("foo/.gitignore").is_file());
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
-    cargo_process("new foo/components/subcomponent")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo/components/subcomponent").run();
 
     assert!(!paths::root()
         .join("foo/components/subcomponent/.git")
@@ -518,7 +281,7 @@ fn subpackage_no_git() {
 
 #[cargo_test]
 fn subpackage_git_with_gitignore() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     assert!(paths::root().join("foo/.git").is_dir());
     assert!(paths::root().join("foo/.gitignore").is_file());
@@ -528,9 +291,7 @@ fn subpackage_git_with_gitignore() {
 
     let subpackage = paths::root().join("foo/components");
     fs::create_dir(&subpackage).unwrap();
-    cargo_process("new foo/components/subcomponent")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo/components/subcomponent").run();
 
     assert!(paths::root()
         .join("foo/components/subcomponent/.git")
@@ -542,13 +303,11 @@ fn subpackage_git_with_gitignore() {
 
 #[cargo_test]
 fn subpackage_git_with_vcs_arg() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
-    cargo_process("new foo/components/subcomponent --vcs git")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo/components/subcomponent --vcs git").run();
 
     assert!(paths::root()
         .join("foo/components/subcomponent/.git")
@@ -581,7 +340,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/10-invalid.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"10-invalid\"
     path = \"src/main.rs\"
 
@@ -593,59 +352,42 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
-        .env("USER", "foo")
         .with_stderr("[CREATED] library `bar` package")
         .run();
 }
 
 #[cargo_test]
 fn new_with_edition_2015() {
-    cargo_process("new --edition 2015 foo")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new --edition 2015 foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2015\""));
 }
 
 #[cargo_test]
 fn new_with_edition_2018() {
-    cargo_process("new --edition 2018 foo")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new --edition 2018 foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2018\""));
 }
 
 #[cargo_test]
 fn new_default_edition() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(manifest.contains("edition = \"2018\""));
+    assert!(manifest.contains("edition = \"2021\""));
 }
 
 #[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
-        .env("USER", "foo")
-        .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
+        .with_stderr_contains("error: \"something_else\" isn't a valid value[..]")
         .with_status(1)
         .run();
 }
 
 #[cargo_test]
-fn new_with_blank_email() {
-    cargo_process("new foo")
-        .env("CARGO_NAME", "Sen")
-        .env("CARGO_EMAIL", "")
-        .run();
-
-    let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(contents.contains(r#"authors = ["Sen"]"#), "{}", contents);
-}
-
-#[cargo_test]
 fn new_with_reference_link() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(contents.contains("# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html"))
@@ -653,7 +395,7 @@ fn new_with_reference_link() {
 
 #[cargo_test]
 fn lockfile_constant_during_new() {
-    cargo_process("new foo").env("USER", "foo").run();
+    cargo_process("new foo").run();
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
     let before = fs::read_to_string(paths::root().join("foo/Cargo.lock")).unwrap();
@@ -666,7 +408,6 @@ fn lockfile_constant_during_new() {
 fn restricted_windows_name() {
     if cfg!(windows) {
         cargo_process("new nul")
-            .env("USER", "foo")
             .with_status(101)
             .with_stderr(
                 "\
@@ -677,7 +418,6 @@ If you need a package name to not match the directory name, consider using --nam
             .run();
     } else {
         cargo_process("new nul")
-            .env("USER", "foo")
             .with_stderr(
                 "\
 [WARNING] the name `nul` is a reserved Windows filename
@@ -692,7 +432,6 @@ This package will not work on Windows platforms.
 #[cargo_test]
 fn non_ascii_name() {
     cargo_process("new Привет")
-        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] the name `Привет` contains non-ASCII characters
@@ -707,7 +446,6 @@ Support for non-ASCII crate names is experimental and only valid on the nightly 
 fn non_ascii_name_invalid() {
     // These are alphanumeric characters, but not Unicode XID.
     cargo_process("new ⒶⒷⒸ")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -719,7 +457,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"ⒶⒷⒸ\"
     path = \"src/main.rs\"
 
@@ -728,7 +466,6 @@ or change the name in Cargo.toml with:
         .run();
 
     cargo_process("new a¼")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -740,7 +477,7 @@ and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/a¼.rs` \
 or change the name in Cargo.toml with:
 
-    [bin]
+    [[bin]]
     name = \"a¼\"
     path = \"src/main.rs\"
 
@@ -752,8 +489,9 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn git_default_branch() {
     // Check for init.defaultBranch support.
-    create_empty_gitconfig();
-    cargo_process("new foo").env("USER", "foo").run();
+    create_default_gitconfig();
+
+    cargo_process("new foo").run();
     let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
     assert_eq!(head.symbolic_target().unwrap(), "refs/heads/master");
@@ -766,7 +504,7 @@ fn git_default_branch() {
         "#,
     )
     .unwrap();
-    cargo_process("new bar").env("USER", "foo").run();
+    cargo_process("new bar").run();
     let repo = git2::Repository::open(paths::root().join("bar")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
     assert_eq!(head.symbolic_target().unwrap(), "refs/heads/hello");

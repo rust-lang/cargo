@@ -1,16 +1,20 @@
 //! Code for building the standard library.
 
+use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{FeaturesFor, RequestedFeatures, ResolvedFeatures};
-use crate::core::resolver::{HasDevUnits, ResolveOpts};
+use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
+use crate::core::resolver::HasDevUnits;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
+use crate::Config;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::PathBuf;
+
+use super::BuildConfig;
 
 /// Parse the `-Zbuild-std` flag.
 pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
@@ -30,13 +34,45 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
     crates.into_iter().map(|s| s.to_string()).collect()
 }
 
+pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<String>> {
+    let crates = config.cli_unstable().build_std.as_ref()?.clone();
+
+    // Only build libtest if it looks like it is needed.
+    let mut crates = crates.clone();
+    // If we know what units we're building, we can filter for libtest depending on the jobs.
+    if let Some(units) = units {
+        if units
+            .iter()
+            .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+        {
+            // Only build libtest when libstd is built (libtest depends on libstd)
+            if crates.iter().any(|c| c == "std") && !crates.iter().any(|c| c == "test") {
+                crates.push("test".to_string());
+            }
+        }
+    } else {
+        // We don't know what jobs are going to be run, so download libtest just in case.
+        if !crates.iter().any(|c| c == "test") {
+            crates.push("test".to_string())
+        }
+    }
+
+    Some(crates)
+}
+
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData,
-    requested_targets: &[CompileKind],
+    target_data: &RustcTargetData<'cfg>,
+    build_config: &BuildConfig,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
+    if build_config.build_plan {
+        ws.config()
+            .shell()
+            .warn("-Zbuild-std does not currently fully support --build-plan")?;
+    }
+
     let src_path = detect_sysroot_src_path(target_data)?;
     let to_patch = [
         "rustc-std-workspace-core",
@@ -47,13 +83,12 @@ pub fn resolve_std<'cfg>(
         .iter()
         .map(|&name| {
             let source_path = SourceId::for_path(&src_path.join("library").join(name))?;
-            let dep = Dependency::parse_no_deprecated(name, None, source_path)?;
+            let dep = Dependency::parse(name, None, source_path)?;
             Ok(dep)
         })
         .collect::<CargoResult<Vec<_>>>()?;
     let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
-    let mut patch = HashMap::new();
-    patch.insert(crates_io_url, patches);
+    let patch = HashMap::from([(crates_io_url, patches)]);
     let members = vec![
         String::from("library/std"),
         String::from("library/core"),
@@ -65,6 +100,7 @@ pub fn resolve_std<'cfg>(
         &Some(members),
         /*default_members*/ &None,
         /*exclude*/ &None,
+        /*inheritable*/ &None,
         /*custom_metadata*/ &None,
     ));
     let virtual_manifest = crate::core::VirtualManifest::new(
@@ -107,18 +143,14 @@ pub fn resolve_std<'cfg>(
             "default".to_string(),
         ],
     };
-    // dev_deps setting shouldn't really matter here.
-    let opts = ResolveOpts::new(
-        /*dev_deps*/ false,
-        RequestedFeatures::from_command_line(
-            &features, /*all_features*/ false, /*uses_default_features*/ false,
-        ),
-    );
+    let cli_features = CliFeatures::from_command_line(
+        &features, /*all_features*/ false, /*uses_default_features*/ false,
+    )?;
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
-        requested_targets,
-        &opts,
+        &build_config.requested_kinds,
+        &cli_features,
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
@@ -157,22 +189,24 @@ pub fn generate_std_roots(
             .iter()
             .find(|t| t.is_lib())
             .expect("std has a lib");
-        let unit_for = UnitFor::new_normal();
         // I don't think we need to bother with Check here, the difference
         // in time is minimal, and the difference in caching is
         // significant.
         let mode = CompileMode::Build;
-        let profile = profiles.get_profile(
+        let features = std_features.activated_features(
             pkg.package_id(),
-            /*is_member*/ false,
-            /*is_local*/ false,
-            unit_for,
-            mode,
+            FeaturesFor::NormalOrDevOrArtifactTarget(None),
         );
-        let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
-
         for kind in kinds {
             let list = ret.entry(*kind).or_insert_with(Vec::new);
+            let unit_for = UnitFor::new_normal(*kind);
+            let profile = profiles.get_profile(
+                pkg.package_id(),
+                /*is_member*/ false,
+                /*is_local*/ false,
+                unit_for,
+                *kind,
+            );
             list.push(interner.intern(
                 pkg,
                 lib,
@@ -182,13 +216,14 @@ pub fn generate_std_roots(
                 features.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
+                IsArtifact::No,
             ));
         }
     }
     Ok(ret)
 }
 
-fn detect_sysroot_src_path(target_data: &RustcTargetData) -> CargoResult<PathBuf> {
+fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
     if let Some(s) = env::var_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
@@ -203,11 +238,19 @@ fn detect_sysroot_src_path(target_data: &RustcTargetData) -> CargoResult<PathBuf
         .join("rust");
     let lock = src_path.join("Cargo.lock");
     if !lock.exists() {
-        anyhow::bail!(
+        let msg = format!(
             "{:?} does not exist, unable to build with the standard \
              library, try:\n        rustup component add rust-src",
             lock
         );
+        match env::var("RUSTUP_TOOLCHAIN") {
+            Ok(rustup_toolchain) => {
+                anyhow::bail!("{} --toolchain {}", msg, rustup_toolchain);
+            }
+            Err(_) => {
+                anyhow::bail!(msg);
+            }
+        }
     }
     Ok(src_path)
 }

@@ -67,6 +67,13 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html#registrydefault>
            config key which defaults to crates-io.
 
+   Package Selection
+       By default, the package in the current working directory is selected.
+       The -p flag can be used to choose a different package in a workspace.
+
+       -p spec, --package spec
+           The package to publish. See cargo-pkgid(1) for the SPEC format.
+
    Compilation Options
        --target triple
            Publish for the given architecture. The default is the host
@@ -99,7 +106,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -149,6 +156,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
+       --keep-going
+           Build as many crates in the dependency graph as possible, rather
+           than aborting the build on the first one that fails to build.
+           Unstable, requires -Zunstable-options.
+
    Display Options
        -v, --verbose
            Use verbose output. May be specified twice for "very verbose" output
@@ -157,7 +169,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -179,6 +193,9 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
 
        -h, --help
            Prints help information.

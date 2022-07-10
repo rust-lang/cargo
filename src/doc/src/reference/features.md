@@ -116,21 +116,33 @@ an external package to handle GIF images. This can be expressed like this:
 gif = { version = "0.11.1", optional = true }
 ```
 
-Optional dependencies implicitly define a feature of the same name as the
-dependency. This means that the same `cfg(feature = "gif")` syntax can be used
-in the code, and the dependency can be enabled just like a feature such as
-`--features gif` (see [Command-line feature
-options](#command-line-feature-options) below).
+By default, this optional dependency implicitly defines a feature that looks
+like this:
 
-> **Note**: A feature in the `[feature]` table cannot use the same name as a
-> dependency. Experimental support for enabling this and other extensions is
-> available on the nightly channel via [namespaced
-> features](unstable.md#namespaced-features).
+```toml
+[features]
+gif = ["dep:gif"]
+```
 
-Explicitly defined features can enable optional dependencies, too. Just
-include the name of the optional dependency in the feature list. For example,
-let's say in order to support the AVIF image format, our library needs two
-other dependencies to be enabled:
+This means that this dependency will only be included if the `gif`
+feature is enabled.
+The same `cfg(feature = "gif")` syntax can be used in the code, and the
+dependency can be enabled just like any feature such as `--features gif` (see
+[Command-line feature options](#command-line-feature-options) below).
+
+In some cases, you may not want to expose a feature that has the same name
+as the optional dependency.
+For example, perhaps the optional dependency is an internal detail, or you
+want to group multiple optional dependencies together, or you just want to use
+a better name.
+If you specify the optional dependency with the `dep:` prefix anywhere
+in the `[features]` table, that disables the implicit feature.
+
+> **Note**: The `dep:` syntax is only available starting with Rust 1.60.
+> Previous versions can only use the implicit feature name.
+
+For example, let's say in order to support the AVIF image format, our library
+needs two other dependencies to be enabled:
 
 ```toml
 [dependencies]
@@ -138,10 +150,13 @@ ravif = { version = "0.6.3", optional = true }
 rgb = { version = "0.8.25", optional = true }
 
 [features]
-avif = ["ravif", "rgb"]
+avif = ["dep:ravif", "dep:rgb"]
 ```
 
 In this example, the `avif` feature will enable the two listed dependencies.
+This also avoids creating the implicit `ravif` and `rgb` features, since we
+don't want users to enable those individually as they are internal details to
+our crate.
 
 > **Note**: Another way to optionally include a dependency is to use
 > [platform-specific dependencies]. Instead of using features, these are
@@ -185,10 +200,31 @@ jpeg-decoder = { version = "0.1.20", default-features = false }
 parallel = ["jpeg-decoder/rayon"]
 ```
 
-> **Note**: The `"package-name/feature-name"` syntax will also enable
-> `package-name` if it is an optional dependency. Experimental support for
-> disabling that behavior is available on the nightly channel via [weak
-> dependency features](unstable.md#weak-dependency-features).
+The `"package-name/feature-name"` syntax will also enable `package-name`
+if it is an optional dependency. Often this is not what you want.
+You can add a `?` as in `"package-name?/feature-name"` which will only enable
+the given feature if something else enables the optional dependency.
+
+> **Note**: The `?` syntax is only available starting with Rust 1.60.
+
+For example, let's say we have added some serialization support to our
+library, and it requires enabling a corresponding feature in some optional
+dependencies.
+That can be done like this:
+
+```toml
+[dependencies]
+serde = { version = "1.0.133", optional = true }
+rgb = { version = "0.8.25", optional = true }
+
+[features]
+serde = ["dep:serde", "rgb?/serde"]
+```
+
+In this example, enabling the `serde` feature will enable the serde
+dependency.
+It will also enable the `serde` feature for the `rgb` dependency, but only if
+something else has enabled the `rgb` dependency.
 
 ### Command-line feature options
 
@@ -292,7 +328,7 @@ enabled. Some options to try:
 * `cargo tree -e features`: This will show features in the dependency graph.
   Each feature will appear showing which package enabled it.
 * `cargo tree -f "{p} {f}"`: This is a more compact view that shows a
-  comma-spearated list of features enabled on each package.
+  comma-separated list of features enabled on each package.
 * `cargo tree -e features -i foo`: This will invert the tree, showing how
   features flow into the given package "foo". This can be useful because
   viewing the entire graph can be quite large and overwhelming. Use this when
@@ -369,6 +405,9 @@ For example:
 # This command is allowed with resolver = "2", regardless of which directory
 # you are in.
 cargo build -p foo -p bar --features foo-feat,bar-feat
+
+# This explicit equivalent works with any resolver version:
+cargo build -p foo -p bar --features foo/foo-feat,bar/bar-feat
 ```
 
 Additionally, with `resolver = "1"`, the `--no-default-features` flag only
@@ -437,7 +476,7 @@ guide, consider adding the documentation there (for example, see [serde.rs]).
 If you have a binary project, consider documenting the features in the README
 or other documentation for the project (for example, see [sccache]).
 
-Clearly documenting the features can set expectations about features
+Clearly documenting the features can set expectations about features that are
 considered "unstable" or otherwise shouldn't be used. For example, if there is
 an optional dependency, but you don't want users to explicitly list that
 optional dependency as a feature, exclude it from the documented list.
@@ -474,3 +513,9 @@ source and inspect it.
 
 [`cargo vendor`]: ../commands/cargo-vendor.md
 [cargo-clone-crate]: https://crates.io/crates/cargo-clone-crate
+
+### Feature combinations
+
+Because features are a form of conditional compilation, they require an exponential number of configurations and test cases to be 100% covered. By default, tests, docs, and other tooling such as [Clippy](https://github.com/rust-lang/rust-clippy) will only run with the default set of features.
+
+We encourage you to consider your strategy and tooling in regards to different feature combinations - Every project will have different requirements in conjunction with time, resources, and the cost-benefit of covering specific scenarios. Common configurations may be with / without default features, specific combinations of features, or all combinations of features.

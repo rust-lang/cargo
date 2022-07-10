@@ -15,15 +15,19 @@ DESCRIPTION
        framework). If you are passing arguments to both Cargo and the binary,
        the ones after -- go to the binary, the ones before go to Cargo. For
        details about libtest's arguments see the output of cargo bench --
-       --help. As an example, this will run only the benchmark named foo (and
-       skip other similarly named benchmarks like foobar):
+       --help and check out the rustc book's chapter on how tests work at
+       <https://doc.rust-lang.org/rustc/tests/index.html>.
+
+       As an example, this will run only the benchmark named foo (and skip
+       other similarly named benchmarks like foobar):
 
            cargo bench -- foo --exact
 
-       Benchmarks are built with the --test option to rustc which creates an
-       executable with a main function that automatically runs all functions
-       annotated with the #[bench] attribute. Cargo passes the --bench flag to
-       the test harness to tell it to run only benchmarks.
+       Benchmarks are built with the --test option to rustc which creates a
+       special executable by linking your code with libtest. The executable
+       automatically runs all functions annotated with the #[bench] attribute.
+       Cargo passes the --bench flag to the test harness to tell it to run only
+       benchmarks.
 
        The libtest harness may be disabled by setting harness = false in the
        target manifest settings, in which case your code will need to provide
@@ -37,6 +41,13 @@ DESCRIPTION
           <https://crates.io/keywords/benchmark> that may help with running
           benchmarks on the stable channel, such as Criterion
           <https://crates.io/crates/criterion>.
+
+       By default, cargo bench uses the bench profile
+       <https://doc.rust-lang.org/cargo/reference/profiles.html#bench>, which
+       enables optimizations and disables debugging information. If you need to
+       debug a benchmark, you can use the --profile=dev command-line option to
+       switch to the dev profile. You can then run the debug-enabled benchmark
+       within a debugger.
 
 OPTIONS
    Benchmark Options
@@ -107,6 +118,15 @@ OPTIONS
        options that take a target by name ignore the bench flag and will always
        benchmark the given target.
 
+       Binary targets are automatically built if there is an integration test
+       or benchmark being selected to benchmark. This allows an integration
+       test to execute the binary to exercise and test its behavior. The
+       CARGO_BIN_EXE_<name> environment variable
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates>
+       is set when the integration test is built so that it can use the env
+       macro <https://doc.rust-lang.org/std/macro.env.html> to locate the
+       executable.
+
        Passing target selection flags will benchmark only the specified
        targets.
 
@@ -171,7 +191,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -199,6 +219,34 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/guide/build-cache.html>
            documentation for more details.
 
+       --profile name
+           Benchmark with the given profile. See the the reference
+           <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+           details on profiles.
+
+       --ignore-rust-version
+           Benchmark the target even if the selected Rust compiler is older
+           than the required Rust version as configured in the project's
+           rust-version field.
+
+       --timings=fmts
+           Output information how long each compilation takes, and track
+           concurrency information over time. Accepts an optional
+           comma-separated list of output formats; --timings without an
+           argument will default to --timings=html. Specifying an output format
+           (rather than the default) is unstable and requires
+           -Zunstable-options. Valid output formats:
+
+           o  html: Write a human-readable file cargo-timing.html to the
+              target/cargo-timings directory with a report of the compilation.
+              Also write a report to the same directory with a timestamp in the
+              filename if you want to look at older runs. HTML output is
+              suitable for human consumption only, and does not provide
+              machine-readable timing data.
+
+           o  json (unstable, requires -Zunstable-options): Emit
+              machine-readable JSON information about timing information.
+
    Output Options
        --target-dir directory
            Directory for all generated artifacts and intermediate files. May
@@ -221,7 +269,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -303,6 +353,9 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
+
        -h, --help
            Prints help information.
 
@@ -321,21 +374,10 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of CPUs.
 
-PROFILES
-       Profiles may be used to configure compiler options such as optimization
-       levels and debug settings. See the reference
-       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
-       details.
-
-       Benchmarks are always built with the bench profile. Binary and lib
-       targets are built separately as benchmarks with the bench profile.
-       Library targets are built with the release profiles when linked to
-       binaries and benchmarks. Dependencies use the release profile.
-
-       If you need a debug build of a benchmark, try building it with
-       cargo-build(1) which will use the test profile which is by default
-       unoptimized and includes debug information. You can then run the
-       debug-enabled benchmark manually.
+       --keep-going
+           Build as many crates in the dependency graph as possible, rather
+           than aborting the build on the first one that fails to build.
+           Unstable, requires -Zunstable-options.
 
 ENVIRONMENT
        See the reference

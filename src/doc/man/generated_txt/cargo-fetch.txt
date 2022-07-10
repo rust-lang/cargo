@@ -9,7 +9,7 @@ SYNOPSIS
 DESCRIPTION
        If a Cargo.lock file is available, this command will ensure that all of
        the git dependencies and/or registry dependencies are downloaded and
-       locally available. Subsequent Cargo commands never touch the network
+       locally available. Subsequent Cargo commands will be able to run offline
        after a cargo fetch unless the lock file changes.
 
        If the lock file is not available, then this command will generate the
@@ -25,8 +25,8 @@ DESCRIPTION
 OPTIONS
    Fetch options
        --target triple
-           Fetch for the given architecture. The default is the host
-           architecture. The general format of the triple is
+           Fetch for the given architecture. The default is all architectures.
+           The general format of the triple is
            <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
            a list of supported targets.
 
@@ -47,7 +47,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -100,6 +102,9 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
 
        -h, --help
            Prints help information.

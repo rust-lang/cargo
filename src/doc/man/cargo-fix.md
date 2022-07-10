@@ -120,7 +120,11 @@ When no target selection options are given, `cargo fix` will fix all targets
 
 {{> options-release }}
 
-{{> options-profile }}
+{{> options-profile-legacy-check }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -152,9 +156,8 @@ When no target selection options are given, `cargo fix` will fix all targets
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

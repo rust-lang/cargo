@@ -19,41 +19,44 @@ guide](../guide/index.md), we specified a dependency on the `time` crate:
 time = "0.1.12"
 ```
 
-The string `"0.1.12"` is a [semver] version requirement. Since this
-string does not have any operators in it, it is interpreted the same way as
-if we had specified `"^0.1.12"`, which is called a caret requirement.
+The string `"0.1.12"` is a version requirement. Although it looks like a
+specific *version* of the `time` crate, it actually specifies a *range* of
+versions and allows [SemVer] compatible updates. An update is allowed if the new
+version number does not modify the left-most non-zero digit in the major, minor,
+patch grouping. In this case, if we ran `cargo update -p time`, cargo should
+update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
+update us to `0.2.0`. If instead we had specified the version string as `1.0`,
+cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
+The version `0.0.x` is not considered compatible with any other version.
 
-[semver]: https://github.com/steveklabnik/semver#requirements
+[SemVer]: https://semver.org
 
-### Caret requirements
-
-**Caret requirements** allow SemVer compatible updates to a specified version.
-An update is allowed if the new version number does not modify the left-most
-non-zero digit in the major, minor, patch grouping. In this case, if we ran
-`cargo update -p time`, cargo should update us to version `0.1.13` if it is the
-latest `0.1.z` release, but would not update us to `0.2.0`. If instead we had
-specified the version string as `^1.0`, cargo should update to `1.1` if it is
-the latest `1.y` release, but not `2.0`. The version `0.0.x` is not considered
-compatible with any other version.
-
-Here are some more examples of caret requirements and the versions that would
+Here are some more examples of version requirements and the versions that would
 be allowed with them:
 
 ```notrust
-^1.2.3  :=  >=1.2.3, <2.0.0
-^1.2    :=  >=1.2.0, <2.0.0
-^1      :=  >=1.0.0, <2.0.0
-^0.2.3  :=  >=0.2.3, <0.3.0
-^0.2    :=  >=0.2.0, <0.3.0
-^0.0.3  :=  >=0.0.3, <0.0.4
-^0.0    :=  >=0.0.0, <0.1.0
-^0      :=  >=0.0.0, <1.0.0
+1.2.3  :=  >=1.2.3, <2.0.0
+1.2    :=  >=1.2.0, <2.0.0
+1      :=  >=1.0.0, <2.0.0
+0.2.3  :=  >=0.2.3, <0.3.0
+0.2    :=  >=0.2.0, <0.3.0
+0.0.3  :=  >=0.0.3, <0.0.4
+0.0    :=  >=0.0.0, <0.1.0
+0      :=  >=0.0.0, <1.0.0
 ```
 
 This compatibility convention is different from SemVer in the way it treats
 versions before 1.0.0. While SemVer says there is no compatibility before
 1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
 and `x > 0`.
+
+It is possible to further tweak the logic for selecting compatible versions
+using special operators, though it shouldn't be necessary most of the time.
+
+### Caret requirements
+
+**Caret requirements** are an alternative syntax for the default strategy,
+`^1.2.3` is exactly equivalent to `1.2.3`.
 
 ### Tilde requirements
 
@@ -128,7 +131,7 @@ you need to specify is the location of the repository with the `git` key:
 
 ```toml
 [dependencies]
-rand = { git = "https://github.com/rust-lang-nursery/rand" }
+regex = { git = "https://github.com/rust-lang/regex" }
 ```
 
 Cargo will fetch the `git` repository at this location then look for a
@@ -144,8 +147,15 @@ the latest commit on a branch named `next`:
 
 ```toml
 [dependencies]
-rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
+regex = { git = "https://github.com/rust-lang/regex", branch = "next" }
 ```
+
+Anything that is not a branch or tag falls under `rev`. This can be a commit
+hash like `rev = "4c59b707"`, or a named reference exposed by the remote
+repository such as `rev = "refs/pull/493/head"`. What references are available
+varies by where the repo is hosted; GitHub in particular exposes a reference to
+the most recent commit of every pull request as shown, but other git hosts often
+provide something equivalent, possibly under a different naming scheme.
 
 Once a `git` dependency has been added, Cargo will lock that dependency to the
 latest commit at the time. New commits will not be pulled down automatically
@@ -245,10 +255,10 @@ winhttp = "0.4.0"
 openssl = "1.0.1"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
-native = { path = "native/i686" }
+native-i686 = { path = "native/i686" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-native = { path = "native/x86_64" }
+native-x86_64 = { path = "native/x86_64" }
 ```
 
 Like with Rust, the syntax here supports the `not`, `any`, and `all` operators

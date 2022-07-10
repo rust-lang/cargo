@@ -49,7 +49,6 @@ try to fix the bug! Originally your manifest will look like:
 [package]
 name = "my-library"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 uuid = "1.0"
@@ -131,7 +130,6 @@ repository we'll edit our `Cargo.toml` to look like
 [package]
 name = "my-library"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 uuid = "1.0.1"
@@ -157,7 +155,6 @@ It's also worth noting that `[patch]` applies *transitively*. Let's say you use
 [package]
 name = "my-binary"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 my-library = { git = 'https://example.com/git/my-library' }
@@ -212,7 +209,6 @@ look at the `my-binary` manifest from above again as well:
 [package]
 name = "my-binary"
 version = "0.1.0"
-authors = ["..."]
 
 [dependencies]
 my-library = { git = 'https://example.com/git/my-library' }
@@ -226,7 +222,7 @@ Note that this will actually resolve to two versions of the `uuid` crate. The
 `my-binary` crate will continue to use the 1.x.y series of the `uuid` crate but
 the `my-library` crate will use the `2.0.0` version of `uuid`. This will allow you
 to gradually roll out breaking changes to a crate through a dependency graph
-without being force to update everything all at once.
+without being forced to update everything all at once.
 
 ### Using `[patch]` with multiple versions
 
@@ -269,6 +265,12 @@ git = 'https://github.com/example/baz'
 [patch.'https://github.com/example/baz']
 baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
 ```
+
+> **Note**: The `[patch]` table can also be specified as a [configuration
+> option](config.md), such as in a `.cargo/config.toml` file or a CLI option
+> like `--config 'patch.crates-io.rand.path="rand"'`. This can be useful for
+> local-only changes that you don't want to commit, or temporarily testing a
+> patch.
 
 The `[patch]` table is made of dependency-like sub-tables. Each key after
 `[patch]` is a URL of the source that is being patched, or the name of a

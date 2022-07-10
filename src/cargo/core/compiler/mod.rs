@@ -1,3 +1,4 @@
+pub mod artifact;
 mod build_config;
 mod build_context;
 mod build_plan;
@@ -7,6 +8,7 @@ mod context;
 mod crate_type;
 mod custom_build;
 mod fingerprint;
+pub mod future_incompat;
 mod job;
 mod job_queue;
 mod layout;
@@ -20,6 +22,7 @@ mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
 
+use std::collections::HashSet;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -27,11 +30,11 @@ use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
-use log::debug;
+use log::{debug, trace};
 
-pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, TimingOutput};
 pub use self::build_context::{
     BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
@@ -48,42 +51,40 @@ pub(crate) use self::layout::Layout;
 pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
+use crate::core::compiler::future_incompat::FutureIncompatReport;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
-use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Feature, PackageId, Target};
-use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
+use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
-use crate::util::machine_message::Message;
-use crate::util::{self, machine_message, ProcessBuilder};
-use crate::util::{add_path_args, internal, join_paths, paths, profile};
+use crate::util::machine_message::{self, Message};
+use crate::util::{add_path_args, internal, iter_join_onto, profile};
+use cargo_util::{paths, ProcessBuilder, ProcessError};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
-#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub enum LinkType {
+    All,
     Cdylib,
     Bin,
+    SingleBin(String),
     Test,
     Bench,
     Example,
 }
 
-impl From<&super::Target> for Option<LinkType> {
-    fn from(value: &super::Target) -> Self {
-        if value.is_cdylib() {
-            Some(LinkType::Cdylib)
-        } else if value.is_bin() {
-            Some(LinkType::Bin)
-        } else if value.is_test() {
-            Some(LinkType::Test)
-        } else if value.is_bench() {
-            Some(LinkType::Bench)
-        } else if value.is_exe_example() {
-            Some(LinkType::Example)
-        } else {
-            None
+impl LinkType {
+    pub fn applies_to(&self, target: &Target) -> bool {
+        match self {
+            LinkType::All => true,
+            LinkType::Cdylib => target.is_cdylib(),
+            LinkType::Bin => target.is_bin(),
+            LinkType::SingleBin(name) => target.is_bin() && target.name() == name,
+            LinkType::Test => target.is_test(),
+            LinkType::Bench => target.is_bench(),
+            LinkType::Example => target.is_exe_example(),
         }
     }
 }
@@ -166,24 +167,24 @@ fn compile<'cfg>(
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;
         job.before(if job.freshness() == Freshness::Dirty {
-            let work = if unit.mode.is_doc() {
+            let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
                 rustdoc(cx, unit)?
             } else {
                 rustc(cx, unit, exec)?
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
-            let work = if unit.show_warnings(bcx.config) {
-                replay_output_cache(
-                    unit.pkg.package_id(),
-                    &unit.target,
-                    cx.files().message_cache_path(unit),
-                    cx.bcx.build_config.message_format,
-                    cx.bcx.config.shell().err_supports_color(),
-                )
-            } else {
-                Work::noop()
-            };
+            // We always replay the output cache,
+            // since it might contain future-incompat-report messages
+            let work = replay_output_cache(
+                unit.pkg.package_id(),
+                PathBuf::from(unit.pkg.manifest_path()),
+                &unit.target,
+                cx.files().message_cache_path(unit),
+                cx.bcx.build_config.message_format,
+                cx.bcx.config.shell().err_supports_color(),
+                unit.show_warnings(bcx.config),
+            );
             // Need to link targets on both the dirty and fresh.
             work.then(link_targets(cx, unit, true)?)
         });
@@ -220,16 +221,21 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // Prepare the native lib state (extra `-L` and `-l` flags).
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let current_id = unit.pkg.package_id();
+    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let build_scripts = cx.build_scripts.get(unit).cloned();
 
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
-    let link_type = (&unit.target).into();
 
-    let dep_info_name = match cx.files().metadata(unit) {
-        Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
-        None => format!("{}.d", unit.target.crate_name()),
+    let dep_info_name = if cx.files().use_extra_filename(unit) {
+        format!(
+            "{}-{}.d",
+            unit.target.crate_name(),
+            cx.files().metadata(unit)
+        )
+    } else {
+        format!("{}.d", unit.target.crate_name())
     };
     let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
@@ -256,8 +262,16 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
     let script_metadata = cx.find_build_script_metadata(unit);
     let is_local = unit.is_local();
+    let artifact = unit.artifact;
 
     return Ok(Work::new(move |state| {
+        // Artifacts are in a different location than typical units,
+        // hence we must assure the crate- and target-dependent
+        // directory is present.
+        if artifact.is_true() {
+            paths::create_dir_all(&root)?;
+        }
+
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -273,12 +287,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     &script_outputs,
                     &build_scripts,
                     pass_l_flag,
-                    link_type,
+                    &target,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, script_metadata);
+            add_custom_flags(&mut rustc, &script_outputs, script_metadata)?;
         }
 
         for output in outputs.iter() {
@@ -301,7 +315,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 .as_ref()
                 .and_then(|perr| perr.code)
             {
-                Some(n) if errors::is_simple_exit_code(n) => VerboseError::new(err).into(),
+                Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
                 _ => err,
             }
         }
@@ -317,10 +331,34 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 &target,
                 mode,
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
+                &mut |line| {
+                    on_stderr_line(
+                        state,
+                        line,
+                        package_id,
+                        &manifest_path,
+                        &target,
+                        &mut output_options,
+                    )
+                },
             )
             .map_err(verbose_if_simple_exit_code)
-            .chain_err(|| format!("could not compile `{}`", name))?;
+            .with_context(|| {
+                // adapted from rustc_errors/src/lib.rs
+                let warnings = match output_options.warnings_seen {
+                    0 => String::new(),
+                    1 => "; 1 warning emitted".to_string(),
+                    count => format!("; {} warnings emitted", count),
+                };
+                let errors = match output_options.errors_seen {
+                    0 => String::new(),
+                    1 => " due to previous error".to_string(),
+                    count => format!(" due to {} previous errors", count),
+                };
+                format!("could not compile `{}`{}{}", name, errors, warnings)
+            })?;
+            // Exec should never return with success *and* generate an error.
+            debug_assert_eq!(output_options.errors_seen, 0);
         }
 
         if rustc_dep_info_loc.exists() {
@@ -334,7 +372,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
             )
-            .chain_err(|| {
+            .with_context(|| {
                 internal(format!(
                     "could not parse/generate dep info at: {}",
                     rustc_dep_info_loc.display()
@@ -355,7 +393,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         build_script_outputs: &BuildScriptOutputs,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
-        link_type: Option<LinkType>,
+        target: &Target,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -370,9 +408,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
 
             if key.0 == current_id {
-                for cfg in &output.cfgs {
-                    rustc.arg("--cfg").arg(cfg);
-                }
                 if pass_l_flag {
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);
@@ -380,31 +415,18 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 }
             }
 
-            if link_type.is_some() {
-                for (lt, arg) in &output.linker_args {
-                    if lt.is_none() || *lt == link_type {
-                        rustc.arg("-C").arg(format!("link-arg={}", arg));
-                    }
+            for (lt, arg) in &output.linker_args {
+                // There was an unintentional change where cdylibs were
+                // allowed to be passed via transitive dependencies. This
+                // clause should have been kept in the `if` block above. For
+                // now, continue allowing it for cdylib only.
+                // See https://github.com/rust-lang/cargo/issues/9562
+                if lt.applies_to(target) && (key.0 == current_id || *lt == LinkType::Cdylib) {
+                    rustc.arg("-C").arg(format!("link-arg={}", arg));
                 }
             }
         }
         Ok(())
-    }
-
-    // Add all custom environment variables present in `state` (after they've
-    // been put there by one of the `build_scripts`) to the command provided.
-    fn add_custom_env(
-        rustc: &mut ProcessBuilder,
-        build_script_outputs: &BuildScriptOutputs,
-        metadata: Option<Metadata>,
-    ) {
-        if let Some(metadata) = metadata {
-            if let Some(output) = build_script_outputs.get(metadata) {
-                for &(ref name, ref value) in output.env.iter() {
-                    rustc.env(name, value);
-                }
-            }
-        }
     }
 }
 
@@ -415,7 +437,8 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id();
-    let profile = unit.profile;
+    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
+    let profile = unit.profile.clone();
     let unit_mode = unit.mode;
     let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
@@ -468,6 +491,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
 
             let msg = machine_message::Artifact {
                 package_id,
+                manifest_path,
                 target: &target,
                 profile: art_profile,
                 features,
@@ -491,7 +515,7 @@ fn add_plugin_deps(
     build_scripts: &BuildScripts,
     root_output: &Path,
 ) -> CargoResult<()> {
-    let var = util::dylib_path_envvar();
+    let var = paths::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for (pkg_id, metadata) in &build_scripts.plugins {
@@ -503,7 +527,7 @@ fn add_plugin_deps(
             root_output,
         ));
     }
-    let search_path = join_paths(&search_path, var)?;
+    let search_path = paths::join_paths(&search_path, var)?;
     rustc.env(var, &search_path);
     Ok(())
 }
@@ -563,6 +587,11 @@ fn prepare_rustc(
         base.env("CARGO_PRIMARY_PACKAGE", "1");
     }
 
+    if unit.target.is_test() || unit.target.is_bench() {
+        let tmp = cx.files().layout(unit.kind).prepare_tmp()?;
+        base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
+    }
+
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
@@ -581,7 +610,8 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     // script_metadata is not needed here, it is only for tests.
     let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
-    rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
+    let crate_name = unit.target.crate_name();
+    rustdoc.arg("--crate-name").arg(&crate_name);
     add_path_args(bcx.ws, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
@@ -595,16 +625,56 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     // it doesn't already exist.
     paths::create_dir_all(&doc_dir)?;
 
-    rustdoc.arg("-o").arg(doc_dir);
+    rustdoc.arg("-o").arg(&doc_dir);
+    rustdoc.args(&features_args(unit));
+    rustdoc.args(&check_cfg_args(cx, unit));
 
-    for feat in &unit.features {
-        rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-    }
-
-    add_error_format_and_color(cx, &mut rustdoc, false);
+    add_error_format_and_color(cx, &mut rustdoc);
+    add_allow_features(cx, &mut rustdoc);
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
+    }
+
+    let metadata = cx.metadata_for_doc_units[unit];
+    rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+
+    let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
+        let output_dir = cx.files().deps_dir(unit);
+        Ok(output_dir.join(format!("{}.examples", unit.buildkey())))
+    };
+
+    if unit.mode.is_doc_scrape() {
+        debug_assert!(cx.bcx.scrape_units.contains(unit));
+
+        rustdoc.arg("-Zunstable-options");
+
+        rustdoc
+            .arg("--scrape-examples-output-path")
+            .arg(scrape_output_path(unit)?);
+
+        // Only scrape example for items from crates in the workspace, to reduce generated file size
+        for pkg in cx.bcx.ws.members() {
+            let names = pkg
+                .targets()
+                .iter()
+                .map(|target| target.crate_name())
+                .collect::<HashSet<_>>();
+            for name in names {
+                rustdoc.arg("--scrape-examples-target-crate").arg(name);
+            }
+        }
+    } else if cx.bcx.scrape_units.len() > 0 && cx.bcx.ws.unit_needs_doc_scrape(unit) {
+        // We only pass scraped examples to packages in the workspace
+        // since examples are only coming from reverse-dependencies of workspace packages
+
+        rustdoc.arg("-Zunstable-options");
+
+        for scrape_unit in &cx.bcx.scrape_units {
+            rustdoc
+                .arg("--with-examples")
+                .arg(scrape_output_path(scrape_unit)?);
+        }
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
@@ -619,30 +689,41 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let package_id = unit.pkg.package_id();
+    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
-
     Ok(Work::new(move |state| {
-        if let Some(script_metadata) = script_metadata {
-            if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
-                for cfg in output.cfgs.iter() {
-                    rustdoc.arg("--cfg").arg(cfg);
-                }
-                for &(ref name, ref value) in output.env.iter() {
-                    rustdoc.env(name, value);
-                }
-            }
+        add_custom_flags(
+            &mut rustdoc,
+            &build_script_outputs.lock().unwrap(),
+            script_metadata,
+        )?;
+        let crate_dir = doc_dir.join(&crate_name);
+        if crate_dir.exists() {
+            // Remove output from a previous build. This ensures that stale
+            // files for removed items are removed.
+            debug!("removing pre-existing doc directory {:?}", crate_dir);
+            paths::remove_dir_all(crate_dir)?;
         }
         state.running(&rustdoc);
 
         rustdoc
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
+                &mut |line| {
+                    on_stderr_line(
+                        state,
+                        line,
+                        package_id,
+                        &manifest_path,
+                        &target,
+                        &mut output_options,
+                    )
+                },
                 false,
             )
-            .chain_err(|| format!("could not document `{}`", name))?;
+            .with_context(|| format!("could not document `{}`", name))?;
         Ok(())
     }))
 }
@@ -650,7 +731,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 // The --crate-version flag could have already been passed in RUSTDOCFLAGS
 // or as an extra compiler argument for rustdoc
 fn crate_version_flag_already_present(rustdoc: &ProcessBuilder) -> bool {
-    rustdoc.get_args().iter().any(|flag| {
+    rustdoc.get_args().any(|flag| {
         flag.to_str()
             .map_or(false, |flag| flag.starts_with(RUSTDOC_CRATE_VERSION_FLAG))
     })
@@ -675,6 +756,15 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
     }
 }
 
+/// Forward -Zallow-features if it is set for cargo.
+fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
+    if let Some(allow) = &cx.bcx.config.cli_unstable().allow_features {
+        let mut arg = String::from("-Zallow-features=");
+        let _ = iter_join_onto(&mut arg, allow, ",");
+        cmd.arg(&arg);
+    }
+}
+
 /// Add error-format flags to the command.
 ///
 /// Cargo always uses JSON output. This has several benefits, such as being
@@ -683,14 +773,9 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
-fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pipelined: bool) {
+fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.arg("--error-format=json");
-    let mut json = String::from("--json=diagnostic-rendered-ansi");
-    if pipelined {
-        // Pipelining needs to know when rmeta files are finished. Tell rustc
-        // to emit a message that cargo will intercept.
-        json.push_str(",artifacts");
-    }
+    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
     match cx.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
@@ -700,19 +785,19 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, pi
     }
     cmd.arg(json);
 
-    if nightly_features_allowed() {
-        let config = cx.bcx.config;
+    let config = cx.bcx.config;
+    if config.nightly_features_allowed {
         match (
             config.cli_unstable().terminal_width,
             config.shell().err_width().diagnostic_terminal_width(),
         ) {
             // Terminal width explicitly provided - only useful for testing.
             (Some(Some(width)), _) => {
-                cmd.arg(format!("-Zterminal-width={}", width));
+                cmd.arg(format!("--diagnostic-width={}", width));
             }
             // Terminal width was not explicitly provided but flag was provided - common case.
             (Some(None), Some(width)) => {
-                cmd.arg(format!("-Zterminal-width={}", width));
+                cmd.arg(format!("--diagnostic-width={}", width));
             }
             // User didn't opt-in.
             _ => (),
@@ -731,6 +816,7 @@ fn build_base_args(
     let bcx = cx.bcx;
     let Profile {
         ref opt_level,
+        codegen_backend,
         codegen_units,
         debuginfo,
         debug_assertions,
@@ -740,8 +826,9 @@ fn build_base_args(
         ref panic,
         incremental,
         strip,
+        rustflags,
         ..
-    } = unit.profile;
+    } = unit.profile.clone();
     let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
@@ -750,11 +837,14 @@ fn build_base_args(
     edition.cmd_edition_arg(cmd);
 
     add_path_args(bcx.ws, unit, cmd);
-    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit));
+    add_error_format_and_color(cx, cmd);
+    add_allow_features(cx, cmd);
 
+    let mut contains_dy_lib = false;
     if !test {
-        for crate_type in crate_types.iter() {
+        for crate_type in crate_types {
             cmd.arg("--crate-type").arg(crate_type.as_str());
+            contains_dy_lib |= crate_type == &CrateType::Dylib;
         }
     }
 
@@ -770,13 +860,17 @@ fn build_base_args(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&CrateType::Dylib) && bcx.ws.members().any(|p| *p != unit.pkg));
+        || (contains_dy_lib && !cx.is_primary_package(unit));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
 
     if opt_level.as_str() != "0" {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
+    }
+
+    if !rustflags.is_empty() {
+        cmd.args(&rustflags);
     }
 
     if *panic != PanicStrategy::Unwind {
@@ -792,6 +886,10 @@ fn build_base_args(
         if let Some(split) = split_debuginfo {
             cmd.arg("-C").arg(format!("split-debuginfo={}", split));
         }
+    }
+
+    if let Some(backend) = codegen_backend {
+        cmd.arg("-Z").arg(&format!("codegen-backend={}", backend));
     }
 
     if let Some(n) = codegen_units {
@@ -844,19 +942,13 @@ fn build_base_args(
         cmd.arg("--cfg").arg("test");
     }
 
-    for feat in &unit.features {
-        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-    }
+    cmd.args(&features_args(unit));
+    cmd.args(&check_cfg_args(cx, unit));
 
-    match cx.files().metadata(unit) {
-        Some(m) => {
-            cmd.arg("-C").arg(&format!("metadata={}", m));
-            cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
-        }
-        None => {
-            cmd.arg("-C")
-                .arg(&format!("metadata={}", cx.files().target_short_hash(unit)));
-        }
+    let meta = cx.files().metadata(unit);
+    cmd.arg("-C").arg(&format!("metadata={}", meta));
+    if cx.files().use_extra_filename(unit) {
+        cmd.arg("-C").arg(&format!("extra-filename=-{}", meta));
     }
 
     if rpath {
@@ -889,7 +981,7 @@ fn build_base_args(
     }
 
     if strip != Strip::None {
-        cmd.arg("-Z").arg(format!("strip={}", strip));
+        cmd.arg("-C").arg(format!("strip={}", strip));
     }
 
     if unit.is_std {
@@ -915,11 +1007,66 @@ fn build_base_args(
             let exe_path = cx
                 .files()
                 .bin_link_for_target(bin_target, unit.kind, cx.bcx)?;
-            let key = format!("CARGO_BIN_EXE_{}", bin_target.name());
+            let name = bin_target
+                .binary_filename()
+                .unwrap_or(bin_target.name().to_string());
+            let key = format!("CARGO_BIN_EXE_{}", name);
             cmd.env(&key, exe_path);
         }
     }
     Ok(())
+}
+
+/// All active features for the unit passed as --cfg
+fn features_args(unit: &Unit) -> Vec<OsString> {
+    let mut args = Vec::with_capacity(unit.features.len() * 2);
+
+    for feat in &unit.features {
+        args.push(OsString::from("--cfg"));
+        args.push(OsString::from(format!("feature=\"{}\"", feat)));
+    }
+
+    args
+}
+
+/// Generate the --check-cfg arguments for the unit
+fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    if let Some((features, well_known_names, well_known_values, _output)) =
+        cx.bcx.config.cli_unstable().check_cfg
+    {
+        let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
+        args.push(OsString::from("-Zunstable-options"));
+
+        if features {
+            // This generate something like this:
+            //  - values(feature)
+            //  - values(feature, "foo", "bar")
+            let mut arg = OsString::from("values(feature");
+            for (&feat, _) in unit.pkg.summary().features() {
+                arg.push(", \"");
+                arg.push(&feat);
+                arg.push("\"");
+            }
+            arg.push(")");
+
+            args.push(OsString::from("--check-cfg"));
+            args.push(arg);
+        }
+
+        if well_known_names {
+            args.push(OsString::from("--check-cfg"));
+            args.push(OsString::from("names()"));
+        }
+
+        if well_known_values {
+            args.push(OsString::from("--check-cfg"));
+            args.push(OsString::from("values()"));
+        }
+
+        args
+    } else {
+        Vec::new()
+    }
 }
 
 fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
@@ -973,10 +1120,9 @@ fn build_deps_args(
         .iter()
         .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.is_linkable())
     {
-        if let Some(dep) = deps
-            .iter()
-            .find(|dep| !dep.unit.mode.is_doc() && dep.unit.target.is_lib())
-        {
+        if let Some(dep) = deps.iter().find(|dep| {
+            !dep.unit.mode.is_doc() && dep.unit.target.is_lib() && !dep.unit.artifact.is_true()
+        }) {
             bcx.config.shell().warn(format!(
                 "The package `{}` \
                  provides no linkable target. The compiler might raise an error while compiling \
@@ -1001,10 +1147,40 @@ fn build_deps_args(
         cmd.arg(arg);
     }
 
+    for (var, env) in artifact::get_env(cx, deps)? {
+        cmd.env(&var, env);
+    }
+
     // This will only be set if we're already using a feature
     // requiring nightly rust
     if unstable_opts {
         cmd.arg("-Z").arg("unstable-options");
+    }
+
+    Ok(())
+}
+
+/// Add custom flags from the output a of build-script to a `ProcessBuilder`
+fn add_custom_flags(
+    cmd: &mut ProcessBuilder,
+    build_script_outputs: &BuildScriptOutputs,
+    metadata: Option<Metadata>,
+) -> CargoResult<()> {
+    if let Some(metadata) = metadata {
+        if let Some(output) = build_script_outputs.get(metadata) {
+            for cfg in output.cfgs.iter() {
+                cmd.arg("--cfg").arg(cfg);
+            }
+            if !output.check_cfgs.is_empty() {
+                cmd.arg("-Zunstable-options");
+                for check_cfg in &output.check_cfgs {
+                    cmd.arg("--check-cfg").arg(check_cfg);
+                }
+            }
+            for &(ref name, ref value) in output.env.iter() {
+                cmd.env(name, value);
+            }
+        }
     }
 
     Ok(())
@@ -1097,9 +1273,6 @@ fn envify(s: &str) -> String {
 struct OutputOptions {
     /// What format we're emitting from Cargo itself.
     format: MessageFormat,
-    /// Look for JSON message that indicates .rmeta file is available for
-    /// pipelined compilation.
-    look_for_metadata_directive: bool,
     /// Whether or not to display messages in color.
     color: bool,
     /// Where to write the JSON messages to support playback later if the unit
@@ -1107,11 +1280,20 @@ struct OutputOptions {
     /// of empty files are not created. If this is None, the output will not
     /// be cached (such as when replaying cached messages).
     cache_cell: Option<(PathBuf, LazyCell<File>)>,
+    /// If `true`, display any diagnostics.
+    /// Other types of JSON messages are processed regardless
+    /// of the value of this flag.
+    ///
+    /// This is used primarily for cache replay. If you build with `-vv`, the
+    /// cache will be filled with diagnostics from dependencies. When the
+    /// cache is replayed without `-vv`, we don't want to show them.
+    show_diagnostics: bool,
+    warnings_seen: usize,
+    errors_seen: usize,
 }
 
 impl OutputOptions {
     fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
-        let look_for_metadata_directive = cx.rmeta_required(unit);
         let color = cx.bcx.config.shell().err_supports_color();
         let path = cx.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
@@ -1119,15 +1301,17 @@ impl OutputOptions {
         let cache_cell = Some((path, LazyCell::new()));
         OutputOptions {
             format: cx.bcx.build_config.message_format,
-            look_for_metadata_directive,
             color,
             cache_cell,
+            show_diagnostics: true,
+            warnings_seen: 0,
+            errors_seen: 0,
         }
     }
 }
 
 fn on_stdout_line(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     _package_id: PackageId,
     _target: &Target,
@@ -1137,13 +1321,14 @@ fn on_stdout_line(
 }
 
 fn on_stderr_line(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
+    manifest_path: &std::path::Path,
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<()> {
-    if on_stderr_line_inner(state, line, package_id, target, options)? {
+    if on_stderr_line_inner(state, line, package_id, manifest_path, target, options)? {
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
@@ -1158,9 +1343,10 @@ fn on_stderr_line(
 
 /// Returns true if the line should be cached.
 fn on_stderr_line_inner(
-    state: &JobState<'_>,
+    state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
+    manifest_path: &std::path::Path,
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<bool> {
@@ -1187,6 +1373,22 @@ fn on_stderr_line_inner(
         }
     };
 
+    let count_diagnostic = |level, options: &mut OutputOptions| {
+        if level == "warning" {
+            options.warnings_seen += 1;
+        } else if level == "error" {
+            options.errors_seen += 1;
+        }
+    };
+
+    if let Ok(report) = serde_json::from_str::<FutureIncompatReport>(compiler_message.get()) {
+        for item in &report.future_incompat_report {
+            count_diagnostic(&*item.diagnostic.level, options);
+        }
+        state.future_incompat_report(report.future_incompat_report);
+        return Ok(true);
+    }
+
     // Depending on what we're emitting from Cargo itself, we figure out what to
     // do with this JSON message.
     match options.format {
@@ -1203,22 +1405,34 @@ fn on_stderr_line_inner(
             #[derive(serde::Deserialize)]
             struct CompilerMessage {
                 rendered: String,
+                message: String,
+                level: String,
             }
-            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+            if let Ok(mut msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                if msg.message.starts_with("aborting due to")
+                    || msg.message.ends_with("warning emitted")
+                    || msg.message.ends_with("warnings emitted")
+                {
+                    // Skip this line; we'll print our own summary at the end.
+                    return Ok(true);
+                }
                 // state.stderr will add a newline
-                if error.rendered.ends_with('\n') {
-                    error.rendered.pop();
+                if msg.rendered.ends_with('\n') {
+                    msg.rendered.pop();
                 }
                 let rendered = if options.color {
-                    error.rendered
+                    msg.rendered
                 } else {
                     // Strip only fails if the the Writer fails, which is Cursor
                     // on a Vec, which should never fail.
-                    strip_ansi_escapes::strip(&error.rendered)
+                    strip_ansi_escapes::strip(&msg.rendered)
                         .map(|v| String::from_utf8(v).expect("utf8"))
                         .expect("strip should never fail")
                 };
-                state.stderr(rendered)?;
+                if options.show_diagnostics {
+                    count_diagnostic(&msg.level, options);
+                    state.emit_diag(msg.level, rendered)?;
+                }
                 return Ok(true);
             }
         }
@@ -1248,27 +1462,24 @@ fn on_stderr_line_inner(
         MessageFormat::Json { ansi: true, .. } => {}
     }
 
-    // In some modes of execution we will execute rustc with `-Z
-    // emit-artifact-notifications` to look for metadata files being produced. When this
-    // happens we may be able to start subsequent compilations more quickly than
-    // waiting for an entire compile to finish, possibly using more parallelism
-    // available to complete a compilation session more quickly.
+    // We always tell rustc to emit messages about artifacts being produced.
+    // These messages feed into pipelined compilation, as well as timing
+    // information.
     //
-    // In these cases look for a matching directive and inform Cargo internally
-    // that a metadata file has been produced.
-    if options.look_for_metadata_directive {
-        #[derive(serde::Deserialize)]
-        struct ArtifactNotification {
-            artifact: String,
+    // Look for a matching directive and inform Cargo internally that a
+    // metadata file has been produced.
+    #[derive(serde::Deserialize)]
+    struct ArtifactNotification {
+        artifact: String,
+    }
+
+    if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
+        trace!("found directive from rustc: `{}`", artifact.artifact);
+        if artifact.artifact.ends_with(".rmeta") {
+            debug!("looks like metadata finished early!");
+            state.rmeta_produced();
         }
-        if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
-            log::trace!("found directive from rustc: `{}`", artifact.artifact);
-            if artifact.artifact.ends_with(".rmeta") {
-                log::debug!("looks like metadata finished early!");
-                state.rmeta_produced();
-            }
-            return Ok(false);
-        }
+        return Ok(false);
     }
 
     #[derive(serde::Deserialize)]
@@ -1285,7 +1496,7 @@ fn on_stderr_line_inner(
     if let Ok(JobserverNotification { jobserver_event }) =
         serde_json::from_str::<JobserverNotification>(compiler_message.get())
     {
-        log::info!(
+        trace!(
             "found jobserver directive from rustc: `{:?}`",
             jobserver_event
         );
@@ -1299,8 +1510,22 @@ fn on_stderr_line_inner(
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
+
+    if !options.show_diagnostics {
+        return Ok(true);
+    }
+
+    #[derive(serde::Deserialize)]
+    struct CompilerMessage {
+        level: String,
+    }
+    if let Ok(message) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+        count_diagnostic(&message.level, options);
+    }
+
     let msg = machine_message::FromCompiler {
         package_id,
+        manifest_path,
         target,
         message: compiler_message,
     }
@@ -1315,17 +1540,21 @@ fn on_stderr_line_inner(
 
 fn replay_output_cache(
     package_id: PackageId,
+    manifest_path: PathBuf,
     target: &Target,
     path: PathBuf,
     format: MessageFormat,
     color: bool,
+    show_diagnostics: bool,
 ) -> Work {
     let target = target.clone();
     let mut options = OutputOptions {
         format,
-        look_for_metadata_directive: true,
         color,
         cache_cell: None,
+        show_diagnostics,
+        warnings_seen: 0,
+        errors_seen: 0,
     };
     Work::new(move |state| {
         if !path.exists() {
@@ -1344,7 +1573,14 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &target, &mut options)?;
+            on_stderr_line(
+                state,
+                trimmed,
+                package_id,
+                &manifest_path,
+                &target,
+                &mut options,
+            )?;
             line.clear();
         }
         Ok(())

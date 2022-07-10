@@ -41,6 +41,15 @@ format.
 When no target selection options are given, \fBcargo rustc\fR will build all
 binary and library targets of the selected package.
 .sp
+Binary targets are automatically built if there is an integration test or
+benchmark being selected to build. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The \fBCARGO_BIN_EXE_<name>\fR
+\fIenvironment variable\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#environment\-variables\-cargo\-sets\-for\-crates>
+is set when the integration test is built so that it can use the
+\fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> to locate the
+executable.
+.sp
 Passing target selection flags will build only the specified
 targets. 
 .sp
@@ -122,6 +131,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -142,8 +152,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Build for the given architecture. The default is the host
-architecture. The general format of the triple is
+Build for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
@@ -155,11 +164,65 @@ target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
+\fB\-r\fR, 
 \fB\-\-release\fR
 .RS 4
-Build optimized artifacts with the \fBrelease\fR profile. See the
-PROFILES section for details on how this affects profile
-selection.
+Build optimized artifacts with the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Build with the given profile.
+.sp
+The \fBrustc\fR subcommand will treat the following named profiles with special behaviors:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBcheck\fR \[em] Builds in the same way as the \fBcargo\-check\fR(1) command with
+the \fBdev\fR profile.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBtest\fR \[em] Builds in the same way as the \fBcargo\-test\fR(1) command,
+enabling building in test mode which will enable tests and enable the \fBtest\fR
+cfg option. See \fIrustc
+tests\fR <https://doc.rust\-lang.org/rustc/tests/index.html> for more detail.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBbench\fR \[em] Builds in the same was as the \fBcargo\-bench\fR(1) command,
+similar to the \fBtest\fR profile.
+.RE
+.sp
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Build the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's \fBrust\-version\fR field.
+.RE
+.sp
+\fB\-\-timings=\fR\fIfmts\fR
+.RS 4
+Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma\-separated list of output
+formats; \fB\-\-timings\fR without an argument will default to \fB\-\-timings=html\fR\&.
+Specifying an output format (rather than the default) is unstable and requires
+\fB\-Zunstable\-options\fR\&. Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine\-readable timing data.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+information about timing information.
+.RE
 .RE
 .SS "Output Options"
 .sp
@@ -184,7 +247,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -294,6 +359,11 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -313,43 +383,21 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more
-details.
 .sp
-Profile selection depends on the target and crate being built. By default the
-\fBdev\fR or \fBtest\fR profiles are used. If the \fB\-\-release\fR flag is given, then the
-\fBrelease\fR or \fBbench\fR profiles are used.
-
-.TS
-allbox tab(:);
-lt lt lt.
-T{
-Target
-T}:T{
-Default Profile
-T}:T{
-\fB\-\-release\fR Profile
-T}
-T{
-lib, bin, example
-T}:T{
-\fBdev\fR
-T}:T{
-\fBrelease\fR
-T}
-T{
-test, bench, or any target in "test" or "bench" mode
-T}:T{
-\fBtest\fR
-T}:T{
-\fBbench\fR
-T}
-.TE
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+\fB\-Zunstable\-options\fR\&.
+.RE
 .sp
+\fB\-\-future\-incompat\-report\fR
+.RS 4
+Displays a future\-incompat report for any future\-incompatible warnings
+produced during execution of this command
 .sp
-Dependencies use the \fBdev\fR/\fBrelease\fR profiles.
+See \fBcargo\-report\fR(1)
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

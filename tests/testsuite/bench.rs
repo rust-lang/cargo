@@ -346,12 +346,12 @@ fn cargo_bench_failing_test() {
 [FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] [..] (target/release/deps/foo-[..][EXE])",
         )
-        .with_either_contains(
+        .with_stdout_contains(
             "[..]thread '[..]' panicked at 'assertion failed: `(left == right)`[..]",
         )
-        .with_either_contains("[..]left: `\"hello\"`[..]")
-        .with_either_contains("[..]right: `\"nope\"`[..]")
-        .with_either_contains("[..]src/main.rs:15[..]")
+        .with_stdout_contains("[..]left: `\"hello\"`[..]")
+        .with_stdout_contains("[..]right: `\"nope\"`[..]")
+        .with_stdout_contains("[..]src/main.rs:15[..]")
         .with_status(101)
         .run();
 }
@@ -1209,6 +1209,41 @@ fn test_bench_no_run() {
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] bench [optimized] target(s) in [..]
+[EXECUTABLE] benches src/lib.rs (target/release/deps/foo-[..][EXE])
+[EXECUTABLE] benches/bbaz.rs (target/release/deps/bbaz-[..][EXE])
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_bench_no_run_emit_json() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "benches/bbaz.rs",
+            r#"
+                #![feature(test)]
+
+                extern crate test;
+
+                use test::Bencher;
+
+                #[bench]
+                fn bench_baz(_: &mut Bencher) {}
+            "#,
+        )
+        .build();
+
+    p.cargo("bench --no-run --message-format json")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] bench [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -1736,6 +1771,7 @@ fn json_artifact_includes_executable_for_benchmark() {
                     "filenames": "{...}",
                     "fresh": false,
                     "package_id": "foo 0.0.1 ([..])",
+                    "manifest_path": "[..]",
                     "profile": "{...}",
                     "reason": "compiler-artifact",
                     "target": {

@@ -1,10 +1,12 @@
 use crate::core::compiler::{
     BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
 };
-use crate::core::{Dependency, Target, TargetKind, Workspace};
+use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
-use crate::util::{paths, CargoResult, CargoResultExt, ProcessBuilder, Rustc};
+use crate::util::{CargoResult, Rustc};
+use anyhow::Context as _;
 use cargo_platform::{Cfg, CfgExpr};
+use cargo_util::{paths, ProcessBuilder};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
@@ -101,11 +103,18 @@ impl FileType {
     /// The filename for this FileType that Cargo should use when "uplifting"
     /// it to the destination directory.
     pub fn uplift_filename(&self, target: &Target) -> String {
-        let name = if self.should_replace_hyphens {
-            target.crate_name()
-        } else {
-            target.name().to_string()
+        let name = match target.binary_filename() {
+            Some(name) => name,
+            None => {
+                // For binary crate type, `should_replace_hyphens` will always be false.
+                if self.should_replace_hyphens {
+                    target.crate_name()
+                } else {
+                    target.name().to_string()
+                }
+            }
         };
+
         format!("{}{}{}", self.prefix, name, self.suffix)
     }
 
@@ -135,9 +144,10 @@ impl TargetInfo {
             &rustc.host,
             None,
             kind,
-            "RUSTFLAGS",
+            Flags::Rust,
         )?;
-        let mut process = rustc.process();
+        let extra_fingerprint = kind.fingerprint_hash();
+        let mut process = rustc.workspace_process();
         process
             .arg("-")
             .arg("--crate-name")
@@ -163,15 +173,18 @@ impl TargetInfo {
             process.arg("--crate-type").arg(crate_type.as_str());
         }
         let supports_split_debuginfo = rustc
-            .cached_output(process.clone().arg("-Csplit-debuginfo=packed"))
+            .cached_output(
+                process.clone().arg("-Csplit-debuginfo=packed"),
+                extra_fingerprint,
+            )
             .is_ok();
 
         process.arg("--print=sysroot");
         process.arg("--print=cfg");
 
         let (output, error) = rustc
-            .cached_output(&process)
-            .chain_err(|| "failed to run `rustc` to learn about target-specific information")?;
+            .cached_output(&process, extra_fingerprint)
+            .with_context(|| "failed to run `rustc` to learn about target-specific information")?;
 
         let mut lines = output.lines();
         let mut map = HashMap::new();
@@ -207,7 +220,7 @@ impl TargetInfo {
             .map(|line| Ok(Cfg::from_str(line)?))
             .filter(TargetInfo::not_user_specific_cfg)
             .collect::<CargoResult<Vec<_>>>()
-            .chain_err(|| {
+            .with_context(|| {
                 format!(
                     "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
                     output
@@ -228,7 +241,7 @@ impl TargetInfo {
                 &rustc.host,
                 Some(&cfg),
                 kind,
-                "RUSTFLAGS",
+                Flags::Rust,
             )?,
             rustdocflags: env_args(
                 config,
@@ -236,7 +249,7 @@ impl TargetInfo {
                 &rustc.host,
                 Some(&cfg),
                 kind,
-                "RUSTDOCFLAGS",
+                Flags::Rustdoc,
             )?,
             cfg,
             supports_split_debuginfo,
@@ -408,7 +421,7 @@ impl TargetInfo {
 
         process.arg("--crate-type").arg(crate_type.as_str());
 
-        let output = process.exec_with_output().chain_err(|| {
+        let output = process.exec_with_output().with_context(|| {
             format!(
                 "failed to run `rustc` to learn about crate-type {} information",
                 crate_type
@@ -439,7 +452,10 @@ impl TargetInfo {
                 }
             }
             CompileMode::Check { .. } => Ok((vec![FileType::new_rmeta()], Vec::new())),
-            CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::RunCustomBuild => {
+            CompileMode::Doc { .. }
+            | CompileMode::Doctest
+            | CompileMode::Docscrape
+            | CompileMode::RunCustomBuild => {
                 panic!("asked for rustc output for non-rustc mode")
             }
         }
@@ -538,79 +554,134 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
     result
 }
 
+#[derive(Debug, Copy, Clone)]
+enum Flags {
+    Rust,
+    Rustdoc,
+}
+
+impl Flags {
+    fn as_key(self) -> &'static str {
+        match self {
+            Flags::Rust => "rustflags",
+            Flags::Rustdoc => "rustdocflags",
+        }
+    }
+
+    fn as_env(self) -> &'static str {
+        match self {
+            Flags::Rust => "RUSTFLAGS",
+            Flags::Rustdoc => "RUSTDOCFLAGS",
+        }
+    }
+}
+
 /// Acquire extra flags to pass to the compiler from various locations.
 ///
 /// The locations are:
 ///
+///  - the `CARGO_ENCODED_RUSTFLAGS` environment variable
 ///  - the `RUSTFLAGS` environment variable
 ///
-/// then if this was not found
+/// then if none of those were found
 ///
 ///  - `target.*.rustflags` from the config (.cargo/config)
 ///  - `target.cfg(..).rustflags` from the config
+///  - `host.*.rustflags` from the config if compiling a host artifact or without `--target`
 ///
-/// then if neither of these were found
+/// then if none of those were found
 ///
 ///  - `build.rustflags` from the config
 ///
-/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
-/// scripts, ...), even if it is the same as the target.
+/// The behavior differs slightly when cross-compiling (or, specifically, when `--target` is
+/// provided) for artifacts that are always built for the host (plugins, build scripts, ...).
+/// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
+/// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
+/// necessary to retain bacwkards compatibility with older versions of Cargo.
 fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
-    name: &str,
+    flags: Flags,
 ) -> CargoResult<Vec<String>> {
-    // We *want* to apply RUSTFLAGS only to builds for the
-    // requested target architecture, and not to things like build
-    // scripts and plugins, which may be for an entirely different
-    // architecture. Cargo's present architecture makes it quite
-    // hard to only apply flags to things that are not build
-    // scripts and plugins though, so we do something more hacky
-    // instead to avoid applying the same RUSTFLAGS to multiple targets
-    // arches:
+    let target_applies_to_host = config.target_applies_to_host()?;
+
+    // Host artifacts should not generally pick up rustflags from anywhere except [host].
     //
-    // 1) If --target is not specified we just apply RUSTFLAGS to
-    // all builds; they are all going to have the same target.
-    //
-    // 2) If --target *is* specified then we only apply RUSTFLAGS
-    // to compilation units with the Target kind, which indicates
-    // it was chosen by the --target flag.
-    //
-    // This means that, e.g., even if the specified --target is the
-    // same as the host, build scripts in plugins won't get
-    // RUSTFLAGS.
-    if requested_kinds != [CompileKind::Host] && kind.is_host() {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
+    // The one exception to this is if `target-applies-to-host = true`, which opts into a
+    // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
+    // set elsewhere when `--target` isn't passed.
+    if kind.is_host() {
+        if target_applies_to_host && requested_kinds == [CompileKind::Host] {
+            // This is the past Cargo behavior where we fall back to the same logic as for other
+            // artifacts without --target.
+        } else {
+            // In all other cases, host artifacts just get flags from [host], regardless of
+            // --target. Or, phrased differently, no `--target` behaves the same as `--target
+            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
+            // example).
+            return Ok(rustflags_from_host(config, flags, host_triple)?.unwrap_or_else(Vec::new));
+        }
     }
 
-    // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
+    // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+    // NOTE: It is impossible to have a [host] section and reach this logic with kind.is_host(),
+    // since [host] implies `target-applies-to-host = false`, which always early-returns above.
+
+    if let Some(rustflags) = rustflags_from_env(flags) {
+        Ok(rustflags)
+    } else if let Some(rustflags) =
+        rustflags_from_target(config, host_triple, target_cfg, kind, flags)?
+    {
+        Ok(rustflags)
+    } else if let Some(rustflags) = rustflags_from_build(config, flags)? {
+        Ok(rustflags)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+fn rustflags_from_env(flags: Flags) -> Option<Vec<String>> {
+    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
+    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
+    if let Ok(a) = env::var(format!("CARGO_ENCODED_{}", flags.as_env())) {
+        if a.is_empty() {
+            return Some(Vec::new());
+        }
+        return Some(a.split('\x1f').map(str::to_string).collect());
+    }
+
+    // Then try RUSTFLAGS from the environment
+    if let Ok(a) = env::var(flags.as_env()) {
         let args = a
             .split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
-        return Ok(args.collect());
+        return Some(args.collect());
     }
 
+    // No rustflags to be collected from the environment
+    None
+}
+
+fn rustflags_from_target(
+    config: &Config,
+    host_triple: &str,
+    target_cfg: Option<&[Cfg]>,
+    kind: CompileKind,
+    flag: Flags,
+) -> CargoResult<Option<Vec<String>>> {
     let mut rustflags = Vec::new();
 
-    let name = name
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .collect::<String>();
     // Then the target.*.rustflags value...
     let target = match &kind {
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    let key = format!("target.{}.{}", target, name);
+    let key = format!("target.{}.{}", target, flag.as_key());
     if let Some(args) = config.get::<Option<StringList>>(&key)? {
         rustflags.extend(args.as_slice().iter().cloned());
     }
@@ -630,28 +701,48 @@ fn env_args(
             });
     }
 
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
+    if rustflags.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(rustflags))
     }
+}
 
+fn rustflags_from_host(
+    config: &Config,
+    flag: Flags,
+    host_triple: &str,
+) -> CargoResult<Option<Vec<String>>> {
+    let target_cfg = config.host_cfg_triple(host_triple)?;
+    let list = match flag {
+        Flags::Rust => &target_cfg.rustflags,
+        Flags::Rustdoc => {
+            // host.rustdocflags is not a thing, since it does not make sense
+            return Ok(None);
+        }
+    };
+    Ok(list.as_ref().map(|l| l.val.as_slice().to_vec()))
+}
+
+fn rustflags_from_build(config: &Config, flag: Flags) -> CargoResult<Option<Vec<String>>> {
     // Then the `build.rustflags` value.
     let build = config.build_config()?;
-    let list = if name == "rustflags" {
-        &build.rustflags
-    } else {
-        &build.rustdocflags
+    let list = match flag {
+        Flags::Rust => &build.rustflags,
+        Flags::Rustdoc => &build.rustdocflags,
     };
-    if let Some(list) = list {
-        return Ok(list.as_slice().to_vec());
-    }
-
-    Ok(Vec::new())
+    Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
 }
 
 /// Collection of information about `rustc` and the host and target.
-pub struct RustcTargetData {
+pub struct RustcTargetData<'cfg> {
     /// Information about `rustc` itself.
     pub rustc: Rustc,
+
+    /// Config
+    config: &'cfg Config,
+    requested_kinds: Vec<CompileKind>,
+
     /// Build information for the "host", which is information about when
     /// `rustc` is invoked without a `--target` flag. This is used for
     /// procedural macros, build scripts, etc.
@@ -664,27 +755,22 @@ pub struct RustcTargetData {
     target_info: HashMap<CompileTarget, TargetInfo>,
 }
 
-impl RustcTargetData {
+impl<'cfg> RustcTargetData<'cfg> {
     pub fn new(
-        ws: &Workspace<'_>,
+        ws: &Workspace<'cfg>,
         requested_kinds: &[CompileKind],
-    ) -> CargoResult<RustcTargetData> {
+    ) -> CargoResult<RustcTargetData<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
-        let host_config = config.target_cfg_triple(&rustc.host)?;
-        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
-        for kind in requested_kinds {
-            if let CompileKind::Target(target) = *kind {
-                let tcfg = config.target_cfg_triple(target.short_name())?;
-                target_config.insert(target, tcfg);
-                target_info.insert(
-                    target,
-                    TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
-                );
-            }
-        }
+        let target_applies_to_host = config.target_applies_to_host()?;
+        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
+        let host_config = if target_applies_to_host {
+            config.target_cfg_triple(&rustc.host)?
+        } else {
+            config.host_cfg_triple(&rustc.host)?
+        };
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
@@ -694,16 +780,65 @@ impl RustcTargetData {
         if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, host_config.clone());
-        }
+            target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
+        };
 
-        Ok(RustcTargetData {
+        let mut res = RustcTargetData {
             rustc,
+            config,
+            requested_kinds: requested_kinds.into(),
             host_config,
             host_info,
             target_config,
             target_info,
-        })
+        };
+
+        // Get all kinds we currently know about.
+        //
+        // For now, targets can only ever come from the root workspace
+        // units and artifact dependencies, so this
+        // correctly represents all the kinds that can happen. When we have
+        // other ways for targets to appear at places that are not the root units,
+        // we may have to revisit this.
+        fn artifact_targets(package: &Package) -> impl Iterator<Item = CompileKind> + '_ {
+            package
+                .manifest()
+                .dependencies()
+                .iter()
+                .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
+        }
+        let all_kinds = requested_kinds
+            .iter()
+            .copied()
+            .chain(ws.members().flat_map(|p| {
+                p.manifest()
+                    .default_kind()
+                    .into_iter()
+                    .chain(p.manifest().forced_kind())
+                    .chain(artifact_targets(p))
+            }));
+        for kind in all_kinds {
+            res.merge_compile_kind(kind)?;
+        }
+
+        Ok(res)
+    }
+
+    /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
+    fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
+        if let CompileKind::Target(target) = kind {
+            if !self.target_config.contains_key(&target) {
+                self.target_config
+                    .insert(target, self.config.target_cfg_triple(target.short_name())?);
+            }
+            if !self.target_info.contains_key(&target) {
+                self.target_info.insert(
+                    target,
+                    TargetInfo::new(self.config, &self.requested_kinds, &self.rustc, kind)?,
+                );
+            }
+        }
+        Ok(())
     }
 
     /// Returns a "short" name for the given kind, suitable for keying off
@@ -765,28 +900,6 @@ pub struct RustDocFingerprint {
 }
 
 impl RustDocFingerprint {
-    /// Read the `RustDocFingerprint` info from the fingerprint file.
-    fn read(cx: &Context<'_, '_>) -> CargoResult<Self> {
-        let rustdoc_data = paths::read(&cx.files().host_root().join(".rustdoc_fingerprint.json"))?;
-        serde_json::from_str(&rustdoc_data).map_err(|e| anyhow::anyhow!("{:?}", e))
-    }
-
-    /// Write the `RustDocFingerprint` info into the fingerprint file.
-    fn write<'a, 'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<()> {
-        paths::write(
-            &cx.files().host_root().join(".rustdoc_fingerprint.json"),
-            serde_json::to_string(&self)?.as_bytes(),
-        )
-    }
-
-    fn remove_doc_dirs(doc_dirs: &[&Path]) -> CargoResult<()> {
-        doc_dirs
-            .iter()
-            .filter(|path| path.exists())
-            .map(|path| paths::remove_dir_all(&path))
-            .collect::<CargoResult<()>>()
-    }
-
     /// This function checks whether the latest version of `Rustc` used to compile this
     /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
     /// call.
@@ -796,38 +909,81 @@ impl RustDocFingerprint {
     /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
     /// any versioning.
     pub fn check_rustdoc_fingerprint(cx: &Context<'_, '_>) -> CargoResult<()> {
+        if cx.bcx.config.cli_unstable().skip_rustdoc_fingerprint {
+            return Ok(());
+        }
         let actual_rustdoc_target_data = RustDocFingerprint {
             rustc_vv: cx.bcx.rustc().verbose_version.clone(),
         };
 
-        // Collect all of the target doc paths for which the docs need to be compiled for.
-        let doc_dirs: Vec<&Path> = cx
-            .bcx
+        let fingerprint_path = cx.files().host_root().join(".rustdoc_fingerprint.json");
+        let write_fingerprint = || -> CargoResult<()> {
+            paths::write(
+                &fingerprint_path,
+                serde_json::to_string(&actual_rustdoc_target_data)?,
+            )
+        };
+        let rustdoc_data = match paths::read(&fingerprint_path) {
+            Ok(rustdoc_data) => rustdoc_data,
+            // If the fingerprint does not exist, do not clear out the doc
+            // directories. Otherwise this ran into problems where projects
+            // like rustbuild were creating the doc directory before running
+            // `cargo doc` in a way that deleting it would break it.
+            Err(_) => return write_fingerprint(),
+        };
+        match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+            Ok(fingerprint) => {
+                if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
+                    return Ok(());
+                } else {
+                    log::debug!(
+                        "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
+                        fingerprint.rustc_vv,
+                        actual_rustdoc_target_data.rustc_vv
+                    );
+                }
+            }
+            Err(e) => {
+                log::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
+            }
+        };
+        // Fingerprint does not match, delete the doc directories and write a new fingerprint.
+        log::debug!(
+            "fingerprint {:?} mismatch, clearing doc directories",
+            fingerprint_path
+        );
+        cx.bcx
             .all_kinds
             .iter()
             .map(|kind| cx.files().layout(*kind).doc())
-            .collect();
+            .filter(|path| path.exists())
+            .try_for_each(|path| clean_doc(path))?;
+        write_fingerprint()?;
+        return Ok(());
 
-        // Check wether `.rustdoc_fingerprint.json` exists
-        match Self::read(cx) {
-            Ok(fingerprint) => {
-                // Check if rustc_version matches the one we just used. Otherways,
-                // remove the `doc` folder to trigger a re-compilation of the docs.
-                if fingerprint.rustc_vv != actual_rustdoc_target_data.rustc_vv {
-                    Self::remove_doc_dirs(&doc_dirs)?;
-                    actual_rustdoc_target_data.write(cx)?
+        fn clean_doc(path: &Path) -> CargoResult<()> {
+            let entries = path
+                .read_dir()
+                .with_context(|| format!("failed to read directory `{}`", path.display()))?;
+            for entry in entries {
+                let entry = entry?;
+                // Don't remove hidden files. Rustdoc does not create them,
+                // but the user might have.
+                if entry
+                    .file_name()
+                    .to_str()
+                    .map_or(false, |name| name.starts_with('.'))
+                {
+                    continue;
+                }
+                let path = entry.path();
+                if entry.file_type()?.is_dir() {
+                    paths::remove_dir_all(path)?;
+                } else {
+                    paths::remove_file(path)?;
                 }
             }
-            // If the file does not exist, then we cannot assume that the docs were compiled
-            // with the actual Rustc instance version. Therefore, we try to remove the
-            // `doc` directory forcing the recompilation of the docs. If the directory doesn't
-            // exists neither, we simply do nothing and continue.
-            Err(_) => {
-                // We don't care if this succeeds as explained above.
-                let _ = Self::remove_doc_dirs(&doc_dirs);
-                actual_rustdoc_target_data.write(cx)?
-            }
+            Ok(())
         }
-        Ok(())
     }
 }

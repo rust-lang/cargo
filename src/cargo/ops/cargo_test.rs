@@ -1,11 +1,12 @@
-use std::ffi::OsString;
-
-use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
+use crate::core::compiler::{Compilation, CompileKind, Doctest, Metadata, Unit, UnitOutput};
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{add_path_args, CargoTestError, Config, ProcessError, Test};
+use crate::util::{add_path_args, CargoTestError, Config, Test};
+use cargo_util::{ProcessBuilder, ProcessError};
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
@@ -21,6 +22,10 @@ pub fn run_tests(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
+        if !options.compile_opts.build_config.emit_json() {
+            display_no_run_information(ws, test_args, &compilation, "unittests")?;
+        }
+
         return Ok(None);
     }
     let (test, mut errors) = run_unit_tests(ws.config(), options, test_args, &compilation)?;
@@ -48,6 +53,10 @@ pub fn run_benches(
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
+        if !options.compile_opts.build_config.emit_json() {
+            display_no_run_information(ws, args, &compilation, "benches")?;
+        }
+
         return Ok(None);
     }
 
@@ -84,30 +93,16 @@ fn run_unit_tests(
         script_meta,
     } in compilation.tests.iter()
     {
-        let test = unit.target.name().to_string();
-
-        let test_path = unit.target.src_path().path().unwrap();
-        let exe_display = if let TargetKind::Test = unit.target.kind() {
-            format!(
-                "{} ({})",
-                test_path
-                    .strip_prefix(unit.pkg.root())
-                    .unwrap_or(test_path)
-                    .display(),
-                path.strip_prefix(cwd).unwrap_or(path).display()
-            )
-        } else {
-            format!(
-                "unittests ({})",
-                path.strip_prefix(cwd).unwrap_or(path).display()
-            )
-        };
-
-        let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
-        cmd.args(test_args);
-        if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
-            cmd.arg("--quiet");
-        }
+        let (exe_display, cmd) = cmd_builds(
+            config,
+            cwd,
+            unit,
+            path,
+            script_meta,
+            test_args,
+            compilation,
+            "unittests",
+        )?;
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;
@@ -117,20 +112,17 @@ fn run_unit_tests(
 
         let result = cmd.exec();
 
-        match result {
-            Err(e) => {
-                let e = e.downcast::<ProcessError>()?;
-                errors.push((
-                    unit.target.kind().clone(),
-                    test.clone(),
-                    unit.pkg.name().to_string(),
-                    e,
-                ));
-                if !options.no_fail_fast {
-                    break;
-                }
+        if let Err(e) = result {
+            let e = e.downcast::<ProcessError>()?;
+            errors.push((
+                unit.target.kind().clone(),
+                unit.target.name().to_string(),
+                unit.pkg.name().to_string(),
+                e,
+            ));
+            if !options.no_fail_fast {
+                break;
             }
-            Ok(()) => {}
         }
     }
 
@@ -170,6 +162,7 @@ fn run_doc_tests(
             unit,
             linker,
             script_meta,
+            env,
         } = doctest_info;
 
         if !doctest_xcompile {
@@ -178,6 +171,16 @@ fn run_doc_tests(
                 CompileKind::Target(target) => {
                     if target.short_name() != compilation.host {
                         // Skip doctests, -Zdoctest-xcompile not enabled.
+                        config.shell().verbose(|shell| {
+                            shell.note(format!(
+                                "skipping doctests for {} ({}), \
+                                 cross-compilation doctests are not yet supported\n\
+                                 See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
+                                 for more information.",
+                                unit.pkg,
+                                unit.target.description_named()
+                            ))
+                        })?;
                         continue;
                     }
                 }
@@ -186,6 +189,10 @@ fn run_doc_tests(
 
         config.shell().status("Doc-tests", unit.target.name())?;
         let mut p = compilation.rustdoc_process(unit, *script_meta)?;
+
+        for (var, value) in env {
+            p.env(var, value);
+        }
         p.arg("--crate-name").arg(&unit.target.crate_name());
         p.arg("--test");
 
@@ -199,11 +206,12 @@ fn run_doc_tests(
             p.arg(unit.target.src_path().path().unwrap());
         }
 
+        if let CompileKind::Target(target) = unit.kind {
+            // use `rustc_target()` to properly handle JSON target paths
+            p.arg("--target").arg(target.rustc_target());
+        }
+
         if doctest_xcompile {
-            if let CompileKind::Target(target) = unit.kind {
-                // use `rustc_target()` to properly handle JSON target paths
-                p.arg("--target").arg(target.rustc_target());
-            }
             p.arg("-Zunstable-options");
             p.arg("--enable-per-target-ignores");
             if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
@@ -236,6 +244,10 @@ fn run_doc_tests(
             p.arg("--test-args").arg(arg);
         }
 
+        if config.shell().verbosity() == Verbosity::Quiet {
+            p.arg("--test-args").arg("--quiet");
+        }
+
         p.args(args);
 
         if *unstable_opts {
@@ -254,4 +266,78 @@ fn run_doc_tests(
         }
     }
     Ok((Test::Doc, errors))
+}
+
+fn display_no_run_information(
+    ws: &Workspace<'_>,
+    test_args: &[&str],
+    compilation: &Compilation<'_>,
+    exec_type: &str,
+) -> CargoResult<()> {
+    let config = ws.config();
+    let cwd = config.cwd();
+    for UnitOutput {
+        unit,
+        path,
+        script_meta,
+    } in compilation.tests.iter()
+    {
+        let (exe_display, cmd) = cmd_builds(
+            config,
+            cwd,
+            unit,
+            path,
+            script_meta,
+            test_args,
+            compilation,
+            exec_type,
+        )?;
+        config
+            .shell()
+            .concise(|shell| shell.status("Executable", &exe_display))?;
+        config
+            .shell()
+            .verbose(|shell| shell.status("Executable", &cmd))?;
+    }
+
+    return Ok(());
+}
+
+fn cmd_builds(
+    config: &Config,
+    cwd: &Path,
+    unit: &Unit,
+    path: &PathBuf,
+    script_meta: &Option<Metadata>,
+    test_args: &[&str],
+    compilation: &Compilation<'_>,
+    exec_type: &str,
+) -> CargoResult<(String, ProcessBuilder)> {
+    let test_path = unit.target.src_path().path().unwrap();
+    let short_test_path = test_path
+        .strip_prefix(unit.pkg.root())
+        .unwrap_or(test_path)
+        .display();
+
+    let exe_display = match unit.target.kind() {
+        TargetKind::Test | TargetKind::Bench => format!(
+            "{} ({})",
+            short_test_path,
+            path.strip_prefix(cwd).unwrap_or(path).display()
+        ),
+        _ => format!(
+            "{} {} ({})",
+            exec_type,
+            short_test_path,
+            path.strip_prefix(cwd).unwrap_or(path).display()
+        ),
+    };
+
+    let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
+    cmd.args(test_args);
+    if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
+        cmd.arg("--quiet");
+    }
+
+    Ok((exe_display, cmd))
 }

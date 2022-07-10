@@ -94,7 +94,7 @@ fn bad4() {
             ".cargo/config",
             r#"
                 [cargo-new]
-                  name = false
+                  vcs = false
             "#,
         )
         .build();
@@ -105,7 +105,7 @@ fn bad4() {
 [ERROR] Failed to create package `foo` at `[..]`
 
 Caused by:
-  error in [..]config: `cargo-new.name` expected a string, but found a boolean
+  error in [..]config: `cargo-new.vcs` expected a string, but found a boolean
 ",
         )
         .run();
@@ -170,7 +170,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1 column 2
+  TOML parse error at line 1, column 2
+    |
+  1 | 4
+    |  ^
+  Unexpected end of input
+  Expected `.` or `=`
 ",
         )
         .run();
@@ -416,7 +421,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected a table key, found a newline at line 8 column 27
+  TOML parse error at line 8, column 27
+    |
+  8 |                 native = {
+    |                           ^
+  Unexpected `
+  `
+  Expected key
 ",
         )
         .run();
@@ -643,39 +654,6 @@ warning: unused manifest key: target.foo.bar
         .file(
             "Cargo.toml",
             r#"
-               cargo-features = ["named-profiles"]
-
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               authors = []
-
-               [profile.debug]
-               debug = 1
-               inherits = "dev"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -Z named-profiles")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-warning: use `[profile.dev]` to configure debug builds
-[..]
-[..]",
-        )
-        .run();
-
-    p.cargo("build -Z named-profiles")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
                 [project]
 
                 name = "foo"
@@ -780,24 +758,32 @@ to use. This will be considered an error in future versions
 }
 
 #[cargo_test]
-fn invalid_toml_historically_allowed_is_warned() {
+fn invalid_toml_historically_allowed_fails() {
     let p = project()
         .file(".cargo/config", "[bar] baz = 2")
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
+        .with_status(101)
         .with_stderr(
             "\
-warning: TOML file found which contains invalid syntax and will soon not parse
-at `[..]config`.
+error: could not load Cargo configuration
 
-The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
-invalid), but this file has a table header which does not have a newline after
-it. A newline needs to be added and this warning will soon become a hard error
-in the future.
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+Caused by:
+  could not parse TOML configuration in `[..]`
+
+Caused by:
+  could not parse input as TOML
+
+Caused by:
+  TOML parse error at line 1, column 7
+    |
+  1 | [bar] baz = 2
+    |       ^
+  Unexpected `b`
+  Expected newline or end of input
+  While parsing a Table Header
 ",
         )
         .run();
@@ -915,7 +901,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   could not find a configured source with the name `bar` \
@@ -961,7 +947,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, [..]
@@ -1009,7 +995,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
@@ -1082,11 +1068,12 @@ fn both_git_and_path_specified() {
 
     foo.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[WARNING] dependency (bar) specification is ambiguous. \
-Only one of `git` or `path` is allowed. \
-This will be considered an error in future versions
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  dependency (bar) specification is ambiguous. Only one of `git` or `path` is allowed.
 ",
         )
         .run();
@@ -1152,9 +1139,13 @@ fn ignored_git_revision() {
 
     foo.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains(
-            "[WARNING] key `branch` is ignored for dependency (bar). \
-             This will be considered an error in future versions",
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  key `branch` is ignored for dependency (bar).
+",
         )
         .run();
 }
@@ -1283,7 +1274,7 @@ fn bad_debuginfo() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string \"a\", expected a boolean or an integer for [..]
+  expected a boolean or an integer for [..]
 ",
         )
         .run();
@@ -1312,7 +1303,7 @@ fn bad_opt_level() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: integer `3`, expected a boolean or a string for key [..]
+  expected a boolean or a string for key [..]
 ",
         )
         .run();
@@ -1365,16 +1356,16 @@ fn bad_target_cfg() {
         .with_stderr(
             "\
 [ERROR] error in [..]/foo/.cargo/config: \
-could not load config key `target.cfg(not(target_os = \"none\")).runner`
+could not load config key `target.\"cfg(not(target_os = \\\"none\\\"))\".runner`
 
 Caused by:
   error in [..]/foo/.cargo/config: \
-  could not load config key `target.cfg(not(target_os = \"none\")).runner`
+  could not load config key `target.\"cfg(not(target_os = \\\"none\\\"))\".runner`
 
 Caused by:
-  invalid configuration for key `target.cfg(not(target_os = \"none\")).runner`
+  invalid configuration for key `target.\"cfg(not(target_os = \\\"none\\\"))\".runner`
   expected a string or array of strings, but found a boolean for \
-  `target.cfg(not(target_os = \"none\")).runner` in [..]/foo/.cargo/config
+  `target.\"cfg(not(target_os = \\\"none\\\"))\".runner` in [..]/foo/.cargo/config
 ",
         )
         .run();
@@ -1443,7 +1434,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] source `foo` defines source registry `https://github.com/rust-lang/crates.io-index`, \
+[ERROR] source `foo` defines source registry `crates-io`, \
     but that source is already defined by `crates-io`
 note: Sources are not allowed to be defined multiple times.
 ",

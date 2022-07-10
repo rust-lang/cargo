@@ -5,36 +5,6 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]
-fn named_profile_gated() {
-    // Named profile in config requires enabling in Cargo.toml.
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [profile.foo]
-            inherits = 'dev'
-            opt-level = 1
-            "#,
-        )
-        .build();
-    p.cargo("build --profile foo -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[ERROR] config profile `foo` is not valid (defined in `[..]/foo/.cargo/config`)
-
-Caused by:
-  feature `named-profiles` is required
-
-  consider adding `cargo-features = [\"named-profiles\"]` to the manifest
-",
-        )
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn profile_config_validate_warnings() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -198,7 +168,7 @@ fn profile_config_override_spec_multiple() {
         .with_stderr(
             "\
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found package specs: bar, bar:0.5.0",
+found package specs: bar, bar@0.5.0",
         )
         .run();
 }
@@ -342,13 +312,11 @@ fn named_config_profile() {
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config
     use super::config::ConfigBuilder;
-    use cargo::core::compiler::CompileMode;
-    use cargo::core::enable_nightly_features;
+    use cargo::core::compiler::CompileKind;
     use cargo::core::profiles::{Profiles, UnitFor};
     use cargo::core::{PackageId, Workspace};
     use cargo::util::interning::InternedString;
     use std::fs;
-    enable_nightly_features();
     paths::root().join(".cargo").mkdir_p();
     fs::write(
         paths::root().join(".cargo/config"),
@@ -375,8 +343,6 @@ fn named_config_profile() {
     fs::write(
         paths::root().join("Cargo.toml"),
         r#"
-            cargo-features = ['named-profiles']
-
             [workspace]
 
             [profile.middle]
@@ -404,8 +370,8 @@ fn named_config_profile() {
     let dep_pkg = PackageId::new("dep", "0.1.0", crates_io).unwrap();
 
     // normal package
-    let mode = CompileMode::Build;
-    let p = profiles.get_profile(a_pkg, true, true, UnitFor::new_normal(), mode);
+    let kind = CompileKind::Host;
+    let p = profiles.get_profile(a_pkg, true, true, UnitFor::new_normal(kind), kind);
     assert_eq!(p.name, "foo");
     assert_eq!(p.codegen_units, Some(2)); // "foo" from config
     assert_eq!(p.opt_level, "1"); // "middle" from manifest
@@ -414,7 +380,7 @@ fn named_config_profile() {
     assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
 
     // build-override
-    let bo = profiles.get_profile(a_pkg, true, true, UnitFor::new_host(false), mode);
+    let bo = profiles.get_profile(a_pkg, true, true, UnitFor::new_host(false, kind), kind);
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
     assert_eq!(bo.opt_level, "0"); // default to zero
@@ -423,7 +389,7 @@ fn named_config_profile() {
     assert_eq!(bo.overflow_checks, true); // SAME as normal
 
     // package overrides
-    let po = profiles.get_profile(dep_pkg, false, true, UnitFor::new_normal(), mode);
+    let po = profiles.get_profile(dep_pkg, false, true, UnitFor::new_normal(kind), kind);
     assert_eq!(po.name, "foo");
     assert_eq!(po.codegen_units, Some(7)); // "foo" package override from config
     assert_eq!(po.opt_level, "1"); // SAME as normal
@@ -439,7 +405,6 @@ fn named_env_profile() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
             [package]
             name = "foo"
             version = "0.1.0"
@@ -448,8 +413,7 @@ fn named_env_profile() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v -Zunstable-options --profile=other")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -v --profile=other")
         .env("CARGO_PROFILE_OTHER_CODEGEN_UNITS", "1")
         .env("CARGO_PROFILE_OTHER_INHERITS", "dev")
         .with_stderr_contains("[..]-C codegen-units=1 [..]")
@@ -458,7 +422,8 @@ fn named_env_profile() {
 
 #[cargo_test]
 fn test_with_dev_profile() {
-    // `cargo test` uses "dev" profile for dependencies.
+    // The `test` profile inherits from `dev` for both local crates and
+    // dependencies.
     Package::new("somedep", "1.0.0").publish();
     let p = project()
         .file(
@@ -484,8 +449,9 @@ fn test_with_dev_profile() {
 [COMPILING] somedep v1.0.0
 [RUNNING] `rustc --crate-name somedep [..]-C debuginfo=0[..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..]-C debuginfo=2[..]
+[RUNNING] `rustc --crate-name foo [..]-C debuginfo=0[..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();

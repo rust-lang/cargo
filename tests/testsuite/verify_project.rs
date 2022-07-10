@@ -68,6 +68,6 @@ fn cargo_verify_project_honours_unstable_features() {
 
     p.cargo("verify-project")
         .with_status(1)
-        .with_stdout(r#"{"invalid":"failed to parse manifest at `[CWD]/Cargo.toml`"}"#)
+        .with_json(r#"{"invalid":"failed to parse manifest at `[CWD]/Cargo.toml`"}"#)
         .run();
 }

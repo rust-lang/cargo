@@ -2,6 +2,21 @@ use anyhow::Error;
 
 use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::Config;
+use std::task::Poll;
+
+pub trait PollExt<T> {
+    fn expect(self, msg: &str) -> T;
+}
+
+impl<T> PollExt<T> for Poll<T> {
+    #[track_caller]
+    fn expect(self, msg: &str) -> T {
+        match self {
+            Poll::Ready(val) => val,
+            Poll::Pending => panic!("{}", msg),
+        }
+    }
+}
 
 pub struct Retry<'a> {
     config: &'a Config,
@@ -49,6 +64,7 @@ fn maybe_spurious(err: &Error) -> bool {
             || curl_err.is_couldnt_resolve_host()
             || curl_err.is_operation_timedout()
             || curl_err.is_recv_error()
+            || curl_err.is_send_error()
             || curl_err.is_http2_error()
             || curl_err.is_http2_stream_error()
             || curl_err.is_ssl_connect_error()

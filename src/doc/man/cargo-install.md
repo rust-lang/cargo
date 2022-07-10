@@ -8,7 +8,7 @@ cargo-install - Build and install a Rust binary
 
 ## SYNOPSIS
 
-`cargo install` [_options_] _crate_...\
+`cargo install` [_options_] _crate_[@_version_]...\
 `cargo install` [_options_] `--path` _path_\
 `cargo install` [_options_] `--git` _url_ [_crate_...]\
 `cargo install` [_options_] `--list`
@@ -42,7 +42,7 @@ change, then Cargo will reinstall the package:
 - The package version and source.
 - The set of binary names installed.
 - The chosen features.
-- The release mode (`--debug`).
+- The profile (`--profile`).
 - The target (`--target`).
 
 Installing with `--path` will always build and install, unless there are
@@ -162,7 +162,12 @@ Directory to install packages into.
 
 {{#option "`--debug`" }}
 Build with the `dev` profile instead the `release` profile.
+See also the `--profile` option for choosing a specific profile by name.
 {{/option}}
+
+{{> options-profile }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -176,12 +181,16 @@ Build with the `dev` profile instead the `release` profile.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
 
 ### Display Options
 
 {{#options}}
 {{> options-display }}
+
+{{> options-message-format }}
+
 {{/options}}
 
 {{> section-options-common }}

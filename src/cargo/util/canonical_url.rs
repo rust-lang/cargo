@@ -1,4 +1,4 @@
-use crate::util::errors::CargoResult;
+use crate::util::{errors::CargoResult, IntoUrl};
 use std::hash::{self, Hash};
 use url::Url;
 
@@ -19,7 +19,7 @@ impl CanonicalUrl {
     pub fn new(url: &Url) -> CargoResult<CanonicalUrl> {
         let mut url = url.clone();
 
-        // cannot-be-a-base-urls (e.g., `github.com:rust-lang-nursery/rustfmt.git`)
+        // cannot-be-a-base-urls (e.g., `github.com:rust-lang/rustfmt.git`)
         // are not supported.
         if url.cannot_be_a_base() {
             anyhow::bail!(
@@ -54,6 +54,17 @@ impl CanonicalUrl {
                 last[..last.len() - 4].to_owned()
             };
             url.path_segments_mut().unwrap().pop().push(&last);
+        }
+
+        // Ignore the protocol specifier (if any).
+        if url.scheme().starts_with("sparse+") {
+            // NOTE: it is illegal to use set_scheme to change sparse+http(s) to http(s).
+            url = url
+                .to_string()
+                .strip_prefix("sparse+")
+                .expect("we just found that prefix")
+                .into_url()
+                .expect("a valid url without a protocol specifier should still be valid");
         }
 
         Ok(CanonicalUrl(url))

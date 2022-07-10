@@ -10,7 +10,7 @@ cargo\-fetch \- Fetch dependencies of a package from the network
 .SH "DESCRIPTION"
 If a \fBCargo.lock\fR file is available, this command will ensure that all of the
 git dependencies and/or registry dependencies are downloaded and locally
-available. Subsequent Cargo commands never touch the network after a \fBcargo fetch\fR unless the lock file changes.
+available. Subsequent Cargo commands will be able to run offline after a \fBcargo fetch\fR unless the lock file changes.
 .sp
 If the lock file is not available, then this command will generate the lock
 file before fetching the dependencies.
@@ -25,8 +25,7 @@ you plan to use Cargo without a network with the \fB\-\-offline\fR flag.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Fetch for the given architecture. The default is the host
-architecture. The general format of the triple is
+Fetch for the given architecture. The default is all architectures. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
@@ -51,7 +50,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -119,6 +120,11 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
 .RE
 .sp
 \fB\-h\fR, 

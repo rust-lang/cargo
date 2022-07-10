@@ -1,8 +1,8 @@
 use crate::core::compiler::CompileKind;
 use crate::util::interning::InternedString;
-use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 use anyhow::bail;
+use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -14,6 +14,8 @@ pub struct BuildConfig {
     pub requested_kinds: Vec<CompileKind>,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
+    /// Do not abort the build as soon as there is an error.
+    pub keep_going: bool,
     /// Build profile
     pub requested_profile: InternedString,
     /// The mode we are compiling in.
@@ -37,6 +39,10 @@ pub struct BuildConfig {
     // Note that, although the cmd-line flag name is `out-dir`, in code we use
     // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
     pub export_dir: Option<PathBuf>,
+    /// `true` to output a future incompatibility report at the end of the build
+    pub future_incompat_report: bool,
+    /// Which kinds of build timings to output (empty if none).
+    pub timing_outputs: Vec<TimingOutput>,
 }
 
 impl BuildConfig {
@@ -51,6 +57,7 @@ impl BuildConfig {
     pub fn new(
         config: &Config,
         jobs: Option<i32>,
+        keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
@@ -68,13 +75,20 @@ impl BuildConfig {
         }
         let jobs = match jobs.or(cfg.jobs) {
             None => ::num_cpus::get() as u32,
+            Some(0) => anyhow::bail!("jobs may not be 0"),
             Some(j) if j < 0 => (::num_cpus::get() as i32 + j).max(1) as u32,
             Some(j) => j as u32,
         };
 
+        if config.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
+            // TODO: This should eventually be fixed.
+            anyhow::bail!("-Zbuild-std requires --target");
+        }
+
         Ok(BuildConfig {
             requested_kinds,
             jobs,
+            keep_going,
             requested_profile: InternedString::new("dev"),
             mode,
             message_format: MessageFormat::Human,
@@ -84,6 +98,8 @@ impl BuildConfig {
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,
+            future_incompat_report: false,
+            timing_outputs: Vec::new(),
         })
     }
 
@@ -147,6 +163,8 @@ pub enum CompileMode {
     Doc { deps: bool },
     /// A target that will be tested with `rustdoc`.
     Doctest,
+    /// An example or library that will be scraped for function calls by `rustdoc`.
+    Docscrape,
     /// A marker for Units that represent the execution of a `build.rs` script.
     RunCustomBuild,
 }
@@ -164,6 +182,7 @@ impl ser::Serialize for CompileMode {
             Bench => "bench".serialize(s),
             Doc { .. } => "doc".serialize(s),
             Doctest => "doctest".serialize(s),
+            Docscrape => "docscrape".serialize(s),
             RunCustomBuild => "run-custom-build".serialize(s),
         }
     }
@@ -183,6 +202,11 @@ impl CompileMode {
     /// Returns `true` if this a doc test.
     pub fn is_doc_test(self) -> bool {
         self == CompileMode::Doctest
+    }
+
+    /// Returns `true` if this is scraping examples for documentation.
+    pub fn is_doc_scrape(self) -> bool {
+        self == CompileMode::Docscrape
     }
 
     /// Returns `true` if this is any type of test (test, benchmark, doc test, or
@@ -209,4 +233,24 @@ impl CompileMode {
     pub fn is_run_custom_build(self) -> bool {
         self == CompileMode::RunCustomBuild
     }
+
+    /// Returns `true` if this mode may generate an executable.
+    ///
+    /// Note that this also returns `true` for building libraries, so you also
+    /// have to check the target.
+    pub fn generates_executable(self) -> bool {
+        matches!(
+            self,
+            CompileMode::Test | CompileMode::Bench | CompileMode::Build
+        )
+    }
+}
+
+/// Kinds of build timings we can output.
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
+pub enum TimingOutput {
+    /// Human-readable HTML report
+    Html,
+    /// Machine-readable JSON (unstable)
+    Json,
 }

@@ -2,25 +2,8 @@
 
 use super::config::{assert_error, assert_match, read_output, write_config, ConfigBuilder};
 use cargo::util::config::Definition;
-use cargo_test_support::{paths, project};
-use std::fs;
-
-#[cargo_test]
-fn config_gated() {
-    // Requires -Zunstable-options
-    let p = project().file("src/lib.rs", "").build();
-
-    p.cargo("build --config --config build.jobs=1")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the `--config` flag is unstable, [..]
-See [..]
-See [..]
-",
-        )
-        .run();
-}
+use cargo_test_support::paths;
+use std::{collections::HashMap, fs};
 
 #[cargo_test]
 fn basic() {
@@ -39,12 +22,14 @@ fn cli_priority() {
         jobs = 3
         rustc = 'file'
         [term]
+        quiet = false
         verbose = false
         ",
     );
     let config = ConfigBuilder::new().build();
     assert_eq!(config.get::<i32>("build.jobs").unwrap(), 3);
     assert_eq!(config.get::<String>("build.rustc").unwrap(), "file");
+    assert_eq!(config.get::<bool>("term.quiet").unwrap(), false);
     assert_eq!(config.get::<bool>("term.verbose").unwrap(), false);
 
     let config = ConfigBuilder::new()
@@ -58,6 +43,14 @@ fn cli_priority() {
     assert_eq!(config.get::<i32>("build.jobs").unwrap(), 1);
     assert_eq!(config.get::<String>("build.rustc").unwrap(), "cli");
     assert_eq!(config.get::<bool>("term.verbose").unwrap(), true);
+
+    // Setting both term.verbose and term.quiet is invalid and is tested
+    // in the run test suite.
+    let config = ConfigBuilder::new()
+        .env("CARGO_TERM_QUIET", "false")
+        .config_arg("term.quiet=true")
+        .build();
+    assert_eq!(config.get::<bool>("term.quiet").unwrap(), true);
 }
 
 #[cargo_test]
@@ -224,11 +217,64 @@ fn merge_array_mixed_def_paths() {
 }
 
 #[cargo_test]
+fn enforces_format() {
+    // These dotted key expressions should all be fine.
+    let config = ConfigBuilder::new()
+        .config_arg("a=true")
+        .config_arg(" b.a = true ")
+        .config_arg("c.\"b\".'a'=true")
+        .config_arg("d.\"=\".'='=true")
+        .config_arg("e.\"'\".'\"'=true")
+        .build();
+    assert_eq!(config.get::<bool>("a").unwrap(), true);
+    assert_eq!(
+        config.get::<HashMap<String, bool>>("b").unwrap(),
+        HashMap::from([("a".to_string(), true)])
+    );
+    assert_eq!(
+        config
+            .get::<HashMap<String, HashMap<String, bool>>>("c")
+            .unwrap(),
+        HashMap::from([("b".to_string(), HashMap::from([("a".to_string(), true)]))])
+    );
+    assert_eq!(
+        config
+            .get::<HashMap<String, HashMap<String, bool>>>("d")
+            .unwrap(),
+        HashMap::from([("=".to_string(), HashMap::from([("=".to_string(), true)]))])
+    );
+    assert_eq!(
+        config
+            .get::<HashMap<String, HashMap<String, bool>>>("e")
+            .unwrap(),
+        HashMap::from([("'".to_string(), HashMap::from([("\"".to_string(), true)]))])
+    );
+
+    // But anything that's not a dotted key expression should be disallowed.
+    let _ = ConfigBuilder::new()
+        .config_arg("[a] foo=true")
+        .build_err()
+        .unwrap_err();
+    let _ = ConfigBuilder::new()
+        .config_arg("a = true\nb = true")
+        .build_err()
+        .unwrap_err();
+
+    // We also disallow overwriting with tables since it makes merging unclear.
+    let _ = ConfigBuilder::new()
+        .config_arg("a = { first = true, second = false }")
+        .build_err()
+        .unwrap_err();
+    let _ = ConfigBuilder::new()
+        .config_arg("a = { first = true }")
+        .build_err()
+        .unwrap_err();
+}
+
+#[cargo_test]
 fn unused_key() {
     // Unused key passed on command line.
-    let config = ConfigBuilder::new()
-        .config_arg("build={jobs=1, unused=2}")
-        .build();
+    let config = ConfigBuilder::new().config_arg("build.unused = 2").build();
 
     config.build_config().unwrap();
     let output = read_output(config);
@@ -274,10 +320,22 @@ fn bad_parse() {
     assert_error(
         config.unwrap_err(),
         "\
-failed to parse --config argument `abc`
+failed to parse value from --config argument `abc` as a dotted key expression
 
 Caused by:
-  expected an equals, found eof at line 1 column 4",
+  TOML parse error at line 1, column 4
+  |
+1 | abc
+  |    ^
+Unexpected end of input
+Expected `.` or `=`
+",
+    );
+
+    let config = ConfigBuilder::new().config_arg("").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "--config argument `` was not a TOML dotted key expression (such as `build.jobs = 2`)",
     );
 }
 
@@ -289,14 +347,73 @@ fn too_many_values() {
         config.unwrap_err(),
         "\
 --config argument `a=1
-b=2` expected exactly one key=value pair, got 2 keys",
+b=2` was not a TOML dotted key expression (such as `build.jobs = 2`)",
     );
+}
 
-    let config = ConfigBuilder::new().config_arg("").build_err();
+#[cargo_test]
+fn no_disallowed_values() {
+    let config = ConfigBuilder::new()
+        .config_arg("registry.token=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registry.token cannot be set through --config for security reasons",
+    );
+    let config = ConfigBuilder::new()
+        .config_arg("registries.crates-io.token=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registries.crates-io.token cannot be set through --config for security reasons",
+    );
+}
+
+#[cargo_test]
+fn no_inline_table_value() {
+    // Disallow inline tables
+    let config = ConfigBuilder::new()
+        .config_arg("a.b={c = \"d\"}")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "--config argument `a.b={c = \"d\"}` sets a value to an inline table, which is not accepted"
+    );
+}
+
+#[cargo_test]
+fn no_array_of_tables_values() {
+    // Disallow array-of-tables when not in dotted form
+    let config = ConfigBuilder::new()
+        .config_arg("[[a.b]]\nc = \"d\"")
+        .build_err();
     assert_error(
         config.unwrap_err(),
         "\
-         --config argument `` expected exactly one key=value pair, got 0 keys",
+--config argument `[[a.b]]
+c = \"d\"` was not a TOML dotted key expression (such as `build.jobs = 2`)",
+    );
+}
+
+#[cargo_test]
+fn no_comments() {
+    // Disallow comments in dotted form.
+    let config = ConfigBuilder::new()
+        .config_arg("a.b = \"c\" # exactly")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+--config argument `a.b = \"c\" # exactly` includes non-whitespace decoration",
+    );
+
+    let config = ConfigBuilder::new()
+        .config_arg("# exactly\na.b = \"c\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+--config argument `# exactly\na.b = \"c\"` includes non-whitespace decoration",
     );
 }
 
@@ -336,5 +453,32 @@ Caused by:
 Caused by:
   failed to merge config value from `--config cli option` into `--config cli option`: \
   expected string, but found array",
+    );
+}
+
+#[cargo_test]
+fn cli_path() {
+    // --config path_to_file
+    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
+    let config = ConfigBuilder::new()
+        .cwd(paths::root())
+        .config_arg("myconfig.toml")
+        .build();
+    assert_eq!(config.get::<u32>("key").unwrap(), 123);
+
+    let config = ConfigBuilder::new().config_arg("missing.toml").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to parse value from --config argument `missing.toml` as a dotted key expression
+
+Caused by:
+  TOML parse error at line 1, column 13
+  |
+1 | missing.toml
+  |             ^
+Unexpected end of input
+Expected `.` or `=`
+",
     );
 }

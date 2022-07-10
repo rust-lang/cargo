@@ -19,16 +19,20 @@ the two dashes (`--`) are passed to the benchmark binaries and thus to
 _libtest_ (rustc's built in unit-test and micro-benchmarking framework). If
 you are passing arguments to both Cargo and the binary, the ones after `--` go
 to the binary, the ones before go to Cargo. For details about libtest's
-arguments see the output of `cargo bench -- --help`.  As an example, this will
-run only the benchmark named `foo` (and skip other similarly named benchmarks
-like `foobar`):
+arguments see the output of `cargo bench -- --help` and check out the rustc
+book's chapter on how tests work at
+<https://doc.rust-lang.org/rustc/tests/index.html>.
+
+As an example, this will run only the benchmark named `foo` (and skip other
+similarly named benchmarks like `foobar`):
 
     cargo bench -- foo --exact
 
-Benchmarks are built with the `--test` option to `rustc` which creates an
-executable with a `main` function that automatically runs all functions
-annotated with the `#[bench]` attribute. Cargo passes the `--bench` flag to
-the test harness to tell it to run only benchmarks.
+Benchmarks are built with the `--test` option to `rustc` which creates a
+special executable by linking your code with libtest. The executable
+automatically runs all functions annotated with the `#[bench]` attribute.
+Cargo passes the `--bench` flag to the test harness to tell it to run
+only benchmarks.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
@@ -42,6 +46,14 @@ function to handle running benchmarks.
 > [crates.io](https://crates.io/keywords/benchmark) that may help with
 > running benchmarks on the stable channel, such as
 > [Criterion](https://crates.io/crates/criterion).
+
+By default, `cargo bench` uses the [`bench` profile], which enables
+optimizations and disables debugging information. If you need to debug a
+benchmark, you can use the `--profile=dev` command-line option to switch to
+the dev profile. You can then run the debug-enabled benchmark within a
+debugger.
+
+[`bench` profile]: ../reference/profiles.html#bench
 
 ## OPTIONS
 
@@ -70,6 +82,8 @@ them from being benchmarked by default. Target selection options that take a
 target by name ignore the `bench` flag and will always benchmark the given
 target.
 
+{{> options-targets-bin-auto-built }}
+
 {{> options-targets }}
 
 {{> section-features }}
@@ -79,6 +93,12 @@ target.
 {{#options}}
 
 {{> options-target-triple }}
+
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -122,24 +142,8 @@ Rust test harness runs benchmarks serially in a single thread.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See
-[the reference](../reference/profiles.html)
-for more details.
-
-Benchmarks are always built with the `bench` profile. Binary and lib targets
-are built separately as benchmarks with the `bench` profile. Library targets
-are built with the `release` profiles when linked to binaries and benchmarks.
-Dependencies use the `release` profile.
-
-If you need a debug build of a benchmark, try building it with
-{{man "cargo-build" 1}} which will use the `test` profile which is by default
-unoptimized and includes debug information. You can then run the debug-enabled
-benchmark manually.
 
 {{> section-environment }}
 

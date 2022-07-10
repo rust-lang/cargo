@@ -13,7 +13,9 @@ use std::time::SystemTime;
 use super::death;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, is_coarse_mtime, project, rustc_host, sleep_ms};
+use cargo_test_support::{
+    basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env, sleep_ms,
+};
 
 #[cargo_test]
 fn modifying_and_moving() {
@@ -491,8 +493,8 @@ fn changing_bin_features_caches_targets() {
     /* Targets should be cached from the first build */
 
     let mut e = p.cargo("build");
-    // MSVC/apple does not include hash in binary filename, so it gets recompiled.
-    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
+    // MSVC does not include hash in binary filename, so it gets recompiled.
+    if cfg!(target_env = "msvc") {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -501,7 +503,7 @@ fn changing_bin_features_caches_targets() {
     p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     let mut e = p.cargo("build --features foo");
-    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
+    if cfg!(target_env = "msvc") {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -594,6 +596,8 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
+[EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[..][EXE])
 ",
         )
         .run();
@@ -1123,6 +1127,7 @@ fn reuse_workspace_lib() {
 [COMPILING] baz v0.1.1 ([..])
 [RUNNING] `rustc[..] --test [..]`
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/baz-[..][EXE]`
 ",
         )
         .run();
@@ -1251,7 +1256,7 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // So a cleaner can remove files associated with a fingerprint
     // if all the files in the fingerprint's folder are older then a time stamp without
     // effecting any builds that happened since that time stamp.
-    let mut cleand = false;
+    let mut cleaned = false;
     dir.push(".fingerprint");
     for fing in fs::read_dir(&dir).unwrap() {
         let fing = fing.unwrap();
@@ -1265,12 +1270,12 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
             println!("remove: {:?}", fing.path());
             // a real cleaner would remove the big files in deps and build as well
             // but fingerprint is sufficient for our tests
-            cleand = true;
+            cleaned = true;
         } else {
         }
     }
     assert!(
-        cleand,
+        cleaned,
         "called fingerprint_cleaner, but there was nothing to remove"
     );
 }
@@ -1374,6 +1379,7 @@ fn reuse_panic_build_dep_test() {
 [RUNNING] [..]build-script-build`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--test[..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();
@@ -2405,10 +2411,7 @@ fn linking_interrupted() {
 
     // Make a change, start a build, then interrupt it.
     p.change_file("src/lib.rs", "// modified");
-    let linker_env = format!(
-        "CARGO_TARGET_{}_LINKER",
-        rustc_host().to_uppercase().replace('-', "_")
-    );
+    let linker_env = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
     // NOTE: This assumes that the paths to the linker or rustc are not in the
     // fingerprint. But maybe they should be?
     let mut cmd = p
@@ -2580,4 +2583,83 @@ fn env_build_script_no_rebuild() {
 
     p.cargo("build").run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
+}
+
+#[cargo_test]
+fn cargo_env_changes() {
+    // Checks that changes to the env var CARGO in the dep-info file triggers
+    // a rebuild.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{:?}", env!("CARGO"));
+                }
+            "#,
+        )
+        .build();
+
+    let cargo_exe = cargo_test_support::cargo_exe();
+    let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
+    std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
+    let other_cargo = || {
+        let mut pb = cargo_test_support::process(&other_cargo_path);
+        pb.cwd(p.root());
+        cargo_test_support::execs().with_process_builder(pb)
+    };
+
+    p.cargo("check").run();
+    other_cargo()
+        .arg("check")
+        .arg("-v")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // And just to confirm that without using env! it doesn't rebuild.
+    p.change_file("src/main.rs", "fn main() {}");
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    other_cargo()
+        .arg("check")
+        .arg("-v")
+        .with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn changing_linker() {
+    // Changing linker should rebuild.
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("build").run();
+    let linker_env = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
+    p.cargo("build --verbose")
+        .env(&linker_env, "nonexistent-linker")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
+[ERROR] [..]linker[..]
+",
+        )
+        .run();
 }

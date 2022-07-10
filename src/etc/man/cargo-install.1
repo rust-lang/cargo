@@ -6,7 +6,7 @@
 .SH "NAME"
 cargo\-install \- Build and install a Rust binary
 .SH "SYNOPSIS"
-\fBcargo install\fR [\fIoptions\fR] \fIcrate\fR\&...
+\fBcargo install\fR [\fIoptions\fR] \fIcrate\fR[@\fIversion\fR]\&...
 .br
 \fBcargo install\fR [\fIoptions\fR] \fB\-\-path\fR \fIpath\fR
 .br
@@ -71,7 +71,7 @@ change, then Cargo will reinstall the package:
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The release mode (\fB\-\-debug\fR).
+\h'-04'\(bu\h'+02'The profile (\fB\-\-profile\fR).
 .RE
 .sp
 .RS 4
@@ -209,6 +209,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -229,8 +230,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Install for the given architecture. The default is the host
-architecture. The general format of the triple is
+Install for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
@@ -258,6 +258,35 @@ is specified.
 \fB\-\-debug\fR
 .RS 4
 Build with the \fBdev\fR profile instead the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Install with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
+\fB\-\-timings=\fR\fIfmts\fR
+.RS 4
+Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma\-separated list of output
+formats; \fB\-\-timings\fR without an argument will default to \fB\-\-timings=html\fR\&.
+Specifying an output format (rather than the default) is unstable and requires
+\fB\-Zunstable\-options\fR\&. Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine\-readable timing data.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+information about timing information.
+.RE
 .RE
 .SS "Manifest Options"
 .sp
@@ -298,6 +327,13 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
+.sp
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+\fB\-Zunstable\-options\fR\&.
+.RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
@@ -312,7 +348,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -335,6 +373,46 @@ terminal.
 May also be specified with the \fBterm.color\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
+.sp
+\fB\-\-message\-format\fR \fIfmt\fR
+.RS 4
+The output format for diagnostic messages. Can be specified multiple times
+and consists of comma\-separated values. Valid values:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format. Conflicts with
+\fBshort\fR and \fBjson\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages. Conflicts with \fBhuman\fR
+and \fBjson\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR: Emit JSON messages to stdout. See
+\fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
+for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
+the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
+contains embedded ANSI color codes for respecting rustc's default color
+scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+.RE
+.RE
 .SS "Common Options"
 .sp
 \fB+\fR\fItoolchain\fR
@@ -344,6 +422,11 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
 .RE
 .sp
 \fB\-h\fR, 

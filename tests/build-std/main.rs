@@ -105,7 +105,16 @@ fn basic() {
         .build();
 
     p.cargo("check").build_std().target_host().run();
-    p.cargo("build").build_std().target_host().run();
+    p.cargo("build")
+        .build_std()
+        .target_host()
+        // Importantly, this should not say [UPDATING]
+        // There have been multiple bugs where every build triggers and update.
+        .with_stderr(
+            "[COMPILING] foo v0.0.1 [..]\n\
+             [FINISHED] dev [..]",
+        )
+        .run();
     p.cargo("run").build_std().target_host().run();
     p.cargo("test").build_std().target_host().run();
 

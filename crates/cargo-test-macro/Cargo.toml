@@ -1,8 +1,7 @@
 [package]
 name = "cargo-test-macro"
 version = "0.1.0"
-authors = ["Jethro Beekman <jethro@fortanix.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"

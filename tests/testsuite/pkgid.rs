@@ -29,7 +29,7 @@ fn simple() {
         .run();
 
     p.cargo("pkgid bar")
-        .with_stdout("https://github.com/rust-lang/crates.io-index#bar:0.1.0")
+        .with_stdout("https://github.com/rust-lang/crates.io-index#bar@0.1.0")
         .run();
 }
 
@@ -54,6 +54,7 @@ fn suggestion_bad_pkgid() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file("cratesio", "")
         .build();
 
     p.cargo("generate-lockfile").run();
@@ -66,7 +67,7 @@ fn suggestion_bad_pkgid() {
 error: package ID specification `https://example.com/crates-io` did not match any packages
 Did you mean one of these?
 
-  crates-io:0.1.0
+  crates-io@0.1.0
 ",
         )
         .run();
@@ -88,11 +89,39 @@ error: package ID specification `crates_io` did not match any packages
         .with_status(101)
         .with_stderr(
             "\
-error: package ID specification `two-ver:0.3.0` did not match any packages
+error: package ID specification `two-ver@0.3.0` did not match any packages
 Did you mean one of these?
 
-  two-ver:0.1.0
-  two-ver:0.2.0
+  two-ver@0.1.0
+  two-ver@0.2.0
+",
+        )
+        .run();
+
+    // Bad file URL.
+    p.cargo("pkgid ./Cargo.toml")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `./Cargo.toml`
+
+Caused by:
+  package ID specification `./Cargo.toml` looks like a file path, maybe try file://[..]/Cargo.toml
+",
+        )
+        .run();
+
+    // Bad file URL with similar name.
+    p.cargo("pkgid './cratesio'")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `./cratesio`
+
+<tab>Did you mean `crates-io`?
+
+Caused by:
+  package ID specification `./cratesio` looks like a file path, maybe try file://[..]/cratesio
 ",
         )
         .run();

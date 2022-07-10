@@ -11,20 +11,23 @@
 //!   providing the most power and flexibility.
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
-use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::{FeatureResolver, ForceAllTargets, ResolvedFeatures};
-use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion};
+use crate::core::registry::{LockedPatchDependency, PackageRegistry};
+use crate::core::resolver::features::{
+    CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
+};
+use crate::core::resolver::{
+    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionPreferences,
+};
 use crate::core::summary::Summary;
 use crate::core::Feature;
-use crate::core::{
-    GitReference, PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace,
-};
+use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
+use anyhow::Context as _;
 use log::{debug, trace};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
@@ -76,9 +79,9 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'cfg>,
     requested_targets: &[CompileKind],
-    opts: &ResolveOpts,
+    cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
@@ -110,6 +113,16 @@ pub fn resolve_ws_with_opts<'cfg>(
                     .shell()
                     .warn(format!("package replacement is not used: {}", replace_spec))?
             }
+
+            if dep.features().len() != 0 || !dep.uses_default_features() {
+                ws.config()
+                .shell()
+                .warn(format!(
+                    "replacement for `{}` uses the features mechanism. \
+                    default-features and features will not take effect because the replacement dependency does not support this mechanism",
+                    dep.package_name()
+                ))?
+            }
         }
 
         Some(resolve)
@@ -120,7 +133,8 @@ pub fn resolve_ws_with_opts<'cfg>(
     let resolved_with_overrides = resolve_with_previous(
         &mut registry,
         ws,
-        opts,
+        cli_features,
+        has_dev_units,
         resolve.as_ref(),
         None,
         specs,
@@ -130,7 +144,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
     let member_ids = ws
-        .members_with_features(specs, &opts.features)?
+        .members_with_features(specs, cli_features)?
         .into_iter()
         .map(|(p, _fts)| p.package_id())
         .collect::<Vec<_>>();
@@ -143,15 +157,25 @@ pub fn resolve_ws_with_opts<'cfg>(
         force_all_targets,
     )?;
 
+    let feature_opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
     let resolved_features = FeatureResolver::resolve(
         ws,
         target_data,
         &resolved_with_overrides,
         &pkg_set,
-        &opts.features,
+        cli_features,
         specs,
         requested_targets,
+        feature_opts,
+    )?;
+
+    pkg_set.warn_no_lib_packages_and_artifact_libs_overlapping_deps(
+        ws,
+        &resolved_with_overrides,
+        &member_ids,
         has_dev_units,
+        requested_targets,
+        target_data,
         force_all_targets,
     )?;
 
@@ -171,7 +195,8 @@ fn resolve_with_registry<'cfg>(
     let mut resolve = resolve_with_previous(
         registry,
         ws,
-        &ResolveOpts::everything(),
+        &CliFeatures::new_all(true),
+        HasDevUnits::Yes,
         prev.as_ref(),
         None,
         &[],
@@ -202,7 +227,8 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    opts: &ResolveOpts,
+    cli_features: &CliFeatures,
+    has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
@@ -236,11 +262,20 @@ pub fn resolve_with_previous<'cfg>(
             }
     };
 
-    // This is a set of PackageIds of `[patch]` entries that should not be
-    // locked.
+    // While registering patches, we will record preferences for particular versions
+    // of various packages.
+    let mut version_prefs = VersionPreferences::default();
+
+    // This is a set of PackageIds of `[patch]` entries, and some related locked PackageIds, for
+    // which locking should be avoided (but which will be preferred when searching dependencies,
+    // via prefer_patch_deps below)
     let mut avoid_patch_ids = HashSet::new();
+
     if register_patches {
-        for (url, patches) in ws.root_patch() {
+        for (url, patches) in ws.root_patch()?.iter() {
+            for patch in patches {
+                version_prefs.prefer_dependency(patch.clone());
+            }
             let previous = match previous {
                 Some(r) => r,
                 None => {
@@ -251,26 +286,91 @@ pub fn resolve_with_previous<'cfg>(
                     continue;
                 }
             };
-            let patches = patches
-                .iter()
-                .map(|dep| {
-                    let unused = previous.unused_patches().iter().cloned();
-                    let candidates = previous.iter().chain(unused);
-                    match candidates
-                        .filter(pre_patch_keep)
-                        .find(|&id| dep.matches_id(id))
-                    {
-                        Some(id) => {
-                            let mut locked_dep = dep.clone();
-                            locked_dep.lock_to(id);
-                            (dep, Some((locked_dep, id)))
-                        }
-                        None => (dep, None),
+
+            // This is a list of pairs where the first element of the pair is
+            // the raw `Dependency` which matches what's listed in `Cargo.toml`.
+            // The second element is, if present, the "locked" version of
+            // the `Dependency` as well as the `PackageId` that it previously
+            // resolved to. This second element is calculated by looking at the
+            // previous resolve graph, which is primarily what's done here to
+            // build the `registrations` list.
+            let mut registrations = Vec::new();
+            for dep in patches {
+                let candidates = || {
+                    previous
+                        .iter()
+                        .chain(previous.unused_patches().iter().cloned())
+                        .filter(&pre_patch_keep)
+                };
+
+                let lock = match candidates().find(|id| dep.matches_id(*id)) {
+                    // If we found an exactly matching candidate in our list of
+                    // candidates, then that's the one to use.
+                    Some(package_id) => {
+                        let mut locked_dep = dep.clone();
+                        locked_dep.lock_to(package_id);
+                        Some(LockedPatchDependency {
+                            dependency: locked_dep,
+                            package_id,
+                            alt_package_id: None,
+                        })
                     }
-                })
-                .collect::<Vec<_>>();
+                    None => {
+                        // If the candidate does not have a matching source id
+                        // then we may still have a lock candidate. If we're
+                        // loading a v2-encoded resolve graph and `dep` is a
+                        // git dep with `branch = 'master'`, then this should
+                        // also match candidates without `branch = 'master'`
+                        // (which is now treated separately in Cargo).
+                        //
+                        // In this scenario we try to convert candidates located
+                        // in the resolve graph to explicitly having the
+                        // `master` branch (if they otherwise point to
+                        // `DefaultBranch`). If this works and our `dep`
+                        // matches that then this is something we'll lock to.
+                        match candidates().find(|&id| {
+                            match master_branch_git_source(id, previous) {
+                                Some(id) => dep.matches_id(id),
+                                None => false,
+                            }
+                        }) {
+                            Some(id_using_default) => {
+                                let id_using_master = id_using_default.with_source_id(
+                                    dep.source_id().with_precise(
+                                        id_using_default
+                                            .source_id()
+                                            .precise()
+                                            .map(|s| s.to_string()),
+                                    ),
+                                );
+
+                                let mut locked_dep = dep.clone();
+                                locked_dep.lock_to(id_using_master);
+                                Some(LockedPatchDependency {
+                                    dependency: locked_dep,
+                                    package_id: id_using_master,
+                                    // Note that this is where the magic
+                                    // happens, where the resolve graph
+                                    // probably has locks pointing to
+                                    // DefaultBranch sources, and by including
+                                    // this here those will get transparently
+                                    // rewritten to Branch("master") which we
+                                    // have a lock entry for.
+                                    alt_package_id: Some(id_using_default),
+                                })
+                            }
+
+                            // No locked candidate was found
+                            None => None,
+                        }
+                    }
+                };
+
+                registrations.push((dep, lock));
+            }
+
             let canonical = CanonicalUrl::new(url)?;
-            for (orig_patch, unlock_id) in registry.patch(url, &patches)? {
+            for (orig_patch, unlock_id) in registry.patch(url, &registrations)? {
                 // Avoid the locked patch ID.
                 avoid_patch_ids.insert(unlock_id);
                 // Also avoid the thing it is patching.
@@ -285,45 +385,49 @@ pub fn resolve_with_previous<'cfg>(
 
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
+    let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
     // without disturbing the graph structure.
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep);
+        register_previous_locks(ws, registry, r, &keep, dev_deps);
     }
-    // Everything in the previous lock file we want to keep is prioritized
-    // in dependency selection if it comes up, aka we want to have
-    // conservative updates.
-    let try_to_use = previous
-        .map(|r| {
-            r.iter()
-                .filter(keep)
-                .inspect(|id| {
-                    debug!("attempting to prefer {}", id);
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+
+    // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
+    for r in previous {
+        for id in r.iter() {
+            if keep(&id) {
+                debug!("attempting to prefer {}", id);
+                version_prefs.prefer_package_id(id);
+            }
+        }
+    }
 
     if register_patches {
         registry.lock_patches();
     }
 
+    // Some packages are already loaded when setting up a workspace. This
+    // makes it so anything that was already loaded will not be loaded again.
+    // Without this there were cases where members would be parsed multiple times
+    ws.preload(registry);
+
+    // In case any members were not already loaded or the Workspace is_ephemeral.
     for member in ws.members() {
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
     let summaries: Vec<(Summary, ResolveOpts)> = ws
-        .members_with_features(specs, &opts.features)?
+        .members_with_features(specs, cli_features)?
         .into_iter()
         .map(|(member, features)| {
             let summary = registry.lock(member.summary().clone());
             (
                 summary,
                 ResolveOpts {
-                    dev_deps: opts.dev_deps,
-                    features,
+                    dev_deps,
+                    features: RequestedFeatures::CliFeatures(features),
                 },
             )
         })
@@ -353,31 +457,23 @@ pub fn resolve_with_previous<'cfg>(
         &summaries,
         &replace,
         registry,
-        &try_to_use,
+        &version_prefs,
         Some(ws.config()),
         ws.unstable_features()
             .require(Feature::public_dependency())
             .is_ok(),
     )?;
-    resolved.register_used_patches(&registry.patches());
-    if register_patches {
-        // It would be good if this warning was more targeted and helpful
-        // (such as showing close candidates that failed to match). However,
-        // that's not terribly easy to do, so just show a general help
-        // message.
-        let warnings: Vec<String> = resolved
-            .unused_patches()
-            .iter()
-            .map(|pkgid| format!("Patch `{}` was not used in the crate graph.", pkgid))
-            .collect();
-        if !warnings.is_empty() {
-            ws.config().shell().warn(format!(
-                "{}\n{}",
-                warnings.join("\n"),
-                UNUSED_PATCH_WARNING
-            ))?;
-        }
+    let patches: Vec<_> = registry
+        .patches()
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
+    resolved.register_used_patches(&patches[..]);
+
+    if register_patches && !resolved.unused_patches().is_empty() {
+        emit_warnings_of_unused_patches(ws, &resolved, registry)?;
     }
+
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
     }
@@ -406,7 +502,7 @@ pub fn add_overrides<'a>(
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, id, ws.config());
-        source.update().chain_err(|| {
+        source.update().with_context(|| {
             format!(
                 "failed to update path override `{}` \
                  (defined in `{}`)",
@@ -448,6 +544,7 @@ fn register_previous_locks(
     registry: &mut PackageRegistry<'_>,
     resolve: &Resolve,
     keep: &dyn Fn(&PackageId) -> bool,
+    dev_deps: bool,
 ) {
     let path_pkg = |id: SourceId| {
         if !id.is_path() {
@@ -557,6 +654,11 @@ fn register_previous_locks(
                 continue;
             }
 
+            // If dev-dependencies aren't being resolved, skip them.
+            if !dep.is_transitive() && !dev_deps {
+                continue;
+            }
+
             // If this is a path dependency, then try to push it onto our
             // worklist.
             if let Some(pkg) = path_pkg(dep.source_id()) {
@@ -611,17 +713,8 @@ fn register_previous_locks(
         // Note that this is only applicable for loading older resolves now at
         // this point. All new lock files are encoded as v3-or-later, so this is
         // just compat for loading an old lock file successfully.
-        if resolve.version() <= ResolveVersion::V2 {
-            let source = node.source_id();
-            if let Some(GitReference::DefaultBranch) = source.git_reference() {
-                let new_source =
-                    SourceId::for_git(source.url(), GitReference::Branch("master".to_string()))
-                        .unwrap()
-                        .with_precise(source.precise().map(|s| s.to_string()));
-
-                let node = node.with_source_id(new_source);
-                registry.register_lock(node, deps.clone());
-            }
+        if let Some(node) = master_branch_git_source(node, resolve) {
+            registry.register_lock(node, deps.clone());
         }
 
         registry.register_lock(node, deps);
@@ -637,4 +730,94 @@ fn register_previous_locks(
             add_deps(resolve, dep, set);
         }
     }
+}
+
+fn master_branch_git_source(id: PackageId, resolve: &Resolve) -> Option<PackageId> {
+    if resolve.version() <= ResolveVersion::V2 {
+        let source = id.source_id();
+        if let Some(GitReference::DefaultBranch) = source.git_reference() {
+            let new_source =
+                SourceId::for_git(source.url(), GitReference::Branch("master".to_string()))
+                    .unwrap()
+                    .with_precise(source.precise().map(|s| s.to_string()));
+            return Some(id.with_source_id(new_source));
+        }
+    }
+    None
+}
+
+/// Emits warnings of unused patches case by case.
+///
+/// This function does its best to provide more targeted and helpful
+/// (such as showing close candidates that failed to match). However, that's
+/// not terribly easy to do, so just show a general help message if we cannot.
+fn emit_warnings_of_unused_patches(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+    registry: &PackageRegistry<'_>,
+) -> CargoResult<()> {
+    const MESSAGE: &str = "was not used in the crate graph.";
+
+    // Patch package with the source URLs being patch
+    let mut patch_pkgid_to_urls = HashMap::new();
+    for (url, summaries) in registry.patches().iter() {
+        for summary in summaries.iter() {
+            patch_pkgid_to_urls
+                .entry(summary.package_id())
+                .or_insert_with(HashSet::new)
+                .insert(url);
+        }
+    }
+
+    // pkg name -> all source IDs of under the same pkg name
+    let mut source_ids_grouped_by_pkg_name = HashMap::new();
+    for pkgid in resolve.iter() {
+        source_ids_grouped_by_pkg_name
+            .entry(pkgid.name())
+            .or_insert_with(HashSet::new)
+            .insert(pkgid.source_id());
+    }
+
+    let mut unemitted_unused_patches = Vec::new();
+    for unused in resolve.unused_patches().iter() {
+        // Show alternative source URLs if the source URLs being patch
+        // cannot not be found in the crate graph.
+        match (
+            source_ids_grouped_by_pkg_name.get(&unused.name()),
+            patch_pkgid_to_urls.get(unused),
+        ) {
+            (Some(ids), Some(patched_urls))
+                if ids
+                    .iter()
+                    .all(|id| !patched_urls.contains(id.canonical_url())) =>
+            {
+                use std::fmt::Write;
+                let mut msg = String::new();
+                writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
+                write!(
+                    msg,
+                    "Perhaps you misspell the source URL being patched.\n\
+                    Possible URLs for `[patch.<URL>]`:",
+                )?;
+                for id in ids.iter() {
+                    write!(msg, "\n    {}", id.display_registry_name())?;
+                }
+                ws.config().shell().warn(msg)?;
+            }
+            _ => unemitted_unused_patches.push(unused),
+        }
+    }
+
+    // Show general help message.
+    if !unemitted_unused_patches.is_empty() {
+        let warnings: Vec<_> = unemitted_unused_patches
+            .iter()
+            .map(|pkgid| format!("Patch `{}` {}", pkgid, MESSAGE))
+            .collect();
+        ws.config()
+            .shell()
+            .warn(format!("{}\n{}", warnings.join("\n"), UNUSED_PATCH_WARNING))?;
+    }
+
+    return Ok(());
 }

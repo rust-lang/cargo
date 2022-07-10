@@ -1,0 +1,9 @@
+[workspace]
+
+[package]
+name = "your-face"
+version = "0.0.0"
+
+[features]
+mouth = []
+nose = []

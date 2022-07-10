@@ -1,6 +1,7 @@
 use crate::core::PackageId;
-use crate::sources::DirectorySource;
-use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
+use crate::sources::registry::CRATES_IO_HTTP_INDEX;
+use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
 use log::trace;
 use serde::de;
@@ -24,7 +25,7 @@ pub struct SourceId {
     inner: &'static SourceIdInner,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
     /// The source URL.
     url: Url,
@@ -42,11 +43,11 @@ struct SourceIdInner {
 
 /// The possible kinds of code source. Along with `SourceIdInner`, this fully defines the
 /// source.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum SourceKind {
     /// A git repository.
     Git(GitReference),
-    /// A local path..
+    /// A local path.
     Path,
     /// A remote registry.
     Registry,
@@ -73,13 +74,13 @@ impl SourceId {
     /// Creates a `SourceId` object from the kind and URL.
     ///
     /// The canonical url will be calculated, but the precise field will not
-    fn new(kind: SourceKind, url: Url) -> CargoResult<SourceId> {
+    fn new(kind: SourceKind, url: Url, name: Option<&str>) -> CargoResult<SourceId> {
         let source_id = SourceId::wrap(SourceIdInner {
             kind,
             canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
-            name: None,
+            name: name.map(|n| n.into()),
         });
         Ok(source_id)
     }
@@ -132,12 +133,17 @@ impl SourceId {
             }
             "registry" => {
                 let url = url.into_url()?;
-                Ok(SourceId::new(SourceKind::Registry, url)?
+                Ok(SourceId::new(SourceKind::Registry, url, None)?
+                    .with_precise(Some("locked".to_string())))
+            }
+            "sparse" => {
+                let url = string.into_url()?;
+                Ok(SourceId::new(SourceKind::Registry, url, None)?
                     .with_precise(Some("locked".to_string())))
             }
             "path" => {
                 let url = url.into_url()?;
-                SourceId::new(SourceKind::Path, url)
+                SourceId::new(SourceKind::Path, url, None)
             }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
@@ -155,43 +161,65 @@ impl SourceId {
     /// `path`: an absolute path.
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
-        SourceId::new(SourceKind::Path, url)
+        SourceId::new(SourceKind::Path, url, None)
     }
 
     /// Creates a `SourceId` from a Git reference.
     pub fn for_git(url: &Url, reference: GitReference) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Git(reference), url.clone())
+        SourceId::new(SourceKind::Git(reference), url.clone(), None)
     }
 
-    /// Creates a SourceId from a registry URL.
+    /// Creates a SourceId from a remote registry URL when the registry name
+    /// cannot be determined, e.g. a user passes `--index` directly from CLI.
+    ///
+    /// Use [`SourceId::for_alt_registry`] if a name can provided, which
+    /// generates better messages for cargo.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Registry, url.clone())
+        SourceId::new(SourceKind::Registry, url.clone(), None)
+    }
+
+    /// Creates a `SourceId` from a remote registry URL with given name.
+    pub fn for_alt_registry(url: &Url, name: &str) -> CargoResult<SourceId> {
+        SourceId::new(SourceKind::Registry, url.clone(), Some(name))
     }
 
     /// Creates a SourceId from a local registry path.
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
-        SourceId::new(SourceKind::LocalRegistry, url)
+        SourceId::new(SourceKind::LocalRegistry, url, None)
     }
 
     /// Creates a `SourceId` from a directory path.
     pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
-        SourceId::new(SourceKind::Directory, url)
+        SourceId::new(SourceKind::Directory, url, None)
     }
 
     /// Returns the `SourceId` corresponding to the main repository.
     ///
     /// This is the main cargo registry by default, but it can be overridden in
-    /// a `.cargo/config`.
+    /// a `.cargo/config.toml`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
         config.crates_io_source_id(|| {
             config.check_registry_index_not_set()?;
             let url = CRATES_IO_INDEX.into_url().unwrap();
-            SourceId::for_registry(&url)
+            SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
         })
     }
 
+    /// Returns the `SourceId` corresponding to the main repository, using the
+    /// sparse HTTP index if allowed.
+    pub fn crates_io_maybe_sparse_http(config: &Config) -> CargoResult<SourceId> {
+        if config.cli_unstable().sparse_registry {
+            config.check_registry_index_not_set()?;
+            let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
+            SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
+        } else {
+            Self::crates_io(config)
+        }
+    }
+
+    /// Gets the `SourceId` associated with given name of the remote registry.
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
         Ok(SourceId::wrap(SourceIdInner {
@@ -216,17 +244,21 @@ impl SourceId {
 
     pub fn display_index(self) -> String {
         if self.is_default_registry() {
-            "crates.io index".to_string()
+            format!("{} index", CRATES_IO_DOMAIN)
         } else {
-            format!("`{}` index", url_display(self.url()))
+            format!("`{}` index", self.display_registry_name())
         }
     }
 
     pub fn display_registry_name(self) -> String {
         if self.is_default_registry() {
-            "crates.io".to_string()
+            CRATES_IO_REGISTRY.to_string()
         } else if let Some(name) = &self.inner.name {
             name.clone()
+        } else if self.precise().is_some() {
+            // We remove `precise` here to retrieve an permissive version of
+            // `SourceIdInner`, which may contain the registry name.
+            self.with_precise(None).display_registry_name()
         } else {
             url_display(self.url())
         }
@@ -287,7 +319,7 @@ impl SourceId {
                 self,
                 yanked_whitelist,
                 config,
-            ))),
+            )?)),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
@@ -337,7 +369,8 @@ impl SourceId {
             SourceKind::Registry => {}
             _ => return false,
         }
-        self.inner.url.as_str() == CRATES_IO_INDEX
+        let url = self.inner.url.as_str();
+        url == CRATES_IO_INDEX || url == CRATES_IO_HTTP_INDEX
     }
 
     /// Hashes `self`.
@@ -463,7 +496,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
-            SourceKind::Registry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            SourceKind::Registry => write!(f, "registry `{}`", self.display_registry_name()),
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
@@ -481,6 +514,138 @@ impl Hash for SourceId {
             _ => self.inner.url.as_str().hash(into),
         }
     }
+}
+
+impl Hash for SourceIdInner {
+    /// The hash of `SourceIdInner` is used to retrieve its interned value. We
+    /// only care about fields that make `SourceIdInner` unique, which are:
+    ///
+    /// - `kind`
+    /// - `precise`
+    /// - `canonical_url`
+    fn hash<S: hash::Hasher>(&self, into: &mut S) {
+        self.kind.hash(into);
+        self.precise.hash(into);
+        self.canonical_url.hash(into);
+    }
+}
+
+impl PartialEq for SourceIdInner {
+    /// This implementation must be synced with [`SourceIdInner::hash`].
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+            && self.precise == other.precise
+            && self.canonical_url == other.canonical_url
+    }
+}
+
+// forward to `Ord`
+impl PartialOrd for SourceKind {
+    fn partial_cmp(&self, other: &SourceKind) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// Note that this is specifically not derived on `SourceKind` although the
+// implementation here is very similar to what it might look like if it were
+// otherwise derived.
+//
+// The reason for this is somewhat obtuse. First of all the hash value of
+// `SourceKind` makes its way into `~/.cargo/registry/index/github.com-XXXX`
+// which means that changes to the hash means that all Rust users need to
+// redownload the crates.io index and all their crates. If possible we strive to
+// not change this to make this redownloading behavior happen as little as
+// possible. How is this connected to `Ord` you might ask? That's a good
+// question!
+//
+// Since the beginning of time `SourceKind` has had `#[derive(Hash)]`. It for
+// the longest time *also* derived the `Ord` and `PartialOrd` traits. In #8522,
+// however, the implementation of `Ord` changed. This handwritten implementation
+// forgot to sync itself with the originally derived implementation, namely
+// placing git dependencies as sorted after all other dependencies instead of
+// first as before.
+//
+// This regression in #8522 (Rust 1.47) went unnoticed. When we switched back
+// to a derived implementation in #9133 (Rust 1.52 beta) we only then ironically
+// saw an issue (#9334). In #9334 it was observed that stable Rust at the time
+// (1.51) was sorting git dependencies last, whereas Rust 1.52 beta would sort
+// git dependencies first. This is because the `PartialOrd` implementation in
+// 1.51 used #8522, the buggy implementation, which put git deps last. In 1.52
+// it was (unknowingly) restored to the pre-1.47 behavior with git dependencies
+// first.
+//
+// Because the breakage was only witnessed after the original breakage, this
+// trait implementation is preserving the "broken" behavior. Put a different way:
+//
+// * Rust pre-1.47 sorted git deps first.
+// * Rust 1.47 to Rust 1.51 sorted git deps last, a breaking change (#8522) that
+//   was never noticed.
+// * Rust 1.52 restored the pre-1.47 behavior (#9133, without knowing it did
+//   so), and breakage was witnessed by actual users due to difference with
+//   1.51.
+// * Rust 1.52 (the source as it lives now) was fixed to match the 1.47-1.51
+//   behavior (#9383), which is now considered intentionally breaking from the
+//   pre-1.47 behavior.
+//
+// Note that this was all discovered when Rust 1.53 was in nightly and 1.52 was
+// in beta. #9133 was in both beta and nightly at the time of discovery. For
+// 1.52 #9383 reverted #9133, meaning 1.52 is the same as 1.51. On nightly
+// (1.53) #9397 was created to fix the regression introduced by #9133 relative
+// to the current stable (1.51).
+//
+// That's all a long winded way of saying "it's weird that git deps hash first
+// and are sorted last, but it's the way it is right now". The author of this
+// comment chose to handwrite the `Ord` implementation instead of the `Hash`
+// implementation, but it's only required that at most one of them is
+// hand-written because the other can be derived. Perhaps one day in
+// the future someone can figure out how to remove this behavior.
+impl Ord for SourceKind {
+    fn cmp(&self, other: &SourceKind) -> Ordering {
+        match (self, other) {
+            (SourceKind::Path, SourceKind::Path) => Ordering::Equal,
+            (SourceKind::Path, _) => Ordering::Less,
+            (_, SourceKind::Path) => Ordering::Greater,
+
+            (SourceKind::Registry, SourceKind::Registry) => Ordering::Equal,
+            (SourceKind::Registry, _) => Ordering::Less,
+            (_, SourceKind::Registry) => Ordering::Greater,
+
+            (SourceKind::LocalRegistry, SourceKind::LocalRegistry) => Ordering::Equal,
+            (SourceKind::LocalRegistry, _) => Ordering::Less,
+            (_, SourceKind::LocalRegistry) => Ordering::Greater,
+
+            (SourceKind::Directory, SourceKind::Directory) => Ordering::Equal,
+            (SourceKind::Directory, _) => Ordering::Less,
+            (_, SourceKind::Directory) => Ordering::Greater,
+
+            (SourceKind::Git(a), SourceKind::Git(b)) => a.cmp(b),
+        }
+    }
+}
+
+// This is a test that the hash of the `SourceId` for crates.io is a well-known
+// value.
+//
+// Note that the hash value matches what the crates.io source id has hashed
+// since long before Rust 1.30. We strive to keep this value the same across
+// versions of Cargo because changing it means that users will need to
+// redownload the index and all crates they use when using a new Cargo version.
+//
+// This isn't to say that this hash can *never* change, only that when changing
+// this it should be explicitly done. If this hash changes accidentally and
+// you're able to restore the hash to its original value, please do so!
+// Otherwise please just leave a comment in your PR as to why the hash value is
+// changing and why the old value can't be easily preserved.
+//
+// The hash value depends on endianness and bit-width, so we only run this test on
+// little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the
+// well-known value.
+#[test]
+#[cfg(all(target_endian = "little", target_pointer_width = "64"))]
+fn test_cratesio_hash() {
+    let config = Config::default().unwrap();
+    let crates_io = SourceId::crates_io(&config).unwrap();
+    assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
 }
 
 /// A `Display`able view into a `SourceId` that will write it as a url
@@ -566,15 +731,15 @@ mod tests {
     fn github_sources_equal() {
         let loc = "https://github.com/foo/bar".into_url().unwrap();
         let default = SourceKind::Git(GitReference::DefaultBranch);
-        let s1 = SourceId::new(default.clone(), loc).unwrap();
+        let s1 = SourceId::new(default.clone(), loc, None).unwrap();
 
         let loc = "git://github.com/foo/bar".into_url().unwrap();
-        let s2 = SourceId::new(default, loc.clone()).unwrap();
+        let s2 = SourceId::new(default, loc.clone(), None).unwrap();
 
         assert_eq!(s1, s2);
 
         let foo = SourceKind::Git(GitReference::Branch("foo".to_string()));
-        let s3 = SourceId::new(foo, loc).unwrap();
+        let s3 = SourceId::new(foo, loc, None).unwrap();
         assert_ne!(s1, s3);
     }
 }

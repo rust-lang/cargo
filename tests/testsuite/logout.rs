@@ -3,6 +3,7 @@
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::{cargo_process, registry};
 use std::fs;
+use toml_edit::easy as toml;
 
 #[cargo_test]
 fn gated() {
@@ -44,7 +45,6 @@ fn check_config_token(registry: Option<&str>, should_be_set: bool) {
 }
 
 fn simple_logout_test(reg: Option<&str>, flag: &str) {
-    registry::init();
     let msg = reg.unwrap_or("crates.io");
     check_config_token(reg, true);
     cargo_process(&format!("logout -Z unstable-options {}", flag))
@@ -73,6 +73,7 @@ fn simple_logout_test(reg: Option<&str>, flag: &str) {
 
 #[cargo_test]
 fn default_registry() {
+    registry::init();
     simple_logout_test(None, "");
 }
 

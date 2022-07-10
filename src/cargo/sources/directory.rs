@@ -1,21 +1,24 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
-
-use serde::Deserialize;
+use std::task::Poll;
 
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
-use crate::util::{Config, Sha256};
+use crate::util::errors::CargoResult;
+use crate::util::Config;
+
+use anyhow::Context as _;
+use cargo_util::{paths, Sha256};
+use serde::Deserialize;
 
 pub struct DirectorySource<'cfg> {
     source_id: SourceId,
     root: PathBuf,
     packages: HashMap<PackageId, (Package, Checksum)>,
     config: &'cfg Config,
+    updated: bool,
 }
 
 #[derive(Deserialize)]
@@ -31,6 +34,7 @@ impl<'cfg> DirectorySource<'cfg> {
             root: path.to_path_buf(),
             config,
             packages: HashMap::new(),
+            updated: false,
         }
     }
 }
@@ -42,21 +46,31 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
+        if !self.updated {
+            return Poll::Pending;
+        }
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
         for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
-        Ok(())
+        Poll::Ready(Ok(()))
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(
+        &mut self,
+        _dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
+        if !self.updated {
+            return Poll::Pending;
+        }
         let packages = self.packages.values().map(|p| &p.0);
         for summary in packages.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
-        Ok(())
+        Poll::Ready(Ok(()))
     }
 
     fn supports_checksums(&self) -> bool {
@@ -71,9 +85,12 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if self.updated {
+            return Ok(());
+        }
         self.packages.clear();
-        let entries = self.root.read_dir().chain_err(|| {
+        let entries = self.root.read_dir().with_context(|| {
             format!(
                 "failed to read root of directory source: {}",
                 self.root.display()
@@ -117,7 +134,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let mut pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
-            let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
+            let cksum = paths::read(&path.join(cksum_file)).with_context(|| {
                 format!(
                     "failed to load checksum `.cargo-checksum.json` \
                      of {} v{}",
@@ -125,7 +142,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                     pkg.package_id().version()
                 )
             })?;
-            let cksum: Checksum = serde_json::from_str(&cksum).chain_err(|| {
+            let cksum: Checksum = serde_json::from_str(&cksum).with_context(|| {
                 format!(
                     "failed to decode `.cargo-checksum.json` of \
                      {} v{}",
@@ -142,6 +159,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             self.packages.insert(pkg.package_id(), (pkg, cksum));
         }
 
+        self.updated = true;
         Ok(())
     }
 
@@ -172,7 +190,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let file = pkg.root().join(file);
             let actual = Sha256::new()
                 .update_path(&file)
-                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?
+                .with_context(|| format!("failed to calculate checksum of: {}", file.display()))?
                 .finish_hex();
             if &*actual != cksum {
                 anyhow::bail!(
@@ -182,7 +200,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                      \n\
                      directory sources are not intended to be edited, if \
                      modifications are required then it is recommended \
-                     that [replace] is used with a forked copy of the \
+                     that `[patch]` is used with a forked copy of the \
                      source\
                      ",
                     file.display(),
@@ -201,7 +219,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
-        Ok(false)
+    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(false))
+    }
+
+    fn invalidate_cache(&mut self) {
+        // Path source has no local cache.
     }
 }

@@ -39,13 +39,16 @@ pub struct BuildContext<'a, 'cfg> {
     pub packages: PackageSet<'cfg>,
 
     /// Information about rustc and the target platform.
-    pub target_data: RustcTargetData,
+    pub target_data: RustcTargetData<'cfg>,
 
     /// The root units of `unit_graph` (units requested on the command-line).
     pub roots: Vec<Unit>,
 
     /// The dependency graph of units to compile.
     pub unit_graph: UnitGraph,
+
+    /// Reverse-dependencies of documented units, used by the rustdoc --scrape-examples flag.
+    pub scrape_units: Vec<Unit>,
 
     /// The list of all kinds that are involved in this build
     pub all_kinds: HashSet<CompileKind>,
@@ -58,9 +61,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         build_config: &'a BuildConfig,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
-        target_data: RustcTargetData,
+        target_data: RustcTargetData<'cfg>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
+        scrape_units: Vec<Unit>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let all_kinds = unit_graph
             .keys()
@@ -79,6 +83,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             target_data,
             roots,
             unit_graph,
+            scrape_units,
             all_kinds,
         })
     }

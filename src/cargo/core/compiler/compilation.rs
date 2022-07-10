@@ -4,12 +4,12 @@ use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
-use semver::Version;
+use cargo_util::{paths, ProcessBuilder};
 
 use super::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
 use crate::core::Package;
-use crate::util::{self, config, join_paths, process, CargoResult, Config, ProcessBuilder};
+use crate::util::{config, CargoResult, Config};
 
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
@@ -25,6 +25,9 @@ pub struct Doctest {
     ///
     /// This is used for indexing [`Compilation::extra_env`].
     pub script_meta: Option<Metadata>,
+
+    /// Environment variables to set in the rustdoc process.
+    pub env: HashMap<String, OsString>,
 }
 
 /// Information about the output of a unit.
@@ -50,6 +53,9 @@ pub struct Compilation<'cfg> {
 
     /// An array of all cdylibs created.
     pub cdylibs: Vec<UnitOutput>,
+
+    /// The crate names of the root units specified on the command-line.
+    pub root_crate_names: Vec<String>,
 
     /// All directories for the output of native build commands.
     ///
@@ -126,16 +132,17 @@ impl<'cfg> Compilation<'cfg> {
             sysroot_target_libdir: bcx
                 .all_kinds
                 .iter()
-                .map(|kind| {
+                .map(|&kind| {
                     (
-                        *kind,
-                        bcx.target_data.info(*kind).sysroot_target_libdir.clone(),
+                        kind,
+                        bcx.target_data.info(kind).sysroot_target_libdir.clone(),
                     )
                 })
                 .collect(),
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
+            root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
             config: bcx.config,
@@ -184,16 +191,17 @@ impl<'cfg> Compilation<'cfg> {
         unit: &Unit,
         script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
-        let rustdoc = process(&*self.config.rustdoc()?);
+        let rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
         let cmd = fill_rustc_tool_env(rustdoc, unit);
-        let mut p = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
-        unit.target.edition().cmd_edition_arg(&mut p);
+        let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
+        cmd.retry_with_argfile(true);
+        unit.target.edition().cmd_edition_arg(&mut cmd);
 
         for crate_type in unit.target.rustc_crate_types() {
-            p.arg("--crate-type").arg(crate_type.as_str());
+            cmd.arg("--crate-type").arg(crate_type.as_str());
         }
 
-        Ok(p)
+        Ok(cmd)
     }
 
     /// Returns a [`ProcessBuilder`] appropriate for running a process for the
@@ -207,7 +215,13 @@ impl<'cfg> Compilation<'cfg> {
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, None, CompileKind::Host, false)
+        self.fill_env(
+            ProcessBuilder::new(cmd),
+            pkg,
+            None,
+            CompileKind::Host,
+            false,
+        )
     }
 
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
@@ -229,12 +243,12 @@ impl<'cfg> Compilation<'cfg> {
         script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
         let builder = if let Some((runner, args)) = self.target_runner(kind) {
-            let mut builder = process(runner);
+            let mut builder = ProcessBuilder::new(runner);
             builder.args(args);
             builder.arg(cmd);
             builder
         } else {
-            process(cmd)
+            ProcessBuilder::new(cmd)
         };
         self.fill_env(builder, pkg, script_meta, kind, false)
     }
@@ -272,7 +286,7 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
-        let dylib_path = util::dylib_path();
+        let dylib_path = paths::dylib_path();
         let dylib_path_is_empty = dylib_path.is_empty();
         search_path.extend(dylib_path.into_iter());
         if cfg!(target_os = "macos") && dylib_path_is_empty {
@@ -285,9 +299,9 @@ impl<'cfg> Compilation<'cfg> {
             search_path.push(PathBuf::from("/usr/local/lib"));
             search_path.push(PathBuf::from("/usr/lib"));
         }
-        let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
+        let search_path = paths::join_paths(&search_path, paths::dylib_path_envvar())?;
 
-        cmd.env(util::dylib_path_envvar(), &search_path);
+        cmd.env(paths::dylib_path_envvar(), &search_path);
         if let Some(meta) = script_meta {
             if let Some(env) = self.extra_env.get(&meta) {
                 for (k, v) in env {
@@ -309,10 +323,7 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
-            .env(
-                "CARGO_PKG_VERSION_PRE",
-                &pre_version_component(pkg.version()),
-            )
+            .env("CARGO_PKG_VERSION_PRE", pkg.version().pre.as_str())
             .env("CARGO_PKG_VERSION", &pkg.version().to_string())
             .env("CARGO_PKG_NAME", &*pkg.name())
             .env(
@@ -336,14 +347,21 @@ impl<'cfg> Compilation<'cfg> {
                 metadata.license_file.as_ref().unwrap_or(&String::new()),
             )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
+            .env(
+                "CARGO_PKG_RUST_VERSION",
+                &pkg.rust_version().unwrap_or(&String::new()),
+            )
             .cwd(pkg.root());
 
-        if self.config.cli_unstable().configurable_env {
-            // Apply any environment variables from the config
-            for (key, value) in self.config.env_config()?.iter() {
-                if value.is_force() || cmd.get_env(key).is_none() {
-                    cmd.env(key, value.resolve(self.config));
-                }
+        // Apply any environment variables from the config
+        for (key, value) in self.config.env_config()?.iter() {
+            // never override a value that has already been set by cargo
+            if cmd.get_envs().contains_key(key) {
+                continue;
+            }
+
+            if value.is_force() || env::var_os(key).is_none() {
+                cmd.env(key, value.resolve(self.config));
             }
         }
 
@@ -355,27 +373,15 @@ impl<'cfg> Compilation<'cfg> {
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     if unit.target.is_bin() {
-        cmd.env("CARGO_BIN_NAME", unit.target.name());
+        let name = unit
+            .target
+            .binary_filename()
+            .unwrap_or(unit.target.name().to_string());
+
+        cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd
-}
-
-fn pre_version_component(v: &Version) -> String {
-    if v.pre.is_empty() {
-        return String::new();
-    }
-
-    let mut ret = String::new();
-
-    for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 {
-            ret.push('.')
-        };
-        ret.push_str(&x.to_string());
-    }
-
-    ret
 }
 
 fn target_runner(

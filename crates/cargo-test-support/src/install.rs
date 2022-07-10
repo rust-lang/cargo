@@ -6,10 +6,12 @@ use std::path::{Path, PathBuf};
 /// has been installed. Example usage:
 ///
 ///     assert_has_installed_exe(cargo_home(), "foo");
+#[track_caller]
 pub fn assert_has_installed_exe<P: AsRef<Path>>(path: P, name: &'static str) {
     assert!(check_has_installed_exe(path, name));
 }
 
+#[track_caller]
 pub fn assert_has_not_installed_exe<P: AsRef<Path>>(path: P, name: &'static str) {
     assert!(!check_has_installed_exe(path, name));
 }

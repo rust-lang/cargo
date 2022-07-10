@@ -180,6 +180,10 @@ The output has the following format:
             "categories": [
                 "command-line-utilities"
             ],
+            /* Optional string that is the default binary picked by cargo run. */
+            "default_run": null,
+            /* Optional string that is the minimum supported rust version */
+            "rust_version": "1.56",
             /* Array of keywords from the manifest. */
             "keywords": [
                 "cli"

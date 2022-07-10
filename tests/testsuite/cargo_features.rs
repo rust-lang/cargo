@@ -1,6 +1,7 @@
 //! Tests for `cargo-features` definitions.
 
-use cargo_test_support::{project, registry};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{is_nightly, project, registry};
 
 #[cargo_test]
 fn feature_required() {
@@ -30,11 +31,17 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-  consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
+  The package requires the Cargo feature called `test-dummy-unstable`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information \
+  about the status of this feature.
 ",
         )
         .run();
 
+    // Same, but stable.
     p.cargo("build")
         .with_status(101)
         .with_stderr(
@@ -47,9 +54,104 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-  this Cargo does not support nightly features, but if you
-  switch to nightly channel you can add
-  `cargo-features = [\"test-dummy-unstable\"]` to enable this feature
+  The package requires the Cargo feature called `test-dummy-unstable`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+  for more information about the status of this feature.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn feature_required_dependency() {
+    // The feature has been stabilized by a future version of Cargo, and
+    // someone published something uses it, but this version of Cargo has not
+    // yet stabilized it. Don't suggest editing Cargo.toml, since published
+    // packages shouldn't be edited.
+    Package::new("bar", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                im-a-teapot = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] [..]
+[DOWNLOADED] bar v1.0.0 [..]
+error: failed to download replaced source registry `crates-io`
+
+Caused by:
+  failed to parse manifest at `[..]/bar-1.0.0/Cargo.toml`
+
+Caused by:
+  the `im-a-teapot` manifest key is unstable and may not work properly in England
+
+Caused by:
+  feature `test-dummy-unstable` is required
+
+  The package requires the Cargo feature called `test-dummy-unstable`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider trying a more recent nightly release.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+  for more information about the status of this feature.
+",
+        )
+        .run();
+
+    // Same, but stable.
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to download `bar v1.0.0`
+
+Caused by:
+  unable to get packages from source
+
+Caused by:
+  failed to download replaced source registry `crates-io`
+
+Caused by:
+  failed to parse manifest at `[..]/bar-1.0.0/Cargo.toml`
+
+Caused by:
+  the `im-a-teapot` manifest key is unstable and may not work properly in England
+
+Caused by:
+  feature `test-dummy-unstable` is required
+
+  The package requires the Cargo feature called `test-dummy-unstable`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+  for more information about the status of this feature.
 ",
         )
         .run();
@@ -108,6 +210,194 @@ release and is no longer necessary to be listed in the manifest
   See https://doc.rust-lang.org/[..]cargo/ for more information about using this feature.
 [COMPILING] a [..]
 [FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn allow_features() {
+    if !is_nightly() {
+        // -Zallow-features on rustc is nightly only
+        eprintln!("skipping test allow_features without nightly rustc");
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["test-dummy-unstable"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("-Zallow-features=test-dummy-unstable build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] a [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("-Zallow-features=test-dummy-unstable,print-im-a-teapot -Zprint-im-a-teapot build")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("im-a-teapot = true")
+        .run();
+
+    p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
+",
+        )
+        .run();
+
+    p.cargo("-Zallow-features= build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  the feature `test-dummy-unstable` is not in the list of allowed features: []
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn allow_features_to_rustc() {
+    if !is_nightly() {
+        // -Zallow-features on rustc is nightly only
+        eprintln!("skipping test allow_features_to_rustc without nightly rustc");
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![feature(test_2018_feature)]
+            "#,
+        )
+        .build();
+
+    p.cargo("-Zallow-features= build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]E0725[..]")
+        .run();
+
+    p.cargo("-Zallow-features=test_2018_feature build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] a [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn allow_features_in_cfg() {
+    if !is_nightly() {
+        // -Zallow-features on rustc is nightly only
+        eprintln!("skipping test allow_features_in_cfg without nightly rustc");
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["test-dummy-unstable"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [unstable]
+                allow-features = ["test-dummy-unstable", "print-im-a-teapot"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] a [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("-Zprint-im-a-teapot build")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("im-a-teapot = true")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+
+    p.cargo("-Zunstable-options build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the feature `unstable-options` is not in the list of allowed features: [print-im-a-teapot, test-dummy-unstable]
+",
+        )
+        .run();
+
+    // -Zallow-features overrides .cargo/config
+    p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
+",
+        )
+        .run();
+
+    p.cargo("-Zallow-features= build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  the feature `test-dummy-unstable` is not in the list of allowed features: []
 ",
         )
         .run();
@@ -357,7 +647,7 @@ fn wrong_position() {
 error: failed to parse manifest at [..]
 
 Caused by:
-  cargo-features = [\"test-dummy-unstable\"] was found in the wrong location, it \
+  cargo-features = [\"test-dummy-unstable\"] was found in the wrong location: it \
   should be set at the top of Cargo.toml before any tables
 ",
         )

@@ -4,11 +4,11 @@ use crate::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("rustdoc")
-        .setting(AppSettings::TrailingVarArg)
+        .trailing_var_arg(true)
         .about("Build a package's documentation, using specified custom flags.")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
-        .arg(Arg::with_name("args").multiple(true))
-        .arg(opt(
+        .arg_quiet()
+        .arg(Arg::new("args").multiple_values(true))
+        .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",
         ))
@@ -35,16 +35,17 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_unit_graph()
         .arg_ignore_rust_version()
+        .arg_timings()
         .after_help("Run `cargo help rustdoc` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options_for_single_package(
         config,
         CompileMode::Doc { deps: false },
         Some(&ws),
-        ProfileChecking::Checked,
+        ProfileChecking::Custom,
     )?;
     let target_args = values(args, "args");
     compile_opts.target_rustdoc_args = if target_args.is_empty() {
@@ -53,7 +54,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some(target_args)
     };
     let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+        open_result: args.flag("open"),
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;

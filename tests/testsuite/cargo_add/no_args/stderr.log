@@ -1,0 +1,9 @@
+error: The following required arguments were not provided:
+    <DEP_ID|--path <PATH>|--git <URI>>
+
+USAGE:
+    cargo add [OPTIONS] <DEP>[@<VERSION>] ...
+    cargo add [OPTIONS] --path <PATH> ...
+    cargo add [OPTIONS] --git <URL> ...
+
+For more information try --help

@@ -27,7 +27,7 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
 }
 
 #[cargo_test]
-fn deprecated() {
+fn removed() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -54,10 +54,10 @@ fn deprecated() {
 [ERROR] failed to parse manifest at [..]
 
 Caused by:
-  the cargo feature `publish-lockfile` has been removed
+  the cargo feature `publish-lockfile` has been removed in the 1.37 release
+
   Remove the feature from Cargo.toml to remove this error.
-  The publish-lockfile key [..]
-  See [..]
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#publish-lockfile [..]
 ",
         )
         .run();
@@ -186,7 +186,7 @@ fn lock_file_and_workspace() {
 #[cargo_test]
 fn note_resolve_changes() {
     // `multi` has multiple sources (path and registry).
-    Package::new("mutli", "0.1.0").publish();
+    Package::new("multi", "0.1.0").publish();
     // `updated` is always from registry, but should not change.
     Package::new("updated", "1.0.0").publish();
     // `patched` is [patch]ed.
@@ -200,7 +200,7 @@ fn note_resolve_changes() {
                 "0.0.1",
                 r#"
                 [dependencies]
-                mutli = { path = "mutli", version = "0.1" }
+                multi = { path = "multi", version = "0.1" }
                 updated = "1.0"
                 patched = "1.0"
 
@@ -210,8 +210,8 @@ fn note_resolve_changes() {
             ),
         )
         .file("src/main.rs", "fn main() {}")
-        .file("mutli/Cargo.toml", &basic_manifest("mutli", "0.1.0"))
-        .file("mutli/src/lib.rs", "")
+        .file("multi/Cargo.toml", &basic_manifest("multi", "0.1.0"))
+        .file("multi/src/lib.rs", "")
         .file("patched/Cargo.toml", &basic_manifest("patched", "1.0.0"))
         .file("patched/src/lib.rs", "")
         .build();
@@ -230,7 +230,7 @@ fn note_resolve_changes() {
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
 [UPDATING] `[..]` index
-[NOTE] package `mutli v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/mutli`
+[NOTE] package `multi v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/multi`
 [NOTE] package `patched v1.0.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/patched`
 ",
         )
@@ -333,7 +333,7 @@ fn warn_package_with_yanked() {
 [PACKAGING] foo v0.0.1 ([..])
 [UPDATING] `[..]` index
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
-    `crates.io`, consider updating to a version that is not yanked
+    `crates-io`, consider updating to a version that is not yanked
 ",
         )
         .run();
@@ -372,7 +372,7 @@ dependencies = [
 [DOWNLOADED] foo v0.1.0 (registry `[..]`)
 [INSTALLING] foo v0.1.0
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
-    `crates.io`, consider running without --locked
+    `crates-io`, consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `[..]`)
 [COMPILING] bar v0.1.0

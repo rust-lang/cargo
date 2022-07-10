@@ -7,9 +7,9 @@
 use crate::core::{GitReference, PackageId, Source, SourceId};
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::{self, ConfigRelativePath, OptValue};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::{Config, IntoUrl};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use log::debug;
 use std::collections::{HashMap, HashSet};
 use url::Url;
@@ -91,6 +91,15 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 replace_with: None,
             },
         )?;
+        if config.cli_unstable().sparse_registry {
+            base.add(
+                CRATES_IO_REGISTRY,
+                SourceConfig {
+                    id: SourceId::crates_io_maybe_sparse_http(config)?,
+                    replace_with: None,
+                },
+            )?;
+        }
         Ok(base)
     }
 
@@ -207,7 +216,7 @@ restore the source replacement configuration to continue the build
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
             let url = url(&registry, &format!("source.{}.registry", name))?;
-            srcs.push(SourceId::for_registry(&url)?);
+            srcs.push(SourceId::for_alt_registry(&url, &name)?);
         }
         if let Some(local_registry) = def.local_registry {
             let path = local_registry.resolve_path(self.config);
@@ -247,8 +256,8 @@ restore the source replacement configuration to continue the build
             check_not_set("tag", def.tag)?;
             check_not_set("rev", def.rev)?;
         }
-        if name == "crates-io" && srcs.is_empty() {
-            srcs.push(SourceId::crates_io(self.config)?);
+        if name == CRATES_IO_REGISTRY && srcs.is_empty() {
+            srcs.push(SourceId::crates_io_maybe_sparse_http(self.config)?);
         }
 
         match srcs.len() {
@@ -280,7 +289,7 @@ restore the source replacement configuration to continue the build
         return Ok(());
 
         fn url(val: &config::Value<String>, key: &str) -> CargoResult<Url> {
-            let url = val.val.into_url().chain_err(|| {
+            let url = val.val.into_url().with_context(|| {
                 format!(
                     "configuration key `{}` specified an invalid \
                      URL (in {})",

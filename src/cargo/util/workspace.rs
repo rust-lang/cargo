@@ -1,10 +1,10 @@
-use super::ProcessBuilder;
 use crate::core::compiler::Unit;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::{Target, Workspace};
 use crate::ops::CompileOptions;
 use crate::util::CargoResult;
 use anyhow::bail;
+use cargo_util::ProcessBuilder;
 use std::fmt::Write;
 use std::path::PathBuf;
 

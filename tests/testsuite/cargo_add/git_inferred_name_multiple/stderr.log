@@ -1,0 +1,2 @@
+    Updating git repository `[ROOTURL]/git-package`
+error: multiple packages found at `[ROOTURL]/git-package`: my-package1, my-package2

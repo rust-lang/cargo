@@ -235,7 +235,7 @@ fn main() {
 Mitigation strategies:
 * Do not add new fields to all-public field structs.
 * Mark structs as [`#[non_exhaustive]`][non_exhaustive] when first introducing
-  an struct to prevent users from using struct literal syntax, and instead
+  a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
 <a id="struct-add-public-field-when-no-private"></a>
@@ -270,7 +270,7 @@ fn main() {
 Mitigation strategies:
 * Do not add new new fields to all-public field structs.
 * Mark structs as [`#[non_exhaustive]`][non_exhaustive] when first introducing
-  an struct to prevent users from using struct literal syntax, and instead
+  a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
 <a id="struct-private-fields-with-private"></a>
@@ -634,7 +634,7 @@ pub trait Trait<T> {}
 use updated_crate::Trait;
 struct Foo;
 
-impl Trait for Foo {}  // Error: wrong number of type arguments
+impl Trait for Foo {}  // Error: missing generics
 ```
 
 Mitigating strategies:
@@ -943,7 +943,7 @@ pub fn foo<T, U>() {}
 use updated_crate::foo;
 
 fn main() {
-    foo::<u8>(); // Error: wrong number of type arguments
+    foo::<u8>(); // Error: this function takes 2 generic arguments but 1 generic argument was supplied
 }
 ```
 
@@ -955,7 +955,7 @@ explicit type arguments.
 <a id="fn-generalize-compatible"></a>
 ### Minor: generalizing a function to use generics (supporting original type)
 
-The type of an parameter to a function, or its return value, can be
+The type of a parameter to a function, or its return value, can be
 *generalized* to use generics, including by introducing a new type parameter,
 as long as it can be instantiated to the original type. For example, the
 following changes are allowed:

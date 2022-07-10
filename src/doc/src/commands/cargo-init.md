@@ -20,32 +20,6 @@ will be used. If not, then a sample `src/main.rs` file will be created, or
 If the directory is not already in a VCS repository, then a new repository
 is created (see `--vcs` below).
 
-The "authors" field in the manifest is determined from the environment or
-configuration settings. A name is required and is determined from (first match
-wins):
-
-- `cargo-new.name` Cargo config value
-- `CARGO_NAME` environment variable
-- `GIT_AUTHOR_NAME` environment variable
-- `GIT_COMMITTER_NAME` environment variable
-- `user.name` git configuration value
-- `USER` environment variable
-- `USERNAME` environment variable
-- `NAME` environment variable
-
-The email address is optional and is determined from:
-
-- `cargo-new.email` Cargo config value
-- `CARGO_EMAIL` environment variable
-- `GIT_AUTHOR_EMAIL` environment variable
-- `GIT_COMMITTER_EMAIL` environment variable
-- `user.email` git configuration value
-- `EMAIL` environment variable
-
-See [the reference](../reference/config.html) for more information about
-configuration files.
-
-
 See [cargo-new(1)](cargo-new.html) for a similar command which will create a new package in
 a new directory.
 
@@ -65,7 +39,7 @@ This is the default behavior.</dd>
 
 
 <dt class="option-term" id="option-cargo-init---edition"><a class="option-anchor" href="#option-cargo-init---edition"></a><code>--edition</code> <em>edition</em></dt>
-<dd class="option-desc">Specify the Rust edition to use. Default is 2018.
+<dd class="option-desc">Specify the Rust edition to use. Default is 2021.
 Possible values: 2015, 2018, 2021</dd>
 
 
@@ -106,7 +80,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-init--q"><a class="option-anchor" href="#option-cargo-init--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-init---quiet"><a class="option-anchor" href="#option-cargo-init---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-init---color"><a class="option-anchor" href="#option-cargo-init---color"></a><code>--color</code> <em>when</em></dt>
@@ -133,6 +109,10 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-init---config"><a class="option-anchor" href="#option-cargo-init---config"></a><code>--config</code> KEY=VALUE</dt>
+<dd class="option-desc">Overrides a Cargo configuration value.</dd>
 
 
 <dt class="option-term" id="option-cargo-init--h"><a class="option-anchor" href="#option-cargo-init--h"></a><code>-h</code></dt>

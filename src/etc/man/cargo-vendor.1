@@ -22,8 +22,8 @@ to use the vendored sources, which you will need to add to \fB\&.cargo/config.to
 \fB\-s\fR \fImanifest\fR, 
 \fB\-\-sync\fR \fImanifest\fR
 .RS 4
-Specify extra \fBCargo.toml\fR manifests to workspaces which should also be
-vendored and synced to the output.
+Specify an extra \fBCargo.toml\fR manifest to workspaces which should also be
+vendored and synced to the output. May be specified multiple times.
 .RE
 .sp
 \fB\-\-no\-delete\fR
@@ -96,7 +96,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -128,6 +130,11 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
 .RE
 .sp
 \fB\-h\fR, 

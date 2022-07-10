@@ -11,7 +11,7 @@
 use std::error::Error;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Output};
 
 fn main() {
     if let Err(e) = doit() {
@@ -24,19 +24,18 @@ const SEPARATOR: &str = "///////////////////////////////////////////////////////
 
 fn doit() -> Result<(), Box<dyn Error>> {
     let filename = std::env::args()
-        .skip(1)
-        .next()
+        .nth(1)
         .unwrap_or_else(|| "../src/reference/semver.md".to_string());
     let contents = fs::read_to_string(filename)?;
     let mut lines = contents.lines().enumerate();
 
     loop {
         // Find a rust block.
-        let block_start = loop {
+        let (block_start, run_program) = loop {
             match lines.next() {
                 Some((lineno, line)) => {
                     if line.trim().starts_with("```rust") && !line.contains("skip") {
-                        break lineno + 1;
+                        break (lineno + 1, line.contains("run-fail"));
                     }
                 }
                 None => return Ok(()),
@@ -83,12 +82,16 @@ fn doit() -> Result<(), Box<dyn Error>> {
         };
         let expect_success = parts[0][0].contains("MINOR");
         println!("Running test from line {}", block_start);
-        if let Err(e) = run_test(
+
+        let result = run_test(
             join(parts[1]),
             join(parts[2]),
             join(parts[3]),
             expect_success,
-        ) {
+            run_program,
+        );
+
+        if let Err(e) = result {
             return Err(format!(
                 "test failed for example starting on line {}: {}",
                 block_start, e
@@ -105,15 +108,23 @@ fn run_test(
     after: String,
     example: String,
     expect_success: bool,
+    run_program: bool,
 ) -> Result<(), Box<dyn Error>> {
     let tempdir = tempfile::TempDir::new()?;
     let before_p = tempdir.path().join("before.rs");
     let after_p = tempdir.path().join("after.rs");
     let example_p = tempdir.path().join("example.rs");
-    compile(before, &before_p, CRATE_NAME, false, true)?;
-    compile(example.clone(), &example_p, "example", true, true)?;
-    compile(after, &after_p, CRATE_NAME, false, true)?;
-    compile(example, &example_p, "example", true, expect_success)?;
+
+    let check_fn = if run_program {
+        run_check
+    } else {
+        compile_check
+    };
+
+    compile_check(before, &before_p, CRATE_NAME, false, true)?;
+    check_fn(example.clone(), &example_p, "example", true, true)?;
+    compile_check(after, &after_p, CRATE_NAME, false, true)?;
+    check_fn(example, &example_p, "example", true, expect_success)?;
     Ok(())
 }
 
@@ -127,15 +138,47 @@ fn check_formatting(path: &Path) -> Result<(), Box<dyn Error>> {
             if !status.success() {
                 return Err(format!("failed to run rustfmt: {}", status).into());
             }
-            return Ok(());
+            Ok(())
         }
-        Err(e) => {
-            return Err(format!("failed to run rustfmt: {}", e).into());
-        }
+        Err(e) => Err(format!("failed to run rustfmt: {}", e).into()),
     }
 }
 
 fn compile(
+    contents: &str,
+    path: &Path,
+    crate_name: &str,
+    extern_path: bool,
+) -> Result<Output, Box<dyn Error>> {
+    let crate_type = if contents.contains("fn main()") {
+        "bin"
+    } else {
+        "rlib"
+    };
+
+    fs::write(path, &contents)?;
+    check_formatting(path)?;
+    let out_dir = path.parent().unwrap();
+    let mut cmd = Command::new("rustc");
+    cmd.args(&[
+        "--edition=2021",
+        "--crate-type",
+        crate_type,
+        "--crate-name",
+        crate_name,
+        "--out-dir",
+    ]);
+    cmd.arg(&out_dir);
+    if extern_path {
+        let epath = out_dir.join(format!("lib{}.rlib", CRATE_NAME));
+        cmd.arg("--extern")
+            .arg(format!("{}={}", CRATE_NAME, epath.display()));
+    }
+    cmd.arg(path);
+    cmd.output().map_err(Into::into)
+}
+
+fn compile_check(
     mut contents: String,
     path: &Path,
     crate_name: &str,
@@ -155,32 +198,9 @@ fn compile(
         }
         None => None,
     };
-    let crate_type = if contents.contains("fn main()") {
-        "bin"
-    } else {
-        "rlib"
-    };
 
-    fs::write(path, &contents)?;
-    check_formatting(path)?;
-    let out_dir = path.parent().unwrap();
-    let mut cmd = Command::new("rustc");
-    cmd.args(&[
-        "--edition=2018",
-        "--crate-type",
-        crate_type,
-        "--crate-name",
-        crate_name,
-        "--out-dir",
-    ]);
-    cmd.arg(&out_dir);
-    if extern_path {
-        let epath = out_dir.join(format!("lib{}.rlib", CRATE_NAME));
-        cmd.arg("--extern")
-            .arg(format!("{}={}", CRATE_NAME, epath.display()));
-    }
-    cmd.arg(path);
-    let output = cmd.output()?;
+    let output = compile(&contents, path, crate_name, extern_path)?;
+
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
     match (output.status.success(), expect_success) {
         (true, true) => Ok(()),
@@ -213,5 +233,50 @@ fn compile(
                 Ok(())
             }
         }
+    }
+}
+
+fn run_check(
+    contents: String,
+    path: &Path,
+    crate_name: &str,
+    extern_path: bool,
+    expect_success: bool,
+) -> Result<(), Box<dyn Error>> {
+    let compile_output = compile(&contents, path, crate_name, extern_path)?;
+
+    if !compile_output.status.success() {
+        let stderr = std::str::from_utf8(&compile_output.stderr).unwrap();
+        return Err(format!(
+            "expected success, got error {}\n===== Contents:\n{}\n===== Output:\n{}\n",
+            path.display(),
+            contents,
+            stderr
+        )
+        .into());
+    }
+
+    let binary_path = path.parent().unwrap().join(crate_name);
+
+    let output = Command::new(binary_path).output()?;
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+
+    match (output.status.success(), expect_success) {
+        (true, false) => Err(format!(
+            "expected panic, got success {}\n===== Contents:\n{}\n===== Output:\n{}\n",
+            path.display(),
+            contents,
+            stderr
+        )
+        .into()),
+        (false, true) => Err(format!(
+            "expected success, got panic {}\n===== Contents:\n{}\n===== Output:\n{}\n",
+            path.display(),
+            contents,
+            stderr,
+        )
+        .into()),
+        (_, _) => Ok(()),
     }
 }

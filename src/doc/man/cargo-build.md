@@ -23,6 +23,8 @@ When no target selection options are given, `cargo build` will build all
 binary and library targets of the selected packages. Binaries are skipped if
 they have `required-features` that are missing.
 
+{{> options-targets-bin-auto-built }}
+
 {{> options-targets }}
 
 {{> section-features }}
@@ -34,6 +36,12 @@ they have `required-features` that are missing.
 {{> options-target-triple }}
 
 {{> options-release }}
+
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -48,7 +56,7 @@ Copy final artifacts to this directory.
 This option is unstable and available only on the
 [nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
 and requires the `-Z unstable-options` flag to enable.
-See https://github.com/rust-lang/cargo/issues/6790 for more information.
+See <https://github.com/rust-lang/cargo/issues/6790> for more information.
 {{/option}}
 
 {{/options}}
@@ -85,9 +93,9 @@ See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
+{{> options-future-incompat }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

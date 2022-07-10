@@ -201,7 +201,7 @@ fn itarget_proc_macro() {
     Package::new("hostdep", "1.0.0").publish();
     Package::new("pm", "1.0.0")
         .proc_macro(true)
-        .target_dep("hostdep", "1.0", &rustc_host())
+        .target_dep("hostdep", "1.0", rustc_host())
         .file("src/lib.rs", "extern crate hostdep;")
         .publish();
     let p = project()
@@ -1203,7 +1203,7 @@ fn build_dep_activated() {
     Package::new("targetdep", "1.0.0").publish();
     Package::new("hostdep", "1.0.0")
         // Check that "for_host" is sticky.
-        .target_dep("somedep", "1.0", &rustc_host())
+        .target_dep("somedep", "1.0", rustc_host())
         .feature("feat1", &[])
         .file(
             "src/lib.rs",
@@ -1947,7 +1947,7 @@ fn minimal_download() {
     //    ✓    |     ✓    |         | `cargo tree --target=all -e normal -Z features=all`†
     //    ✓    |     ✓    |    ✓    | A normal build.
     //
-    // † — However, `cargo tree` downloads everything.
+    // † — However, `cargo tree` downloads everything.
     Package::new("normal", "1.0.0").publish();
     Package::new("normal_pm", "1.0.0").publish();
     Package::new("normal_opt", "1.0.0").publish();
@@ -2074,6 +2074,7 @@ fn minimal_download() {
 [COMPILING] dev_dep v1.0.0
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 ",
         )
         .run();
@@ -2396,5 +2397,79 @@ foo v0.1.0 [..]
 └── common v1.0.0 feats:
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn all_features_merges_with_features() {
+    Package::new("dep", "0.1.0")
+        .feature("feat1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+                #[cfg(feature="feat1")]
+                pub fn work() {
+                    println!("it works");
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [features]
+                a = []
+
+                [dependencies]
+                dep = "0.1"
+
+                [[example]]
+                name = "ex"
+                required-features = ["a", "dep/feat1"]
+            "#,
+        )
+        .file(
+            "examples/ex.rs",
+            r#"
+            fn main() {
+                dep::work();
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("run --example ex --all-features --features dep/feat1")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+[COMPILING] dep v0.1.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/examples/ex[EXE]`
+",
+        )
+        .with_stdout("it works")
+        .run();
+
+    switch_to_resolver_2(&p);
+
+    p.cargo("run --example ex --all-features --features dep/feat1")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+[RUNNING] `target/debug/examples/ex[EXE]`
+",
+        )
+        .with_stdout("it works")
         .run();
 }

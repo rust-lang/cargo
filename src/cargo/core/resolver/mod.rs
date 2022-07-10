@@ -47,7 +47,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -58,6 +58,7 @@ use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
+use crate::util::network::PollExt;
 use crate::util::profile;
 
 use self::context::Context;
@@ -69,18 +70,20 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::features::{ForceAllTargets, HasDevUnits};
+pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
+pub use self::version_prefs::{VersionOrdering, VersionPreferences};
 
 mod conflict_cache;
 mod context;
 mod dep_cache;
 mod encode;
-mod errors;
+pub(crate) mod errors;
 pub mod features;
 mod resolve;
 mod types;
+mod version_prefs;
 
 /// Builds the list of all packages required to build the first argument.
 ///
@@ -101,10 +104,8 @@ mod types;
 ///   for the same query every time). Typically this is an instance of a
 ///   `PackageRegistry`.
 ///
-/// * `try_to_use` - this is a list of package IDs which were previously found
-///   in the lock file. We heuristically prefer the ids listed in `try_to_use`
-///   when sorting candidates to activate, but otherwise this isn't used
-///   anywhere else.
+/// * `version_prefs` - this represents a preference for some versions over others,
+///   based on the lock file or other reasons such as `[patch]`es.
 ///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
@@ -123,18 +124,26 @@ pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
-    try_to_use: &HashSet<PackageId>,
+    version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new(check_public_visible_dependencies);
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
-    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, version_prefs, minimal_versions);
+    let cx = loop {
+        let cx = Context::new(check_public_visible_dependencies);
+        let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+        if registry.reset_pending() {
+            break cx;
+        } else {
+            registry.registry.block_until_ready()?;
+        }
+    };
 
     let mut cksums = HashMap::new();
     for (summary, _) in cx.activations.values() {
@@ -192,7 +201,7 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone());
+        let res = activate(&mut cx, registry, None, summary.clone(), opts);
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -378,9 +387,8 @@ fn activate_deps_loop(
             let pid = candidate.package_id();
             let opts = ResolveOpts {
                 dev_deps: false,
-                features: RequestedFeatures {
+                features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
-                    all_features: false,
                     uses_default_features: dep.uses_default_features(),
                 },
             };
@@ -391,7 +399,7 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts);
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &opts);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -603,13 +611,13 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
-    opts: ResolveOpts,
+    opts: &ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        // add a edge from candidate to parent in the parents graph
+        // add an edge from candidate to parent in the parents graph
         cx.parents
             .link(candidate_pid, parent_pid)
             // and associate dep with that edge
@@ -625,7 +633,7 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate, &opts, parent)?;
+    let activated = cx.flag_activated(&candidate, opts, parent)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
@@ -634,7 +642,7 @@ fn activate(
             // does. TBH it basically cause panics in the test suite if
             // `parent` is passed through here and `[replace]` is otherwise
             // on life support so it's not critical to fix bugs anyway per se.
-            if cx.flag_activated(replace, &opts, None)? && activated {
+            if cx.flag_activated(replace, opts, None)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -655,7 +663,7 @@ fn activate(
 
     let now = Instant::now();
     let (used_features, deps) =
-        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, &opts)?;
+        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, opts)?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {
@@ -700,7 +708,7 @@ struct BacktrackFrame {
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Summary>,
-    // This is a inlined peekable generator
+    // This is an inlined peekable generator
     has_another: Option<Summary>,
 }
 
@@ -854,6 +862,7 @@ fn generalize_conflicting(
             if let Some(others) = registry
                 .query(critical_parents_dep)
                 .expect("an already used dep now error!?")
+                .expect("an already used dep now pending!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
                 .map(|other| {
@@ -1007,13 +1016,15 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     // dev-dependency since that doesn't count for cycles.
     let mut graph = BTreeMap::new();
     for id in resolve.iter() {
-        let set = graph.entry(id).or_insert_with(BTreeSet::new);
-        for (dep, listings) in resolve.deps_not_replaced(id) {
-            let is_transitive = listings.iter().any(|d| d.is_transitive());
+        let map = graph.entry(id).or_insert_with(BTreeMap::new);
+        for (dep_id, listings) in resolve.deps_not_replaced(id) {
+            let transitive_dep = listings.iter().find(|d| d.is_transitive());
 
-            if is_transitive {
-                set.insert(dep);
-                set.extend(resolve.replacement(dep));
+            if let Some(transitive_dep) = transitive_dep.cloned() {
+                map.insert(dep_id, transitive_dep.clone());
+                resolve
+                    .replacement(dep_id)
+                    .map(|p| map.insert(p, transitive_dep));
             }
         }
     }
@@ -1033,7 +1044,7 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     return Ok(());
 
     fn visit(
-        graph: &BTreeMap<PackageId, BTreeSet<PackageId>>,
+        graph: &BTreeMap<PackageId, BTreeMap<PackageId, Dependency>>,
         id: PackageId,
         visited: &mut HashSet<PackageId>,
         path: &mut Vec<PackageId>,
@@ -1041,15 +1052,21 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     ) -> CargoResult<()> {
         path.push(id);
         if !visited.insert(id) {
+            let iter = path.iter().rev().skip(1).scan(id, |child, parent| {
+                let dep = graph.get(parent).and_then(|adjacent| adjacent.get(child));
+                *child = *parent;
+                Some((parent, dep))
+            });
+            let iter = std::iter::once((&id, None)).chain(iter);
             anyhow::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                errors::describe_path(&path.iter().rev().collect::<Vec<_>>()),
+                errors::describe_path(iter),
             );
         }
 
         if checked.insert(id) {
-            for dep in graph[&id].iter() {
+            for dep in graph[&id].keys() {
                 visit(graph, *dep, visited, path, checked)?;
             }
         }

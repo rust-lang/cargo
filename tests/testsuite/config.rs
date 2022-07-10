@@ -1,11 +1,12 @@
 //! Tests for config settings.
 
-use cargo::core::{enable_nightly_features, Shell};
+use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
-use cargo_test_support::{normalized_lines_match, paths, project, t};
+use cargo_test_support::compare;
+use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
 use serde::Deserialize;
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
@@ -20,6 +21,7 @@ pub struct ConfigBuilder {
     unstable: Vec<String>,
     config_args: Vec<String>,
     cwd: Option<PathBuf>,
+    enable_nightly_features: bool,
 }
 
 impl ConfigBuilder {
@@ -29,6 +31,7 @@ impl ConfigBuilder {
             unstable: Vec::new(),
             config_args: Vec::new(),
             cwd: None,
+            enable_nightly_features: false,
         }
     }
 
@@ -44,12 +47,14 @@ impl ConfigBuilder {
         self
     }
 
+    /// Unconditionally enable nightly features, even on stable channels.
+    pub fn nightly_features_allowed(&mut self, allowed: bool) -> &mut Self {
+        self.enable_nightly_features = allowed;
+        self
+    }
+
     /// Passes a `--config` flag.
     pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
-        if !self.unstable.iter().any(|s| s == "unstable-options") {
-            // --config is current unstable
-            self.unstable_flag("unstable-options");
-        }
         self.config_args.push(arg.into());
         self
     }
@@ -67,15 +72,12 @@ impl ConfigBuilder {
 
     /// Creates the `Config`, returning a Result.
     pub fn build_err(&self) -> CargoResult<Config> {
-        if !self.unstable.is_empty() {
-            // This is unfortunately global. Some day that should be fixed.
-            enable_nightly_features();
-        }
         let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
         let shell = Shell::from_write(output);
         let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
+        config.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
         config.set_env(self.env.clone());
         config.set_search_stop_path(paths::root());
         config.configure(
@@ -142,30 +144,8 @@ pub fn write_config_at(path: impl AsRef<Path>, contents: &str) {
     fs::write(path, contents).unwrap();
 }
 
-fn write_config_toml(config: &str) {
+pub fn write_config_toml(config: &str) {
     write_config_at(paths::root().join(".cargo/config.toml"), config);
-}
-
-// Several test fail on windows if the user does not have permission to
-// create symlinks (the `SeCreateSymbolicLinkPrivilege`). Instead of
-// disabling these test on Windows, use this function to test whether we
-// have permission, and return otherwise. This way, we still don't run these
-// tests most of the time, but at least we do if the user has the right
-// permissions.
-// This function is derived from libstd fs tests.
-pub fn got_symlink_permission() -> bool {
-    if cfg!(unix) {
-        return true;
-    }
-    let link = paths::root().join("some_hopefully_unique_link_name");
-    let target = paths::root().join("nonexisting_target");
-
-    match symlink_file(&target, &link) {
-        Ok(_) => true,
-        // ERROR_PRIVILEGE_NOT_HELD = 1314
-        Err(ref err) if err.raw_os_error() == Some(1314) => false,
-        Err(_) => true,
-    }
 }
 
 #[cfg(unix)]
@@ -184,6 +164,7 @@ fn symlink_config_to_config_toml() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
+#[track_caller]
 pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
@@ -201,12 +182,10 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
     assert_match(msgs, &causes);
 }
 
+#[track_caller]
 pub fn assert_match(expected: &str, actual: &str) {
-    if !normalized_lines_match(expected, actual, None) {
-        panic!(
-            "Did not find expected:\n{}\nActual:\n{}\n",
-            expected, actual
-        );
+    if let Err(e) = compare::match_exact(expected, actual, "output", "", None) {
+        panic_error("", e);
     }
 }
 
@@ -250,7 +229,7 @@ f1 = 1
 fn config_ambiguous_filename_symlink_doesnt_warn() {
     // Windows requires special permissions to create symlinks.
     // If we don't have permission, just skip this test.
-    if !got_symlink_permission() {
+    if !symlink_supported() {
         return;
     };
 
@@ -269,15 +248,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(config);
-    let unexpected = "\
-warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
-";
-    if normalized_lines_match(unexpected, &output, None) {
-        panic!(
-            "Found unexpected:\n{}\nActual error:\n{}\n",
-            unexpected, output
-        );
-    }
+    assert_eq!(output, "");
 }
 
 #[cargo_test]
@@ -576,7 +547,7 @@ opt-level = 'foo'
 error in [..]/.cargo/config: could not load config key `profile.dev.opt-level`
 
 Caused by:
-  must be an integer, `z`, or `s`, but found the string: \"foo\"",
+  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"foo\"",
     );
 
     let config = ConfigBuilder::new()
@@ -589,7 +560,7 @@ Caused by:
 error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
 
 Caused by:
-  must be an integer, `z`, or `s`, but found the string: \"asdf\"",
+  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"asdf\"",
     );
 }
 
@@ -681,6 +652,7 @@ Caused by:
     );
 
     #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct S {
         f1: i64,
         f2: String,
@@ -724,7 +696,12 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1 column 5",
+  TOML parse error at line 1, column 5
+  |
+1 | asdf
+  |     ^
+Unexpected end of input
+Expected `.` or `=`",
     );
 }
 
@@ -793,8 +770,14 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     // "invalid number" here isn't the best error, but I think it's just toml.rs.
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
-        "error in environment variable `CARGO_BAD_ENV`: \
-         could not parse TOML list: invalid TOML value, did you mean to use a quoted string? at line 1 column 8",
+        "\
+error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 8
+  |
+1 | value=[zzz]
+  |        ^
+Unexpected `z`
+Expected newline or `#`
+",
     );
 
     // Try some other sequence-like types.
@@ -1083,7 +1066,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  dotted key attempted to extend non-table type at line 2 column 15",
+  TOML parse error at line 3, column 1
+  |
+3 | ssl-version.min = 'tlsv1.2'
+  | ^
+Dotted key `ssl-version` attempted to extend non-table type (string)
+
+",
     );
     assert!(config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -1095,40 +1084,37 @@ Caused by:
 /// Assert that unstable options can be configured with the `unstable` table in
 /// cargo config files
 fn unstable_table_notation() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 [unstable]
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
 /// Assert that dotted notation works for configuring unstable options
 fn unstable_dotted_notation() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
 /// Assert that Zflags on the CLI take precedence over those from config
 fn unstable_cli_precedence() {
-    cargo::core::enable_nightly_features();
     write_config(
         "\
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, true);
 
     let config = ConfigBuilder::new()
@@ -1138,7 +1124,7 @@ unstable.print-im-a-teapot = true
 }
 
 #[cargo_test]
-/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// Assert that attempting to set an unstable flag that doesn't exist via config
 /// is ignored on stable
 fn unstable_invalid_flag_ignored_on_stable() {
     write_config(
@@ -1159,7 +1145,8 @@ fn unstable_flags_ignored_on_stable() {
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().build();
+    // Enforce stable channel even when testing on nightly.
+    let config = ConfigBuilder::new().nightly_features_allowed(false).build();
     assert_eq!(config.cli_unstable().print_im_a_teapot, false);
 }
 
@@ -1182,6 +1169,7 @@ fn table_merge_failure() {
     );
 
     #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct Table {
         key: StringList,
     }
@@ -1487,4 +1475,40 @@ fn cargo_target_empty_env() {
         .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
         .with_status(101)
         .run()
+}
+
+#[cargo_test]
+fn all_profile_options() {
+    // Check that all profile options can be serialized/deserialized.
+    let base_settings = toml::TomlProfile {
+        opt_level: Some(toml::TomlOptLevel("0".to_string())),
+        lto: Some(toml::StringOrBool::String("thin".to_string())),
+        codegen_backend: Some(InternedString::new("example")),
+        codegen_units: Some(123),
+        debug: Some(toml::U32OrBool::U32(1)),
+        split_debuginfo: Some("packed".to_string()),
+        debug_assertions: Some(true),
+        rpath: Some(true),
+        panic: Some("abort".to_string()),
+        overflow_checks: Some(true),
+        incremental: Some(true),
+        dir_name: Some(InternedString::new("dir_name")),
+        inherits: Some(InternedString::new("debug")),
+        strip: Some(toml::StringOrBool::String("symbols".to_string())),
+        package: None,
+        build_override: None,
+        rustflags: None,
+    };
+    let mut overrides = BTreeMap::new();
+    let key = toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
+    overrides.insert(key, base_settings.clone());
+    let profile = toml::TomlProfile {
+        build_override: Some(Box::new(base_settings.clone())),
+        package: Some(overrides),
+        ..base_settings
+    };
+    let profile_toml = toml_edit::easy::to_string(&profile).unwrap();
+    let roundtrip: toml::TomlProfile = toml_edit::easy::from_str(&profile_toml).unwrap();
+    let roundtrip_toml = toml_edit::easy::to_string(&roundtrip).unwrap();
+    compare::assert_match_exact(&profile_toml, &roundtrip_toml);
 }

@@ -27,7 +27,7 @@ bench = false
 
 ### Binaries
 
-Binary targets are executables programs that can be run after being compiled.
+Binary targets are executable programs that can be run after being compiled.
 The default binary filename is `src/main.rs`, which defaults to the name of
 the package. Additional binaries are stored in the [`src/bin/`
 directory][package layout]. The settings for each binary can be [customized]
@@ -94,11 +94,19 @@ There are two styles of tests within a Cargo project:
   access to its *public* API.
 
 Tests are run with the [`cargo test`] command. By default, Cargo and `rustc`
-use the libtest harness which is responsible for collecting functions
+use the [libtest harness] which is responsible for collecting functions
 annotated with the [`#[test]` attribute][test-attribute] and executing them in
 parallel, reporting the success and failure of each test. See [the `harness`
 field](#the-harness-field) if you want to use a different harness or test
 strategy.
+
+> **Note**: There is another special style of test in Cargo:
+> [documentation tests][documentation examples].
+> They are handled by `rustdoc` and have a slightly different execution model.
+> For more information, please see [`cargo test`][cargo-test-documentation-tests].
+
+[libtest harness]: ../../rustc/tests/index.html
+[cargo-test-documentation-tests]: ../commands/cargo-test.md#documentation-tests
 
 #### Integration tests
 

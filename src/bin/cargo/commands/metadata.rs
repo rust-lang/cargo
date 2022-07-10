@@ -8,14 +8,14 @@ pub fn cli() -> App {
              the concrete used versions including overrides, \
              in machine-readable format",
         )
-        .arg(opt("quiet", "Do not print cargo log messages").short("q"))
+        .arg_quiet()
         .arg_features()
         .arg(multi_opt(
             "filter-platform",
             "TRIPLE",
             "Only include resolve dependencies matching the given target-triple",
         ))
-        .arg(opt(
+        .arg(flag(
             "no-deps",
             "Output information only about the workspace members \
              and don't fetch dependencies",
@@ -24,15 +24,15 @@ pub fn cli() -> App {
         .arg(
             opt("format-version", "Format version")
                 .value_name("VERSION")
-                .possible_value("1"),
+                .value_parser(["1"]),
         )
         .after_help("Run `cargo help metadata` for more detailed information.\n")
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let version = match args.value_of("format-version") {
+    let version = match args.get_one::<String>("format-version") {
         None => {
             config.shell().warn(
                 "please specify `--format-version` flag explicitly \
@@ -44,15 +44,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
 
     let options = OutputMetadataOptions {
-        features: values(args, "features"),
-        all_features: args.is_present("all-features"),
-        no_default_features: args.is_present("no-default-features"),
-        no_deps: args.is_present("no-deps"),
+        cli_features: args.cli_features()?,
+        no_deps: args.flag("no-deps"),
         filter_platforms: args._values_of("filter-platform"),
         version,
     };
 
     let result = ops::output_metadata(&ws, &options)?;
-    config.shell().print_json(&result);
+    config.shell().print_json(&result)?;
     Ok(())
 }

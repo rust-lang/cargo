@@ -6,7 +6,9 @@
 .SH "NAME"
 cargo\-yank \- Remove a pushed crate from the index
 .SH "SYNOPSIS"
-\fBcargo yank\fR [\fIoptions\fR] \fB\-\-vers\fR \fIversion\fR [\fIcrate\fR]
+\fBcargo yank\fR [\fIoptions\fR] \fIcrate\fR@\fIversion\fR
+.br
+\fBcargo yank\fR [\fIoptions\fR] \fB\-\-version\fR \fIversion\fR [\fIcrate\fR]
 .SH "DESCRIPTION"
 The yank command removes a previously published crate's version from the
 server's index. This command does not delete any data, and the crate will
@@ -24,7 +26,8 @@ current directory.
 .SH "OPTIONS"
 .SS "Yank Options"
 .sp
-\fB\-\-vers\fR \fIversion\fR
+\fB\-\-vers\fR \fIversion\fR, 
+\fB\-\-version\fR \fIversion\fR
 .RS 4
 The version to yank or un\-yank.
 .RE
@@ -73,7 +76,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -107,6 +112,11 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -136,7 +146,7 @@ details on environment variables that Cargo reads.
 .sp
 .RS 4
 .nf
-cargo yank \-\-vers 1.0.7 foo
+cargo yank foo@1.0.7
 .fi
 .RE
 .RE

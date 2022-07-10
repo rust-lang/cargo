@@ -96,11 +96,15 @@ impl Shell {
     /// Creates a new shell (color choice and verbosity), defaulting to 'auto' color and verbose
     /// output.
     pub fn new() -> Shell {
-        let auto = ColorChoice::CargoAuto.to_termcolor_color_choice();
+        let auto_clr = ColorChoice::CargoAuto;
         Shell {
             output: ShellOut::Stream {
-                stdout: StandardStream::stdout(auto),
-                stderr: StandardStream::stderr(auto),
+                stdout: StandardStream::stdout(
+                    auto_clr.to_termcolor_color_choice(atty::Stream::Stdout),
+                ),
+                stderr: StandardStream::stderr(
+                    auto_clr.to_termcolor_color_choice(atty::Stream::Stderr),
+                ),
                 color_choice: ColorChoice::CargoAuto,
                 stderr_tty: atty::is(atty::Stream::Stderr),
             },
@@ -185,10 +189,7 @@ impl Shell {
 
     /// Erase from cursor to end of line.
     pub fn err_erase_line(&mut self) {
-        if let ShellOut::Stream {
-            stderr_tty: true, ..
-        } = self.output
-        {
+        if self.err_supports_color() {
             imp::err_erase_line(self);
             self.needs_clear = false;
         }
@@ -300,9 +301,8 @@ impl Shell {
                 ),
             };
             *color_choice = cfg;
-            let choice = cfg.to_termcolor_color_choice();
-            *stdout = StandardStream::stdout(choice);
-            *stderr = StandardStream::stderr(choice);
+            *stdout = StandardStream::stdout(cfg.to_termcolor_color_choice(atty::Stream::Stdout));
+            *stderr = StandardStream::stderr(cfg.to_termcolor_color_choice(atty::Stream::Stderr));
         }
         Ok(())
     }
@@ -326,8 +326,37 @@ impl Shell {
         }
     }
 
-    /// Prints a message and translates ANSI escape code into console colors.
-    pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+    pub fn out_supports_color(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream { stdout, .. } => stdout.supports_color(),
+        }
+    }
+
+    /// Write a styled fragment
+    ///
+    /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
+    pub fn write_stdout(
+        &mut self,
+        fragment: impl fmt::Display,
+        color: &ColorSpec,
+    ) -> CargoResult<()> {
+        self.output.write_stdout(fragment, color)
+    }
+
+    /// Write a styled fragment
+    ///
+    /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
+    pub fn write_stderr(
+        &mut self,
+        fragment: impl fmt::Display,
+        color: &ColorSpec,
+    ) -> CargoResult<()> {
+        self.output.write_stderr(fragment, color)
+    }
+
+    /// Prints a message to stderr and translates ANSI escape code into console colors.
+    pub fn print_ansi_stderr(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
             self.err_erase_line();
         }
@@ -342,9 +371,28 @@ impl Shell {
         Ok(())
     }
 
-    pub fn print_json<T: serde::ser::Serialize>(&mut self, obj: &T) {
-        let encoded = serde_json::to_string(&obj).unwrap();
+    /// Prints a message to stdout and translates ANSI escape code into console colors.
+    pub fn print_ansi_stdout(&mut self, message: &[u8]) -> CargoResult<()> {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+        #[cfg(windows)]
+        {
+            if let ShellOut::Stream { stdout, .. } = &mut self.output {
+                ::fwdansi::write_ansi(stdout, message)?;
+                return Ok(());
+            }
+        }
+        self.out().write_all(message)?;
+        Ok(())
+    }
+
+    pub fn print_json<T: serde::ser::Serialize>(&mut self, obj: &T) -> CargoResult<()> {
+        // Path may fail to serialize to JSON ...
+        let encoded = serde_json::to_string(&obj)?;
+        // ... but don't fail due to a closed pipe.
         drop(writeln!(self.out(), "{}", encoded));
+        Ok(())
     }
 }
 
@@ -397,6 +445,38 @@ impl ShellOut {
         Ok(())
     }
 
+    /// Write a styled fragment
+    fn write_stdout(&mut self, fragment: impl fmt::Display, color: &ColorSpec) -> CargoResult<()> {
+        match *self {
+            ShellOut::Stream { ref mut stdout, .. } => {
+                stdout.reset()?;
+                stdout.set_color(&color)?;
+                write!(stdout, "{}", fragment)?;
+                stdout.reset()?;
+            }
+            ShellOut::Write(ref mut w) => {
+                write!(w, "{}", fragment)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Write a styled fragment
+    fn write_stderr(&mut self, fragment: impl fmt::Display, color: &ColorSpec) -> CargoResult<()> {
+        match *self {
+            ShellOut::Stream { ref mut stderr, .. } => {
+                stderr.reset()?;
+                stderr.set_color(&color)?;
+                write!(stderr, "{}", fragment)?;
+                stderr.reset()?;
+            }
+            ShellOut::Write(ref mut w) => {
+                write!(w, "{}", fragment)?;
+            }
+        }
+        Ok(())
+    }
+
     /// Gets stdout as a `io::Write`.
     fn stdout(&mut self) -> &mut dyn Write {
         match *self {
@@ -416,12 +496,12 @@ impl ShellOut {
 
 impl ColorChoice {
     /// Converts our color choice to termcolor's version.
-    fn to_termcolor_color_choice(self) -> termcolor::ColorChoice {
+    fn to_termcolor_color_choice(self, stream: atty::Stream) -> termcolor::ColorChoice {
         match self {
             ColorChoice::Always => termcolor::ColorChoice::Always,
             ColorChoice::Never => termcolor::ColorChoice::Never,
             ColorChoice::CargoAuto => {
-                if atty::is(atty::Stream::Stderr) {
+                if atty::is(stream) {
                     termcolor::ColorChoice::Auto
                 } else {
                     termcolor::ColorChoice::Never

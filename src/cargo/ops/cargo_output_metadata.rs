@@ -1,7 +1,7 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
-use crate::core::resolver::{features::RequestedFeatures, HasDevUnits, Resolve, ResolveOpts};
+use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
 use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
@@ -10,13 +10,12 @@ use cargo_platform::Platform;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toml_edit::easy as toml;
 
 const VERSION: u32 = 1;
 
 pub struct OutputMetadataOptions {
-    pub features: Vec<String>,
-    pub no_default_features: bool,
-    pub all_features: bool,
+    pub cli_features: CliFeatures,
     pub no_deps: bool,
     pub version: u32,
     pub filter_platforms: Vec<String>,
@@ -33,9 +32,8 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
             VERSION
         );
     }
-    let config = ws.config();
     let (packages, resolve) = if opt.no_deps {
-        let packages = ws.members().map(|pkg| pkg.serialized(config)).collect();
+        let packages = ws.members().map(|pkg| pkg.serialized()).collect();
         (packages, None)
     } else {
         let (packages, resolve) = build_resolve_graph(ws, opt)?;
@@ -83,7 +81,7 @@ struct MetadataResolveNode {
 
 #[derive(Serialize)]
 struct Dep {
-    name: String,
+    name: InternedString,
     pkg: PackageId,
     dep_kinds: Vec<DepKindInfo>,
 }
@@ -115,12 +113,6 @@ fn build_resolve_graph(
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let requested_features = RequestedFeatures::from_command_line(
-        &metadata_opts.features,
-        metadata_opts.all_features,
-        !metadata_opts.no_default_features,
-    );
-    let resolve_opts = ResolveOpts::new(/*dev_deps*/ true, requested_features);
     let force_all = if metadata_opts.filter_platforms.is_empty() {
         crate::core::resolver::features::ForceAllTargets::Yes
     } else {
@@ -133,7 +125,7 @@ fn build_resolve_graph(
         ws,
         &target_data,
         &requested_kinds,
-        &resolve_opts,
+        &metadata_opts.cli_features,
         &specs,
         HasDevUnits::Yes,
         force_all,
@@ -160,11 +152,10 @@ fn build_resolve_graph(
         );
     }
     // Get a Vec of Packages.
-    let config = ws.config();
     let actual_packages = package_map
         .into_iter()
         .filter_map(|(pkg_id, pkg)| node_map.get(&pkg_id).map(|_| pkg))
-        .map(|pkg| pkg.serialized(config))
+        .map(|pkg| pkg.serialized())
         .collect();
 
     let mr = MetadataResolve {
@@ -179,7 +170,7 @@ fn build_resolve_graph_r(
     pkg_id: PackageId,
     resolve: &Resolve,
     package_map: &BTreeMap<PackageId, Package>,
-    target_data: &RustcTargetData,
+    target_data: &RustcTargetData<'_>,
     requested_kinds: &[CompileKind],
 ) {
     if node_map.contains_key(&pkg_id) {
@@ -220,7 +211,12 @@ fn build_resolve_graph_r(
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                .and_then(|lib_target| resolve.extern_crate_name(pkg_id, dep_id, lib_target).ok())
+                .and_then(|lib_target| {
+                    resolve
+                        .extern_crate_name_and_dep_name(pkg_id, dep_id, lib_target)
+                        .map(|(ext_crate_name, _)| ext_crate_name)
+                        .ok()
+                })
                 .map(|name| Dep {
                     name,
                     pkg: normalize_id(dep_id),

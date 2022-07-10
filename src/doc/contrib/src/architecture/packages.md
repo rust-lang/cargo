@@ -16,27 +16,27 @@ actually compiled by `rustc`.
 There are several data structures that are important to understand how
 packages are found and loaded:
 
-* [`Package`] — A package, which is a `Cargo.toml` manifest and its associated
+* [`Package`] — A package, which is a `Cargo.toml` manifest and its associated
   source files.
-    * [`PackageId`] — A unique identifier for a package.
+    * [`PackageId`] — A unique identifier for a package.
 * [`Source`] — An abstraction for something that can fetch packages (a remote
   registry, a git repo, the local filesystem, etc.). Check out the [source
   implementations] for all the details about registries, indexes, git
   dependencies, etc.
-    * [`SourceId`] — A unique identifier for a source.
-* [`SourceMap`] — Map of all available sources.
-* [`PackageRegistry`] — This is the main interface for how the dependency
+    * [`SourceId`] — A unique identifier for a source.
+* [`SourceMap`] — Map of all available sources.
+* [`PackageRegistry`] — This is the main interface for how the dependency
   resolver finds packages. It contains the `SourceMap`, and handles things
   like the `[patch]` table. The `Registry` trait provides a generic interface
   to the `PackageRegistry`, but this is only used for providing an alternate
   implementation of the `PackageRegistry` for testing. The dependency resolver
   sends a query to the `PackageRegistry` to "get me all packages that match
   this dependency declaration".
-* [`Summary`] — A summary is a subset of a [`Manifest`], and is essentially
+* [`Summary`] — A summary is a subset of a [`Manifest`], and is essentially
   the information that can be found in a registry index. Queries against the
   `PackageRegistry` yields a `Summary`. The resolver uses the summary
   information to build the dependency graph.
-* [`PackageSet`] — Contains all of the `Package` objects. This works with the
+* [`PackageSet`] — Contains all of the `Package` objects. This works with the
   [`Downloads`] struct to coordinate downloading packages. It has a reference
   to the `SourceMap` to get the `Source` objects which tell the `Downloads`
   struct which URLs to fetch.

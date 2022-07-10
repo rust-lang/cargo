@@ -15,9 +15,12 @@ the two dashes (\fB\-\-\fR) are passed to the benchmark binaries and thus to
 \fIlibtest\fR (rustc's built in unit\-test and micro\-benchmarking framework). If
 you are passing arguments to both Cargo and the binary, the ones after \fB\-\-\fR go
 to the binary, the ones before go to Cargo. For details about libtest's
-arguments see the output of \fBcargo bench \-\- \-\-help\fR\&.  As an example, this will
-run only the benchmark named \fBfoo\fR (and skip other similarly named benchmarks
-like \fBfoobar\fR):
+arguments see the output of \fBcargo bench \-\- \-\-help\fR and check out the rustc
+book's chapter on how tests work at
+<https://doc.rust\-lang.org/rustc/tests/index.html>\&.
+.sp
+As an example, this will run only the benchmark named \fBfoo\fR (and skip other
+similarly named benchmarks like \fBfoobar\fR):
 .sp
 .RS 4
 .nf
@@ -25,10 +28,11 @@ cargo bench \-\- foo \-\-exact
 .fi
 .RE
 .sp
-Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates an
-executable with a \fBmain\fR function that automatically runs all functions
-annotated with the \fB#[bench]\fR attribute. Cargo passes the \fB\-\-bench\fR flag to
-the test harness to tell it to run only benchmarks.
+Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates a
+special executable by linking your code with libtest. The executable
+automatically runs all functions annotated with the \fB#[bench]\fR attribute.
+Cargo passes the \fB\-\-bench\fR flag to the test harness to tell it to run
+only benchmarks.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
@@ -47,6 +51,12 @@ running benchmarks on the stable channel, such as
 .br
 .RE
 .ll
+.sp
+By default, \fBcargo bench\fR uses the \fI\f(BIbench\fI profile\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html#bench>, which enables
+optimizations and disables debugging information. If you need to debug a
+benchmark, you can use the \fB\-\-profile=dev\fR command\-line option to switch to
+the dev profile. You can then run the debug\-enabled benchmark within a
+debugger.
 .SH "OPTIONS"
 .SS "Benchmark Options"
 .sp
@@ -134,6 +144,15 @@ them from being benchmarked by default. Target selection options that take a
 target by name ignore the \fBbench\fR flag and will always benchmark the given
 target.
 .sp
+Binary targets are automatically built if there is an integration test or
+benchmark being selected to benchmark. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The \fBCARGO_BIN_EXE_<name>\fR
+\fIenvironment variable\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#environment\-variables\-cargo\-sets\-for\-crates>
+is set when the integration test is built so that it can use the
+\fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> to locate the
+executable.
+.sp
 Passing target selection flags will benchmark only the specified
 targets. 
 .sp
@@ -215,6 +234,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -235,8 +255,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Benchmark for the given architecture. The default is the host
-architecture. The general format of the triple is
+Benchmark for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
@@ -246,6 +265,40 @@ This may also be specified with the \fBbuild.target\fR
 Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Benchmark with the given profile.
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Benchmark the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project's \fBrust\-version\fR field.
+.RE
+.sp
+\fB\-\-timings=\fR\fIfmts\fR
+.RS 4
+Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma\-separated list of output
+formats; \fB\-\-timings\fR without an argument will default to \fB\-\-timings=html\fR\&.
+Specifying an output format (rather than the default) is unstable and requires
+\fB\-Zunstable\-options\fR\&. Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine\-readable timing data.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+information about timing information.
+.RE
 .RE
 .SS "Output Options"
 .sp
@@ -279,7 +332,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -389,6 +444,11 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -411,21 +471,13 @@ Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See
-\fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html>
-for more details.
 .sp
-Benchmarks are always built with the \fBbench\fR profile. Binary and lib targets
-are built separately as benchmarks with the \fBbench\fR profile. Library targets
-are built with the \fBrelease\fR profiles when linked to binaries and benchmarks.
-Dependencies use the \fBrelease\fR profile.
-.sp
-If you need a debug build of a benchmark, try building it with
-\fBcargo\-build\fR(1) which will use the \fBtest\fR profile which is by default
-unoptimized and includes debug information. You can then run the debug\-enabled
-benchmark manually.
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build. Unstable, requires
+\fB\-Zunstable\-options\fR\&.
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

@@ -22,10 +22,6 @@ pub struct Resolve {
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
-    /// An empty `Vec` to avoid creating a new `Vec` for every package
-    /// that does not have any features, and to avoid using `Option` to
-    /// simplify the API.
-    empty_features: Vec<InternedString>,
     /// Features enabled for a given package.
     features: HashMap<PackageId, Vec<InternedString>>,
     /// Checksum for each package. A SHA256 hash of the `.crate` file used to
@@ -107,7 +103,6 @@ impl Resolve {
             checksums,
             metadata,
             unused_patches,
-            empty_features: Vec::new(),
             reverse_replacements,
             public_dependencies,
             version,
@@ -117,7 +112,10 @@ impl Resolve {
 
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
-    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
+    pub fn path_to_top<'a>(
+        &'a self,
+        pkg: &'a PackageId,
+    ) -> Vec<(&'a PackageId, Option<&'a HashSet<Dependency>>)> {
         self.graph.path_to_top(pkg)
     }
 
@@ -261,7 +259,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn features(&self, pkg: PackageId) -> &[InternedString] {
-        self.features.get(&pkg).unwrap_or(&self.empty_features)
+        self.features.get(&pkg).map(|v| &**v).unwrap_or(&[])
     }
 
     /// This is only here for legacy support, it will be removed when
@@ -297,12 +295,12 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.metadata
     }
 
-    pub fn extern_crate_name(
+    pub fn extern_crate_name_and_dep_name(
         &self,
         from: PackageId,
         to: PackageId,
         to_target: &Target,
-    ) -> CargoResult<String> {
+    ) -> CargoResult<(InternedString, Option<InternedString>)> {
         let empty_set: HashSet<Dependency> = HashSet::new();
         let deps = if from == to {
             &empty_set
@@ -310,22 +308,22 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             self.dependencies_listed(from, to)
         };
 
-        let crate_name = to_target.crate_name();
-        let mut names = deps.iter().map(|d| {
+        let target_crate_name = || (to_target.crate_name(), None);
+        let mut name_pairs = deps.iter().map(|d| {
             d.explicit_name_in_toml()
-                .map(|s| s.as_str().replace("-", "_"))
-                .unwrap_or_else(|| crate_name.clone())
+                .map(|s| (s.as_str().replace("-", "_"), Some(s)))
+                .unwrap_or_else(target_crate_name)
         });
-        let name = names.next().unwrap_or_else(|| crate_name.clone());
-        for n in names {
+        let (extern_crate_name, dep_name) = name_pairs.next().unwrap_or_else(target_crate_name);
+        for (n, _) in name_pairs {
             anyhow::ensure!(
-                n == name,
+                n == extern_crate_name,
                 "the crate `{}` depends on crate `{}` multiple times with different names",
                 from,
                 to,
             );
         }
-        Ok(name)
+        Ok((extern_crate_name.into(), dep_name))
     }
 
     fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &HashSet<Dependency> {
@@ -374,7 +372,7 @@ impl PartialEq for Resolve {
         }
         compare! {
             // fields to compare
-            graph replacements reverse_replacements empty_features features
+            graph replacements reverse_replacements features
             checksums metadata unused_patches public_dependencies summaries
             |
             // fields to ignore

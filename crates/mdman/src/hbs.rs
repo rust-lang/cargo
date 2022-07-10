@@ -7,7 +7,6 @@ use handlebars::{
     RenderContext, RenderError, Renderable,
 };
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::path::Path;
 
 type FormatterRef<'a> = &'a (dyn Formatter + Send + Sync);
@@ -24,14 +23,13 @@ pub fn expand(file: &Path, formatter: FormatterRef) -> Result<String, Error> {
     handlebars.register_template_file("template", file)?;
     let includes = file.parent().unwrap().join("includes");
     handlebars.register_templates_directory(".md", includes)?;
-    let mut data: HashMap<String, String> = HashMap::new();
     let man_name = file
         .file_stem()
         .expect("expected filename")
         .to_str()
         .expect("utf8 filename")
         .to_string();
-    data.insert("man_name".to_string(), man_name);
+    let data = HashMap::from([("man_name", man_name)]);
     let expanded = handlebars.render("template", &data)?;
     Ok(expanded)
 }

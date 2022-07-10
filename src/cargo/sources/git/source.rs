@@ -7,8 +7,10 @@ use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::Config;
 use anyhow::Context;
+use cargo_util::paths::exclude_from_backups_and_indexing;
 use log::trace;
 use std::fmt::{self, Debug, Formatter};
+use std::task::Poll;
 use url::Url;
 
 pub struct GitSource<'cfg> {
@@ -52,7 +54,8 @@ impl<'cfg> GitSource<'cfg> {
 
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
-            self.update()?;
+            self.invalidate_cache();
+            self.block_until_ready()?;
         }
         self.path_source.as_mut().unwrap().read_packages()
     }
@@ -83,20 +86,24 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
-        let src = self
-            .path_source
-            .as_mut()
-            .expect("BUG: `update()` must be called before `query()`");
-        src.query(dep, f)
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
+        if let Some(src) = self.path_source.as_mut() {
+            src.query(dep, f)
+        } else {
+            Poll::Pending
+        }
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
-        let src = self
-            .path_source
-            .as_mut()
-            .expect("BUG: `update()` must be called before `query()`");
-        src.fuzzy_query(dep, f)
+    fn fuzzy_query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
+        if let Some(src) = self.path_source.as_mut() {
+            src.fuzzy_query(dep, f)
+        } else {
+            Poll::Pending
+        }
     }
 
     fn supports_checksums(&self) -> bool {
@@ -111,9 +118,27 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        let git_path = self.config.git_path();
-        let git_path = self.config.assert_package_cache_locked(&git_path);
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        if self.path_source.is_some() {
+            return Ok(());
+        }
+
+        let git_fs = self.config.git_path();
+        // Ignore errors creating it, in case this is a read-only filesystem:
+        // perhaps the later operations can succeed anyhow.
+        let _ = git_fs.create_dir();
+        let git_path = self.config.assert_package_cache_locked(&git_fs);
+
+        // Before getting a checkout, make sure that `<cargo_home>/git` is
+        // marked as excluded from indexing and backups. Older versions of Cargo
+        // didn't do this, so we do it here regardless of whether `<cargo_home>`
+        // exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        exclude_from_backups_and_indexing(&git_path);
+
         let db_path = git_path.join("db").join(&self.ident);
 
         let db = self.remote.db_at(&db_path).ok();
@@ -209,9 +234,11 @@ impl<'cfg> Source for GitSource<'cfg> {
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
-        Ok(false)
+    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(false))
     }
+
+    fn invalidate_cache(&mut self) {}
 }
 
 #[cfg(test)]

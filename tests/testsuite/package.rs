@@ -140,8 +140,8 @@ fn package_verbose() {
     let repo = git::repo(&root)
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("src/main.rs", "fn main() {}")
-        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
-        .file("a/src/lib.rs", "")
+        .file("a/a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/a/src/lib.rs", "")
         .build();
     cargo_process("build").cwd(repo.root()).run();
 
@@ -167,7 +167,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         r#"{{
   "git": {{
     "sha1": "{}"
-  }}
+  }},
+  "path_in_vcs": ""
 }}
 "#,
         repo.revparse_head()
@@ -187,7 +188,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 
     println!("package sub-repo");
     cargo_process("package -v --no-verify")
-        .cwd(repo.root().join("a"))
+        .cwd(repo.root().join("a/a"))
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -200,6 +201,29 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 ",
         )
         .run();
+
+    let f = File::open(&repo.root().join("a/a/target/package/a-0.0.1.crate")).unwrap();
+    let vcs_contents = format!(
+        r#"{{
+  "git": {{
+    "sha1": "{}"
+  }},
+  "path_in_vcs": "a/a"
+}}
+"#,
+        repo.revparse_head()
+    );
+    validate_crate_contents(
+        f,
+        "a-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            ".cargo_vcs_info.json",
+        ],
+        &[(".cargo_vcs_info.json", &vcs_contents)],
+    );
 }
 
 #[cargo_test]
@@ -260,6 +284,45 @@ in package source
 }
 
 #[cargo_test]
+fn orig_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                description = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                exclude = ["*.no-existe"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {}
+            "#,
+        )
+        .file("Cargo.toml.orig", "oops")
+        .build();
+    p.cargo("package")
+        .arg("--no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid inclusion of reserved file name Cargo.toml.orig \
+in package source
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn path_dependency_no_version() {
     let p = project()
         .file(
@@ -287,8 +350,47 @@ fn path_dependency_no_version() {
             "\
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version\n\
+Note: The packaged dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_dependency_no_version() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies.foo]
+                git = "git://path/to/nowhere"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `foo` does not specify a version
+Note: The packaged dependency will use the version from crates.io,
+the `git` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -731,13 +833,91 @@ fn broken_symlink() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to prepare local package for uploading
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   failed to open for archiving: `[..]foo.rs`
 
 Caused by:
   [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
+/// Test that /dir and /dir/ matches symlinks to directories.
+fn gitignore_symlink_dir() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+            .symlink_dir("src", "src1")
+            .symlink_dir("src", "src2")
+            .symlink_dir("src", "src3")
+            .symlink_dir("src", "src4")
+            .file(".gitignore", "/src1\n/src2/\nsrc3\nsrc4/")
+    });
+
+    p.cargo("package -l --no-metadata")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
+/// Test that /dir and /dir/ matches symlinks to directories in dirty working directory.
+fn gitignore_symlink_dir_dirty() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+            .file(".gitignore", "/src1\n/src2/\nsrc3\nsrc4/")
+    });
+
+    p.symlink("src", "src1");
+    p.symlink("src", "src2");
+    p.symlink("src", "src3");
+    p.symlink("src", "src4");
+
+    p.cargo("package -l --no-metadata")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+
+    p.cargo("package -l --no-metadata --allow-dirty")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
 ",
         )
         .run();
@@ -760,6 +940,27 @@ fn package_symlink_to_dir() {
         .build()
         .cargo("package -v")
         .with_stderr_contains("[ARCHIVING] foo/Makefile")
+        .run();
+}
+
+#[cargo_test]
+/// Tests if a symlink to ancestor causes filesystem loop error.
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn filesystem_loop() {
+    if !symlink_supported() {
+        return;
+    }
+
+    project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .symlink_dir("a/b", "a/b/c/d/foo")
+        .build()
+        .cargo("package -v")
+        .with_stderr_contains(
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+        )
         .run();
 }
 
@@ -817,8 +1018,61 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 }
 
 #[cargo_test]
+fn dirty_ignored() {
+    // Cargo warns about an ignored file that will be published.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "foo"
+                documentation = "foo"
+                include = ["src", "build"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(".gitignore", "build")
+    });
+    // Example of adding a file that is confusingly ignored by an overzealous
+    // gitignore rule.
+    p.change_file("src/build/mod.rs", "");
+    p.cargo("package --list")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: 1 files in the working directory contain changes that were not yet committed into git:
+
+src/build/mod.rs
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+",
+        )
+        .run();
+    // Add the ignored file and make sure it is included.
+    let mut index = t!(repo.index());
+    t!(index.add_path(Path::new("src/build/mod.rs")));
+    t!(index.write());
+    git::commit(&repo);
+    p.cargo("package --list")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+src/build/mod.rs
+src/lib.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn generated_manifest() {
-    registry::alt_init();
+    let registry = registry::alt_init();
     Package::new("abc", "1.0.0").publish();
     Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();
@@ -868,6 +1122,7 @@ license = "MIT"
 
 [package.metadata]
 foo = "bar"
+
 [dependencies.abc]
 version = "1.0"
 
@@ -882,7 +1137,7 @@ registry-index = "{}"
 version = "1.0"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE,
-        registry::alt_registry_url()
+        registry.index_url()
     );
 
     validate_crate_contents(
@@ -1682,7 +1937,8 @@ fn package_restricted_windows() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
+        // use unordered here because the order of the warning is different on each platform.
+        .with_stderr_unordered(
             "\
 [WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
 [WARNING] file src/con.rs is a reserved Windows filename, it will not work on Windows platforms
@@ -1842,8 +2098,10 @@ src/main.rs
         .with_status(101)
         .with_stderr(
             "\
-error: all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version
+Note: The packaged dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -1947,10 +2205,123 @@ fn reproducible_output() {
     let mut archive = Archive::new(decoder);
     for ent in archive.entries().unwrap() {
         let ent = ent.unwrap();
+        println!("checking {:?}", ent.path());
         let header = ent.header();
         assert_eq!(header.mode().unwrap(), 0o644);
-        assert_eq!(header.mtime().unwrap(), 0);
+        assert!(header.mtime().unwrap() != 0);
         assert_eq!(header.username().unwrap().unwrap(), "");
         assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
+}
+
+#[cargo_test]
+fn package_with_resolver_and_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                resolver = '2'
+
+                [package.metadata.docs.rs]
+                all-features = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package").run();
+}
+
+#[cargo_test]
+fn deleted_git_working_tree() {
+    // When deleting a file, but not staged, cargo should ignore the file.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file("src/lib.rs", "").file("src/main.rs", "fn main() {}")
+    });
+    p.root().join("src/lib.rs").rm_rf();
+    p.cargo("package --allow-dirty --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package --allow-dirty").run();
+    let mut index = t!(repo.index());
+    t!(index.remove(Path::new("src/lib.rs"), 0));
+    t!(index.write());
+    p.cargo("package --allow-dirty --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package --allow-dirty").run();
+}
+
+#[cargo_test]
+fn in_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package --workspace")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
 }

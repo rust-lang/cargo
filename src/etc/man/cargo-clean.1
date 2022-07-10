@@ -33,7 +33,12 @@ the target directory.
 .sp
 \fB\-\-release\fR
 .RS 4
-Clean all artifacts that were built with the \fBrelease\fR or \fBbench\fR profiles.
+Remove all artifacts in the \fBrelease\fR directory.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Remove all artifacts in the directory with the given profile name.
 .RE
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR
@@ -46,8 +51,7 @@ Defaults to \fBtarget\fR in the root of the workspace.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Clean for the given architecture. The default is the host
-architecture. The general format of the triple is
+Clean for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
@@ -72,7 +76,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -140,6 +146,11 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR KEY=VALUE
+.RS 4
+Overrides a Cargo configuration value.
 .RE
 .sp
 \fB\-h\fR, 

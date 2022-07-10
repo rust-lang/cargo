@@ -2,6 +2,7 @@
 
 use cargo_test_support::{basic_bin_manifest, main_file, project};
 
+#[track_caller]
 fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -20,6 +21,7 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
         .run();
 }
 
+#[track_caller]
 fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
     let p = project().build();
     let expected_path = manifest_path_argument

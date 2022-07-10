@@ -18,8 +18,8 @@ The Cargo home consists of following components:
 * `credentials.toml`
  	Private login credentials from [`cargo login`] in order to log in to a [registry][def-registry].
 
-* `.crates.toml`
-	This hidden file contains [package][def-package] information of crates installed via [`cargo install`]. Do NOT edit by hand!
+* `.crates.toml`, `.crates2.json`
+	These hidden files contain [package][def-package] information of crates installed via [`cargo install`]. Do NOT edit by hand!
 
 ## Directories:
 

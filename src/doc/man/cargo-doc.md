@@ -22,7 +22,9 @@ is placed in `target/doc` in rustdoc's usual format.
 
 {{#option "`--open`" }}
 Open the docs in a browser after building them. This will use your default
-browser unless you define another one in the `BROWSER` environment variable.
+browser unless you define another one in the `BROWSER` environment variable
+or use the [`doc.browser`](../reference/config.html#docbrowser) configuration
+option.
 {{/option}}
 
 {{#option "`--no-deps`" }}
@@ -30,7 +32,7 @@ Do not build documentation for dependencies.
 {{/option}}
 
 {{#option "`--document-private-items`" }}
-Include non-public items in the documentation.
+Include non-public items in the documentation. This will be enabled by default if documenting a binary target.
 {{/option}}
 
 {{/options}}
@@ -50,6 +52,16 @@ flag and will always document the given target.
 
 {{#options}}
 {{> options-targets-lib-bin }}
+
+{{#option "`--example` _name_..." }}
+{{actionverb}} the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
+{{/option}}
+
+{{#option "`--examples`" }}
+{{actionverb}} all example targets.
+{{/option}}
+
 {{/options}}
 
 {{> section-features }}
@@ -61,6 +73,12 @@ flag and will always document the given target.
 {{> options-target-triple }}
 
 {{> options-release }}
+
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -92,9 +110,8 @@ flag and will always document the given target.
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

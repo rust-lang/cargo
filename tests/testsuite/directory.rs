@@ -191,9 +191,10 @@ fn simple_install_fail() {
 error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`
 
 Caused by:
-  no matching package named `baz` found
-  location searched: registry `https://github.com/rust-lang/crates.io-index`
-  perhaps you meant: bar or foo
+  no matching package found
+  searched package name: `baz`
+  perhaps you meant:      bar or foo
+  location searched: registry `crates-io`
   required by package `bar v0.1.0`
 ",
         )
@@ -472,7 +473,7 @@ expected: [..]
 actual:   [..]
 
 directory sources are not intended to be edited, if modifications are \
-required then it is recommended that [replace] is used with a forked copy of \
+required then it is recommended that `[patch]` is used with a forked copy of \
 the source
 ",
         )

@@ -870,6 +870,7 @@ fn override_and_depend() {
         .cwd("b")
         .with_stderr(
             "\
+[WARNING] skipping duplicate package `a2` found at `[..]`
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])
@@ -964,9 +965,10 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package named `bar` found
+error: no matching package found
+searched package name: `bar`
+perhaps you meant:      foo
 location searched: [..]
-perhaps you meant: foo
 required by package `foo v0.5.0 ([..])`
 ",
         )
@@ -1045,8 +1047,8 @@ fn deep_path_error() {
         .with_stderr(
             "\
 [ERROR] failed to get `c` as a dependency of package `b v0.1.0 [..]`
-    ... which is depended on by `a v0.1.0 [..]`
-    ... which is depended on by `foo v0.1.0 [..]`
+    ... which satisfies path dependency `b` of package `a v0.1.0 [..]`
+    ... which satisfies path dependency `a` of package `foo v0.1.0 [..]`
 
 Caused by:
   failed to load source for dependency `c`

@@ -10,6 +10,10 @@ See the [rustup documentation](https://rust-lang.github.io/rustup/overrides.html
 for more information about how toolchain overrides work.
 {{/option}}
 
+{{#option "`--config` KEY=VALUE"}}
+Overrides a Cargo configuration value.
+{{/option}}
+
 {{#option "`-h`" "`--help`"}}
 Prints help information.
 {{/option}}

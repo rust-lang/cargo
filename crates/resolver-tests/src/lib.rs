@@ -1,5 +1,4 @@
-#![allow(clippy::many_single_char_names)]
-#![allow(clippy::needless_range_loop)] // false positives
+#![allow(clippy::all)]
 
 use std::cell::RefCell;
 use std::cmp::PartialEq;
@@ -8,10 +7,11 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
+use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts};
+use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
@@ -123,21 +123,21 @@ pub fn resolve_with_config_raw(
     struct MyRegistry<'a> {
         list: &'a [Summary],
         used: HashSet<PackageId>,
-    };
+    }
     impl<'a> Registry for MyRegistry<'a> {
         fn query(
             &mut self,
             dep: &Dependency,
             f: &mut dyn FnMut(Summary),
             fuzzy: bool,
-        ) -> CargoResult<()> {
+        ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
                 if fuzzy || dep.matches(summary) {
                     self.used.insert(summary.package_id());
                     f(summary.clone());
                 }
             }
-            Ok(())
+            Poll::Ready(Ok(()))
         }
 
         fn describe_source(&self, _src: SourceId) -> String {
@@ -146,6 +146,10 @@ pub fn resolve_with_config_raw(
 
         fn is_replaced(&self, _src: SourceId) -> bool {
             false
+        }
+
+        fn block_until_ready(&mut self) -> CargoResult<()> {
+            Ok(())
         }
     }
     impl<'a> Drop for MyRegistry<'a> {
@@ -184,7 +188,7 @@ pub fn resolve_with_config_raw(
         &[(summary, opts)],
         &[],
         &mut registry,
-        &HashSet::new(),
+        &VersionPreferences::default(),
         Some(config),
         true,
     );
@@ -507,7 +511,7 @@ pub trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), registry_loc()).unwrap()
+        Dependency::parse(self, Some("1.0.0"), registry_loc()).unwrap()
     }
 }
 
@@ -627,7 +631,7 @@ pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
+    Dependency::parse(name, Some(req), registry_loc()).unwrap()
 }
 pub fn dep_req_kind(name: &str, req: &str, kind: DepKind, public: bool) -> Dependency {
     let mut dep = dep_req(name, req);
@@ -640,7 +644,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.into_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
+    Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
 }
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     dep(name).set_kind(kind).clone()
@@ -969,12 +973,14 @@ fn meta_test_multiple_versions_strategy() {
 }
 
 /// Assert `xs` contains `elems`
+#[track_caller]
 pub fn assert_contains<A: PartialEq>(xs: &[A], elems: &[A]) {
     for elem in elems {
         assert!(xs.contains(elem));
     }
 }
 
+#[track_caller]
 pub fn assert_same<A: PartialEq>(a: &[A], b: &[A]) {
     assert_eq!(a.len(), b.len());
     assert_contains(b, a);

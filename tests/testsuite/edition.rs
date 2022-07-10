@@ -71,9 +71,11 @@ fn edition_unstable_gated() {
 Caused by:
   feature `edition{next}` is required
 
-  this Cargo does not support nightly features, but if you
-  switch to nightly channel you can add
-  `cargo-features = [\"edition{next}\"]` to enable this feature
+  The package requires the Cargo feature called `edition{next}`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-{next} \
+  for more information about the status of this feature.
 ",
             next = next
         ))

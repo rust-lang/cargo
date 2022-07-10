@@ -4,7 +4,8 @@ NAME
        cargo-yank - Remove a pushed crate from the index
 
 SYNOPSIS
-       cargo yank [options] --vers version [crate]
+       cargo yank [options] crate@version
+       cargo yank [options] --version version [crate]
 
 DESCRIPTION
        The yank command removes a previously published crate's version from the
@@ -23,7 +24,7 @@ DESCRIPTION
 
 OPTIONS
    Yank Options
-       --vers version
+       --vers version, --version version
            The version to yank or un-yank.
 
        --undo
@@ -59,7 +60,9 @@ OPTIONS
            value <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -82,6 +85,9 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE
+           Overrides a Cargo configuration value.
+
        -h, --help
            Prints help information.
 
@@ -102,7 +108,7 @@ EXIT STATUS
 EXAMPLES
        1. Yank a crate from the index:
 
-              cargo yank --vers 1.0.7 foo
+              cargo yank foo@1.0.7
 
 SEE ALSO
        cargo(1), cargo-login(1), cargo-publish(1)
