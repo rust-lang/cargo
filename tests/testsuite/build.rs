@@ -5455,7 +5455,7 @@ fn invalid_jobs() {
 
     p.cargo("build --jobs 0")
         .with_status(101)
-        .with_stderr_contains("error: jobs must not be zero")
+        .with_stderr_contains("error: jobs may not be 0")
         .run();
 
     p.cargo("build --jobs over9000")
