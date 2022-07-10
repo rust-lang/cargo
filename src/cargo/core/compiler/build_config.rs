@@ -64,7 +64,7 @@ impl BuildConfig {
         let cfg = config.build_config()?;
         let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
         if jobs == Some(0) {
-            anyhow::bail!("jobs must not be zero")
+            anyhow::bail!("jobs may not be 0")
         }
         if jobs.is_some() && config.jobserver_from_env().is_some() {
             config.shell().warn(
