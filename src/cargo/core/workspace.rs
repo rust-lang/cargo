@@ -1702,10 +1702,18 @@ fn find_workspace_root_with_loader(
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
     // Check if there are any workspace roots that have already been found that would work
-    for (ws_root, ws_root_config) in config.ws_roots.borrow().iter() {
-        if manifest_path.starts_with(ws_root) && !ws_root_config.is_excluded(manifest_path) {
-            // Add `Cargo.toml` since ws_root is the root and not the file
-            return Ok(Some(ws_root.join("Cargo.toml").clone()));
+    {
+        let mut parent = manifest_path.parent();
+        let roots = config.ws_roots.borrow();
+        while let Some(current) = parent {
+            if let Some(ws_config) = roots.get(current) {
+                if !ws_config.is_excluded(manifest_path) {
+                    // Add `Cargo.toml` since ws_root is the root and not the file
+                    return Ok(Some(current.join("Cargo.toml")));
+                }
+            }
+
+            parent = current.parent();
         }
     }
 
