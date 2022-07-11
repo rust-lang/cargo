@@ -209,7 +209,7 @@ fn resolve_with_registry<'cfg>(
     Ok(resolve)
 }
 
-/// Resolves all dependencies for a package using an optional previous instance.
+/// Resolves all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
 ///
 /// This also takes an optional hash set, `to_avoid`, which is a list of package
