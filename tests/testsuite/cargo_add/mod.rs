@@ -76,6 +76,7 @@ mod overwrite_optional;
 mod overwrite_optional_with_no_optional;
 mod overwrite_path_noop;
 mod overwrite_path_with_version;
+mod overwrite_preserves_inline_table;
 mod overwrite_rename_with_no_rename;
 mod overwrite_rename_with_rename;
 mod overwrite_rename_with_rename_noop;
