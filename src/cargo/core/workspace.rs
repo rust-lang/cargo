@@ -1703,17 +1703,16 @@ fn find_workspace_root_with_loader(
 ) -> CargoResult<Option<PathBuf>> {
     // Check if there are any workspace roots that have already been found that would work
     {
-        let mut parent = manifest_path.parent();
         let roots = config.ws_roots.borrow();
-        while let Some(current) = parent {
+        // Iterate through the manifests parent directories until we find a workspace
+        // root. Note we skip the first item since that is just the path itself
+        for current in manifest_path.ancestors().skip(1) {
             if let Some(ws_config) = roots.get(current) {
                 if !ws_config.is_excluded(manifest_path) {
                     // Add `Cargo.toml` since ws_root is the root and not the file
                     return Ok(Some(current.join("Cargo.toml")));
                 }
             }
-
-            parent = current.parent();
         }
     }
 
