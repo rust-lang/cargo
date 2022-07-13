@@ -55,7 +55,10 @@ pub fn cli() -> App {
         .arg(flag("no-track", "Do not save tracking information"))
         .arg_features()
         .arg_profile("Install artifacts with the specified profile")
-        .arg(flag("debug", "Build in debug mode instead of release mode"))
+        .arg(flag(
+            "debug",
+            "Build in debug mode (with the 'dev' profile) instead of release mode",
+        ))
         .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",
