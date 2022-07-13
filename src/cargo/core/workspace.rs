@@ -686,13 +686,13 @@ impl<'cfg> Workspace<'cfg> {
                 })?;
         }
 
+        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)?;
+
         if let Some(default) = default_members_paths {
             for path in default {
                 let normalized_path = paths::normalize_path(&path);
                 let manifest_path = normalized_path.join("Cargo.toml");
-                if !self.members.contains(&manifest_path)
-                    && (self.is_virtual() || manifest_path != root_manifest_path)
-                {
+                if !self.members.contains(&manifest_path) {
                     // default-members are allowed to be excluded, but they
                     // still must be referred to by the original (unfiltered)
                     // members list. Note that we aren't testing against the
@@ -718,7 +718,7 @@ impl<'cfg> Workspace<'cfg> {
             self.default_members.push(self.current_manifest.clone())
         }
 
-        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)
+        Ok(())
     }
 
     fn find_path_deps(
