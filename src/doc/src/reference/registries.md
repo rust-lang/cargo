@@ -340,8 +340,7 @@ responses should have a JSON object with the following structure:
 If the response has this structure Cargo will display the detailed message to the user, even if the response code is 200.
 If the response code indicates an error and the content does not have this structure, Cargo will display to the user a
  message intended to help debugging the server error. A server returning an `errors` object allows a registry to provide a more
-detailed or user centric error message. The first release of Cargo to support registries Cargo 1.34 (released 2019-04-11) will only 
-show a human readable error if the code is 200, this has been fixed in all versions since Cargo 1.35 (released 2019-05-23).
+detailed or user-centric error message.
 
 For backwards compatibility, servers should ignore any unexpected query
 parameters or JSON fields. If a JSON field is missing, it should be assumed to
