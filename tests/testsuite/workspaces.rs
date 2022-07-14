@@ -2454,3 +2454,50 @@ fn virtual_primary_package_env_var() {
     p.cargo("clean").run();
     p.cargo("test -p foo").run();
 }
+
+#[cargo_test]
+fn ensure_correct_workspace_when_nested() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "sub/Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo"]
+            "#,
+        )
+        .file(
+            "sub/foo/Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                bar = { path = "../.."}
+            "#,
+        )
+        .file("sub/foo/src/main.rs", "fn main() {}");
+    let p = p.build();
+    p.cargo("tree")
+        .cwd("sub/foo")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo/sub/foo)
+└── bar v0.1.0 ([..]/foo)\
+        ",
+        )
+        .run();
+}
