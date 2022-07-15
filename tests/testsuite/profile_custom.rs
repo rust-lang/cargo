@@ -490,7 +490,7 @@ fn clean_custom_dirname() {
         )
         .run();
 
-    p.cargo("clean -p foo").masquerade_as_nightly_cargo().run();
+    p.cargo("clean -p foo").run();
 
     p.cargo("build --release")
         .with_stdout("")
