@@ -2389,7 +2389,6 @@ foo v0.1.0 [..]
     // Importantly, this does not include `f1` on `common`.
     p.cargo("tree -f")
         .arg("{p} feats:{f}")
-        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 foo v0.1.0 [..]
