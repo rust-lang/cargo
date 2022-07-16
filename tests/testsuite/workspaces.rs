@@ -120,6 +120,35 @@ fn non_virtual_default_members_build_other_member() {
 }
 
 #[cargo_test]
+fn non_virtual_default_members_build_root_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["bar"]
+                default-members = ["."]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "[..] Compiling foo v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn inferred_root() {
     let p = project()
         .file(

@@ -686,6 +686,8 @@ impl<'cfg> Workspace<'cfg> {
                 })?;
         }
 
+        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)?;
+
         if let Some(default) = default_members_paths {
             for path in default {
                 let normalized_path = paths::normalize_path(&path);
@@ -716,7 +718,7 @@ impl<'cfg> Workspace<'cfg> {
             self.default_members.push(self.current_manifest.clone())
         }
 
-        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)
+        Ok(())
     }
 
     fn find_path_deps(
