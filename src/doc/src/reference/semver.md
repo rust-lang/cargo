@@ -279,7 +279,7 @@ Mitigation strategies:
 
 When constructing a normal struct using [struct literal] syntax, the curly braces
 are required even if the struct has no fields. Changing a unit struct
-to a normal struct will then break any code that attempted to construct 
+to a normal struct will then break any code that attempted to construct
 the unit struct using a [struct literal].
 
 ```rust,ignore
@@ -295,6 +295,8 @@ pub struct Foo {}
 
 ///////////////////////////////////////////////////////////
 // Example usage that will break.
+use updated_crate::Foo;
+
 fn main() {
     let x = Foo; // Error: expected value, found struct `Foo`
     //      ^^^ help: use struct literal syntax instead: `Foo {}`
