@@ -62,6 +62,7 @@ considered incompatible.
     * Structs
         * [Major: adding a private struct field when all current fields are public](#struct-add-private-field-when-public)
         * [Major: adding a public field when no private field exists](#struct-add-public-field-when-no-private)
+        * [Major: going from a unit struct to a normal struct, even if it has no fields](#struct-unit-to-normal)
         * [Minor: adding or removing private fields when at least one already exists](#struct-private-fields-with-private)
         * [Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa](#struct-tuple-normal-with-private)
     * Enums
@@ -272,6 +273,33 @@ Mitigation strategies:
 * Mark structs as [`#[non_exhaustive]`][non_exhaustive] when first introducing
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
+
+<a id="#struct-unit-to-normal"></a>
+### Major: going from a unit struct to a normal struct, even if it has no fields
+
+When constructing a normal struct using [struct literal] syntax, the curly braces
+are required even if the struct has no fields. Changing a unit struct
+to a normal struct will then break any code that attempted to construct 
+the unit struct using a [struct literal].
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Foo;
+
+///////////////////////////////////////////////////////////
+// After
+pub struct Foo {}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let x = Foo; // Error: expected value, found struct `Foo`
+    //      ^^^ help: use struct literal syntax instead: `Foo {}`
+}
+```
 
 <a id="struct-private-fields-with-private"></a>
 ### Minor: adding or removing private fields when at least one already exists
