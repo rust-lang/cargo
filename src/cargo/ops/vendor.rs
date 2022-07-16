@@ -298,6 +298,9 @@ fn sync(
         config.insert(
             merged_source_name.to_string(),
             VendorSource::Directory {
+                // Windows-flavour paths are valid here on Windows but Unix.
+                // This backslash normalization is for making output paths more
+                // cross-platform compatible.
                 directory: opts.destination.to_string_lossy().replace("\\", "/"),
             },
         );
