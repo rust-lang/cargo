@@ -71,7 +71,7 @@ fn works_with_cli() {
         )
         .run();
     p.cargo("build -v -Z config-include")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["config-include"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 [..]

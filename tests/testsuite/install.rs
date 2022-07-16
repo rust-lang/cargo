@@ -1755,7 +1755,9 @@ fn install_ignores_unstable_table_in_local_cargo_config() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("install bar").masquerade_as_nightly_cargo().run();
+    p.cargo("install bar")
+        .masquerade_as_nightly_cargo(&["build-std"])
+        .run();
     assert_has_installed_exe(cargo_home(), "bar");
 }
 

@@ -61,7 +61,7 @@ fn custom_target_minimal() {
 
     // Ensure that the correct style of flag is passed to --target with doc tests.
     p.cargo("test --doc --target src/../custom-target.json -v -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-xcompile", "no_core", "lang_items"])
         .with_stderr_contains("[RUNNING] `rustdoc [..]--target [..]foo/custom-target.json[..]")
         .run();
 }

@@ -105,7 +105,7 @@ fn collision_export() {
     // -j1 to avoid issues with two processes writing to the same file at the
     // same time.
     p.cargo("build -j1 --out-dir=out -Z unstable-options --bins --examples")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .with_stderr_contains("\
 [WARNING] `--out-dir` filename collision.
 The example target `foo` in package `foo v1.0.0 ([..]/foo)` has the same output filename as the bin target `foo` in package `foo v1.0.0 ([..]/foo)`.

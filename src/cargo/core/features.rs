@@ -86,7 +86,9 @@
 //!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
 //!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
-//!    `cargo-features` from `Cargo.toml` test files if any.
+//!    `cargo-features` from `Cargo.toml` test files if any. You can
+//!     quickly find what needs to be removed by searching for the name
+//!     of the feature, e.g. `print_im_a_teapot`
 //! 3. Update the docs in unstable.md to move the section to the bottom
 //!    and summarize it similar to the other entries. Update the rest of the
 //!    documentation to add the new feature.

@@ -861,7 +861,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
     }
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr(&format!(
             "\
 [CHECKING] foo [..]
@@ -942,7 +942,7 @@ fn prepare_for_already_on_latest_unstable() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\

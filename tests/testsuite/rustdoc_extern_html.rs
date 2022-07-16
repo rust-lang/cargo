@@ -50,7 +50,7 @@ fn simple() {
     }
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo [..]bar=https://docs.rs/bar/1.0.0/[..]",
         )
@@ -91,7 +91,7 @@ fn std_docs() {
         "#,
     );
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains("[RUNNING] `rustdoc [..]--crate-name foo [..]std=file://[..]")
         .run();
     let myfun = p.read_file("target/doc/foo/fn.myfun.html");
@@ -105,7 +105,7 @@ fn std_docs() {
         "#,
     );
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo [..]std=https://example.com/rust/[..]",
         )
@@ -148,7 +148,7 @@ fn renamed_dep() {
         )
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo [..]bar=https://docs.rs/bar/1.0.0/[..]",
         )
@@ -201,7 +201,7 @@ fn lib_name() {
         )
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo [..]rumpelstiltskin=https://docs.rs/bar/1.0.0/[..]",
         )
@@ -270,7 +270,7 @@ fn alt_registry() {
         )
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo \
             [..]bar=https://example.com/bar/1.0.0/[..]grimm=https://docs.rs/grimm/1.0.0/[..]",
@@ -328,7 +328,7 @@ fn multiple_versions() {
         )
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo \
             [..]bar=https://docs.rs/bar/1.0.0/[..]bar=https://docs.rs/bar/2.0.0/[..]",
@@ -351,7 +351,7 @@ fn rebuilds_when_changing() {
     }
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains("[..]--extern-html-root-url[..]")
         .run();
 
@@ -364,7 +364,7 @@ fn rebuilds_when_changing() {
         "#,
     );
     p.cargo("doc -v --no-deps -Zrustdoc-map")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..]",
         )

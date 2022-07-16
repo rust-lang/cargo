@@ -11,7 +11,7 @@ fn invalid_key_inherit_dependency() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .arg("add")
         .args(["foo", "--default-features", "-p", "bar"])
         .current_dir(cwd)

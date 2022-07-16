@@ -47,7 +47,7 @@ fn removed() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("package")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["publish-lockfile"])
         .with_status(101)
         .with_stderr(
             "\

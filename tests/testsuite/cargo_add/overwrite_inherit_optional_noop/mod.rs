@@ -13,7 +13,7 @@ fn overwrite_inherit_optional_noop() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .arg("add")
         .args(["foo", "-p", "bar"])
         .current_dir(cwd)

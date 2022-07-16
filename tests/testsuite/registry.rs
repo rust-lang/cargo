@@ -14,7 +14,8 @@ use std::path::Path;
 
 fn cargo_http(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
-    e.arg("-Zsparse-registry").masquerade_as_nightly_cargo();
+    e.arg("-Zsparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"]);
     e
 }
 
@@ -2650,7 +2651,7 @@ fn http_requires_z_flag() {
 #[cargo_test]
 fn http_requires_trailing_slash() {
     cargo_process("-Z sparse-registry install bar --index sparse+https://index.crates.io")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
         .with_status(101)
         .with_stderr("[ERROR] registry url must end in a slash `/`: sparse+https://index.crates.io")
         .run()

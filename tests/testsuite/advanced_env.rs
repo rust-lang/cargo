@@ -31,7 +31,7 @@ fn source_config_env() {
     let path = paths::root().join("registry");
 
     p.cargo("check -Zadvanced-env")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["advanced-env"])
         .env("CARGO_SOURCE_crates-io_REPLACE_WITH", "my-local-source")
         .env("CARGO_SOURCE_my-local-source_LOCAL_REGISTRY", path)
         .run();

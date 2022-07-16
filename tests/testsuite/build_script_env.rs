@@ -130,7 +130,7 @@ fn rustc_bootstrap() {
         .run();
     // nightly should warn whether or not RUSTC_BOOTSTRAP is set
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["RUSTC_BOOTSTRAP"])
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
@@ -159,7 +159,7 @@ fn rustc_bootstrap() {
         .build();
     // nightly should warn when there's no library whether or not RUSTC_BOOTSTRAP is set
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["RUSTC_BOOTSTRAP"])
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")

@@ -278,7 +278,7 @@ fn color() {
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .run();
 
     p.cargo("report future-incompatibilities")
@@ -307,7 +307,7 @@ fn bad_ids() {
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .run();
 
     p.cargo("report future-incompatibilities --id foo")
@@ -393,7 +393,7 @@ with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.
 ";
 
     p.cargo("check --future-incompat-report")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(update_message)
         .run();
