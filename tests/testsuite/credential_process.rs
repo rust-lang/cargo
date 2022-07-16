@@ -32,7 +32,7 @@ fn gated() {
         .build();
 
     p.cargo("publish --no-verify")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -51,7 +51,7 @@ fn gated() {
     );
 
     p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -94,7 +94,7 @@ fn warn_both_token_and_process() {
         .build();
 
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -118,7 +118,7 @@ Only one of these values may be set, remove one or the other to proceed.
         "#,
     );
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -192,7 +192,7 @@ fn publish() {
     let (p, _t) = get_token_test();
 
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -219,7 +219,7 @@ fn basic_unsupported() {
     .unwrap();
 
     cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -232,7 +232,7 @@ the credential-process configuration value must pass the \
         .run();
 
     cargo_process("logout -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process", "cargo-logout"])
         .with_status(101)
         .with_stderr(
             "\
@@ -287,7 +287,7 @@ fn login() {
     .unwrap();
 
     cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -341,7 +341,7 @@ fn logout() {
     .unwrap();
 
     cargo_process("logout -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process", "cargo-logout"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -361,7 +361,7 @@ fn yank() {
     let (p, _t) = get_token_test();
 
     p.cargo("yank --version 0.1.0 --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -376,7 +376,7 @@ fn owner() {
     let (p, _t) = get_token_test();
 
     p.cargo("owner --add username --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -402,7 +402,7 @@ fn libexec_path() {
     .unwrap();
 
     cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
@@ -452,7 +452,7 @@ fn invalid_token_output() {
         .build();
 
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\

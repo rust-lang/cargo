@@ -46,7 +46,7 @@ fn simple() {
         .build();
 
     p.cargo("build --features a/feata --unit-graph -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["unit-graph"])
         .with_json(
             r#"{
               "roots": [

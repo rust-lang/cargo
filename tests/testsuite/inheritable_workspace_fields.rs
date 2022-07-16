@@ -104,7 +104,7 @@ Caused by:
   dep1 is optional, but workspace dependencies cannot be optional
 ",
         )
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .run();
 }
 
@@ -165,7 +165,7 @@ fn inherit_own_workspace_fields() {
         .build();
 
     p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .run();
     publish::validate_upload_with_contents(
         r#"
@@ -276,7 +276,7 @@ fn inherit_own_dependencies() {
     Package::new("dep-dev", "0.5.2").publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -290,13 +290,15 @@ fn inherit_own_dependencies() {
         )
         .run();
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
+        .run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
     p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .run();
     publish::validate_upload_with_contents(
         r#"
@@ -410,7 +412,7 @@ fn inherit_own_detailed_dependencies() {
         .publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -423,11 +425,13 @@ fn inherit_own_detailed_dependencies() {
         )
         .run();
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
+        .run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
     p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .run();
     publish::validate_upload_with_contents(
         r#"
@@ -511,7 +515,7 @@ fn inherit_from_own_undefined_field() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_status(101)
         .with_stderr(
             "\
@@ -563,7 +567,7 @@ fn inherited_dependencies_union_features() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -654,7 +658,7 @@ fn inherit_workspace_fields() {
         .build();
 
     p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .cwd("bar")
         .run();
     publish::validate_upload_with_contents(
@@ -773,8 +777,7 @@ fn inherit_dependencies() {
     Package::new("dep-dev", "0.5.2").publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -788,13 +791,15 @@ fn inherit_dependencies() {
         )
         .run();
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
+        .run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
     p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .cwd("bar")
         .run();
     publish::validate_upload_with_contents(
@@ -912,7 +917,7 @@ fn inherit_target_dependencies() {
     Package::new("dep", "0.1.2").publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -961,7 +966,7 @@ fn inherit_dependency_override_optional() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1006,7 +1011,7 @@ fn inherit_dependency_features() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1080,7 +1085,7 @@ fn inherit_detailed_dependencies() {
     let git_root = git_project.root();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`\n\
@@ -1125,7 +1130,7 @@ fn inherit_path_dependencies() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_stderr(
             "\
 [COMPILING] dep v0.9.0 ([CWD]/dep)
@@ -1169,7 +1174,7 @@ fn error_workspace_false() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1214,7 +1219,7 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_status(101)
         .with_stderr(
             "\
@@ -1259,7 +1264,7 @@ fn error_malformed_workspace_root() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1306,7 +1311,7 @@ fn error_no_root_workspace() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1354,7 +1359,7 @@ fn error_inherit_unspecified_dependency() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1395,7 +1400,7 @@ fn workspace_inheritance_not_enabled() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .with_status(101)
         .with_stderr(
             "\

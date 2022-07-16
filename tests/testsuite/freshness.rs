@@ -1225,7 +1225,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .build();
 
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
@@ -1236,13 +1236,13 @@ fn update_dependency_mtime_does_not_rebuild() {
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
     p.cargo("build -p bar -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
@@ -1303,10 +1303,10 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .build();
 
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .run();
     p.cargo("build -Z mtime-on-use --features a")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1322,18 +1322,18 @@ fn fingerprint_cleaner_does_not_rebuild() {
     }
     // This does not make new files, but it does update the mtime.
     p.cargo("build -Z mtime-on-use --features a")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use --features a")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])

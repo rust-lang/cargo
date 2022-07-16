@@ -324,7 +324,7 @@ fn relative_depinfo_paths_ws() {
     let host = rustc_host();
     p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_contains("[COMPILING] foo [..]")
         .run();
 
@@ -361,7 +361,7 @@ fn relative_depinfo_paths_ws() {
     // Make sure it stays fresh.
     p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr("[FINISHED] dev [..]")
         .run();
 }
@@ -452,7 +452,7 @@ fn relative_depinfo_paths_no_ws() {
         .build();
 
     p.cargo("build -Z binary-dep-depinfo")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_contains("[COMPILING] foo [..]")
         .run();
 
@@ -488,7 +488,7 @@ fn relative_depinfo_paths_no_ws() {
 
     // Make sure it stays fresh.
     p.cargo("build -Z binary-dep-depinfo")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr("[FINISHED] dev [..]")
         .run();
 }
@@ -566,7 +566,7 @@ fn canonical_path() {
     p.symlink(real, "target");
 
     p.cargo("build -Z binary-dep-depinfo")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .run();
 
     assert_deps_contains(

@@ -5382,7 +5382,7 @@ required by package `bar v0.1.0 ([..]/foo)`
         )
         .run();
     p.cargo("build -Zavoid-dev-deps")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["avoid-dev-deps"])
         .run();
 }
 
@@ -6122,7 +6122,7 @@ fn simple_terminal_width() {
         .build();
 
     p.cargo("build -Zterminal-width=20")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["terminal-width"])
         .with_status(101)
         .with_stderr_contains("3 | ..._: () = 42;")
         .run();

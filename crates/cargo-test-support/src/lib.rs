@@ -806,9 +806,14 @@ impl Execs {
         p.build_command()
     }
 
-    pub fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
+    /// Enables nightly features for testing
+    ///
+    /// The list of reasons should be why nightly cargo is needed. If it is
+    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// e.g. `&["print-im-a-teapot"]`
+    pub fn masquerade_as_nightly_cargo(&mut self, reasons: &[&str]) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
-            p.masquerade_as_nightly_cargo();
+            p.masquerade_as_nightly_cargo(reasons);
         }
         self
     }
@@ -1139,17 +1144,20 @@ fn _process(t: &OsStr) -> ProcessBuilder {
 
 /// Enable nightly features for testing
 pub trait ChannelChanger {
-    fn masquerade_as_nightly_cargo(self) -> Self;
+    /// The list of reasons should be why nightly cargo is needed. If it is
+    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// e.g. `&["print-im-a-teapot"]`.
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self;
 }
 
 impl ChannelChanger for &mut ProcessBuilder {
-    fn masquerade_as_nightly_cargo(self) -> Self {
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }
 
 impl ChannelChanger for snapbox::cmd::Command {
-    fn masquerade_as_nightly_cargo(self) -> Self {
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }

@@ -4023,7 +4023,7 @@ fn cargo_test_doctest_xcompile_ignores() {
 
     #[cfg(not(target_arch = "x86_64"))]
     p.cargo("test -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
         .with_stdout_contains(
             "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
         )
@@ -4031,7 +4031,7 @@ fn cargo_test_doctest_xcompile_ignores() {
 
     #[cfg(target_arch = "x86_64")]
     p.cargo("test -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
         .with_stdout_contains(
             "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out[..]",
         )
@@ -4071,7 +4071,7 @@ fn cargo_test_doctest_xcompile() {
         "test --target {} -Zdoctest-xcompile",
         cross_compile::alternate()
     ))
-    .masquerade_as_nightly_cargo()
+    .masquerade_as_nightly_cargo(&["doctest-xcompile"])
     .with_stdout_contains(
         "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
     )
@@ -4151,7 +4151,7 @@ fn cargo_test_doctest_xcompile_runner() {
         "test --target {} -Zdoctest-xcompile",
         cross_compile::alternate()
     ))
-    .masquerade_as_nightly_cargo()
+    .masquerade_as_nightly_cargo(&["doctest-xcompile"])
     .with_stdout_contains(
         "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
     )
@@ -4195,7 +4195,7 @@ fn cargo_test_doctest_xcompile_no_runner() {
         "test --target {} -Zdoctest-xcompile",
         cross_compile::alternate()
     ))
-    .masquerade_as_nightly_cargo()
+    .masquerade_as_nightly_cargo(&["doctest-xcompile"])
     .with_stdout_contains(
         "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
     )
@@ -4243,7 +4243,7 @@ fn panic_abort_tests() {
         .with_stderr_contains("[..]--crate-name a [..]-C panic=abort[..]")
         .with_stderr_contains("[..]--crate-name foo [..]-C panic=abort[..]")
         .with_stderr_contains("[..]--crate-name foo [..]-C panic=abort[..]--test[..]")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
 
@@ -4284,7 +4284,7 @@ fn panic_abort_only_test() {
 
     p.cargo("test -Z panic-abort-tests -v")
         .with_stderr_contains("warning: `panic` setting is ignored for `test` profile")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
 
@@ -4324,7 +4324,7 @@ fn panic_abort_test_profile_inherits() {
         .build();
 
     p.cargo("test -Z panic-abort-tests -v")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .with_status(0)
         .run();
 }

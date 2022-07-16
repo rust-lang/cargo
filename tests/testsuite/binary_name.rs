@@ -24,7 +24,7 @@ fn gated() {
 
     // Run cargo build.
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_status(101)
         .with_stderr_contains("[..]feature `different-binary-name` is required")
         .run();
@@ -58,7 +58,9 @@ fn binary_name1() {
         .build();
 
     // Run cargo build.
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
+        .run();
 
     // Check the name of the binary that cargo has generated.
     // A binary with the name of the crate should NOT be created.
@@ -90,7 +92,7 @@ fn binary_name1() {
 
     // Run cargo second time, to verify fingerprint.
     p.cargo("build -p foo -v")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_stderr(
             "\
 [FRESH] foo [..]
@@ -100,7 +102,9 @@ fn binary_name1() {
         .run();
 
     // Run cargo clean.
-    p.cargo("clean -p foo").masquerade_as_nightly_cargo().run();
+    p.cargo("clean -p foo")
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
+        .run();
 
     // Check if the appropriate file was removed.
     assert!(
@@ -156,7 +160,9 @@ fn binary_name2() {
         .build();
 
     // Run cargo build.
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
+        .run();
 
     // Check the name of the binary that cargo has generated.
     // A binary with the name of the crate should NOT be created.
@@ -168,7 +174,7 @@ fn binary_name2() {
 
     // Check if `cargo test` works
     p.cargo("test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -180,17 +186,19 @@ fn binary_name2() {
 
     // Check if `cargo run` is able to execute the binary
     p.cargo("run")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_stdout("Hello, crabs!")
         .run();
 
-    p.cargo("install").masquerade_as_nightly_cargo().run();
+    p.cargo("install")
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
+        .run();
 
     assert_has_installed_exe(cargo_home(), "007bar");
 
     p.cargo("uninstall")
         .with_stderr("[REMOVING] [ROOT]/home/.cargo/bin/007bar[EXE]")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .run();
 
     assert_has_not_installed_exe(cargo_home(), "007bar");
@@ -234,13 +242,15 @@ fn check_env_vars() {
         .build();
 
     // Run cargo build.
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
+        .run();
     p.cargo("run")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_stdout("007bar")
         .run();
     p.cargo("test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_status(0)
         .run();
 }
@@ -285,7 +295,7 @@ fn check_msg_format_json() {
 
     // Run cargo build.
     p.cargo("build --message-format=json")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["different-binary-name"])
         .with_json(output)
         .run();
 }

@@ -11,7 +11,7 @@ fn cargo_build_plan_simple() {
         .build();
 
     p.cargo("build --build-plan -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["build-plan"])
         .with_json(
             r#"
             {
@@ -70,7 +70,7 @@ fn cargo_build_plan_single_dep() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
     p.cargo("build --build-plan -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["build-plan"])
         .with_json(
             r#"
             {
@@ -139,7 +139,7 @@ fn cargo_build_plan_build_script() {
         .build();
 
     p.cargo("build --build-plan -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["build-plan"])
         .with_json(
             r#"
             {
@@ -217,6 +217,6 @@ fn build_plan_with_dev_dep() {
         .build();
 
     p.cargo("build --build-plan -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["build-plan"])
         .run();
 }

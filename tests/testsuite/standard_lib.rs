@@ -134,7 +134,7 @@ fn enable_build_std(e: &mut Execs, setup: &Setup) {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std");
     e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
 
-    e.masquerade_as_nightly_cargo();
+    e.masquerade_as_nightly_cargo(&["build-std"]);
 
     // We do various shenanigans to ensure our "mock sysroot" actually links
     // with the real sysroot, so we don't have to actually recompile std for

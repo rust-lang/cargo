@@ -861,7 +861,7 @@ fn check_keep_going() {
 
     // Due to -j1, without --keep-going only one of the two bins would be built.
     foo.cargo("check -j1 --keep-going -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["keep-going"])
         .with_status(101)
         .with_stderr_contains("error: ONE")
         .with_stderr_contains("error: TWO")

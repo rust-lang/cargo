@@ -13,7 +13,7 @@ fn detect_workspace_inherit_features() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .arg("add")
         .args(["foo", "-p", "bar", "--features", "test"])
         .current_dir(cwd)

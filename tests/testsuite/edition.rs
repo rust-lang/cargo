@@ -117,7 +117,7 @@ fn edition_unstable() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr(
             "\
 [CHECKING] foo [..]

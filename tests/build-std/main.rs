@@ -32,7 +32,7 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
         None => "-Zbuild-std".to_string(),
     };
     e.arg(arg);
-    e.masquerade_as_nightly_cargo();
+    e.masquerade_as_nightly_cargo(&["build-std"]);
 }
 
 // Helper methods used in the tests below
