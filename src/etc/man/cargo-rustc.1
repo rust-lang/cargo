@@ -224,6 +224,20 @@ and does not provide machine\-readable timing data.
 information about timing information.
 .RE
 .RE
+.sp
+\fB\-\-crate\-type\fR \fIcrate\-type\fR
+.RS 4
+Build for the given crate type. This flag accepts a comma\-separated list of
+1 or more crate types, of which the allowed values are the same as \fBcrate\-type\fR
+field in the manifest for configurating a Cargo target. See
+\fI\f(BIcrate\-type\fI field\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#the\-crate\-type\-field>
+for possible values.
+.sp
+If the manifest contains a list, and \fB\-\-crate\-type\fR is provided,
+the command\-line argument value will override what is in the manifest.
+.sp
+This flag only works when building a \fBlib\fR or \fBexample\fR library target.
+.RE
 .SS "Output Options"
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR
@@ -429,6 +443,16 @@ the size of every type:
 .RS 4
 .nf
 cargo rustc \-\-lib \-\- \-Z print\-type\-sizes
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'Override \fBcrate\-type\fR field in Cargo.toml with command\-line option:
+.sp
+.RS 4
+.nf
+cargo rustc \-\-lib \-\-crate\-type lib,cdylib
 .fi
 .RE
 .RE

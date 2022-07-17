@@ -409,23 +409,6 @@ like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
 
-### crate-type
-* Tracking Issue: [#10083](https://github.com/rust-lang/cargo/issues/10083)
-* RFC: [#3180](https://github.com/rust-lang/rfcs/pull/3180)
-* Original Pull Request: [#10093](https://github.com/rust-lang/cargo/pull/10093)
-
-`cargo rustc --crate-type=lib,cdylib` forwards the `--crate-type` flag to `rustc`.
-This runs `rustc` with the corresponding
-[`--crate-type`](https://doc.rust-lang.org/rustc/command-line-arguments.html#--crate-type-a-list-of-types-of-crates-for-the-compiler-to-emit)
-flag, and compiling.
-
-When using it, it requires the `-Z unstable-options`
-command-line option:
-
-```console
-cargo rustc --crate-type lib,cdylib -Z unstable-options
-```
-
 ### keep-going
 * Tracking Issue: [#10496](https://github.com/rust-lang/cargo/issues/10496)
 
@@ -1547,3 +1530,9 @@ information.
 The `-Z multitarget` option has been stabilized in the 1.64 release.
 See [`build.target`](config.md#buildtarget) for more information about
 setting the default target platform triples.
+
+### crate-type
+
+The `--crate-type` flag for `cargo rustc` has been stabilized in the 1.64
+release. See the [`cargo rustc` documentation](../commands/cargo-rustc.md)
+for more information.
