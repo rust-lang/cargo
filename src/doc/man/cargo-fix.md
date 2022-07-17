@@ -1,5 +1,6 @@
 # cargo-fix(1)
 {{*set actionverb="Fix"}}
+{{*set multitarget=true}}
 
 ## NAME
 

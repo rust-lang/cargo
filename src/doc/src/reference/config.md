@@ -380,15 +380,24 @@ It affects the filename hash so that artifacts produced by the wrapper are cache
 Sets the executable to use for `rustdoc`.
 
 ##### `build.target`
-* Type: string
+* Type: string or array of strings
 * Default: host platform
 * Environment: `CARGO_BUILD_TARGET`
 
-The default target platform triple to compile to.
+The default target platform triples to compile to.
 
-This may also be a relative path to a `.json` target spec file.
+This allows passing either a string or an array of strings. Each string value
+is a target platform triple. The selected build targets will be built for each
+of the selected architectures.
+
+The string value may also be a relative path to a `.json` target spec file.
 
 Can be overridden with the `--target` CLI option.
+
+```toml
+[build]
+target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+```
 
 ##### `build.target-dir`
 * Type: string (path)

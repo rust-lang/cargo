@@ -1,5 +1,6 @@
 # cargo-clean(1)
 {{*set actionverb="Clean"}}
+{{*set multitarget=true}}
 
 ## NAME
 

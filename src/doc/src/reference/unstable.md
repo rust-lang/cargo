@@ -48,7 +48,7 @@ how the feature works:
   ```toml
   [unstable]
   mtime-on-use = true
-  multitarget = true
+  build-std = ["core", "alloc"]
   ```
 
 Each new feature described below should explain how to use it.
@@ -76,7 +76,6 @@ Each new feature described below should explain how to use it.
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
     * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
-    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
     * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
@@ -87,7 +86,6 @@ Each new feature described below should explain how to use it.
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
@@ -216,32 +214,6 @@ information from `.cargo/config.toml`. See the rustc issue for more information.
 
 ```sh
 cargo test --target foo -Zdoctest-xcompile
-```
-
-### multitarget
-* Tracking Issue: [#8176](https://github.com/rust-lang/cargo/issues/8176)
-
-This flag allows passing multiple `--target` flags to the `cargo` subcommand
-selected. When multiple `--target` flags are passed the selected build targets
-will be built for each of the selected architectures.
-
-For example to compile a library for both 32 and 64-bit:
-
-```
-cargo build --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
-```
-
-or running tests for both targets:
-
-```
-cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
-```
-
-This can also be specified in `.cargo/config.toml` files.
-
-```toml
-[build]
-target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 ```
 
 #### New `dir-name` attribute
@@ -438,7 +410,7 @@ like to stabilize it somehow!
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
 
 ### keep-going
-* Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/10496)
+* Tracking Issue: [#10496](https://github.com/rust-lang/cargo/issues/10496)
 
 `cargo build --keep-going` (and similarly for `check`, `test` etc) will build as
 many crates in the dependency graph as possible, rather than aborting the build
@@ -1552,6 +1524,12 @@ unstable and require `-Zunstable-options`.)
 The `--config` CLI option has been stabilized in the 1.63 release. See
 the [config documentation](config.html#command-line-overrides) for more
 information.
+
+### multitarget
+
+The `-Z multitarget` option has been stabilized in the 1.64 release.
+See [`build.target`](config.md#buildtarget) for more information about
+setting the default target platform triples.
 
 ### crate-type
 

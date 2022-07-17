@@ -720,8 +720,8 @@ fn rustc_with_print_cfg_multiple_targets() {
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options -Z multitarget --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
-        .masquerade_as_nightly_cargo(&["print", "multitarget"])
+    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
+        .masquerade_as_nightly_cargo(&["print"])
         .with_stdout_contains("debug_assertions")
         .with_stdout_contains("target_arch=\"x86_64\"")
         .with_stdout_contains("target_endian=\"little\"")
