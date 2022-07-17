@@ -722,6 +722,8 @@ const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always
 
 const STABILIZED_TIMINGS: &str = "The -Ztimings option has been stabilized as --timings.";
 
+const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always available.";
+
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -922,7 +924,7 @@ impl CliUnstable {
                 self.features = Some(feats);
             }
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
-            "multitarget" => self.multitarget = parse_empty(k, v)?,
+            "multitarget" => stabilized_warn(k, "1.64", STABILISED_MULTITARGET),
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
             "sparse-registry" => self.sparse_registry = parse_empty(k, v)?,

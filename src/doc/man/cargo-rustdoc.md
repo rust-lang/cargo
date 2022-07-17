@@ -1,5 +1,6 @@
 # cargo-rustdoc(1)
 {{*set actionverb="Document"}}
+{{*set multitarget=true}}
 
 ## NAME
 
