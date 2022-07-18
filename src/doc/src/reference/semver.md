@@ -1158,9 +1158,14 @@ pub struct Foo {
 }
 
 pub enum Bar {
-    #[non_exhaustive] X,
-    #[non_exhaustive] Y(usize),
-    #[non_exhaustive] Z { a: usize },
+    #[non_exhaustive]
+    X,
+
+    #[non_exhaustive]
+    Y(usize),
+
+    #[non_exhaustive]
+    Z { a: usize },
 }
 
 #[non_exhaustive]
