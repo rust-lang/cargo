@@ -1146,8 +1146,8 @@ pub enum Bar {
 
 pub enum Quux {
     X,
-    Y(a: usize),
-    Z { b: usize },
+    Y(usize),
+    Z { a: usize },
 }
 
 ///////////////////////////////////////////////////////////
