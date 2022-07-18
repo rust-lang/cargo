@@ -1180,8 +1180,9 @@ fn main() {
     let bar_z = Bar::Z { a: 0 }; // Error: cannot create non-exhaustive variant using struct expression
 
     let q = Quux::Var;
-    match q { // Error: non-exhaustive patterns: `_` not covered
+    match q {
         Quux::Var => 0,
+        // Error: non-exhaustive patterns: `_` not covered
     }
 }
 ```
