@@ -1141,13 +1141,13 @@ pub struct Foo {
 }
 
 pub enum Bar {
-    Baz,
-}
-
-pub enum Quux {
     X,
     Y(usize),
     Z { a: usize },
+}
+
+pub enum Quux {
+    Var,
 }
 
 ///////////////////////////////////////////////////////////
@@ -1183,7 +1183,7 @@ fn main() {
     match q {
         Quux::Var => 0,
         // Error: non-exhaustive patterns: `_` not covered
-    }
+    };
 }
 ```
 
