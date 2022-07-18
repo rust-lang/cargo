@@ -1170,7 +1170,7 @@ pub enum Quux {
 
 ///////////////////////////////////////////////////////////
 // Example usage that will break.
-use updated_crate::{Foo, Bar, Quux};
+use updated_crate::{Bar, Foo, Quux};
 
 fn main() {
     let foo = Foo { bar: 0 }; // Error: cannot create non-exhaustive struct using struct expression
