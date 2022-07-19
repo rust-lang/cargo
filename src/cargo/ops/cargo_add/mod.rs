@@ -705,11 +705,7 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
             shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
         }
         for feat in deactivated {
-            let is_hidden = feat
-                .chars()
-                .nth(0)
-                .map(|c| c == '_')
-                .unwrap_or(false);
+            let is_hidden = feat.chars().nth(0).map(|c| c == '_').unwrap_or(false);
 
             if !is_hidden {
                 shell.write_stderr(&prefix, &ColorSpec::new())?;
