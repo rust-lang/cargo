@@ -293,7 +293,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
                 Ok(dep) => dep,
                 Err(_) => return false,
             };
-            match source.query_vec(&dep) {
+            match source.query_vec(&dep, false) {
                 Poll::Ready(Ok(sum)) => {
                     summaries.push((pkg_id, sum));
                     false

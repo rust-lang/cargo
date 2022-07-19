@@ -40,9 +40,9 @@ pub trait Source {
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency) -> Poll<CargoResult<Vec<Summary>>> {
+    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, false, &mut |s| ret.push(s)).map_ok(|_| ret)
+        self.query(dep, fuzzy, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
 
     /// Ensure that the source is fully up-to-date for the current session on the next query.

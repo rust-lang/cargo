@@ -540,7 +540,7 @@ where
     }
 
     let deps = loop {
-        match source.query_vec(&dep)? {
+        match source.query_vec(&dep, false)? {
             Poll::Ready(deps) => break deps,
             Poll::Pending => source.block_until_ready()?,
         }

@@ -327,7 +327,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                     .get_mut(dep.source_id())
                     .expect("loaded source not present");
 
-                let summaries = match source.query_vec(dep)? {
+                let summaries = match source.query_vec(dep, false)? {
                     Poll::Ready(deps) => deps,
                     Poll::Pending => {
                         deps_pending.push(dep_remaining);
@@ -483,7 +483,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.package_name(), s);
-            let mut results = match src.query_vec(&dep) {
+            let mut results = match src.query_vec(&dep, false) {
                 Poll::Ready(results) => results?,
                 Poll::Pending => return Poll::Pending,
             };
@@ -881,7 +881,7 @@ fn summary_for_patch(
     // No summaries found, try to help the user figure out what is wrong.
     if let Some(locked) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let orig_matches = match source.query_vec(orig_patch) {
+        let orig_matches = match source.query_vec(orig_patch, false) {
             Poll::Pending => return Poll::Pending,
             Poll::Ready(deps) => deps,
         }
@@ -906,7 +906,7 @@ fn summary_for_patch(
     // Try checking if there are *any* packages that match this by name.
     let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
 
-    let name_summaries = match source.query_vec(&name_only_dep) {
+    let name_summaries = match source.query_vec(&name_only_dep, false) {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(deps) => deps,
     }
