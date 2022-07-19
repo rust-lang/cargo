@@ -705,9 +705,17 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
             shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
         }
         for feat in deactivated {
-            shell.write_stderr(&prefix, &ColorSpec::new())?;
-            shell.write_stderr('-', &ColorSpec::new().set_bold(true).set_fg(Some(Red)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            let is_hidden = feat
+                .chars()
+                .nth(0)
+                .map(|c| c == '_')
+                .unwrap_or(false);
+
+            if !is_hidden {
+                shell.write_stderr(&prefix, &ColorSpec::new())?;
+                shell.write_stderr('-', &ColorSpec::new().set_bold(true).set_fg(Some(Red)))?;
+                shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            }
         }
     }
 
