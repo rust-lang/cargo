@@ -6,7 +6,7 @@ takes, and tracks concurrency information over time.
 cargo build --timings
 ```
 
-This writes an HTML report in `target/cargo-timings/cargo-timings.html`. This
+This writes an HTML report in `target/cargo-timings/cargo-timing.html`. This
 also writes a copy of the report to the same directory with a timestamp in the
 filename, if you want to look at older runs.
 
