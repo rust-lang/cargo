@@ -100,13 +100,9 @@ impl<'a> RegistryQueryer<'a> {
         }
 
         let mut ret = Vec::new();
-        let ready = self.registry.query(
-            dep,
-            &mut |s| {
-                ret.push(s);
-            },
-            false,
-        )?;
+        let ready = self.registry.query(dep, false, &mut |s| {
+            ret.push(s);
+        })?;
         if ready.is_pending() {
             self.registry_cache.insert(dep.clone(), Poll::Pending);
             return Poll::Pending;

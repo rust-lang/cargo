@@ -19,13 +19,13 @@ pub trait Registry {
     fn query(
         &mut self,
         dep: &Dependency,
-        f: &mut dyn FnMut(Summary),
         fuzzy: bool,
+        f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
     fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s), fuzzy)
+        self.query(dep, fuzzy, &mut |s| ret.push(s))
             .map_ok(|()| ret)
     }
 
@@ -575,8 +575,8 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(
         &mut self,
         dep: &Dependency,
-        f: &mut dyn FnMut(Summary),
         fuzzy: bool,
+        f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {

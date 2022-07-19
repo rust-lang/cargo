@@ -128,8 +128,8 @@ pub fn resolve_with_config_raw(
         fn query(
             &mut self,
             dep: &Dependency,
-            f: &mut dyn FnMut(Summary),
             fuzzy: bool,
+            f: &mut dyn FnMut(Summary),
         ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
                 if fuzzy || dep.matches(summary) {
