@@ -1,0 +1,4 @@
+    Updating `dummy-registry` index
+      Adding hidden-feature-test v99999.0.0 to dependencies.
+             Features:
+             - not_secret

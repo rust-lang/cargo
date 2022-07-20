@@ -1,4 +1,6 @@
 mod add_basic;
+mod add_hidden_activated;
+mod add_hidden_unactivated;
 mod add_multiple;
 mod add_normalized_name_external;
 mod build;
@@ -184,5 +186,11 @@ fn add_registry_packages(alt: bool) {
         .feature("mouth", &[])
         .feature("eyes", &[])
         .feature("ears", &[])
+        .publish();
+
+    cargo_test_support::registry::Package::new("hidden-feature-test", "99999.0.0+my-package")
+        .alternative(alt)
+        .feature("_secret", &[])
+        .feature("not_secret", &[])
         .publish();
 }
