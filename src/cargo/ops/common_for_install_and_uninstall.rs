@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use toml_edit::easy as toml;
 
 use crate::core::compiler::Freshness;
-use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
+use crate::core::{Dependency, FeatureValue, Package, PackageId, QueryKind, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
@@ -540,7 +540,7 @@ where
     }
 
     let deps = loop {
-        match source.query_vec(&dep, false)? {
+        match source.query_vec(&dep, QueryKind::Exact)? {
             Poll::Ready(deps) => break deps,
             Poll::Pending => source.block_until_ready()?,
         }

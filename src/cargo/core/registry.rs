@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::task::Poll;
 
 use crate::core::PackageSet;
-use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
+use crate::core::{Dependency, PackageId, QueryKind, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -19,14 +19,13 @@ pub trait Registry {
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> Poll<CargoResult<Vec<Summary>>> {
+    fn query_vec(&mut self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, fuzzy, &mut |s| ret.push(s))
-            .map_ok(|()| ret)
+        self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|()| ret)
     }
 
     fn describe_source(&self, source: SourceId) -> String;
@@ -327,7 +326,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                     .get_mut(dep.source_id())
                     .expect("loaded source not present");
 
-                let summaries = match source.query_vec(dep, false)? {
+                let summaries = match source.query_vec(dep, QueryKind::Exact)? {
                     Poll::Ready(deps) => deps,
                     Poll::Pending => {
                         deps_pending.push(dep_remaining);
@@ -483,7 +482,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.package_name(), s);
-            let mut results = match src.query_vec(&dep, false) {
+            let mut results = match src.query_vec(&dep, QueryKind::Exact) {
                 Poll::Ready(results) => results?,
                 Poll::Pending => return Poll::Pending,
             };
@@ -575,7 +574,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         assert!(self.patches_locked);
@@ -671,7 +670,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                             }
                             f(lock(locked, all_patches, summary))
                         };
-                        return source.query(dep, fuzzy, callback);
+                        return source.query(dep, kind, callback);
                     }
 
                     // If we have an override summary then we query the source
@@ -690,7 +689,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                                 n += 1;
                                 to_warn = Some(summary);
                             };
-                            let pend = source.query(dep, fuzzy, callback);
+                            let pend = source.query(dep, kind, callback);
                             if pend.is_pending() {
                                 return Poll::Pending;
                             }
@@ -881,7 +880,7 @@ fn summary_for_patch(
     // No summaries found, try to help the user figure out what is wrong.
     if let Some(locked) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let orig_matches = match source.query_vec(orig_patch, false) {
+        let orig_matches = match source.query_vec(orig_patch, QueryKind::Exact) {
             Poll::Pending => return Poll::Pending,
             Poll::Ready(deps) => deps,
         }
@@ -906,7 +905,7 @@ fn summary_for_patch(
     // Try checking if there are *any* packages that match this by name.
     let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
 
-    let name_summaries = match source.query_vec(&name_only_dep, false) {
+    let name_summaries = match source.query_vec(&name_only_dep, QueryKind::Exact) {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(deps) => deps,
     }

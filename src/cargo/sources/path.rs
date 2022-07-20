@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::ops;
 use crate::util::{internal, CargoResult, Config};
 use anyhow::Context as _;
@@ -500,12 +500,16 @@ impl<'cfg> Source for PathSource<'cfg> {
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         self.update()?;
         for s in self.packages.iter().map(|p| p.summary()) {
-            if fuzzy || dep.matches(s) {
+            let matched = match kind {
+                QueryKind::Exact => dep.matches(s),
+                QueryKind::Fuzzy => true,
+            };
+            if matched {
                 f(s.clone())
             }
         }

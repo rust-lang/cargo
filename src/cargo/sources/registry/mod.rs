@@ -176,7 +176,7 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
@@ -704,44 +704,44 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        if !fuzzy {
-            // If this is a precise dependency, then it came from a lock file and in
-            // theory the registry is known to contain this version. If, however, we
-            // come back with no summaries, then our registry may need to be
-            // updated, so we fall back to performing a lazy update.
-            if dep.source_id().precise().is_some() && !self.ops.is_updated() {
-                debug!("attempting query without update");
-                let mut called = false;
-                let pend = self.index.query_inner(
-                    dep,
-                    &mut *self.ops,
-                    &self.yanked_whitelist,
-                    &mut |s| {
+        // If this is a precise dependency, then it came from a lock file and in
+        // theory the registry is known to contain this version. If, however, we
+        // come back with no summaries, then our registry may need to be
+        // updated, so we fall back to performing a lazy update.
+        if kind == QueryKind::Exact && dep.source_id().precise().is_some() && !self.ops.is_updated()
+        {
+            debug!("attempting query without update");
+            let mut called = false;
+            let pend =
+                self.index
+                    .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
                         if dep.matches(&s) {
                             called = true;
                             f(s);
                         }
-                    },
-                )?;
-                if pend.is_pending() {
-                    return Poll::Pending;
-                }
-                if called {
-                    return Poll::Ready(Ok(()));
-                } else {
-                    debug!("falling back to an update");
-                    self.invalidate_cache();
-                    return Poll::Pending;
-                }
+                    })?;
+            if pend.is_pending() {
+                return Poll::Pending;
+            }
+            if called {
+                return Poll::Ready(Ok(()));
+            } else {
+                debug!("falling back to an update");
+                self.invalidate_cache();
+                return Poll::Pending;
             }
         }
 
         self.index
             .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                if fuzzy || dep.matches(&s) {
+                let matched = match kind {
+                    QueryKind::Exact => dep.matches(&s),
+                    QueryKind::Fuzzy => true,
+                };
+                if matched {
                     f(s);
                 }
             })

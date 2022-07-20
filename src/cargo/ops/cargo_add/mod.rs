@@ -19,6 +19,7 @@ use toml_edit::Item as TomlItem;
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
 use crate::core::Package;
+use crate::core::QueryKind;
 use crate::core::Registry;
 use crate::core::Shell;
 use crate::core::Workspace;
@@ -443,8 +444,7 @@ fn get_latest_dependency(
         }
         MaybeWorkspace::Other(query) => {
             let possibilities = loop {
-                let fuzzy = true;
-                match registry.query_vec(&query, fuzzy) {
+                match registry.query_vec(&query, QueryKind::Fuzzy) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
@@ -485,8 +485,8 @@ fn select_package(
         }
         MaybeWorkspace::Other(query) => {
             let possibilities = loop {
-                let fuzzy = false; // Returns all for path/git
-                match registry.query_vec(&query, fuzzy) {
+                // Exact to avoid returning all for path/git
+                match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
@@ -600,7 +600,7 @@ fn populate_available_features(
         MaybeWorkspace::Other(query) => query,
     };
     let possibilities = loop {
-        match registry.query_vec(&query, true) {
+        match registry.query_vec(&query, QueryKind::Fuzzy) {
             std::task::Poll::Ready(res) => {
                 break res?;
             }

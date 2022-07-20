@@ -1,7 +1,7 @@
 use std::fmt;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
+use crate::core::{Dependency, PackageId, QueryKind, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
 use crate::util::{Config, VersionExt};
 use anyhow::Error;
@@ -228,7 +228,7 @@ pub(super) fn activation_error(
     new_dep.set_version_req(all_req);
 
     let mut candidates = loop {
-        match registry.query_vec(&new_dep, false) {
+        match registry.query_vec(&new_dep, QueryKind::Exact) {
             Poll::Ready(Ok(candidates)) => break candidates,
             Poll::Ready(Err(e)) => return to_resolve_err(e),
             Poll::Pending => match registry.block_until_ready() {
@@ -294,7 +294,7 @@ pub(super) fn activation_error(
             // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
             // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
             let mut candidates = loop {
-                match registry.query_vec(&new_dep, true) {
+                match registry.query_vec(&new_dep, QueryKind::Fuzzy) {
                     Poll::Ready(Ok(candidates)) => break candidates,
                     Poll::Ready(Err(e)) => return to_resolve_err(e),
                     Poll::Pending => match registry.block_until_ready() {

@@ -29,20 +29,16 @@ pub trait Source {
     fn requires_precise(&self) -> bool;
 
     /// Attempts to find the packages that match a dependency request.
-    ///
-    /// When fuzzy, each source gets to define what `close` means for it.
-    /// Path/Git sources may return all dependencies that are at that URI,
-    /// whereas an `Index` source may return dependencies that have the same canonicalization.
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> Poll<CargoResult<Vec<Summary>>> {
+    fn query_vec(&mut self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, fuzzy, &mut |s| ret.push(s)).map_ok(|_| ret)
+        self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
 
     /// Ensure that the source is fully up-to-date for the current session on the next query.
@@ -114,6 +110,15 @@ pub trait Source {
     fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum QueryKind {
+    Exact,
+    /// Each source gets to define what `close` means for it.
+    /// Path/Git sources may return all dependencies that are at that URI,
+    /// whereas an `Index` source may return dependencies that have the same canonicalization.
+    Fuzzy,
+}
+
 pub enum MaybePackage {
     Ready(Package),
     Download { url: String, descriptor: String },
@@ -144,10 +149,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        (**self).query(dep, fuzzy, f)
+        (**self).query(dep, kind, f)
     }
 
     fn invalidate_cache(&mut self) {
@@ -214,10 +219,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
     fn query(
         &mut self,
         dep: &Dependency,
-        fuzzy: bool,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        (**self).query(dep, fuzzy, f)
+        (**self).query(dep, kind, f)
     }
 
     fn invalidate_cache(&mut self) {

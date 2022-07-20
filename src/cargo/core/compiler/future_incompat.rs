@@ -1,7 +1,7 @@
 //! Support for future-incompatible warning reporting.
 
 use crate::core::compiler::BuildContext;
-use crate::core::{Dependency, PackageId, Workspace};
+use crate::core::{Dependency, PackageId, QueryKind, Workspace};
 use crate::sources::SourceConfigMap;
 use crate::util::{iter_join, CargoResult, Config};
 use anyhow::{bail, format_err, Context};
@@ -293,7 +293,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
                 Ok(dep) => dep,
                 Err(_) => return false,
             };
-            match source.query_vec(&dep, false) {
+            match source.query_vec(&dep, QueryKind::Exact) {
                 Poll::Ready(Ok(sum)) => {
                     summaries.push((pkg_id, sum));
                     false

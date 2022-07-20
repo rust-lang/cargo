@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
 use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
-use cargo::core::source::{GitReference, SourceId};
+use cargo::core::source::{GitReference, QueryKind, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::util::{CargoResult, Config, Graph, IntoUrl};
@@ -128,11 +128,15 @@ pub fn resolve_with_config_raw(
         fn query(
             &mut self,
             dep: &Dependency,
-            fuzzy: bool,
+            kind: QueryKind,
             f: &mut dyn FnMut(Summary),
         ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
-                if fuzzy || dep.matches(summary) {
+                let matched = match kind {
+                    QueryKind::Exact => dep.matches(summary),
+                    QueryKind::Fuzzy => true,
+                };
+                if matched {
                     self.used.insert(summary.package_id());
                     f(summary.clone());
                 }
