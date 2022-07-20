@@ -42,32 +42,17 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.requires_precise()
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        let (replace_with, to_replace) = (self.replace_with, self.to_replace);
-        let dep = dep.clone().map_source(to_replace, replace_with);
-
-        self.inner
-            .query(&dep, &mut |summary| {
-                f(summary.map_source(replace_with, to_replace))
-            })
-            .map_err(|e| {
-                e.context(format!(
-                    "failed to query replaced source {}",
-                    self.to_replace
-                ))
-            })
-    }
-
-    fn fuzzy_query(
+    fn query(
         &mut self,
         dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
 
         self.inner
-            .fuzzy_query(&dep, &mut |summary| {
+            .query(&dep, fuzzy, &mut |summary| {
                 f(summary.map_source(replace_with, to_replace))
             })
             .map_err(|e| {

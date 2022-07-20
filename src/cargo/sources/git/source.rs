@@ -86,21 +86,14 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        if let Some(src) = self.path_source.as_mut() {
-            src.query(dep, f)
-        } else {
-            Poll::Pending
-        }
-    }
-
-    fn fuzzy_query(
+    fn query(
         &mut self,
         dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         if let Some(src) = self.path_source.as_mut() {
-            src.fuzzy_query(dep, f)
+            src.query(dep, fuzzy, f)
         } else {
             Poll::Pending
         }

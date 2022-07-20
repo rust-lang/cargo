@@ -29,21 +29,20 @@ pub trait Source {
     fn requires_precise(&self) -> bool;
 
     /// Attempts to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>>;
-
-    /// Attempts to find the packages that are close to a dependency request.
-    /// Each source gets to define what `close` means for it.
+    ///
+    /// When fuzzy, each source gets to define what `close` means for it.
     /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Index` source may return dependencies that have the same canonicalization.
-    fn fuzzy_query(
+    fn query(
         &mut self,
         dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
     fn query_vec(&mut self, dep: &Dependency) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s)).map_ok(|_| ret)
+        self.query(dep, false, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
 
     /// Ensure that the source is fully up-to-date for the current session on the next query.
@@ -142,17 +141,13 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::query`.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        (**self).query(dep, f)
-    }
-
-    /// Forwards to `Source::query`.
-    fn fuzzy_query(
+    fn query(
         &mut self,
         dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        (**self).fuzzy_query(dep, f)
+        (**self).query(dep, fuzzy, f)
     }
 
     fn invalidate_cache(&mut self) {
@@ -216,16 +211,13 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).requires_precise()
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        (**self).query(dep, f)
-    }
-
-    fn fuzzy_query(
+    fn query(
         &mut self,
         dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        (**self).fuzzy_query(dep, f)
+        (**self).query(dep, fuzzy, f)
     }
 
     fn invalidate_cache(&mut self) {

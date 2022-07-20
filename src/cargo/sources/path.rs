@@ -497,24 +497,17 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        self.update()?;
-        for s in self.packages.iter().map(|p| p.summary()) {
-            if dep.matches(s) {
-                f(s.clone())
-            }
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn fuzzy_query(
+    fn query(
         &mut self,
-        _dep: &Dependency,
+        dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         self.update()?;
         for s in self.packages.iter().map(|p| p.summary()) {
-            f(s.clone())
+            if fuzzy || dep.matches(s) {
+                f(s.clone())
+            }
         }
         Poll::Ready(Ok(()))
     }

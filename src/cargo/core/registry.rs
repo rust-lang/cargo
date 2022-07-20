@@ -671,11 +671,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                             }
                             f(lock(locked, all_patches, summary))
                         };
-                        return if fuzzy {
-                            source.fuzzy_query(dep, callback)
-                        } else {
-                            source.query(dep, callback)
-                        };
+                        return source.query(dep, fuzzy, callback);
                     }
 
                     // If we have an override summary then we query the source
@@ -694,11 +690,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                                 n += 1;
                                 to_warn = Some(summary);
                             };
-                            let pend = if fuzzy {
-                                source.fuzzy_query(dep, callback)?
-                            } else {
-                                source.query(dep, callback)?
-                            };
+                            let pend = source.query(dep, fuzzy, callback);
                             if pend.is_pending() {
                                 return Poll::Pending;
                             }

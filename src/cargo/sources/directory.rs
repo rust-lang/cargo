@@ -46,28 +46,18 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        if !self.updated {
-            return Poll::Pending;
-        }
-        let packages = self.packages.values().map(|p| &p.0);
-        let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
-        for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(summary);
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn fuzzy_query(
+    fn query(
         &mut self,
-        _dep: &Dependency,
+        dep: &Dependency,
+        fuzzy: bool,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         if !self.updated {
             return Poll::Pending;
         }
         let packages = self.packages.values().map(|p| &p.0);
-        for summary in packages.map(|pkg| pkg.summary().clone()) {
+        let matches = packages.filter(|pkg| fuzzy || dep.matches(pkg.summary()));
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
         Poll::Ready(Ok(()))
