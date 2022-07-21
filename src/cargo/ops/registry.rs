@@ -18,9 +18,11 @@ use termcolor::Color::Green;
 use termcolor::ColorSpec;
 
 use crate::core::dependency::DepKind;
+use crate::core::dependency::Dependency;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
+use crate::core::QueryKind;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::ops::Packages;
@@ -183,6 +185,19 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         reg_ids.original,
         opts.dry_run,
     )?;
+    if !opts.dry_run {
+        const DEFAULT_TIMEOUT: u64 = 0;
+        let timeout = if opts.config.cli_unstable().publish_timeout {
+            let timeout: Option<u64> = opts.config.get("publish.timeout")?;
+            timeout.unwrap_or(DEFAULT_TIMEOUT)
+        } else {
+            DEFAULT_TIMEOUT
+        };
+        if 0 < timeout {
+            let timeout = std::time::Duration::from_secs(timeout);
+            wait_for_publish(opts.config, reg_ids.original, pkg, timeout)?;
+        }
+    }
 
     Ok(())
 }
@@ -369,6 +384,72 @@ fn transmit(
         for msg in warnings.other {
             config.shell().warn(&msg)?;
         }
+    }
+
+    Ok(())
+}
+
+fn wait_for_publish(
+    config: &Config,
+    registry_src: SourceId,
+    pkg: &Package,
+    timeout: std::time::Duration,
+) -> CargoResult<()> {
+    let version_req = format!("={}", pkg.version());
+    let mut source = SourceConfigMap::empty(config)?.load(registry_src, &HashSet::new())?;
+    let source_description = source.describe();
+    let query = Dependency::parse(pkg.name(), Some(&version_req), registry_src)?;
+
+    let now = std::time::Instant::now();
+    let sleep_time = std::time::Duration::from_secs(1);
+    let mut logged = false;
+    loop {
+        {
+            let _lock = config.acquire_package_cache_lock()?;
+            // Force re-fetching the source
+            //
+            // As pulling from a git source is expensive, we track when we've done it within the
+            // process to only do it once, but we are one of the rare cases that needs to do it
+            // multiple times
+            config
+                .updated_sources()
+                .remove(&source.replaced_source_id());
+            source.invalidate_cache();
+            let summaries = loop {
+                // Exact to avoid returning all for path/git
+                match source.query_vec(&query, QueryKind::Exact) {
+                    std::task::Poll::Ready(res) => {
+                        break res?;
+                    }
+                    std::task::Poll::Pending => source.block_until_ready()?,
+                }
+            };
+            if !summaries.is_empty() {
+                break;
+            }
+        }
+
+        if timeout < now.elapsed() {
+            config.shell().warn(format!(
+                "timed out waiting for `{}` to be in {}",
+                pkg.name(),
+                source_description
+            ))?;
+            break;
+        }
+
+        if !logged {
+            config.shell().status(
+                "Waiting",
+                format!(
+                    "on `{}` to propagate to {} (ctrl-c to wait asynchronously)",
+                    pkg.name(),
+                    source_description
+                ),
+            )?;
+            logged = true;
+        }
+        std::thread::sleep(sleep_time);
     }
 
     Ok(())

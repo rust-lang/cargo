@@ -2263,7 +2263,7 @@ fn http_api_not_noop() {
 }
 
 #[cargo_test]
-fn delayed_publish_errors() {
+fn wait_for_publish() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
@@ -2304,10 +2304,17 @@ fn delayed_publish_errors() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            "
+                [publish]
+                timeout = 60
+                ",
+        )
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    p.cargo("publish --no-verify -Z sparse-registry -Z publish-timeout")
+        .masquerade_as_nightly_cargo(&["sparse-registry", "publish-timeout"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2317,13 +2324,15 @@ fn delayed_publish_errors() {
 See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
 [UPLOADING] delay v0.0.1 ([CWD])
+[UPDATING] `crates-io` index
+[WAITING] on `delay` to propagate to `crates-io` index (which is replacing registry `crates-io`) (ctrl-c to wait asynchronously)
 ",
         )
         .run();
 
-    // Check nothing has touched the responder
+    // Verify the responder has been pinged
     let lock = arc2.lock().unwrap();
-    assert_eq!(*lock, 0);
+    assert_eq!(*lock, 2);
     drop(lock);
 
     let p = project()
@@ -2343,23 +2352,6 @@ See [..]
 
     p.cargo("build -Z sparse-registry")
         .masquerade_as_nightly_cargo(&["sparse-registry"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no matching package named `delay` found
-location searched: registry `crates-io`
-required by package `foo v0.0.1 ([..]/foo)`
-",
-        )
-        .run();
-
-    let lock = arc2.lock().unwrap();
-    assert_eq!(*lock, 1);
-    drop(lock);
-
-    p.cargo("build -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
         .with_status(0)
         .run();
 }
@@ -2368,7 +2360,7 @@ required by package `foo v0.0.1 ([..]/foo)`
 /// the responder twice per cargo invocation. If that ever gets changed
 /// this test will need to be changed accordingly.
 #[cargo_test]
-fn delayed_publish_errors_underscore() {
+fn wait_for_publish_underscore() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
@@ -2409,10 +2401,17 @@ fn delayed_publish_errors_underscore() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            "
+                [publish]
+                timeout = 60
+                ",
+        )
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    p.cargo("publish --no-verify -Z sparse-registry -Z publish-timeout")
+        .masquerade_as_nightly_cargo(&["sparse-registry", "publish-timeout"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2422,13 +2421,16 @@ fn delayed_publish_errors_underscore() {
 See [..]
 [PACKAGING] delay_with_underscore v0.0.1 ([CWD])
 [UPLOADING] delay_with_underscore v0.0.1 ([CWD])
+[UPDATING] `crates-io` index
+[WAITING] on `delay_with_underscore` to propagate to `crates-io` index (which is replacing registry `crates-io`) (ctrl-c to wait asynchronously)
 ",
         )
         .run();
 
-    // Check nothing has touched the responder
+    // Verify the repsponder has been pinged
     let lock = arc2.lock().unwrap();
-    assert_eq!(*lock, 0);
+    // NOTE: package names with - or _ hit the responder twice per cargo invocation
+    assert_eq!(*lock, 3);
     drop(lock);
 
     let p = project()
@@ -2448,24 +2450,48 @@ See [..]
 
     p.cargo("build -Z sparse-registry")
         .masquerade_as_nightly_cargo(&["sparse-registry"])
-        .with_status(101)
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test]
+fn skip_wait_for_publish() {
+    // Intentionally using local registry so the crate never makes it to the index
+    let registry = registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            "
+                [publish]
+                timeout = 0
+                ",
+        )
+        .build();
+
+    p.cargo("publish --no-verify -Zpublish-timeout")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
         .with_stderr(
             "\
-[UPDATING] [..]
-[ERROR] no matching package named `delay_with_underscore` found
-location searched: registry `crates-io`
-required by package `foo v0.0.1 ([..]/foo)`
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
 ",
         )
-        .run();
-
-    let lock = arc2.lock().unwrap();
-    // package names with - or _ hit the responder twice per cargo invocation
-    assert_eq!(*lock, 2);
-    drop(lock);
-
-    p.cargo("build -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
-        .with_status(0)
         .run();
 }

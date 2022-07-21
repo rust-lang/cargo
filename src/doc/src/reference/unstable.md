@@ -99,6 +99,7 @@ Each new feature described below should explain how to use it.
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
     * [sparse-registry](#sparse-registry) — Adds support for fetching from static-file HTTP registries (`sparse+`)
+    * [publish-timeout](#publish-timeout) — Controls the timeout between uploading the crate and being available in the index
 
 ### allow-features
 
@@ -840,6 +841,23 @@ When fetching index metadata over HTTP, Cargo only downloads the metadata for re
 crates, which can save significant time and bandwidth.
 
 The format of the sparse index is identical to a checkout of a git-based index.
+
+### publish-timeout
+* Tracking Issue: [11222](https://github.com/rust-lang/cargo/issues/11222)
+
+The `publish.timeout` key in a config file can be used to control how long
+`cargo publish` waits between posting a package to the registry and it being
+available in the local index.
+
+A timeout of `0` prevents any checks from occurring.
+
+It requires the `-Zpublish-timeout` command-line options to be set.
+
+```toml
+# config.toml
+[publish]
+timeout = 300  # in seconds
+```
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
