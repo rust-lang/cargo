@@ -1,6 +1,6 @@
+use cargo_test_support::curr_dir;
 use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
-use cargo_test_support::curr_dir;
 
 use crate::cargo_add::init_registry;
 
