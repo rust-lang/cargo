@@ -903,6 +903,7 @@ fn publish_no_implicit() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();
@@ -1029,6 +1030,7 @@ fn publish() {
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();

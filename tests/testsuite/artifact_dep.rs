@@ -1920,6 +1920,7 @@ fn publish_artifact_dep() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();

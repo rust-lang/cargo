@@ -569,6 +569,7 @@ fn publish() {
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();

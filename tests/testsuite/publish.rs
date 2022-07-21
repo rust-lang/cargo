@@ -123,6 +123,7 @@ fn simple() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
 ",
         )
         .run();
@@ -176,6 +177,7 @@ fn old_token_location() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
 ",
         )
         .run();
@@ -215,7 +217,9 @@ fn simple_with_index() {
 [..]
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -410,7 +414,9 @@ fn publish_clean() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -453,7 +459,9 @@ fn publish_in_sub_repo() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -496,7 +504,9 @@ fn publish_when_ignored() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -538,7 +548,9 @@ fn ignore_when_crate_ignored() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -727,7 +739,9 @@ fn publish_allowed_registry() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] `alternative` index
+",
         )
         .run();
 
@@ -789,7 +803,9 @@ fn publish_implicitly_to_only_allowed_registry() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] `alternative` index
+",
         )
         .run();
 
@@ -912,7 +928,9 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
+",
         )
         .run();
 }
@@ -958,6 +976,7 @@ fn publish_with_select_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1004,6 +1023,7 @@ fn publish_with_all_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1112,7 +1132,9 @@ fn publish_with_patch() {
 [..]
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
+",
         )
         .run();
 
@@ -1316,7 +1338,9 @@ fn publish_git_with_version() {
 [..]
 [..]
 [..]
-[UPLOADING] foo v0.1.0 ([CWD])",
+[UPLOADING] foo v0.1.0 ([CWD])
+[UPDATING] crates.io index
+",
         )
         .run();
 
@@ -1443,6 +1467,7 @@ fn publish_dev_dep_no_version() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1526,6 +1551,7 @@ fn credentials_ambiguous_filename() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 [..]
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1934,6 +1960,7 @@ fn in_package_workspace() {
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [UPLOADING] li v0.0.1 ([CWD]/li)
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -2039,6 +2066,7 @@ fn in_package_workspace_with_members_with_features_old() {
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [UPLOADING] li v0.0.1 ([CWD]/li)
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -2129,6 +2157,7 @@ fn in_virtual_workspace_with_p() {
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [UPLOADING] li v0.0.1 ([CWD]/li)
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -2313,7 +2342,9 @@ fn http_api_not_noop() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -2380,17 +2411,10 @@ fn wait_for_publish() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            "
-                [publish]
-                timeout = 60
-                ",
-        )
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry -Z publish-timeout")
-        .masquerade_as_nightly_cargo(&["sparse-registry", "publish-timeout"])
+    p.cargo("publish --no-verify -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2477,17 +2501,10 @@ fn wait_for_publish_underscore() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            "
-                [publish]
-                timeout = 60
-                ",
-        )
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry -Z publish-timeout")
-        .masquerade_as_nightly_cargo(&["sparse-registry", "publish-timeout"])
+    p.cargo("publish --no-verify -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(

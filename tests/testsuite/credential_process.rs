@@ -135,6 +135,7 @@ Only one of these values may be set, remove one or the other to proceed.
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();
@@ -208,6 +209,7 @@ fn publish() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();
