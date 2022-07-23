@@ -11,7 +11,6 @@ fn invalid_key_rename_inherit_dependency() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["workspace-inheritance"])
         .arg("add")
         .args(["--rename", "foo", "foo-alt", "-p", "bar"])
         .current_dir(cwd)

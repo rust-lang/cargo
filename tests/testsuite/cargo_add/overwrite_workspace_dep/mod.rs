@@ -13,7 +13,6 @@ fn overwrite_workspace_dep() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["zworkspace-inheritance"])
         .arg("add")
         .args(["foo", "--path", "./dependency", "-p", "bar"])
         .current_dir(cwd)
