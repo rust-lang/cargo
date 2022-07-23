@@ -661,12 +661,32 @@ pub fn create_bcx<'a, 'cfg>(
                 continue;
             }
 
+            let guidance = if ws.is_ephemeral() {
+                if ws.ignore_lock() {
+                    "Try re-running cargo install with `--locked`".to_string()
+                } else {
+                    String::new()
+                }
+            } else {
+                format!(
+                    "Either upgrade to rustc {} or newer, or use\n\
+                     cargo update -p {}@{} --precise ver\n\
+                     where `ver` is the latest version of `{}` supporting rustc {}",
+                    version,
+                    unit.pkg.name(),
+                    unit.pkg.version(),
+                    unit.pkg.name(),
+                    current_version,
+                )
+            };
+
             anyhow::bail!(
                 "package `{}` cannot be built because it requires rustc {} or newer, \
-                 while the currently active rustc version is {}",
+                 while the currently active rustc version is {}\n{}",
                 unit.pkg,
                 version,
                 current_version,
+                guidance,
             );
         }
     }

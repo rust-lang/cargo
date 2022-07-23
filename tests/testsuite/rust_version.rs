@@ -124,7 +124,10 @@ fn rust_version_too_high() {
         .with_status(101)
         .with_stderr(
             "error: package `foo v0.0.1 ([..])` cannot be built because it requires \
-             rustc 1.9876.0 or newer, while the currently active rustc version is [..]",
+             rustc 1.9876.0 or newer, while the currently active rustc version is [..]\n\
+             Either upgrade to rustc 1.9876.0 or newer, or use\n\
+             cargo update -p foo@0.0.1 --precise ver\n\
+             where `ver` is the latest version of `foo` supporting rustc [..]",
         )
         .run();
     p.cargo("build --ignore-rust-version").run();
@@ -159,7 +162,10 @@ fn rust_version_dependency_fails() {
              Downloading crates ...\n  \
              Downloaded bar v0.0.1 (registry `[..]`)\n\
              error: package `bar v0.0.1` cannot be built because it requires \
-             rustc 1.2345.0 or newer, while the currently active rustc version is [..]",
+             rustc 1.2345.0 or newer, while the currently active rustc version is [..]\n\
+             Either upgrade to rustc 1.2345.0 or newer, or use\n\
+             cargo update -p bar@0.0.1 --precise ver\n\
+             where `ver` is the latest version of `bar` supporting rustc [..]",
         )
         .run();
     p.cargo("build --ignore-rust-version").run();
