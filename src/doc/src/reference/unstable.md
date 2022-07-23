@@ -68,7 +68,6 @@ Each new feature described below should explain how to use it.
     * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
     * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
-    * [workspace-inheritance](#workspace-inheritance) - Allow workspace members to share fields and dependencies
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
@@ -1535,4 +1534,13 @@ setting the default target platform triples.
 
 The `--crate-type` flag for `cargo rustc` has been stabilized in the 1.64
 release. See the [`cargo rustc` documentation](../commands/cargo-rustc.md)
+for more information.
+
+
+### Workspace Inheritance
+
+Workspace Inheritance has been stabilized in the 1.64 release.
+See [workspace.package](workspaces.md#the-workspacepackage-table), 
+[workspace.dependencies](workspaces.md#the-workspacedependencies-table), 
+and [inheriting-a-dependency-from-a-workspace](specifying-dependencies.md#inheriting-a-dependency-from-a-workspace)
 for more information.

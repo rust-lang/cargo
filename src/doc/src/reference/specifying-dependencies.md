@@ -454,8 +454,44 @@ following to the above manifest:
 log-debug = ['bar/log-debug'] # using 'foo/log-debug' would be an error!
 ```
 
+### Inheriting a dependency from a workspace
+
+Dependencies can be inherited from a workspace by specifying the
+dependency in the workspace's [`[workspace.dependencies]`][workspace.dependencies] table.
+After that add it to the `[dependencies]` table with `workspace = true`.
+
+Along with the `workspace` key, dependencies can also include these keys:
+- [`optional`][optional]: Note that the`[workspace.dependencies]` table is not allowed to specify `optional`.
+- [`features`][features]: These are additive with the features declared in the `[workspace.dependencies]`
+
+Other than `optional` and `features`, inherited dependencies cannot use any other
+dependency key (such as `version` or `default-features`).
+
+Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and
+`[target."...".dependencies]` sections support the ability to reference the
+`[workspace.dependencies]` definition of dependencies.
+
+```toml
+[project]
+name = "bar"
+version = "0.2.0"
+
+[dependencies]
+regex = { workspace = true, features = ["unicode"] }
+
+[build-dependencies]
+cc.workspace = true
+
+[dev-dependencies]
+rand = { workspace = true, optional = true }
+```
+
+
 [crates.io]: https://crates.io/
 [dev-dependencies]: #development-dependencies
+[workspace.dependencies]: workspaces.md#the-workspacedependencies-table
+[optional]: features.md#optional-dependencies
+[features]: features.md
 
 <script>
 (function() {
