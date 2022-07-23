@@ -1230,7 +1230,7 @@ documentation = "https://example.github.io/example"
 ```
 
 ```toml
-# [PROGJCT_DIR]/bar/Cargo.toml
+# [PROJECT_DIR]/bar/Cargo.toml
 cargo-features = ["workspace-inheritance"]
 
 [package]
