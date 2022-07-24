@@ -361,7 +361,8 @@ Sets the executable to use for `rustc`.
 * Environment: `CARGO_BUILD_RUSTC_WRAPPER` or `RUSTC_WRAPPER`
 
 Sets a wrapper to execute instead of `rustc`. The first argument passed to the
-wrapper is the path to the actual `rustc`.
+wrapper is the path to the actual executable to use
+(i.e., `build.rustc`, if that is set, or `"rustc"` otherwise).
 
 ##### `build.rustc-workspace-wrapper`
 * Type: string (program path)
@@ -369,7 +370,8 @@ wrapper is the path to the actual `rustc`.
 * Environment: `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER`
 
 Sets a wrapper to execute instead of `rustc`, for workspace members only.
-The first argument passed to the wrapper is the path to the actual `rustc`.
+The first argument passed to the wrapper is the path to the actual
+executable to use (i.e., `build.rustc`, if that is set, or `"rustc"` otherwise).
 It affects the filename hash so that artifacts produced by the wrapper are cached separately.
 
 ##### `build.rustdoc`
