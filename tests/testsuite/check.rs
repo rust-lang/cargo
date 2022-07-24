@@ -870,7 +870,18 @@ fn check_keep_going() {
 
 #[cargo_test]
 fn does_not_use_empty_rustc_wrapper() {
-    let p = project().file("src/lib.rs", "").build();
+    // An empty RUSTC_WRAPPER environment variable won't be used.
+    // The env var will also override the config, essentially unsetting it.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                rustc-wrapper = "do-not-execute-me"
+            "#,
+        )
+        .build();
     p.cargo("check").env("RUSTC_WRAPPER", "").run();
 }
 
