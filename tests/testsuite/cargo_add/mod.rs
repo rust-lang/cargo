@@ -48,6 +48,8 @@ mod invalid_vers;
 mod list_features;
 mod list_features_path;
 mod list_features_path_no_default;
+mod locked_changed;
+mod locked_unchanged;
 mod manifest_path_package;
 mod merge_activated_features;
 mod multiple_conflicts_with_features;
