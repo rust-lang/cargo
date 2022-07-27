@@ -62,6 +62,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 
     let manifest_path = options.spec.manifest_path().to_path_buf();
     let mut manifest = LocalManifest::try_new(&manifest_path)?;
+    let original_raw_manifest = manifest.to_string();
     let legacy = manifest.get_legacy_sections();
     if !legacy.is_empty() {
         anyhow::bail!(
@@ -139,6 +140,16 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             .and_then(TomlItem::as_table_like_mut)
         {
             table.sort_values();
+        }
+    }
+
+    if options.config.locked() {
+        let new_raw_manifest = manifest.to_string();
+        if original_raw_manifest != new_raw_manifest {
+            anyhow::bail!(
+                "the manifest file {} needs to be updated but --locked was passed to prevent this",
+                manifest.path.display()
+            );
         }
     }
 
