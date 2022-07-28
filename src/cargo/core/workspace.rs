@@ -15,7 +15,7 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec};
+use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -990,6 +990,23 @@ impl<'cfg> Workspace<'cfg> {
                     if behavior != self.resolve_behavior {
                         // Only warn if they don't match.
                         emit_warning("resolver")?;
+                    }
+                }
+            }
+            if let MaybePackage::Virtual(vm) = self.root_maybe() {
+                if vm.resolve_behavior().is_none() {
+                    if self
+                        .members()
+                        .filter(|p| p.manifest_path() != root_manifest)
+                        .any(|p| p.manifest().edition() >= Edition::Edition2021)
+                    {
+                        self.config.shell().warn(
+                            "\
+                        some crates are on edition 2021 which defaults to `resolver = \"2\"`,\n\
+                     \x20   but a virtual workspace defaults to `resolver = \"1\"`\n\
+                     \x20   specify the desired resolver version explicitly at the workspace root\
+                            ",
+                        )?;
                     }
                 }
             }
