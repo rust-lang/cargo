@@ -1342,7 +1342,7 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
-        package.resolver = ws.resolve_behavior().to_manifest();
+        package.resolver = Some(ws.resolve_behavior().to_manifest());
         if let Some(license_file) = &package.license_file {
             let license_file = license_file
                 .as_defined()

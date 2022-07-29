@@ -951,6 +951,7 @@ version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+resolver = "1"
 
 [dependencies.opt-dep1]
 version = "1.0"
@@ -1058,6 +1059,7 @@ version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
 license = "MIT"
+resolver = "1"
 
 [dependencies.bar]
 version = "1.0"
