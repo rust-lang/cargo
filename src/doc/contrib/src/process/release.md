@@ -28,6 +28,46 @@ and stable releases.
 
 [`dist` bootstrap module]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/dist.rs
 
+## Submodule updates
+
+Cargo is tracked in the [rust-lang/rust] repository using a [git submodule].
+It is updated manually about once a week by a Cargo team member.
+However, anyone is welcome to update it as needed.
+
+[@ehuss] has a tool called [subup](https://github.com/ehuss/subup) to automate the process of updating the submodule, updating the lockfile, running tests, and creating a PR.
+Running the tests ahead-of-time helps avoid long cycle times waiting for bors if there are any errors.
+Subup will also provide a message to include in the PR with a list of all PRs it covers.
+Posting this in the PR message also helps create reference links on each Cargo PR to the submodule update PR to help track when it gets merged.
+
+The following is an example of the command to run in a local clone of rust-lang/rust to run a certain set of tests of things that are likely to get broken by a Cargo update:
+
+```bash
+subup --up-branch update-cargo \
+    --commit-message "Update cargo" \
+    --test="src/tools/linkchecker tidy \
+        src/tools/cargo \
+        src/tools/rustfmt \
+        src/tools/rls" \
+    src/tools/cargo
+```
+
+If doing a [beta backport](#beta-backports), the command is similar, but needs to point to the correct branches:
+
+```bash
+subup --up-branch update-beta-cargo \
+    --rust-branch beta \
+    --set-config rust.channel=beta \
+    --commit-message "[beta] Update cargo" \
+    --test="src/tools/linkchecker tidy \
+        src/tools/cargo \
+        src/tools/rustfmt \
+        src/tools/rls" \
+    rust-1.63.0:src/tools/cargo
+```
+
+[@ehuss]: https://github.com/ehuss/
+[git submodule]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
+
 ## Version updates
 
 Shortly after each major release, a Cargo team member will post a PR to update
