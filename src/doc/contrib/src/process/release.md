@@ -53,6 +53,23 @@ release**. It is rare that these get updated. Bumping these as-needed helps
 avoid churning incompatible version numbers. This process should be improved
 in the future!
 
+[@ehuss] has a tool called [cargo-new-release] to automate the process of doing a version bump.
+It runs through several steps:
+1. Creates a branch
+2. Updates the version numbers
+3. Creates a changelog for anything on the master branch that is not part of beta
+4. Creates a changelog for anything on the beta branch
+
+It opens a browser tab for every PR in order to review each change.
+It places each PR in the changelog with its title, but usually every PR should be rewritten to explain the change from the user's perspective.
+Each PR should also be categorized as an Addition, Change, Fix, or Nightly-only change.
+Most PRs are deleted, since they are not relevant to users of Cargo.
+For example, remove all PRs related to Cargo internals, infrastructure, documentation, error changes, refactorings, etc.
+Usually about half of the PRs get removed.
+This process usually takes @ehuss about an hour to finish.
+
+[@ehuss]: https://github.com/ehuss/
+[cargo-new-release]: https://github.com/ehuss/cargo-new-release
 [`crates/` directory]: https://github.com/rust-lang/cargo/tree/master/crates
 
 ## Docs publishing
