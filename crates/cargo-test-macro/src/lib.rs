@@ -21,7 +21,7 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut ignore = false;
     let mut requires_reason = false;
     let mut found_reason = false;
-    let is_not_nightly = || !version().1;
+    let is_not_nightly = !version().1;
     for rule in split_rules(attr) {
         match rule.as_str() {
             "build_std_real" => {
@@ -29,19 +29,19 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // explicit opt-in (these generally only work on linux, and
                 // have some extra requirements, and are slow, and can pollute
                 // the environment since it downloads dependencies).
-                ignore |= is_not_nightly();
+                ignore |= is_not_nightly;
                 ignore |= option_env!("CARGO_RUN_BUILD_STD_TESTS").is_none();
             }
             "build_std_mock" => {
                 // Only run the "mock" build-std tests on nightly and disable
                 // for windows-gnu which is missing object files (see
                 // https://github.com/rust-lang/wg-cargo-std-aware/issues/46).
-                ignore |= is_not_nightly();
+                ignore |= is_not_nightly;
                 ignore |= cfg!(all(target_os = "windows", target_env = "gnu"));
             }
             "nightly" => {
                 requires_reason = true;
-                ignore |= is_not_nightly();
+                ignore |= is_not_nightly;
             }
             s if s.starts_with("requires_") => {
                 let command = &s[9..];
