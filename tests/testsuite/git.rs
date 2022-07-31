@@ -2642,7 +2642,7 @@ fn failed_submodule_checkout() {
     t.join().unwrap();
 }
 
-#[cargo_test(disable_git_cli)]
+#[cargo_test]
 fn use_the_cli() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -2743,7 +2743,7 @@ fn templatedir_doesnt_cause_problems() {
     p.cargo("build").run();
 }
 
-#[cargo_test(disable_git_cli)]
+#[cargo_test]
 fn git_with_cli_force() {
     // Supports a force-pushed repo.
     let git_project = git::new("dep1", |project| {
@@ -2800,7 +2800,7 @@ fn git_with_cli_force() {
     p.rename_run("foo", "foo2").with_stdout("two").run();
 }
 
-#[cargo_test(disable_git_cli)]
+#[cargo_test]
 fn git_fetch_cli_env_clean() {
     // This tests that git-fetch-with-cli works when GIT_DIR environment
     // variable is set (for whatever reason).
@@ -3500,7 +3500,7 @@ fn corrupted_checkout() {
     _corrupted_checkout(false);
 }
 
-#[cargo_test(disable_git_cli)]
+#[cargo_test]
 fn corrupted_checkout_with_cli() {
     // Test what happens if the checkout is corrupted somehow with git cli.
     _corrupted_checkout(true);

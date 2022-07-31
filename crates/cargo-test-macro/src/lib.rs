@@ -43,9 +43,6 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 requires_reason = true;
                 ignore |= is_not_nightly();
             }
-            "disable_git_cli" => {
-                ignore |= disable_git_cli();
-            }
             s if s.starts_with("requires_") => {
                 let command = &s[9..];
                 ignore |= !has_command(command);
@@ -153,13 +150,6 @@ fn version() -> &'static (u32, bool) {
         unsafe { VERSION = (minor, is_nightly) }
     });
     unsafe { &VERSION }
-}
-
-fn disable_git_cli() -> bool {
-    // mingw git on Windows does not support Windows-style file URIs.
-    // Appveyor in the rust repo has that git up front in the PATH instead
-    // of Git-for-Windows, which causes this to fail.
-    matches!(option_env!("CARGO_TEST_DISABLE_GIT_CLI"), Some("1"))
 }
 
 fn has_command(command: &str) -> bool {

@@ -92,8 +92,6 @@ The options it supports are:
 * `>=1.64` — This indicates that the test will only run with the given version of `rustc` or newer.
   This can be used when a new `rustc` feature has been stabilized that the test depends on.
   If this is specified, a `reason` is required to explain why it is being checked.
-* `disable_git_cli` — This is needed for `git-fetch-with-cli` tests.
-  This disables the test in rust-lang/rust's CI due to a compatibility issue.
 
 #### Testing Nightly Features
 
