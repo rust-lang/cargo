@@ -68,7 +68,7 @@ The `#[cargo_test]` attribute injects code which does some setup before starting
 It will create a filesystem "sandbox" under the "cargo integration test" directory for each test, such as `/path/to/cargo/target/tmp/cit/t123/`.
 The sandbox will contain a `home` directory that will be used instead of your normal home directory.
 
-The `#[cargo_test`] attribute takes several options that will affect how the test is generated.
+The `#[cargo_test]` attribute takes several options that will affect how the test is generated.
 They are listed in parentheses separated with commas, such as:
 
 ```rust,ignore
@@ -86,7 +86,7 @@ The options it supports are:
 * `build_std_mock` — This is a "mock" `-Zbuild-std` test (which uses a mock standard library).
   This only runs on nightly, and is disabled for windows-gnu.
 * `requires_` — This indicates a command that is required to be installed to be run.
-  For example, `requires_rustmft` means the test will only run if the executable `rustfmt` is installed.
+  For example, `requires_rustfmt` means the test will only run if the executable `rustfmt` is installed.
   These tests are *always* run on CI.
   This is mainly used to avoid requiring contributors from having every dependency installed.
 * `>=1.64` — This indicates that the test will only run with the given version of `rustc` or newer.
