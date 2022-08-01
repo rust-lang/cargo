@@ -1128,6 +1128,10 @@ pub fn rustc_host_env() -> String {
 
 pub fn is_nightly() -> bool {
     let vv = &RUSTC_INFO.verbose_version;
+    // CARGO_TEST_DISABLE_NIGHTLY is set in rust-lang/rust's CI so that all
+    // nightly-only tests are disabled there. Otherwise, it could make it
+    // difficult to land changes which would need to be made simultaneously in
+    // rust-lang/cargo and rust-lan/rust, which isn't possible.
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
         && (vv.contains("-nightly") || vv.contains("-dev"))
 }
@@ -1348,16 +1352,6 @@ pub fn slow_cpu_multiplier(main: u64) -> Duration {
             env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
     }
     Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
-}
-
-pub fn command_is_available(cmd: &str) -> bool {
-    if let Err(e) = process(cmd).arg("-V").exec_with_output() {
-        eprintln!("{} not available, skipping tests", cmd);
-        eprintln!("{:?}", e);
-        false
-    } else {
-        true
-    }
 }
 
 #[cfg(windows)]

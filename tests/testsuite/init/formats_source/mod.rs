@@ -1,15 +1,11 @@
 use cargo_test_support::compare::assert_ui;
 use cargo_test_support::prelude::*;
-use cargo_test_support::{command_is_available, Project};
+use cargo_test_support::Project;
 
 use cargo_test_support::curr_dir;
 
-#[cargo_test]
+#[cargo_test(requires_rustfmt)]
 fn formats_source() {
-    if !command_is_available("rustfmt") {
-        return;
-    }
-
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = &project.root();
 

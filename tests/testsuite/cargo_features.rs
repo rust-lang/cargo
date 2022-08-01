@@ -1,7 +1,7 @@
 //! Tests for `cargo-features` definitions.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{is_nightly, project, registry};
+use cargo_test_support::{project, registry};
 
 #[cargo_test]
 fn feature_required() {
@@ -215,14 +215,8 @@ release and is no longer necessary to be listed in the manifest
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zallow-features is unstable")]
 fn allow_features() {
-    if !is_nightly() {
-        // -Zallow-features on rustc is nightly only
-        eprintln!("skipping test allow_features without nightly rustc");
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -286,14 +280,8 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zallow-features is unstable")]
 fn allow_features_to_rustc() {
-    if !is_nightly() {
-        // -Zallow-features on rustc is nightly only
-        eprintln!("skipping test allow_features_to_rustc without nightly rustc");
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -329,14 +317,8 @@ fn allow_features_to_rustc() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zallow-features is unstable")]
 fn allow_features_in_cfg() {
-    if !is_nightly() {
-        // -Zallow-features on rustc is nightly only
-        eprintln!("skipping test allow_features_in_cfg without nightly rustc");
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

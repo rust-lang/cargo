@@ -1,7 +1,7 @@
 //! Tests for the -Zrustdoc-map feature.
 
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{is_nightly, paths, project, Project};
+use cargo_test_support::{paths, project, Project};
 
 fn basic_project() -> Project {
     Package::new("bar", "1.0.0")
@@ -41,13 +41,9 @@ fn ignores_on_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn simple() {
     // Basic test that it works with crates.io.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
@@ -59,15 +55,12 @@ fn simple() {
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
-#[cargo_test]
 // Broken, temporarily disable until https://github.com/rust-lang/rust/pull/82776 is resolved.
 #[ignore]
+#[cargo_test]
+// #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn std_docs() {
     // Mapping std docs somewhere else.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     // For local developers, skip this test if docs aren't installed.
     let docs = std::path::Path::new(&paths::sysroot()).join("share/doc/rust/html");
     if !docs.exists() {
@@ -114,13 +107,9 @@ fn std_docs() {
     assert!(myfun.contains(r#"href="https://example.com/rust/core/option/enum.Option.html""#));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn renamed_dep() {
     // Handles renamed dependencies.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "pub struct Straw;")
         .publish();
@@ -157,13 +146,9 @@ fn renamed_dep() {
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn lib_name() {
     // Handles lib name != package name.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     Package::new("bar", "1.0.0")
         .file(
             "Cargo.toml",
@@ -210,13 +195,9 @@ fn lib_name() {
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/rumpelstiltskin/struct.Straw.html""#));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn alt_registry() {
     // Supports other registry names.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     registry::alt_init();
     Package::new("bar", "1.0.0")
         .alternative(true)
@@ -290,15 +271,11 @@ fn alt_registry() {
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn multiple_versions() {
     // What happens when there are multiple versions.
     // NOTE: This is currently broken behavior. Rustdoc does not provide a way
     // to match renamed dependencies.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "pub struct Spin;")
         .publish();
@@ -342,13 +319,9 @@ fn multiple_versions() {
     assert!(fn2.contains(r#"href="https://docs.rs/bar/2.0.0/bar/struct.Straw.html""#));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn rebuilds_when_changing() {
     // Make sure it rebuilds if the map changes.
-    if !is_nightly() {
-        // --extern-html-root-url is unstable
-        return;
-    }
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])

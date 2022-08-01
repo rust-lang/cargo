@@ -1,15 +1,10 @@
 //! Tests for the `cargo bench` command.
 
-use cargo_test_support::is_nightly;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn cargo_bench_simple() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
@@ -51,12 +46,8 @@ fn cargo_bench_simple() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_bench_implicit() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "src/main.rs",
@@ -99,12 +90,8 @@ fn bench_bench_implicit() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_bin_implicit() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "src/main.rs",
@@ -146,12 +133,8 @@ fn bench_bin_implicit() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_tarname() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "benches/bin1.rs",
@@ -183,12 +166,8 @@ fn bench_tarname() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_multiple_targets() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "benches/bin1.rs",
@@ -223,12 +202,8 @@ fn bench_multiple_targets() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn cargo_bench_verbose() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
@@ -255,12 +230,8 @@ fn cargo_bench_verbose() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn many_similar_names() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "src/lib.rs",
@@ -302,12 +273,8 @@ fn many_similar_names() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn cargo_bench_failing_test() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
@@ -356,12 +323,8 @@ fn cargo_bench_failing_test() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_with_lib_dep() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -424,12 +387,8 @@ fn bench_with_lib_dep() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_with_deep_lib_dep() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .at("bar")
         .file(
@@ -487,12 +446,8 @@ fn bench_with_deep_lib_dep() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn external_bench_explicit() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -546,12 +501,8 @@ fn external_bench_explicit() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn external_bench_implicit() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "src/lib.rs",
@@ -593,12 +544,8 @@ fn external_bench_implicit() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_autodiscover_2015() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -670,12 +617,8 @@ https://github.com/rust-lang/cargo/issues/5330
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn dont_run_examples() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -686,12 +629,8 @@ fn dont_run_examples() {
     p.cargo("bench").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn pass_through_command_line() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "src/lib.rs",
@@ -727,12 +666,8 @@ fn pass_through_command_line() {
 
 // Regression test for running cargo-bench twice with
 // tests in an rlib
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn cargo_bench_twice() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
@@ -754,12 +689,8 @@ fn cargo_bench_twice() {
     }
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn lib_bin_same_name() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -811,12 +742,8 @@ fn lib_bin_same_name() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn lib_with_standard_name() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
         .file(
@@ -861,12 +788,8 @@ fn lib_with_standard_name() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn lib_with_standard_name2() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -911,12 +834,8 @@ fn lib_with_standard_name2() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_dylib() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1005,12 +924,8 @@ fn bench_dylib() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_twice_with_build_cmd() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1054,12 +969,8 @@ fn bench_twice_with_build_cmd() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_with_examples() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1141,12 +1052,8 @@ fn bench_with_examples() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn test_a_bench() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1181,12 +1088,8 @@ fn test_a_bench() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn test_bench_no_run() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -1216,12 +1119,8 @@ fn test_bench_no_run() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn test_bench_no_run_emit_json() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -1249,12 +1148,8 @@ fn test_bench_no_run_emit_json() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn test_bench_no_fail_fast() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
@@ -1294,12 +1189,8 @@ fn test_bench_no_fail_fast() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn test_bench_multiple_packages() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1387,12 +1278,8 @@ fn test_bench_multiple_packages() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_all_workspace() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1444,12 +1331,8 @@ fn bench_all_workspace() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_all_exclude() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1493,12 +1376,8 @@ test bar ... bench:           [..] ns/iter (+/- [..])",
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_all_exclude_glob() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1542,12 +1421,8 @@ test bar ... bench:           [..] ns/iter (+/- [..])",
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_all_virtual_manifest() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1595,12 +1470,8 @@ fn bench_all_virtual_manifest() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_virtual_manifest_glob() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1649,12 +1520,8 @@ fn bench_virtual_manifest_glob() {
 }
 
 // https://github.com/rust-lang/cargo/issues/4287
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn legacy_bench_name() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1691,12 +1558,8 @@ please set bench.path in Cargo.toml",
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_virtual_manifest_all_implied() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1741,12 +1604,8 @@ fn bench_virtual_manifest_all_implied() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn json_artifact_includes_executable_for_benchmark() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "benches/benchmark.rs",

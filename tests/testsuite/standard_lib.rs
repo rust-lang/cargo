@@ -6,7 +6,7 @@
 
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
-use cargo_test_support::{is_nightly, paths, project, rustc_host, Execs};
+use cargo_test_support::{paths, project, rustc_host, Execs};
 use std::path::{Path, PathBuf};
 
 struct Setup {
@@ -14,19 +14,7 @@ struct Setup {
     real_sysroot: String,
 }
 
-fn setup() -> Option<Setup> {
-    if !is_nightly() {
-        // -Zbuild-std is nightly
-        // We don't want these tests to run on rust-lang/rust.
-        return None;
-    }
-
-    if cfg!(all(target_os = "windows", target_env = "gnu")) {
-        // FIXME: contains object files that we don't handle yet:
-        // https://github.com/rust-lang/wg-cargo-std-aware/issues/46
-        return None;
-    }
-
+fn setup() -> Setup {
     // Our mock sysroot requires a few packages from crates.io, so make sure
     // they're "published" to crates.io. Also edit their code a bit to make sure
     // that they have access to our custom crates with custom apis.
@@ -122,10 +110,10 @@ fn setup() -> Option<Setup> {
         .build();
     p.cargo("build").run();
 
-    Some(Setup {
+    Setup {
         rustc_wrapper: p.bin("foo"),
         real_sysroot: paths::sysroot(),
-    })
+    }
 }
 
 fn enable_build_std(e: &mut Execs, setup: &Setup) {
@@ -184,12 +172,9 @@ impl BuildStd for Execs {
     }
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn basic() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
 
     let p = project()
         .file(
@@ -248,12 +233,10 @@ fn basic() {
     p.cargo("test").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn simple_lib_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
         .build_std(&setup)
@@ -269,22 +252,18 @@ fn simple_lib_std() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn simple_bin_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("run -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn lib_nostd() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -303,12 +282,10 @@ fn lib_nostd() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn check_core() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file("src/lib.rs", "#![no_std] fn unused_fn() {}")
         .build();
@@ -320,12 +297,9 @@ fn check_core() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn depend_same_as_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
 
     let p = project()
         .file(
@@ -357,12 +331,10 @@ fn depend_same_as_std() {
     p.cargo("build -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn test() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -385,12 +357,10 @@ fn test() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn target_proc_macro() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -406,12 +376,10 @@ fn target_proc_macro() {
     p.cargo("build -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn bench() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -430,12 +398,10 @@ fn bench() {
     p.cargo("bench -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn doc() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -449,12 +415,10 @@ fn doc() {
     p.cargo("doc -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn check_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -487,12 +451,10 @@ fn check_std() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn doctest() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -513,13 +475,11 @@ fn doctest() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn no_implicit_alloc() {
     // Demonstrate that alloc is not implicitly in scope.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -539,17 +499,15 @@ fn no_implicit_alloc() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn macro_expanded_shadow() {
     // This tests a bug caused by the previous use of `--extern` to directly
     // load sysroot crates. This necessitated the switch to `--sysroot` to
     // retain existing behavior. See
     // https://github.com/rust-lang/wg-cargo-std-aware/issues/40 for more
     // detail.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -565,15 +523,13 @@ fn macro_expanded_shadow() {
     p.cargo("build -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn ignores_incremental() {
     // Incremental is not really needed for std, make sure it is disabled.
     // Incremental also tends to have bugs that affect std libraries more than
     // any other crate.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build")
         .env("CARGO_INCREMENTAL", "1")
@@ -593,12 +549,10 @@ fn ignores_incremental() {
         .starts_with("foo-"));
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn cargo_config_injects_compiler_builtins() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -625,12 +579,10 @@ fn cargo_config_injects_compiler_builtins() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn different_features() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -648,13 +600,11 @@ fn different_features() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn no_roots() {
     // Checks for a bug where it would panic if there are no roots.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project().file("tests/t1.rs", "").build();
     p.cargo("build")
         .build_std(&setup)
@@ -663,13 +613,11 @@ fn no_roots() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn proc_macro_only() {
     // Checks for a bug where it would panic if building a proc-macro only
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -691,12 +639,10 @@ fn proc_macro_only() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn fetch() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("fetch")
         .build_std(&setup)

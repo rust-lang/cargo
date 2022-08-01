@@ -1,14 +1,10 @@
 //! Tests for public/private dependencies.
 
+use cargo_test_support::project;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{is_nightly, project};
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_priv_warning() {
-    if !is_nightly() {
-        // exported_private_dependencies lint is unstable
-        return;
-    }
     Package::new("priv_dep", "0.1.0")
         .file("src/lib.rs", "pub struct FromPriv;")
         .publish();
@@ -46,12 +42,8 @@ src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep'
         .run()
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_pub_dep() {
-    if !is_nightly() {
-        // exported_private_dependencies lint is unstable
-        return;
-    }
     Package::new("pub_dep", "0.1.0")
         .file("src/lib.rs", "pub struct FromPub;")
         .publish();

@@ -1,6 +1,5 @@
 //! Tests for custom json target specifications.
 
-use cargo_test_support::is_nightly;
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
 
@@ -34,12 +33,8 @@ const SIMPLE_SPEC: &str = r#"
 }
 "#;
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_target_minimal() {
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
@@ -66,12 +61,8 @@ fn custom_target_minimal() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items, auto_traits")]
 fn custom_target_dependency() {
-    if !is_nightly() {
-        // Requires features no_core, lang_items, auto_traits
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -122,12 +113,8 @@ fn custom_target_dependency() {
     p.cargo("build --lib --target custom-target.json -v").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_bin_target() {
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/main.rs",
@@ -143,13 +130,9 @@ fn custom_bin_target() {
     p.cargo("build --target custom-bin-target.json -v").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn changing_spec_rebuilds() {
     // Changing the .json file will trigger a rebuild.
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
@@ -190,13 +173,9 @@ fn changing_spec_rebuilds() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn changing_spec_relearns_crate_types() {
     // Changing the .json file will invalidate the cache of crate types.
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -235,13 +214,9 @@ fn changing_spec_relearns_crate_types() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_target_ignores_filepath() {
     // Changing the path of the .json file will not trigger a rebuild.
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",

@@ -4,7 +4,7 @@ use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{is_nightly, rustc_host, symlink_supported, tools};
+use cargo_test_support::{rustc_host, symlink_supported, tools};
 use std::fs;
 use std::str;
 
@@ -748,12 +748,8 @@ fn doc_same_name() {
     p.cargo("doc").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "no_core, lang_items requires nightly")]
 fn doc_target() {
-    if !is_nightly() {
-        // no_core, lang_items requires nightly.
-        return;
-    }
     const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
@@ -1310,13 +1306,8 @@ fn doc_workspace_open_help_message() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zextern-html-root-url is unstable")]
 fn doc_extern_map_local() {
-    if !is_nightly() {
-        // -Zextern-html-root-url is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2050,13 +2041,8 @@ fn crate_versions_flag_is_overridden() {
     asserts(output_documentation());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-in-workspace is unstable")]
 fn doc_test_in_workspace() {
-    if !is_nightly() {
-        // -Zdoctest-in-workspace is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2357,13 +2343,8 @@ fn doc_fingerprint_unusual_behavior() {
     assert!(real_doc.join("somefile").exists());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_basic() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2397,13 +2378,8 @@ fn scrape_examples_basic() {
     assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_avoid_build_script_cycle() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         // package with build dependency
         .file(
@@ -2444,13 +2420,8 @@ fn scrape_examples_avoid_build_script_cycle() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_complex_reverse_dependencies() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2506,13 +2477,8 @@ fn scrape_examples_complex_reverse_dependencies() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_crate_with_dash() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2535,12 +2501,8 @@ fn scrape_examples_crate_with_dash() {
     assert!(doc_html.contains("Examples found in repository"));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_missing_flag() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2560,13 +2522,8 @@ fn scrape_examples_missing_flag() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_configure_profile() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2593,13 +2550,8 @@ fn scrape_examples_configure_profile() {
     assert!(doc_html.contains("More examples"));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_issue_10545() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

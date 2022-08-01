@@ -2,8 +2,8 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
+use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
-use cargo_test_support::{is_nightly, rustc_host};
 
 #[cargo_test]
 fn simple_cross() {
@@ -411,13 +411,9 @@ fn linker() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_with_extra_dylib_dep() {
     if cross_compile::disabled() {
-        return;
-    }
-    if !is_nightly() {
-        // plugins are unstable
         return;
     }
 
@@ -1298,13 +1294,9 @@ fn cross_test_dylib() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn doctest_xcompile_linker() {
     if cross_compile::disabled() {
-        return;
-    }
-    if !is_nightly() {
-        // -Zdoctest-xcompile is unstable
         return;
     }
 
