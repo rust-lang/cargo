@@ -56,16 +56,13 @@ impl BuildConfig {
     /// * `target.$target.libfoo.metadata`
     pub fn new(
         config: &Config,
-        jobs: Option<u32>,
+        jobs: Option<i32>,
         keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
         let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
-        if jobs == Some(0) {
-            anyhow::bail!("jobs must be at least 1")
-        }
         if jobs.is_some() && config.jobserver_from_env().is_some() {
             config.shell().warn(
                 "a `-j` argument was passed to Cargo but Cargo is \
@@ -73,10 +70,12 @@ impl BuildConfig {
                  its environment, ignoring the `-j` parameter",
             )?;
         }
-        let jobs = jobs.or(cfg.jobs).unwrap_or(::num_cpus::get() as u32);
-        if jobs == 0 {
-            anyhow::bail!("jobs may not be 0");
-        }
+        let jobs = match jobs.or(cfg.jobs) {
+            None => ::num_cpus::get() as u32,
+            Some(0) => anyhow::bail!("jobs may not be 0"),
+            Some(j) if j < 0 => (::num_cpus::get() as i32 + j).max(1) as u32,
+            Some(j) => j as u32,
+        };
 
         if config.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
             // TODO: This should eventually be fixed.

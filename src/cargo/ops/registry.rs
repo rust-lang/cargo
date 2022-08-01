@@ -80,7 +80,7 @@ pub struct PublishOpts<'cfg> {
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
-    pub jobs: Option<u32>,
+    pub jobs: Option<i32>,
     pub keep_going: bool,
     pub to_publish: ops::Packages,
     pub targets: Vec<String>,

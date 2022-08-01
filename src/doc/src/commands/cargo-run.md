@@ -281,7 +281,9 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-run---jobs"><a class="option-anchor" href="#option-cargo-run---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value.
+Should not be 0.</dd>
 
 
 <dt class="option-term" id="option-cargo-run---keep-going"><a class="option-anchor" href="#option-cargo-run---keep-going"></a><code>--keep-going</code></dt>

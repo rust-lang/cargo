@@ -5417,6 +5417,18 @@ fn good_cargo_config_jobs() {
 }
 
 #[cargo_test]
+fn good_jobs() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build --jobs 1").run();
+
+    p.cargo("build --jobs -1").run();
+}
+
+#[cargo_test]
 fn invalid_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -5441,11 +5453,9 @@ fn invalid_jobs() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("build --jobs -1")
-        .with_status(1)
-        .with_stderr_contains(
-            "error: Found argument '-1' which wasn't expected, or isn't valid in this context",
-        )
+    p.cargo("build --jobs 0")
+        .with_status(101)
+        .with_stderr_contains("error: jobs may not be 0")
         .run();
 
     p.cargo("build --jobs over9000")

@@ -472,7 +472,9 @@ Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value.
+Should not be 0.
 .RE
 .sp
 \fB\-\-keep\-going\fR

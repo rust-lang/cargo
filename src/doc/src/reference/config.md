@@ -344,7 +344,9 @@ The `[build]` table controls build-time operations and compiler settings.
 * Default: number of logical CPUs
 * Environment: `CARGO_BUILD_JOBS`
 
-Sets the maximum number of compiler processes to run in parallel.
+Sets the maximum number of compiler processes to run in parallel. If negative,
+it sets the maximum number of compiler processes to the number of logical CPUs
+plus provided value. Should not be 0.
 
 Can be overridden with the `--jobs` CLI option.
 
