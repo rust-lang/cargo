@@ -14,7 +14,7 @@ fn overwrite_optional_with_no_optional() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
+        .arg_line("your-face my-package2@0.4.1 --no-optional")
         .current_dir(cwd)
         .assert()
         .success()

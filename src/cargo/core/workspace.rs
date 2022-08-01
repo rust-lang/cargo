@@ -686,6 +686,8 @@ impl<'cfg> Workspace<'cfg> {
                 })?;
         }
 
+        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)?;
+
         if let Some(default) = default_members_paths {
             for path in default {
                 let normalized_path = paths::normalize_path(&path);
@@ -716,7 +718,7 @@ impl<'cfg> Workspace<'cfg> {
             self.default_members.push(self.current_manifest.clone())
         }
 
-        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)
+        Ok(())
     }
 
     fn find_path_deps(
@@ -1702,10 +1704,17 @@ fn find_workspace_root_with_loader(
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
     // Check if there are any workspace roots that have already been found that would work
-    for (ws_root, ws_root_config) in config.ws_roots.borrow().iter() {
-        if manifest_path.starts_with(ws_root) && !ws_root_config.is_excluded(manifest_path) {
-            // Add `Cargo.toml` since ws_root is the root and not the file
-            return Ok(Some(ws_root.join("Cargo.toml").clone()));
+    {
+        let roots = config.ws_roots.borrow();
+        // Iterate through the manifests parent directories until we find a workspace
+        // root. Note we skip the first item since that is just the path itself
+        for current in manifest_path.ancestors().skip(1) {
+            if let Some(ws_config) = roots.get(current) {
+                if !ws_config.is_excluded(manifest_path) {
+                    // Add `Cargo.toml` since ws_root is the root and not the file
+                    return Ok(Some(current.join("Cargo.toml")));
+                }
+            }
         }
     }
 

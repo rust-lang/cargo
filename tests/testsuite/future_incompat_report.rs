@@ -278,16 +278,14 @@ fn color() {
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .run();
 
     p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
         .with_stdout_does_not_contain("[..]\x1b[[..]")
         .run();
 
     p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
         .env("CARGO_TERM_COLOR", "always")
         .with_stdout_contains("[..]\x1b[[..]")
         .run();
@@ -303,24 +301,21 @@ fn bad_ids() {
     let p = simple_project();
 
     p.cargo("report future-incompatibilities --id 1")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("error: no reports are currently available")
         .run();
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .run();
 
     p.cargo("report future-incompatibilities --id foo")
-        .masquerade_as_nightly_cargo()
         .with_status(1)
         .with_stderr("error: Invalid value: could not parse `foo` as a number")
         .run();
 
     p.cargo("report future-incompatibilities --id 7")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -398,13 +393,12 @@ with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.
 ";
 
     p.cargo("check --future-incompat-report")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(update_message)
         .run();
 
     p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
         .with_stdout_contains(update_message)
         .run()
 }

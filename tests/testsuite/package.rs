@@ -1119,6 +1119,7 @@ authors = []
 exclude = ["*.txt"]
 description = "foo"
 license = "MIT"
+resolver = "1"
 
 [package.metadata]
 foo = "bar"
@@ -1189,6 +1190,7 @@ fn ignore_workspace_specifier() {
 name = "bar"
 version = "0.1.0"
 authors = []
+resolver = "1"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE
     );
@@ -2324,4 +2326,47 @@ See [..]
 
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
+}
+
+#[cargo_test]
+fn workspace_overrides_resolver() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify").cwd("bar").run();
+
+    let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2021"
+name = "bar"
+version = "0.1.0"
+resolver = "1"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    validate_crate_contents(
+        f,
+        "bar-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
 }

@@ -48,6 +48,9 @@ mod invalid_vers;
 mod list_features;
 mod list_features_path;
 mod list_features_path_no_default;
+mod locked_changed;
+mod locked_unchanged;
+mod lockfile_updated;
 mod manifest_path_package;
 mod merge_activated_features;
 mod multiple_conflicts_with_features;
@@ -76,6 +79,7 @@ mod overwrite_optional;
 mod overwrite_optional_with_no_optional;
 mod overwrite_path_noop;
 mod overwrite_path_with_version;
+mod overwrite_preserves_inline_table;
 mod overwrite_rename_with_no_rename;
 mod overwrite_rename_with_rename;
 mod overwrite_rename_with_rename_noop;
@@ -128,6 +132,9 @@ fn add_registry_packages(alt: bool) {
         "unrelateed-crate",
     ] {
         cargo_test_support::registry::Package::new(name, "0.1.1+my-package")
+            .alternative(alt)
+            .publish();
+        cargo_test_support::registry::Package::new(name, "0.2.0+my-package")
             .alternative(alt)
             .publish();
         cargo_test_support::registry::Package::new(name, "0.2.3+my-package")

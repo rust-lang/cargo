@@ -1,6 +1,7 @@
 # cargo-rustc(1)
 
 
+
 ## NAME
 
 cargo-rustc - Compile the current package, and pass extra options to the compiler
@@ -169,7 +170,7 @@ be specified multiple times, which enables all specified features.</dd>
 <dt class="option-term" id="option-cargo-rustc---target"><a class="option-anchor" href="#option-cargo-rustc---target"></a><code>--target</code> <em>triple</em></dt>
 <dd class="option-desc">Build for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -224,6 +225,17 @@ information about timing information.</li>
 </ul></dd>
 
 
+
+
+<dt class="option-term" id="option-cargo-rustc---crate-type"><a class="option-anchor" href="#option-cargo-rustc---crate-type"></a><code>--crate-type</code> <em>crate-type</em></dt>
+<dd class="option-desc">Build for the given crate type. This flag accepts a comma-separated list of
+1 or more crate types, of which the allowed values are the same as <code>crate-type</code>
+field in the manifest for configurating a Cargo target. See
+<a href="../reference/cargo-targets.html#the-crate-type-field"><code>crate-type</code> field</a>
+for possible values.</p>
+<p>If the manifest contains a list, and <code>--crate-type</code> is provided,
+the command-line argument value will override what is in the manifest.</p>
+<p>This flag only works when building a <code>lib</code> or <code>example</code> library target.</dd>
 
 
 </dl>
@@ -411,6 +423,10 @@ details on environment variables that Cargo reads.
    the size of every type:
 
        cargo rustc --lib -- -Z print-type-sizes
+
+3. Override `crate-type` field in Cargo.toml with command-line option:
+
+       cargo rustc --lib --crate-type lib,cdylib
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-build(1)](cargo-build.html), [rustc(1)](https://doc.rust-lang.org/rustc/index.html)

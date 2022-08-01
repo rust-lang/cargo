@@ -9,7 +9,7 @@ use toml_edit::easy as toml;
 fn gated() {
     registry::init();
     cargo_process("logout")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_status(101)
         .with_stderr(
             "\
@@ -48,7 +48,7 @@ fn simple_logout_test(reg: Option<&str>, flag: &str) {
     let msg = reg.unwrap_or("crates.io");
     check_config_token(reg, true);
     cargo_process(&format!("logout -Z unstable-options {}", flag))
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_stderr(&format!(
             "\
 [UPDATING] [..]
@@ -60,7 +60,7 @@ fn simple_logout_test(reg: Option<&str>, flag: &str) {
     check_config_token(reg, false);
 
     cargo_process(&format!("logout -Z unstable-options {}", flag))
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_stderr(&format!(
             "\
 [LOGOUT] not currently logged in to `{}`

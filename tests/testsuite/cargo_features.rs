@@ -19,7 +19,7 @@ fn feature_required() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
         .with_stderr(
             "\
@@ -98,7 +98,7 @@ fn feature_required_dependency() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
         .with_stderr(
             "\
@@ -240,7 +240,7 @@ fn allow_features() {
         .build();
 
     p.cargo("-Zallow-features=test-dummy-unstable build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable"])
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -250,12 +250,20 @@ fn allow_features() {
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable,print-im-a-teapot -Zprint-im-a-teapot build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&[
+            "allow-features",
+            "test-dummy-unstable",
+            "print-im-a-teapot",
+        ])
         .with_stdout("im-a-teapot = true")
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&[
+            "allow-features",
+            "test-dummy-unstable",
+            "print-im-a-teapot",
+        ])
         .with_status(101)
         .with_stderr(
             "\
@@ -265,7 +273,7 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: [
         .run();
 
     p.cargo("-Zallow-features= build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable"])
         .with_status(101)
         .with_stderr(
             "\
@@ -305,13 +313,13 @@ fn allow_features_to_rustc() {
         .build();
 
     p.cargo("-Zallow-features= build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["allow-features"])
         .with_status(101)
         .with_stderr_contains("[..]E0725[..]")
         .run();
 
     p.cargo("-Zallow-features=test_2018_feature build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["allow-features"])
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -353,7 +361,11 @@ fn allow_features_in_cfg() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&[
+            "allow-features",
+            "test-dummy-unstable",
+            "print-im-a-teapot",
+        ])
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -363,13 +375,17 @@ fn allow_features_in_cfg() {
         .run();
 
     p.cargo("-Zprint-im-a-teapot build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&[
+            "allow-features",
+            "test-dummy-unstable",
+            "print-im-a-teapot",
+        ])
         .with_stdout("im-a-teapot = true")
         .with_stderr("[FINISHED] [..]")
         .run();
 
     p.cargo("-Zunstable-options build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable", "print-im-a-teapot"])
         .with_status(101)
         .with_stderr(
             "\
@@ -380,7 +396,11 @@ error: the feature `unstable-options` is not in the list of allowed features: [p
 
     // -Zallow-features overrides .cargo/config
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&[
+            "allow-features",
+            "test-dummy-unstable",
+            "print-im-a-teapot",
+        ])
         .with_status(101)
         .with_stderr(
             "\
@@ -390,7 +410,11 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: [
         .run();
 
     p.cargo("-Zallow-features= build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&[
+            "allow-features",
+            "test-dummy-unstable",
+            "print-im-a-teapot",
+        ])
         .with_status(101)
         .with_stderr(
             "\
@@ -421,7 +445,7 @@ fn nightly_feature_requires_nightly() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -478,7 +502,7 @@ fn nightly_feature_requires_nightly_in_dep() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -532,7 +556,7 @@ fn cant_publish() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr(
             "\
 [COMPILING] a [..]
@@ -585,13 +609,13 @@ fn z_flags_rejected() {
         .run();
 
     p.cargo("build -Zarg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
         .with_stderr("error: unknown `-Z` flag specified: arg")
         .run();
 
     p.cargo("build -Zprint-im-a-teapot")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stdout("im-a-teapot = true\n")
         .with_stderr(
             "\
@@ -621,7 +645,7 @@ fn publish_allowed() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .run();
 }
 
@@ -640,7 +664,7 @@ fn wrong_position() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
         .with_stderr(
             "\
@@ -659,7 +683,7 @@ fn z_stabilized() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("check -Z cache-messages")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr(
             "\
 warning: flag `-Z cache-messages` has been stabilized in the 1.40 release, \
@@ -673,7 +697,7 @@ warning: flag `-Z cache-messages` has been stabilized in the 1.40 release, \
         .run();
 
     p.cargo("check -Z offline")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_status(101)
         .with_stderr(
             "\

@@ -168,7 +168,7 @@ _cargo() {
                         '(-f --force)'{-f,--force}'[force overwriting of existing crates or binaries]' \
                         '--bin=[only install the specified binary]:binary' \
                         '--branch=[branch to use when installing from git]:branch' \
-                        '--debug[build in debug mode instead of release mode]' \
+                        '--debug[Build in debug mode (with the "dev" profile) instead of release mode]' \
                         '--example=[install the specified example instead of binaries]:example:_cargo_example_names' \
                         '--git=[specify URL from which to install the crate]:url:_urls' \
                         '--path=[local filesystem path to crate to install]: :_directories' \

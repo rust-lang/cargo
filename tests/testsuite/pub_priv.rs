@@ -37,7 +37,7 @@ fn exported_priv_warning() {
         .build();
 
     p.cargo("build --message-format=short")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_contains(
             "\
 src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep' in public interface
@@ -80,7 +80,7 @@ fn exported_pub_dep() {
         .build();
 
     p.cargo("build --message-format=short")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -143,7 +143,7 @@ fn requires_feature() {
         .build();
 
     p.cargo("build --message-format=short")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_status(101)
         .with_stderr(
             "\
@@ -193,7 +193,7 @@ fn pub_dev_dependency() {
         .build();
 
     p.cargo("build --message-format=short")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_status(101)
         .with_stderr(
             "\

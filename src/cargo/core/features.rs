@@ -86,7 +86,9 @@
 //!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
 //!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
-//!    `cargo-features` from `Cargo.toml` test files if any.
+//!    `cargo-features` from `Cargo.toml` test files if any. You can
+//!     quickly find what needs to be removed by searching for the name
+//!     of the feature, e.g. `print_im_a_teapot`
 //! 3. Update the docs in unstable.md to move the section to the bottom
 //!    and summarize it similar to the other entries. Update the rest of the
 //!    documentation to add the new feature.
@@ -414,7 +416,7 @@ features! {
     (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
 
     // Allow specifying rustflags directly in a profile
-    (unstable, workspace_inheritance, "", "reference/unstable.html#workspace-inheritance"),
+    (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
 }
 
 pub struct Feature {
@@ -720,6 +722,8 @@ const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always
 
 const STABILIZED_TIMINGS: &str = "The -Ztimings option has been stabilized as --timings.";
 
+const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always available.";
+
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -920,7 +924,7 @@ impl CliUnstable {
                 self.features = Some(feats);
             }
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
-            "multitarget" => self.multitarget = parse_empty(k, v)?,
+            "multitarget" => stabilized_warn(k, "1.64", STABILISED_MULTITARGET),
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
             "sparse-registry" => self.sparse_registry = parse_empty(k, v)?,

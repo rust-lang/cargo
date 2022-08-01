@@ -71,11 +71,11 @@ fn <description>() {
 #### Testing Nightly Features
 
 If you are testing a Cargo feature that only works on "nightly" Cargo, then
-you need to call `masquerade_as_nightly_cargo` on the process builder like
-this:
+you need to call `masquerade_as_nightly_cargo` on the process builder and pass 
+the name of the feature as the reason, like this:
 
 ```rust,ignore
-p.cargo("build").masquerade_as_nightly_cargo()
+p.cargo("build").masquerade_as_nightly_cargo(&["print-im-a-teapot"])
 ```
 
 If you are testing a feature that only works on *nightly rustc* (such as
@@ -192,12 +192,12 @@ Be sure to check the snapshots to make sure they make sense.
 #### Testing Nightly Features
 
 If you are testing a Cargo feature that only works on "nightly" Cargo, then
-you need to call `masquerade_as_nightly_cargo` on the process builder like
-this:
+you need to call `masquerade_as_nightly_cargo` on the process builder and pass
+the name of the feature as the reason, like this:
 
 ```rust,ignore
     snapbox::cmd::Command::cargo()
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["print-im-a-teapot"])
 ```
 
 If you are testing a feature that only works on *nightly rustc* (such as

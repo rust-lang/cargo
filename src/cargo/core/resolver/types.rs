@@ -119,11 +119,12 @@ impl ResolveBehavior {
         }
     }
 
-    pub fn to_manifest(&self) -> Option<String> {
+    pub fn to_manifest(&self) -> String {
         match self {
-            ResolveBehavior::V1 => None,
-            ResolveBehavior::V2 => Some("2".to_string()),
+            ResolveBehavior::V1 => "1",
+            ResolveBehavior::V2 => "2",
         }
+        .to_owned()
     }
 }
 

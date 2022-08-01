@@ -2,7 +2,7 @@ use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, StableHasher};
-use anyhow::{bail, Context as _};
+use anyhow::Context as _;
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
@@ -65,9 +65,6 @@ impl CompileKind {
         };
 
         if !targets.is_empty() {
-            if targets.len() > 1 && !config.cli_unstable().multitarget {
-                bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
-            }
             return dedup(targets);
         }
 

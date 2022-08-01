@@ -19,6 +19,7 @@ use toml_edit::Item as TomlItem;
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
 use crate::core::Package;
+use crate::core::QueryKind;
 use crate::core::Registry;
 use crate::core::Shell;
 use crate::core::Workspace;
@@ -61,6 +62,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 
     let manifest_path = options.spec.manifest_path().to_path_buf();
     let mut manifest = LocalManifest::try_new(&manifest_path)?;
+    let original_raw_manifest = manifest.to_string();
     let legacy = manifest.get_legacy_sections();
     if !legacy.is_empty() {
         anyhow::bail!(
@@ -138,6 +140,16 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             .and_then(TomlItem::as_table_like_mut)
         {
             table.sort_values();
+        }
+    }
+
+    if options.config.locked() {
+        let new_raw_manifest = manifest.to_string();
+        if original_raw_manifest != new_raw_manifest {
+            anyhow::bail!(
+                "the manifest file {} needs to be updated but --locked was passed to prevent this",
+                manifest.path.display()
+            );
         }
     }
 
@@ -443,8 +455,7 @@ fn get_latest_dependency(
         }
         MaybeWorkspace::Other(query) => {
             let possibilities = loop {
-                let fuzzy = true;
-                match registry.query_vec(&query, fuzzy) {
+                match registry.query_vec(&query, QueryKind::Fuzzy) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
@@ -485,8 +496,8 @@ fn select_package(
         }
         MaybeWorkspace::Other(query) => {
             let possibilities = loop {
-                let fuzzy = false; // Returns all for path/git
-                match registry.query_vec(&query, fuzzy) {
+                // Exact to avoid returning all for path/git
+                match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
@@ -600,7 +611,7 @@ fn populate_available_features(
         MaybeWorkspace::Other(query) => query,
     };
     let possibilities = loop {
-        match registry.query_vec(&query, true) {
+        match registry.query_vec(&query, QueryKind::Fuzzy) {
             std::task::Poll::Ready(res) => {
                 break res?;
             }

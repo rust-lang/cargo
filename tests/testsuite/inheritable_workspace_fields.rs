@@ -71,8 +71,6 @@ fn deny_optional_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [workspace]
             members = ["bar"]
 
@@ -104,7 +102,6 @@ Caused by:
   dep1 is optional, but workspace dependencies cannot be optional
 ",
         )
-        .masquerade_as_nightly_cargo()
         .run();
 }
 
@@ -118,7 +115,6 @@ fn inherit_own_workspace_fields() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
             badges.workspace = true
 
             [package]
@@ -164,9 +160,7 @@ fn inherit_own_workspace_fields() {
         .file("bar.txt", "") // should be included when packaging
         .build();
 
-    p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --token sekrit").run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -204,8 +198,6 @@ fn inherit_own_workspace_fields() {
             "Cargo.toml",
             &format!(
                 r#"{}
-cargo-features = ["workspace-inheritance"]
-
 [package]
 edition = "2018"
 rust-version = "1.60"
@@ -226,6 +218,7 @@ keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"
 repository = "https://github.com/example/example"
+resolver = "1"
 
 [badges.gitlab]
 branch = "master"
@@ -243,8 +236,6 @@ fn inherit_own_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             name = "bar"
             version = "0.2.0"
@@ -276,7 +267,6 @@ fn inherit_own_dependencies() {
     Package::new("dep-dev", "0.5.2").publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -290,14 +280,12 @@ fn inherit_own_dependencies() {
         )
         .run();
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check").run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
-    p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --token sekrit").run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -357,12 +345,11 @@ fn inherit_own_dependencies() {
             "Cargo.toml",
             &format!(
                 r#"{}
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "bar"
 version = "0.2.0"
 authors = []
+resolver = "1"
 
 [dependencies.dep]
 version = "0.1"
@@ -385,8 +372,6 @@ fn inherit_own_detailed_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             name = "bar"
             version = "0.2.0"
@@ -410,7 +395,6 @@ fn inherit_own_detailed_dependencies() {
         .publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -423,12 +407,10 @@ fn inherit_own_detailed_dependencies() {
         )
         .run();
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check").run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
-    p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --token sekrit").run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -468,12 +450,11 @@ fn inherit_own_detailed_dependencies() {
             "Cargo.toml",
             &format!(
                 r#"{}
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "bar"
 version = "0.2.0"
 authors = []
+resolver = "1"
 
 [dependencies.dep]
 version = "0.1.2"
@@ -495,8 +476,6 @@ fn inherit_from_own_undefined_field() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [package]
             name = "foo"
             version = "1.2.5"
@@ -511,7 +490,6 @@ fn inherit_from_own_undefined_field() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -544,8 +522,6 @@ fn inherited_dependencies_union_features() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             name = "bar"
             version = "0.2.0"
@@ -563,7 +539,6 @@ fn inherited_dependencies_union_features() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -624,7 +599,6 @@ fn inherit_workspace_fields() {
             "bar/Cargo.toml",
             r#"
             badges.workspace = true
-            cargo-features = ["workspace-inheritance"]
             [package]
             name = "bar"
             workspace = ".."
@@ -653,10 +627,7 @@ fn inherit_workspace_fields() {
         .file("bar/bar.txt", "") // should be included when packaging
         .build();
 
-    p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
-        .cwd("bar")
-        .run();
+    p.cargo("publish --token sekrit").cwd("bar").run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -696,8 +667,6 @@ fn inherit_workspace_fields() {
             "Cargo.toml",
             &format!(
                 r#"{}
-cargo-features = ["workspace-inheritance"]
-
 [package]
 edition = "2018"
 rust-version = "1.60"
@@ -722,6 +691,7 @@ categories = ["development-tools"]
 license = "MIT"
 license-file = "LICENSE"
 repository = "https://github.com/example/example"
+resolver = "1"
 
 [badges.gitlab]
 branch = "master"
@@ -750,8 +720,6 @@ fn inherit_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             workspace = ".."
             name = "bar"
@@ -773,8 +741,6 @@ fn inherit_dependencies() {
     Package::new("dep-dev", "0.5.2").publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -788,15 +754,12 @@ fn inherit_dependencies() {
         )
         .run();
 
-    p.cargo("check").masquerade_as_nightly_cargo().run();
+    p.cargo("check").run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
-    p.cargo("publish --token sekrit")
-        .masquerade_as_nightly_cargo()
-        .cwd("bar")
-        .run();
+    p.cargo("publish --token sekrit").cwd("bar").run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -856,12 +819,11 @@ fn inherit_dependencies() {
             "Cargo.toml",
             &format!(
                 r#"{}
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "bar"
 version = "0.2.0"
 authors = []
+resolver = "1"
 
 [dependencies.dep]
 version = "0.1"
@@ -893,8 +855,6 @@ fn inherit_target_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             workspace = ".."
             name = "bar"
@@ -912,7 +872,6 @@ fn inherit_target_dependencies() {
     Package::new("dep", "0.1.2").publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -946,8 +905,6 @@ fn inherit_dependency_override_optional() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             workspace = ".."
             name = "bar"
@@ -961,7 +918,6 @@ fn inherit_dependency_override_optional() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -987,8 +943,6 @@ fn inherit_dependency_features() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             name = "bar"
             version = "0.2.0"
@@ -1006,7 +960,6 @@ fn inherit_dependency_features() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1063,8 +1016,6 @@ fn inherit_detailed_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             workspace = ".."
             name = "bar"
@@ -1080,7 +1031,6 @@ fn inherit_detailed_dependencies() {
     let git_root = git_project.root();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`\n\
@@ -1108,8 +1058,6 @@ fn inherit_path_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [project]
             workspace = ".."
             name = "bar"
@@ -1125,7 +1073,6 @@ fn inherit_path_dependencies() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] dep v0.9.0 ([CWD]/dep)
@@ -1169,7 +1116,6 @@ fn error_workspace_false() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1193,7 +1139,6 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
             [package]
             name = "bar"
             version = "1.2.3"
@@ -1214,7 +1159,6 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -1246,8 +1190,6 @@ fn error_malformed_workspace_root() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [package]
             name = "bar"
             workspace = ".."
@@ -1259,7 +1201,6 @@ fn error_malformed_workspace_root() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1291,8 +1232,6 @@ fn error_no_root_workspace() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [package]
             name = "bar"
             workspace = ".."
@@ -1306,7 +1245,6 @@ fn error_no_root_workspace() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1339,8 +1277,6 @@ fn error_inherit_unspecified_dependency() {
         .file(
             "bar/Cargo.toml",
             r#"
-            cargo-features = ["workspace-inheritance"]
-
             [package]
             name = "bar"
             workspace = ".."
@@ -1354,7 +1290,6 @@ fn error_inherit_unspecified_dependency() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1366,92 +1301,6 @@ Caused by:
 
 Caused by:
   `workspace.dependencies` was not defined
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn workspace_inheritance_not_enabled() {
-    registry::init();
-
-    let p = project().build();
-
-    let _ = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "1.2.5"
-            authors = ["rustaceans"]
-            description.workspace = true
-
-            [workspace]
-            members = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  feature `workspace-inheritance` is required
-
-  The package requires the Cargo feature called `workspace-inheritance`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
-  Consider adding `cargo-features = [\"workspace-inheritance\"]` to the top of Cargo.toml \
-  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#workspace-inheritance \
-  for more information about the status of this feature.
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn nightly_required() {
-    registry::init();
-
-    let p = project().build();
-
-    let _ = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["workspace-inheritance"]
-
-            [package]
-            name = "foo"
-            version = "1.2.5"
-            authors = ["rustaceans"]
-            description.workspace = true
-
-            [workspace]
-            members = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  the cargo feature `workspace-inheritance` requires a nightly version of Cargo, \
-  but this is the `stable` channel
-  See [..]
-  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#workspace-inheritance \
-  for more information about using this feature.
 ",
         )
         .run();

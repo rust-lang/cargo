@@ -154,7 +154,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .RS 4
 Build for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -223,6 +223,20 @@ and does not provide machine\-readable timing data.
 \h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
 information about timing information.
 .RE
+.RE
+.sp
+\fB\-\-crate\-type\fR \fIcrate\-type\fR
+.RS 4
+Build for the given crate type. This flag accepts a comma\-separated list of
+1 or more crate types, of which the allowed values are the same as \fBcrate\-type\fR
+field in the manifest for configurating a Cargo target. See
+\fI\f(BIcrate\-type\fI field\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#the\-crate\-type\-field>
+for possible values.
+.sp
+If the manifest contains a list, and \fB\-\-crate\-type\fR is provided,
+the command\-line argument value will override what is in the manifest.
+.sp
+This flag only works when building a \fBlib\fR or \fBexample\fR library target.
 .RE
 .SS "Output Options"
 .sp
@@ -431,6 +445,16 @@ the size of every type:
 .RS 4
 .nf
 cargo rustc \-\-lib \-\- \-Z print\-type\-sizes
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'Override \fBcrate\-type\fR field in Cargo.toml with command\-line option:
+.sp
+.RS 4
+.nf
+cargo rustc \-\-lib \-\-crate\-type lib,cdylib
 .fi
 .RE
 .RE

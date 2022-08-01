@@ -81,7 +81,7 @@ fn no_index_update() {
         .run();
 
     p.cargo("generate-lockfile -Zno-index-update")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["no-index-update"])
         .with_stdout("")
         .with_stderr("")
         .run();

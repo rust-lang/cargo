@@ -216,7 +216,8 @@ fn per_crate_target_test(
     if let Some(t) = arg_target {
         cmd.arg("--target").arg(&t);
     }
-    cmd.masquerade_as_nightly_cargo().run();
+    cmd.masquerade_as_nightly_cargo(&["per-package-target"])
+        .run();
     assert!(p.target_bin(cross_compile::alternate(), "foo").is_file());
 
     if cross_compile::can_run_on_host() {
@@ -344,7 +345,8 @@ fn workspace_with_multiple_targets() {
         .build();
 
     let mut cmd = p.cargo("build -v");
-    cmd.masquerade_as_nightly_cargo().run();
+    cmd.masquerade_as_nightly_cargo(&["per-package-target"])
+        .run();
 
     assert!(p.bin("native").is_file());
     assert!(p.target_bin(cross_compile::alternate(), "cross").is_file());
@@ -1334,7 +1336,7 @@ fn doctest_xcompile_linker() {
     p.cargo("test --doc -v -Zdoctest-xcompile --target")
         .arg(&target)
         .with_status(101)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
         .with_stderr_contains(&format!(
             "\
 [RUNNING] `rustdoc --crate-type lib --crate-name foo --test [..]\

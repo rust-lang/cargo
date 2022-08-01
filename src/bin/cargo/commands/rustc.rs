@@ -39,7 +39,7 @@ pub fn cli() -> App {
         .arg(multi_opt(
             CRATE_TYPE_ARG_NAME,
             "CRATE-TYPE",
-            "Comma separated list of types of crates for the compiler to emit (unstable)",
+            "Comma separated list of types of crates for the compiler to emit",
         ))
         .arg_target_dir()
         .arg_manifest_path()
@@ -88,9 +88,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
         None
     } else {
-        config
-            .cli_unstable()
-            .fail_if_stable_opt(CRATE_TYPE_ARG_NAME, 10083)?;
         Some(crate_types)
     };
     ops::compile(&ws, &compile_opts)?;

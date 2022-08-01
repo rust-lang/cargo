@@ -238,8 +238,7 @@ impl str::FromStr for Manifest {
 
 impl std::fmt::Display for Manifest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = self.data.to_string();
-        s.fmt(f)
+        self.data.fmt(f)
     }
 }
 
@@ -430,6 +429,12 @@ impl LocalManifest {
             }
         }
         status
+    }
+}
+
+impl std::fmt::Display for LocalManifest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.manifest.fmt(f)
     }
 }
 

@@ -1332,7 +1332,7 @@ fn doc_extern_map_local() {
 
     p.cargo("doc -v --no-deps -Zrustdoc-map --open")
         .env("BROWSER", tools::echo())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.1.0 [..]
@@ -2102,7 +2102,7 @@ fn doc_test_in_workspace() {
         )
         .build();
     p.cargo("test -Zdoctest-in-workspace --doc -vv")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-in-workspace"])
         .with_stderr_contains("[DOCTEST] crate-a")
         .with_stdout_contains(
             "
@@ -2346,7 +2346,7 @@ fn doc_fingerprint_unusual_behavior() {
     p.change_file("src/lib.rs", "// changed2");
     fs::write(real_doc.join("somefile"), "test").unwrap();
     p.cargo("doc -Z skip-rustdoc-fingerprint")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["skip-rustdoc-fingerprint"])
         .with_stderr(
             "[DOCUMENTING] foo [..]\n\
              [FINISHED] [..]",
@@ -2379,7 +2379,7 @@ fn scrape_examples_basic() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr(
             "\
 [..] foo v0.0.1 ([CWD])
@@ -2440,7 +2440,7 @@ fn scrape_examples_avoid_build_script_cycle() {
         .build();
 
     p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
 
@@ -2502,7 +2502,7 @@ fn scrape_examples_complex_reverse_dependencies() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
 
@@ -2528,7 +2528,7 @@ fn scrape_examples_crate_with_dash() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
     let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
@@ -2554,7 +2554,7 @@ fn scrape_examples_missing_flag() {
         .file("src/lib.rs", "//! These are the docs!")
         .build();
     p.cargo("doc -Zrustdoc-scrape-examples")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_status(101)
         .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
         .run();
@@ -2585,7 +2585,7 @@ fn scrape_examples_configure_profile() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
     let doc_html = p.read_file("target/doc/foo/fn.foo.html");
@@ -2641,7 +2641,7 @@ fn scrape_examples_issue_10545() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
 

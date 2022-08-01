@@ -1,5 +1,6 @@
 # cargo-publish(1)
 {{*set actionverb="Publish"}}
+{{*set multitarget=true}}
 
 ## NAME
 

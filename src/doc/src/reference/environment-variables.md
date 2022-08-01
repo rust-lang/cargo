@@ -21,15 +21,18 @@ system:
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
   compiler instead. See [`build.rustc`] to set via config.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
-  specified wrapper instead, passing as its command-line arguments the rustc
-  invocation, with the first argument being `rustc`. Useful to set up a build
-  cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
-* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will
-  execute this specified wrapper instead for workspace members only, passing
+  specified wrapper, passing as its command-line arguments the rustc
+  invocation, with the first argument being the path to the actual rustc.
+  Useful to set up a build cache tool such as `sccache`. See
+  [`build.rustc-wrapper`] to set via config. Setting this to the empty string
+  overwrites the config and resets cargo to not use a wrapper.
+* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, for workspace
+  members Cargo will execute this specified wrapper, passing
   as its command-line arguments the rustc invocation, with the first argument
-  being `rustc`. It affects the filename hash so that artifacts produced by
-  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`]
-  to set via config.
+  being the path to the actual rustc. It affects the filename hash
+  so that artifacts produced by the wrapper are cached separately.
+  See [`build.rustc-workspace-wrapper`] to set via config. Setting this to the empty string
+  overwrites the config and resets cargo to not use a wrapper for workspace members.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
 * `RUSTDOCFLAGS` — A space-separated list of custom flags to pass to all `rustdoc`

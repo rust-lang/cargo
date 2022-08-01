@@ -2012,7 +2012,7 @@ fn minimal_download() {
     // none
     // Should be the same as `-Zfeatures=all`
     p.cargo("check -Zfeatures=compare")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["features=compare"])
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
@@ -2389,7 +2389,6 @@ foo v0.1.0 [..]
     // Importantly, this does not include `f1` on `common`.
     p.cargo("tree -f")
         .arg("{p} feats:{f}")
-        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 foo v0.1.0 [..]

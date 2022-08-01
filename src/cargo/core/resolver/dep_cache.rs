@@ -16,7 +16,9 @@ use crate::core::resolver::{
     ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
     VersionPreferences,
 };
-use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
+use crate::core::{
+    Dependency, FeatureValue, PackageId, PackageIdSpec, QueryKind, Registry, Summary,
+};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
@@ -100,13 +102,9 @@ impl<'a> RegistryQueryer<'a> {
         }
 
         let mut ret = Vec::new();
-        let ready = self.registry.query(
-            dep,
-            &mut |s| {
-                ret.push(s);
-            },
-            false,
-        )?;
+        let ready = self.registry.query(dep, QueryKind::Exact, &mut |s| {
+            ret.push(s);
+        })?;
         if ready.is_pending() {
             self.registry_cache.insert(dep.clone(), Poll::Pending);
             return Poll::Pending;
@@ -127,7 +125,7 @@ impl<'a> RegistryQueryer<'a> {
                 dep.version_req()
             );
 
-            let mut summaries = match self.registry.query_vec(dep, false)? {
+            let mut summaries = match self.registry.query_vec(dep, QueryKind::Exact)? {
                 Poll::Ready(s) => s.into_iter(),
                 Poll::Pending => {
                     self.registry_cache.insert(dep.clone(), Poll::Pending);

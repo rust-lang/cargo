@@ -6,8 +6,8 @@ version = "0.0.0"
 
 [features]
 default = []
-other = ["my-package1/nose"]
+other = ["your-face/nose"]
 
 [dependencies]
-my-package1 = { version = "99999.0.0" }
+your-face = { version = "99999.0.0" }
 my-package2 = { version = "0.4.1" }
