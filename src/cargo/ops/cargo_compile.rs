@@ -667,7 +667,7 @@ pub fn create_bcx<'a, 'cfg>(
                 } else {
                     String::new()
                 }
-            } else {
+            } else if !unit.is_local() {
                 format!(
                     "Either upgrade to rustc {} or newer, or use\n\
                      cargo update -p {}@{} --precise ver\n\
@@ -678,6 +678,8 @@ pub fn create_bcx<'a, 'cfg>(
                     unit.pkg.name(),
                     current_version,
                 )
+            } else {
+                String::new()
             };
 
             anyhow::bail!(
