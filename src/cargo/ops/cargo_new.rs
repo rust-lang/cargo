@@ -10,8 +10,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::str::{from_utf8, FromStr};
+use std::str::FromStr;
 use toml_edit::easy as toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -830,14 +829,12 @@ mod tests {
             paths::write(&path_of_source_file, default_file_content)?;
 
             // Format the newly created source file
-            match Command::new("rustfmt").arg(&path_of_source_file).output() {
-                Err(e) => log::warn!("failed to call rustfmt: {}", e),
-                Ok(output) => {
-                    if !output.status.success() {
-                        log::warn!("rustfmt failed: {:?}", from_utf8(&output.stdout));
-                    }
-                }
-            };
+            if let Err(e) = cargo_util::ProcessBuilder::new("rustfmt")
+                .arg(&path_of_source_file)
+                .exec_with_output()
+            {
+                log::warn!("failed to call rustfmt: {:#}", e);
+            }
         }
     }
 
