@@ -20,7 +20,17 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     // but they don't really handle the absence of files well.
     let mut ignore = false;
     let mut requires_reason = false;
-    let mut found_reason = false;
+    let mut explicit_reason = None;
+    let mut implicit_reasons = Vec::new();
+    macro_rules! set_ignore {
+        ($predicate:expr, $($arg:tt)*) => {
+            let p = $predicate;
+            ignore |= p;
+            if p {
+                implicit_reasons.push(std::fmt::format(format_args!($($arg)*)));
+            }
+        };
+    }
     let is_not_nightly = !version().1;
     for rule in split_rules(attr) {
         match rule.as_str() {
@@ -29,57 +39,81 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // explicit opt-in (these generally only work on linux, and
                 // have some extra requirements, and are slow, and can pollute
                 // the environment since it downloads dependencies).
-                ignore |= is_not_nightly;
-                ignore |= option_env!("CARGO_RUN_BUILD_STD_TESTS").is_none();
+                set_ignore!(is_not_nightly, "requires nightly");
+                set_ignore!(
+                    option_env!("CARGO_RUN_BUILD_STD_TESTS").is_none(),
+                    "CARGO_RUN_BUILD_STD_TESTS must be set"
+                );
             }
             "build_std_mock" => {
                 // Only run the "mock" build-std tests on nightly and disable
                 // for windows-gnu which is missing object files (see
                 // https://github.com/rust-lang/wg-cargo-std-aware/issues/46).
-                ignore |= is_not_nightly;
-                ignore |= cfg!(all(target_os = "windows", target_env = "gnu"));
+                set_ignore!(is_not_nightly, "requires nightly");
+                set_ignore!(
+                    cfg!(all(target_os = "windows", target_env = "gnu")),
+                    "does not work on windows-gnu"
+                );
             }
             "nightly" => {
                 requires_reason = true;
-                ignore |= is_not_nightly;
+                set_ignore!(is_not_nightly, "requires nightly");
             }
             s if s.starts_with("requires_") => {
                 let command = &s[9..];
-                ignore |= !has_command(command);
+                set_ignore!(!has_command(command), "{command} not installed");
             }
             s if s.starts_with(">=1.") => {
                 requires_reason = true;
                 let min_minor = s[4..].parse().unwrap();
-                ignore |= version().0 < min_minor;
+                let minor = version().0;
+                set_ignore!(minor < min_minor, "requires rustc 1.{minor} or newer");
             }
             s if s.starts_with("reason=") => {
-                found_reason = true;
+                explicit_reason = Some(s[7..].parse().unwrap());
             }
             _ => panic!("unknown rule {:?}", rule),
         }
     }
-    if requires_reason && !found_reason {
+    if requires_reason && explicit_reason.is_none() {
         panic!(
             "#[cargo_test] with a rule also requires a reason, \
             such as #[cargo_test(nightly, reason = \"needs -Z unstable-thing\")]"
         );
     }
 
+    // Construct the appropriate attributes.
     let span = Span::call_site();
     let mut ret = TokenStream::new();
-    let add_attr = |ret: &mut TokenStream, attr_name| {
+    let add_attr = |ret: &mut TokenStream, attr_name, attr_input| {
         ret.extend(Some(TokenTree::from(Punct::new('#', Spacing::Alone))));
         let attr = TokenTree::from(Ident::new(attr_name, span));
+        let mut attr_stream: TokenStream = attr.into();
+        if let Some(input) = attr_input {
+            attr_stream.extend(input);
+        }
         ret.extend(Some(TokenTree::from(Group::new(
             Delimiter::Bracket,
-            attr.into(),
+            attr_stream,
         ))));
     };
-    add_attr(&mut ret, "test");
+    add_attr(&mut ret, "test", None);
     if ignore {
-        add_attr(&mut ret, "ignore");
+        let reason = explicit_reason
+            .or_else(|| {
+                (!implicit_reasons.is_empty())
+                    .then(|| TokenTree::from(Literal::string(&implicit_reasons.join(", "))).into())
+            })
+            .map(|reason: TokenStream| {
+                let mut stream = TokenStream::new();
+                stream.extend(Some(TokenTree::from(Punct::new('=', Spacing::Alone))));
+                stream.extend(Some(reason));
+                stream
+            });
+        add_attr(&mut ret, "ignore", reason);
     }
 
+    // Find where the function body starts, and add the boilerplate at the start.
     for token in item {
         let group = match token {
             TokenTree::Group(g) => {

@@ -94,7 +94,10 @@ Caused by:
 }
 
 #[cargo_test]
-#[ignore] // dir-name is currently disabled
+// We are currently uncertain if dir-name will ever be exposed to the user.
+// The code for it still roughly exists, but only for the internal profiles.
+// This test was kept in case we ever want to enable support for it again.
+#[ignore = "dir-name is disabled"]
 fn invalid_dir_name() {
     let p = project()
         .file(

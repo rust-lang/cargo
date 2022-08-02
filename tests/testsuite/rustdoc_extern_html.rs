@@ -55,8 +55,7 @@ fn simple() {
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
-// Broken, temporarily disable until https://github.com/rust-lang/rust/pull/82776 is resolved.
-#[ignore]
+#[ignore = "Broken, temporarily disabled until https://github.com/rust-lang/rust/pull/82776 is resolved."]
 #[cargo_test]
 // #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn std_docs() {

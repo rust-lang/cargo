@@ -110,7 +110,7 @@ fn default_toolchain_is_stable() -> bool {
 //   The optional dependency `new-baz-dep` should not be activated.
 // * `bar` 1.0.2 has a dependency on `baz` that *requires* the new feature
 //   syntax.
-#[ignore]
+#[ignore = "must be run manually, requires old cargo installations"]
 #[cargo_test]
 fn new_features() {
     let registry = registry::init();
@@ -534,7 +534,7 @@ fn new_features() {
 }
 
 #[cargo_test]
-#[ignore]
+#[ignore = "must be run manually, requires old cargo installations"]
 fn index_cache_rebuild() {
     // Checks that the index cache gets rebuilt.
     //
@@ -618,7 +618,7 @@ foo v0.1.0 [..]
 }
 
 #[cargo_test]
-#[ignore]
+#[ignore = "must be run manually, requires old cargo installations"]
 fn avoids_split_debuginfo_collision() {
     // Test needs two different toolchains.
     // If the default toolchain is stable, then it won't work.
