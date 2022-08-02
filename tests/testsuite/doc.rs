@@ -2420,7 +2420,12 @@ fn scrape_examples_avoid_build_script_cycle() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+// FIXME: This test is broken with latest nightly 2022-08-02.
+// The example is calling a function from a proc-macro, but proc-macros don't
+// export functions. It is not clear what this test is trying to exercise.
+// #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+#[ignore]
+#[cargo_test]
 fn scrape_examples_complex_reverse_dependencies() {
     let p = project()
         .file(
