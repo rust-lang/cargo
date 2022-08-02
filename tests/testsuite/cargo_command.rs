@@ -262,9 +262,8 @@ fn find_closest_dont_correct_nonsense() {
         .cwd(&paths::root())
         .with_status(101)
         .with_stderr(
-            "[ERROR] no such subcommand: \
-                        `there-is-no-way-that-there-is-a-command-close-to-this`
-",
+            "[ERROR] no such subcommand: `there-is-no-way-that-there-is-a-command-close-to-this`\n
+<tab>View all installed commands with `cargo --list`"
         )
         .run();
 }
@@ -273,7 +272,10 @@ fn find_closest_dont_correct_nonsense() {
 fn displays_subcommand_on_error() {
     cargo_process("invalid-command")
         .with_status(101)
-        .with_stderr("[ERROR] no such subcommand: `invalid-command`\n\n<tab>A similar Cargo subcommand could not be found\n<tab>View a list of installed Cargo subcommands using `cargo --list`")
+        .with_stderr(
+            "[ERROR] no such subcommand: `invalid-command`\n
+<tab>View all installed commands with `cargo --list`"
+        )
         .run();
 }
 
