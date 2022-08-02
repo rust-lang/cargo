@@ -263,7 +263,7 @@ fn find_closest_dont_correct_nonsense() {
         .with_status(101)
         .with_stderr(
             "[ERROR] no such subcommand: `there-is-no-way-that-there-is-a-command-close-to-this`\n
-<tab>View all installed commands with `cargo --list`"
+<tab>View all installed commands with `cargo --list`",
         )
         .run();
 }
@@ -274,7 +274,7 @@ fn displays_subcommand_on_error() {
         .with_status(101)
         .with_stderr(
             "[ERROR] no such subcommand: `invalid-command`\n
-<tab>View all installed commands with `cargo --list`"
+<tab>View all installed commands with `cargo --list`",
         )
         .run();
 }
