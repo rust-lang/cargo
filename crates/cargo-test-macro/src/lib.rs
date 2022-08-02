@@ -156,10 +156,10 @@ fn has_command(command: &str) -> bool {
     let output = match Command::new(command).arg("--version").output() {
         Ok(output) => output,
         Err(e) => {
-            // hg is not installed on GitHub macos.
-            // Consider installing it if Cargo gains more hg support, but
-            // otherwise it isn't critical.
-            if is_ci() && !(cfg!(target_os = "macos") && command == "hg") {
+            // hg is not installed on GitHub macOS or certain constrained
+            // environments like Docker. Consider installing it if Cargo gains
+            // more hg support, but otherwise it isn't critical.
+            if is_ci() && command != "hg" {
                 panic!(
                     "expected command `{}` to be somewhere in PATH: {}",
                     command, e
