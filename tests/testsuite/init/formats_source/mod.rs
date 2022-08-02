@@ -1,11 +1,19 @@
 use cargo_test_support::compare::assert_ui;
 use cargo_test_support::prelude::*;
-use cargo_test_support::Project;
+use cargo_test_support::{process, Project};
 
 use cargo_test_support::curr_dir;
 
-#[cargo_test(requires_rustfmt)]
+#[cargo_test]
 fn formats_source() {
+    // This cannot use `requires_rustfmt` because rustfmt is not available in
+    // the rust-lang/rust environment. Additionally, if running cargo without
+    // rustup (but with rustup installed), this test also fails due to HOME
+    // preventing the proxy from choosing a toolchain.
+    if let Err(e) = process("rustfmt").arg("-V").exec_with_output() {
+        eprintln!("skipping test, rustfmt not available:\n{e:?}");
+        return;
+    }
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = &project.root();
 
