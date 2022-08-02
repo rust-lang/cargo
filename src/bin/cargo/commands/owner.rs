@@ -43,7 +43,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .map(|xs| xs.cloned().collect()),
         to_remove: args
             .get_many::<String>("remove")
-            .map(|xs| xs.cloned().collect()),
+            .map(|xs| xs.cloned().map(|s| s.to_lowercase()).collect()),
         list: args.flag("list"),
         registry,
     };
