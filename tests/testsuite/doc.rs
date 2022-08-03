@@ -2424,7 +2424,7 @@ fn scrape_examples_avoid_build_script_cycle() {
 // The example is calling a function from a proc-macro, but proc-macros don't
 // export functions. It is not clear what this test is trying to exercise.
 // #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
-#[ignore]
+#[ignore = "broken, needs fixing"]
 #[cargo_test]
 fn scrape_examples_complex_reverse_dependencies() {
     let p = project()

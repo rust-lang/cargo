@@ -1206,8 +1206,10 @@ fn platform_specific_variables_reflected_in_build_scripts() {
 }
 
 #[cargo_test]
-// Don't have a dylib cross target on macos.
-#[cfg_attr(target_os = "macos", ignore)]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "don't have a dylib cross target on macos"
+)]
 fn cross_test_dylib() {
     if cross_compile::disabled() {
         return;
