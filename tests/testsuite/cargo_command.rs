@@ -386,3 +386,14 @@ fn closed_output_ok() {
     assert!(status.success());
     assert!(s.is_empty(), "{}", s);
 }
+
+#[cargo_test]
+fn subcommand_leading_plus_output_contains() {
+    cargo_process("+nightly")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+<tab>Cargo does not handle `+toolchain` directives.",
+        )
+        .run();
+}

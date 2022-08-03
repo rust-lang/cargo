@@ -170,7 +170,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
                 anyhow::format_err!(
                     "no such subcommand: `{}`\n\n\t\
                     Cargo does not handle `+toolchain` directives.\n\t\
-                    Did you mean to run `cargo` through `rustup` instead?",
+                    Did you mean to invoke `cargo` through `rustup` instead?",
                     cmd
                 )
             } else {
