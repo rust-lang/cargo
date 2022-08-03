@@ -1,6 +1,8 @@
 //! Tests for the jobserver protocol.
 
+use cargo_util::is_ci;
 use std::net::TcpListener;
+use std::process::Command;
 use std::thread;
 
 use cargo_test_support::{cargo_exe, project};
@@ -56,8 +58,17 @@ fn jobserver_exists() {
     p.cargo("build -j2").run();
 }
 
-#[cargo_test(requires_make)]
+#[cargo_test]
 fn makes_jobserver_used() {
+    let make = if cfg!(windows) {
+        "mingw32-make"
+    } else {
+        "make"
+    };
+    if !is_ci() && Command::new(make).arg("--version").output().is_err() {
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -151,7 +162,7 @@ all:
         drop((a2, a3));
     });
 
-    p.process("make")
+    p.process(make)
         .env("CARGO", cargo_exe())
         .env("ADDR", addr.to_string())
         .arg("-j2")
@@ -161,6 +172,15 @@ all:
 
 #[cargo_test]
 fn jobserver_and_j() {
+    let make = if cfg!(windows) {
+        "mingw32-make"
+    } else {
+        "make"
+    };
+    if !is_ci() && Command::new(make).arg("--version").output().is_err() {
+        return;
+    }
+
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -172,7 +192,7 @@ all:
         )
         .build();
 
-    p.process("make")
+    p.process(make)
         .env("CARGO", cargo_exe())
         .arg("-j2")
         .with_stderr(
