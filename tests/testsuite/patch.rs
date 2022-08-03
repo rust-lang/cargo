@@ -431,7 +431,7 @@ fn unused_with_mismatch_source_being_patched() {
             "\
 [UPDATING] `dummy-registry` index
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
-Perhaps you misspell the source URL being patched.
+Perhaps you misspelled the source URL being patched.
 Possible URLs for `[patch.<URL>]`:
     crates-io
 [WARNING] Patch `bar v0.3.0 ([CWD]/baz)` was not used in the crate graph.
@@ -1769,7 +1769,7 @@ fn two_semver_compatible() {
         .with_stderr(
             "\
 warning: Patch `bar v0.1.1 [..]` was not used in the crate graph.
-Perhaps you misspell the source URL being patched.
+Perhaps you misspelled the source URL being patched.
 Possible URLs for `[patch.<URL>]`:
     [CWD]/bar
 [FINISHED] [..]",
@@ -1823,7 +1823,7 @@ fn multipatch_select_big() {
         .with_stderr(
             "\
 warning: Patch `bar v0.1.0 [..]` was not used in the crate graph.
-Perhaps you misspell the source URL being patched.
+Perhaps you misspelled the source URL being patched.
 Possible URLs for `[patch.<URL>]`:
     [CWD]/bar
 [FINISHED] [..]",
