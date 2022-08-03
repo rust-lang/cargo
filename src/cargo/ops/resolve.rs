@@ -796,7 +796,7 @@ fn emit_warnings_of_unused_patches(
                 writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
                 write!(
                     msg,
-                    "Perhaps you misspell the source URL being patched.\n\
+                    "Perhaps you misspelled the source URL being patched.\n\
                     Possible URLs for `[patch.<URL>]`:",
                 )?;
                 for id in ids.iter() {
