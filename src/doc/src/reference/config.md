@@ -59,6 +59,7 @@ c = "check"
 t = "test"
 r = "run"
 rr = "run --release"
+recursive_example = "rr --example recursions"
 space_example = ["run", "--release", "--", "\"command list\""]
 
 [build]
@@ -334,6 +335,14 @@ r = "run"
 ```
 
 Aliases are not allowed to redefine existing built-in commands.
+
+Aliases are recursive:
+
+```toml
+[alias]
+rr = "run --release"
+recursive_example = "rr --example recursions"
+```
 
 #### `[build]`
 
