@@ -391,9 +391,27 @@ fn closed_output_ok() {
 fn subcommand_leading_plus_output_contains() {
     cargo_process("+nightly")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-<tab>Cargo does not handle `+toolchain` directives.",
+error: no such subcommand: `+nightly`
+
+<tab>Cargo does not handle `+toolchain` directives.
+<tab>Did you mean to invoke `cargo` through `rustup` instead?",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn full_did_you_mean() {
+    cargo_process("bluid")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no such subcommand: `bluid`
+
+<tab>Did you mean `build`?
+
+<tab>View all installed commands with `cargo --list`",
         )
         .run();
 }
