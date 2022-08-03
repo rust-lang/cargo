@@ -262,9 +262,10 @@ fn find_closest_dont_correct_nonsense() {
         .cwd(&paths::root())
         .with_status(101)
         .with_stderr(
-            "[ERROR] no such subcommand: \
-                        `there-is-no-way-that-there-is-a-command-close-to-this`
-",
+            "\
+[ERROR] no such subcommand: `there-is-no-way-that-there-is-a-command-close-to-this`
+
+<tab>View all installed commands with `cargo --list`",
         )
         .run();
 }
@@ -273,7 +274,12 @@ fn find_closest_dont_correct_nonsense() {
 fn displays_subcommand_on_error() {
     cargo_process("invalid-command")
         .with_status(101)
-        .with_stderr("[ERROR] no such subcommand: `invalid-command`\n")
+        .with_stderr(
+            "\
+[ERROR] no such subcommand: `invalid-command`
+
+<tab>View all installed commands with `cargo --list`",
+        )
         .run();
 }
 
@@ -379,4 +385,33 @@ fn closed_output_ok() {
     let status = child.wait().unwrap();
     assert!(status.success());
     assert!(s.is_empty(), "{}", s);
+}
+
+#[cargo_test]
+fn subcommand_leading_plus_output_contains() {
+    cargo_process("+nightly")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no such subcommand: `+nightly`
+
+<tab>Cargo does not handle `+toolchain` directives.
+<tab>Did you mean to invoke `cargo` through `rustup` instead?",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn full_did_you_mean() {
+    cargo_process("bluid")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no such subcommand: `bluid`
+
+<tab>Did you mean `build`?
+
+<tab>View all installed commands with `cargo --list`",
+        )
+        .run();
 }

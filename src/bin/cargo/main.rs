@@ -166,9 +166,25 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let command = match path {
         Some(command) => command,
         None => {
-            let suggestions = list_commands(config);
-            let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
-            let err = anyhow::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
+            let err = if cmd.starts_with('+') {
+                anyhow::format_err!(
+                    "no such subcommand: `{}`\n\n\t\
+                    Cargo does not handle `+toolchain` directives.\n\t\
+                    Did you mean to invoke `cargo` through `rustup` instead?",
+                    cmd
+                )
+            } else {
+                let suggestions = list_commands(config);
+                let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
+
+                anyhow::format_err!(
+                    "no such subcommand: `{}`{}\n\n\t\
+                    View all installed commands with `cargo --list`",
+                    cmd,
+                    did_you_mean
+                )
+            };
+
             return Err(CliError::new(err, 101));
         }
     };
