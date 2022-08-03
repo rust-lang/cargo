@@ -1331,7 +1331,8 @@ fn build_script_deps_adopts_target_platform_if_target_equals_target() {
 }
 
 #[cargo_test]
-#[cfg_attr(target_env = "msvc", ignore)] // TODO(ST): rename bar (dependency) to something else and un-ignore this with RFC-3176
+// TODO(ST): rename bar (dependency) to something else and un-ignore this with RFC-3176
+#[cfg_attr(target_env = "msvc", ignore = "msvc not working")]
 fn profile_override_basic() {
     let p = project()
         .file(
@@ -1450,7 +1451,7 @@ foo v0.0.0 ([CWD])
 //       For reference, see comments by ehuss https://github.com/rust-lang/cargo/pull/9992#discussion_r801086315 and
 //       joshtriplett https://github.com/rust-lang/cargo/pull/9992#issuecomment-1033394197 .
 #[cargo_test]
-#[ignore]
+#[ignore = "broken, need artifact info in index"]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
     if cross_compile::disabled() {
         return;
