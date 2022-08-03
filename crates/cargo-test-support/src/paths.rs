@@ -295,6 +295,13 @@ pub fn sysroot() -> String {
 /// determines whether we are running in a mode that allows Windows reserved names.
 #[cfg(windows)]
 pub fn windows_reserved_names_are_allowed() -> bool {
+    use cargo_util::is_ci;
+
+    // Ensure tests still run in CI until we need to migrate.
+    if is_ci() {
+        return false;
+    }
+
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     use std::ptr;
