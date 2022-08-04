@@ -107,12 +107,17 @@ breaking change.
 
 <a id="the-authors-field-optional"></a>
 #### The `authors` field
-
-The optional `authors` field lists people or organizations that are considered
+The optional `authors` field lists in an array the people or organizations that are considered
 the "authors" of the package. The exact meaning is open to interpretation — it
 may list the original or primary authors, current maintainers, or owners of the
 package. An optional email address may be included within angled brackets at
 the end of each author entry.
+
+```toml
+[package]
+# ...
+authors = ["Graydon Hoare", "Fnu Lnu <no-reply@rust-lang.org>"]
+```
 
 This field is only surfaced in package metadata and in the `CARGO_PKG_AUTHORS`
 environment variable within `build.rs`. It is not displayed in the [crates.io]
