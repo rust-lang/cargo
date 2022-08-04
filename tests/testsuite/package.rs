@@ -2009,6 +2009,12 @@ src/lib.rs
 #[cargo_test]
 #[cfg(windows)]
 fn reserved_windows_name() {
+    // If we are running on a version of Windows that allows these reserved filenames,
+    // skip this test.
+    if paths::windows_reserved_names_are_allowed() {
+        return;
+    }
+
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "pub mod aux;")
         .file("src/aux.rs", "")
