@@ -284,7 +284,7 @@ formats; <code>--timings</code> without an argument will default to <code>--timi
 Specifying an output format (rather than the default) is unstable and requires
 <code>-Zunstable-options</code>. Valid output formats:</p>
 <ul>
-<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
 <code>target/cargo-timings</code> directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
