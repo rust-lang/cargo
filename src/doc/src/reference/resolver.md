@@ -37,7 +37,8 @@ with leading zeros. For example, `0.1.0` and `0.1.2` are compatible, but
 `0.1.0` and `0.2.0` are not. Similarly, `0.0.1` and `0.0.2` are not
 compatible.
 
-As a quick refresher, the *version requirement* syntax Cargo uses for
+As a quick refresher, the
+[*version requirement* syntax][Specifying Dependencies] Cargo uses for
 dependencies is:
 
 Requirement | Example | Equivalence | Description
