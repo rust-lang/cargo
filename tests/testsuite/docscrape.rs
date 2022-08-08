@@ -125,7 +125,7 @@ fn complex_reverse_dependencies() {
                 feature = []
             "#,
         )
-        .file("a/src/lib.rs", "#[cfg(feature)] pub fn f();")
+        .file("a/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
