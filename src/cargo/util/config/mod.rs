@@ -52,7 +52,7 @@
 use std::borrow::Cow;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
@@ -1166,7 +1166,9 @@ impl Config {
         let cli_args = match &self.cli_config {
             Some(cli_args) => cli_args,
             None => return Ok(loaded_args),
-        };
+        }
+        .iter()
+        .collect::<BTreeSet<&String>>();
         let mut seen = HashSet::new();
         for arg in cli_args {
             let arg_as_path = self.cwd.join(arg);
