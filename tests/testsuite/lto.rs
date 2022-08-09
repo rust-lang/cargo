@@ -667,7 +667,7 @@ fn test_profile() {
 [RUNNING] `rustc --crate-name bar [..]crate-type lib[..]
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C linker-plugin-lto[..]
-[RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C lto=thin [..]--test[..]
+[RUNNING] `rustc --crate-name foo [..]--emit=dep-info,metadata,link -C lto=thin [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [DOCTEST] foo
