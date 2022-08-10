@@ -1119,7 +1119,6 @@ authors = []
 exclude = ["*.txt"]
 description = "foo"
 license = "MIT"
-resolver = "1"
 
 [package.metadata]
 foo = "bar"
@@ -1190,7 +1189,6 @@ fn ignore_workspace_specifier() {
 name = "bar"
 version = "0.1.0"
 authors = []
-resolver = "1"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE
     );
@@ -2341,7 +2339,7 @@ fn workspace_overrides_resolver() {
             "Cargo.toml",
             r#"
                 [workspace]
-                members = ["bar"]
+                members = ["bar", "baz"]
             "#,
         )
         .file(
@@ -2354,9 +2352,19 @@ fn workspace_overrides_resolver() {
             "#,
         )
         .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
         .build();
 
-    p.cargo("package --no-verify").cwd("bar").run();
+    p.cargo("package --no-verify -p bar -p baz").run();
 
     let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
     let rewritten_toml = format!(
@@ -2372,6 +2380,24 @@ resolver = "1"
     validate_crate_contents(
         f,
         "bar-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
+
+    // When the crate has the same implicit resolver as the workspace it is not overridden
+    let f = File::open(&p.root().join("target/package/baz-0.1.0.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2015"
+name = "baz"
+version = "0.1.0"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    validate_crate_contents(
+        f,
+        "baz-0.1.0.crate",
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[("Cargo.toml", &rewritten_toml)],
     );

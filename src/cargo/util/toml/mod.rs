@@ -3,7 +3,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::str;
+use std::str::{self, FromStr};
 
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
@@ -1342,7 +1342,26 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
-        package.resolver = Some(ws.resolve_behavior().to_manifest());
+        let current_resolver = package
+            .resolver
+            .as_ref()
+            .map(|r| ResolveBehavior::from_manifest(r))
+            .unwrap_or_else(|| {
+                package
+                    .edition
+                    .as_ref()
+                    .and_then(|e| e.as_defined())
+                    .map(|e| Edition::from_str(e))
+                    .unwrap_or(Ok(Edition::Edition2015))
+                    .map(|e| e.default_resolve_behavior())
+            })?;
+        if ws.resolve_behavior() != current_resolver {
+            // This ensures the published crate if built as a root (e.g. `cargo install`) will
+            // use the same resolver behavior it was tested with in the workspace.
+            // To avoid forcing a higher MSRV we don't explicitly set this if it would implicitly
+            // result in the same thing.
+            package.resolver = Some(ws.resolve_behavior().to_manifest());
+        }
         if let Some(license_file) = &package.license_file {
             let license_file = license_file
                 .as_defined()

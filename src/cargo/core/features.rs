@@ -102,6 +102,7 @@ use anyhow::{bail, Error};
 use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 
+use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::{indented_lines, iter_join};
 use crate::Config;
@@ -240,6 +241,14 @@ impl Edition {
             Edition2015 => false,
             Edition2018 => true,
             Edition2021 => false,
+        }
+    }
+
+    pub(crate) fn default_resolve_behavior(&self) -> ResolveBehavior {
+        if *self >= Edition::Edition2021 {
+            ResolveBehavior::V2
+        } else {
+            ResolveBehavior::V1
         }
     }
 }
