@@ -9,6 +9,11 @@ with them:
 You can override these environment variables to change Cargo's behavior on your
 system:
 
+* `CARGO_LOG` - Cargo uses the [`env_logger`] crate to display debug log messages.
+  The `CARGO_LOG` environment variable can be set to enable debug logging,
+  with a value such as `trace`, `debug`, or `warn`.
+  Usually it is only used during debugging. For more details refer to the
+  [Debug logging].
 * `CARGO_HOME` — Cargo maintains a local cache of the registry index and of
   git checkouts of crates. By default these are stored under `$HOME/.cargo`
   (`%USERPROFILE%\.cargo` on Windows), but this variable overrides the
@@ -39,17 +44,17 @@ system:
   invocations that Cargo performs. In contrast with [`cargo rustdoc`], this is
   useful for passing a flag to *all* `rustdoc` instances. See
   [`build.rustdocflags`] for some more ways to set flags. This string is
-  split by whitespace; for a more robust encoding of multiple arguments, 
+  split by whitespace; for a more robust encoding of multiple arguments,
   see `CARGO_ENCODED_RUSTDOCFLAGS`.
-* `CARGO_ENCODED_RUSTDOCFLAGS` -  A list of custom flags separated by `0x1f` 
+* `CARGO_ENCODED_RUSTDOCFLAGS` -  A list of custom flags separated by `0x1f`
   (ASCII Unit Separator) to pass to all `rustdoc` invocations that Cargo performs.
 * `RUSTFLAGS` — A space-separated list of custom flags to pass to all compiler
   invocations that Cargo performs. In contrast with [`cargo rustc`], this is
   useful for passing a flag to *all* compiler instances. See
   [`build.rustflags`] for some more ways to set flags. This string is
-  split by whitespace; for a more robust encoding of multiple arguments, 
+  split by whitespace; for a more robust encoding of multiple arguments,
   see `CARGO_ENCODED_RUSTFLAGS`.
-* `CARGO_ENCODED_RUSTFLAGS` - A list of custom flags separated by `0x1f` 
+* `CARGO_ENCODED_RUSTFLAGS` - A list of custom flags separated by `0x1f`
   (ASCII Unit Separator) to pass to all compiler invocations that Cargo performs.
 * `CARGO_INCREMENTAL` — If this is set to 1 then Cargo will force [incremental
   compilation] to be enabled for the current compilation, and when set to 0 it
@@ -369,6 +374,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
   the environment; scripts should use `CARGO_ENCODED_RUSTFLAGS` instead.
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
 
+[`env_logger`]: https://docs.rs/env_logger
+[debug logging]: https://doc.crates.io/contrib/architecture/console.html#debug-logging
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [target family]: ../../reference/conditional-compilation.html#target_family
