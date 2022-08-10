@@ -409,7 +409,7 @@ fn target_runner(
     let matching_runner = cfgs.next();
     if let Some((key, runner)) = cfgs.next() {
         anyhow::bail!(
-            "several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`\n\
+            "several matching instances of `target.'cfg(..)'.runner` in configurations\n\
              first match `{}` located in {}\n\
              second match `{}` located in {}",
             matching_runner.unwrap().0,
