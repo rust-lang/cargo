@@ -661,13 +661,11 @@ pub fn create_bcx<'a, 'cfg>(
                 continue;
             }
 
-            let guidance = if ws.is_ephemeral() {
-                if ws.ignore_lock() {
-                    "Try re-running cargo install with `--locked`".to_string()
-                } else {
-                    String::new()
-                }
-            } else if !unit.is_local() {
+            let guidance = if ws.is_install() {
+                "Try re-running cargo install with `--locked`".to_string()
+            } else if ws.is_ephemeral() || unit.is_local() {
+                String::new()
+            } else {
                 format!(
                     "Either upgrade to rustc {} or newer, or use\n\
                      cargo update -p {}@{} --precise ver\n\
@@ -678,8 +676,6 @@ pub fn create_bcx<'a, 'cfg>(
                     unit.pkg.name(),
                     current_version,
                 )
-            } else {
-                String::new()
             };
 
             anyhow::bail!(

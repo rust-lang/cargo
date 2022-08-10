@@ -561,6 +561,13 @@ impl<'cfg> Workspace<'cfg> {
         self.member_ids.contains(&pkg.package_id())
     }
 
+    /// Returns true if this workspace is being used for a `cargo install` operation
+    pub fn is_install(&self) -> bool {
+        // For now, this condition detects `cargo install`, but calling `is_install` allows us to
+        // more easily change that in the future.
+        self.is_ephemeral && self.ignore_lock
+    }
+
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
     }
