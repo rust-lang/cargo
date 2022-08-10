@@ -1,11 +1,12 @@
 use crate::core::compiler::CompileKind;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::thread::available_parallelism;
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]
@@ -45,6 +46,12 @@ pub struct BuildConfig {
     pub timing_outputs: Vec<TimingOutput>,
 }
 
+fn default_parallelism() -> CargoResult<u32> {
+    Ok(available_parallelism()
+        .context("failed to determine the amount of parallelism available")?
+        .get() as u32)
+}
+
 impl BuildConfig {
     /// Parses all config files to learn about build configuration. Currently
     /// configured options are:
@@ -71,9 +78,9 @@ impl BuildConfig {
             )?;
         }
         let jobs = match jobs.or(cfg.jobs) {
-            None => ::num_cpus::get() as u32,
+            None => default_parallelism()?,
             Some(0) => anyhow::bail!("jobs may not be 0"),
-            Some(j) if j < 0 => (::num_cpus::get() as i32 + j).max(1) as u32,
+            Some(j) if j < 0 => (default_parallelism()? as i32 + j).max(1) as u32,
             Some(j) => j as u32,
         };
 
