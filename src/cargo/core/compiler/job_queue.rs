@@ -55,11 +55,11 @@ use std::fmt::Write as _;
 use std::io;
 use std::marker;
 use std::sync::Arc;
+use std::thread::{self, Scope};
 use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
-use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, trace};
 use semver::Version;
@@ -556,22 +556,21 @@ impl<'cfg> JobQueue<'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        crossbeam_utils::thread::scope(move |scope| {
-            match state.drain_the_queue(cx, plan, scope, &helper) {
+        thread::scope(
+            move |scope| match state.drain_the_queue(cx, plan, scope, &helper) {
                 Some(err) => Err(err),
                 None => Ok(()),
-            }
-        })
-        .expect("child threads shouldn't panic")
+            },
+        )
     }
 }
 
 impl<'cfg> DrainState<'cfg> {
-    fn spawn_work_if_possible(
+    fn spawn_work_if_possible<'s>(
         &mut self,
         cx: &mut Context<'_, '_>,
         jobserver_helper: &HelperThread,
-        scope: &Scope<'_>,
+        scope: &'s Scope<'s, '_>,
     ) -> CargoResult<()> {
         // Dequeue as much work as we can, learning about everything
         // possible that can run. Note that this is also the point where we
@@ -807,11 +806,11 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// This returns an Option to prevent the use of `?` on `Result` types
     /// because it is important for the loop to carefully handle errors.
-    fn drain_the_queue(
+    fn drain_the_queue<'s>(
         mut self,
         cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
-        scope: &Scope<'_>,
+        scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
     ) -> Option<anyhow::Error> {
         trace!("queue: {:#?}", self.queue);
@@ -997,7 +996,7 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// Fresh jobs block until finished (which should be very fast!), Dirty
     /// jobs will spawn a thread in the background and return immediately.
-    fn run(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &Scope<'_>) {
+    fn run<'s>(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &'s Scope<'s, '_>) {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
@@ -1072,7 +1071,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             Freshness::Dirty => {
                 self.timings.add_dirty();
-                scope.spawn(move |_| {
+                scope.spawn(move || {
                     doit(JobState {
                         id,
                         messages: messages.clone(),
