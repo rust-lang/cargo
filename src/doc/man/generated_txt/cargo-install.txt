@@ -313,7 +313,7 @@ OPTIONS
               rustc's default color scheme. Cannot be used with human or short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
-              diagnostics in in JSON messages printed, but instead Cargo itself
+              diagnostics in JSON messages printed, but instead Cargo itself
               should render the JSON diagnostics coming from rustc. Cargo's own
               JSON diagnostics and others coming from rustc are still emitted.
               Cannot be used with human or short.
