@@ -300,7 +300,7 @@ the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</cod
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
 contains embedded ANSI color codes for respecting rustc's default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
-<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
