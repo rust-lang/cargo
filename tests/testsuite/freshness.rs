@@ -872,39 +872,54 @@ fn rerun_build_script_if_add_rustc_wrapper() {
 
     let file_created_by_build_script = p.root().join("did run");
 
-    // First build runs build script.
-    p.cargo("check").run();
+    let build_script_build_without_wrapper =
+        "[RUNNING] `rustc --crate-name build_script_build [..]`";
+    let build_script_build_with_wrapper =
+        "[RUNNING] `[..]rustc-echo-wrapper[EXE] rustc --crate-name build_script_build [..]`";
+    let build_script_build_any = "[RUNNING] `[..]rustc --crate-name build_script_build [..]`";
+
+    // The first build compiles and runs the build script.
+    p.cargo("check --verbose")
+        .with_stderr_contains(build_script_build_without_wrapper)
+        .run();
     assert!(file_created_by_build_script.exists());
     fs::remove_file(&file_created_by_build_script).unwrap();
 
     // Does not rerun build script, despite file delete in the project directory.
-    p.cargo("check").run();
+    p.cargo("check --verbose")
+        .with_stderr_does_not_contain(build_script_build_any)
+        .run();
     assert!(!file_created_by_build_script.exists());
 
-    // Reruns build script because RUSTC_WRAPPER changes the fingerprint.
-    p.cargo("check")
+    // Rebuilds and reruns build script because RUSTC_WRAPPER changes the fingerprint.
+    p.cargo("check --verbose")
         .env("RUSTC_WRAPPER", tools::echo_wrapper())
+        .with_stderr_contains(build_script_build_with_wrapper)
         .run();
     assert!(file_created_by_build_script.exists());
     fs::remove_file(&file_created_by_build_script).unwrap();
 
     p.cargo("clean").run();
 
-    // Runs build script after clean.
-    p.cargo("check")
+    // Compiles and runs build script after clean.
+    p.cargo("check --verbose")
         .env("RUSTC_WRAPPER", tools::echo_wrapper())
+        .with_stderr_contains(build_script_build_with_wrapper)
         .run();
     assert!(file_created_by_build_script.exists());
     fs::remove_file(&file_created_by_build_script).unwrap();
 
     // Does not rerun build script because RUSTC_WRAPPER has not changed.
-    p.cargo("check")
+    p.cargo("check --verbose")
         .env("RUSTC_WRAPPER", tools::echo_wrapper())
+        .with_stderr_does_not_contain(build_script_build_any)
         .run();
     assert!(!file_created_by_build_script.exists());
 
-    // Reruns build script because RUSTC_WRAPPER is no longer present.
-    p.cargo("check").run();
+    // Rebuilds and reruns build script because RUSTC_WRAPPER is no longer present.
+    p.cargo("check --verbose")
+        .with_stderr_contains(build_script_build_without_wrapper)
+        .run();
     assert!(file_created_by_build_script.exists());
 }
 
