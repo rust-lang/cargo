@@ -1322,6 +1322,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     if let Some(linker) = cx.bcx.linker(unit.kind) {
         linker.hash(&mut config);
     }
+    cx.bcx.rustc().wrapper.hash(&mut config);
     if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
         if let Ok(map) = cx.bcx.config.doc_extern_map() {
             map.hash(&mut config);
