@@ -14,7 +14,7 @@ use super::death;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env, sleep_ms,
+    basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env, sleep_ms, tools,
 };
 
 #[cargo_test]
@@ -853,6 +853,59 @@ fn rebuild_if_environment_changes() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn rerun_build_script_if_add_rustc_wrapper() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    std::fs::write("did run", "").unwrap();
+                }
+            "#,
+        )
+        .build();
+
+    let file_created_by_build_script = p.root().join("did run");
+
+    // First build runs build script.
+    p.cargo("check").run();
+    assert!(file_created_by_build_script.exists());
+    fs::remove_file(&file_created_by_build_script).unwrap();
+
+    // Does not rerun build script, despite file delete in the project directory.
+    p.cargo("check").run();
+    assert!(!file_created_by_build_script.exists());
+
+    // Reruns build script because RUSTC_WRAPPER changes the fingerprint.
+    p.cargo("check")
+        .env("RUSTC_WRAPPER", tools::echo_wrapper())
+        .run();
+    assert!(file_created_by_build_script.exists());
+    fs::remove_file(&file_created_by_build_script).unwrap();
+
+    p.cargo("clean").run();
+
+    // Runs build script after clean.
+    p.cargo("check")
+        .env("RUSTC_WRAPPER", tools::echo_wrapper())
+        .run();
+    assert!(file_created_by_build_script.exists());
+    fs::remove_file(&file_created_by_build_script).unwrap();
+
+    // Does not rerun build script because RUSTC_WRAPPER has not changed.
+    p.cargo("check")
+        .env("RUSTC_WRAPPER", tools::echo_wrapper())
+        .run();
+    assert!(!file_created_by_build_script.exists());
+
+    // Reruns build script because RUSTC_WRAPPER is no longer present.
+    p.cargo("check").run();
+    assert!(file_created_by_build_script.exists());
 }
 
 #[cargo_test]
