@@ -16,7 +16,7 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
+use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -287,16 +287,12 @@ impl<'cfg> Workspace<'cfg> {
         // - If the root package specifies edition 2021, use v2.
         // - Otherwise, use the default v1.
         self.resolve_behavior = match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().resolve_behavior().or_else(|| {
-                if p.manifest().edition() >= Edition::Edition2021 {
-                    Some(ResolveBehavior::V2)
-                } else {
-                    None
-                }
-            }),
-            MaybePackage::Virtual(vm) => vm.resolve_behavior(),
+            MaybePackage::Package(p) => p
+                .manifest()
+                .resolve_behavior()
+                .unwrap_or_else(|| p.manifest().edition().default_resolve_behavior()),
+            MaybePackage::Virtual(vm) => vm.resolve_behavior().unwrap_or(ResolveBehavior::V1),
         }
-        .unwrap_or(ResolveBehavior::V1);
     }
 
     /// Returns the current package of this workspace.

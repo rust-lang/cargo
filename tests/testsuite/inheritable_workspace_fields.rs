@@ -218,7 +218,6 @@ keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"
 repository = "https://github.com/example/example"
-resolver = "1"
 
 [badges.gitlab]
 branch = "master"
@@ -349,7 +348,6 @@ fn inherit_own_dependencies() {
 name = "bar"
 version = "0.2.0"
 authors = []
-resolver = "1"
 
 [dependencies.dep]
 version = "0.1"
@@ -454,7 +452,6 @@ fn inherit_own_detailed_dependencies() {
 name = "bar"
 version = "0.2.0"
 authors = []
-resolver = "1"
 
 [dependencies.dep]
 version = "0.1.2"
@@ -691,7 +688,6 @@ categories = ["development-tools"]
 license = "MIT"
 license-file = "LICENSE"
 repository = "https://github.com/example/example"
-resolver = "1"
 
 [badges.gitlab]
 branch = "master"
@@ -823,7 +819,6 @@ fn inherit_dependencies() {
 name = "bar"
 version = "0.2.0"
 authors = []
-resolver = "1"
 
 [dependencies.dep]
 version = "0.1"
