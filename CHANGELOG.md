@@ -33,7 +33,9 @@
   flag to `cargo rustc` to override the crate type.
   [#10838](https://github.com/rust-lang/cargo/pull/10838)
 - Cargo commands can now accept multiple `--target` flags to build for
-  multiple targets at once.
+  multiple targets at once, and the
+  [`build.target`](https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildtarget)
+  config option may now take an array of multiple targets.
   [#10766](https://github.com/rust-lang/cargo/pull/10766)
 - The `--jobs` argument can now take a negative number to count backwards from
   the max CPUs.
