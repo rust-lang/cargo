@@ -32,7 +32,7 @@ option.</dd>
 <dd class="option-desc">Do not build documentation for dependencies.</dd>
 
 
-<dt class="option-term" id="option-cargo-doc---document-private-items"><a class="option-anchor" href="#option-cargo-doc---document-private-items"></a><code>--document-private-items</code></dt>
+<dt class="option-term" id="option-cargo-doc---document-private-items[=yes|no]"><a class="option-anchor" href="#option-cargo-doc---document-private-items[=yes|no]"></a><code>--document-private-items</code>[=<em>yes|no</em>]</dt>
 <dd class="option-desc">Include non-public items in the documentation. This will be enabled by default if documenting a binary target.</dd>
 
 

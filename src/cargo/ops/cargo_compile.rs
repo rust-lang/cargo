@@ -75,9 +75,11 @@ pub struct CompileOptions {
     pub target_rustc_crate_types: Option<Vec<String>>,
     /// Extra arguments passed to all selected targets for rustdoc.
     pub local_rustdoc_args: Option<Vec<String>>,
-    /// Whether the `--document-private-items` flags was specified and should
-    /// be forwarded to `rustdoc`.
-    pub rustdoc_document_private_items: bool,
+    /// Whether either the `--document-private-items` flag was specified, and
+    /// if so, if that argument should be forwarded to `rustdoc`. `None` indicates
+    /// that the behavior should be decided based on the target type - either public-only
+    /// for libraries, or private items for binaries.
+    pub rustdoc_document_private_items: Option<bool>,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
     pub honor_rust_version: bool,
@@ -98,7 +100,7 @@ impl CompileOptions {
             target_rustc_args: None,
             target_rustc_crate_types: None,
             local_rustdoc_args: None,
-            rustdoc_document_private_items: false,
+            rustdoc_document_private_items: None,
             honor_rust_version: true,
         })
     }
@@ -620,7 +622,7 @@ pub fn create_bcx<'a, 'cfg>(
             // Add `--document-private-items` rustdoc flag if requested or if
             // the target is a binary. Binary crates get their private items
             // documented by default.
-            if rustdoc_document_private_items || unit.target.is_bin() {
+            if rustdoc_document_private_items.unwrap_or(unit.target.is_bin()) {
                 let mut args = extra_args.take().unwrap_or_default();
                 args.push("--document-private-items".into());
                 if unit.target.is_bin() {

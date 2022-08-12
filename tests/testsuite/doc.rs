@@ -1923,6 +1923,58 @@ fn bin_private_items() {
 }
 
 #[cargo_test]
+fn bin_private_items_disable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "
+            pub fn foo_pub() {}
+            fn foo_priv() {}
+            struct FooStruct;
+            enum FooEnum {}
+            trait FooTrait {}
+            type FooType = u32;
+            mod foo_mod {}
+
+        ",
+        )
+        .build();
+
+    p.cargo("doc --document-private-items=no")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/foo/fn.foo_pub.html").is_file());
+    assert!(!p.root().join("target/doc/foo/fn.foo_priv.html").is_file());
+    assert!(!p
+        .root()
+        .join("target/doc/foo/struct.FooStruct.html")
+        .is_file());
+    assert!(!p.root().join("target/doc/foo/enum.FooEnum.html").is_file());
+    assert!(!p
+        .root()
+        .join("target/doc/foo/trait.FooTrait.html")
+        .is_file());
+    assert!(!p.root().join("target/doc/foo/type.FooType.html").is_file());
+    assert!(!p.root().join("target/doc/foo/foo_mod/index.html").is_file());
+}
+
+#[cargo_test]
 fn bin_private_items_deps() {
     let p = project()
         .file(

@@ -125,7 +125,7 @@ _cargo() {
                 doc | d)
                     _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
                         '--no-deps[do not build docs for dependencies]' \
-                        '--document-private-items[include non-public items in the documentation]' \
+                        '--document-private-items'{--document-private-items=}'[include non-public items in the documentation]:bool:_cargo_yesno' \
                         '--open[open docs in browser after the build]' \
                         '(-p --package)'{-p+,--package=}'[specify package to document]:package:_cargo_package_names' \
                         '--release[build artifacts in release mode, with optimizations]' \
@@ -261,7 +261,7 @@ _cargo() {
 
                 rustdoc)
                     _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
-                        '--document-private-items[include non-public items in the documentation]' \
+                        '--document-private-items'{--document-private-items=}'[include non-public items in the documentation]:bool:_cargo_yesno' \
                         '--open[open the docs in a browser after the operation]' \
                         '(-p --package)'{-p+,--package=}'[specify package to document]:package:_cargo_package_names' \
                         '--release[build artifacts in release mode, with optimizations]' \
@@ -442,6 +442,10 @@ _cargo_example_names() {
         local -a files=(${(@f)$(echo examples/*.rs(:t:r))})
         _values 'example' "${files[@]}"
     fi
+}
+
+_cargo_yesno() {
+    _values 'yes|no' yes no
 }
 
 _cargo

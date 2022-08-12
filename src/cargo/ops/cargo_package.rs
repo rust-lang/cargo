@@ -830,7 +830,7 @@ fn run_verify(
             target_rustc_args: rustc_args,
             target_rustc_crate_types: None,
             local_rustdoc_args: None,
-            rustdoc_document_private_items: false,
+            rustdoc_document_private_items: None,
             honor_rust_version: true,
         },
         &exec,

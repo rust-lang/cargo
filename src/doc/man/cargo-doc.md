@@ -32,7 +32,7 @@ option.
 Do not build documentation for dependencies.
 {{/option}}
 
-{{#option "`--document-private-items`" }}
+{{#option "`--document-private-items`[=_yes|no_]" }}
 Include non-public items in the documentation. This will be enabled by default if documenting a binary target.
 {{/option}}
 

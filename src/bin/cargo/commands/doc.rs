@@ -21,7 +21,10 @@ pub fn cli() -> App {
             "no-deps",
             "Don't build documentation for dependencies",
         ))
-        .arg(flag("document-private-items", "Document private items"))
+        .arg(yesno_flag(
+            "document-private-items",
+            "Document private items (the default for binaries)",
+        ))
         .arg_jobs()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
@@ -50,7 +53,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
-    compile_opts.rustdoc_document_private_items = args.flag("document-private-items");
+
+    compile_opts.rustdoc_document_private_items =
+        args.get_one::<bool>("document-private-items").copied();
 
     let doc_opts = DocOptions {
         open_result: args.flag("open"),

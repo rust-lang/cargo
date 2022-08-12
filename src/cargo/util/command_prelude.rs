@@ -268,6 +268,20 @@ pub fn flag(name: &'static str, help: &'static str) -> Arg<'static> {
         .action(ArgAction::SetTrue)
 }
 
+pub fn yesno_flag(name: &'static str, help: &'static str) -> Arg<'static> {
+    Arg::new(name)
+        .long(name)
+        .help(help)
+        .value_name("yes|no")
+        .value_parser(clap::builder::BoolishValueParser::new())
+        .hide_possible_values(true)
+        .min_values(0)
+        .takes_value(true)
+        .multiple_values(false)
+        .require_equals(true)
+        .default_missing_value("yes")
+}
+
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static> {
     Arg::new(name).long(name).help(help)
 }
@@ -610,7 +624,7 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             target_rustc_crate_types: None,
             local_rustdoc_args: None,
-            rustdoc_document_private_items: false,
+            rustdoc_document_private_items: None,
             honor_rust_version: !self.flag("ignore-rust-version"),
         };
 
