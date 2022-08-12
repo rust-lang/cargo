@@ -1,9 +1,43 @@
 # Changelog
 
-## Cargo 1.64 (2022-09-22)
-[a5e08c47...HEAD](https://github.com/rust-lang/cargo/compare/a5e08c47...HEAD)
+## Cargo 1.65 (2022-11-03)
+[4fd148c4...HEAD](https://github.com/rust-lang/cargo/compare/4fd148c4...HEAD)
 
 ### Added
+
+### Changed
+
+- Cargo now uses the standard library's `available_parallelism` instead of the
+  `num_cpus` crate for determining the default parallelism.
+  [#10969](https://github.com/rust-lang/cargo/pull/10969)
+
+### Fixed
+
+### Nightly only
+
+
+## Cargo 1.64 (2022-09-22)
+[a5e08c47...rust-1.64.0](https://github.com/rust-lang/cargo/compare/a5e08c47...rust-1.64.0)
+
+### Added
+
+- 🎉 Packages can now inherit settings from the workspace so that the settings
+  can be centralized in one place. See
+  [`workspace.package`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#the-workspacepackage-table)
+  and
+  [`workspace.dependencies`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#the-workspacedependencies-table)
+  for more details on how to define these common settings.
+  [#10859](https://github.com/rust-lang/cargo/pull/10859)
+- Added the
+  [`--crate-type`](https://doc.rust-lang.org/nightly/cargo/commands/cargo-rustc.html#option-cargo-rustc---crate-type)
+  flag to `cargo rustc` to override the crate type.
+  [#10838](https://github.com/rust-lang/cargo/pull/10838)
+- Cargo commands can now accept multiple `--target` flags to build for
+  multiple targets at once.
+  [#10766](https://github.com/rust-lang/cargo/pull/10766)
+- The `--jobs` argument can now take a negative number to count backwards from
+  the max CPUs.
+  [#10844](https://github.com/rust-lang/cargo/pull/10844)
 
 ### Changed
 - Bash completion of `cargo install --path` now supports path completion.
@@ -11,10 +45,31 @@
 - Significantly improved the performance fetching git dependencies from GitHub
   when using a hash in the `rev` field.
   [#10079](https://github.com/rust-lang/cargo/pull/10079)
+- Published packages will now include the resolver setting from the workspace
+  to ensure that they use the same resolver when used in isolation.
+  [#10911](https://github.com/rust-lang/cargo/pull/10911)
+  [#10961](https://github.com/rust-lang/cargo/pull/10961)
+  [#10970](https://github.com/rust-lang/cargo/pull/10970)
+- `cargo add` will now update `Cargo.lock`.
+  [#10902](https://github.com/rust-lang/cargo/pull/10902)
+- The path in the config output of `cargo vendor` now translates backslashes
+  to forward slashes so that the settings should work across platforms.
+  [#10668](https://github.com/rust-lang/cargo/pull/10668)
+- The
+  [`workspace.default-members`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#package-selection)
+  setting now allows a value of `"."` in a non-virtual workspace to refer to
+  the root package.
+  [#10784](https://github.com/rust-lang/cargo/pull/10784)
 
 ### Fixed
 - The `os` output in `cargo --version --verbose` now supports more platforms.
   [#10802](https://github.com/rust-lang/cargo/pull/10802)
+- Cached git checkouts will now be rebuilt if they are corrupted. This may
+  happen when using `net.git-fetch-with-cli` and interrupting the clone
+  process.
+  [#10829](https://github.com/rust-lang/cargo/pull/10829)
+- Fixed panic in `cargo add --offline`.
+  [#10817](https://github.com/rust-lang/cargo/pull/10817)
 
 
 ### Nightly only
