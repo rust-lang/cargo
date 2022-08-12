@@ -116,7 +116,7 @@ pub enum QueryKind {
     /// Each source gets to define what `close` means for it.
     /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Index` source may return dependencies that have the same canonicalization.
-    Fuzzy,
+    Alternatives,
 }
 
 pub enum MaybePackage {
