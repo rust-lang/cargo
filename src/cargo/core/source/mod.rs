@@ -117,6 +117,9 @@ pub enum QueryKind {
     /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Index` source may return dependencies that have the same canonicalization.
     Alternatives,
+    /// Behavior like `Exact` for path sources and like `Alternatives` for
+    /// registry sources
+    Normalized,
 }
 
 pub enum MaybePackage {

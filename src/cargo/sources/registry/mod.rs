@@ -740,6 +740,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(&s),
                     QueryKind::Alternatives => true,
+                    QueryKind::Normalized => true,
                 };
                 if matched {
                     f(s);
