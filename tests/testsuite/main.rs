@@ -20,6 +20,7 @@ mod build_script_env;
 mod build_script_extra_link_arg;
 mod cache_messages;
 mod cargo_add;
+mod cargo_add_with_vendored_pkgs;
 mod cargo_alias_config;
 mod cargo_command;
 mod cargo_config;
