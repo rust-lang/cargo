@@ -10,7 +10,17 @@ use std::path::Path;
 // 2. We are in an HG repo.
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     fn in_git_repo(path: &Path, cwd: &Path) -> bool {
-        if let Ok(repo) = GitRepo::discover(path, cwd) {
+        // Try to find the first existing parent of the path.
+        // Otherwise, we can't find the git repo when the path has non-existing parent directories.
+        let mut first_exist_base_path = Some(path);
+        while let Some(p) = first_exist_base_path {
+            if p.exists() {
+                break;
+            }
+            first_exist_base_path = p.parent();
+        }
+
+        if let Ok(repo) = GitRepo::discover(first_exist_base_path.unwrap_or(path), cwd) {
             // Don't check if the working directory itself is ignored.
             if repo.workdir().map_or(false, |workdir| workdir == path) {
                 true

@@ -302,6 +302,43 @@ fn subpackage_git_with_gitignore() {
 }
 
 #[cargo_test]
+fn subpackage_no_git_with_git_in_ancestor() {
+    cargo_process("new foo").run();
+
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    cargo_process("new foo/non-existent/subcomponent").run();
+
+    assert!(!paths::root()
+        .join("foo/non-existent/subcomponent/.git")
+        .is_dir());
+    assert!(!paths::root()
+        .join("foo/non-existent/subcomponent/.gitignore")
+        .is_file());
+}
+
+#[cargo_test]
+fn subpackage_git_with_gitignore_in_ancestor() {
+    cargo_process("new foo").run();
+
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    let gitignore = paths::root().join("foo/.gitignore");
+    fs::write(gitignore, b"non-existent").unwrap();
+
+    cargo_process("new foo/non-existent/subcomponent").run();
+
+    assert!(paths::root()
+        .join("foo/non-existent/subcomponent/.git")
+        .is_dir());
+    assert!(paths::root()
+        .join("foo/non-existent/subcomponent/.gitignore")
+        .is_file());
+}
+
+#[cargo_test]
 fn subpackage_git_with_vcs_arg() {
     cargo_process("new foo").run();
 
