@@ -11,11 +11,20 @@ pub fn make_dep_path(dep_name: &str, prefix_only: bool) -> String {
     } else {
         ("/", dep_name)
     };
-    match dep_name.len() {
+    match dep_name.chars().take(4).count() {
         1 => format!("1{}{}", slash, name),
         2 => format!("2{}{}", slash, name),
-        3 => format!("3/{}{}{}", &dep_name[..1], slash, name),
-        _ => format!("{}/{}{}{}", &dep_name[0..2], &dep_name[2..4], slash, name),
+        3 => {
+            let first_symbol = dep_name.chars().take(1).collect::<String>();
+
+            format!("3/{}{}{}", first_symbol, slash, name)
+        }
+        _ => {
+            let first_symbol = dep_name.chars().take(2).collect::<String>();
+            let second_symbol = dep_name.chars().skip(2).take(2).collect::<String>();
+
+            format!("{}/{}{}{}", first_symbol, second_symbol, slash, name)
+        }
     }
 }
 
