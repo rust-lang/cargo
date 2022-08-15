@@ -1,9 +1,9 @@
-use cargo_test_support::project;
+use cargo_test_support::{project, registry::Package};
 
 #[cargo_test]
 fn carg_add_with_vendored_packages() {
     let p = project()
-        .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+        .file("src/lib.rs", "")
         .file(
             "Cargo.toml",
             r#"[package]
@@ -17,6 +17,8 @@ edition = "2021"
 xml-rs = "0.8.4""#,
         )
         .build();
+    Package::new("xml-rs", "0.8.4").publish();
+    Package::new("cbindgen", "0.9.4").publish();
 
     p.cargo("vendor ./vendor")
         .with_stdout(
@@ -29,7 +31,7 @@ directory = "./vendor""#,
         )
         .run();
     p.change_file(
-        ".cargo/config.toml",
+        ".cargo/config",
         r#"
     [source.crates-io]
     replace-with = "vendored-sources"
