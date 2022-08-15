@@ -392,6 +392,42 @@ fn update_precise() {
         .run();
 }
 
+#[cargo_test]
+fn update_precise_without_package() {
+    Package::new("serde", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    Package::new("serde", "0.2.1").publish();
+    Package::new("serde", "0.3.0").publish();
+
+    p.cargo("update --precise 0.3.0")
+        .with_stderr(
+            "\
+[WARNING] precise is only supported with \"--package <SPEC>\", this will become a hard error in a future release.
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.0 -> v0.2.1
+",
+        )
+        .run();
+}
+
 // cargo update should respect its arguments even without a lockfile.
 // See issue "Running cargo update without a Cargo.lock ignores arguments"
 // at <https://github.com/rust-lang/cargo/issues/6872>.
