@@ -51,4 +51,13 @@ mod tests {
         assert_eq!(make_dep_path("AbCd", false), "Ab/Cd/AbCd");
         assert_eq!(make_dep_path("aBcDe", false), "aB/cD/aBcDe");
     }
+    
+    #[test]
+    fn test_10993() {
+        assert_eq!(make_dep_path("ĉa", true), "2");
+        assert_eq!(make_dep_path("abcĉ", true), "ab/cĉ");
+
+        assert_eq!(make_dep_path("ĉa", false), "2/ĉa");
+        assert_eq!(make_dep_path("abcĉ", false), "ab/cĉ/abcĉ");
+    }
 }
