@@ -1706,6 +1706,30 @@ Caused by:
         .run();
 }
 
+#[cargo_test]
+fn cargo_metadata_with_invalid_authors_field() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                authors = ""
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            r#"[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  invalid type: string "", expected vector of strings for key `package.authors`"#,
+        )
+        .run();
+}
+
 const MANIFEST_OUTPUT: &str = r#"
 {
     "packages": [{
