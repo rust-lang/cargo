@@ -378,7 +378,6 @@ mod sys {
             // For targets in which they are the same, the duplicate pattern causes a warning.
             #[allow(unreachable_patterns)]
             Some(libc::ENOTSUP | libc::EOPNOTSUPP) => true,
-            #[cfg(any(target_os = "linux", target_os = "android"))]
             Some(libc::ENOSYS) => true,
             _ => false,
         }
