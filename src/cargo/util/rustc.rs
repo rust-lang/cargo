@@ -47,13 +47,18 @@ impl Rustc {
         let _p = profile::start("Rustc::new");
 
         // In order to avoid calling through rustup multiple times, we first ask
-        // rustc to give us the "resolved" rustc path, and use that instead.
+        // rustc to give us the "resolved" rustc path, and use that instead. If
+        // this doesn't give us a path, then we just use the original path such
+        // that the following logic can handle any resulting errors normally.
         let mut cmd = ProcessBuilder::new(&path);
         cmd.arg("--print=rustc-path");
         if let Ok(output) = cmd.output() {
             if output.status.success() {
                 if let Ok(resolved) = String::from_utf8(output.stdout) {
-                    path = PathBuf::from(resolved.trim());
+                    let resolved = PathBuf::from(resolved.trim());
+                    if resolved.exists() {
+                        path = resolved;
+                    }
                 }
             }
         }
