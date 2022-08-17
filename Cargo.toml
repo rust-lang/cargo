@@ -99,7 +99,7 @@ features = [
 [dev-dependencies]
 cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
-snapbox = { version = "0.2.8", features = ["diff", "path"] }
+snapbox = { version = "0.3.0", features = ["diff", "path"] }
 
 [build-dependencies]
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
