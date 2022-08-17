@@ -52,6 +52,9 @@ mod tests {
         assert_eq!(make_dep_path("aBcDe", false), "aB/cD/aBcDe");
     }
 
+    // This test checks that non-ASCII strings are handled correctly in 2 cases
+    // - 3 byte string, where byte index 2 isn't a char boundary
+    // - at least 4 byte string, where byte index 4 isn't a char boundary
     #[test]
     fn test_10993() {
         assert_eq!(make_dep_path("ĉa", true), "2");
