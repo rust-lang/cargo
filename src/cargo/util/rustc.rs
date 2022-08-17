@@ -38,13 +38,25 @@ impl Rustc {
     /// If successful this function returns a description of the compiler along
     /// with a list of its capabilities.
     pub fn new(
-        path: PathBuf,
+        mut path: PathBuf,
         wrapper: Option<PathBuf>,
         workspace_wrapper: Option<PathBuf>,
         rustup_rustc: &Path,
         cache_location: Option<PathBuf>,
     ) -> CargoResult<Rustc> {
         let _p = profile::start("Rustc::new");
+
+        // In order to avoid calling through rustup multiple times, we first ask
+        // rustc to give us the "resolved" rustc path, and use that instead.
+        let mut cmd = ProcessBuilder::new(&path);
+        cmd.arg("--print=rustc-path");
+        if let Ok(output) = cmd.output() {
+            if output.status.success() {
+                if let Ok(resolved) = String::from_utf8(output.stdout) {
+                    path = PathBuf::from(resolved.trim());
+                }
+            }
+        }
 
         let mut cache = Cache::load(
             wrapper.as_deref(),
