@@ -38,7 +38,7 @@ impl Rustc {
     /// If successful this function returns a description of the compiler along
     /// with a list of its capabilities.
     pub fn new(
-        mut path: PathBuf,
+        mut rustc: PathBuf,
         wrapper: Option<PathBuf>,
         workspace_wrapper: Option<PathBuf>,
         rustup_rustc: &Path,
@@ -46,32 +46,34 @@ impl Rustc {
     ) -> CargoResult<Rustc> {
         let _p = profile::start("Rustc::new");
 
-        // In order to avoid calling through rustup multiple times, we first ask
-        // rustc to give us the "resolved" rustc path, and use that instead. If
-        // this doesn't give us a path, then we just use the original path such
-        // that the following logic can handle any resulting errors normally.
-        let mut cmd = ProcessBuilder::new(&path);
-        cmd.arg("--print=rustc-path");
-        if let Ok(output) = cmd.output() {
-            if output.status.success() {
-                if let Ok(resolved) = String::from_utf8(output.stdout) {
-                    let resolved = PathBuf::from(resolved.trim());
-                    if resolved.exists() {
-                        path = resolved;
-                    }
-                }
-            }
-        }
-
         let mut cache = Cache::load(
             wrapper.as_deref(),
             workspace_wrapper.as_deref(),
-            &path,
+            &rustc,
             rustup_rustc,
             cache_location,
         );
 
-        let mut cmd = ProcessBuilder::new(&path);
+        // In order to avoid calling through rustup multiple times, we first ask
+        // rustc to give us the "resolved" rustc path, and use that instead. If
+        // this doesn't give us a path, then we just use the original path such
+        // that the following logic can handle any resulting errors normally.
+        let mut cmd = ProcessBuilder::new(&rustc);
+        cmd.arg("--print=rustc-path");
+        if let Ok((stdout, _)) = cache.cached_output(&cmd, 0) {
+            let resolved = PathBuf::from(stdout.trim());
+            if resolved.exists() {
+                rustc = resolved;
+                cache.reset(
+                    wrapper.as_deref(),
+                    workspace_wrapper.as_deref(),
+                    &rustc,
+                    rustup_rustc,
+                );
+            }
+        }
+
+        let mut cmd = ProcessBuilder::new(&rustc);
         cmd.arg("-vV");
         let verbose_version = cache.cached_output(&cmd, 0)?.0;
 
@@ -98,7 +100,7 @@ impl Rustc {
         })?;
 
         Ok(Rustc {
-            path,
+            path: rustc,
             wrapper,
             workspace_wrapper,
             verbose_version,
@@ -191,56 +193,14 @@ impl Cache {
         rustup_rustc: &Path,
         cache_location: Option<PathBuf>,
     ) -> Cache {
-        match (
+        let mut this = Cache {
             cache_location,
-            rustc_fingerprint(wrapper, workspace_wrapper, rustc, rustup_rustc),
-        ) {
-            (Some(cache_location), Ok(rustc_fingerprint)) => {
-                let empty = CacheData {
-                    rustc_fingerprint,
-                    outputs: HashMap::new(),
-                    successes: HashMap::new(),
-                };
-                let mut dirty = true;
-                let data = match read(&cache_location) {
-                    Ok(data) => {
-                        if data.rustc_fingerprint == rustc_fingerprint {
-                            debug!("reusing existing rustc info cache");
-                            dirty = false;
-                            data
-                        } else {
-                            debug!("different compiler, creating new rustc info cache");
-                            empty
-                        }
-                    }
-                    Err(e) => {
-                        debug!("failed to read rustc info cache: {}", e);
-                        empty
-                    }
-                };
-                return Cache {
-                    cache_location: Some(cache_location),
-                    dirty,
-                    data,
-                };
+            dirty: false,
+            data: CacheData::default(),
+        };
 
-                fn read(path: &Path) -> CargoResult<CacheData> {
-                    let json = paths::read(path)?;
-                    Ok(serde_json::from_str(&json)?)
-                }
-            }
-            (_, fingerprint) => {
-                if let Err(e) = fingerprint {
-                    warn!("failed to calculate rustc fingerprint: {}", e);
-                }
-                debug!("rustc info cache disabled");
-                Cache {
-                    cache_location: None,
-                    dirty: false,
-                    data: CacheData::default(),
-                }
-            }
-        }
+        this.reset(wrapper, workspace_wrapper, rustc, rustup_rustc);
+        this
     }
 
     fn cached_output(
@@ -291,10 +251,63 @@ impl Cache {
             .into())
         }
     }
-}
 
-impl Drop for Cache {
-    fn drop(&mut self) {
+    fn reset(
+        &mut self,
+        wrapper: Option<&Path>,
+        workspace_wrapper: Option<&Path>,
+        rustc: &Path,
+        rustup_rustc: &Path,
+    ) {
+        self.flush();
+        match (
+            &self.cache_location,
+            rustc_fingerprint(wrapper, workspace_wrapper, rustc, rustup_rustc),
+        ) {
+            (Some(cache_location), Ok(rustc_fingerprint)) => {
+                let empty = CacheData {
+                    rustc_fingerprint,
+                    outputs: HashMap::new(),
+                    successes: HashMap::new(),
+                };
+                self.dirty = true;
+                self.data = match read(&cache_location) {
+                    Ok(data) => {
+                        if data.rustc_fingerprint == rustc_fingerprint {
+                            debug!("reusing existing rustc info cache");
+                            self.dirty = false;
+                            data
+                        } else {
+                            debug!("different compiler, creating new rustc info cache");
+                            empty
+                        }
+                    }
+                    Err(e) => {
+                        debug!("failed to read rustc info cache: {}", e);
+                        empty
+                    }
+                };
+
+                fn read(path: &Path) -> CargoResult<CacheData> {
+                    let json = paths::read(path)?;
+                    Ok(serde_json::from_str(&json)?)
+                }
+            }
+            (_, fingerprint) => {
+                if let Err(e) = fingerprint {
+                    warn!("failed to calculate rustc fingerprint: {}", e);
+                }
+                debug!("rustc info cache disabled");
+                *self = Cache {
+                    cache_location: None,
+                    dirty: false,
+                    data: CacheData::default(),
+                }
+            }
+        }
+    }
+
+    fn flush(&mut self) {
         if !self.dirty {
             return;
         }
@@ -305,6 +318,13 @@ impl Drop for Cache {
                 Err(e) => warn!("failed to update rustc info cache: {}", e),
             }
         }
+        self.dirty = false;
+    }
+}
+
+impl Drop for Cache {
+    fn drop(&mut self) {
+        self.flush();
     }
 }
 
