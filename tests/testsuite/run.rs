@@ -503,7 +503,10 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-error: no example target named `a`
+error: no example target named `a`.
+Available example targets:
+    do_magic
+
 ",
         )
         .run();
@@ -528,7 +531,14 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     let p = autodiscover_examples_project("2015", Some(false));
     p.cargo("run --example a")
         .with_status(101)
-        .with_stderr("error: no example target named `a`\n")
+        .with_stderr(
+            "\
+error: no example target named `a`.
+Available example targets:
+    do_magic
+
+",
+        )
         .run();
 }
 
@@ -600,7 +610,14 @@ fn run_with_filename() {
 
     p.cargo("run --bin bin.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no bin target named `bin.rs`")
+        .with_stderr(
+            "\
+[ERROR] no bin target named `bin.rs`.
+Available bin targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("run --bin a.rs")
@@ -615,7 +632,14 @@ fn run_with_filename() {
 
     p.cargo("run --example example.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no example target named `example.rs`")
+        .with_stderr(
+            "\
+[ERROR] no example target named `example.rs`.
+Available example targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("run --example a.rs")
