@@ -182,7 +182,9 @@ use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;
-use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
+use crate::util::{
+    restricted_names, CargoResult, Config, Filesystem, LimitErrorReader, OptVersionReq,
+};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
@@ -194,6 +196,7 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
+const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
@@ -615,6 +618,7 @@ impl<'cfg> RegistrySource<'cfg> {
             }
         }
         let gz = GzDecoder::new(tarball);
+        let gz = LimitErrorReader::new(gz, MAX_UNPACK_SIZE);
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
