@@ -639,6 +639,13 @@ impl<'cfg> RegistrySource<'cfg> {
                     prefix
                 )
             }
+            // Prevent unpacking the lockfile from the crate itself.
+            if entry_path
+                .file_name()
+                .map_or(false, |p| p == PACKAGE_SOURCE_LOCK)
+            {
+                continue;
+            }
             // Unpacking failed
             let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
             if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
@@ -654,16 +661,14 @@ impl<'cfg> RegistrySource<'cfg> {
                 .with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
 
-        // The lock file is created after unpacking so we overwrite a lock file
-        // which may have been extracted from the package.
+        // Now that we've finished unpacking, create and write to the lock file to indicate that
+        // unpacking was successful.
         let mut ok = OpenOptions::new()
-            .create(true)
+            .create_new(true)
             .read(true)
             .write(true)
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
-
-        // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;
 
         Ok(unpack_dir.to_path_buf())
