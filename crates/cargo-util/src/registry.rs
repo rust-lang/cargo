@@ -11,19 +11,22 @@ pub fn make_dep_path(dep_name: &str, prefix_only: bool) -> String {
     } else {
         ("/", dep_name)
     };
-    match dep_name.chars().take(4).count() {
-        1 => format!("1{}{}", slash, name),
-        2 => format!("2{}{}", slash, name),
-        3 => {
-            let first_symbol = dep_name.chars().take(1).collect::<String>();
 
-            format!("3/{}{}{}", first_symbol, slash, name)
+    let mut chars = [None; 4];
+    dep_name.chars().enumerate().try_for_each(|(i, c)| {
+        *chars.get_mut(i)? = Some(c);
+        Some(())
+    });
+
+    match chars {
+        [None, ..] => panic!("length of a crate name must not be zero"),
+        [Some(_), None, ..] => format!("1{slash}{name}"),
+        [Some(_), Some(_), None, ..] => format!("2{slash}{name}"),
+        [Some(f0), Some(_), Some(_), None] => {
+            format!("3/{f0}{slash}{name}")
         }
-        _ => {
-            let first_symbol = dep_name.chars().take(2).collect::<String>();
-            let second_symbol = dep_name.chars().skip(2).take(2).collect::<String>();
-
-            format!("{}/{}{}{}", first_symbol, second_symbol, slash, name)
+        [Some(f0), Some(f1), Some(s0), Some(s1)] => {
+            format!("{f0}{f1}/{s0}{s1}{slash}{name}")
         }
     }
 }
