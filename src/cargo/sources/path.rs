@@ -432,7 +432,11 @@ impl<'cfg> PathSource<'cfg> {
                     self.config.shell().warn(err)?;
                 }
                 Err(err) => match err.path() {
-                    // If the error occurs with a path, simply recover from it.
+                    // If an error occurs with a path, filter it again.
+                    // If it is excluded, Just ignore it in this case.
+                    // See issue rust-lang/cargo#10917
+                    Some(path) if !filter(path, path.is_dir()) => {}
+                    // Otherwise, simply recover from it.
                     // Don't worry about error skipping here, the callers would
                     // still hit the IO error if they do access it thereafter.
                     Some(path) => ret.push(path.to_path_buf()),
