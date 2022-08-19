@@ -1041,7 +1041,14 @@ fn cargo_compile_with_filename() {
 
     p.cargo("build --bin bin.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no bin target named `bin.rs`")
+        .with_stderr(
+            "\
+[ERROR] no bin target named `bin.rs`.
+Available bin targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("build --bin a.rs")
@@ -1056,7 +1063,14 @@ fn cargo_compile_with_filename() {
 
     p.cargo("build --example example.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no example target named `example.rs`")
+        .with_stderr(
+            "\
+[ERROR] no example target named `example.rs`.
+Available example targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("build --example a.rs")

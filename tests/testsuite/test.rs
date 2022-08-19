@@ -2122,11 +2122,21 @@ fn bad_example() {
 
     p.cargo("run --example foo")
         .with_status(101)
-        .with_stderr("[ERROR] no example target named `foo`")
+        .with_stderr(
+            "\
+[ERROR] no example target named `foo`.
+
+",
+        )
         .run();
     p.cargo("run --bin foo")
         .with_status(101)
-        .with_stderr("[ERROR] no bin target named `foo`")
+        .with_stderr(
+            "\
+[ERROR] no bin target named `foo`.
+
+",
+        )
         .run();
 }
 
