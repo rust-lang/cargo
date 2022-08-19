@@ -846,6 +846,55 @@ Caused by:
 }
 
 #[cargo_test]
+/// Tests if a broken but excluded symlink is ignored.
+/// See issue rust-lang/cargo#10917
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn broken_but_excluded_symlink() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = 'foo'
+                documentation = 'foo'
+                homepage = 'foo'
+                repository = 'foo'
+                exclude = ["src/foo.rs"]
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+    t!(symlink("nowhere", &p.root().join("src/foo.rs")));
+
+    p.cargo("package -v --list")
+        // `src/foo.rs` is excluded.
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 #[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
 /// Test that /dir and /dir/ matches symlinks to directories.
 fn gitignore_symlink_dir() {
