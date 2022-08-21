@@ -429,6 +429,43 @@ fn update_precise_without_package() {
 }
 
 #[cargo_test]
+fn update_aggressive() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --aggressive")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] log v0.1.0 -> v0.1.1
+[UPDATING] serde v0.2.1 -> v0.2.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn update_aggressive_without_package() {
     Package::new("serde", "0.2.0").publish();
 
