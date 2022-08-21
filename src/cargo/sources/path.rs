@@ -150,7 +150,7 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        let mut filter = |path: &Path, is_dir: bool| {
+        let filter = |path: &Path, is_dir: bool| {
             let relative_path = match path.strip_prefix(root) {
                 Ok(p) => p,
                 Err(_) => return false,
@@ -169,10 +169,10 @@ impl<'cfg> PathSource<'cfg> {
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
         if no_include_option {
             if let Some(repo) = git_repo {
-                return self.list_files_git(pkg, &repo, &mut filter);
+                return self.list_files_git(pkg, &repo, &filter);
             }
         }
-        self.list_files_walk(pkg, &mut filter)
+        self.list_files_walk(pkg, &filter)
     }
 
     /// Returns `Some(git2::Repository)` if found sibling `Cargo.toml` and `.git`
@@ -222,7 +222,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         repo: &git2::Repository,
-        filter: &mut dyn FnMut(&Path, bool) -> bool,
+        filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
@@ -376,7 +376,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(
         &self,
         pkg: &Package,
-        filter: &mut dyn FnMut(&Path, bool) -> bool,
+        filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         self.walk(pkg.root(), &mut ret, true, filter)?;
@@ -388,7 +388,7 @@ impl<'cfg> PathSource<'cfg> {
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
-        filter: &mut dyn FnMut(&Path, bool) -> bool,
+        filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<()> {
         let walkdir = WalkDir::new(path)
             .follow_links(true)
@@ -432,7 +432,11 @@ impl<'cfg> PathSource<'cfg> {
                     self.config.shell().warn(err)?;
                 }
                 Err(err) => match err.path() {
-                    // If the error occurs with a path, simply recover from it.
+                    // If an error occurs with a path, filter it again.
+                    // If it is excluded, Just ignore it in this case.
+                    // See issue rust-lang/cargo#10917
+                    Some(path) if !filter(path, path.is_dir()) => {}
+                    // Otherwise, simply recover from it.
                     // Don't worry about error skipping here, the callers would
                     // still hit the IO error if they do access it thereafter.
                     Some(path) => ret.push(path.to_path_buf()),
