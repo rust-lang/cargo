@@ -25,3 +25,27 @@ impl<R: Read> Read for LimitErrorReader<R> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::LimitErrorReader;
+
+    use std::io::Read;
+
+    #[test]
+    fn under_the_limit() {
+        let buf = &[1; 7][..];
+        let mut r = LimitErrorReader::new(buf, 8);
+        let mut out = Vec::new();
+        assert!(matches!(r.read_to_end(&mut out), Ok(7)));
+        assert_eq!(buf, out.as_slice());
+    }
+
+    #[test]
+    #[should_panic = "maximum limit reached when reading"]
+    fn over_the_limit() {
+        let buf = &[1; 8][..];
+        let mut r = LimitErrorReader::new(buf, 8);
+        let mut out = Vec::new();
+        r.read_to_end(&mut out).unwrap();
+    }
+}

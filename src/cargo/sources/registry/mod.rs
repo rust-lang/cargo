@@ -618,7 +618,7 @@ impl<'cfg> RegistrySource<'cfg> {
             }
         }
         let gz = GzDecoder::new(tarball);
-        let gz = LimitErrorReader::new(gz, MAX_UNPACK_SIZE);
+        let gz = LimitErrorReader::new(gz, max_unpack_size());
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -832,6 +832,20 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
 
         self.ops.block_until_ready()
+    }
+}
+
+/// For integration test only.
+#[inline]
+fn max_unpack_size() -> u64 {
+    const VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
+    if cfg!(debug_assertions) && std::env::var(VAR).is_ok() {
+        std::env::var(VAR)
+            .unwrap()
+            .parse()
+            .expect("a max unpack size in bytes")
+    } else {
+        MAX_UNPACK_SIZE
     }
 }
 
