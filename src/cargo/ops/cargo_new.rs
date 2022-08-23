@@ -253,8 +253,7 @@ fn check_name(
     if restricted_names::is_non_ascii_name(name) {
         shell.warn(format!(
             "the name `{}` contains non-ASCII characters\n\
-            Support for non-ASCII crate names is experimental and only valid \
-            on the nightly toolchain.",
+            Non-ASCII crate names are not supported by Rust.",
             name
         ))?;
     }
