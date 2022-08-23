@@ -435,7 +435,7 @@ fn non_ascii_name() {
         .with_stderr(
             "\
 [WARNING] the name `Привет` contains non-ASCII characters
-Support for non-ASCII crate names is experimental and only valid on the nightly toolchain.
+Non-ASCII crate names are not supported by Rust.
 [CREATED] binary (application) `Привет` package
 ",
         )
