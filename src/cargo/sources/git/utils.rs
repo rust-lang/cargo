@@ -7,7 +7,7 @@ use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
-use git2::{self, ErrorClass, ObjectType};
+use git2::{self, ErrorClass, ObjectType, Oid};
 use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
@@ -15,6 +15,7 @@ use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str;
 use std::time::{Duration, Instant};
 use url::Url;
 
@@ -759,11 +760,15 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository
-    match github_up_to_date(repo, url, reference, config) {
-        Ok(true) => return Ok(()),
-        Ok(false) => {}
-        Err(e) => debug!("failed to check github {:?}", e),
-    }
+    let oid_to_fetch = match github_fast_path(repo, url, reference, config) {
+        Ok(FastPathRev::UpToDate) => return Ok(()),
+        Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
+        Ok(FastPathRev::Indeterminate) => None,
+        Err(e) => {
+            debug!("failed to check github {:?}", e);
+            None
+        }
+    };
 
     // We reuse repositories quite a lot, so before we go through and update the
     // repo check to see if it's a little too old and could benefit from a gc.
@@ -793,11 +798,10 @@ pub fn fetch(
         }
 
         GitReference::Rev(rev) => {
-            let is_github = || Url::parse(url).map_or(false, |url| is_github(&url));
             if rev.starts_with("refs/") {
                 refspecs.push(format!("+{0}:{0}", rev));
-            } else if is_github() && is_long_hash(rev) {
-                refspecs.push(format!("+{0}:refs/commit/{0}", rev));
+            } else if let Some(oid_to_fetch) = oid_to_fetch {
+                refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
@@ -994,15 +998,25 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
     Ok(git2::Repository::init_opts(&path, &opts)?)
 }
 
+enum FastPathRev {
+    /// The local rev (determined by `reference.resolve(repo)`) is already up to
+    /// date with what this rev resolves to on GitHub's server.
+    UpToDate,
+    /// The following SHA must be fetched in order for the local rev to become
+    /// up to date.
+    NeedsFetch(Oid),
+    /// Don't know whether local rev is up to date. We'll fetch _all_ branches
+    /// and tags from the server and see what happens.
+    Indeterminate,
+}
+
 /// Updating the index is done pretty regularly so we want it to be as fast as
 /// possible. For registries hosted on GitHub (like the crates.io index) there's
 /// a fast path available to use [1] to tell us that there's no updates to be
 /// made.
 ///
 /// This function will attempt to hit that fast path and verify that the `oid`
-/// is actually the current branch of the repository. If `true` is returned then
-/// no update needs to be performed, but if `false` is returned then the
-/// standard update logic still needs to happen.
+/// is actually the current branch of the repository.
 ///
 /// [1]: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
 ///
@@ -1010,16 +1024,18 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
 /// just a fast path. As a result all errors are ignored in this function and we
 /// just return a `bool`. Any real errors will be reported through the normal
 /// update path above.
-fn github_up_to_date(
+fn github_fast_path(
     repo: &mut git2::Repository,
     url: &str,
     reference: &GitReference,
     config: &Config,
-) -> CargoResult<bool> {
+) -> CargoResult<FastPathRev> {
     let url = Url::parse(url)?;
     if !is_github(&url) {
-        return Ok(false);
+        return Ok(FastPathRev::Indeterminate);
     }
+
+    let local_object = reference.resolve(repo).ok();
 
     let github_branch_name = match reference {
         GitReference::Branch(branch) => branch,
@@ -1028,11 +1044,33 @@ fn github_up_to_date(
         GitReference::Rev(rev) => {
             if rev.starts_with("refs/") {
                 rev
-            } else if is_long_hash(rev) {
-                return Ok(reference.resolve(repo).is_ok());
+            } else if looks_like_commit_hash(rev) {
+                // `revparse_single` (used by `resolve`) is the only way to turn
+                // short hash -> long hash, but it also parses other things,
+                // like branch and tag names, which might coincidentally be
+                // valid hex.
+                //
+                // We only return early if `rev` is a prefix of the object found
+                // by `revparse_single`. Don't bother talking to GitHub in that
+                // case, since commit hashes are permanent. If a commit with the
+                // requested hash is already present in the local clone, its
+                // contents must be the same as what is on the server for that
+                // hash.
+                //
+                // If `rev` is not found locally by `revparse_single`, we'll
+                // need GitHub to resolve it and get a hash. If `rev` is found
+                // but is not a short hash of the found object, it's probably a
+                // branch and we also need to get a hash from GitHub, in case
+                // the branch has moved.
+                if let Some(local_object) = local_object {
+                    if is_short_hash_of(rev, local_object) {
+                        return Ok(FastPathRev::UpToDate);
+                    }
+                }
+                rev
             } else {
                 debug!("can't use github fast path with `rev = \"{}\"`", rev);
-                return Ok(false);
+                return Ok(FastPathRev::Indeterminate);
             }
         }
     };
@@ -1065,18 +1103,50 @@ fn github_up_to_date(
     handle.get(true)?;
     handle.url(&url)?;
     handle.useragent("cargo")?;
-    let mut headers = List::new();
-    headers.append("Accept: application/vnd.github.3.sha")?;
-    headers.append(&format!("If-None-Match: \"{}\"", reference.resolve(repo)?))?;
-    handle.http_headers(headers)?;
-    handle.perform()?;
-    Ok(handle.response_code()? == 304)
+    handle.http_headers({
+        let mut headers = List::new();
+        headers.append("Accept: application/vnd.github.3.sha")?;
+        if let Some(local_object) = local_object {
+            headers.append(&format!("If-None-Match: \"{}\"", local_object))?;
+        }
+        headers
+    })?;
+
+    let mut response_body = Vec::new();
+    let mut transfer = handle.transfer();
+    transfer.write_function(|data| {
+        response_body.extend_from_slice(data);
+        Ok(data.len())
+    })?;
+    transfer.perform()?;
+    drop(transfer); // end borrow of handle so that response_code can be called
+
+    let response_code = handle.response_code()?;
+    if response_code == 304 {
+        Ok(FastPathRev::UpToDate)
+    } else if response_code == 200 {
+        let oid_to_fetch = str::from_utf8(&response_body)?.parse::<Oid>()?;
+        Ok(FastPathRev::NeedsFetch(oid_to_fetch))
+    } else {
+        // Usually response_code == 404 if the repository does not exist, and
+        // response_code == 422 if exists but GitHub is unable to resolve the
+        // requested rev.
+        Ok(FastPathRev::Indeterminate)
+    }
 }
 
 fn is_github(url: &Url) -> bool {
     url.host_str() == Some("github.com")
 }
 
-fn is_long_hash(rev: &str) -> bool {
-    rev.len() == 40 && rev.chars().all(|ch| ch.is_ascii_hexdigit())
+fn looks_like_commit_hash(rev: &str) -> bool {
+    rev.len() >= 7 && rev.chars().all(|ch| ch.is_ascii_hexdigit())
+}
+
+fn is_short_hash_of(rev: &str, oid: Oid) -> bool {
+    let long_hash = oid.to_string();
+    match long_hash.get(..rev.len()) {
+        Some(truncated_long_hash) => truncated_long_hash.eq_ignore_ascii_case(rev),
+        None => false,
+    }
 }
