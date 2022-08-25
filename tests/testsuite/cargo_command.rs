@@ -7,11 +7,14 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
+use cargo_test_support::basic_manifest;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{
     basic_bin_manifest, cargo_exe, cargo_process, paths, project, project_in_home,
 };
+use cargo_util::paths::join_paths;
 
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
@@ -341,6 +344,83 @@ fn cargo_subcommand_env() {
         .run();
 }
 
+#[cargo_test]
+fn cargo_cmd_bins_vs_explicit_path() {
+    // Set up `cargo-foo` binary in two places: inside `$HOME/.cargo/bin` and outside of it
+    //
+    // Return paths to both places
+    fn set_up_cargo_foo() -> (PathBuf, PathBuf) {
+        let p = project()
+            .at("cargo-foo")
+            .file("Cargo.toml", &basic_manifest("cargo-foo", "1.0.0"))
+            .file(
+                "src/bin/cargo-foo.rs",
+                r#"fn main() { println!("INSIDE"); }"#,
+            )
+            .file(
+                "src/bin/cargo-foo2.rs",
+                r#"fn main() { println!("OUTSIDE"); }"#,
+            )
+            .build();
+        p.cargo("build").run();
+        let cargo_bin_dir = paths::home().join(".cargo/bin");
+        cargo_bin_dir.mkdir_p();
+        let root_bin_dir = paths::root().join("bin");
+        root_bin_dir.mkdir_p();
+        let exe_name = format!("cargo-foo{}", env::consts::EXE_SUFFIX);
+        fs::rename(p.bin("cargo-foo"), cargo_bin_dir.join(&exe_name)).unwrap();
+        fs::rename(p.bin("cargo-foo2"), root_bin_dir.join(&exe_name)).unwrap();
+
+        (root_bin_dir, cargo_bin_dir)
+    }
+
+    let (outside_dir, inside_dir) = set_up_cargo_foo();
+
+    // If `$CARGO_HOME/bin` is not in a path, prefer it over anything in `$PATH`.
+    //
+    // This is the historical behavior we don't want to break.
+    cargo_process("foo").with_stdout_contains("INSIDE").run();
+
+    // When `$CARGO_HOME/bin` is in the `$PATH`
+    // use only `$PATH` so the user-defined ordering is respected.
+    {
+        cargo_process("foo")
+            .env(
+                "PATH",
+                join_paths(&[&inside_dir, &outside_dir], "PATH").unwrap(),
+            )
+            .with_stdout_contains("INSIDE")
+            .run();
+
+        cargo_process("foo")
+            // Note: trailing slash
+            .env(
+                "PATH",
+                join_paths(&[inside_dir.join(""), outside_dir.join("")], "PATH").unwrap(),
+            )
+            .with_stdout_contains("INSIDE")
+            .run();
+
+        cargo_process("foo")
+            .env(
+                "PATH",
+                join_paths(&[&outside_dir, &inside_dir], "PATH").unwrap(),
+            )
+            .with_stdout_contains("OUTSIDE")
+            .run();
+
+        cargo_process("foo")
+            // Note: trailing slash
+            .env(
+                "PATH",
+                join_paths(&[outside_dir.join(""), inside_dir.join("")], "PATH").unwrap(),
+            )
+            .with_stdout_contains("OUTSIDE")
+            .run();
+    }
+}
+
+#[test]
 #[cargo_test]
 fn cargo_subcommand_args() {
     let p = echo_subcommand();
