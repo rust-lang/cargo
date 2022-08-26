@@ -2584,6 +2584,47 @@ fn package_lock_inside_package_is_overwritten() {
 }
 
 #[cargo_test]
+fn package_lock_as_a_symlink_inside_package_is_overwritten() {
+    let registry = registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = ">= 0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .file("src/lib.rs", "pub fn f() {}")
+        .symlink(".cargo-ok", "src/lib.rs")
+        .publish();
+
+    p.cargo("build").run();
+
+    let id = SourceId::for_registry(registry.index_url()).unwrap();
+    let hash = cargo::util::hex::short_hash(&id);
+    let pkg_root = cargo_home()
+        .join("registry")
+        .join("src")
+        .join(format!("-{}", hash))
+        .join("bar-0.0.1");
+    let ok = pkg_root.join(".cargo-ok");
+    let librs = pkg_root.join("src/lib.rs");
+
+    // Is correctly overwritten and doesn't affect the file linked to
+    assert_eq!(ok.metadata().unwrap().len(), 2);
+    assert_eq!(fs::read_to_string(librs).unwrap(), "pub fn f() {}");
+}
+
+#[cargo_test]
 fn ignores_unknown_index_version_http() {
     let _server = setup_http();
     ignores_unknown_index_version(cargo_http);
