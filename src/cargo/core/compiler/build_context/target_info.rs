@@ -597,7 +597,7 @@ impl Flags {
 /// provided) for artifacts that are always built for the host (plugins, build scripts, ...).
 /// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
 /// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
-/// necessary to retain bacwkards compatibility with older versions of Cargo.
+/// necessary to retain backwards compatibility with older versions of Cargo.
 fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],
