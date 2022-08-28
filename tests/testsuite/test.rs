@@ -6,7 +6,7 @@ use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project,
 };
 use cargo_test_support::{cross_compile, paths};
-use cargo_test_support::{rustc_host, sleep_ms};
+use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
 use std::fs;
 
 #[cargo_test]
@@ -377,7 +377,7 @@ fn cargo_test_failing_test_in_bin() {
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[ERROR] test failed, to rerun pass '--bin foo'",
+[ERROR] test failed, to rerun pass `--bin foo`",
         )
         .with_stdout_contains(
             "
@@ -426,7 +426,7 @@ fn cargo_test_failing_test_in_test() {
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [RUNNING] [..] (target/debug/deps/footest-[..][EXE])
-[ERROR] test failed, to rerun pass '--test footest'",
+[ERROR] test failed, to rerun pass `--test footest`",
         )
         .with_stdout_contains("running 0 tests")
         .with_stdout_contains(
@@ -464,7 +464,7 @@ fn cargo_test_failing_test_in_lib() {
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[ERROR] test failed, to rerun pass '--lib'",
+[ERROR] test failed, to rerun pass `--lib`",
         )
         .with_stdout_contains(
             "\
@@ -2466,19 +2466,20 @@ fn no_fail_fast() {
         .build();
     p.cargo("test --no-fail-fast")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test_add_one-[..][EXE])",
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] test [..]
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo[..])
+[RUNNING] tests/test_add_one.rs (target/debug/deps/test_add_one[..])
+[ERROR] test failed, to rerun pass `--test test_add_one`
+[RUNNING] tests/test_sub_one.rs (target/debug/deps/test_sub_one[..])
+[DOCTEST] foo
+[ERROR] 1 target failed:
+    `--test test_add_one`
+",
         )
         .with_stdout_contains("running 0 tests")
-        .with_stderr_contains(
-            "\
-[RUNNING] [..] (target/debug/deps/test_sub_one-[..][EXE])
-[DOCTEST] foo",
-        )
         .with_stdout_contains("test result: FAILED. [..]")
         .with_stdout_contains("test sub_one_test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -3576,10 +3577,7 @@ fn test_hint_not_masked_by_doctest() {
         .with_status(101)
         .with_stdout_contains("test this_fails ... FAILED")
         .with_stdout_contains("[..]this_works (line [..]ok")
-        .with_stderr_contains(
-            "[ERROR] test failed, to rerun pass \
-             '--test integ'",
-        )
+        .with_stderr_contains("[ERROR] test failed, to rerun pass `--test integ`")
         .run();
 }
 
@@ -3590,24 +3588,131 @@ fn test_hint_workspace_virtual() {
             "Cargo.toml",
             r#"
                 [workspace]
-                members = ["a", "b"]
+                members = ["a", "b", "c"]
             "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/lib.rs", "#[test] fn t1() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file("b/src/lib.rs", "#[test] fn t1() {assert!(false)}")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.1.0"))
+        .file(
+            "c/src/lib.rs",
+            r#"
+                /// ```rust
+                /// assert_eq!(1, 2);
+                /// ```
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "c/src/main.rs",
+            r#"
+                fn main() {}
+
+                #[test]
+                fn from_main() { assert_eq!(1, 2); }
+            "#,
+        )
+        .file(
+            "c/tests/t1.rs",
+            r#"
+                #[test]
+                fn from_int_test() { assert_eq!(1, 2); }
+            "#,
+        )
+        .file(
+            "c/examples/ex1.rs",
+            r#"
+                fn main() {}
+
+                #[test]
+                fn from_example() { assert_eq!(1, 2); }
+            "#,
+        )
+        // This does not use #[bench] since it is unstable. #[test] works just
+        // the same for our purpose of checking the hint.
+        .file(
+            "c/benches/b1.rs",
+            r#"
+                #[test]
+                fn from_bench() { assert_eq!(1, 2); }
+            "#,
+        )
         .build();
 
+    // This depends on Units being sorted so that `b` fails first.
     p.cargo("test")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass '-p b --lib'")
+        .with_stderr_unordered(
+            "\
+[COMPILING] c v0.1.0 [..]
+[COMPILING] a v0.1.0 [..]
+[COMPILING] b v0.1.0 [..]
+[FINISHED] test [..]
+[RUNNING] unittests src/lib.rs (target/debug/deps/a[..])
+[RUNNING] unittests src/lib.rs (target/debug/deps/b[..])
+[ERROR] test failed, to rerun pass `-p b --lib`
+",
+        )
         .with_status(101)
         .run();
     p.cargo("test")
         .cwd("b")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass '--lib'")
+        .with_stderr(
+            "\
+[FINISHED] test [..]
+[RUNNING] unittests src/lib.rs ([ROOT]/foo/target/debug/deps/b[..])
+[ERROR] test failed, to rerun pass `--lib`
+",
+        )
         .with_status(101)
         .run();
+    p.cargo("test --no-fail-fast")
+        .with_stderr(
+            "\
+[FINISHED] test [..]
+[RUNNING] unittests src/lib.rs (target/debug/deps/a[..])
+[RUNNING] unittests src/lib.rs (target/debug/deps/b[..])
+[ERROR] test failed, to rerun pass `-p b --lib`
+[RUNNING] unittests src/lib.rs (target/debug/deps/c[..])
+[RUNNING] unittests src/main.rs (target/debug/deps/c[..])
+[ERROR] test failed, to rerun pass `-p c --bin c`
+[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+[ERROR] test failed, to rerun pass `-p c --test t1`
+[DOCTEST] a
+[DOCTEST] b
+[DOCTEST] c
+[ERROR] doctest failed, to rerun pass `-p c --doc`
+[ERROR] 4 targets failed:
+    `-p b --lib`
+    `-p c --bin c`
+    `-p c --test t1`
+    `-p c --doc`
+",
+        )
+        .with_status(101)
+        .run();
+    // Check others that are not in the default set.
+    p.cargo("test -p c --examples --benches --no-fail-fast")
+        .with_stderr(
+            "\
+[COMPILING] c v0.1.0 [..]
+[FINISHED] test [..]
+[RUNNING] unittests src/lib.rs (target/debug/deps/c[..])
+[RUNNING] unittests src/main.rs (target/debug/deps/c[..])
+[ERROR] test failed, to rerun pass `-p c --bin c`
+[RUNNING] benches/b1.rs (target/debug/deps/b1[..])
+[ERROR] test failed, to rerun pass `-p c --bench b1`
+[RUNNING] unittests examples/ex1.rs (target/debug/examples/ex1[..])
+[ERROR] test failed, to rerun pass `-p c --example ex1`
+[ERROR] 3 targets failed:
+    `-p c --bin c`
+    `-p c --bench b1`
+    `-p c --example ex1`
+",
+        )
+        .with_status(101)
+        .run()
 }
 
 #[cargo_test]
@@ -3630,11 +3735,11 @@ fn test_hint_workspace_nonvirtual() {
         .build();
 
     p.cargo("test --workspace")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass '-p a --lib'")
+        .with_stderr_contains("[ERROR] test failed, to rerun pass `-p a --lib`")
         .with_status(101)
         .run();
     p.cargo("test -p a")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass '-p a --lib'")
+        .with_stderr_contains("[ERROR] test failed, to rerun pass `-p a --lib`")
         .with_status(101)
         .run();
 }
@@ -4492,5 +4597,110 @@ fn test_workspaces_cwd() {
         .with_stderr_contains("[DOCTEST] deep-crate")
         .with_stdout_contains("test test_unit_deep_cwd ... ok")
         .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .run();
+}
+
+#[cargo_test]
+fn execution_error() {
+    // Checks the behavior when a test fails to launch.
+    let p = project()
+        .file(
+            "tests/t1.rs",
+            r#"
+                #[test]
+                fn foo() {}
+            "#,
+        )
+        .build();
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
+    p.cargo("test")
+        .env(&key, "does_not_exist")
+        // The actual error is usually "no such file", but on Windows it has a
+        // custom message. Since matching against the error string produced by
+        // Rust is not very reliable, this just uses `[..]`.
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] test [..]
+[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+error: test failed, to rerun pass `--test t1`
+
+Caused by:
+  could not execute process `does_not_exist [ROOT]/foo/target/debug/deps/t1[..]` (never executed)
+
+Caused by:
+  [..]
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn nonzero_exit_status() {
+    // Tests for nonzero exit codes from tests.
+    let p = project()
+        .file(
+            "tests/t1.rs",
+            r#"
+                #[test]
+                fn t() { panic!("this is a normal error") }
+            "#,
+        )
+        .file(
+            "tests/t2.rs",
+            r#"
+                #[test]
+                fn t() { std::process::exit(4) }
+            "#,
+        )
+        .build();
+
+    p.cargo("test --test t1")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] test [..]
+[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+error: test failed, to rerun pass `--test t1`
+",
+        )
+        .with_stdout_contains("[..]this is a normal error[..]")
+        .with_status(101)
+        .run();
+
+    p.cargo("test --test t2")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] test [..]
+[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
+error: test failed, to rerun pass `--test t2`
+
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
+",
+        )
+        .with_status(4)
+        .run();
+
+    // no-fail-fast always uses 101
+    p.cargo("test --no-fail-fast")
+        .with_stderr(
+            "\
+[FINISHED] test [..]
+[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+error: test failed, to rerun pass `--test t1`
+[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
+error: test failed, to rerun pass `--test t2`
+
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
+error: 2 targets failed:
+    `--test t1`
+    `--test t2`
+",
+        )
+        .with_status(101)
         .run();
 }

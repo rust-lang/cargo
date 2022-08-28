@@ -3,9 +3,11 @@ use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{add_path_args, CargoTestError, Config, Test};
+use crate::util::{add_path_args, CliError, CliResult, Config};
+use anyhow::format_err;
 use cargo_util::{ProcessBuilder, ProcessError};
 use std::ffi::OsString;
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
 pub struct TestOptions {
@@ -14,61 +16,87 @@ pub struct TestOptions {
     pub no_fail_fast: bool,
 }
 
-pub fn run_tests(
-    ws: &Workspace<'_>,
-    options: &TestOptions,
-    test_args: &[&str],
-) -> CargoResult<Option<CargoTestError>> {
+/// The kind of test.
+///
+/// This is needed because `Unit` does not track whether or not something is a
+/// benchmark.
+#[derive(Copy, Clone)]
+enum TestKind {
+    Test,
+    Bench,
+    Doctest,
+}
+
+/// A unit that failed to run.
+struct UnitTestError {
+    unit: Unit,
+    kind: TestKind,
+}
+
+impl UnitTestError {
+    /// Returns the CLI args needed to target this unit.
+    fn cli_args(&self, ws: &Workspace<'_>, opts: &ops::CompileOptions) -> String {
+        let mut args = if opts.spec.needs_spec_flag(ws) {
+            format!("-p {} ", self.unit.pkg.name())
+        } else {
+            String::new()
+        };
+        let mut add = |which| write!(args, "--{which} {}", self.unit.target.name()).unwrap();
+
+        match self.kind {
+            TestKind::Test | TestKind::Bench => match self.unit.target.kind() {
+                TargetKind::Lib(_) => args.push_str("--lib"),
+                TargetKind::Bin => add("bin"),
+                TargetKind::Test => add("test"),
+                TargetKind::Bench => add("bench"),
+                TargetKind::ExampleLib(_) | TargetKind::ExampleBin => add("example"),
+                TargetKind::CustomBuild => panic!("unexpected CustomBuild kind"),
+            },
+            TestKind::Doctest => args.push_str("--doc"),
+        }
+        args
+    }
+}
+
+/// Compiles and runs tests.
+///
+/// On error, the returned [`CliError`] will have the appropriate process exit
+/// code that Cargo should use.
+pub fn run_tests(ws: &Workspace<'_>, options: &TestOptions, test_args: &[&str]) -> CliResult {
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
         if !options.compile_opts.build_config.emit_json() {
             display_no_run_information(ws, test_args, &compilation, "unittests")?;
         }
-
-        return Ok(None);
+        return Ok(());
     }
-    let (test, mut errors) = run_unit_tests(ws.config(), options, test_args, &compilation)?;
+    let mut errors = run_unit_tests(ws, options, test_args, &compilation, TestKind::Test)?;
 
-    // If we have an error and want to fail fast, then return.
-    if !errors.is_empty() && !options.no_fail_fast {
-        return Ok(Some(CargoTestError::new(test, errors)));
-    }
-
-    let (doctest, docerrors) = run_doc_tests(ws, options, test_args, &compilation)?;
-    let test = if docerrors.is_empty() { test } else { doctest };
-    errors.extend(docerrors);
-    if errors.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(CargoTestError::new(test, errors)))
-    }
+    let doctest_errors = run_doc_tests(ws, options, test_args, &compilation)?;
+    errors.extend(doctest_errors);
+    no_fail_fast_err(ws, &options.compile_opts, &errors)
 }
 
-pub fn run_benches(
-    ws: &Workspace<'_>,
-    options: &TestOptions,
-    args: &[&str],
-) -> CargoResult<Option<CargoTestError>> {
+/// Compiles and runs benchmarks.
+///
+/// On error, the returned [`CliError`] will have the appropriate process exit
+/// code that Cargo should use.
+pub fn run_benches(ws: &Workspace<'_>, options: &TestOptions, args: &[&str]) -> CliResult {
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
         if !options.compile_opts.build_config.emit_json() {
             display_no_run_information(ws, args, &compilation, "benches")?;
         }
-
-        return Ok(None);
+        return Ok(());
     }
 
     let mut args = args.to_vec();
     args.push("--bench");
 
-    let (test, errors) = run_unit_tests(ws.config(), options, &args, &compilation)?;
-
-    match errors.len() {
-        0 => Ok(None),
-        _ => Ok(Some(CargoTestError::new(test, errors))),
-    }
+    let errors = run_unit_tests(ws, options, &args, &compilation, TestKind::Bench)?;
+    no_fail_fast_err(ws, &options.compile_opts, &errors)
 }
 
 fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<Compilation<'a>> {
@@ -78,12 +106,17 @@ fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<C
 }
 
 /// Runs the unit and integration tests of a package.
+///
+/// Returns a `Vec` of tests that failed when `--no-fail-fast` is used.
+/// If `--no-fail-fast` is *not* used, then this returns an `Err`.
 fn run_unit_tests(
-    config: &Config,
+    ws: &Workspace<'_>,
     options: &TestOptions,
     test_args: &[&str],
     compilation: &Compilation<'_>,
-) -> CargoResult<(Test, Vec<ProcessError>)> {
+    test_kind: TestKind,
+) -> Result<Vec<UnitTestError>, CliError> {
+    let config = ws.config();
     let cwd = config.cwd();
     let mut errors = Vec::new();
 
@@ -110,46 +143,32 @@ fn run_unit_tests(
             .shell()
             .verbose(|shell| shell.status("Running", &cmd))?;
 
-        let result = cmd.exec();
-
-        if let Err(e) = result {
-            let e = e.downcast::<ProcessError>()?;
-            errors.push((
-                unit.target.kind().clone(),
-                unit.target.name().to_string(),
-                unit.pkg.name().to_string(),
-                e,
-            ));
+        if let Err(e) = cmd.exec() {
+            let code = fail_fast_code(&e);
+            let unit_err = UnitTestError {
+                unit: unit.clone(),
+                kind: test_kind,
+            };
+            report_test_error(ws, &options.compile_opts, &unit_err, e);
+            errors.push(unit_err);
             if !options.no_fail_fast {
-                break;
+                return Err(CliError::code(code));
             }
         }
     }
-
-    if errors.len() == 1 {
-        let (kind, name, pkg_name, e) = errors.pop().unwrap();
-        Ok((
-            Test::UnitTest {
-                kind,
-                name,
-                pkg_name,
-            },
-            vec![e],
-        ))
-    } else {
-        Ok((
-            Test::Multiple,
-            errors.into_iter().map(|(_, _, _, e)| e).collect(),
-        ))
-    }
+    Ok(errors)
 }
 
+/// Runs doc tests.
+///
+/// Returns a `Vec` of tests that failed when `--no-fail-fast` is used.
+/// If `--no-fail-fast` is *not* used, then this returns an `Err`.
 fn run_doc_tests(
     ws: &Workspace<'_>,
     options: &TestOptions,
     test_args: &[&str],
     compilation: &Compilation<'_>,
-) -> CargoResult<(Test, Vec<ProcessError>)> {
+) -> Result<Vec<UnitTestError>, CliError> {
     let config = ws.config();
     let mut errors = Vec::new();
     let doctest_xcompile = config.cli_unstable().doctest_xcompile;
@@ -258,16 +277,24 @@ fn run_doc_tests(
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
         if let Err(e) = p.exec() {
-            let e = e.downcast::<ProcessError>()?;
-            errors.push(e);
+            let code = fail_fast_code(&e);
+            let unit_err = UnitTestError {
+                unit: unit.clone(),
+                kind: TestKind::Doctest,
+            };
+            report_test_error(ws, &options.compile_opts, &unit_err, e);
+            errors.push(unit_err);
             if !options.no_fail_fast {
-                return Ok((Test::Doc, errors));
+                return Err(CliError::code(code));
             }
         }
     }
-    Ok((Test::Doc, errors))
+    Ok(errors)
 }
 
+/// Displays human-readable descriptions of the test executables.
+///
+/// This is used when `cargo test --no-run` is used.
 fn display_no_run_information(
     ws: &Workspace<'_>,
     test_args: &[&str],
@@ -303,6 +330,11 @@ fn display_no_run_information(
     return Ok(());
 }
 
+/// Creates a [`ProcessBuilder`] for executing a single test.
+///
+/// Returns a tuple `(exe_display, process)` where `exe_display` is a string
+/// to display that describes the executable path in a human-readable form.
+/// `process` is the `ProcessBuilder` to use for executing the test.
 fn cmd_builds(
     config: &Config,
     cwd: &Path,
@@ -340,4 +372,68 @@ fn cmd_builds(
     }
 
     Ok((exe_display, cmd))
+}
+
+/// Returns the error code to use when *not* using `--no-fail-fast`.
+///
+/// Cargo will return the error code from the test process itself. If some
+/// other error happened (like a failure to launch the process), then it will
+/// return a standard 101 error code.
+///
+/// When using `--no-fail-fast`, Cargo always uses the 101 exit code (since
+/// there may not be just one process to report).
+fn fail_fast_code(error: &anyhow::Error) -> i32 {
+    if let Some(proc_err) = error.downcast_ref::<ProcessError>() {
+        if let Some(code) = proc_err.code {
+            return code;
+        }
+    }
+    101
+}
+
+/// Returns the `CliError` when using `--no-fail-fast` and there is at least
+/// one error.
+fn no_fail_fast_err(
+    ws: &Workspace<'_>,
+    opts: &ops::CompileOptions,
+    errors: &[UnitTestError],
+) -> CliResult {
+    // TODO: This could be improved by combining the flags on a single line when feasible.
+    let args: Vec<_> = errors
+        .iter()
+        .map(|unit_err| format!("    `{}`", unit_err.cli_args(ws, opts)))
+        .collect();
+    let message = match errors.len() {
+        0 => return Ok(()),
+        1 => format!("1 target failed:\n{}", args.join("\n")),
+        n => format!("{n} targets failed:\n{}", args.join("\n")),
+    };
+    Err(anyhow::Error::msg(message).into())
+}
+
+/// Displays an error on the console about a test failure.
+fn report_test_error(
+    ws: &Workspace<'_>,
+    opts: &ops::CompileOptions,
+    unit_err: &UnitTestError,
+    test_error: anyhow::Error,
+) {
+    let which = match unit_err.kind {
+        TestKind::Test => "test failed",
+        TestKind::Bench => "bench failed",
+        TestKind::Doctest => "doctest failed",
+    };
+
+    let mut err = format_err!("{}, to rerun pass `{}`", which, unit_err.cli_args(ws, opts));
+    // Don't show "process didn't exit successfully" for simple errors.
+    // libtest exits with 101 for normal errors.
+    let is_simple = test_error
+        .downcast_ref::<ProcessError>()
+        .and_then(|proc_err| proc_err.code)
+        .map_or(false, |code| code == 101);
+    if !is_simple {
+        err = test_error.context(err);
+    }
+
+    crate::display_error(&err, &mut ws.config().shell());
 }

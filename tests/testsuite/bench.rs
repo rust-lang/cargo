@@ -1153,7 +1153,7 @@ fn test_bench_no_fail_fast() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
-            "src/foo.rs",
+            "src/main.rs",
             r#"
             #![feature(test)]
             #[cfg(test)]
@@ -1177,15 +1177,36 @@ fn test_bench_no_fail_fast() {
             }
             "#,
         )
+        .file(
+            "benches/b1.rs",
+            r#"
+                #![feature(test)]
+                extern crate test;
+                #[bench]
+                fn b1_fail(_b: &mut test::Bencher) { assert_eq!(1, 2); }
+            "#,
+        )
         .build();
 
     p.cargo("bench --no-fail-fast -- --test-threads=1")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/foo-[..][EXE])")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 [..]
+[FINISHED] bench [..]
+[RUNNING] unittests src/main.rs (target/release/deps/foo[..])
+[ERROR] bench failed, to rerun pass `--bin foo`
+[RUNNING] benches/b1.rs (target/release/deps/b1[..])
+[ERROR] bench failed, to rerun pass `--bench b1`
+[ERROR] 2 targets failed:
+    `--bin foo`
+    `--bench b1`
+",
+        )
         .with_stdout_contains("running 2 tests")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/foo-[..][EXE])")
         .with_stdout_contains("test bench_hello [..]")
         .with_stdout_contains("test bench_nope [..]")
+        .with_stdout_contains("test b1_fail [..]")
         .run();
 }
 
