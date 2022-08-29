@@ -1,10 +1,7 @@
 use anyhow::anyhow;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
-use clap::{
-    error::{ContextKind, ContextValue},
-    AppSettings, Arg, ArgMatches,
-};
+use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -29,31 +26,7 @@ pub fn main(config: &mut Config) -> CliResult {
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
 
-    if commands::help::handle_embedded_help(config) {
-        return Ok(());
-    }
-
-    let args = match cli().try_get_matches() {
-        Ok(args) => args,
-        Err(e) => {
-            if e.kind() == clap::ErrorKind::UnrecognizedSubcommand {
-                // An unrecognized subcommand might be an external subcommand.
-                let cmd = e
-                    .context()
-                    .find_map(|c| match c {
-                        (ContextKind::InvalidSubcommand, &ContextValue::String(ref cmd)) => {
-                            Some(cmd)
-                        }
-                        _ => None,
-                    })
-                    .expect("UnrecognizedSubcommand implies the presence of InvalidSubcommand");
-                return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
-                    .map_err(|_| e.into());
-            } else {
-                return Err(e.into());
-            }
-        }
-    };
+    let args = cli().try_get_matches()?;
 
     // Global args need to be extracted before expanding aliases because the
     // clap code for extracting a subcommand discards global options
@@ -412,7 +385,7 @@ impl GlobalArgs {
     }
 }
 
-fn cli() -> App {
+pub fn cli() -> App {
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"
@@ -425,6 +398,8 @@ fn cli() -> App {
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
         .disable_colored_help(true)
+        // Provide a custom help subcommand for calling into man pages
+        .disable_help_subcommand(true)
         .override_usage(usage)
         .help_template(
             "\
