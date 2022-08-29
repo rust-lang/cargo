@@ -583,11 +583,19 @@ impl<'cfg> DrainState<'cfg> {
             }
         }
 
+        // If multiple pieces of work are waiting in the pending queue, we can
+        // sort it according to their priorities: higher priorities should be
+        // scheduled sooner.
+        self.pending_queue
+            .sort_by_cached_key(|(unit, _)| self.queue.priority(unit));
+
         // Now that we've learned of all possible work that we can execute
         // try to spawn it so long as we've got a jobserver token which says
         // we're able to perform some parallel work.
+        // The `pending_queue` is sorted in ascending priority order, and we're
+        // removing the highest priority items from its end.
         while self.has_extra_tokens() && !self.pending_queue.is_empty() {
-            let (unit, job) = self.pending_queue.remove(0);
+            let (unit, job) = self.pending_queue.pop().unwrap();
             *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
             if !cx.bcx.build_config.build_plan {
                 // Print out some nice progress information.

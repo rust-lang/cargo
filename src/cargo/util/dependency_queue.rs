@@ -170,6 +170,13 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         self.dep_map.len()
     }
 
+    /// Returns the relative priority of a node. Higher priorities should be scheduled sooner.
+    /// Currently computed as the transitive cost of the given node: its own, plus the cost of its
+    /// reverse dependencies.
+    pub(crate) fn priority(&self, node: &N) -> usize {
+        self.priority[node]
+    }
+
     /// Indicate that something has finished.
     ///
     /// Calling this function indicates that the `node` has produced `edge`. All
