@@ -30,13 +30,11 @@ fn main() {
         }
     };
 
-    let result = match cargo::ops::fix_maybe_exec_rustc(&config) {
-        Ok(true) => Ok(()),
-        Ok(false) => {
-            let _token = cargo::util::job::setup();
-            cli::main(&mut config)
-        }
-        Err(e) => Err(CliError::from(e)),
+    let result = if let Some(lock_addr) = cargo::ops::fix_get_proxy_lock_addr() {
+        cargo::ops::fix_exec_rustc(&config, &lock_addr).map_err(|e| CliError::from(e))
+    } else {
+        let _token = cargo::util::job::setup();
+        cli::main(&mut config)
     };
 
     match result {
