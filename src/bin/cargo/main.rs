@@ -1,7 +1,6 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
 #![allow(clippy::all)]
 
-use cargo::core::shell::Shell;
 use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
@@ -22,23 +21,17 @@ fn main() {
     #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init_from_env("CARGO_LOG");
 
-    let mut config = match Config::default() {
-        Ok(cfg) => cfg,
-        Err(e) => {
-            let mut shell = Shell::new();
-            cargo::exit_with_error(e.into(), &mut shell)
-        }
-    };
+    let mut config = cli::LazyConfig::new();
 
     let result = if let Some(lock_addr) = cargo::ops::fix_get_proxy_lock_addr() {
-        cargo::ops::fix_exec_rustc(&config, &lock_addr).map_err(|e| CliError::from(e))
+        cargo::ops::fix_exec_rustc(config.get(), &lock_addr).map_err(|e| CliError::from(e))
     } else {
         let _token = cargo::util::job::setup();
         cli::main(&mut config)
     };
 
     match result {
-        Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
+        Err(e) => cargo::exit_with_error(e, &mut config.get_mut().shell()),
         Ok(()) => {}
     }
 }
