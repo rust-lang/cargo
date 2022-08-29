@@ -22,14 +22,44 @@ locally you probably also have `cargo` installed locally.
 
 ## Compiling from Source
 
+### Requirements
+
 Cargo requires the following tools and packages to build:
 
-* `git`
-* `curl` (on Unix)
-* `pkg-config` (on Unix, used to figure out the `libssl` headers/libraries)
-* OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
-* A C compiler [for your platform](https://github.com/rust-lang/cc-rs#compile-time-requirements)
 * `cargo` and `rustc`
+* A C compiler [for your platform](https://github.com/rust-lang/cc-rs#compile-time-requirements)
+* `git` (to clone this repository)
+
+**Other requirements:**
+
+The following are optional based on your platform and needs.
+
+* `pkg-config` — This is used to help locate system packages, such as `libssl` headers/libraries. This may not be required in all cases, such as using vendored OpenSSL, or on Windows.
+* OpenSSL — Only needed on Unix-like systems and only if the `vendored-openssl` Cargo feature is not used.
+
+  This requires the development headers, which can be obtained from the `libssl-dev` package on Ubuntu or `openssl-devel` with apk or yum or the `openssl` package from Homebrew on macOS.
+
+  If using the `vendored-openssl` Cargo feature, then a static copy of OpenSSL will be built from source instead of using the system OpenSSL.
+  This may require additional tools such as `perl` and `make`.
+
+  On macOS, common installation directories from Homebrew, MacPorts, or pkgsrc will be checked. Otherwise it will fall back to `pkg-config`.
+
+  On Windows, the system-provided Schannel will be used instead.
+
+  LibreSSL is also supported.
+
+**Optional system libraries:**
+
+The build will automatically use vendored versions of the following libraries. However, if they are provided by the system and can be found with `pkg-config`, then the system libraries will be used instead:
+
+* [`libcurl`](https://curl.se/libcurl/) — Used for network transfers.
+* [`libgit2`](https://libgit2.org/) — Used for fetching git dependencies.
+* [`libssh2`](https://www.libssh2.org/) — Used for SSH access to git repositories.
+* [`libz`](https://zlib.net/) (aka zlib) — Used for data compression.
+
+It is recommended to use the vendored versions as they are the versions that are tested to work with Cargo.
+
+### Compiling
 
 First, you'll want to check out this repository
 
