@@ -73,12 +73,5 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let bench_args = bench_args.chain(args.get_many::<String>("args").unwrap_or_default());
     let bench_args = bench_args.map(String::as_str).collect::<Vec<_>>();
 
-    let err = ops::run_benches(&ws, &ops, &bench_args)?;
-    match err {
-        None => Ok(()),
-        Some(err) => Err(match err.code {
-            Some(i) => CliError::new(anyhow::format_err!("bench failed"), i),
-            None => CliError::new(err.into(), 101),
-        }),
-    }
+    ops::run_benches(&ws, &ops, &bench_args)
 }
