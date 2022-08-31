@@ -252,13 +252,13 @@ fn sync(
 
     // replace original sources with vendor
     for source_id in sources {
-        let name = if source_id.is_default_registry() {
+        let name = if source_id.is_crates_io() {
             CRATES_IO_REGISTRY.to_string()
         } else {
             source_id.url().to_string()
         };
 
-        let source = if source_id.is_default_registry() {
+        let source = if source_id.is_crates_io() {
             VendorSource::Registry {
                 registry: None,
                 replace_with: merged_source_name.to_string(),

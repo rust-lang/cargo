@@ -39,6 +39,10 @@ struct SourceIdInner {
     /// WARNING: this is not always set for alt-registries when the name is
     /// not known.
     name: Option<String>,
+    /// Name of the alt registry in the `[registries]` table.
+    /// WARNING: this is not always set for alt-registries when the name is
+    /// not known.
+    alt_registry_key: Option<String>,
 }
 
 /// The possible kinds of code source. Along with `SourceIdInner`, this fully defines the
@@ -81,6 +85,7 @@ impl SourceId {
             url,
             precise: None,
             name: name.map(|n| n.into()),
+            alt_registry_key: None,
         });
         Ok(source_id)
     }
@@ -221,6 +226,9 @@ impl SourceId {
 
     /// Gets the `SourceId` associated with given name of the remote registry.
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
+        if key == CRATES_IO_REGISTRY {
+            return Self::crates_io(config);
+        }
         let url = config.get_registry_index(key)?;
         Ok(SourceId::wrap(SourceIdInner {
             kind: SourceKind::Registry,
@@ -228,6 +236,7 @@ impl SourceId {
             url,
             precise: None,
             name: Some(key.to_string()),
+            alt_registry_key: Some(key.to_string()),
         }))
     }
 
@@ -243,7 +252,7 @@ impl SourceId {
     }
 
     pub fn display_index(self) -> String {
-        if self.is_default_registry() {
+        if self.is_crates_io() {
             format!("{} index", CRATES_IO_DOMAIN)
         } else {
             format!("`{}` index", self.display_registry_name())
@@ -251,7 +260,7 @@ impl SourceId {
     }
 
     pub fn display_registry_name(self) -> String {
-        if self.is_default_registry() {
+        if self.is_crates_io() {
             CRATES_IO_REGISTRY.to_string()
         } else if let Some(name) = &self.inner.name {
             name.clone()
@@ -262,6 +271,13 @@ impl SourceId {
         } else {
             url_display(self.url())
         }
+    }
+
+    /// Gets the name of the remote registry as defined in the `[registries]` table.
+    /// WARNING: alt registries that come from Cargo.lock, or --index will
+    /// not have a name.
+    pub fn alt_registry_key(&self) -> Option<&str> {
+        self.inner.alt_registry_key.as_deref()
     }
 
     /// Returns `true` if this source is from a filesystem path.
@@ -364,13 +380,15 @@ impl SourceId {
     }
 
     /// Returns `true` if the remote registry is the standard <https://crates.io>.
-    pub fn is_default_registry(self) -> bool {
+    pub fn is_crates_io(self) -> bool {
         match self.inner.kind {
             SourceKind::Registry => {}
             _ => return false,
         }
         let url = self.inner.url.as_str();
-        url == CRATES_IO_INDEX || url == CRATES_IO_HTTP_INDEX
+        url == CRATES_IO_INDEX
+            || url == CRATES_IO_HTTP_INDEX
+            || std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS").as_deref() == Ok(url)
     }
 
     /// Hashes `self`.

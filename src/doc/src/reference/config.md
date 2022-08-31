@@ -933,7 +933,7 @@ local-registry, or git).
 * Default: none
 * Environment: not supported
 
-If set, replace this source with the given named source.
+If set, replace this source with the given named source or named registry.
 
 ##### `source.<name>.directory`
 * Type: string (path)

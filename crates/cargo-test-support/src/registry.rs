@@ -105,7 +105,7 @@ impl RegistryBuilder {
     pub fn new() -> RegistryBuilder {
         RegistryBuilder {
             alternative: None,
-            token: Some("api-token".to_string()),
+            token: None,
             http_api: false,
             http_index: false,
             api: true,
@@ -197,6 +197,7 @@ impl RegistryBuilder {
         let dl_url = generate_url(&format!("{prefix}dl"));
         let dl_path = generate_path(&format!("{prefix}dl"));
         let api_path = generate_path(&format!("{prefix}api"));
+        let token = Some(self.token.unwrap_or_else(|| format!("{prefix}sekrit")));
 
         let (server, index_url, api_url, dl_url) = if !self.http_index && !self.http_api {
             // No need to start the HTTP server.
@@ -205,7 +206,7 @@ impl RegistryBuilder {
             let server = HttpServer::new(
                 registry_path.clone(),
                 dl_path,
-                self.token.clone(),
+                token.clone(),
                 self.custom_responders,
             );
             let index_url = if self.http_index {
@@ -228,7 +229,7 @@ impl RegistryBuilder {
             _server: server,
             dl_url,
             path: registry_path,
-            token: self.token,
+            token,
         };
 
         if self.configure_registry {
@@ -252,8 +253,8 @@ impl RegistryBuilder {
                     [source.crates-io]
                     replace-with = 'dummy-registry'
 
-                    [source.dummy-registry]
-                    registry = '{}'",
+                    [registries.dummy-registry]
+                    index = '{}'",
                         registry.index_url
                     )
                     .as_bytes(),

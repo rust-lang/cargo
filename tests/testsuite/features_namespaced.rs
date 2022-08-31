@@ -1,7 +1,7 @@
 //! Tests for namespaced features.
 
 use super::features2::switch_to_resolver_2;
-use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::registry::{self, Dependency, Package};
 use cargo_test_support::{project, publish};
 
 #[cargo_test]
@@ -858,6 +858,7 @@ bar v1.0.0
 
 #[cargo_test]
 fn publish_no_implicit() {
+    let registry = registry::init();
     // Does not include implicit features or dep: syntax on publish.
     Package::new("opt-dep1", "1.0.0").publish();
     Package::new("opt-dep2", "1.0.0").publish();
@@ -884,7 +885,8 @@ fn publish_no_implicit() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify --token sekrit")
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -907,7 +909,6 @@ fn publish_no_implicit() {
               "kind": "normal",
               "name": "opt-dep1",
               "optional": true,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             },
@@ -917,7 +918,6 @@ fn publish_no_implicit() {
               "kind": "normal",
               "name": "opt-dep2",
               "optional": true,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             }
@@ -971,6 +971,7 @@ feat = ["opt-dep1"]
 
 #[cargo_test]
 fn publish() {
+    let registry = registry::init();
     // Publish behavior with explicit dep: syntax.
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -996,7 +997,8 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --token sekrit")
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -1022,7 +1024,6 @@ fn publish() {
               "kind": "normal",
               "name": "bar",
               "optional": true,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             }

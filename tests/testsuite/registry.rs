@@ -1074,10 +1074,12 @@ fn dev_dependency_not_used(cargo: fn(&Project, &str) -> Execs) {
 fn login_with_no_cargo_dir() {
     // Create a config in the root directory because `login` requires the
     // index to be updated, and we don't want to hit crates.io.
-    registry::init();
+    let registry = registry::init();
     fs::rename(paths::home().join(".cargo"), paths::root().join(".cargo")).unwrap();
     paths::home().rm_rf();
-    cargo_process("login foo -v").run();
+    cargo_process("login foo -v")
+        .replace_crates_io(registry.index_url())
+        .run();
     let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
 }
@@ -1085,23 +1087,32 @@ fn login_with_no_cargo_dir() {
 #[cargo_test]
 fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly truncated.
-    registry::init();
+    let registry = registry::init();
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
-    cargo_process("login lmaolmaolmao -v").run();
-    cargo_process("login lmao -v").run();
-    cargo_process("login lmaolmaolmao -v").run();
+    cargo_process("login lmaolmaolmao -v")
+        .replace_crates_io(registry.index_url())
+        .run();
+    cargo_process("login lmao -v")
+        .replace_crates_io(registry.index_url())
+        .run();
+    cargo_process("login lmaolmaolmao -v")
+        .replace_crates_io(registry.index_url())
+        .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
 }
 
 #[cargo_test]
 fn login_with_token_on_stdin() {
-    registry::init();
+    let registry = registry::init();
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
-    cargo_process("login lmao -v").run();
+    cargo_process("login lmao -v")
+        .replace_crates_io(registry.index_url())
+        .run();
     cargo_process("login")
+        .replace_crates_io(registry.index_url())
         .with_stdout("please paste the API Token found on [..]/me below")
         .with_stdin("some token")
         .run();
@@ -1111,16 +1122,17 @@ fn login_with_token_on_stdin() {
 
 #[cargo_test]
 fn bad_license_file_http() {
-    let _server = setup_http();
-    bad_license_file(cargo_http);
+    let registry = setup_http();
+    bad_license_file(cargo_http, &registry);
 }
 
 #[cargo_test]
 fn bad_license_file_git() {
-    bad_license_file(cargo_stable);
+    let registry = registry::init();
+    bad_license_file(cargo_stable, &registry);
 }
 
-fn bad_license_file(cargo: fn(&Project, &str) -> Execs) {
+fn bad_license_file(cargo: fn(&Project, &str) -> Execs, registry: &TestRegistry) {
     Package::new("foo", "1.0.0").publish();
     let p = project()
         .file(
@@ -1137,7 +1149,8 @@ fn bad_license_file(cargo: fn(&Project, &str) -> Execs) {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    cargo(&p, "publish -v --token sekrit")
+    cargo(&p, "publish -v")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();

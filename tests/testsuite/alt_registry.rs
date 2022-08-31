@@ -1,10 +1,9 @@
 //! Tests for alternative registries.
 
-use cargo::util::IntoUrl;
 use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
-use cargo_test_support::{basic_manifest, git, paths, project};
+use cargo_test_support::{basic_manifest, paths, project};
 use std::fs;
 
 #[cargo_test]
@@ -249,9 +248,8 @@ fn registry_incompatible_with_git() {
 
 #[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
-    registry::alt_init();
-    let fakeio_path = paths::root().join("fake.io");
-    let fakeio_url = fakeio_path.into_url().unwrap();
+    let crates_io = registry::init();
+    let _alternative = RegistryBuilder::new().alternative().build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -266,41 +264,22 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
             "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            ".cargo/config",
-            &format!(
-                r#"
-                    [registries.fakeio]
-                    index = "{}"
-                "#,
-                fakeio_url
-            ),
-        )
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    // Since this can't really call plain `publish` without fetching the real
-    // crates.io index, create a fake one that points to the real crates.io.
-    git::repo(&fakeio_path)
-        .file(
-            "config.json",
-            r#"
-                {"dl": "https://crates.io/api/v1/crates", "api": "https://crates.io"}
-            "#,
-        )
-        .build();
-
-    // Login so that we have the token available
-    p.cargo("login --registry fakeio TOKEN").run();
-
-    p.cargo("publish --registry fakeio")
+    p.cargo("publish")
+        .replace_crates_io(crates_io.index_url())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 
-    p.cargo("publish --token sekrit --index")
-        .arg(fakeio_url.to_string())
+    p.cargo("publish")
+        .replace_crates_io(crates_io.index_url())
+        .arg("--token")
+        .arg(crates_io.token())
+        .arg("--index")
+        .arg(crates_io.index_url().as_str())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();

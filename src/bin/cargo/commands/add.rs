@@ -1,3 +1,4 @@
+use cargo::sources::CRATES_IO_REGISTRY;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
 
@@ -207,7 +208,10 @@ fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<
     let rev = matches.get_one::<String>("rev");
     let tag = matches.get_one::<String>("tag");
     let rename = matches.get_one::<String>("rename");
-    let registry = matches.registry(config)?;
+    let registry = match matches.registry(config)? {
+        Some(reg) if reg == CRATES_IO_REGISTRY => None,
+        reg => reg,
+    };
     let default_features = default_features(matches);
     let optional = optional(matches);
 

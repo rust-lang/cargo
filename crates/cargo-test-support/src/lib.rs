@@ -818,6 +818,17 @@ impl Execs {
         self
     }
 
+    /// Overrides the crates.io URL for testing.
+    ///
+    /// Can be used for testing crates-io functionality where alt registries
+    /// cannot be used.
+    pub fn replace_crates_io(&mut self, url: &Url) -> &mut Self {
+        if let Some(ref mut p) = self.process_builder {
+            p.env("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS", url.as_str());
+        }
+        self
+    }
+
     pub fn enable_mac_dsym(&mut self) -> &mut Self {
         if cfg!(target_os = "macos") {
             self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")

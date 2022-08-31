@@ -2,7 +2,7 @@
 
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::registry::{self, Dependency, Package};
 use cargo_test_support::{project, publish};
 use std::fmt::Write;
 
@@ -523,6 +523,7 @@ bar v1.0.0
 
 #[cargo_test]
 fn publish() {
+    let registry = registry::init();
     // Publish behavior with /? syntax.
     Package::new("bar", "1.0.0").feature("feat", &[]).publish();
     let p = project()
@@ -547,7 +548,8 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --token sekrit")
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -573,7 +575,6 @@ fn publish() {
               "kind": "normal",
               "name": "bar",
               "optional": true,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             }
