@@ -21,6 +21,9 @@ jobs:
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.9/mdbook-v0.4.9-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
+    - name: Build API doc
+      run: |
+          cargo doc --document-private-items --no-deps
     - name: Deploy docs
       run: |
         cd src/doc/contrib
@@ -33,6 +36,8 @@ jobs:
         git update-ref -d refs/heads/gh-pages
         rm -rf contrib
         mv ../book contrib
+        # Move rustdoc under contrib/
+        mv ../../../../target/doc contrib/apidoc
         git add contrib
         git commit -m "Deploy $GITHUB_SHA to gh-pages"
         git push --force

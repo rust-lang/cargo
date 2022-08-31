@@ -48,13 +48,13 @@ pub enum RegistryConfig {
 impl RegistryConfig {
     /// Returns `true` if the credential is [`None`].
     ///
-    /// [`None`]: Credential::None
+    /// [`None`]: Self::None
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
     /// Returns `true` if the credential is [`Token`].
     ///
-    /// [`Token`]: Credential::Token
+    /// [`Token`]: Self::Token
     pub fn is_token(&self) -> bool {
         matches!(self, Self::Token(..))
     }

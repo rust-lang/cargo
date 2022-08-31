@@ -6,6 +6,74 @@
 // necessarily an improvement, we prefer to not use them at this time.
 #![allow(clippy::all)]
 
+//! # Cargo as a library
+//!
+//! Cargo, the Rust package manager, is also provided as a library.
+//!
+//! There are two places you can find API documentation of cargo-the-library,
+//!
+//! - <https://docs.rs/cargo> and
+//! - <https://doc.crates.io/contrib/apidoc/cargo>.
+//!
+//! Each of them targets on a slightly different audience.
+//!
+//! ## For external tool developers
+//!
+//! The documentation on <https://docs.rs/cargo> contains public-facing items in cargo-the-library.
+//! External tool developers may find it useful when trying to reuse existing building blocks from Cargo.
+//! However, using Cargo as a library has drawbacks, especially cargo-the-library is unstable,
+//! and there is no clear path to stabilize it soon at the time of writing.
+//! See [The Cargo Book: External tools] for more on this topic.
+//!
+//! Cargo API documentation on docs.rs gets updates along with each Rust release.
+//! Its version always has a 0 major version to state it is unstable.
+//! The minor version is always +1 of rustc's minor version
+//! (that is, `cargo 0.66.0` corresponds to `rustc 1.65`).
+//!
+//! ## For Cargo contributors
+//!
+//! The documentation on <https://doc.crates.io/contrib/apidoc/cargo> contains all items in Cargo.
+//! Contributors of Cargo may find it useful as a reference of Cargo's implementation details.
+//! It's built with `--document-private-items` rustdoc flag,
+//! so you might expect to see some noise and strange items here.
+//! The Cargo team and contributors strive for jotting down every details
+//! from their brains in each issue and PR.
+//! However, something might just disappear in the air with no reason.
+//! This documentation can be seen as their extended minds,
+//! sharing designs and hacks behind both public and private interfaces.
+//!
+//! If you are just diving into Cargo internals, [Cargo Architecture Overview]
+//! is the best material to get a broader context of how Cargo works under the hood.
+//! Things also worth a read are important concepts reside in source code,
+//! which Cargo developers have been crafting for a while, namely
+//!
+//! - [`cargo::core::resolver`](crate::core::resolver),
+//! - [`cargo::core::compiler::fingerprint`](core/compiler/fingerprint/index.html),
+//! - [`cargo::util::config`](crate::util::config),
+//! - [`cargo::ops::fix`](ops/fix/index.html), and
+//! - [`cargo::sources::registry`](crate::sources::registry).
+//!
+//! This API documentation is published on each push of rust-lang/cargo master branch.
+//! In other words, it always reflects the latest doc comments in source code on master branch.
+//!
+//! ## Contribute to Cargo documentations
+//!
+//! The Cargo team always continues improving all external and internal documentations.
+//! If you spot anything could be better, don't hesitate to discuss with the team on
+//! Zulip [`t-cargo` stream], or [submit an issue] right on GitHub.
+//! There is also an issue label [`A-documenting-cargo-itself`],
+//! which is generally for documenting user-facing [The Cargo Book],
+//! but the Cargo team is welcome any form of enhancement for the [Cargo Contributor Guide]
+//! and this API documentation as well.
+//!
+//! [The Cargo Book: External tools]: https://doc.rust-lang.org/stable/cargo/reference/external-tools.html
+//! [Cargo Architecture Overview]: https://doc.crates.io/contrib/architecture
+//! [`t-cargo` stream]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
+//! [submit an issue]: https://github.com/rust-lang/cargo/issues/new/choose
+//! [`A-documenting-cargo-itself`]: https://github.com/rust-lang/cargo/labels/A-documenting-cargo-itself
+//! [The Cargo Book]: https://doc.rust-lang.org/cargo/
+//! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
+
 use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 use anyhow::Error;
