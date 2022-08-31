@@ -37,24 +37,31 @@ jobs:
     strategy:
       matrix:
         include:
-        - os: ubuntu-latest
+        - name: Linux x86_64 stable
+          os: ubuntu-latest
           rust: stable
           other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
+        - name: Linux x86_64 beta
+          os: ubuntu-latest
           rust: beta
           other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
+        - name: Linux x86_64 nightly
+          os: ubuntu-latest
           rust: nightly
           other: i686-unknown-linux-gnu
-        - os: macos-latest
+        - name: macOS x86_64 stable
+          os: macos-latest
           rust: stable
           other: x86_64-apple-ios
-        - os: windows-latest
+        - name: Windows x86_64 MSVC stable
+          os: windows-latest
           rust: stable-msvc
           other: i686-pc-windows-msvc
-        - os: windows-latest
+        - name: Windows x86_64 gnu nightly
+          os: windows-latest
           rust: nightly-gnu
           other: i686-pc-windows-gnu
+    name: Tests ${{ matrix.name }}
     steps:
     - uses: actions/checkout@v3
     - name: Dump Environment
