@@ -162,3 +162,29 @@ fn colored_results() {
         .with_stdout_contains("[..]\x1b[[..]")
         .run();
 }
+
+#[cargo_test]
+fn no_results() {
+    let _server = RegistryBuilder::new()
+        .http_api()
+        .add_responder("/api/v1/crates", |_| Response {
+            code: 200,
+            headers: vec![],
+            body: br#"
+{
+    "crates": [],
+    "meta": {
+        "total": 0
+    }
+}
+            "#
+            .to_vec(),
+        })
+        .build();
+    cargo_process("search z12345")
+        .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] could not find any crates matching `z12345` from the registry at [..]",
+        )
+        .run();
+}

@@ -8,7 +8,7 @@ use std::task::Poll;
 use std::time::Duration;
 use std::{cmp, env};
 
-use anyhow::{bail, format_err, Context as _};
+use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
@@ -983,6 +983,14 @@ pub fn search(
             registry.host()
         )
     })?;
+
+    if total_crates == 0 {
+        return Err(anyhow!(
+            "could not find any crates matching `{}` from the registry at {}",
+            query,
+            registry.host()
+        ));
+    }
 
     let names = crates
         .iter()
