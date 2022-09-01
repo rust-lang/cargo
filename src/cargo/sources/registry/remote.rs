@@ -163,10 +163,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     // Older versions of Cargo used the single value of the hash of the HEAD commit as a `index_version`.
     // This is technically correct but a little too conservative. If a new commit is fetched all cached
     // files need to be regenerated even if a particular file was not changed.
-    // Cargo now reads the `index_version` in two parts the cache file is considered valid if `index_version`
+    // Cargo now checks the `index_version` in two parts the cache file is considered valid if `index_version`
     // ends with the hash of the HEAD commit OR if it starts with the hash of the file's contents.
-    // In the future cargo can write cached files with `index_version` = `git_file_hash + ":" + `git_commit_hash`,
-    // but for now it still uses `git_commit_hash` to be compatible with older Cargoes.
+    // Cargo writes the cached files with `index_version` = `git_file_hash` + ":" + `git_commit_hash`.
     fn load(
         &mut self,
         _root: &Path,
@@ -178,7 +177,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
         // Check if the cache is valid.
         let git_commit_hash = self.current_version();
-        if let (Some(c), Some(i)) = (git_commit_hash, index_version) {
+        if let (Some(i), Some(c)) = (index_version, git_commit_hash) {
             if i.ends_with(c.as_str()) {
                 return Poll::Ready(Ok(LoadResponse::CacheValid));
             }
@@ -212,9 +211,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
             Ok(LoadResponse::Data {
                 raw_data: blob.content().to_vec(),
-                index_version: git_commit_hash.map(String::from),
-                // TODO: When the reading code has been stable for long enough (Say 8/2022)
-                // change to `git_file_hash + ":" + git_commit_hash`
+                index_version: git_commit_hash.map(|c| git_file_hash + c),
             })
         }
 
