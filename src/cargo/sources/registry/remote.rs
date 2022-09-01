@@ -163,9 +163,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     // Older versions of Cargo used the single value of the hash of the HEAD commit as a `index_version`.
     // This is technically correct but a little too conservative. If a new commit is fetched all cached
     // files need to be regenerated even if a particular file was not changed.
-    // Cargo now checks the `index_version` in two parts the cache file is considered valid if `index_version`
-    // ends with the hash of the HEAD commit OR if it starts with the hash of the file's contents.
-    // Cargo writes the cached files with `index_version` = `git_file_hash` + ":" + `git_commit_hash`.
+    // However if an old cargo has written such a file we still know how to read it, as long as we check for that hash value.
+    //
+    // Cargo now uses a hash of the file's contents as provided by git.
     fn load(
         &mut self,
         _root: &Path,
@@ -177,10 +177,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
         // Check if the cache is valid.
         let git_commit_hash = self.current_version();
-        if let (Some(i), Some(c)) = (index_version, git_commit_hash) {
-            if i.ends_with(c.as_str()) {
-                return Poll::Ready(Ok(LoadResponse::CacheValid));
-            }
+        if index_version.is_some() && index_version == git_commit_hash.as_deref() {
+            // This file was written by an old version of cargo, but it is still up-to-date.
+            return Poll::Ready(Ok(LoadResponse::CacheValid));
         }
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
@@ -189,18 +188,16 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             registry: &RemoteRegistry<'_>,
             path: &Path,
             index_version: Option<&str>,
-            git_commit_hash: Option<&str>,
         ) -> CargoResult<LoadResponse> {
             let repo = registry.repo()?;
             let tree = registry.tree()?;
             let entry = tree.get_path(path);
             let entry = entry?;
-            let git_file_hash = entry.id().to_string();
+            let git_file_hash = Some(entry.id().to_string());
 
-            if let Some(i) = index_version {
-                if i.starts_with(git_file_hash.as_str()) {
-                    return Ok(LoadResponse::CacheValid);
-                }
+            // Check if the cache is valid.
+            if index_version.is_some() && index_version == git_file_hash.as_deref() {
+                return Ok(LoadResponse::CacheValid);
             }
 
             let object = entry.to_object(repo)?;
@@ -211,11 +208,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
             Ok(LoadResponse::Data {
                 raw_data: blob.content().to_vec(),
-                index_version: git_commit_hash.map(|c| git_file_hash + c),
+                index_version: git_file_hash,
             })
         }
 
-        match load_helper(&self, path, index_version, git_commit_hash.as_deref()) {
+        match load_helper(&self, path, index_version) {
             Ok(result) => Poll::Ready(Ok(result)),
             Err(_) if !self.updated => {
                 // If git returns an error and we haven't updated the repo, return
