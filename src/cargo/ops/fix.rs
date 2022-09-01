@@ -333,20 +333,23 @@ to prevent this issue from happening.
     Ok(())
 }
 
+/// Provide the lock address when running in proxy mode
+///
+/// Returns `None` if `fix` is not being run (not in proxy mode). Returns
+/// `Some(...)` if in `fix` proxy mode
+pub fn fix_get_proxy_lock_addr() -> Option<String> {
+    env::var(FIX_ENV).ok()
+}
+
 /// Entry point for `cargo` running as a proxy for `rustc`.
 ///
 /// This is called every time `cargo` is run to check if it is in proxy mode.
 ///
-/// Returns `false` if `fix` is not being run (not in proxy mode). Returns
-/// `true` if in `fix` proxy mode, and the fix was complete without any
-/// warnings or errors. If there are warnings or errors, this does not return,
+/// If there are warnings or errors, this does not return,
 /// and the process exits with the corresponding `rustc` exit code.
-pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
-    let lock_addr = match env::var(FIX_ENV) {
-        Ok(s) => s,
-        Err(_) => return Ok(false),
-    };
-
+///
+/// See [`fix_proxy_lock_addr`]
+pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     let args = FixArgs::get()?;
     trace!("cargo-fix as rustc got file {:?}", args.file);
 
@@ -392,7 +395,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         // any. If stderr is empty then there's no need for the final exec at
         // the end, we just bail out here.
         if output.status.success() && output.stderr.is_empty() {
-            return Ok(true);
+            return Ok(());
         }
 
         // Otherwise, if our rustc just failed, then that means that we broke the

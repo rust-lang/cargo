@@ -1,10 +1,8 @@
 use anyhow::anyhow;
+use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
-use clap::{
-    error::{ContextKind, ContextValue},
-    AppSettings, Arg, ArgMatches,
-};
+use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -24,36 +22,13 @@ lazy_static::lazy_static! {
     ]);
 }
 
-pub fn main(config: &mut Config) -> CliResult {
+pub fn main(config: &mut LazyConfig) -> CliResult {
+    let args = cli().try_get_matches()?;
+
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
-
-    if commands::help::handle_embedded_help(config) {
-        return Ok(());
-    }
-
-    let args = match cli().try_get_matches() {
-        Ok(args) => args,
-        Err(e) => {
-            if e.kind() == clap::ErrorKind::UnrecognizedSubcommand {
-                // An unrecognized subcommand might be an external subcommand.
-                let cmd = e
-                    .context()
-                    .find_map(|c| match c {
-                        (ContextKind::InvalidSubcommand, &ContextValue::String(ref cmd)) => {
-                            Some(cmd)
-                        }
-                        _ => None,
-                    })
-                    .expect("UnrecognizedSubcommand implies the presence of InvalidSubcommand");
-                return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
-                    .map_err(|_| e.into());
-            } else {
-                return Err(e.into());
-            }
-        }
-    };
+    let config = config.get_mut();
 
     // Global args need to be extracted before expanding aliases because the
     // clap code for extracting a subcommand discards global options
@@ -412,7 +387,7 @@ impl GlobalArgs {
     }
 }
 
-fn cli() -> App {
+pub fn cli() -> App {
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"
@@ -425,6 +400,8 @@ fn cli() -> App {
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
         .disable_colored_help(true)
+        // Provide a custom help subcommand for calling into man pages
+        .disable_help_subcommand(true)
         .override_usage(usage)
         .help_template(
             "\
@@ -486,6 +463,49 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 .global(true),
         )
         .subcommands(commands::builtin())
+}
+
+/// Delay loading [`Config`] until access.
+///
+/// In the common path, the [`Config`] is dependent on CLI parsing and shouldn't be loaded until
+/// after that is done but some other paths (like fix or earlier errors) might need access to it,
+/// so this provides a way to share the instance and the implementation across these different
+/// accesses.
+pub struct LazyConfig {
+    config: Option<Config>,
+}
+
+impl LazyConfig {
+    pub fn new() -> Self {
+        Self { config: None }
+    }
+
+    /// Check whether the config is loaded
+    ///
+    /// This is useful for asserts in case the environment needs to be setup before loading
+    pub fn is_init(&self) -> bool {
+        self.config.is_some()
+    }
+
+    /// Get the config, loading it if needed
+    ///
+    /// On error, the process is terminated
+    pub fn get(&mut self) -> &Config {
+        self.get_mut()
+    }
+
+    /// Get the config, loading it if needed
+    ///
+    /// On error, the process is terminated
+    pub fn get_mut(&mut self) -> &mut Config {
+        self.config.get_or_insert_with(|| match Config::default() {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                let mut shell = Shell::new();
+                cargo::exit_with_error(e.into(), &mut shell)
+            }
+        })
+    }
 }
 
 #[test]

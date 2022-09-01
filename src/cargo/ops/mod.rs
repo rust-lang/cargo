@@ -19,7 +19,7 @@ pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_run::run;
 pub use self::cargo_test::{run_benches, run_tests, TestOptions};
 pub use self::cargo_uninstall::uninstall;
-pub use self::fix::{fix, fix_maybe_exec_rustc, FixOptions};
+pub use self::fix::{fix, fix_exec_rustc, fix_get_proxy_lock_addr, FixOptions};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::HttpTimeout;
 pub use self::registry::{configure_http_handle, http_handle, http_handle_and_timeout};
