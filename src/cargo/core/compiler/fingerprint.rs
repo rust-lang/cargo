@@ -1302,12 +1302,15 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     // Fill out a bunch more information that we'll be tracking typically
     // hashed to take up less space on disk as we just need to know when things
     // change.
-    let extra_flags = if unit.mode.is_doc() {
+    let mut rustflags = if unit.mode.is_doc() {
         cx.bcx.rustdocflags_args(unit)
     } else {
         cx.bcx.rustflags_args(unit)
     }
     .to_vec();
+
+    // Append the command line user specified RUSTFLAGS to the env var or config RUSTFLAGS.
+    rustflags.extend(unit.rustflags.iter().map(InternedString::to_string));
 
     let profile_hash = util::hash_u64((
         &unit.profile,
@@ -1345,7 +1348,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         metadata,
         config: config.finish(),
         compile_kind,
-        rustflags: extra_flags,
+        rustflags,
         fs_status: FsStatus::Stale,
         outputs,
     })

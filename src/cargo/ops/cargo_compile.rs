@@ -62,6 +62,8 @@ pub struct CompileOptions {
     pub build_config: BuildConfig,
     /// Feature flags requested by the user.
     pub cli_features: CliFeatures,
+    /// Rustflags requested by the user.
+    pub rustflags: Vec<InternedString>,
     /// A set of packages to build.
     pub spec: Packages,
     /// Filter to apply to the root package to select which targets will be
@@ -91,6 +93,7 @@ impl CompileOptions {
         Ok(CompileOptions {
             build_config: BuildConfig::new(config, jobs, keep_going, &[], mode)?,
             cli_features: CliFeatures::new_all(false),
+            rustflags: Vec::new(),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {
                 required_features_filterable: false,
@@ -335,6 +338,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref build_config,
         ref spec,
         ref cli_features,
+        ref rustflags,
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
@@ -492,6 +496,7 @@ pub fn create_bcx<'a, 'cfg>(
         &resolve,
         &workspace_resolve,
         &resolved_features,
+        &rustflags,
         &pkg_set,
         &profiles,
         interner,
@@ -532,6 +537,7 @@ pub fn create_bcx<'a, 'cfg>(
                 &resolve,
                 &workspace_resolve,
                 &resolved_features,
+                &rustflags,
                 &pkg_set,
                 &profiles,
                 interner,
@@ -983,6 +989,7 @@ fn generate_targets(
     resolve: &Resolve,
     workspace_resolve: &Option<Resolve>,
     resolved_features: &features::ResolvedFeatures,
+    rustflags: &Vec<InternedString>,
     package_set: &PackageSet<'_>,
     profiles: &Profiles,
     interner: &UnitInterner,
@@ -1082,6 +1089,15 @@ fn generate_targets(
                 unit_for,
                 *kind,
             );
+
+            // Doc units will not set the user specified rustflags since these use
+            // rustdoc specific flags instead.
+            let rustflags = if target_mode.is_doc() {
+                Default::default()
+            } else {
+                rustflags.clone()
+            };
+
             let unit = interner.intern(
                 pkg,
                 target,
@@ -1089,6 +1105,7 @@ fn generate_targets(
                 kind.for_target(target),
                 target_mode,
                 features.clone(),
+                rustflags.clone(),
                 /*is_std*/ false,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
@@ -1672,6 +1689,7 @@ fn traverse_and_share(
         new_kind,
         unit.mode,
         unit.features.clone(),
+        unit.rustflags.clone(),
         unit.is_std,
         new_dep_hash,
         unit.artifact,
@@ -1913,6 +1931,7 @@ fn override_rustc_crate_types(
             unit.kind,
             unit.mode,
             unit.features.clone(),
+            unit.rustflags.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,

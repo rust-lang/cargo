@@ -35,6 +35,7 @@ pub fn cli() -> App {
         )
         .arg_manifest_path()
         .arg_jobs()
+        .arg_rustflags()
         .after_help("Run `cargo help package` for more detailed information.\n")
 }
 

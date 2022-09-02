@@ -82,6 +82,7 @@ pub fn cli() -> App {
         )
         .arg_message_format()
         .arg_timings()
+        .arg_rustflags()
         .after_help("Run `cargo help install` for more detailed information.\n")
 }
 

@@ -37,6 +37,7 @@ pub fn cli() -> App {
         .arg_unit_graph()
         .arg_future_incompat_report()
         .arg_timings()
+        .arg_rustflags()
         .after_help("Run `cargo help check` for more detailed information.\n")
 }
 

@@ -214,6 +214,8 @@ pub fn generate_std_roots(
                 *kind,
                 mode,
                 features.clone(),
+                /*rustflags*/
+                Default::default(), // Setting command line rustflags for the standard library is not supported
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,

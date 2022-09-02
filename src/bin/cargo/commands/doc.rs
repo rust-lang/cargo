@@ -40,6 +40,7 @@ pub fn cli() -> App {
         .arg_ignore_rust_version()
         .arg_unit_graph()
         .arg_timings()
+        .arg_rustflags()
         .after_help("Run `cargo help doc` for more detailed information.\n")
 }
 

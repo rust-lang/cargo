@@ -284,6 +284,7 @@ fn compute_deps(
                 unit,
                 dep_pkg,
                 dep_lib,
+                /*rustflags*/ Default::default(),
                 dep_unit_for,
                 unit.kind,
                 mode,
@@ -295,6 +296,7 @@ fn compute_deps(
                 unit,
                 dep_pkg,
                 dep_lib,
+                /*rustflags*/ Default::default(),
                 dep_unit_for,
                 CompileKind::Host,
                 mode,
@@ -307,6 +309,7 @@ fn compute_deps(
                 unit,
                 dep_pkg,
                 dep_lib,
+                /*rustflags*/ Default::default(),
                 dep_unit_for,
                 unit.kind.for_target(dep_lib),
                 mode,
@@ -377,6 +380,7 @@ fn compute_deps(
                         unit,
                         &unit.pkg,
                         t,
+                        /*rustflags*/ Default::default(),
                         UnitFor::new_normal(unit_for.root_compile_kind()),
                         unit.kind.for_target(t),
                         CompileMode::Build,
@@ -479,6 +483,7 @@ fn compute_deps_custom_build(
         unit,
         &unit.pkg,
         &unit.target,
+        /*rustflags*/ Default::default(),
         script_unit_for,
         // Build scripts always compiled for the host.
         CompileKind::Host,
@@ -568,6 +573,7 @@ fn artifact_targets_to_unit_deps(
                                     target
                                         .clone()
                                         .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
+                                    /*rustflags*/ Default::default(),
                                     parent_unit_for,
                                     compile_kind,
                                     CompileMode::Build,
@@ -580,6 +586,7 @@ fn artifact_targets_to_unit_deps(
                         parent,
                         artifact_pkg,
                         target,
+                        /*rustflags*/ Default::default(),
                         parent_unit_for,
                         compile_kind,
                         CompileMode::Build,
@@ -655,6 +662,7 @@ fn compute_deps_doc(
             unit,
             dep_pkg,
             dep_lib,
+            /*rustflags*/ Default::default(),
             dep_unit_for,
             unit.kind.for_target(dep_lib),
             mode,
@@ -669,6 +677,7 @@ fn compute_deps_doc(
                     unit,
                     dep_pkg,
                     dep_lib,
+                    /*rustflags*/ Default::default(),
                     dep_unit_for,
                     unit.kind.for_target(dep_lib),
                     unit.mode,
@@ -699,6 +708,7 @@ fn compute_deps_doc(
                 unit,
                 &unit.pkg,
                 lib,
+                /*rustflags*/ Default::default(),
                 dep_unit_for,
                 unit.kind.for_target(lib),
                 unit.mode,
@@ -717,6 +727,7 @@ fn compute_deps_doc(
                 scrape_unit,
                 &scrape_unit.pkg,
                 &scrape_unit.target,
+                /*rustflags*/ Default::default(),
                 unit_for,
                 scrape_unit.kind,
                 scrape_unit.mode,
@@ -740,11 +751,15 @@ fn maybe_lib(
         .map(|t| {
             let mode = check_or_build_mode(unit.mode, t);
             let dep_unit_for = unit_for.with_dependency(unit, t, unit_for.root_compile_kind());
+
+            // When adding the lib targets for the current unit also pass down the user specified
+            // rustflags for the package.
             new_unit_dep(
                 state,
                 unit,
                 &unit.pkg,
                 t,
+                unit.rustflags.clone(),
                 dep_unit_for,
                 unit.kind.for_target(t),
                 mode,
@@ -805,6 +820,7 @@ fn dep_build_script(
                 unit,
                 &unit.pkg,
                 t,
+                Default::default(),
                 script_unit_for,
                 unit.kind,
                 CompileMode::RunCustomBuild,
@@ -839,6 +855,7 @@ fn new_unit_dep(
     parent: &Unit,
     pkg: &Package,
     target: &Target,
+    rustflags: Vec<InternedString>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -853,7 +870,7 @@ fn new_unit_dep(
         kind,
     );
     new_unit_dep_with_profile(
-        state, parent, pkg, target, unit_for, kind, mode, profile, artifact,
+        state, parent, pkg, target, rustflags, unit_for, kind, mode, profile, artifact,
     )
 }
 
@@ -862,6 +879,7 @@ fn new_unit_dep_with_profile(
     parent: &Unit,
     pkg: &Package,
     target: &Target,
+    rustflags: Vec<InternedString>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -885,6 +903,7 @@ fn new_unit_dep_with_profile(
         kind,
         mode,
         features,
+        rustflags,
         state.is_std,
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),

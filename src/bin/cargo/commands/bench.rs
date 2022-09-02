@@ -48,6 +48,7 @@ pub fn cli() -> App {
         ))
         .arg_unit_graph()
         .arg_timings()
+        .arg_rustflags()
         .after_help("Run `cargo help bench` for more detailed information.\n")
 }
 
