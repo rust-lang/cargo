@@ -181,11 +181,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     };
 
     let cargo_exe = config.cargo_exe()?;
-    let err = match ProcessBuilder::new(&command)
-        .env(cargo::CARGO_ENV, cargo_exe)
-        .args(args)
-        .exec_replace()
-    {
+    let mut cmd = ProcessBuilder::new(&command);
+    cmd.env(cargo::CARGO_ENV, cargo_exe).args(args);
+    if let Some(client) = config.jobserver_from_env() {
+        cmd.inherit_jobserver(client);
+    }
+    let err = match cmd.exec_replace() {
         Ok(()) => return Ok(()),
         Err(e) => e,
     };

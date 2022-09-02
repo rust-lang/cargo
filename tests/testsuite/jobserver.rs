@@ -5,50 +5,50 @@ use std::net::TcpListener;
 use std::process::Command;
 use std::thread;
 
+use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
 use cargo_test_support::{cargo_exe, project};
+
+const EXE_CONTENT: &str = r#"
+use std::env;
+
+fn main() {
+    let var = env::var("CARGO_MAKEFLAGS").unwrap();
+    let arg = var.split(' ')
+                 .find(|p| p.starts_with("--jobserver"))
+                .unwrap();
+    let val = &arg[arg.find('=').unwrap() + 1..];
+    validate(val);
+}
+
+#[cfg(unix)]
+fn validate(s: &str) {
+    use std::fs::File;
+    use std::io::*;
+    use std::os::unix::prelude::*;
+
+    let fds = s.split(',').collect::<Vec<_>>();
+    println!("{}", s);
+    assert_eq!(fds.len(), 2);
+    unsafe {
+        let mut read = File::from_raw_fd(fds[0].parse().unwrap());
+        let mut write = File::from_raw_fd(fds[1].parse().unwrap());
+
+        let mut buf = [0];
+        assert_eq!(read.read(&mut buf).unwrap(), 1);
+        assert_eq!(write.write(&buf).unwrap(), 1);
+    }
+}
+
+#[cfg(windows)]
+fn validate(_: &str) {
+    // a little too complicated for a test...
+}
+"#;
 
 #[cargo_test]
 fn jobserver_exists() {
     let p = project()
-        .file(
-            "build.rs",
-            r#"
-                use std::env;
-
-                fn main() {
-                    let var = env::var("CARGO_MAKEFLAGS").unwrap();
-                    let arg = var.split(' ')
-                                 .find(|p| p.starts_with("--jobserver"))
-                                 .unwrap();
-                    let val = &arg[arg.find('=').unwrap() + 1..];
-                    validate(val);
-                }
-
-                #[cfg(unix)]
-                fn validate(s: &str) {
-                    use std::fs::File;
-                    use std::io::*;
-                    use std::os::unix::prelude::*;
-
-                    let fds = s.split(',').collect::<Vec<_>>();
-                    println!("{}", s);
-                    assert_eq!(fds.len(), 2);
-                    unsafe {
-                        let mut read = File::from_raw_fd(fds[0].parse().unwrap());
-                        let mut write = File::from_raw_fd(fds[1].parse().unwrap());
-
-                        let mut buf = [0];
-                        assert_eq!(read.read(&mut buf).unwrap(), 1);
-                        assert_eq!(write.write(&buf).unwrap(), 1);
-                    }
-                }
-
-                #[cfg(windows)]
-                fn validate(_: &str) {
-                    // a little too complicated for a test...
-                }
-            "#,
-        )
+        .file("build.rs", EXE_CONTENT)
         .file("src/lib.rs", "")
         .build();
 
@@ -56,6 +56,45 @@ fn jobserver_exists() {
     // token to read from `validate` above, since running the build script
     // itself consumes a token.
     p.cargo("build -j2").run();
+}
+
+#[cargo_test]
+fn external_subcommand_inherits_jobserver() {
+    let make = if cfg!(windows) {
+        "mingw32-make"
+    } else {
+        "make"
+    };
+    if Command::new(make).arg("--version").output().is_err() {
+        return;
+    }
+
+    let name = "cargo-jobserver-check";
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "{name}"
+                    version = "0.0.1"
+                "#
+            ),
+        )
+        .file("src/main.rs", EXE_CONTENT)
+        .file(
+            "Makefile",
+            "\
+all:
+\t+$(CARGO) jobserver-check
+",
+        )
+        .build();
+
+    p.cargo("install --path .").run();
+    assert_has_installed_exe(cargo_home(), name);
+
+    p.process(make).env("CARGO", cargo_exe()).arg("-j2").run();
 }
 
 #[cargo_test]
