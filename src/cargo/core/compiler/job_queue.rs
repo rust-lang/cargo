@@ -162,7 +162,7 @@ struct DrainState<'cfg> {
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
     /// allow us to request jobserver tokens pretty early.
-    pending_queue: Vec<(Unit, Job)>,
+    pending_queue: Vec<(Unit, Job, usize)>,
     print: DiagnosticPrinter<'cfg>,
 
     /// How many jobs we've finished
@@ -576,26 +576,29 @@ impl<'cfg> DrainState<'cfg> {
         // possible that can run. Note that this is also the point where we
         // start requesting job tokens. Each job after the first needs to
         // request a token.
-        while let Some((unit, job)) = self.queue.dequeue() {
-            self.pending_queue.push((unit, job));
+        while let Some((unit, job, priority)) = self.queue.dequeue() {
+            // We want to keep the pieces of work in the `pending_queue` sorted
+            // by their priorities, and insert the current job at its correctly
+            // sorted position: following the lower priority jobs, and the ones
+            // with the same priority (since they were dequeued before the
+            // current one, we also keep that relation).
+            let idx = self
+                .pending_queue
+                .partition_point(|&(_, _, p)| p <= priority);
+            self.pending_queue.insert(idx, (unit, job, priority));
             if self.active.len() + self.pending_queue.len() > 1 {
                 jobserver_helper.request_token();
             }
         }
 
-        // If multiple pieces of work are waiting in the pending queue, we can
-        // sort it according to their priorities: higher priorities should be
-        // scheduled sooner.
-        self.pending_queue
-            .sort_by_cached_key(|(unit, _)| self.queue.priority(unit));
-
         // Now that we've learned of all possible work that we can execute
         // try to spawn it so long as we've got a jobserver token which says
         // we're able to perform some parallel work.
-        // The `pending_queue` is sorted in ascending priority order, and we're
-        // removing the highest priority items from its end.
+        // The `pending_queue` is sorted in ascending priority order, and we
+        // remove items from its end to schedule the highest priority items
+        // sooner.
         while self.has_extra_tokens() && !self.pending_queue.is_empty() {
-            let (unit, job) = self.pending_queue.pop().unwrap();
+            let (unit, job, _) = self.pending_queue.pop().unwrap();
             *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
             if !cx.bcx.build_config.build_plan {
                 // Print out some nice progress information.
