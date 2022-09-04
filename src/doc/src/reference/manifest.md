@@ -73,7 +73,8 @@ The package name is an identifier used to refer to the package. It is used
 when listed as a dependency in another package, and as the default name of
 inferred lib and bin targets.
 
-The name must use only [alphanumeric] characters or `-` or `_`, and cannot be empty.
+The name must use only [alphanumeric] characters or `-` or `_`, and cannot be
+empty, the maximum length for the crate name is 64 characters.
 Note that [`cargo new`] and [`cargo init`] impose some additional restrictions on
 the package name, such as enforcing that it is a valid Rust identifier and not
 a keyword. [crates.io] imposes even more restrictions, such as
