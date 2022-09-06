@@ -5,6 +5,7 @@
 // Due to some of the default clippy lints being somewhat subjective and not
 // necessarily an improvement, we prefer to not use them at this time.
 #![allow(clippy::all)]
+#![allow(rustdoc::private_intra_doc_links)]
 
 //! # Cargo as a library
 //!
