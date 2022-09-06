@@ -80,10 +80,10 @@ Note that [`cargo new`] and [`cargo init`] impose some additional restrictions o
 the package name, such as enforcing that it is a valid Rust identifier and not
 a keyword. [crates.io] imposes even more restrictions, such as:
 
-- Only ASCII characters are allowed
-- Do not use reserved names
-- Do not use special Windows name such as "nul"
-- Use a maximum of 64 characters of length
+- Only ASCII characters are allowed.
+- Do not use reserved names.
+- Do not use special Windows name such as "nul".
+- Use a maximum of 64 characters of length.
 
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
 
