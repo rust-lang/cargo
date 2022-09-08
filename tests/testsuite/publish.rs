@@ -5,6 +5,7 @@ use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package, Response};
 use cargo_test_support::{basic_manifest, no_such_file_err_msg, project, publish};
 use std::fs;
+use std::sync::{Arc, Mutex};
 
 const CLEAN_FOO_JSON: &str = r#"
     {
