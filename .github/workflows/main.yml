@@ -150,7 +150,9 @@ jobs:
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.5/mdbook-v0.4.5-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-    - run: cargo doc --no-deps
+    - run: cargo doc --document-private-items --no-deps
+      env:
+        RUSTDOCFLAGS: -D warnings
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
     - run: |
         cd src/doc

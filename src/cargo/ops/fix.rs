@@ -348,7 +348,7 @@ pub fn fix_get_proxy_lock_addr() -> Option<String> {
 /// If there are warnings or errors, this does not return,
 /// and the process exits with the corresponding `rustc` exit code.
 ///
-/// See [`fix_proxy_lock_addr`]
+/// See [`fix_get_proxy_lock_addr`]
 pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     let args = FixArgs::get()?;
     trace!("cargo-fix as rustc got file {:?}", args.file);
