@@ -2,7 +2,7 @@ use crate::process_error::ProcessError;
 use crate::read2;
 
 use anyhow::{bail, Context, Result};
-use jobserver::Client;
+use jobslot::Client;
 use shell_escape::escape;
 use tempfile::NamedTempFile;
 
@@ -12,8 +12,9 @@ use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::io::{self, Write};
 use std::iter::once;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
-use std::process::{Command, ExitStatus, Output, Stdio};
+use std::process::{self, Child, ExitStatus, Output, Stdio};
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -29,10 +30,10 @@ pub struct ProcessBuilder {
     /// A list of wrappers that wrap the original program when calling
     /// [`ProcessBuilder::wrapped`]. The last one is the outermost one.
     wrappers: Vec<OsString>,
-    /// The `make` jobserver. See the [jobserver crate] for
+    /// The `make` jobserver. See the [jobslot crate] for
     /// more information.
     ///
-    /// [jobserver crate]: https://docs.rs/jobserver/
+    /// [jobslot crate]: https://docs.rs/jobslot/
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
@@ -467,7 +468,7 @@ impl ProcessBuilder {
             }
             writeln!(buf, "{arg}")?;
         }
-        tmp.write_all(&mut buf)?;
+        tmp.write_all(&buf)?;
         Ok((cmd, tmp))
     }
 
@@ -475,7 +476,10 @@ impl ProcessBuilder {
     fn build_command_without_args(&self) -> Command {
         let mut command = {
             let mut iter = self.wrappers.iter().rev().chain(once(&self.program));
-            let mut cmd = Command::new(iter.next().expect("at least one `program` exists"));
+            let mut cmd = Command::new(
+                iter.next().expect("at least one `program` exists"),
+                &self.jobserver,
+            );
             cmd.args(iter);
             cmd
         };
@@ -491,9 +495,6 @@ impl ProcessBuilder {
                     command.env_remove(k);
                 }
             }
-        }
-        if let Some(ref c) = self.jobserver {
-            c.configure(&mut command);
         }
         command
     }
@@ -534,6 +535,59 @@ impl ProcessBuilder {
     }
 }
 
+#[derive(Debug)]
+pub struct Command {
+    jobserver: Option<Client>,
+    cmd: process::Command,
+}
+
+impl Command {
+    fn new(program: impl AsRef<OsStr>, jobserver: &Option<Client>) -> Self {
+        Self {
+            jobserver: jobserver.clone(),
+            cmd: process::Command::new(program.as_ref()),
+        }
+    }
+
+    pub fn spawn(&mut self) -> Result<Child, io::Error> {
+        if let Some(jobserver) = &self.jobserver {
+            jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.spawn())
+        } else {
+            self.cmd.spawn()
+        }
+    }
+
+    pub fn status(&mut self) -> Result<ExitStatus, io::Error> {
+        if let Some(jobserver) = &self.jobserver {
+            jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.status())
+        } else {
+            self.cmd.status()
+        }
+    }
+
+    pub fn output(&mut self) -> Result<Output, io::Error> {
+        if let Some(jobserver) = &self.jobserver {
+            jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.output())
+        } else {
+            self.cmd.output()
+        }
+    }
+}
+
+impl Deref for Command {
+    type Target = process::Command;
+
+    fn deref(&self) -> &Self::Target {
+        &self.cmd
+    }
+}
+
+impl DerefMut for Command {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.cmd
+    }
+}
+
 /// Forces the command to use `@path` argfile.
 ///
 /// You should set `__CARGO_TEST_FORCE_ARGFILE` to enable this.
@@ -545,7 +599,8 @@ fn debug_force_argfile(retry_enabled: bool) -> bool {
 fn piped(cmd: &mut Command) -> &mut Command {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .stdin(Stdio::piped())
+        .stdin(Stdio::piped());
+    cmd
 }
 
 fn close_tempfile_and_log_error(file: NamedTempFile) {

@@ -11,12 +11,12 @@ use std::fmt::Write;
 use std::fs;
 use std::os;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 use std::str;
 use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
-use cargo_util::{is_ci, ProcessBuilder, ProcessError};
+use cargo_util::{is_ci, Command, ProcessBuilder, ProcessError};
 use serde_json;
 use url::Url;
 

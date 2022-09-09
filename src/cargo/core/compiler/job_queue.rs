@@ -60,7 +60,7 @@ use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
-use jobserver::{Acquired, Client, HelperThread};
+use jobslot::{Acquired, Client, HelperThread};
 use log::{debug, trace};
 use semver::Version;
 

@@ -153,7 +153,7 @@ pub struct Config {
     /// continue operating if possible.
     offline: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
-    jobserver: Option<jobserver::Client>,
+    jobserver: Option<jobslot::Client>,
     /// Cli flags of the form "-Z something" merged with config file values
     unstable_flags: CliUnstable,
     /// Cli flags of the form "-Z something"
@@ -215,13 +215,13 @@ impl Config {
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
-        static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
+        static mut GLOBAL_JOBSERVER: *mut jobslot::Client = 0 as *mut _;
         static INIT: Once = Once::new();
 
         // This should be called early on in the process, so in theory the
         // unsafety is ok here. (taken ownership of random fds)
         INIT.call_once(|| unsafe {
-            if let Some(client) = jobserver::Client::from_env() {
+            if let Some(client) = jobslot::Client::from_env() {
                 GLOBAL_JOBSERVER = Box::into_raw(Box::new(client));
             }
         });
@@ -1499,7 +1499,7 @@ impl Config {
             .unwrap_or_else(|| PathBuf::from(tool))
     }
 
-    pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
+    pub fn jobserver_from_env(&self) -> Option<&jobslot::Client> {
         self.jobserver.as_ref()
     }
 

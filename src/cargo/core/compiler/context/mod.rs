@@ -9,7 +9,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 use anyhow::{bail, Context as _};
 use filetime::FileTime;
-use jobserver::Client;
+use jobslot::Client;
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
