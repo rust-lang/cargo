@@ -12,7 +12,7 @@ use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::io::{self, Write};
 use std::iter::once;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::path::Path;
 use std::process::{self, Child, ExitStatus, Output, Stdio};
 
@@ -641,6 +641,12 @@ impl Command {
         self.cmd.stderr(cfg.into());
         self
     }
+
+    // For mod impl
+
+    fn into_inner(self) -> process::Command {
+        self.cmd
+    }
 }
 
 // Implement `Deref` for getters
@@ -683,16 +689,16 @@ mod imp {
         let mut error;
         let mut file = None;
         if debug_force_argfile(process_builder.retry_with_argfile) {
-            let (mut command, argfile) = process_builder.build_command_with_argfile()?;
+            let (command, argfile) = process_builder.build_command_with_argfile()?;
             file = Some(argfile);
-            error = command.exec()
+            error = command.into_inner().exec()
         } else {
-            let mut command = process_builder.build_command();
+            let mut command = process_builder.build_command().into_inner();
             error = command.exec();
             if process_builder.should_retry_with_argfile(&error) {
-                let (mut command, argfile) = process_builder.build_command_with_argfile()?;
+                let (command, argfile) = process_builder.build_command_with_argfile()?;
                 file = Some(argfile);
-                error = command.exec()
+                error = command.into_inner().exec()
             }
         }
         if let Some(file) = file {
