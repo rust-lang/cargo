@@ -14,7 +14,7 @@ use cargo_util::paths;
 use curl::easy::{HttpVersion, List};
 use curl::multi::{EasyHandle, Multi};
 use log::{debug, trace};
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -98,6 +98,9 @@ pub struct Downloads<'cfg> {
     progress: RefCell<Option<Progress<'cfg>>>,
     /// Number of downloads that have successfully finished.
     downloads_finished: usize,
+    /// Number of times the caller has requested blocking. This is used for
+    /// an estimate of progress.
+    blocking_calls: usize,
 }
 
 struct Download {
@@ -113,10 +116,6 @@ struct Download {
 
     /// ETag or Last-Modified header received from the server (if any).
     index_version: RefCell<Option<String>>,
-
-    /// Statistics updated from the progress callback in libcurl.
-    total: Cell<u64>,
-    current: Cell<u64>,
 }
 
 struct CompletedDownload {
@@ -159,10 +158,11 @@ impl<'cfg> HttpRegistry<'cfg> {
                 results: HashMap::new(),
                 progress: RefCell::new(Some(Progress::with_style(
                     "Fetch",
-                    ProgressStyle::Ratio,
+                    ProgressStyle::Indeterminate,
                     config,
                 ))),
                 downloads_finished: 0,
+                blocking_calls: 0,
             },
             fresh: HashSet::new(),
             requested_update: false,
@@ -457,15 +457,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             Ok(buf.len())
         })?;
 
-        // Same goes for the progress function -- it goes through thread-local storage.
-        handle.progress(true)?;
-        handle.progress_function(move |dl_total, dl_cur, _, _| {
-            tls::with(|downloads| match downloads {
-                Some(d) => d.progress(token, dl_total as u64, dl_cur as u64),
-                None => false,
-            })
-        })?;
-
         // And ditto for the header function.
         handle.header_function(move |buf| {
             if let Some((tag, value)) = Self::handle_http_header(buf) {
@@ -494,8 +485,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             data: RefCell::new(Vec::new()),
             path: path.to_path_buf(),
             index_version: RefCell::new(None),
-            total: Cell::new(0),
-            current: Cell::new(0),
         };
 
         // Finally add the request we've lined up to the pool of requests that cURL manages.
@@ -588,11 +577,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        let initial_pending_count = self.downloads.pending.len();
         trace!(
             "block_until_ready: {} transfers pending",
-            initial_pending_count
+            self.downloads.pending.len()
         );
+        self.downloads.blocking_calls += 1;
 
         loop {
             self.handle_completed_downloads()?;
@@ -622,21 +611,31 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 }
 
 impl<'cfg> Downloads<'cfg> {
-    fn progress(&self, token: usize, total: u64, cur: u64) -> bool {
-        let dl = &self.pending[&token].0;
-        dl.total.set(total);
-        dl.current.set(cur);
-        true
-    }
-
     fn tick(&self) -> CargoResult<()> {
         let mut progress = self.progress.borrow_mut();
         let progress = progress.as_mut().unwrap();
 
+        // Since the sparse protocol discovers dependencies as it goes,
+        // it's not possible to get an accurate progress indication.
+        //
+        // As an approximation, we assume that the depth of the dependency graph
+        // is fixed, and base the progress on how many times the caller has asked
+        // for blocking. If there are actually additional dependencies, the progress
+        // bar will get stuck. If there are fewer dependencies, it will disappear
+        // early. It will never go backwards.
+        //
+        // The status text also contains the number of completed & pending requests, which
+        // gives an better indication of forward progress.
+        let approximate_tree_depth = 10;
+
         progress.tick(
-            self.downloads_finished,
-            self.downloads_finished + self.pending.len(),
-            "",
+            self.blocking_calls.min(approximate_tree_depth),
+            approximate_tree_depth + 1,
+            &format!(
+                " {} complete; {} pending",
+                self.downloads_finished,
+                self.pending.len()
+            ),
         )
     }
 }
