@@ -110,3 +110,15 @@ pub fn indented_lines(text: &str) -> String {
         })
         .collect()
 }
+
+pub fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
+    // We should truncate at grapheme-boundary and compute character-widths,
+    // yet the dependencies on unicode-segmentation and unicode-width are
+    // not worth it.
+    let mut chars = s.chars();
+    let mut prefix = (&mut chars).take(max_width - 1).collect::<String>();
+    if chars.next().is_some() {
+        prefix.push('…');
+    }
+    prefix
+}

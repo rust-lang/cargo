@@ -4,25 +4,32 @@ use anyhow::Error;
 use std::fmt;
 use std::path::PathBuf;
 
+use super::truncate_with_ellipsis;
+
 pub type CargoResult<T> = anyhow::Result<T>;
 
 #[derive(Debug)]
-pub struct HttpNot200 {
+pub struct HttpNotSuccessful {
     pub code: u32,
     pub url: String,
+    pub body: Vec<u8>,
 }
 
-impl fmt::Display for HttpNot200 {
+impl fmt::Display for HttpNotSuccessful {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let body = std::str::from_utf8(&self.body)
+            .map(|s| truncate_with_ellipsis(s, 512))
+            .unwrap_or_else(|_| format!("[{} non-utf8 bytes]", self.body.len()));
+
         write!(
             f,
-            "failed to get 200 response from `{}`, got {}",
+            "failed to get successful HTTP response from `{}`, got {}\nbody:\n{body}",
             self.url, self.code
         )
     }
 }
 
-impl std::error::Error for HttpNot200 {}
+impl std::error::Error for HttpNotSuccessful {}
 
 // =============================================================================
 // Verbose error

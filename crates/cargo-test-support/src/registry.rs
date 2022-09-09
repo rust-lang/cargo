@@ -72,7 +72,7 @@ pub struct RegistryBuilder {
     /// Write the registry in configuration.
     configure_registry: bool,
     /// API responders.
-    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request) -> Response>>,
+    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
 }
 
 pub struct TestRegistry {
@@ -117,7 +117,7 @@ impl RegistryBuilder {
 
     /// Adds a custom HTTP response for a specific url
     #[must_use]
-    pub fn add_responder<R: 'static + Send + Fn(&Request) -> Response>(
+    pub fn add_responder<R: 'static + Send + Fn(&Request, &HttpServer) -> Response>(
         mut self,
         url: &'static str,
         responder: R,
@@ -497,12 +497,12 @@ pub struct Response {
     pub body: Vec<u8>,
 }
 
-struct HttpServer {
+pub struct HttpServer {
     listener: TcpListener,
     registry_path: PathBuf,
     dl_path: PathBuf,
     token: Option<String>,
-    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request) -> Response>>,
+    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
 }
 
 impl HttpServer {
@@ -510,7 +510,10 @@ impl HttpServer {
         registry_path: PathBuf,
         dl_path: PathBuf,
         token: Option<String>,
-        api_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request) -> Response>>,
+        api_responders: HashMap<
+            &'static str,
+            Box<dyn Send + Fn(&Request, &HttpServer) -> Response>,
+        >,
     ) -> HttpServerHandle {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
@@ -620,7 +623,7 @@ impl HttpServer {
 
         // Check for custom responder
         if let Some(responder) = self.custom_responders.get(req.url.path()) {
-            return responder(&req);
+            return responder(&req, self);
         }
         let path: Vec<_> = req.url.path()[1..].split('/').collect();
         match (req.method.as_str(), path.as_slice()) {
@@ -668,7 +671,7 @@ impl HttpServer {
     }
 
     /// Unauthorized response
-    fn unauthorized(&self, _req: &Request) -> Response {
+    pub fn unauthorized(&self, _req: &Request) -> Response {
         Response {
             code: 401,
             headers: vec![],
@@ -677,7 +680,7 @@ impl HttpServer {
     }
 
     /// Not found response
-    fn not_found(&self, _req: &Request) -> Response {
+    pub fn not_found(&self, _req: &Request) -> Response {
         Response {
             code: 404,
             headers: vec![],
@@ -686,7 +689,7 @@ impl HttpServer {
     }
 
     /// Respond OK without doing anything
-    fn ok(&self, _req: &Request) -> Response {
+    pub fn ok(&self, _req: &Request) -> Response {
         Response {
             code: 200,
             headers: vec![],
@@ -694,8 +697,17 @@ impl HttpServer {
         }
     }
 
+    /// Return an internal server error (HTTP 500)
+    pub fn internal_server_error(&self, _req: &Request) -> Response {
+        Response {
+            code: 500,
+            headers: vec![],
+            body: br#"internal server error"#.to_vec(),
+        }
+    }
+
     /// Serve the download endpoint
-    fn dl(&self, req: &Request) -> Response {
+    pub fn dl(&self, req: &Request) -> Response {
         let file = self
             .dl_path
             .join(req.url.path().strip_prefix("/dl/").unwrap());
@@ -711,7 +723,7 @@ impl HttpServer {
     }
 
     /// Serve the registry index
-    fn index(&self, req: &Request) -> Response {
+    pub fn index(&self, req: &Request) -> Response {
         let file = self
             .registry_path
             .join(req.url.path().strip_prefix("/index/").unwrap());
@@ -761,7 +773,7 @@ impl HttpServer {
         }
     }
 
-    fn publish(&self, req: &Request) -> Response {
+    pub fn publish(&self, req: &Request) -> Response {
         if let Some(body) = &req.body {
             // Get the metadata of the package
             let (len, remaining) = body.split_at(4);

@@ -7,8 +7,9 @@ use crate::ops;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
-use crate::util::errors::CargoResult;
-use crate::util::{Config, Filesystem, IntoUrl, Progress, ProgressStyle};
+use crate::util::errors::{CargoResult, HttpNotSuccessful};
+use crate::util::network::Retry;
+use crate::util::{internal, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;
 use curl::easy::{HttpVersion, List};
@@ -83,15 +84,12 @@ pub struct Downloads<'cfg> {
     /// When a download is started, it is added to this map. The key is a
     /// "token" (see `Download::token`). It is removed once the download is
     /// finished.
-    pending: HashMap<usize, (Download, EasyHandle)>,
-    /// Set of paths currently being downloaded, mapped to their tokens.
+    pending: HashMap<usize, (Download<'cfg>, EasyHandle)>,
+    /// Set of paths currently being downloaded.
     /// This should stay in sync with `pending`.
-    pending_ids: HashMap<PathBuf, usize>,
-    /// The final result of each download. A pair `(token, result)`. This is a
-    /// temporary holding area, needed because curl can report multiple
-    /// downloads at once, but the main loop (`wait`) is written to only
-    /// handle one at a time.
-    results: HashMap<PathBuf, Result<CompletedDownload, curl::Error>>,
+    pending_paths: HashSet<PathBuf>,
+    /// The final result of each download.
+    results: HashMap<PathBuf, CargoResult<CompletedDownload>>,
     /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
     /// Progress bar.
@@ -103,7 +101,7 @@ pub struct Downloads<'cfg> {
     blocking_calls: usize,
 }
 
-struct Download {
+struct Download<'cfg> {
     /// The token for this download, used as the key of the `Downloads::pending` map
     /// and stored in `EasyHandle` as well.
     token: usize,
@@ -116,6 +114,9 @@ struct Download {
 
     /// ETag or Last-Modified header received from the server (if any).
     index_version: RefCell<Option<String>>,
+
+    /// Logic used to track retrying this download if it's a spurious failure.
+    retry: Retry<'cfg>,
 }
 
 struct CompletedDownload {
@@ -154,7 +155,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             downloads: Downloads {
                 next: 0,
                 pending: HashMap::new(),
-                pending_ids: HashMap::new(),
+                pending_paths: HashSet::new(),
                 results: HashMap::new(),
                 progress: RefCell::new(Some(Progress::with_style(
                     "Fetch",
@@ -213,41 +214,64 @@ impl<'cfg> HttpRegistry<'cfg> {
     fn handle_completed_downloads(&mut self) -> CargoResult<()> {
         assert_eq!(
             self.downloads.pending.len(),
-            self.downloads.pending_ids.len()
+            self.downloads.pending_paths.len()
         );
 
         // Collect the results from the Multi handle.
-        let pending = &mut self.downloads.pending;
-        self.multi.messages(|msg| {
-            let token = msg.token().expect("failed to read token");
-            let (_, handle) = &pending[&token];
-            let result = match msg.result_for(handle) {
-                Some(result) => result,
-                None => return, // transfer is not yet complete.
-            };
-
-            let (download, mut handle) = pending.remove(&token).unwrap();
-            self.downloads.pending_ids.remove(&download.path).unwrap();
-
-            let result = match result {
-                Ok(()) => {
-                    self.downloads.downloads_finished += 1;
-                    match handle.response_code() {
-                        Ok(code) => Ok(CompletedDownload {
-                            response_code: code,
-                            data: download.data.take(),
-                            index_version: download
-                                .index_version
-                                .take()
-                                .unwrap_or_else(|| UNKNOWN.to_string()),
-                        }),
-                        Err(e) => Err(e),
+        let results = {
+            let mut results = Vec::new();
+            let pending = &mut self.downloads.pending;
+            self.multi.messages(|msg| {
+                let token = msg.token().expect("failed to read token");
+                let (_, handle) = &pending[&token];
+                if let Some(result) = msg.result_for(handle) {
+                    results.push((token, result));
+                };
+            });
+            results
+        };
+        for (token, result) in results {
+            let (mut download, handle) = self.downloads.pending.remove(&token).unwrap();
+            let mut handle = self.multi.remove(handle)?;
+            let data = download.data.take();
+            let url = self.full_url(&download.path);
+            let result = match download.retry.r#try(|| {
+                result.with_context(|| format!("failed to download from `{}`", url))?;
+                let code = handle.response_code()?;
+                // Keep this list of expected status codes in sync with the codes handled in `load`
+                if !matches!(code, 200 | 304 | 401 | 404 | 451) {
+                    let url = handle.effective_url()?.unwrap_or(&url);
+                    return Err(HttpNotSuccessful {
+                        code,
+                        url: url.to_owned(),
+                        body: data,
                     }
+                    .into());
+                }
+                Ok(data)
+            }) {
+                Ok(Some(data)) => Ok(CompletedDownload {
+                    response_code: handle.response_code()?,
+                    data,
+                    index_version: download
+                        .index_version
+                        .take()
+                        .unwrap_or_else(|| UNKNOWN.to_string()),
+                }),
+                Ok(None) => {
+                    // retry the operation
+                    let handle = self.multi.add(handle)?;
+                    self.downloads.pending.insert(token, (download, handle));
+                    continue;
                 }
                 Err(e) => Err(e),
             };
+
+            assert!(self.downloads.pending_paths.remove(&download.path));
             self.downloads.results.insert(download.path, result);
-        });
+            self.downloads.downloads_finished += 1;
+        }
+
         self.downloads.tick()?;
 
         Ok(())
@@ -305,7 +329,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         index_version: Option<&str>,
     ) -> Poll<CargoResult<LoadResponse>> {
         trace!("load: {}", path.display());
-        if let Some(_token) = self.downloads.pending_ids.get(path) {
+        if let Some(_token) = self.downloads.pending_paths.get(path) {
             debug!("dependency is still pending: {}", path.display());
             return Poll::Pending;
         }
@@ -339,6 +363,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 debug!("downloaded the index file `{}` twice", path.display())
             }
 
+            // The status handled here need to be kept in sync with the codes handled
+            // in `handle_completed_downloads`
             match result.response_code {
                 200 => {}
                 304 => {
@@ -355,13 +381,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     return Poll::Ready(Ok(LoadResponse::NotFound));
                 }
                 code => {
-                    return Err(anyhow::anyhow!(
-                        "server returned unexpected HTTP status code {} for {}\nbody: {}",
-                        code,
-                        self.full_url(path),
-                        str::from_utf8(&result.data).unwrap_or("<invalid utf8>"),
-                    ))
-                    .into();
+                    return Err(internal(format!("unexpected HTTP status code {code}"))).into();
                 }
             }
 
@@ -369,13 +389,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 raw_data: result.data,
                 index_version: Some(result.index_version),
             }));
-        }
-
-        if self.config.offline() {
-            return Poll::Ready(Err(anyhow::anyhow!(
-                "can't download index file from '{}': you are in offline mode (--offline)",
-                self.url
-            )));
         }
 
         // Looks like we're going to have to do a network request.
@@ -430,9 +443,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let token = self.downloads.next;
         self.downloads.next += 1;
         debug!("downloading {} as {}", path.display(), token);
-        assert_eq!(
-            self.downloads.pending_ids.insert(path.to_path_buf(), token),
-            None,
+        assert!(
+            self.downloads.pending_paths.insert(path.to_path_buf()),
             "path queued for download more than once"
         );
 
@@ -482,6 +494,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             data: RefCell::new(Vec::new()),
             path: path.to_path_buf(),
             index_version: RefCell::new(None),
+            retry: Retry::new(self.config)?,
         };
 
         // Finally add the request we've lined up to the pool of requests that cURL manages.
@@ -598,7 +611,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             let timeout = self
                 .multi
                 .get_timeout()?
-                .unwrap_or_else(|| Duration::new(5, 0));
+                .unwrap_or_else(|| Duration::new(1, 0));
             self.multi
                 .wait(&mut [], timeout)
                 .with_context(|| "failed to wait on curl `Multi`")?;
