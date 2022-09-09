@@ -549,6 +549,9 @@ impl Command {
         }
     }
 
+    // Implement spawn, status and output since jobserver
+    // needs to configure cmd for spawning.
+
     pub fn spawn(&mut self) -> Result<Child, io::Error> {
         if let Some(jobserver) = &self.jobserver {
             jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.spawn())
@@ -572,19 +575,80 @@ impl Command {
             self.cmd.output()
         }
     }
+
+    // Implement modifiers of the builder to ensure the users do not
+    // accidentally call `process::Command::{spawn, status, output}`.
+
+    pub fn arg<S: AsRef<OsStr>>(&mut self, arg: S) -> &mut Self {
+        self.cmd.arg(arg.as_ref());
+        self
+    }
+
+    pub fn args<I, S>(&mut self, args: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        self.cmd.args(args);
+        self
+    }
+
+    pub fn current_dir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self {
+        self.cmd.current_dir(dir.as_ref());
+        self
+    }
+
+    pub fn env<K, V>(&mut self, key: K, val: V) -> &mut Self
+    where
+        K: AsRef<OsStr>,
+        V: AsRef<OsStr>,
+    {
+        self.cmd.env(key.as_ref(), val.as_ref());
+        self
+    }
+
+    pub fn env_clear(&mut self) -> &mut Self {
+        self.cmd.env_clear();
+        self
+    }
+
+    pub fn env_remove<K: AsRef<OsStr>>(&mut self, key: K) -> &mut Self {
+        self.cmd.env_remove(key.as_ref());
+        self
+    }
+
+    pub fn envs<I, K, V>(&mut self, vars: I) -> &mut Self
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: AsRef<OsStr>,
+        V: AsRef<OsStr>,
+    {
+        self.cmd.envs(vars);
+        self
+    }
+
+    pub fn stdin<T: Into<Stdio>>(&mut self, cfg: T) -> &mut Self {
+        self.cmd.stdin(cfg.into());
+        self
+    }
+
+    pub fn stdout<T: Into<Stdio>>(&mut self, cfg: T) -> &mut Self {
+        self.cmd.stdout(cfg.into());
+        self
+    }
+
+    pub fn stderr<T: Into<Stdio>>(&mut self, cfg: T) -> &mut Self {
+        self.cmd.stderr(cfg.into());
+        self
+    }
 }
 
+// Implement `Deref` for getters
 impl Deref for Command {
     type Target = process::Command;
 
     fn deref(&self) -> &Self::Target {
         &self.cmd
-    }
-}
-
-impl DerefMut for Command {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.cmd
     }
 }
 
@@ -599,8 +663,7 @@ fn debug_force_argfile(retry_enabled: bool) -> bool {
 fn piped(cmd: &mut Command) -> &mut Command {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .stdin(Stdio::piped());
-    cmd
+        .stdin(Stdio::piped())
 }
 
 fn close_tempfile_and_log_error(file: NamedTempFile) {
