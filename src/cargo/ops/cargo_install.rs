@@ -5,8 +5,8 @@ use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
-use crate::ops::CompileFilter;
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
+use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem, Rustc, ToSemver, VersionReqExt};
@@ -37,7 +37,7 @@ impl Drop for Transaction {
 
 struct InstallablePackage<'cfg, 'a> {
     config: &'cfg Config,
-    opts: &'a ops::CompileOptions,
+    opts: ops::CompileOptions,
     root: Filesystem,
     source_id: SourceId,
     vers: Option<&'a str>,
@@ -60,7 +60,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         source_id: SourceId,
         from_cwd: bool,
         vers: Option<&'a str>,
-        opts: &'a ops::CompileOptions,
+        original_opts: &'a ops::CompileOptions,
         force: bool,
         no_track: bool,
         needs_update_if_source_is_index: bool,
@@ -145,7 +145,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     dep.clone(),
                     &mut source,
                     config,
-                    opts,
+                    original_opts,
                     &root,
                     &dst,
                     force,
@@ -167,7 +167,14 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             }
         };
 
-        let (ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+        // When we build this package, we want to build the *specified* package only,
+        // and avoid building e.g. workspace default-members instead. Do so by constructing
+        // specialized compile options specific to the identified package.
+        // See test `path_install_workspace_root_despite_default_members`.
+        let mut opts = original_opts.clone();
+        opts.spec = Packages::Packages(vec![pkg.name().to_string()]);
+
+        let (ws, rustc, target) = make_ws_rustc_target(config, &opts, &source_id, pkg.clone())?;
         // If we're installing in --locked mode and there's no `Cargo.lock` published
         // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
         if config.locked() && !ws.root().join("Cargo.lock").exists() {
@@ -235,7 +242,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             // Check for conflicts.
             ip.no_track_duplicates(&dst)?;
         } else if is_installed(
-            &ip.pkg, config, opts, &ip.rustc, &ip.target, &ip.root, &dst, force,
+            &ip.pkg, config, &ip.opts, &ip.rustc, &ip.target, &ip.root, &dst, force,
         )? {
             let msg = format!(
                 "package `{}` is already installed, use --force to override",
@@ -297,7 +304,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         self.check_yanked_install()?;
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-        let compile = ops::compile_ws(&self.ws, self.opts, &exec).with_context(|| {
+        let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
                 td.into_path();
@@ -372,7 +379,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 &dst,
                 &self.pkg,
                 self.force,
-                self.opts,
+                &self.opts,
                 &self.target,
                 &self.rustc.verbose_version,
             )?;
@@ -439,7 +446,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 &self.pkg,
                 &successful_bins,
                 self.vers.map(|s| s.to_string()),
-                self.opts,
+                &self.opts,
                 &self.target,
                 &self.rustc.verbose_version,
             );

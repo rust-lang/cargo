@@ -6,10 +6,11 @@ use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread::available_parallelism;
 
 /// Configuration information for a rustc build.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BuildConfig {
     /// The requested kind of compilation for this session
     pub requested_kinds: Vec<CompileKind>,
@@ -33,7 +34,7 @@ pub struct BuildConfig {
     pub primary_unit_rustc: Option<ProcessBuilder>,
     /// A thread used by `cargo fix` to receive messages on a socket regarding
     /// the success/failure of applying fixes.
-    pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
+    pub rustfix_diagnostic_server: Arc<RefCell<Option<RustfixDiagnosticServer>>>,
     /// The directory to copy final artifacts to. Note that even if `out_dir` is
     /// set, a copy of artifacts still could be found a `target/(debug\release)`
     /// as usual.
@@ -100,7 +101,7 @@ impl BuildConfig {
             build_plan: false,
             unit_graph: false,
             primary_unit_rustc: None,
-            rustfix_diagnostic_server: RefCell::new(None),
+            rustfix_diagnostic_server: Arc::new(RefCell::new(None)),
             export_dir: None,
             future_incompat_report: false,
             timing_outputs: Vec::new(),
