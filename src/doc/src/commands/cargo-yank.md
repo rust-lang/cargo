@@ -15,9 +15,14 @@ The yank command removes a previously published crate's version from the
 server's index. This command does not delete any data, and the crate will
 still be available for download via the registry's download link.
 
-Note that existing crates locked to a yanked version will still be able to
-download the yanked version to use it. Cargo will, however, not allow any new
-crates to be locked to any yanked version.
+However, yanking a release will prevent compilation of any dependent crates
+with a semver constraint that no can no longer be satisfied by a non-yanked
+version of this crate.
+
+The only exception to this is crates locked to a yanked version by a lockfile,
+these will still be able to download the yanked version to use it. Cargo
+will, however, not allow any new crates to be locked to any yanked version, 
+including when resolving semver constraints in the abscence of a lockfile.
 
 This command requires you to be authenticated with either the `--token` option
 or using [cargo-login(1)](cargo-login.html).
