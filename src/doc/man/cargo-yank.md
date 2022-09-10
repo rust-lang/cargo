@@ -15,9 +15,25 @@ The yank command removes a previously published crate's version from the
 server's index. This command does not delete any data, and the crate will
 still be available for download via the registry's download link.
 
-Note that existing crates locked to a yanked version will still be able to
-download the yanked version to use it. Cargo will, however, not allow any new
-crates to be locked to any yanked version.
+However, yanking a release will prevent cargo from selecting that version
+when determining the version of a dependency to use. If there are no longer
+any compatible versions that haven't been yanked, cargo will return an error.
+
+The only exception to this is crates locked to a specific version by a lockfile,
+these will still be able to download the yanked version to use it.
+
+For example, consider a crate `bar` with published versions `0.22.0`, `0.22.1`, `0.22.2`, 
+`0.23.0` and `0.24.0`. The following table identifies what versions would be used by crates 
+with different semver constraints, in the absence of a lockfile
+
+| Yanked Version / Semver Constraint | `bar = "0.22.0"`                          | `bar = "=0.22.0"` | `bar = "0.23.0"` |
+|------------------------------------|-------------------------------------------|-------------------|------------------|
+| `0.22.0`                           | Use either `0.22.1` or `0.22.2`           | **Return Error**  | Use `0.23.0`     |
+| `0.22.1`                           | Use either `0.22.0` or `0.22.2`           | Use `0.22.0`      | Use `0.22.0`     |
+| `0.23.0`                           | Use either `0.22.0`, `0.21.0` or `0.22.2` | Use `0.22.0`      | **Return Error** |
+
+A common workflow is to yank a crate having already published a semver compatible version,
+to reduce the probability of preventing dependent crates from compiling
 
 This command requires you to be authenticated with either the `--token` option
 or using {{man "cargo-login" 1}}.
