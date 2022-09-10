@@ -30,7 +30,7 @@ following a given release being yanked
 | Yanked Version / Semver Constraint | `bar = "0.22.0"`                          | `bar = "=0.22.0"` | `bar = "0.23.0"` |
 |------------------------------------|-------------------------------------------|-------------------|------------------|
 | `0.22.0`                           | Use either `0.22.1` or `0.22.2`           | **Return Error**  | Use `0.23.0`     |
-| `0.22.1`                           | Use either `0.22.0` or `0.22.2`           | Use `0.22.0`      | Use `0.22.0`     |
+| `0.22.1`                           | Use either `0.22.0` or `0.22.2`           | Use `0.22.0`      | Use `0.23.0`     |
 | `0.23.0`                           | Use either `0.22.0`, `0.21.0` or `0.22.2` | Use `0.22.0`      | **Return Error** |
 
 A common workflow is to yank a crate having already published a semver compatible version,
