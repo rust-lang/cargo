@@ -22,9 +22,10 @@ any compatible versions that haven't been yanked, cargo will return an error.
 The only exception to this is crates locked to a specific version by a lockfile,
 these will still be able to download the yanked version to use it.
 
-For example, consider a crate `bar` with published versions `0.22.0`, `0.22.1`, `0.22.2`, 
-`0.23.0` and `0.24.0`. The following table identifies what versions would be used by crates 
-with different semver constraints, in the absence of a lockfile
+For example, consider a crate `bar` with published versions `0.22.0`, `0.22.1`, 
+`0.22.2`, `0.23.0` and `0.24.0`. The following table identifies the versions
+cargo could use in the absence of a lockfile for different semver constraints,
+following a given release being yanked 
 
 | Yanked Version / Semver Constraint | `bar = "0.22.0"`                          | `bar = "=0.22.0"` | `bar = "0.23.0"` |
 |------------------------------------|-------------------------------------------|-------------------|------------------|

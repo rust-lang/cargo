@@ -22,9 +22,9 @@ DESCRIPTION
        it.
 
        For example, consider a crate bar with published versions 0.22.0,
-       0.22.1, 0.22.2, 0.23.0 and 0.24.0. The following table identifies what
-       versions would be used by crates with different semver constraints, in
-       the absence of a lockfile
+       0.22.1, 0.22.2, 0.23.0 and 0.24.0. The following table identifies the
+       versions cargo could use in the absence of a lockfile for different
+       semver constraints, following a given release being yanked
 
        +----------------------+-----------------------+-----------+----------+
        | Yanked Version /     | bar = "0.22.0"        | bar =     | bar =    |
@@ -41,7 +41,8 @@ DESCRIPTION
        +----------------------+-----------------------+-----------+----------+
 
        A common workflow is to yank a crate having already published a semver
-       compatible version, to avoid preventing dependent crates from compiling
+       compatible version, to reduce the probability of preventing dependent
+       crates from compiling
 
        This command requires you to be authenticated with either the --token
        option or using cargo-login(1).
