@@ -14,7 +14,7 @@ use std::env;
 fn main() {
     let var = env::var("CARGO_MAKEFLAGS").unwrap();
     let arg = var.split(' ')
-                 .find(|p| p.starts_with("--jobserver"))
+                 .find(|p| p.starts_with("--jobserver") || p.starts_with("-j"))
                 .unwrap();
     let val = &arg[arg.find('=').unwrap() + 1..];
     validate(val);
