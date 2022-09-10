@@ -554,7 +554,7 @@ impl Command {
 
     pub fn spawn(&mut self) -> Result<Child, io::Error> {
         if let Some(jobserver) = &self.jobserver {
-            jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.spawn())
+            jobserver.configure_make_and_run(&mut self.cmd, |cmd| cmd.spawn())
         } else {
             self.cmd.spawn()
         }
@@ -562,7 +562,7 @@ impl Command {
 
     pub fn status(&mut self) -> Result<ExitStatus, io::Error> {
         if let Some(jobserver) = &self.jobserver {
-            jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.status())
+            jobserver.configure_make_and_run(&mut self.cmd, |cmd| cmd.status())
         } else {
             self.cmd.status()
         }
@@ -570,7 +570,7 @@ impl Command {
 
     pub fn output(&mut self) -> Result<Output, io::Error> {
         if let Some(jobserver) = &self.jobserver {
-            jobserver.configure_and_run(&mut self.cmd, |cmd| cmd.output())
+            jobserver.configure_make_and_run(&mut self.cmd, |cmd| cmd.output())
         } else {
             self.cmd.output()
         }
