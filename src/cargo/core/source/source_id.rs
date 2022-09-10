@@ -680,7 +680,13 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 kind: SourceKind::Registry,
                 ref url,
                 ..
-            } => write!(f, "registry+{}", url),
+            } => {
+                if url.scheme().starts_with("sparse+") {
+                    write!(f, "{}", url)
+                } else {
+                    write!(f, "registry+{}", url)
+                }
+            }
             SourceIdInner {
                 kind: SourceKind::LocalRegistry,
                 ref url,
