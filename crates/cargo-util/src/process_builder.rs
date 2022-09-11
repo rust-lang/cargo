@@ -641,12 +641,6 @@ impl Command {
         self.cmd.stderr(cfg.into());
         self
     }
-
-    // For mod impl
-
-    fn into_inner(self) -> process::Command {
-        self.cmd
-    }
 }
 
 // Implement `Deref` for getters
@@ -680,25 +674,41 @@ fn close_tempfile_and_log_error(file: NamedTempFile) {
 
 #[cfg(unix)]
 mod imp {
-    use super::{close_tempfile_and_log_error, debug_force_argfile, ProcessBuilder, ProcessError};
+    use super::{
+        close_tempfile_and_log_error, debug_force_argfile, Command, ProcessBuilder, ProcessError,
+    };
     use anyhow::Result;
+    use std::convert::Infallible;
     use std::io;
     use std::os::unix::process::CommandExt;
+
+    impl Command {
+        fn exec(&mut self) -> io::Error {
+            let res: io::Result<Infallible> = if let Some(jobserver) = &self.jobserver {
+                jobserver.configure_make_and_run(&mut self.cmd, |cmd| Err(cmd.exec()))
+            } else {
+                Err(self.cmd.exec())
+            };
+
+            // res just cannot be Ok
+            res.unwrap_err()
+        }
+    }
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         let mut error;
         let mut file = None;
         if debug_force_argfile(process_builder.retry_with_argfile) {
-            let (command, argfile) = process_builder.build_command_with_argfile()?;
+            let (mut command, argfile) = process_builder.build_command_with_argfile()?;
             file = Some(argfile);
-            error = command.into_inner().exec()
+            error = command.exec()
         } else {
-            let mut command = process_builder.build_command().into_inner();
+            let mut command = process_builder.build_command();
             error = command.exec();
             if process_builder.should_retry_with_argfile(&error) {
-                let (command, argfile) = process_builder.build_command_with_argfile()?;
+                let (mut command, argfile) = process_builder.build_command_with_argfile()?;
                 file = Some(argfile);
-                error = command.into_inner().exec()
+                error = command.exec()
             }
         }
         if let Some(file) = file {
