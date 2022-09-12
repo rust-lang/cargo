@@ -1,6 +1,8 @@
 //! Tests for the --config CLI option.
 
-use super::config::{assert_error, assert_match, read_output, write_config, ConfigBuilder};
+use super::config::{
+    assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
+};
 use cargo::util::config::Definition;
 use cargo_test_support::paths;
 use std::{collections::HashMap, fs};
@@ -51,6 +53,72 @@ fn cli_priority() {
         .config_arg("term.quiet=true")
         .build();
     assert_eq!(config.get::<bool>("term.quiet").unwrap(), true);
+}
+
+#[cargo_test]
+fn merge_primitives_for_multiple_cli_occurences() {
+    let config_path0 = ".cargo/file0.toml";
+    write_config_at(config_path0, "k = 'file0'");
+    let config_path1 = ".cargo/file1.toml";
+    write_config_at(config_path1, "k = 'file1'");
+
+    // k=env0
+    let config = ConfigBuilder::new().env("CARGO_K", "env0").build();
+    assert_eq!(config.get::<String>("k").unwrap(), "env0");
+
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "cli1");
+
+    // Env has a lower priority when comparing with file from CLI arg.
+    //
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    // --config .cargo/file0.toml
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .config_arg(config_path0)
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "file0");
+
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    // --config .cargo/file0.toml
+    // --config k='cli2'
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .config_arg(config_path0)
+        .config_arg("k='cli2'")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "cli2");
+
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    // --config .cargo/file0.toml
+    // --config k='cli2'
+    // --config .cargo/file1.toml
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .config_arg(config_path0)
+        .config_arg("k='cli2'")
+        .config_arg(config_path1)
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "file1");
 }
 
 #[cargo_test]
