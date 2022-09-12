@@ -1019,6 +1019,9 @@ impl Config {
         self.load_values_from(&self.cwd)
     }
 
+    /// Like [`load_values`](Config::load_values) but without merging config values.
+    ///
+    /// This is primarily crafted for `cargo config` command.
     pub(crate) fn load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
         let mut result = Vec::new();
         let mut seen = HashSet::new();
@@ -1035,6 +1038,9 @@ impl Config {
         Ok(result)
     }
 
+    /// Like [`load_includes`](Config::load_includes) but without merging config values.
+    ///
+    /// This is primarily crafted for `cargo config` command.
     fn load_unmerged_include(
         &self,
         cv: &mut CV,
@@ -1054,6 +1060,7 @@ impl Config {
         Ok(())
     }
 
+    /// Start a config file discovery from a path and merges all config values found.
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         // This definition path is ignored, this is just a temporary container
         // representing the entire file.
@@ -1075,10 +1082,22 @@ impl Config {
         }
     }
 
+    /// Loads a config value from a path.
+    ///
+    /// This is used during config file discovery.
     fn load_file(&self, path: &Path, includes: bool) -> CargoResult<ConfigValue> {
         self._load_file(path, &mut HashSet::new(), includes, WhyLoad::FileDiscovery)
     }
 
+    /// Loads a config value from a path with options.
+    ///
+    /// This is actual implementation of loading a config value from a path.
+    ///
+    /// * `includes` determines whether to load configs from [`config-include`].
+    /// * `seen` is used to check for cyclic includes.
+    /// * `why_load` tells why a config is being loaded.
+    ///
+    /// [`config-include`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#config-include
     fn _load_file(
         &self,
         path: &Path,
@@ -1118,7 +1137,8 @@ impl Config {
     ///
     /// Returns `value` with the given include files merged into it.
     ///
-    /// `seen` is used to check for cyclic includes.
+    /// * `seen` is used to check for cyclic includes.
+    /// * `why_load` tells why a config is being loaded.
     fn load_includes(
         &self,
         mut value: CV,
