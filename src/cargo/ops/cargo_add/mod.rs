@@ -284,9 +284,7 @@ fn resolve_dependency(
                 // Overwrite with `crate_spec`
                 old_dep.source = selected_dep.source;
             }
-            old_dep = populate_dependency(old_dep, arg);
-            old_dep.available_features = selected_dep.available_features;
-            old_dep
+            populate_dependency(old_dep, arg)
         }
     } else {
         selected_dep
@@ -318,9 +316,7 @@ fn resolve_dependency(
                 ))?;
                 dependency.name = latest.name; // Normalize the name
             }
-            dependency = dependency
-                .set_source(latest.source.expect("latest always has a source"))
-                .set_available_features(latest.available_features);
+            dependency = dependency.set_source(latest.source.expect("latest always has a source"));
         }
     }
 

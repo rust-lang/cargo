@@ -85,15 +85,6 @@ impl Dependency {
         self
     }
 
-    /// Set the available features of the dependency to a given vec
-    pub fn set_available_features(
-        mut self,
-        available_features: BTreeMap<String, Vec<String>>,
-    ) -> Self {
-        self.available_features = available_features;
-        self
-    }
-
     /// Populate from cargo
     pub fn set_available_features_from_cargo(
         mut self,
