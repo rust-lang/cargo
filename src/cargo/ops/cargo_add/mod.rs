@@ -4,6 +4,7 @@ mod crate_spec;
 mod dependency;
 mod manifest;
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::path::Path;
@@ -18,10 +19,13 @@ use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
+use crate::core::FeatureMap;
+use crate::core::FeatureValue;
 use crate::core::Package;
 use crate::core::QueryKind;
 use crate::core::Registry;
 use crate::core::Shell;
+use crate::core::Summary;
 use crate::core::Workspace;
 use crate::CargoResult;
 use crate::Config;
@@ -200,7 +204,7 @@ fn resolve_dependency(
     section: &DepTable,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<DependencyEx> {
     let crate_spec = arg
         .crate_spec
         .as_deref()
@@ -353,7 +357,7 @@ fn resolve_dependency(
         MaybeWorkspace::Other(query) => query,
     };
 
-    dependency = populate_available_features(dependency, &query, registry)?;
+    let dependency = populate_available_features(dependency, &query, registry)?;
 
     Ok(dependency)
 }
@@ -596,12 +600,68 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
     dependency
 }
 
+pub struct DependencyEx {
+    dep: Dependency,
+    available_features: BTreeMap<String, Vec<String>>,
+}
+
+impl DependencyEx {
+    fn new(dep: Dependency) -> Self {
+        Self {
+            dep,
+            available_features: Default::default(),
+        }
+    }
+
+    fn set_available_features(&mut self, available_features: &FeatureMap) {
+        self.available_features = available_features
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.as_str().to_owned(),
+                    v.iter()
+                        .filter_map(|v| match v {
+                            FeatureValue::Feature(f) => Some(f.as_str().to_owned()),
+                            FeatureValue::Dep { .. } | FeatureValue::DepFeature { .. } => None,
+                        })
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect();
+    }
+}
+
+impl<'s> From<&'s Summary> for DependencyEx {
+    fn from(other: &'s Summary) -> Self {
+        let dep = Dependency::from(other);
+        let mut dep = Self::new(dep);
+        dep.set_available_features(other.features());
+        dep
+    }
+}
+
+impl std::fmt::Display for DependencyEx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.dep.fmt(f)
+    }
+}
+
+impl std::ops::Deref for DependencyEx {
+    type Target = Dependency;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dep
+    }
+}
+
 /// Lookup available features
 fn populate_available_features(
-    mut dependency: Dependency,
+    dependency: Dependency,
     query: &crate::core::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<DependencyEx> {
+    let mut dependency = DependencyEx::new(dependency);
+
     if !dependency.available_features.is_empty() {
         return Ok(dependency);
     }
@@ -627,12 +687,12 @@ fn populate_available_features(
         .ok_or_else(|| {
             anyhow::format_err!("the crate `{dependency}` could not be found in registry index.")
         })?;
-    dependency = dependency.set_available_features_from_cargo(lowest_common_denominator.features());
+    dependency.set_available_features(lowest_common_denominator.features());
 
     Ok(dependency)
 }
 
-fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoResult<()> {
+fn print_msg(shell: &mut Shell, dep: &DependencyEx, section: &[String]) -> CargoResult<()> {
     use std::fmt::Write;
 
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
