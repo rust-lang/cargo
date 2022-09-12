@@ -769,6 +769,8 @@ fn print_msg(shell: &mut Shell, dep: &DependencyEx, section: &[String]) -> Cargo
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
         let suffix = if let Some(version) = &dep.available_version {
+            let mut version = version.clone();
+            version.build = Default::default();
             let version = version.to_string();
             let version_req = dep
                 .version()
