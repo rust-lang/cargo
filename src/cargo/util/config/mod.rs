@@ -121,6 +121,20 @@ macro_rules! get_value_typed {
     };
 }
 
+/// Indicates why a config value is being loaded.
+#[derive(Clone, Copy, Debug)]
+enum WhyLoad {
+    /// Loaded due to a request from the global cli arg `--config`
+    ///
+    /// Indirect configs loaded via [`config-include`] are also seen as from cli args,
+    /// if the initial config is being loaded from cli.
+    ///
+    /// [`config-include`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#config-include
+    Cli,
+    /// Loaded due to config file discovery.
+    FileDiscovery,
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
@@ -1010,7 +1024,7 @@ impl Config {
         let mut seen = HashSet::new();
         let home = self.home_path.clone().into_path_unlocked();
         self.walk_tree(&self.cwd, &home, |path| {
-            let mut cv = self._load_file(path, &mut seen, false)?;
+            let mut cv = self._load_file(path, &mut seen, false, WhyLoad::FileDiscovery)?;
             if self.cli_unstable().config_include {
                 self.load_unmerged_include(&mut cv, &mut seen, &mut result)?;
             }
@@ -1029,9 +1043,11 @@ impl Config {
     ) -> CargoResult<()> {
         let includes = self.include_paths(cv, false)?;
         for (path, abs_path, def) in includes {
-            let mut cv = self._load_file(&abs_path, seen, false).with_context(|| {
-                format!("failed to load config include `{}` from `{}`", path, def)
-            })?;
+            let mut cv = self
+                ._load_file(&abs_path, seen, false, WhyLoad::FileDiscovery)
+                .with_context(|| {
+                    format!("failed to load config include `{}` from `{}`", path, def)
+                })?;
             self.load_unmerged_include(&mut cv, seen, output)?;
             output.push(cv);
         }
@@ -1060,7 +1076,7 @@ impl Config {
     }
 
     fn load_file(&self, path: &Path, includes: bool) -> CargoResult<ConfigValue> {
-        self._load_file(path, &mut HashSet::new(), includes)
+        self._load_file(path, &mut HashSet::new(), includes, WhyLoad::FileDiscovery)
     }
 
     fn _load_file(
@@ -1068,6 +1084,7 @@ impl Config {
         path: &Path,
         seen: &mut HashSet<PathBuf>,
         includes: bool,
+        why_load: WhyLoad,
     ) -> CargoResult<ConfigValue> {
         if !seen.insert(path.to_path_buf()) {
             bail!(
@@ -1080,15 +1097,18 @@ impl Config {
         let toml = cargo_toml::parse(&contents, path, self).with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
-        let value =
-            CV::from_toml(Definition::Path(path.to_path_buf()), toml).with_context(|| {
-                format!(
-                    "failed to load TOML configuration from `{}`",
-                    path.display()
-                )
-            })?;
+        let def = match why_load {
+            WhyLoad::Cli => Definition::Cli(Some(path.into())),
+            WhyLoad::FileDiscovery => Definition::Path(path.into()),
+        };
+        let value = CV::from_toml(def, toml).with_context(|| {
+            format!(
+                "failed to load TOML configuration from `{}`",
+                path.display()
+            )
+        })?;
         if includes {
-            self.load_includes(value, seen)
+            self.load_includes(value, seen, why_load)
         } else {
             Ok(value)
         }
@@ -1099,7 +1119,12 @@ impl Config {
     /// Returns `value` with the given include files merged into it.
     ///
     /// `seen` is used to check for cyclic includes.
-    fn load_includes(&self, mut value: CV, seen: &mut HashSet<PathBuf>) -> CargoResult<CV> {
+    fn load_includes(
+        &self,
+        mut value: CV,
+        seen: &mut HashSet<PathBuf>,
+        why_load: WhyLoad,
+    ) -> CargoResult<CV> {
         // Get the list of files to load.
         let includes = self.include_paths(&mut value, true)?;
         // Check unstable.
@@ -1109,7 +1134,7 @@ impl Config {
         // Accumulate all values here.
         let mut root = CV::Table(HashMap::new(), value.definition().clone());
         for (path, abs_path, def) in includes {
-            self._load_file(&abs_path, seen, true)
+            self._load_file(&abs_path, seen, true, why_load)
                 .and_then(|include| root.merge(include, true))
                 .with_context(|| {
                     format!("failed to load config include `{}` from `{}`", path, def)
@@ -1127,8 +1152,8 @@ impl Config {
     ) -> CargoResult<Vec<(String, PathBuf, Definition)>> {
         let abs = |path: &str, def: &Definition| -> (String, PathBuf, Definition) {
             let abs_path = match def {
-                Definition::Path(p) => p.parent().unwrap().join(&path),
-                Definition::Environment(_) | Definition::Cli => self.cwd().join(&path),
+                Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().join(&path),
+                Definition::Environment(_) | Definition::Cli(None) => self.cwd().join(&path),
             };
             (path.to_string(), abs_path, def.clone())
         };
@@ -1162,7 +1187,7 @@ impl Config {
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
-        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli);
+        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli(None));
         let cli_args = match &self.cli_config {
             Some(cli_args) => cli_args,
             None => return Ok(loaded_args),
@@ -1178,7 +1203,7 @@ impl Config {
                         anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
                     })?
                     .to_string();
-                self._load_file(&self.cwd().join(&str_path), &mut seen, true)
+                self._load_file(&self.cwd().join(&str_path), &mut seen, true, WhyLoad::Cli)
                     .with_context(|| format!("failed to load config from `{}`", str_path))?
             } else {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
@@ -1273,11 +1298,11 @@ impl Config {
                     );
                 }
 
-                CV::from_toml(Definition::Cli, toml_v)
+                CV::from_toml(Definition::Cli(None), toml_v)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
             let tmp_table = self
-                .load_includes(tmp_table, &mut HashSet::new())
+                .load_includes(tmp_table, &mut HashSet::new(), WhyLoad::Cli)
                 .with_context(|| "failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
