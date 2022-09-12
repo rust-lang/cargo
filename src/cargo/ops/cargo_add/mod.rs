@@ -339,7 +339,25 @@ fn resolve_dependency(
         dependency = dependency.clear_version();
     }
 
-    dependency = populate_available_features(dependency, config, registry, ws)?;
+    let query = dependency.query(config)?;
+    let query = match query {
+        MaybeWorkspace::Workspace(_workspace) => {
+            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
+            if let Some(features) = dep.features.clone() {
+                dependency = dependency.set_inherited_features(features);
+            }
+            let query = dep.query(config)?;
+            match query {
+                MaybeWorkspace::Workspace(_) => {
+                    unreachable!("This should have been caught when parsing a workspace root")
+                }
+                MaybeWorkspace::Other(query) => query,
+            }
+        }
+        MaybeWorkspace::Other(query) => query,
+    };
+
+    dependency = populate_available_features(dependency, &query, registry)?;
 
     Ok(dependency)
 }
@@ -585,31 +603,13 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
 /// Lookup available features
 fn populate_available_features(
     mut dependency: Dependency,
-    config: &Config,
+    query: &crate::core::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
-    ws: &Workspace<'_>,
 ) -> CargoResult<Dependency> {
     if !dependency.available_features.is_empty() {
         return Ok(dependency);
     }
 
-    let query = dependency.query(config)?;
-    let query = match query {
-        MaybeWorkspace::Workspace(_workspace) => {
-            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
-            if let Some(features) = dep.features.clone() {
-                dependency = dependency.set_inherited_features(features);
-            }
-            let query = dep.query(config)?;
-            match query {
-                MaybeWorkspace::Workspace(_) => {
-                    unreachable!("This should have been caught when parsing a workspace root")
-                }
-                MaybeWorkspace::Other(query) => query,
-            }
-        }
-        MaybeWorkspace::Other(query) => query,
-    };
     let possibilities = loop {
         match registry.query_vec(&query, QueryKind::Fuzzy) {
             std::task::Poll::Ready(res) => {
