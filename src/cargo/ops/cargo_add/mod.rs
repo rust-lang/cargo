@@ -601,6 +601,7 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
 
 pub struct DependencyEx {
     dep: Dependency,
+    available_version: Option<semver::Version>,
     available_features: BTreeMap<String, Vec<String>>,
 }
 
@@ -608,11 +609,13 @@ impl DependencyEx {
     fn new(dep: Dependency) -> Self {
         Self {
             dep,
+            available_version: None,
             available_features: Default::default(),
         }
     }
 
     fn apply_summary(&mut self, summary: &Summary) {
+        self.available_version = Some(summary.version().clone());
         self.available_features = summary
             .features()
             .iter()
@@ -765,7 +768,15 @@ fn print_msg(shell: &mut Shell, dep: &DependencyEx, section: &[String]) -> Cargo
     deactivated.sort();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
-        shell.write_stderr(format_args!("{}Features:\n", prefix), &ColorSpec::new())?;
+        let suffix = if let Some(version) = &dep.available_version {
+            format!(" as of v{}", version)
+        } else {
+            "".to_owned()
+        };
+        shell.write_stderr(
+            format_args!("{}Features{}:\n", prefix, suffix),
+            &ColorSpec::new(),
+        )?;
         for feat in activated {
             shell.write_stderr(&prefix, &ColorSpec::new())?;
             shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
