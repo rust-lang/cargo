@@ -4,11 +4,11 @@ mod crate_spec;
 mod dependency;
 mod manifest;
 
-use anyhow::Context;
 use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::path::Path;
 
+use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexSet;
 use termcolor::Color::Green;
