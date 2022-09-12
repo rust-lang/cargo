@@ -12,8 +12,9 @@ const EXE_CONTENT: &str = r#"
 use std::env;
 
 fn main() {
-    // Copied from jobslot::Client::from_env
     let var = env::var("CARGO_MAKEFLAGS").unwrap();
+    // Copied from jobslot::Client::from_env
+    // It uses MIT + Apache, so it is OK to reuse their code here.
     let val = var
         .split_ascii_whitespace()
         .filter_map(|arg| {
@@ -22,6 +23,7 @@ fn main() {
         })
         .find(|s| !s.is_empty())
         .unwrap();
+    // end here
     validate(val);
 }
 
