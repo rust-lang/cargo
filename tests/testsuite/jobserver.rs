@@ -12,11 +12,16 @@ const EXE_CONTENT: &str = r#"
 use std::env;
 
 fn main() {
+    // Copied from jobslot::Client::from_env
     let var = env::var("CARGO_MAKEFLAGS").unwrap();
-    let arg = var.split(' ')
-                 .find(|p| p.starts_with("--jobserver") || p.starts_with("-j"))
-                .unwrap();
-    let val = &arg[arg.find('=').unwrap() + 1..];
+    let val = var
+        .split_ascii_whitespace()
+        .filter_map(|arg| {
+            arg.strip_prefix("--jobserver-fds=")
+                .or_else(|| arg.strip_prefix("--jobserver-auth="))
+        })
+        .find(|s| !s.is_empty())
+        .unwrap();
     validate(val);
 }
 
