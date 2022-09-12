@@ -19,7 +19,6 @@ use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
-use crate::core::FeatureMap;
 use crate::core::FeatureValue;
 use crate::core::Package;
 use crate::core::QueryKind;
@@ -613,8 +612,9 @@ impl DependencyEx {
         }
     }
 
-    fn set_available_features(&mut self, available_features: &FeatureMap) {
-        self.available_features = available_features
+    fn apply_summary(&mut self, summary: &Summary) {
+        self.available_features = summary
+            .features()
             .iter()
             .map(|(k, v)| {
                 (
@@ -635,7 +635,7 @@ impl<'s> From<&'s Summary> for DependencyEx {
     fn from(other: &'s Summary) -> Self {
         let dep = Dependency::from(other);
         let mut dep = Self::new(dep);
-        dep.set_available_features(other.features());
+        dep.apply_summary(other);
         dep
     }
 }
@@ -687,7 +687,7 @@ fn populate_available_features(
         .ok_or_else(|| {
             anyhow::format_err!("the crate `{dependency}` could not be found in registry index.")
         })?;
-    dependency.set_available_features(lowest_common_denominator.features());
+    dependency.apply_summary(&lowest_common_denominator);
 
     Ok(dependency)
 }
