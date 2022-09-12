@@ -254,3 +254,31 @@ Caused by:
   expected array, but found string",
     );
 }
+
+#[cargo_test]
+fn cli_include_take_prioirty_over_env() {
+    write_config_at(".cargo/include.toml", "k='include'");
+
+    // k=env
+    let config = ConfigBuilder::new().env("CARGO_K", "env").build();
+    assert_eq!(config.get::<String>("k").unwrap(), "env");
+
+    // k=env
+    // --config 'include=".cargo/include.toml"'
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env")
+        .unstable_flag("config-include")
+        .config_arg("include='.cargo/include.toml'")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "include");
+
+    // k=env
+    // --config '.cargo/foo.toml'
+    write_config_at(".cargo/foo.toml", "include='include.toml'");
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env")
+        .unstable_flag("config-include")
+        .config_arg(".cargo/foo.toml")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "include");
+}
