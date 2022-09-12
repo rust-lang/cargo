@@ -2,7 +2,7 @@
 warning: translating `linked_hash_map` to `linked-hash-map`
 warning: translating `Inflector` to `inflector`
       Adding linked-hash-map v0.5.4 to dependencies.
-             Features as of v0.5.4:
+             Features:
              - clippy
              - heapsize
              - heapsize_impl
@@ -11,7 +11,7 @@ warning: translating `Inflector` to `inflector`
              - serde_impl
              - serde_test
       Adding inflector v0.11.4 to dependencies.
-             Features as of v0.11.4:
+             Features:
              + heavyweight
              + lazy_static
              + regex

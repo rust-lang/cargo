@@ -769,7 +769,16 @@ fn print_msg(shell: &mut Shell, dep: &DependencyEx, section: &[String]) -> Cargo
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
         let suffix = if let Some(version) = &dep.available_version {
-            format!(" as of v{}", version)
+            let version = version.to_string();
+            let version_req = dep
+                .version()
+                .and_then(|v| semver::VersionReq::parse(v).ok())
+                .and_then(|v| precise_version(&v));
+            if version_req.as_deref() != Some(version.as_str()) {
+                format!(" as of v{}", version)
+            } else {
+                "".to_owned()
+            }
         } else {
             "".to_owned()
         };
@@ -831,4 +840,36 @@ fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Depen
         toml_key
     ))?;
     Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
+}
+
+fn precise_version(version_req: &semver::VersionReq) -> Option<String> {
+    version_req
+        .comparators
+        .iter()
+        .filter(|c| {
+            matches!(
+                c.op,
+                // Only ops we can determine a precise version from
+                semver::Op::Exact
+                    | semver::Op::GreaterEq
+                    | semver::Op::LessEq
+                    | semver::Op::Tilde
+                    | semver::Op::Caret
+                    | semver::Op::Wildcard
+            )
+        })
+        .filter_map(|c| {
+            // Only do it when full precision is specified
+            c.minor.and_then(|minor| {
+                c.patch.map(|patch| semver::Version {
+                    major: c.major,
+                    minor,
+                    patch,
+                    pre: c.pre.clone(),
+                    build: Default::default(),
+                })
+            })
+        })
+        .max()
+        .map(|v| v.to_string())
 }
