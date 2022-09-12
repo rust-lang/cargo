@@ -1068,7 +1068,7 @@ impl Config {
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
-            let value = self.load_file(path, true)?;
+            let value = self.load_file(path)?;
             cfg.merge(value, false).with_context(|| {
                 format!("failed to merge configuration at `{}`", path.display())
             })?;
@@ -1085,8 +1085,8 @@ impl Config {
     /// Loads a config value from a path.
     ///
     /// This is used during config file discovery.
-    fn load_file(&self, path: &Path, includes: bool) -> CargoResult<ConfigValue> {
-        self._load_file(path, &mut HashSet::new(), includes, WhyLoad::FileDiscovery)
+    fn load_file(&self, path: &Path) -> CargoResult<ConfigValue> {
+        self._load_file(path, &mut HashSet::new(), true, WhyLoad::FileDiscovery)
     }
 
     /// Loads a config value from a path with options.
@@ -1476,7 +1476,7 @@ impl Config {
             None => return Ok(()),
         };
 
-        let mut value = self.load_file(&credentials, true)?;
+        let mut value = self.load_file(&credentials)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let (value_map, def) = match value {
