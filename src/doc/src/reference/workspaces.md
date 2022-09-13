@@ -1,9 +1,7 @@
 ## Workspaces
 
-A *workspace* is a collection of one or more packages that share common
-dependency resolution (with a shared `Cargo.lock`), output directory, and
-various settings such as profiles. Packages that are part of a workspaces are
-called *workspace members*.
+A *workspace* is a collection of one or more packages, called *workspace
+members*, that are managed together.
 
 The key points of workspaces are:
 
