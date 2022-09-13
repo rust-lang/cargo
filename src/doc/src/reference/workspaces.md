@@ -6,7 +6,7 @@ members*, that are managed together.
 The key points of workspaces are:
 
 * Common commands can run across all workspace members, like `cargo check --workspace`.
-* All packages share a common `Cargo.lock` file which resides in the
+* All packages share a common [`Cargo.lock`] file which resides in the
   *workspace root*.
 * All packages share a common [output directory], which defaults to a
   directory named `target` in the *workspace root*.
@@ -240,6 +240,7 @@ to the data in `workspace.metadata` if data is missing from `package.metadata`,
 if that makes sense for the tool in question.
 
 [package]: manifest.md#the-package-section
+[`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
 [package-metadata]: manifest.md#the-metadata-table
 [output directory]: ../guide/build-cache.md
 [patch]: overriding-dependencies.md#the-patch-section
