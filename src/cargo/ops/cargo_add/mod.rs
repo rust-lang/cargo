@@ -599,9 +599,14 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
     dependency
 }
 
+/// Track presentation-layer information with the editable representation of a `[dependencies]`
+/// entry (Dependency)
 pub struct DependencyUI {
+    /// Editable representation of a `[depednencies]` entry
     dep: Dependency,
+    /// The version of the crate that we pulled `available_features` from
     available_version: Option<semver::Version>,
+    /// The widest set of features compatible with `Dependency`s version requirement
     available_features: BTreeMap<String, Vec<String>>,
 }
 
@@ -772,6 +777,8 @@ fn print_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> Cargo
             let mut version = version.clone();
             version.build = Default::default();
             let version = version.to_string();
+            // Avoid displaying the version if it will visually look like the version req that we
+            // showed earlier
             let version_req = dep
                 .version()
                 .and_then(|v| semver::VersionReq::parse(v).ok())
@@ -844,6 +851,8 @@ fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Depen
     Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
 }
 
+/// Convert a `semver::VersionReq` into a rendered `semver::Version` if all fields are fully
+/// specified.
 fn precise_version(version_req: &semver::VersionReq) -> Option<String> {
     version_req
         .comparators
