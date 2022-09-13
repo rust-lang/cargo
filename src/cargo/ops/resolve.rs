@@ -386,21 +386,19 @@ pub fn resolve_with_previous<'cfg>(
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
     let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
-    // In the case where a previous instance of resolve is available, we
-    // want to lock as many packages as possible to the previous version
-    // without disturbing the graph structure.
+
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep, dev_deps);
-    }
 
-    // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
-    for r in previous {
-        for id in r.iter() {
-            if keep(&id) {
-                debug!("attempting to prefer {}", id);
-                version_prefs.prefer_package_id(id);
-            }
+        // In the case where a previous instance of resolve is available, we
+        // want to lock as many packages as possible to the previous version
+        // without disturbing the graph structure.
+        register_previous_locks(ws, registry, r, &keep, dev_deps);
+
+        // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
+        for id in r.iter().filter(keep) {
+            debug!("attempting to prefer {}", id);
+            version_prefs.prefer_package_id(id);
         }
     }
 
