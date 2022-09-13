@@ -4,11 +4,12 @@ mod crate_spec;
 mod dependency;
 mod manifest;
 
-use anyhow::Context;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::path::Path;
 
+use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexSet;
 use termcolor::Color::Green;
@@ -18,10 +19,12 @@ use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
+use crate::core::FeatureValue;
 use crate::core::Package;
 use crate::core::QueryKind;
 use crate::core::Registry;
 use crate::core::Shell;
+use crate::core::Summary;
 use crate::core::Workspace;
 use crate::CargoResult;
 use crate::Config;
@@ -200,7 +203,7 @@ fn resolve_dependency(
     section: &DepTable,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<DependencyUI> {
     let crate_spec = arg
         .crate_spec
         .as_deref()
@@ -284,9 +287,7 @@ fn resolve_dependency(
                 // Overwrite with `crate_spec`
                 old_dep.source = selected_dep.source;
             }
-            old_dep = populate_dependency(old_dep, arg);
-            old_dep.available_features = selected_dep.available_features;
-            old_dep
+            populate_dependency(old_dep, arg)
         }
     } else {
         selected_dep
@@ -318,9 +319,7 @@ fn resolve_dependency(
                 ))?;
                 dependency.name = latest.name; // Normalize the name
             }
-            dependency = dependency
-                .set_source(latest.source.expect("latest always has a source"))
-                .set_available_features(latest.available_features);
+            dependency = dependency.set_source(latest.source.expect("latest always has a source"));
         }
     }
 
@@ -339,7 +338,25 @@ fn resolve_dependency(
         dependency = dependency.clear_version();
     }
 
-    dependency = populate_available_features(dependency, config, registry, ws)?;
+    let query = dependency.query(config)?;
+    let query = match query {
+        MaybeWorkspace::Workspace(_workspace) => {
+            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
+            if let Some(features) = dep.features.clone() {
+                dependency = dependency.set_inherited_features(features);
+            }
+            let query = dep.query(config)?;
+            match query {
+                MaybeWorkspace::Workspace(_) => {
+                    unreachable!("This should have been caught when parsing a workspace root")
+                }
+                MaybeWorkspace::Other(query) => query,
+            }
+        }
+        MaybeWorkspace::Other(query) => query,
+    };
+
+    let dependency = populate_available_features(dependency, &query, registry)?;
 
     Ok(dependency)
 }
@@ -582,34 +599,81 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
     dependency
 }
 
+/// Track presentation-layer information with the editable representation of a `[dependencies]`
+/// entry (Dependency)
+pub struct DependencyUI {
+    /// Editable representation of a `[depednencies]` entry
+    dep: Dependency,
+    /// The version of the crate that we pulled `available_features` from
+    available_version: Option<semver::Version>,
+    /// The widest set of features compatible with `Dependency`s version requirement
+    available_features: BTreeMap<String, Vec<String>>,
+}
+
+impl DependencyUI {
+    fn new(dep: Dependency) -> Self {
+        Self {
+            dep,
+            available_version: None,
+            available_features: Default::default(),
+        }
+    }
+
+    fn apply_summary(&mut self, summary: &Summary) {
+        self.available_version = Some(summary.version().clone());
+        self.available_features = summary
+            .features()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.as_str().to_owned(),
+                    v.iter()
+                        .filter_map(|v| match v {
+                            FeatureValue::Feature(f) => Some(f.as_str().to_owned()),
+                            FeatureValue::Dep { .. } | FeatureValue::DepFeature { .. } => None,
+                        })
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect();
+    }
+}
+
+impl<'s> From<&'s Summary> for DependencyUI {
+    fn from(other: &'s Summary) -> Self {
+        let dep = Dependency::from(other);
+        let mut dep = Self::new(dep);
+        dep.apply_summary(other);
+        dep
+    }
+}
+
+impl std::fmt::Display for DependencyUI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.dep.fmt(f)
+    }
+}
+
+impl std::ops::Deref for DependencyUI {
+    type Target = Dependency;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dep
+    }
+}
+
 /// Lookup available features
 fn populate_available_features(
-    mut dependency: Dependency,
-    config: &Config,
+    dependency: Dependency,
+    query: &crate::core::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
-    ws: &Workspace<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<DependencyUI> {
+    let mut dependency = DependencyUI::new(dependency);
+
     if !dependency.available_features.is_empty() {
         return Ok(dependency);
     }
 
-    let query = dependency.query(config)?;
-    let query = match query {
-        MaybeWorkspace::Workspace(_workspace) => {
-            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
-            if let Some(features) = dep.features.clone() {
-                dependency = dependency.set_inherited_features(features);
-            }
-            let query = dep.query(config)?;
-            match query {
-                MaybeWorkspace::Workspace(_) => {
-                    unreachable!("This should have been caught when parsing a workspace root")
-                }
-                MaybeWorkspace::Other(query) => query,
-            }
-        }
-        MaybeWorkspace::Other(query) => query,
-    };
     let possibilities = loop {
         match registry.query_vec(&query, QueryKind::Fuzzy) {
             std::task::Poll::Ready(res) => {
@@ -631,12 +695,12 @@ fn populate_available_features(
         .ok_or_else(|| {
             anyhow::format_err!("the crate `{dependency}` could not be found in registry index.")
         })?;
-    dependency = dependency.set_available_features_from_cargo(lowest_common_denominator.features());
+    dependency.apply_summary(&lowest_common_denominator);
 
     Ok(dependency)
 }
 
-fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoResult<()> {
+fn print_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> CargoResult<()> {
     use std::fmt::Write;
 
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
@@ -709,7 +773,28 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
     deactivated.sort();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
-        shell.write_stderr(format_args!("{}Features:\n", prefix), &ColorSpec::new())?;
+        let suffix = if let Some(version) = &dep.available_version {
+            let mut version = version.clone();
+            version.build = Default::default();
+            let version = version.to_string();
+            // Avoid displaying the version if it will visually look like the version req that we
+            // showed earlier
+            let version_req = dep
+                .version()
+                .and_then(|v| semver::VersionReq::parse(v).ok())
+                .and_then(|v| precise_version(&v));
+            if version_req.as_deref() != Some(version.as_str()) {
+                format!(" as of v{version}")
+            } else {
+                "".to_owned()
+            }
+        } else {
+            "".to_owned()
+        };
+        shell.write_stderr(
+            format_args!("{}Features{}:\n", prefix, suffix),
+            &ColorSpec::new(),
+        )?;
         for feat in activated {
             shell.write_stderr(&prefix, &ColorSpec::new())?;
             shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
@@ -764,4 +849,38 @@ fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Depen
         toml_key
     ))?;
     Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
+}
+
+/// Convert a `semver::VersionReq` into a rendered `semver::Version` if all fields are fully
+/// specified.
+fn precise_version(version_req: &semver::VersionReq) -> Option<String> {
+    version_req
+        .comparators
+        .iter()
+        .filter(|c| {
+            matches!(
+                c.op,
+                // Only ops we can determine a precise version from
+                semver::Op::Exact
+                    | semver::Op::GreaterEq
+                    | semver::Op::LessEq
+                    | semver::Op::Tilde
+                    | semver::Op::Caret
+                    | semver::Op::Wildcard
+            )
+        })
+        .filter_map(|c| {
+            // Only do it when full precision is specified
+            c.minor.and_then(|minor| {
+                c.patch.map(|patch| semver::Version {
+                    major: c.major,
+                    minor,
+                    patch,
+                    pre: c.pre.clone(),
+                    build: Default::default(),
+                })
+            })
+        })
+        .max()
+        .map(|v| v.to_string())
 }
