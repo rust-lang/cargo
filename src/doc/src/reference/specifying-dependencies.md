@@ -489,7 +489,7 @@ rand = { workspace = true, optional = true }
 
 [crates.io]: https://crates.io/
 [dev-dependencies]: #development-dependencies
-[workspace.dependencies]: workspaces.md#the-workspacedependencies-table
+[workspace.dependencies]: workspaces.md#the-dependencies-table
 [optional]: features.md#optional-dependencies
 [features]: features.md
 
