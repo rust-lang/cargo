@@ -10,6 +10,7 @@ The key points of workspaces are:
   *workspace root*.
 * All packages share a common [output directory], which defaults to a
   directory named `target` in the *workspace root*.
+* Sharing package metadata, like with [`workspace.package`](#the-package-table).
 * The [`[patch]`][patch], [`[replace]`][replace] and [`[profile.*]`][profiles]
   sections in `Cargo.toml` are only recognized in the *root* manifest, and
   ignored in member crates' manifests.
