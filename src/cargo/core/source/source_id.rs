@@ -742,4 +742,16 @@ mod tests {
         let s3 = SourceId::new(foo, loc, None).unwrap();
         assert_ne!(s1, s3);
     }
+
+    #[test]
+    fn gitrefs_roundtrip() {
+        let base = "https://host/path".into_url().unwrap();
+        let branch = GitReference::Branch("*-._+20%30 Z/z#foo=bar&zap[]?to\\()'\"".to_string());
+        let s1 = SourceId::for_git(&base, branch).unwrap();
+        let ser1 = format!("{}", s1.as_url());
+        let s2 = SourceId::from_url(&ser1).expect("Failed to deserialize");
+        let ser2 = format!("{}", s2.as_url());
+        assert_eq!(ser1, ser2, "Serialized forms don't match");
+        assert_eq!(s1, s2, "SourceId doesn't round-trip");
+    }
 }
