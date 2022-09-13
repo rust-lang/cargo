@@ -15,6 +15,26 @@ use std::ptr;
 use std::sync::Mutex;
 use url::Url;
 
+// Encode a name or value for a query string
+//
+// https://url.spec.whatwg.org/#urlencoded-serializing
+//
+// The result of running percent-encode after encoding with encoding,
+// tuple’s name, the application/x-www-form-urlencoded percent-encode
+// set, and true
+//
+// We can't use percent_encoding directly because spaces are handled in
+// a peculiar way.
+fn write_form_urlencoded_component(
+    fmt: &mut Formatter<'_>,
+    component: &str,
+) -> Result<(), fmt::Error> {
+    for s in url::form_urlencoded::byte_serialize(component.as_bytes()) {
+        fmt.write_str(s)?;
+    }
+    Ok(())
+}
+
 lazy_static::lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Default::default();
 }
@@ -714,9 +734,18 @@ pub struct PrettyRef<'a> {
 impl<'a> fmt::Display for PrettyRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
-            GitReference::Branch(ref b) => write!(f, "branch={}", b),
-            GitReference::Tag(ref s) => write!(f, "tag={}", s),
-            GitReference::Rev(ref s) => write!(f, "rev={}", s),
+            GitReference::Branch(ref b) => {
+                f.write_str("branch=")?;
+                write_form_urlencoded_component(f, b)
+            }
+            GitReference::Tag(ref s) => {
+                f.write_str("tag=")?;
+                write_form_urlencoded_component(f, s)
+            }
+            GitReference::Rev(ref s) => {
+                f.write_str("rev=")?;
+                write_form_urlencoded_component(f, s)
+            }
             GitReference::DefaultBranch => unreachable!(),
         }
     }
@@ -751,7 +780,16 @@ mod tests {
         let ser1 = format!("{}", s1.as_url());
         let s2 = SourceId::from_url(&ser1).expect("Failed to deserialize");
         let ser2 = format!("{}", s2.as_url());
+        // Serializing twice should yield the same result
         assert_eq!(ser1, ser2, "Serialized forms don't match");
+        // SourceId serializing the same should have the same semantics
+        // This used to not be the case (# was ambiguous)
         assert_eq!(s1, s2, "SourceId doesn't round-trip");
+        // Freeze the format to match an x-www-form-urlencoded query string
+        // https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+        assert_eq!(
+            ser1,
+            "git+https://host/path?branch=*-._%2B20%2530+Z%2Fz%23foo%3Dbar%26zap%5B%5D%3Fto%5C%28%29%27%22"
+        );
     }
 }

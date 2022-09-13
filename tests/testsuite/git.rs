@@ -273,7 +273,7 @@ fn cargo_compile_git_dep_pull_request() {
         .cargo("build")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
-             [COMPILING] dep1 v0.5.0 ({}?rev=refs/pull/330/head#[..])\n\
+             [COMPILING] dep1 v0.5.0 ({}?rev=refs%2Fpull%2F330%2Fhead#[..])\n\
              [COMPILING] foo v0.0.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
