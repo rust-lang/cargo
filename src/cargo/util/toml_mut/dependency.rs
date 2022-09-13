@@ -1,3 +1,5 @@
+//! Information about dependencies in a manifest.
+
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -11,27 +13,28 @@ use crate::core::Summary;
 use crate::CargoResult;
 use crate::Config;
 
-/// A dependency handled by Cargo
+/// A dependency handled by Cargo.
 ///
-/// `None` means the field will be blank in TOML
+/// `None` means the field will be blank in TOML.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub struct Dependency {
-    /// The name of the dependency (as it is set in its `Cargo.toml` and known to crates.io)
+    /// The name of the dependency (as it is set in its `Cargo.toml` and known
+    /// to crates.io).
     pub name: String,
-    /// Whether the dependency is opted-in with a feature flag
+    /// Whether the dependency is opted-in with a feature flag.
     pub optional: Option<bool>,
 
     /// List of features to add (or None to keep features unchanged).
     pub features: Option<IndexSet<String>>,
-    /// Whether default features are enabled
+    /// Whether default features are enabled.
     pub default_features: Option<bool>,
-    /// List of features inherited from a workspace dependency
+    /// List of features inherited from a workspace dependency.
     pub inherited_features: Option<IndexSet<String>>,
 
-    /// Where the dependency comes from
+    /// Where the dependency comes from.
     pub source: Option<Source>,
-    /// Non-default registry
+    /// Non-default registry.
     pub registry: Option<String>,
 
     /// If the dependency is renamed, this is the new name for the dependency
@@ -40,7 +43,7 @@ pub struct Dependency {
 }
 
 impl Dependency {
-    /// Create a new dependency with a name
+    /// Create a new dependency with a name.
     pub fn new(name: &str) -> Self {
         Self {
             name: name.into(),
@@ -54,13 +57,13 @@ impl Dependency {
         }
     }
 
-    /// Set dependency to a given version
+    /// Set dependency to a given version.
     pub fn set_source(mut self, source: impl Into<Source>) -> Self {
         self.source = Some(source.into());
         self
     }
 
-    /// Remove the existing version requirement
+    /// Remove the existing version requirement.
     pub fn clear_version(mut self) -> Self {
         match &mut self.source {
             Some(Source::Registry(_)) => {
@@ -78,20 +81,21 @@ impl Dependency {
         self
     }
 
-    /// Set whether the dependency is optional
+    /// Set whether the dependency is optional.
     #[allow(dead_code)]
     pub fn set_optional(mut self, opt: bool) -> Self {
         self.optional = Some(opt);
         self
     }
 
-    /// Set features as an array of string (does some basic parsing)
+    /// Set features as an array of string (does some basic parsing).
     #[allow(dead_code)]
     pub fn set_features(mut self, features: IndexSet<String>) -> Self {
         self.features = Some(features);
         self
     }
-    /// Set features as an array of string (does some basic parsing)
+
+    /// Set features as an array of string (does some basic parsing).
     pub fn extend_features(mut self, features: impl IntoIterator<Item = String>) -> Self {
         self.features
             .get_or_insert_with(Default::default)
@@ -99,37 +103,37 @@ impl Dependency {
         self
     }
 
-    /// Set the value of default-features for the dependency
+    /// Set the value of default-features for the dependency.
     #[allow(dead_code)]
     pub fn set_default_features(mut self, default_features: bool) -> Self {
         self.default_features = Some(default_features);
         self
     }
 
-    /// Set the alias for the dependency
+    /// Set the alias for the dependency.
     pub fn set_rename(mut self, rename: &str) -> Self {
         self.rename = Some(rename.into());
         self
     }
 
-    /// Set the value of registry for the dependency
+    /// Set the value of registry for the dependency.
     pub fn set_registry(mut self, registry: impl Into<String>) -> Self {
         self.registry = Some(registry.into());
         self
     }
 
-    /// Set features as an array of string (does some basic parsing)
+    /// Set features as an array of string (does some basic parsing).
     pub fn set_inherited_features(mut self, features: IndexSet<String>) -> Self {
         self.inherited_features = Some(features);
         self
     }
 
-    /// Get the dependency source
+    /// Get the dependency source.
     pub fn source(&self) -> Option<&Source> {
         self.source.as_ref()
     }
 
-    /// Get version of dependency
+    /// Get version of dependency.
     pub fn version(&self) -> Option<&str> {
         match self.source()? {
             Source::Registry(src) => Some(src.version.as_str()),
@@ -139,27 +143,27 @@ impl Dependency {
         }
     }
 
-    /// Get registry of the dependency
+    /// Get registry of the dependency.
     pub fn registry(&self) -> Option<&str> {
         self.registry.as_deref()
     }
 
-    /// Get the alias for the dependency (if any)
+    /// Get the alias for the dependency (if any).
     pub fn rename(&self) -> Option<&str> {
         self.rename.as_deref()
     }
 
-    /// Whether default features are activated
+    /// Whether default features are activated.
     pub fn default_features(&self) -> Option<bool> {
         self.default_features
     }
 
-    /// Get whether the dep is optional
+    /// Get whether the dep is optional.
     pub fn optional(&self) -> Option<bool> {
         self.optional
     }
 
-    /// Get the SourceID for this dependency
+    /// Get the SourceID for this dependency.
     pub fn source_id(&self, config: &Config) -> CargoResult<MaybeWorkspace<SourceId>> {
         match &self.source.as_ref() {
             Some(Source::Registry(_)) | None => {
@@ -177,7 +181,7 @@ impl Dependency {
         }
     }
 
-    /// Query to find this dependency
+    /// Query to find this dependency.
     pub fn query(
         &self,
         config: &Config,
@@ -196,13 +200,14 @@ impl Dependency {
     }
 }
 
+/// Either a workspace or another type.
 pub enum MaybeWorkspace<T> {
     Workspace(WorkspaceSource),
     Other(T),
 }
 
 impl Dependency {
-    /// Create a dependency from a TOML table entry
+    /// Create a dependency from a TOML table entry.
     pub fn from_toml(crate_root: &Path, key: &str, item: &toml_edit::Item) -> CargoResult<Self> {
         if let Some(version) = item.as_str() {
             let dep = Self::new(key).set_source(RegistrySource::new(version));
@@ -334,12 +339,12 @@ impl Dependency {
         self.rename().unwrap_or(&self.name)
     }
 
-    /// Convert dependency to TOML
+    /// Convert dependency to TOML.
     ///
-    /// Returns a tuple with the dependency's name and either the version as a `String`
-    /// or the path/git repository as an `InlineTable`.
-    /// (If the dependency is set as `optional` or `default-features` is set to `false`,
-    /// an `InlineTable` is returned in any case.)
+    /// Returns a tuple with the dependency's name and either the version as a
+    /// `String` or the path/git repository as an `InlineTable`.
+    /// (If the dependency is set as `optional` or `default-features` is set to
+    /// `false`, an `InlineTable` is returned in any case.)
     ///
     /// # Panic
     ///
@@ -435,7 +440,7 @@ impl Dependency {
         table
     }
 
-    /// Modify existing entry to match this dependency
+    /// Modify existing entry to match this dependency.
     pub fn update_toml<'k>(
         &self,
         crate_root: &Path,
@@ -621,21 +626,21 @@ fn path_field(crate_root: &Path, abs_path: &Path) -> String {
     relpath
 }
 
-/// Primary location of a dependency
+/// Primary location of a dependency.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Source {
-    /// Dependency from a registry
+    /// Dependency from a registry.
     Registry(RegistrySource),
-    /// Dependency from a local path
+    /// Dependency from a local path.
     Path(PathSource),
-    /// Dependency from a git repo
+    /// Dependency from a git repo.
     Git(GitSource),
-    /// Dependency from a workspace
+    /// Dependency from a workspace.
     Workspace(WorkspaceSource),
 }
 
 impl Source {
-    /// Access the registry source, if present
+    /// Access the registry source, if present.
     pub fn as_registry(&self) -> Option<&RegistrySource> {
         match self {
             Self::Registry(src) => Some(src),
@@ -643,7 +648,7 @@ impl Source {
         }
     }
 
-    /// Access the path source, if present
+    /// Access the path source, if present.
     #[allow(dead_code)]
     pub fn as_path(&self) -> Option<&PathSource> {
         match self {
@@ -652,7 +657,7 @@ impl Source {
         }
     }
 
-    /// Access the git source, if present
+    /// Access the git source, if present.
     #[allow(dead_code)]
     pub fn as_git(&self) -> Option<&GitSource> {
         match self {
@@ -661,7 +666,7 @@ impl Source {
         }
     }
 
-    /// Access the workspace source, if present
+    /// Access the workspace source, if present.
     #[allow(dead_code)]
     pub fn as_workspace(&self) -> Option<&WorkspaceSource> {
         match self {
@@ -712,16 +717,16 @@ impl From<WorkspaceSource> for Source {
     }
 }
 
-/// Dependency from a registry
+/// Dependency from a registry.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub struct RegistrySource {
-    /// Version requirement
+    /// Version requirement.
     pub version: String,
 }
 
 impl RegistrySource {
-    /// Specify dependency by version requirement
+    /// Specify dependency by version requirement.
     pub fn new(version: impl AsRef<str>) -> Self {
         // versions might have semver metadata appended which we do not want to
         // store in the cargo toml files.  This would cause a warning upon compilation
@@ -739,18 +744,18 @@ impl std::fmt::Display for RegistrySource {
     }
 }
 
-/// Dependency from a local path
+/// Dependency from a local path.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub struct PathSource {
-    /// Local, absolute path
+    /// Local, absolute path.
     pub path: PathBuf,
-    /// Version requirement for when published
+    /// Version requirement for when published.
     pub version: Option<String>,
 }
 
 impl PathSource {
-    /// Specify dependency from a path
+    /// Specify dependency from a path.
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
             path: path.into(),
@@ -758,7 +763,7 @@ impl PathSource {
         }
     }
 
-    /// Set an optional version requirement
+    /// Set an optional version requirement.
     pub fn set_version(mut self, version: impl AsRef<str>) -> Self {
         // versions might have semver metadata appended which we do not want to
         // store in the cargo toml files.  This would cause a warning upon compilation
@@ -768,7 +773,7 @@ impl PathSource {
         self
     }
 
-    /// Get the SourceID for this dependency
+    /// Get the SourceID for this dependency.
     pub fn source_id(&self) -> CargoResult<SourceId> {
         SourceId::for_path(&self.path)
     }
@@ -780,24 +785,24 @@ impl std::fmt::Display for PathSource {
     }
 }
 
-/// Dependency from a git repo
+/// Dependency from a git repo.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub struct GitSource {
-    /// Repo URL
+    /// Repository URL.
     pub git: String,
-    /// Select specific branch
+    /// Select specific branch.
     pub branch: Option<String>,
-    /// Select specific tag
+    /// Select specific tag.
     pub tag: Option<String>,
-    /// Select specific rev
+    /// Select specific rev.
     pub rev: Option<String>,
-    /// Version requirement for when published
+    /// Version requirement for when published.
     pub version: Option<String>,
 }
 
 impl GitSource {
-    /// Specify dependency from a git repo
+    /// Specify dependency from a git repo.
     pub fn new(git: impl Into<String>) -> Self {
         Self {
             git: git.into(),
@@ -808,7 +813,7 @@ impl GitSource {
         }
     }
 
-    /// Specify an optional branch
+    /// Specify an optional branch.
     pub fn set_branch(mut self, branch: impl Into<String>) -> Self {
         self.branch = Some(branch.into());
         self.tag = None;
@@ -816,7 +821,7 @@ impl GitSource {
         self
     }
 
-    /// Specify an optional tag
+    /// Specify an optional tag.
     pub fn set_tag(mut self, tag: impl Into<String>) -> Self {
         self.branch = None;
         self.tag = Some(tag.into());
@@ -824,7 +829,7 @@ impl GitSource {
         self
     }
 
-    /// Specify an optional rev
+    /// Specify an optional rev.
     pub fn set_rev(mut self, rev: impl Into<String>) -> Self {
         self.branch = None;
         self.tag = None;
@@ -832,7 +837,7 @@ impl GitSource {
         self
     }
 
-    /// Get the SourceID for this dependency
+    /// Get the SourceID for this dependency.
     pub fn source_id(&self) -> CargoResult<SourceId> {
         let git_url = self.git.parse::<url::Url>()?;
         let git_ref = self.git_ref();
@@ -852,7 +857,7 @@ impl GitSource {
         }
     }
 
-    /// Set an optional version requirement
+    /// Set an optional version requirement.
     pub fn set_version(mut self, version: impl AsRef<str>) -> Self {
         // versions might have semver metadata appended which we do not want to
         // store in the cargo toml files.  This would cause a warning upon compilation
@@ -874,7 +879,7 @@ impl std::fmt::Display for GitSource {
     }
 }
 
-/// Dependency from a workspace
+/// Dependency from a workspace.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub struct WorkspaceSource;

@@ -1,3 +1,5 @@
+//! Parsing and editing of manifest files.
+
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::str;
@@ -10,7 +12,7 @@ use crate::core::FeatureValue;
 use crate::util::interning::InternedString;
 use crate::CargoResult;
 
-/// Dependency table to add dep to
+/// Dependency table to add deps to.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DepTable {
     kind: DepKind,
@@ -24,7 +26,7 @@ impl DepTable {
         Self::new().set_kind(DepKind::Build),
     ];
 
-    /// Reference to a Dependency Table
+    /// Reference to a Dependency Table.
     pub const fn new() -> Self {
         Self {
             kind: DepKind::Normal,
@@ -32,29 +34,29 @@ impl DepTable {
         }
     }
 
-    /// Choose the type of dependency
+    /// Choose the type of dependency.
     pub const fn set_kind(mut self, kind: DepKind) -> Self {
         self.kind = kind;
         self
     }
 
-    /// Choose the platform for the dependency
+    /// Choose the platform for the dependency.
     pub fn set_target(mut self, target: impl Into<String>) -> Self {
         self.target = Some(target.into());
         self
     }
 
-    /// Type of dependency
+    /// Type of dependency.
     pub fn kind(&self) -> DepKind {
         self.kind
     }
 
-    /// Platform for the dependency
+    /// Platform for the dependency.
     pub fn target(&self) -> Option<&str> {
         self.target.as_deref()
     }
 
-    /// Keys to the table
+    /// Keys to the table.
     pub fn to_table(&self) -> Vec<&str> {
         if let Some(target) = &self.target {
             vec!["target", target, self.kind_table()]
@@ -84,15 +86,15 @@ impl From<DepKind> for DepTable {
     }
 }
 
-/// A Cargo manifest
+/// An editable Cargo manifest.
 #[derive(Debug, Clone)]
 pub struct Manifest {
-    /// Manifest contents as TOML data
+    /// Manifest contents as TOML data.
     pub data: toml_edit::Document,
 }
 
 impl Manifest {
-    /// Get the manifest's package name
+    /// Get the manifest's package name.
     pub fn package_name(&self) -> CargoResult<&str> {
         self.data
             .as_table()
@@ -155,8 +157,9 @@ impl Manifest {
         descend(self.data.as_item_mut(), table_path)
     }
 
-    /// Get all sections in the manifest that exist and might contain dependencies.
-    /// The returned items are always `Table` or `InlineTable`.
+    /// Get all sections in the manifest that exist and might contain
+    /// dependencies. The returned items are always `Table` or
+    /// `InlineTable`.
     pub fn get_sections(&self) -> Vec<(DepTable, toml_edit::Item)> {
         let mut sections = Vec::new();
 
@@ -242,12 +245,12 @@ impl std::fmt::Display for Manifest {
     }
 }
 
-/// A Cargo manifest that is available locally.
+/// An editable Cargo manifest that is available locally.
 #[derive(Debug)]
 pub struct LocalManifest {
-    /// Path to the manifest
+    /// Path to the manifest.
     pub path: PathBuf,
-    /// Manifest contents
+    /// Manifest contents.
     pub manifest: Manifest,
 }
 
@@ -266,7 +269,7 @@ impl DerefMut for LocalManifest {
 }
 
 impl LocalManifest {
-    /// Construct the `LocalManifest` corresponding to the `Path` provided.
+    /// Construct the `LocalManifest` corresponding to the `Path` provided..
     pub fn try_new(path: &Path) -> CargoResult<Self> {
         if !path.is_absolute() {
             anyhow::bail!("can only edit absolute paths, got {}", path.display());
@@ -279,7 +282,7 @@ impl LocalManifest {
         })
     }
 
-    /// Write changes back to the file
+    /// Write changes back to the file.
     pub fn write(&self) -> CargoResult<()> {
         if !self.manifest.data.contains_key("package")
             && !self.manifest.data.contains_key("project")
@@ -304,7 +307,7 @@ impl LocalManifest {
         cargo_util::paths::write(&self.path, new_contents_bytes)
     }
 
-    /// Lookup a dependency
+    /// Lookup a dependency.
     pub fn get_dependency_versions<'s>(
         &'s self,
         dep_key: &'s str,
@@ -365,7 +368,7 @@ impl LocalManifest {
         Ok(())
     }
 
-    /// Remove references to `dep_key` if its no longer present
+    /// Remove references to `dep_key` if its no longer present.
     pub fn gc_dep(&mut self, dep_key: &str) {
         let explicit_dep_activation = self.is_explicit_dep_activation(dep_key);
         let status = self.dep_status(dep_key);
