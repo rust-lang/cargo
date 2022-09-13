@@ -203,7 +203,7 @@ fn resolve_dependency(
     section: &DepTable,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<DependencyEx> {
+) -> CargoResult<DependencyUI> {
     let crate_spec = arg
         .crate_spec
         .as_deref()
@@ -599,13 +599,13 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
     dependency
 }
 
-pub struct DependencyEx {
+pub struct DependencyUI {
     dep: Dependency,
     available_version: Option<semver::Version>,
     available_features: BTreeMap<String, Vec<String>>,
 }
 
-impl DependencyEx {
+impl DependencyUI {
     fn new(dep: Dependency) -> Self {
         Self {
             dep,
@@ -634,7 +634,7 @@ impl DependencyEx {
     }
 }
 
-impl<'s> From<&'s Summary> for DependencyEx {
+impl<'s> From<&'s Summary> for DependencyUI {
     fn from(other: &'s Summary) -> Self {
         let dep = Dependency::from(other);
         let mut dep = Self::new(dep);
@@ -643,13 +643,13 @@ impl<'s> From<&'s Summary> for DependencyEx {
     }
 }
 
-impl std::fmt::Display for DependencyEx {
+impl std::fmt::Display for DependencyUI {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.dep.fmt(f)
     }
 }
 
-impl std::ops::Deref for DependencyEx {
+impl std::ops::Deref for DependencyUI {
     type Target = Dependency;
 
     fn deref(&self) -> &Self::Target {
@@ -662,8 +662,8 @@ fn populate_available_features(
     dependency: Dependency,
     query: &crate::core::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<DependencyEx> {
-    let mut dependency = DependencyEx::new(dependency);
+) -> CargoResult<DependencyUI> {
+    let mut dependency = DependencyUI::new(dependency);
 
     if !dependency.available_features.is_empty() {
         return Ok(dependency);
@@ -695,7 +695,7 @@ fn populate_available_features(
     Ok(dependency)
 }
 
-fn print_msg(shell: &mut Shell, dep: &DependencyEx, section: &[String]) -> CargoResult<()> {
+fn print_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> CargoResult<()> {
     use std::fmt::Write;
 
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
