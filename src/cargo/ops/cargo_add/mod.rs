@@ -784,7 +784,7 @@ fn print_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> Cargo
                 .and_then(|v| semver::VersionReq::parse(v).ok())
                 .and_then(|v| precise_version(&v));
             if version_req.as_deref() != Some(version.as_str()) {
-                format!(" as of v{}", version)
+                format!(" as of v{version}")
             } else {
                 "".to_owned()
             }
