@@ -1358,7 +1358,7 @@ for more information.
 ### Workspace Inheritance
 
 Workspace Inheritance has been stabilized in the 1.64 release.
-See [workspace.package](workspaces.md#the-workspacepackage-table), 
-[workspace.dependencies](workspaces.md#the-workspacedependencies-table), 
+See [workspace.package](workspaces.md#the-package-table), 
+[workspace.dependencies](workspaces.md#the-dependencies-table), 
 and [inheriting-a-dependency-from-a-workspace](specifying-dependencies.md#inheriting-a-dependency-from-a-workspace)
 for more information.

@@ -516,7 +516,7 @@ external tools may wish to use them in a consistent fashion, such as referring
 to the data in `workspace.metadata` if data is missing from `package.metadata`,
 if that makes sense for the tool in question.
 
-[workspace-metadata]: workspaces.md#the-workspacemetadata-table
+[workspace-metadata]: workspaces.md#the-metadata-table
 
 #### The `default-run` field
 
@@ -603,7 +603,7 @@ more detail.
         "#the-required-features-field-optional": "cargo-targets.html#the-required-features-field",
         "#building-dynamic-or-static-libraries": "cargo-targets.html#the-crate-type-field",
         "#the-workspace-section": "workspaces.html#the-workspace-section",
-        "#virtual-manifest": "workspaces.html",
+        "#virtual-workspace": "workspaces.html",
         "#package-selection": "workspaces.html#package-selection",
         "#the-features-section": "features.html#the-features-section",
         "#rules": "features.html",
