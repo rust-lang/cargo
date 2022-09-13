@@ -480,13 +480,6 @@ impl LazyConfig {
         Self { config: None }
     }
 
-    /// Check whether the config is loaded
-    ///
-    /// This is useful for asserts in case the environment needs to be setup before loading
-    pub fn is_init(&self) -> bool {
-        self.config.is_some()
-    }
-
     /// Get the config, loading it if needed
     ///
     /// On error, the process is terminated
