@@ -6,10 +6,10 @@ use cargo::core::FeatureValue;
 use cargo::ops::cargo_add::add;
 use cargo::ops::cargo_add::AddOptions;
 use cargo::ops::cargo_add::DepOp;
-use cargo::ops::cargo_add::DepTable;
 use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
 use cargo::util::interning::InternedString;
+use cargo::util::toml_mut::manifest::DepTable;
 use cargo::CargoResult;
 
 pub fn cli() -> clap::Command<'static> {
