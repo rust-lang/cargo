@@ -25,6 +25,8 @@ In the `Cargo.toml`, the `[workspace]` table supports the following sections:
   * [`metadata`](#the-metadata-table) — Extra settings for external tools.
   * [`package`](#the-package-table) — Keys for inheriting in packages.
   * [`dependencies`](#the-dependencies-table) — Keys for inheriting in package dependencies.
+* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
+* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
 * [`[profile]`](profiles.md) — Compiler settings and optimizations.
 
 ### The `[workspace]` section

@@ -291,6 +291,10 @@ also be patched with versions of crates that already exist. If a source is
 patched with a crate version that already exists in the source, then the
 source's original crate is replaced.
 
+Cargo only looks at the patch settings in the `Cargo.toml` manifest at the
+root of the workspace. Patch settings defined in dependencies will be
+ignored.
+
 ### The `[replace]` section
 
 > **Note**: `[replace]` is deprecated. You should use the
@@ -312,6 +316,10 @@ value of each key is the same as the `[dependencies]` syntax for specifying
 dependencies, except that you can't specify features. Note that when a crate
 is overridden the copy it's overridden with must have both the same name and
 version, but it can come from a different source (e.g., git or a local path).
+
+Cargo only looks at the replace settings in the `Cargo.toml` manifest at the
+root of the workspace. Replace settings defined in dependencies will be
+ignored.
 
 ### `paths` overrides
 
