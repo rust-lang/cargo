@@ -245,6 +245,8 @@ Paths for non-executables will be relative to where the config value is defined.
 In particular, rules are:
 
 * For environment variables, paths are relative to the current working directory.
+* For config values loaded directly from the [`--config KEY=VALUE`](#command-line-overrides) option,
+  paths are relative to the current working directory.
 * For config files, paths are relative to the parent directory of the directory where the config files were defined,
   no matter those files are from either the [hierarchical probing](#hierarchical-structure)
   or the [`--config <path>`](#command-line-overrides) option.
