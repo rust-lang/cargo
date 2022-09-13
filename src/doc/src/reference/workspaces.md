@@ -5,6 +5,7 @@ members*, that are managed together.
 
 The key points of workspaces are:
 
+* Common commands can run across all workspace members, like `cargo check --workspace`.
 * All packages share a common `Cargo.lock` file which resides in the
   *workspace root*.
 * All packages share a common [output directory], which defaults to a
