@@ -212,11 +212,28 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
-    if let Some(val) = env::var_os("PATH") {
-        dirs.extend(env::split_paths(&val));
-    }
-    dirs
+    let mut path_dirs = if let Some(val) = env::var_os("PATH") {
+        env::split_paths(&val).collect()
+    } else {
+        vec![]
+    };
+
+    let home_bin = config.home().clone().into_path_unlocked().join("bin");
+
+    // If any of that PATH elements contains `home_bin`, do not
+    // add it again. This is so that the users can control priority
+    // of it using PATH, while preserving the historical
+    // behavior of preferring it over system global directories even
+    // when not in PATH at all.
+    // See https://github.com/rust-lang/cargo/issues/11020 for details.
+    //
+    // Note: `p == home_bin` will ignore trailing slash, but we don't
+    // `canonicalize` the paths.
+    if !path_dirs.iter().any(|p| p == &home_bin) {
+        path_dirs.insert(0, home_bin);
+    };
+
+    path_dirs
 }
 
 fn init_git_transports(config: &Config) {
