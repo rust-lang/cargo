@@ -10,8 +10,10 @@ See the [rustup documentation](https://rust-lang.github.io/rustup/overrides.html
 for more information about how toolchain overrides work.
 {{/option}}
 
-{{#option "`--config` KEY=VALUE"}}
-Overrides a Cargo configuration value.
+{{#option "`--config` _KEY=VALUE_ or _PATH_"}}
+Overrides a Cargo configuration value. The argument should be in TOML syntax of `KEY=VALUE`,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the [command-line overrides section](../reference/config.html#command-line-overrides) for more information.
 {{/option}}
 
 {{#option "`-h`" "`--help`"}}

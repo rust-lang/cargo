@@ -374,9 +374,11 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
-\fB\-\-config\fR KEY=VALUE
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
 .RS 4
-Overrides a Cargo configuration value.
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
 .RE
 .sp
 \fB\-h\fR, 

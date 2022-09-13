@@ -138,8 +138,10 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
-<dt class="option-term" id="option-cargo-update---config"><a class="option-anchor" href="#option-cargo-update---config"></a><code>--config</code> KEY=VALUE</dt>
-<dd class="option-desc">Overrides a Cargo configuration value.</dd>
+<dt class="option-term" id="option-cargo-update---config"><a class="option-anchor" href="#option-cargo-update---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
 
 
 <dt class="option-term" id="option-cargo-update--h"><a class="option-anchor" href="#option-cargo-update--h"></a><code>-h</code></dt>
