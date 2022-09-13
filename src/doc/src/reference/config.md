@@ -238,13 +238,26 @@ precedence rules as other options specified directly with `--config`.
 
 ### Config-relative paths
 
-Paths in config files may be absolute, relative, or a bare name without any
-path separators. Paths for executables without a path separator will use the
-`PATH` environment variable to search for the executable. Paths for
-non-executables will be relative to where the config value is defined. For
-config files, that is relative to the parent directory of the `.cargo`
-directory where the value was defined. For environment variables it is
-relative to the current working directory.
+Paths in config files may be absolute, relative, or a bare name without any path separators.
+Paths for executables without a path separator will use the `PATH` environment variable to search for the executable. 
+Paths for non-executables will be relative to where the config value is defined.
+
+In particular, rules are:
+
+* For environment variables, paths are relative to the current working directory.
+* For config files, paths are relative to the parent directory of the directory where the config files were defined,
+  no matter those files are from either the [hierarchical probing](#hierarchical-structure)
+  or the [`--config <path>`](#command-line-overrides) option.
+
+> **Note:** To maintain consistency with existing `.cargo/config.toml` probing behavior,
+> it is by design that a path in a config file passed via `--config <path>`
+> is also relative to two levels up from the config file itself.
+>
+> To avoid unexpected results, the rule of thumb is putting your extra config files
+> at the same level of discovered `.cargo/config.toml` in your porject.
+> For instance, given a project `/my/project`, 
+> it is recommended to put config files under `/my/project/.cargo`
+> or a new directory at the same level, such as `/my/project/.config`.
 
 ```toml
 # Relative path examples.
