@@ -81,6 +81,7 @@ Each new feature described below should explain how to use it.
     * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
     * [crate-type](#crate-type) — Supports passing crate types to the compiler.
     * [keep-going](#keep-going) — Build as much as possible rather than aborting on the first error.
+    * [rustflags](#rustflags) — Supports passing RUSTFLAGS to the compiler for the root crate.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
@@ -426,6 +427,26 @@ The `-Z unstable-options` command-line option must be used in order to use
 
 ```console
 cargo check --keep-going -Z unstable-options
+```
+
+### rustflags
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+`cargo build --rustflags` (and similarly for `run`, `test` etc) forward the
+rustflags specified to the compiler only for the root crate. Dependencies,
+including transitive dependencies, will not have these rustflags enabled.
+
+For example if the current package depends on dependencies `foo` and `bar`,
+`cargo test --rustflags -C instrument-coverage ` will
+instrument only the libraries for the current package and not for `foo` or `bar`.
+
+This option supports multiple values that begin with a leading hypen(`-`),
+as such, a value terminator (`;`) is required to indicate the end of these
+values. This terminator will allow additional cargo options to be passed via
+the command line after the values to the `--rustflags` option.
+
+```console
+cargo test --rustflags -C instrument-coverage ; -Z unstable-options
 ```
 
 ### config-include
