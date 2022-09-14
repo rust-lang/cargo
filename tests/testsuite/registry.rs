@@ -2698,6 +2698,8 @@ fn http_requires_trailing_slash() {
         .run()
 }
 
+// Limit the test to debug builds so that `__CARGO_TEST_MAX_UNPACK_SIZE` will take affect.
+#[cfg(debug_assertions)]
 #[cargo_test]
 fn reach_max_unpack_size() {
     let p = project()
