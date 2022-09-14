@@ -182,7 +182,9 @@ use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;
-use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
+use crate::util::{
+    restricted_names, CargoResult, Config, Filesystem, LimitErrorReader, OptVersionReq,
+};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
@@ -194,6 +196,7 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
+const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
@@ -615,6 +618,7 @@ impl<'cfg> RegistrySource<'cfg> {
             }
         }
         let gz = GzDecoder::new(tarball);
+        let gz = LimitErrorReader::new(gz, max_unpack_size());
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -639,6 +643,13 @@ impl<'cfg> RegistrySource<'cfg> {
                     prefix
                 )
             }
+            // Prevent unpacking the lockfile from the crate itself.
+            if entry_path
+                .file_name()
+                .map_or(false, |p| p == PACKAGE_SOURCE_LOCK)
+            {
+                continue;
+            }
             // Unpacking failed
             let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
             if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
@@ -654,16 +665,14 @@ impl<'cfg> RegistrySource<'cfg> {
                 .with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
 
-        // The lock file is created after unpacking so we overwrite a lock file
-        // which may have been extracted from the package.
+        // Now that we've finished unpacking, create and write to the lock file to indicate that
+        // unpacking was successful.
         let mut ok = OpenOptions::new()
-            .create(true)
+            .create_new(true)
             .read(true)
             .write(true)
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
-
-        // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;
 
         Ok(unpack_dir.to_path_buf())
@@ -823,6 +832,20 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
 
         self.ops.block_until_ready()
+    }
+}
+
+/// For integration test only.
+#[inline]
+fn max_unpack_size() -> u64 {
+    const VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
+    if cfg!(debug_assertions) && std::env::var(VAR).is_ok() {
+        std::env::var(VAR)
+            .unwrap()
+            .parse()
+            .expect("a max unpack size in bytes")
+    } else {
+        MAX_UNPACK_SIZE
     }
 }
 
