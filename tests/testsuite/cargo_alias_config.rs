@@ -30,6 +30,58 @@ expected a list, but found a integer for [..]",
 }
 
 #[cargo_test]
+fn alias_malformed_config_string() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                b-cargo-test = `
+            "#,
+        )
+        .build();
+
+    p.cargo("b-cargo-test -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] no such subcommand: `b-cargo-test`
+
+<tab>View all installed commands with `cargo --list`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn alias_malformed_config_list() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                b-cargo-test = [1, 2]
+            "#,
+        )
+        .build();
+
+    p.cargo("b-cargo-test -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] no such subcommand: `b-cargo-test`
+
+<tab>View all installed commands with `cargo --list`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn alias_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
