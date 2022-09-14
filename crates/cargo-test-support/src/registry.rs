@@ -1051,7 +1051,12 @@ impl Package {
             self.append_manifest(&mut a);
         }
         if self.files.is_empty() {
-            self.append(&mut a, "src/lib.rs", DEFAULT_MODE, &EntryData::Regular("".into()));
+            self.append(
+                &mut a,
+                "src/lib.rs",
+                DEFAULT_MODE,
+                &EntryData::Regular("".into()),
+            );
         } else {
             for PackageFile {
                 path,
@@ -1125,7 +1130,12 @@ impl Package {
             manifest.push_str("[lib]\nproc-macro = true\n");
         }
 
-        self.append(ar, "Cargo.toml", DEFAULT_MODE, &EntryData::Regular(manifest.into()));
+        self.append(
+            ar,
+            "Cargo.toml",
+            DEFAULT_MODE,
+            &EntryData::Regular(manifest.into()),
+        );
     }
 
     fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, mode: u32, contents: &EntryData) {
@@ -1137,7 +1147,13 @@ impl Package {
         );
     }
 
-    fn append_raw<W: Write>(&self, ar: &mut Builder<W>, path: &str, mode: u32, contents: &EntryData) {
+    fn append_raw<W: Write>(
+        &self,
+        ar: &mut Builder<W>,
+        path: &str,
+        mode: u32,
+        contents: &EntryData,
+    ) {
         let mut header = Header::new_ustar();
         let contents = match contents {
             EntryData::Regular(contents) => contents.as_str(),
