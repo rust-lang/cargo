@@ -1,8 +1,6 @@
 //! Core of cargo-add command
 
 mod crate_spec;
-mod dependency;
-mod manifest;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -26,18 +24,17 @@ use crate::core::Registry;
 use crate::core::Shell;
 use crate::core::Summary;
 use crate::core::Workspace;
+use crate::util::toml_mut::dependency::Dependency;
+use crate::util::toml_mut::dependency::GitSource;
+use crate::util::toml_mut::dependency::MaybeWorkspace;
+use crate::util::toml_mut::dependency::PathSource;
+use crate::util::toml_mut::dependency::Source;
+use crate::util::toml_mut::dependency::WorkspaceSource;
+use crate::util::toml_mut::manifest::DepTable;
+use crate::util::toml_mut::manifest::LocalManifest;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;
-use dependency::Dependency;
-use dependency::GitSource;
-use dependency::PathSource;
-use dependency::RegistrySource;
-use dependency::Source;
-use manifest::LocalManifest;
-
-use crate::ops::cargo_add::dependency::{MaybeWorkspace, WorkspaceSource};
-pub use manifest::DepTable;
 
 /// Information on what dependencies should be added
 #[derive(Clone, Debug)]

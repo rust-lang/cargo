@@ -57,6 +57,7 @@ pub mod rustc;
 mod semver_ext;
 pub mod to_semver;
 pub mod toml;
+pub mod toml_mut;
 mod vcs;
 mod workspace;
 
