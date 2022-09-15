@@ -47,8 +47,8 @@ pub struct Resolve {
 }
 
 /// A version to indicate how a `Cargo.lock` should be serialized. Currently
-/// V3 is the default when creating a new lockfile. If an old version of
-/// lockfile already exists, it will stay as-is.
+/// [V3 is the default](ResolveVersion::default) when creating a new lockfile.
+/// If an old version of lockfile already exists, it will stay as-is.
 ///
 /// It's theorized that we can add more here over time to track larger changes
 /// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
@@ -396,7 +396,7 @@ impl fmt::Debug for Resolve {
 impl Default for ResolveVersion {
     /// The default way to encode new or updated `Cargo.lock` files.
     ///
-    /// It's important that if a new version of `ResolveVersion` is added that
+    /// It's important that if a new version of [`ResolveVersion`] is added that
     /// this is not updated until *at least* the support for the version is in
     /// the stable release of Rust.
     ///
