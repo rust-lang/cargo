@@ -47,8 +47,8 @@ pub struct Resolve {
 }
 
 /// A version to indicate how a `Cargo.lock` should be serialized. Currently
-/// V2 is the default when creating a new lockfile. If a V1 lockfile already
-/// exists, it will stay as V1.
+/// V3 is the default when creating a new lockfile. If an old version of
+/// lockfile already exists, it will stay as-is.
 ///
 /// It's theorized that we can add more here over time to track larger changes
 /// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
@@ -59,12 +59,13 @@ pub enum ResolveVersion {
     /// A more compact format, more amenable to avoiding source-control merge
     /// conflicts. The `dependencies` arrays are compressed and checksums are
     /// listed inline. Introduced in 2019 in version 1.38. New lockfiles use
-    /// V2 by default starting in 1.41.
+    /// V2 by default from 1.41 to 1.52.
     V2,
     /// A format that explicitly lists a `version` at the top of the file as
     /// well as changing how git dependencies are encoded. Dependencies with
     /// `branch = "master"` are no longer encoded the same way as those without
-    /// branch specifiers.
+    /// branch specifiers. Introduced in 2020 in version 1.47. New lockfiles use
+    /// V3 by default staring in 1.53.
     V3,
 }
 
