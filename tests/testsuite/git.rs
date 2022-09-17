@@ -936,6 +936,71 @@ fn dep_with_submodule() {
 }
 
 #[cargo_test]
+fn dep_with_relative_submodule() {
+    let foo = project();
+    let base = git::new("base", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+                    [package]
+                    name = "base"
+                    version = "0.5.0"
+                    [dependencies]
+                    deployment.path = "deployment"
+                "#,
+            )
+            .file(
+                "src/lib.rs",
+                r#"
+                    pub fn dep() {
+                        deployment::deployment_func();
+                    }
+                "#,
+            )
+    });
+    let _deployment = git::new("deployment", |project| {
+        project
+            .file("src/lib.rs", "pub fn deployment_func() {}")
+            .file("Cargo.toml", &basic_lib_manifest("deployment"))
+    });
+
+    let base_repo = git2::Repository::open(&base.root()).unwrap();
+    git::add_submodule(&base_repo, "../deployment", Path::new("deployment"));
+    git::commit(&base_repo);
+
+    let project = foo
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    [dependencies.base]
+                    git = '{}'
+                "#,
+                base.url()
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() {  }")
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[UPDATING] git submodule `file://[..]/deployment`
+[COMPILING] deployment [..]
+[COMPILING] base [..]
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn dep_with_bad_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
