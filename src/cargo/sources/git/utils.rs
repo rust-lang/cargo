@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
 use std::time::{Duration, Instant};
-use url::Url;
+use url::{ParseError, Url};
 
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
@@ -151,6 +151,7 @@ impl GitDatabase {
         rev: git2::Oid,
         dest: &Path,
         cargo_config: &Config,
+        parent_remote_url: &Url,
     ) -> CargoResult<GitCheckout<'_>> {
         // If the existing checkout exists, and it is fresh, use it.
         // A non-fresh checkout can happen if the checkout operation was
@@ -164,7 +165,7 @@ impl GitDatabase {
             Some(co) => co,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
-        checkout.update_submodules(cargo_config)?;
+        checkout.update_submodules(cargo_config, parent_remote_url)?;
         Ok(checkout)
     }
 
@@ -322,19 +323,25 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
-    fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config);
+    fn update_submodules(&self, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
+        return update_submodules(&self.repo, cargo_config, parent_remote_url);
 
-        fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
+        fn update_submodules(
+            repo: &git2::Repository,
+            cargo_config: &Config,
+            parent_remote_url: &Url,
+        ) -> CargoResult<()> {
             debug!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
-                update_submodule(repo, &mut child, cargo_config).with_context(|| {
-                    format!(
-                        "failed to update submodule `{}`",
-                        child.name().unwrap_or("")
-                    )
-                })?;
+                update_submodule(repo, &mut child, cargo_config, parent_remote_url).with_context(
+                    || {
+                        format!(
+                            "failed to update submodule `{}`",
+                            child.name().unwrap_or("")
+                        )
+                    },
+                )?;
             }
             Ok(())
         }
@@ -343,9 +350,11 @@ impl<'a> GitCheckout<'a> {
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
+            parent_remote_url: &Url,
         ) -> CargoResult<()> {
             child.init(false)?;
-            let url = child.url().ok_or_else(|| {
+
+            let child_url_str = child.url().ok_or_else(|| {
                 anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
             })?;
 
@@ -355,11 +364,51 @@ impl<'a> GitCheckout<'a> {
                     "Skipping",
                     format!(
                         "git submodule `{}` due to update strategy in .gitmodules",
-                        url
+                        child_url_str
                     ),
                 )?;
                 return Ok(());
             }
+
+            // There are a few possible cases here:
+            // 1. Submodule URL is not relative.
+            //     Happy path, Url is just the submodule url.
+            // 2. Submodule URL is relative and does specify ssh/https/file/etc.
+            //     We combine the parent path and relative path.
+            // 3. Submodule URL is relative and does not specify ssh/https/file/etc.
+            //     In which case we fail to parse with the error ParseError::RelativeUrlWithoutBase.
+            //     We then combine the relative url with the host/protocol from the parent url.
+            // 4. We fail to parse submodule url for some reason.
+            //     Error. Gets passed up.
+
+            let join_urls = || {
+                let path = parent_remote_url.path();
+                let mut new_parent_remote_url = parent_remote_url.clone();
+                new_parent_remote_url.set_path(&format!("{}/", path));
+                match new_parent_remote_url.join(child_url_str) {
+                    Ok(x) => Ok(x.to_string()),
+                    Err(err) => {
+                        Err(err).with_context(|| format!("Failed to parse child submodule url"))
+                    }
+                }
+            };
+
+            let url = match Url::parse(child_url_str) {
+                Ok(child_url) => {
+                    if Path::new(child_url.path()).is_relative() {
+                        join_urls()?
+                    } else {
+                        child_url.to_string()
+                    }
+                }
+                Err(ParseError::RelativeUrlWithoutBase) => join_urls()?,
+                Err(err) => {
+                    return Err(anyhow::format_err!(
+                        "Error parsing submodule url: {:?}?",
+                        err
+                    ));
+                }
+            };
 
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
@@ -379,7 +428,7 @@ impl<'a> GitCheckout<'a> {
             let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, cargo_config);
+                        return update_submodules(&repo, cargo_config, parent_remote_url);
                     }
                     repo
                 }
@@ -394,7 +443,7 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            fetch(&mut repo, url, &reference, cargo_config).with_context(|| {
+            fetch(&mut repo, &url, &reference, cargo_config).with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -404,7 +453,7 @@ impl<'a> GitCheckout<'a> {
 
             let obj = repo.find_object(head, None)?;
             reset(&repo, &obj, cargo_config)?;
-            update_submodules(&repo, cargo_config)
+            update_submodules(&repo, cargo_config, parent_remote_url)
         }
     }
 }
