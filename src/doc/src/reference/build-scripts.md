@@ -323,9 +323,9 @@ cross-compiling, so keep that in consideration of the impact on compile time.
 
 When rebuilding a package, Cargo does not necessarily know if the build script
 needs to be run again. By default, it takes a conservative approach of always
-re-running the build script if *any* file within the package directory is changed
-(or the list of files controlled by the [`exclude` and `include` fields]). For
-most cases, this is not a good choice, so it is recommended that every build script
+re-running the build script if any file within the package is changed (or the
+list of files controlled by the [`exclude` and `include` fields]). For most
+cases, this is not a good choice, so it is recommended that every build script
 emit at least one of the `rerun-if` instructions (described below). If these
 are emitted, then Cargo will only re-run the script if the given value has
 changed. If Cargo is re-running the build scripts of your own crate or a
