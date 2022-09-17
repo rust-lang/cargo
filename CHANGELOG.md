@@ -64,6 +64,15 @@
   [#10784](https://github.com/rust-lang/cargo/pull/10784)
 
 ### Fixed
+
+- [CVE-2022-36113](https://github.com/rust-lang/cargo/security/advisories/GHSA-rfj2-q3h3-hm5j):
+  Extracting malicious crates can corrupt arbitrary files.
+  [#11089](https://github.com/rust-lang/cargo/pull/11089)
+  [#11088](https://github.com/rust-lang/cargo/pull/11088)
+- [CVE-2022-36114](https://github.com/rust-lang/cargo/security/advisories/GHSA-2hvr-h6gw-qrxp):
+  Extracting malicious crates can fill the file system.
+  [#11089](https://github.com/rust-lang/cargo/pull/11089)
+  [#11088](https://github.com/rust-lang/cargo/pull/11088)
 - The `os` output in `cargo --version --verbose` now supports more platforms.
   [#10802](https://github.com/rust-lang/cargo/pull/10802)
 - Cached git checkouts will now be rebuilt if they are corrupted. This may
