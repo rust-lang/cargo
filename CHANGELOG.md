@@ -23,9 +23,9 @@
 
 - 🎉 Packages can now inherit settings from the workspace so that the settings
   can be centralized in one place. See
-  [`workspace.package`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#the-workspacepackage-table)
+  [`workspace.package`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#the-package-table)
   and
-  [`workspace.dependencies`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#the-workspacedependencies-table)
+  [`workspace.dependencies`](https://doc.rust-lang.org/nightly/cargo/reference/workspaces.html#the-dependencies-table)
   for more details on how to define these common settings.
   [#10859](https://github.com/rust-lang/cargo/pull/10859)
 - Added the
