@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
 use std::time::{Duration, Instant};
-use url::{ParseError, Url};
+use url::Url;
 
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
@@ -370,44 +370,25 @@ impl<'a> GitCheckout<'a> {
                 return Ok(());
             }
 
-            // There are a few possible cases here:
-            // 1. Submodule URL is not relative.
-            //     Happy path, Url is just the submodule url.
-            // 2. Submodule URL is relative and does specify ssh/https/file/etc.
-            //     We combine the parent path and relative path.
-            // 3. Submodule URL is relative and does not specify ssh/https/file/etc.
-            //     In which case we fail to parse with the error ParseError::RelativeUrlWithoutBase.
-            //     We then combine the relative url with the host/protocol from the parent url.
-            // 4. We fail to parse submodule url for some reason.
-            //     Error. Gets passed up.
+            // See the `git submodule add` command on the documentation:
+            // https://git-scm.com/docs/git-submodule
+            let url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
+                let mut new_path = parent_remote_url.path().to_string();
+                if !new_path.ends_with('/') {
+                    new_path.push('/');
+                }
 
-            let join_urls = || {
-                let path = parent_remote_url.path();
                 let mut new_parent_remote_url = parent_remote_url.clone();
-                new_parent_remote_url.set_path(&format!("{}/", path));
-                match new_parent_remote_url.join(child_url_str) {
-                    Ok(x) => Ok(x.to_string()),
-                    Err(err) => {
-                        Err(err).with_context(|| format!("Failed to parse child submodule url"))
-                    }
-                }
-            };
+                new_parent_remote_url.set_path(&new_path);
 
-            let url = match Url::parse(child_url_str) {
-                Ok(child_url) => {
-                    if Path::new(child_url.path()).is_relative() {
-                        join_urls()?
-                    } else {
-                        child_url.to_string()
+                match new_parent_remote_url.join(child_url_str) {
+                    Ok(x) => x.to_string(),
+                    Err(err) => {
+                        Err(err).with_context(|| format!("Failed to parse child submodule url"))?
                     }
                 }
-                Err(ParseError::RelativeUrlWithoutBase) => join_urls()?,
-                Err(err) => {
-                    return Err(anyhow::format_err!(
-                        "Error parsing submodule url: {:?}?",
-                        err
-                    ));
-                }
+            } else {
+                child_url_str.to_string()
             };
 
             // A submodule which is listed in .gitmodules but not actually
