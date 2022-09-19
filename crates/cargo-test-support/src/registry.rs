@@ -5,8 +5,9 @@ use cargo_util::{registry::make_dep_path, Sha256};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::collections::{BTreeMap, HashMap};
+use std::fmt;
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -466,13 +467,26 @@ impl Drop for HttpServerHandle {
 }
 
 /// Request to the test http server
-#[derive(Debug)]
 pub struct Request {
     pub url: Url,
     pub method: String,
+    pub body: Option<Vec<u8>>,
     pub authorization: Option<String>,
     pub if_modified_since: Option<String>,
     pub if_none_match: Option<String>,
+}
+
+impl fmt::Debug for Request {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // body is not included as it can produce long debug outputs
+        f.debug_struct("Request")
+            .field("url", &self.url)
+            .field("method", &self.method)
+            .field("authorization", &self.authorization)
+            .field("if_modified_since", &self.if_modified_since)
+            .field("if_none_match", &self.if_none_match)
+            .finish()
+    }
 }
 
 /// Response from the test http server
@@ -539,6 +553,7 @@ impl HttpServer {
             let mut if_modified_since = None;
             let mut if_none_match = None;
             let mut authorization = None;
+            let mut content_len = None;
             loop {
                 line.clear();
                 if buf.read_line(&mut line).unwrap() == 0 {
@@ -556,15 +571,26 @@ impl HttpServer {
                     "if-modified-since" => if_modified_since = Some(value),
                     "if-none-match" => if_none_match = Some(value),
                     "authorization" => authorization = Some(value),
+                    "content-length" => content_len = Some(value),
                     _ => {}
                 }
             }
+
+            let mut body = None;
+            if let Some(con_len) = content_len {
+                let len = con_len.parse::<u64>().unwrap();
+                let mut content = vec![0u8; len as usize];
+                buf.read_exact(&mut content).unwrap();
+                body = Some(content)
+            }
+
             let req = Request {
                 authorization,
                 if_modified_since,
                 if_none_match,
                 method,
                 url,
+                body,
             };
             println!("req: {:#?}", req);
             let response = self.route(&req);
