@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo
-          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: |
           rustup update --no-self-update ${{ matrix.rust }}
@@ -58,7 +58,7 @@ jobs:
           cargo fmt -- --check
       - run: cargo build --verbose
       - run: cargo test --verbose
-      # FIXME: Use `cargo install` when we switch to Rust 1.41.0
+      # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
       - name: Before cache
         shell: bash
         run: |
@@ -79,7 +79,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo
-          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: |
           rustup update --no-self-update nightly
@@ -91,6 +91,7 @@ jobs:
       - run: rustup component add clippy
       - run: cargo clippy --all --all-targets
       - name: Before cache
+        shell: bash
         run: |
-          cargo install --debug --bin cargo-cache -- cargo-cache
+          cargo install --debug --bin cargo-cache -- cargo-cache 
           cargo cache --autoclean
