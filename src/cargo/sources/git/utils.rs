@@ -11,6 +11,7 @@ use git2::{self, ErrorClass, ObjectType, Oid};
 use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -373,9 +374,9 @@ impl<'a> GitCheckout<'a> {
             // See the `git submodule add` command on the documentation:
             // https://git-scm.com/docs/git-submodule
             let url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
-                let mut new_path = parent_remote_url.path().to_string();
+                let mut new_path = Cow::from(parent_remote_url.path());
                 if !new_path.ends_with('/') {
-                    new_path.push('/');
+                    new_path.to_mut().push('/');
                 }
 
                 let mut new_parent_remote_url = parent_remote_url.clone();
