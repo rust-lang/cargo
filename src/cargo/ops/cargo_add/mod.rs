@@ -5,6 +5,7 @@ mod crate_spec;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::VecDeque;
+use std::fmt::Write;
 use std::path::Path;
 
 use anyhow::Context as _;
@@ -99,7 +100,8 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             table_option.map_or(true, |table| is_sorted(table.iter().map(|(name, _)| name)))
         });
     for dep in deps {
-        print_msg(&mut options.config.shell(), &dep, &dep_table)?;
+        print_action_msg(&mut options.config.shell(), &dep, &dep_table)?;
+        print_dep_table_msg(&mut options.config.shell(), &dep)?;
         if let Some(Source::Path(src)) = dep.source() {
             if src.path == manifest.path.parent().unwrap_or_else(|| Path::new("")) {
                 anyhow::bail!(
@@ -634,6 +636,42 @@ impl DependencyUI {
             })
             .collect();
     }
+
+    fn features(&self) -> (IndexSet<&str>, IndexSet<&str>) {
+        let mut activated: IndexSet<_> =
+            self.features.iter().flatten().map(|s| s.as_str()).collect();
+        if self.default_features().unwrap_or(true) {
+            activated.insert("default");
+        }
+        activated.extend(self.inherited_features.iter().flatten().map(|s| s.as_str()));
+        let mut walk: VecDeque<_> = activated.iter().cloned().collect();
+        while let Some(next) = walk.pop_front() {
+            walk.extend(
+                self.available_features
+                    .get(next)
+                    .into_iter()
+                    .flatten()
+                    .map(|s| s.as_str()),
+            );
+            activated.extend(
+                self.available_features
+                    .get(next)
+                    .into_iter()
+                    .flatten()
+                    .map(|s| s.as_str()),
+            );
+        }
+        activated.remove("default");
+        activated.sort();
+        let mut deactivated = self
+            .available_features
+            .keys()
+            .filter(|f| !activated.contains(f.as_str()) && *f != "default")
+            .map(|f| f.as_str())
+            .collect::<IndexSet<_>>();
+        deactivated.sort();
+        (activated, deactivated)
+    }
 }
 
 impl<'s> From<&'s Summary> for DependencyUI {
@@ -697,9 +735,7 @@ fn populate_available_features(
     Ok(dependency)
 }
 
-fn print_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> CargoResult<()> {
-    use std::fmt::Write;
-
+fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> CargoResult<()> {
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
         return Ok(());
     }
@@ -736,38 +772,14 @@ fn print_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> Cargo
     };
     write!(message, " {section}")?;
     write!(message, ".")?;
-    shell.status("Adding", message)?;
+    shell.status("Adding", message)
+}
 
-    let mut activated: IndexSet<_> = dep.features.iter().flatten().map(|s| s.as_str()).collect();
-    if dep.default_features().unwrap_or(true) {
-        activated.insert("default");
+fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()> {
+    if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
+        return Ok(());
     }
-    activated.extend(dep.inherited_features.iter().flatten().map(|s| s.as_str()));
-    let mut walk: VecDeque<_> = activated.iter().cloned().collect();
-    while let Some(next) = walk.pop_front() {
-        walk.extend(
-            dep.available_features
-                .get(next)
-                .into_iter()
-                .flatten()
-                .map(|s| s.as_str()),
-        );
-        activated.extend(
-            dep.available_features
-                .get(next)
-                .into_iter()
-                .flatten()
-                .map(|s| s.as_str()),
-        );
-    }
-    activated.remove("default");
-    activated.sort();
-    let mut deactivated = dep
-        .available_features
-        .keys()
-        .filter(|f| !activated.contains(f.as_str()) && *f != "default")
-        .collect::<Vec<_>>();
-    deactivated.sort();
+    let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
         let suffix = if let Some(version) = &dep.available_version {
