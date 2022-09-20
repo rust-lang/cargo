@@ -208,3 +208,34 @@ fn build_script_sees_cfg_target_feature() {
             .run();
     }
 }
+
+/// In this test, the cfg is self-contradictory. There's no *right* answer as to
+/// what the value of `RUSTFLAGS` should be in this case. We chose to give a
+/// warning. However, no matter what we do, it's important that build scripts
+/// and rustc see a consistent picture
+#[cargo_test]
+fn cfg_paradox() {
+    let build_rs = r#"
+        fn main() {
+            let cfg = std::env::var("CARGO_CFG_BERTRAND").is_ok();
+            eprintln!("cfg!(bertrand)={cfg}");
+        }
+    "#;
+
+    let config = r#"
+        [target.'cfg(not(bertrand))']
+        rustflags = ["--cfg=bertrand"]
+    "#;
+
+    let p = project()
+        .file(".cargo/config.toml", config)
+        .file("src/lib.rs", r#""#)
+        .file("build.rs", build_rs)
+        .build();
+
+    p.cargo("build -vv")
+        .with_stderr_contains("[WARNING] non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")
+        .with_stderr_contains("[foo 0.0.1] cfg!(bertrand)=true")
+        .with_stderr_contains("[..]--cfg=bertrand[..]")
+        .run();
+}
