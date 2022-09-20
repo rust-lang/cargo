@@ -173,3 +173,38 @@ fn rustc_bootstrap() {
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+#[cfg(target_arch = "x86_64")]
+fn build_script_sees_cfg_target_feature() {
+    let build_rs = r#"
+        fn main() {
+            let cfg = std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap();
+            eprintln!("CARGO_CFG_TARGET_FEATURE={cfg}");
+        }
+    "#;
+
+    let configs = [
+        r#"
+            [build]
+            rustflags = ["-Ctarget-feature=+sse4.1,+sse4.2"]
+        "#,
+        r#"
+            [target.'cfg(target_arch = "x86_64")']
+            rustflags = ["-Ctarget-feature=+sse4.1,+sse4.2"]
+        "#,
+    ];
+
+    for config in configs {
+        let p = project()
+            .file(".cargo/config.toml", config)
+            .file("src/lib.rs", r#""#)
+            .file("build.rs", build_rs)
+            .build();
+
+        p.cargo("build -vv")
+            .with_stderr_contains("[foo 0.0.1] CARGO_CFG_TARGET_FEATURE=[..]sse4.2[..]")
+            .with_stderr_contains("[..]-Ctarget-feature=[..]+sse4.2[..]")
+            .run();
+    }
+}
