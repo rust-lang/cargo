@@ -1754,6 +1754,30 @@ Caused by:
         .run();
 }
 
+#[cargo_test]
+fn cargo_metadata_with_invalid_publish_field() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                publish = "foo"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            r#"[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  invalid type: string "foo", expected a boolean or vector of strings for key `package.publish`"#,
+        )
+        .run();
+}
+
 const MANIFEST_OUTPUT: &str = r#"
 {
     "packages": [{
