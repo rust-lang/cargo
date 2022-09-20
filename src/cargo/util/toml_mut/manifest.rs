@@ -524,6 +524,8 @@ fn fix_feature_activations(
             }
         }
     }
+
+    feature_values.fmt();
 }
 
 pub fn str_or_1_len_table(item: &toml_edit::Item) -> bool {
