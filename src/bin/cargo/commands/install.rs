@@ -6,7 +6,7 @@ use cargo::util::IntoUrl;
 
 use cargo_util::paths;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
         .arg_quiet()

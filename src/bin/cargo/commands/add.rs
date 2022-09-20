@@ -12,7 +12,7 @@ use cargo::util::interning::InternedString;
 use cargo::util::toml_mut::manifest::DepTable;
 use cargo::CargoResult;
 
-pub fn cli() -> clap::Command<'static> {
+pub fn cli() -> Command {
     clap::Command::new("add")
         .setting(clap::AppSettings::DeriveDisplayOrder)
         .about("Add dependencies to a Cargo.toml manifest file")

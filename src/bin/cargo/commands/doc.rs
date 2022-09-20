@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops::{self, DocOptions};
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("doc")
         // subcommand aliases are handled in aliased_command()
         // .alias("d")

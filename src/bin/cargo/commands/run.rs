@@ -4,7 +4,7 @@ use cargo::core::Verbosity;
 use cargo::ops::{self, CompileFilter, Packages};
 use cargo_util::ProcessError;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("run")
         // subcommand aliases are handled in aliased_command()
         // .alias("r")

@@ -5,7 +5,7 @@ use cargo::util::interning::InternedString;
 const PRINT_ARG_NAME: &str = "print";
 const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("rustc")
         .trailing_var_arg(true)
         .about("Compile a package, and pass extra options to the compiler")

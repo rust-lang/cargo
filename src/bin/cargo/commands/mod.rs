@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 
-pub fn builtin() -> Vec<App> {
+pub fn builtin() -> Vec<Command> {
     vec![
         add::cli(),
         bench::cli(),

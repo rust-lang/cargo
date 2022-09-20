@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 use cargo::ops;
 use std::path::PathBuf;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("vendor")
         .about("Vendor all dependencies for a project locally")
         .arg_quiet()

@@ -3,7 +3,7 @@ use anyhow::bail;
 use cargo::{drop_println, CargoResult};
 use serde::Serialize;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("locate-project")
         .about("Print a JSON representation of a Cargo.toml file's location")
         .arg_quiet()

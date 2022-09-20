@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 use cargo::ops::cargo_config;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("config")
         .about("Inspect configuration values")
         .after_help("Run `cargo help config` for more detailed information.\n")

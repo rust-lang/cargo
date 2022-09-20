@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 use cargo::ops::{self, TestOptions};
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("bench")
         .trailing_var_arg(true)
         .about("Execute all benchmarks of a local package")

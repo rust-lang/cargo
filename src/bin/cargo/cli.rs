@@ -391,14 +391,14 @@ impl GlobalArgs {
     }
 }
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"
     } else {
         "cargo [OPTIONS] [SUBCOMMAND]"
     };
-    App::new("cargo")
+    Command::new("cargo")
         .allow_external_subcommands(true)
         .setting(AppSettings::DeriveDisplayOrder)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
