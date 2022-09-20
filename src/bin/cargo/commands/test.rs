@@ -9,13 +9,13 @@ pub fn cli() -> Command {
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
             Arg::new("TESTNAME")
+                .action(ArgAction::Set)
                 .help("If specified, only run tests containing this string in their names"),
         )
         .arg(
             Arg::new("args")
                 .help("Arguments for the test binary")
-                .multiple_values(true)
-                .last(true),
+                .num_args(0..),
         )
         .arg(
             flag(

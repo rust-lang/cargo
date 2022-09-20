@@ -6,7 +6,7 @@ pub fn cli() -> Command {
     subcommand("yank")
         .about("Remove a pushed crate from the index")
         .arg_quiet()
-        .arg(Arg::new("crate"))
+        .arg(Arg::new("crate").action(ArgAction::Set))
         .arg(
             opt("version", "The version to yank or un-yank")
                 .alias("vers")

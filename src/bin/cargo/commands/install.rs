@@ -13,7 +13,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("crate")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
-                .multiple_values(true),
+                .num_args(0..),
         )
         .arg(
             opt("version", "Specify a version to install")

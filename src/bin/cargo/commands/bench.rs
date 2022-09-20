@@ -8,13 +8,13 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg(
             Arg::new("BENCHNAME")
+                .action(ArgAction::Set)
                 .help("If specified, only run benches containing this string in their names"),
         )
         .arg(
             Arg::new("args")
                 .help("Arguments for the bench binary")
-                .multiple_values(true)
-                .last(true),
+                .num_args(0..),
         )
         .arg_targets_all(
             "Benchmark only this package's library",

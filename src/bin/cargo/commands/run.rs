@@ -14,7 +14,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .value_parser(value_parser!(std::ffi::OsString))
-                .multiple_values(true),
+                .num_args(0..),
         )
         .arg_targets_bin_example(
             "Name of the bin target to run",

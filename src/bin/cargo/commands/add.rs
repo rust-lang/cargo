@@ -14,21 +14,19 @@ use cargo::CargoResult;
 
 pub fn cli() -> Command {
     clap::Command::new("add")
-        .setting(clap::AppSettings::DeriveDisplayOrder)
         .about("Add dependencies to a Cargo.toml manifest file")
         .override_usage(
             "\
-    cargo add [OPTIONS] <DEP>[@<VERSION>] ...
-    cargo add [OPTIONS] --path <PATH> ...
-    cargo add [OPTIONS] --git <URL> ..."
+       cargo add [OPTIONS] <DEP>[@<VERSION>] ...
+       cargo add [OPTIONS] --path <PATH> ...
+       cargo add [OPTIONS] --git <URL> ..."
         )
         .after_help("Run `cargo help add` for more detailed information.\n")
         .group(clap::ArgGroup::new("selected").multiple(true).required(true))
         .args([
             clap::Arg::new("crates")
-                .takes_value(true)
                 .value_name("DEP_ID")
-                .multiple_values(true)
+                .num_args(0..)
                 .help("Reference to a package to add as a dependency")
                 .long_help(
                 "Reference to a package to add as a dependency
@@ -46,7 +44,6 @@ You can reference a package by:
             clap::Arg::new("features")
                 .short('F')
                 .long("features")
-                .takes_value(true)
                 .value_name("FEATURES")
                 .action(ArgAction::Append)
                 .help("Space or comma separated list of features to activate"),
@@ -65,7 +62,7 @@ The package will be removed from your features.")
                 .overrides_with("optional"),
             clap::Arg::new("rename")
                 .long("rename")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("NAME")
                 .help("Rename the dependency")
                 .long_help("Rename the dependency
@@ -79,7 +76,7 @@ Example uses:
             clap::Arg::new("package")
                 .short('p')
                 .long("package")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("SPEC")
                 .help("Package to modify"),
         ])
@@ -89,14 +86,14 @@ Example uses:
         .args([
             clap::Arg::new("path")
                 .long("path")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("PATH")
                 .help("Filesystem path to local crate to add")
                 .group("selected")
                 .conflicts_with("git"),
             clap::Arg::new("git")
                 .long("git")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("URI")
                 .help("Git repository location")
                 .long_help("Git repository location
@@ -105,21 +102,21 @@ Without any other information, cargo will use latest commit on the main branch."
                 .group("selected"),
             clap::Arg::new("branch")
                 .long("branch")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("BRANCH")
                 .help("Git branch to download the crate from")
                 .requires("git")
                 .group("git-ref"),
             clap::Arg::new("tag")
                 .long("tag")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("TAG")
                 .help("Git tag to download the crate from")
                 .requires("git")
                 .group("git-ref"),
             clap::Arg::new("rev")
                 .long("rev")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("REV")
                 .help("Git reference to download the crate from")
                 .long_help("Git reference to download the crate from
@@ -129,7 +126,7 @@ This is the catch all, handling hashes to named references in remote repositorie
                 .group("git-ref"),
             clap::Arg::new("registry")
                 .long("registry")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("NAME")
                 .help("Package registry for this dependency"),
         ])
@@ -151,7 +148,7 @@ Build-dependencies are the only dependencies available for use by build scripts 
                 .group("section"),
             clap::Arg::new("target")
                 .long("target")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("TARGET")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .help("Add as dependency to the given target platform")

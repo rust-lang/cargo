@@ -10,7 +10,7 @@ pub fn cli() -> Command {
         .trailing_var_arg(true)
         .about("Compile a package, and pass extra options to the compiler")
         .arg_quiet()
-        .arg(Arg::new("args").multiple_values(true).help("Rustc flags"))
+        .arg(Arg::new("args").num_args(0..).help("Rustc flags"))
         .arg_package("Package to build")
         .arg_jobs()
         .arg_targets_all(

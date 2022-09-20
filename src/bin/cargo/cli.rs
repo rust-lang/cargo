@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
-use clap::{AppSettings, Arg, ArgMatches};
+use clap::{Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -69,7 +69,7 @@ Available unstable (nightly-only) flags:
 
 {}
 
-Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
+Run with 'cargo -Z [FLAG] [COMMAND]'",
             joined
         );
         if !config.nightly_features_allowed {
@@ -406,14 +406,12 @@ impl GlobalArgs {
 pub fn cli() -> Command {
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
-        "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"
+        "cargo [+toolchain] [OPTIONS] [COMMAND]"
     } else {
-        "cargo [OPTIONS] [SUBCOMMAND]"
+        "cargo [OPTIONS] [COMMAND]"
     };
     Command::new("cargo")
         .allow_external_subcommands(true)
-        .allow_invalid_utf8_for_external_subcommands(true)
-        .setting(AppSettings::DeriveDisplayOrder)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
         .disable_colored_help(true)
@@ -424,10 +422,9 @@ pub fn cli() -> Command {
             "\
 Rust's package manager
 
-USAGE:
-    {usage}
+Usage: {usage}
 
-OPTIONS:
+Options:
 {options}
 
 Some common cargo commands are (see all commands with --list):

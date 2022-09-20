@@ -156,7 +156,7 @@ fn find_closest_capital_c_to_c() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `C`
+error: no such command: `C`
 
 <tab>Did you mean `c`?
 ",
@@ -170,7 +170,7 @@ fn find_closest_capital_b_to_b() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `B`
+error: no such command: `B`
 
 <tab>Did you mean `b`?
 ",
@@ -184,7 +184,7 @@ fn find_closest_biuld_to_build() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `biuld`
+error: no such command: `biuld`
 
 <tab>Did you mean `build`?
 ",
@@ -235,7 +235,7 @@ fn find_closest_alias() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `myalais`
+error: no such command: `myalais`
 
 <tab>Did you mean `myalias`?
 ",
@@ -247,7 +247,7 @@ error: no such subcommand: `myalais`
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `myalais`
+error: no such command: `myalais`
 ",
         )
         .with_stderr_does_not_contain(
@@ -266,7 +266,7 @@ fn find_closest_dont_correct_nonsense() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] no such subcommand: `there-is-no-way-that-there-is-a-command-close-to-this`
+[ERROR] no such command: `there-is-no-way-that-there-is-a-command-close-to-this`
 
 <tab>View all installed commands with `cargo --list`",
         )
@@ -279,7 +279,7 @@ fn displays_subcommand_on_error() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] no such subcommand: `invalid-command`
+[ERROR] no such command: `invalid-command`
 
 <tab>View all installed commands with `cargo --list`",
         )
@@ -473,7 +473,7 @@ fn subcommand_leading_plus_output_contains() {
         .with_status(101)
         .with_stderr(
             "\
-error: no such subcommand: `+nightly`
+error: no such command: `+nightly`
 
 <tab>Cargo does not handle `+toolchain` directives.
 <tab>Did you mean to invoke `cargo` through `rustup` instead?",
@@ -487,7 +487,7 @@ fn full_did_you_mean() {
         .with_status(101)
         .with_stderr(
             "\
-error: no such subcommand: `bluid`
+error: no such command: `bluid`
 
 <tab>Did you mean `build`?
 

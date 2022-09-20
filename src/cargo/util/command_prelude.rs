@@ -20,12 +20,12 @@ use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
 pub use crate::{CliError, CliResult, Config};
-pub use clap::{value_parser, AppSettings, Arg, ArgAction, ArgMatches};
+pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
-pub type Command = clap::Command<'static>;
+pub use clap::Command;
 
 pub trait CommandExt: Sized {
-    fn _arg(self, arg: Arg<'static>) -> Self;
+    fn _arg(self, arg: Arg) -> Self;
 
     /// Do not use this method, it is only for backwards compatibility.
     /// Use `arg_package_spec_no_all` instead.
@@ -256,40 +256,34 @@ pub trait CommandExt: Sized {
 }
 
 impl CommandExt for Command {
-    fn _arg(self, arg: Arg<'static>) -> Self {
+    fn _arg(self, arg: Arg) -> Self {
         self.arg(arg)
     }
 }
 
-pub fn flag(name: &'static str, help: &'static str) -> Arg<'static> {
+pub fn flag(name: &'static str, help: &'static str) -> Arg {
     Arg::new(name)
         .long(name)
         .help(help)
         .action(ArgAction::SetTrue)
 }
 
-pub fn opt(name: &'static str, help: &'static str) -> Arg<'static> {
-    Arg::new(name).long(name).help(help)
+pub fn opt(name: &'static str, help: &'static str) -> Arg {
+    Arg::new(name).long(name).help(help).action(ArgAction::Set)
 }
 
-pub fn optional_opt(name: &'static str, help: &'static str) -> Arg<'static> {
-    opt(name, help).min_values(0)
+pub fn optional_opt(name: &'static str, help: &'static str) -> Arg {
+    opt(name, help).num_args(0..=1)
 }
 
-pub fn optional_multi_opt(
-    name: &'static str,
-    value_name: &'static str,
-    help: &'static str,
-) -> Arg<'static> {
+pub fn optional_multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg {
     opt(name, help)
         .value_name(value_name)
+        .num_args(0..=1)
         .action(ArgAction::Append)
-        .multiple_values(true)
-        .min_values(0)
-        .number_of_values(1)
 }
 
-pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg<'static> {
+pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg {
     opt(name, help)
         .value_name(value_name)
         .action(ArgAction::Append)
@@ -297,8 +291,6 @@ pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static st
 
 pub fn subcommand(name: &'static str) -> Command {
     Command::new(name)
-        .dont_collapse_args_in_usage(true)
-        .setting(AppSettings::DeriveDisplayOrder)
 }
 
 /// Determines whether or not to gate `--profile` as unstable when resolving it.
@@ -792,7 +784,7 @@ pub fn values_os(args: &ArgMatches, name: &str) -> Vec<OsString> {
 }
 
 #[track_caller]
-fn ignore_unknown<T: Default>(r: Result<T, clap::parser::MatchesError>) -> T {
+pub fn ignore_unknown<T: Default>(r: Result<T, clap::parser::MatchesError>) -> T {
     match r {
         Ok(t) => t,
         Err(clap::parser::MatchesError::UnknownArgument { .. }) => Default::default(),
