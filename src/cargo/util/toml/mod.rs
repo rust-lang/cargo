@@ -1007,11 +1007,28 @@ where
 /// Enum that allows for the parsing of `field.workspace = true` in a Cargo.toml
 ///
 /// It allows for things to be inherited from a workspace or defined as needed
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum MaybeWorkspace<T> {
     Workspace(TomlWorkspaceField),
     Defined(T),
+}
+
+impl<'de, T: Deserialize<'de>> de::Deserialize<'de> for MaybeWorkspace<T> {
+    fn deserialize<D>(deserializer: D) -> Result<MaybeWorkspace<T>, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+        if let Ok(workspace) = TomlWorkspaceField::deserialize(serde_value::ValueDeserializer::<
+            D::Error,
+        >::new(value.clone()))
+        {
+            return Ok(MaybeWorkspace::Workspace(workspace));
+        }
+        T::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
 }
 
 impl<T> MaybeWorkspace<T> {
