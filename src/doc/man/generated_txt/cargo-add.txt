@@ -188,5 +188,5 @@ EXAMPLES
               cargo add serde serde_json -F serde/derive
 
 SEE ALSO
-       cargo(1)
+       cargo(1), cargo-remove(1)
 

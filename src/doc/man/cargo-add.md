@@ -159,4 +159,4 @@ which enables all specified features.
        cargo add serde serde_json -F serde/derive
 
 ## SEE ALSO
-{{man "cargo" 1}}
+{{man "cargo" 1}}, {{man "cargo-remove" 1}}
