@@ -1058,43 +1058,6 @@ impl<T> MaybeWorkspace<T> {
     }
 }
 
-fn maybe_workspace_vec_string<'de, D>(
-    deserializer: D,
-) -> Result<Option<MaybeWorkspace<Vec<String>>>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    struct Visitor;
-
-    impl<'de> de::Visitor<'de> for Visitor {
-        type Value = Option<MaybeWorkspace<Vec<String>>>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("vector of strings")
-        }
-
-        fn visit_seq<V>(self, v: V) -> Result<Self::Value, V::Error>
-        where
-            V: de::SeqAccess<'de>,
-        {
-            let seq = de::value::SeqAccessDeserializer::new(v);
-            let defined = Vec::<String>::deserialize(seq).map(MaybeWorkspace::Defined)?;
-            Ok(Some(defined))
-        }
-
-        fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-        where
-            V: de::MapAccess<'de>,
-        {
-            let mvd = de::value::MapAccessDeserializer::new(map);
-            let workspace = TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)?;
-            Ok(Some(workspace))
-        }
-    }
-
-    deserializer.deserialize_any(Visitor)
-}
-
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlWorkspaceField {
     workspace: bool,
@@ -1114,8 +1077,6 @@ pub struct TomlProject {
     name: InternedString,
     #[serde(deserialize_with = "version_trim_whitespace")]
     version: MaybeWorkspace<semver::Version>,
-    #[serde(default)]
-    #[serde(deserialize_with = "maybe_workspace_vec_string")]
     authors: Option<MaybeWorkspace<Vec<String>>>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,
@@ -1124,11 +1085,7 @@ pub struct TomlProject {
     #[serde(rename = "forced-target")]
     forced_target: Option<String>,
     links: Option<String>,
-    #[serde(default)]
-    #[serde(deserialize_with = "maybe_workspace_vec_string")]
     exclude: Option<MaybeWorkspace<Vec<String>>>,
-    #[serde(default)]
-    #[serde(deserialize_with = "maybe_workspace_vec_string")]
     include: Option<MaybeWorkspace<Vec<String>>>,
     publish: Option<MaybeWorkspace<VecStringOrBool>>,
     workspace: Option<String>,
@@ -1144,11 +1101,7 @@ pub struct TomlProject {
     homepage: Option<MaybeWorkspace<String>>,
     documentation: Option<MaybeWorkspace<String>>,
     readme: Option<MaybeWorkspace<StringOrBool>>,
-    #[serde(default)]
-    #[serde(deserialize_with = "maybe_workspace_vec_string")]
     keywords: Option<MaybeWorkspace<Vec<String>>>,
-    #[serde(default)]
-    #[serde(deserialize_with = "maybe_workspace_vec_string")]
     categories: Option<MaybeWorkspace<Vec<String>>>,
     license: Option<MaybeWorkspace<String>>,
     license_file: Option<MaybeWorkspace<String>>,

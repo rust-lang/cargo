@@ -1725,7 +1725,7 @@ fn cargo_metadata_with_invalid_authors_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "", expected vector of strings for key `package.authors`"#,
+  invalid type: string "", expected a sequence for key `package.authors`"#,
         )
         .run();
 }
