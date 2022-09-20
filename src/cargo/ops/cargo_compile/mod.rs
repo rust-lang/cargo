@@ -32,15 +32,14 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
 
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::{build_unit_dependencies, IsArtifact};
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
-use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -115,32 +114,14 @@ impl CompileOptions {
     }
 }
 
-/// Compiles!
-///
-/// This uses the [`DefaultExecutor`]. To use a custom [`Executor`], see [`compile_with_exec`].
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<Compilation<'a>> {
-    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    compile_with_exec(ws, options, &exec)
-}
-
-/// Like [`compile`] but allows specifying a custom [`Executor`]
-/// that will be able to intercept build calls and add custom logic.
-///
-/// [`compile`] uses [`DefaultExecutor`] which just passes calls through.
-pub fn compile_with_exec<'a>(
-    ws: &Workspace<'a>,
-    options: &CompileOptions,
-    exec: &Arc<dyn Executor>,
-) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
-    compile_ws(ws, options, exec)
+    compile_ws(ws, options)
 }
 
-/// Like [`compile_with_exec`] but without warnings from manifest parsing.
 pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
-    exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let interner = UnitInterner::new();
     let bcx = create_bcx(ws, options, &interner)?;
@@ -150,7 +131,7 @@ pub fn compile_ws<'a>(
     }
     let _p = profile::start("compiling");
     let cx = Context::new(&bcx)?;
-    cx.compile(exec)
+    cx.compile()
 }
 
 /// Executes `rustc --print <VALUE>`.

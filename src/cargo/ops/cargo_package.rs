@@ -4,10 +4,9 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::Arc;
 use std::task::Poll;
 
-use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::compiler::{BuildConfig, CompileMode};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
@@ -835,8 +834,7 @@ fn run_verify(
         None
     };
 
-    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    ops::compile_with_exec(
+    ops::compile(
         &ws,
         &ops::CompileOptions {
             build_config: BuildConfig::new(
@@ -857,7 +855,6 @@ fn run_verify(
             rustdoc_document_private_items: false,
             honor_rust_version: true,
         },
-        &exec,
     )?;
 
     // Check that `build.rs` didn't modify any files in the `src` directory.

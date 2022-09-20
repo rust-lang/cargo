@@ -18,9 +18,7 @@ use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::lto::Lto;
 use super::unit_graph::UnitDep;
-use super::{
-    BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor, RustDocFingerprint,
-};
+use super::{BuildContext, Compilation, CompileKind, CompileMode, FileFlavor, RustDocFingerprint};
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
@@ -126,7 +124,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Starts compilation, waits for it to finish, and returns information
     /// about the result of compilation.
-    pub fn compile(mut self, exec: &Arc<dyn Executor>) -> CargoResult<Compilation<'cfg>> {
+    pub fn compile(mut self) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
@@ -156,7 +154,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // function which will run everything in order with proper
             // parallelism.
             let force_rebuild = self.bcx.build_config.force_rebuild;
-            super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
+            super::compile(&mut self, &mut queue, &mut plan, unit, force_rebuild)?;
         }
 
         // Now that we've got the full job queue and we've done all our

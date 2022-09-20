@@ -90,60 +90,11 @@ impl LinkType {
     }
 }
 
-/// A glorified callback for executing calls to rustc. Rather than calling rustc
-/// directly, we'll use an `Executor`, giving clients an opportunity to intercept
-/// the build calls.
-pub trait Executor: Send + Sync + 'static {
-    /// Called after a rustc process invocation is prepared up-front for a given
-    /// unit of work (may still be modified for runtime-known dependencies, when
-    /// the work is actually executed).
-    fn init(&self, _cx: &Context<'_, '_>, _unit: &Unit) {}
-
-    /// In case of an `Err`, Cargo will not continue with the build process for
-    /// this package.
-    fn exec(
-        &self,
-        cmd: &ProcessBuilder,
-        id: PackageId,
-        target: &Target,
-        mode: CompileMode,
-        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()>;
-
-    /// Queried when queuing each unit of work. If it returns true, then the
-    /// unit will always be rebuilt, independent of whether it needs to be.
-    fn force_rebuild(&self, _unit: &Unit) -> bool {
-        false
-    }
-}
-
-/// A `DefaultExecutor` calls rustc without doing anything else. It is Cargo's
-/// default behaviour.
-#[derive(Copy, Clone)]
-pub struct DefaultExecutor;
-
-impl Executor for DefaultExecutor {
-    fn exec(
-        &self,
-        cmd: &ProcessBuilder,
-        _id: PackageId,
-        _target: &Target,
-        _mode: CompileMode,
-        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()> {
-        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
-            .map(drop)
-    }
-}
-
 fn compile<'cfg>(
     cx: &mut Context<'_, 'cfg>,
     jobs: &mut JobQueue<'cfg>,
     plan: &mut BuildPlan,
     unit: &Unit,
-    exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
@@ -163,15 +114,14 @@ fn compile<'cfg>(
         // We run these targets later, so this is just a no-op for now.
         Job::new_fresh()
     } else if build_plan {
-        Job::new_dirty(rustc(cx, unit, &exec.clone())?)
+        Job::new_dirty(rustc(cx, unit)?)
     } else {
-        let force = exec.force_rebuild(unit) || force_rebuild;
-        let mut job = fingerprint::prepare_target(cx, unit, force)?;
+        let mut job = fingerprint::prepare_target(cx, unit, force_rebuild)?;
         job.before(if job.freshness() == Freshness::Dirty {
             let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
                 rustdoc(cx, unit)?
             } else {
-                rustc(cx, unit, exec)?
+                rustc(cx, unit)?
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
@@ -198,7 +148,7 @@ fn compile<'cfg>(
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in deps {
-        compile(cx, jobs, plan, &dep.unit, exec, false)?;
+        compile(cx, jobs, plan, &dep.unit, false)?;
     }
     if build_plan {
         plan.add(cx, unit)?;
@@ -207,7 +157,7 @@ fn compile<'cfg>(
     Ok(())
 }
 
-fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> CargoResult<Work> {
+fn rustc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     let build_plan = cx.bcx.build_config.build_plan;
 
@@ -248,10 +198,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
-    let mode = unit.mode;
-
-    exec.init(cx, unit);
-    let exec = exec.clone();
 
     let root_output = cx.files().host_dest().to_path_buf();
     let target_dir = cx.bcx.ws.target_dir().into_path_unlocked();
@@ -339,38 +285,37 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            exec.exec(
-                &rustc,
-                package_id,
-                &target,
-                mode,
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &manifest_path,
-                        &target,
-                        &mut output_options,
-                    )
-                },
-            )
-            .map_err(verbose_if_simple_exit_code)
-            .with_context(|| {
-                // adapted from rustc_errors/src/lib.rs
-                let warnings = match output_options.warnings_seen {
-                    0 => String::new(),
-                    1 => "; 1 warning emitted".to_string(),
-                    count => format!("; {} warnings emitted", count),
-                };
-                let errors = match output_options.errors_seen {
-                    0 => String::new(),
-                    1 => " due to previous error".to_string(),
-                    count => format!(" due to {} previous errors", count),
-                };
-                format!("could not compile `{}`{}{}", name, errors, warnings)
-            })?;
+            rustc
+                .exec_with_streaming(
+                    &mut |line| on_stdout_line(state, line, package_id, &target),
+                    &mut |line| {
+                        on_stderr_line(
+                            state,
+                            line,
+                            package_id,
+                            &manifest_path,
+                            &target,
+                            &mut output_options,
+                        )
+                    },
+                    false,
+                )
+                .map(drop)
+                .map_err(verbose_if_simple_exit_code)
+                .with_context(|| {
+                    // adapted from rustc_errors/src/lib.rs
+                    let warnings = match output_options.warnings_seen {
+                        0 => String::new(),
+                        1 => "; 1 warning emitted".to_string(),
+                        count => format!("; {} warnings emitted", count),
+                    };
+                    let errors = match output_options.errors_seen {
+                        0 => String::new(),
+                        1 => " due to previous error".to_string(),
+                        count => format!(" due to {} previous errors", count),
+                    };
+                    format!("could not compile `{}`{}{}", name, errors, warnings)
+                })?;
             // Exec should never return with success *and* generate an error.
             debug_assert_eq!(output_options.errors_seen, 0);
         }
