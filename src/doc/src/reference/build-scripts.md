@@ -443,8 +443,7 @@ script specified with a custom library. The purpose of this functionality is to
 prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
-To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](config.md).
+To override a build script, place the following configuration in any acceptable [`config.toml`](config.md) file.
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]
