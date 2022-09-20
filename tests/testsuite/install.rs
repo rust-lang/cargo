@@ -1440,22 +1440,6 @@ fn inline_and_explicit_version() {
 }
 
 #[cargo_test]
-fn not_both_vers_and_version() {
-    pkg("foo", "0.1.1");
-    pkg("foo", "0.1.2");
-
-    cargo_process("install foo --version 0.1.1 --vers 0.1.2")
-        .with_status(1)
-        .with_stderr_contains(
-            "\
-error: The argument '--version <VERSION>' was provided more than once, \
-but cannot be used multiple times
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn test_install_git_cannot_be_a_base_url() {
     cargo_process("install --git github.com:rust-lang/rustfmt.git")
         .with_status(101)

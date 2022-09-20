@@ -7,7 +7,11 @@ pub fn cli() -> Command {
         .trailing_var_arg(true)
         .about("Build a package's documentation, using specified custom flags.")
         .arg_quiet()
-        .arg(Arg::new("args").multiple_values(true))
+        .arg(
+            Arg::new("args")
+                .action(ArgAction::Append)
+                .multiple_values(true),
+        )
         .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",

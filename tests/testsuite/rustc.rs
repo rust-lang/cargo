@@ -501,64 +501,6 @@ fn targets_selected_all() {
 }
 
 #[cargo_test]
-fn fail_with_multiple_packages() {
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [dependencies.bar]
-                    path = "../bar"
-
-                [dependencies.baz]
-                    path = "../baz"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    let _bar = project()
-        .at("bar")
-        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/main.rs",
-            r#"
-                fn main() {
-                    if cfg!(flag = "1") { println!("Yeah from bar!"); }
-                }
-            "#,
-        )
-        .build();
-
-    let _baz = project()
-        .at("baz")
-        .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "src/main.rs",
-            r#"
-                fn main() {
-                    if cfg!(flag = "1") { println!("Yeah from baz!"); }
-                }
-            "#,
-        )
-        .build();
-
-    foo.cargo("rustc -v -p bar -p baz")
-        .with_status(1)
-        .with_stderr_contains(
-            "\
-error: The argument '--package [<SPEC>...]' was provided more than once, \
-       but cannot be used multiple times
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn fail_with_glob() {
     let p = project()
         .file(

@@ -13,6 +13,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("crate")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
+                .action(ArgAction::Append)
                 .multiple_values(true),
         )
         .arg(

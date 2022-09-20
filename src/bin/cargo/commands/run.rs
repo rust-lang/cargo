@@ -14,6 +14,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .value_parser(value_parser!(std::ffi::OsString))
+                .action(ArgAction::Append)
                 .multiple_values(true),
         )
         .arg_targets_bin_example(

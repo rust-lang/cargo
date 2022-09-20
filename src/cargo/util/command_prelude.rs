@@ -269,7 +269,7 @@ pub fn flag(name: &'static str, help: &'static str) -> Arg<'static> {
 }
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static> {
-    Arg::new(name).long(name).help(help)
+    Arg::new(name).long(name).help(help).action(ArgAction::Set)
 }
 
 pub fn optional_opt(name: &'static str, help: &'static str) -> Arg<'static> {

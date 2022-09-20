@@ -9,6 +9,7 @@ pub fn cli() -> Command {
         .arg_manifest_path()
         .arg(
             Arg::new("path")
+                .action(ArgAction::Set)
                 .value_parser(clap::value_parser!(PathBuf))
                 .help("Where to vendor crates (`vendor` by default)"),
         )
