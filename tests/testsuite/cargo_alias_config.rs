@@ -21,7 +21,7 @@ fn alias_incorrect_config_type() {
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [ERROR] invalid configuration for key `alias.b-cargo-test`
 expected a list, but found a integer for [..]",
@@ -47,9 +47,21 @@ fn alias_malformed_config_string() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] no such subcommand: `b-cargo-test`
+[ERROR] could not load Cargo configuration
 
-<tab>View all installed commands with `cargo --list`
+Caused by:
+  could not parse TOML configuration in `[..]/config`
+
+Caused by:
+  [..]
+
+Caused by:
+  TOML parse error at line [..]
+    |
+  3 |                 b-cargo-test = `
+    |                                ^
+  Unexpected ```
+  Expected quoted string
 ",
         )
         .run();
@@ -73,9 +85,19 @@ fn alias_malformed_config_list() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] no such subcommand: `b-cargo-test`
+[ERROR] could not load Cargo configuration
 
-<tab>View all installed commands with `cargo --list`
+Caused by:
+  failed to load TOML configuration from `[..]/config`
+
+Caused by:
+  [..] `alias`
+
+Caused by:
+  [..] `b-cargo-test`
+
+Caused by:
+  expected string but found integer in list
 ",
         )
         .run();
