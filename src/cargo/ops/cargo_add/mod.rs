@@ -11,6 +11,7 @@ use std::path::Path;
 use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexSet;
+use itertools::Itertools;
 use termcolor::Color::Green;
 use termcolor::Color::Red;
 use termcolor::ColorSpec;
@@ -101,7 +102,6 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         });
     for dep in deps {
         print_action_msg(&mut options.config.shell(), &dep, &dep_table)?;
-        print_dep_table_msg(&mut options.config.shell(), &dep)?;
         if let Some(Source::Path(src)) = dep.source() {
             if src.path == manifest.path.parent().unwrap_or_else(|| Path::new("")) {
                 anyhow::bail!(
@@ -126,10 +126,62 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                 inherited_features.iter().map(|s| s.as_str()).collect();
             unknown_features.extend(inherited_features.difference(&available_features).copied());
         }
+
         unknown_features.sort();
+
         if !unknown_features.is_empty() {
-            anyhow::bail!("unrecognized features: {unknown_features:?}");
+            let (mut activated, mut deactivated) = dep.features();
+            // Since the unknown features have been added to the DependencyUI we need to remove
+            // them to present the "correct" features that can be specified for the crate.
+            deactivated.retain(|f| !unknown_features.contains(f));
+            activated.retain(|f| !unknown_features.contains(f));
+
+            let mut message = format!(
+                "unrecognized feature{} for crate {}: {}\n",
+                if unknown_features.len() == 1 { "" } else { "s" },
+                dep.name,
+                unknown_features.iter().format(", "),
+            );
+            if activated.is_empty() && deactivated.is_empty() {
+                write!(message, "no features available for crate {}", dep.name)?;
+            } else {
+                if !deactivated.is_empty() {
+                    writeln!(
+                        message,
+                        "disabled features:\n    {}",
+                        deactivated
+                            .iter()
+                            .map(|s| s.to_string())
+                            .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                Ok(format!("{x}, {y}"))
+                            } else {
+                                Err((x, y))
+                            })
+                            .into_iter()
+                            .format("\n    ")
+                    )?
+                }
+                if !activated.is_empty() {
+                    writeln!(
+                        message,
+                        "enabled features:\n    {}",
+                        activated
+                            .iter()
+                            .map(|s| s.to_string())
+                            .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                Ok(format!("{x}, {y}"))
+                            } else {
+                                Err((x, y))
+                            })
+                            .into_iter()
+                            .format("\n    ")
+                    )?
+                }
+            }
+            anyhow::bail!(message.trim().to_owned());
         }
+
+        print_dep_table_msg(&mut options.config.shell(), &dep)?;
 
         manifest.insert_into_table(&dep_table, &dep)?;
         manifest.gc_dep(dep.toml_key());
