@@ -305,6 +305,19 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     paths::remove_file(&dst)?;
                 }
             }
+
+            // Some linkers do not remove the executable, but truncate and modify it.
+            // That results in the old hard-link being modified even after renamed.
+            // We delete the old artifact here to prevent this behavior from confusing users.
+            // See rust-lang/cargo#8348.
+            if output.hardlink.is_some() && output.path.exists() {
+                _ = paths::remove_file(&output.path).map_err(|e| {
+                    log::debug!(
+                        "failed to delete previous output file `{:?}`: {e:?}",
+                        output.path
+                    );
+                });
+            }
         }
 
         fn verbose_if_simple_exit_code(err: Error) -> Error {
