@@ -660,7 +660,7 @@ impl Profile {
     /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
-    fn comparable(&self) -> impl Hash + Eq {
+    fn comparable(&self) -> impl Hash + Eq + '_ {
         (
             self.opt_level,
             self.lto,
@@ -673,7 +673,8 @@ impl Profile {
             self.rpath,
             self.incremental,
             self.panic,
-            self.strip,
+            //"This trait is implemented for tuples up to twelve items long." - https://doc.rust-lang.org/std/cmp/trait.Eq.html#impl-Eq-203
+            (self.strip, &self.rustflags),
         )
     }
 }
