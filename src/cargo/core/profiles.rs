@@ -8,7 +8,7 @@ use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
-use std::{cmp, env, fmt, hash};
+use std::{env, fmt};
 
 /// Collection of all profiles.
 #[derive(Clone, Debug)]
@@ -539,10 +539,16 @@ pub enum ProfileRoot {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Eq, PartialOrd, Ord, serde::Serialize)]
+#[derive(Clone, Eq, PartialOrd, Ord, serde::Serialize, derivative::Derivative)]
+/// Don't compare/hash fields which wont affect compilation.
+/// This is necessary for `Unit` deduplication for things like "test" and
+/// "dev" which are essentially the same.
+#[derivative(Hash, PartialEq)]
 pub struct Profile {
+    #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub name: InternedString,
     pub opt_level: InternedString,
+    #[derivative(Hash = "ignore", PartialEq = "ignore")]
     #[serde(skip)] // named profiles are unstable
     pub root: ProfileRoot,
     pub lto: Lto,
@@ -620,21 +626,6 @@ impl fmt::Display for Profile {
     }
 }
 
-impl hash::Hash for Profile {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: hash::Hasher,
-    {
-        self.comparable().hash(state);
-    }
-}
-
-impl cmp::PartialEq for Profile {
-    fn eq(&self, other: &Self) -> bool {
-        self.comparable() == other.comparable()
-    }
-}
-
 impl Profile {
     fn default_dev() -> Profile {
         Profile {
@@ -655,27 +646,6 @@ impl Profile {
             opt_level: InternedString::new("3"),
             ..Profile::default()
         }
-    }
-
-    /// Don't compare/hash fields which wont affect compilation.
-    /// This is necessary for `Unit` deduplication for things like "test" and
-    /// "dev" which are essentially the same.
-    fn comparable(&self) -> impl Hash + Eq + '_ {
-        (
-            self.opt_level,
-            self.lto,
-            self.codegen_backend,
-            self.codegen_units,
-            self.debuginfo,
-            self.split_debuginfo,
-            self.debug_assertions,
-            self.overflow_checks,
-            self.rpath,
-            self.incremental,
-            self.panic,
-            //"This trait is implemented for tuples up to twelve items long." - https://doc.rust-lang.org/std/cmp/trait.Eq.html#impl-Eq-203
-            (self.strip, &self.rustflags),
-        )
     }
 }
 
