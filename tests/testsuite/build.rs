@@ -6247,3 +6247,32 @@ fn primary_package_env_var() {
 
     foo.cargo("test").run();
 }
+
+#[cargo_test]
+fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build").run();
+
+    let bin = p.bin("foo");
+    let renamed_bin = p.bin("foo-renamed");
+
+    fs::rename(&bin, &renamed_bin).unwrap();
+
+    p.change_file("src/main.rs", "fn main() { eprintln!(\"hello, world\"); }");
+    p.cargo("build").run();
+
+    let not_the_same = !same_file::is_same_file(bin, renamed_bin).unwrap();
+    assert!(not_the_same, "renamed uplifted artifact must be unmodified");
+}
