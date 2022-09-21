@@ -107,6 +107,7 @@ breaking change.
 
 <a id="the-authors-field-optional"></a>
 #### The `authors` field
+
 The optional `authors` field lists in an array the people or organizations that are considered
 the "authors" of the package. The exact meaning is open to interpretation — it
 may list the original or primary authors, current maintainers, or owners of the
