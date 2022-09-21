@@ -324,11 +324,12 @@ fn weird_check() {
         .build();
 
     p.cargo("-- check --invalid_argument -some-other-argument")
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] trailing arguments after built-in command `check` are ignored: `--invalid_argument -some-other-argument`
-[CHECKING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[ERROR] trailing arguments after built-in command `check` are unsupported: `--invalid_argument -some-other-argument`
+
+To pass the arguments to the subcommand, remove `--`
 ",
         )
         .run();

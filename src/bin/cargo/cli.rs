@@ -242,11 +242,15 @@ fn expand_aliases(
             (Some(_), None) => {
                 // Command is built-in and is not conflicting with alias, but contains ignored values.
                 if let Some(mut values) = args.get_many::<String>("") {
-                    config.shell().warn(format!(
-                        "trailing arguments after built-in command `{}` are ignored: `{}`",
+                    return Err(anyhow::format_err!(
+                        "\
+trailing arguments after built-in command `{}` are unsupported: `{}`
+
+To pass the arguments to the subcommand, remove `--`",
                         cmd,
                         values.join(" "),
-                    ))?;
+                    )
+                    .into());
                 }
             }
             (None, None) => {}
