@@ -11,7 +11,7 @@ use std::path::Path;
 
 const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"));
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("help")
         .about("Displays help for a cargo subcommand")
         .arg(Arg::new("SUBCOMMAND"))

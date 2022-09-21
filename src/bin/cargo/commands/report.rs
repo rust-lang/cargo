@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 use cargo::core::compiler::future_incompat::{OnDiskReports, REPORT_PREAMBLE};
 use cargo::drop_println;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("report")
         .about("Generate and display various kinds of reports")
         .after_help("Run `cargo help report` for more detailed information.\n")

@@ -4,7 +4,7 @@ use std::cmp::min;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("search")
         .about("Search packages in crates.io")
         .arg_quiet()

@@ -2,7 +2,7 @@ use cargo::ops::{self, DocOptions};
 
 use crate::command_prelude::*;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("rustdoc")
         .trailing_var_arg(true)
         .about("Build a package's documentation, using specified custom flags.")

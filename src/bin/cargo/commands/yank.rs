@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("yank")
         .about("Remove a pushed crate from the index")
         .arg_quiet()

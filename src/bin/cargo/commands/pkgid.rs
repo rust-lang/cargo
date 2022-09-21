@@ -3,7 +3,7 @@ use crate::command_prelude::*;
 use cargo::ops;
 use cargo::util::print_available_packages;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("pkgid")
         .about("Print a fully qualified package specification")
         .arg_quiet()

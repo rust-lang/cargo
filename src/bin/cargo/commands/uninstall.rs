@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("uninstall")
         .about("Remove a Rust binary")
         .arg_quiet()

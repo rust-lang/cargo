@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops::{self, OwnersOptions};
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
         .arg_quiet()

@@ -22,9 +22,9 @@ pub use crate::core::compiler::CompileMode;
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{value_parser, AppSettings, Arg, ArgAction, ArgMatches};
 
-pub type App = clap::Command<'static>;
+pub type Command = clap::Command<'static>;
 
-pub trait AppExt: Sized {
+pub trait CommandExt: Sized {
     fn _arg(self, arg: Arg<'static>) -> Self;
 
     /// Do not use this method, it is only for backwards compatibility.
@@ -255,7 +255,7 @@ pub trait AppExt: Sized {
     }
 }
 
-impl AppExt for App {
+impl CommandExt for Command {
     fn _arg(self, arg: Arg<'static>) -> Self {
         self.arg(arg)
     }
@@ -295,8 +295,8 @@ pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static st
         .action(ArgAction::Append)
 }
 
-pub fn subcommand(name: &'static str) -> App {
-    App::new(name)
+pub fn subcommand(name: &'static str) -> Command {
+    Command::new(name)
         .dont_collapse_args_in_usage(true)
         .setting(AppSettings::DeriveDisplayOrder)
 }
@@ -319,7 +319,7 @@ pub trait ArgMatchesExt {
             None => None,
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
                 clap::Error::raw(
-                    clap::ErrorKind::ValueValidation,
+                    clap::error::ErrorKind::ValueValidation,
                     format!("Invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
@@ -332,7 +332,7 @@ pub trait ArgMatchesExt {
             None => None,
             Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
                 clap::Error::raw(
-                    clap::ErrorKind::ValueValidation,
+                    clap::error::ErrorKind::ValueValidation,
                     format!("Invalid value: could not parse `{}` as a number", arg),
                 )
             })?),

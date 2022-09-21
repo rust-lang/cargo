@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("init")
         .about("Create a new cargo package in an existing directory")
         .arg_quiet()

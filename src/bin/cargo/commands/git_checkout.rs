@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 const REMOVED: &str = "The `git-checkout` subcommand has been removed.";
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("git-checkout")
         .about("This subcommand has been removed")
         .hide(true)
