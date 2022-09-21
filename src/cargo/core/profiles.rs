@@ -657,7 +657,7 @@ impl Profile {
         }
     }
 
-    /// Compares all fields except `name`, which doesn't affect compilation.
+    /// Don't compare/hash fields which wont affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
     fn comparable(&self) -> impl Hash + Eq + '_ {
