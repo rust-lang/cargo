@@ -209,7 +209,7 @@ fn duplicate_packages_in_cargo_lock() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -263,7 +263,7 @@ fn bad_source_in_cargo_lock() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -654,7 +654,7 @@ warning: unused manifest key: target.foo.bar
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -667,7 +667,7 @@ warning: unused manifest key: target.foo.bar
     p.cargo("build")
         .with_stderr(
             "\
-warning: unused manifest key: project.bulid
+warning: unused manifest key: package.bulid
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -679,7 +679,7 @@ warning: unused manifest key: project.bulid
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"

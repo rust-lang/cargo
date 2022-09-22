@@ -11,7 +11,7 @@ fn simple_explicit() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -24,7 +24,7 @@ fn simple_explicit() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -52,7 +52,7 @@ fn simple_explicit_default_members() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -66,7 +66,7 @@ fn simple_explicit_default_members() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -87,7 +87,7 @@ fn non_virtual_default_members_build_other_member() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -125,7 +125,7 @@ fn non_virtual_default_members_build_root_project() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -154,7 +154,7 @@ fn inferred_root() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -186,7 +186,7 @@ fn inferred_path_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -221,7 +221,7 @@ fn transitive_path_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -236,7 +236,7 @@ fn transitive_path_dep() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -278,7 +278,7 @@ fn parent_pointer_works() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -293,7 +293,7 @@ fn parent_pointer_works() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -316,7 +316,7 @@ fn same_names_in_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -329,7 +329,7 @@ fn same_names_in_workspace() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -357,7 +357,7 @@ fn parent_doesnt_point_to_child() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -392,7 +392,7 @@ fn invalid_parent_pointer() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -421,7 +421,7 @@ fn invalid_members() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -455,7 +455,7 @@ fn bare_workspace_ok() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -475,7 +475,7 @@ fn two_roots() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -488,7 +488,7 @@ fn two_roots() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -518,7 +518,7 @@ fn workspace_isnt_root() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -542,7 +542,7 @@ fn dangling_member() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -555,7 +555,7 @@ fn dangling_member() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -566,7 +566,7 @@ fn dangling_member() {
         .file(
             "baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.1.0"
                 authors = []
@@ -594,7 +594,7 @@ fn cycle() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -605,7 +605,7 @@ fn cycle() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -629,7 +629,7 @@ fn share_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -645,7 +645,7 @@ fn share_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -680,7 +680,7 @@ fn fetch_fetches_all() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -693,7 +693,7 @@ fn fetch_fetches_all() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -724,7 +724,7 @@ fn lock_works_for_everyone() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -740,7 +740,7 @@ fn lock_works_for_everyone() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -968,7 +968,7 @@ fn include_virtual() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -1002,7 +1002,7 @@ fn members_include_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1018,7 +1018,7 @@ fn members_include_path_deps() {
         .file(
             "p1/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "p1"
                 version = "0.1.0"
                 authors = []
@@ -1051,7 +1051,7 @@ fn new_warns_you_this_will_not_work() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1112,7 +1112,7 @@ fn lock_doesnt_change_depending_on_crate() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1128,7 +1128,7 @@ fn lock_doesnt_change_depending_on_crate() {
         .file(
             "baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.1.0"
                 authors = []
@@ -1304,7 +1304,7 @@ fn workspace_with_transitive_dev_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = ["mbrubeck@example.com"]
@@ -1319,7 +1319,7 @@ fn workspace_with_transitive_dev_deps() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = ["mbrubeck@example.com"]
@@ -1370,7 +1370,7 @@ fn relative_path_for_member_works() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1383,7 +1383,7 @@ fn relative_path_for_member_works() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -1403,7 +1403,7 @@ fn relative_path_for_root_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1433,7 +1433,7 @@ fn path_dep_outside_workspace_is_not_member() {
         .file(
             "ws/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ws"
                 version = "0.1.0"
                 authors = []
@@ -1459,7 +1459,7 @@ fn test_in_and_out_of_workspace() {
         .file(
             "ws/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ws"
                 version = "0.1.0"
                 authors = []
@@ -1475,7 +1475,7 @@ fn test_in_and_out_of_workspace() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1491,7 +1491,7 @@ fn test_in_and_out_of_workspace() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 workspace = "../ws"
                 name = "bar"
                 version = "0.1.0"
@@ -1523,7 +1523,7 @@ fn test_path_dependency_under_member() {
         .file(
             "ws/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ws"
                 version = "0.1.0"
                 authors = []
@@ -1538,7 +1538,7 @@ fn test_path_dependency_under_member() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 workspace = "../ws"
                 name = "foo"
                 version = "0.1.0"
@@ -1573,7 +1573,7 @@ fn excluded_simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ws"
                 version = "0.1.0"
                 authors = []
@@ -1599,7 +1599,7 @@ fn exclude_members_preferred() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ws"
                 version = "0.1.0"
                 authors = []
@@ -1630,7 +1630,7 @@ fn exclude_but_also_depend() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ws"
                 version = "0.1.0"
                 authors = []
@@ -1753,7 +1753,7 @@ fn glob_syntax() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1767,7 +1767,7 @@ fn glob_syntax() {
         .file(
             "crates/bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -1778,7 +1778,7 @@ fn glob_syntax() {
         .file(
             "crates/baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.1.0"
                 authors = []
@@ -1789,7 +1789,7 @@ fn glob_syntax() {
         .file(
             "crates/qux/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "qux"
                 version = "0.1.0"
                 authors = []
@@ -1825,7 +1825,7 @@ fn glob_syntax() {
 fn glob_syntax_2() {
     let p = project()
         .file("Cargo.toml", r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
             authors = []
@@ -1836,7 +1836,7 @@ fn glob_syntax_2() {
         "#)
         .file("src/main.rs", "fn main() {}")
         .file("crates/bar/Cargo.toml", r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.1.0"
             authors = []
@@ -1844,7 +1844,7 @@ fn glob_syntax_2() {
         "#)
         .file("crates/bar/src/main.rs", "fn main() {}")
         .file("crates/baz/Cargo.toml", r#"
-            [project]
+            [package]
             name = "baz"
             version = "0.1.0"
             authors = []
@@ -1852,7 +1852,7 @@ fn glob_syntax_2() {
         "#)
         .file("crates/baz/src/main.rs", "fn main() {}")
         .file("crates/qux/Cargo.toml", r#"
-            [project]
+            [package]
             name = "qux"
             version = "0.1.0"
             authors = []
@@ -1889,7 +1889,7 @@ fn glob_syntax_invalid_members() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1939,7 +1939,7 @@ fn dep_used_with_separate_features() {
         .file(
             "feat_lib/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "feat_lib"
                 version = "0.1.0"
                 authors = []
@@ -1952,7 +1952,7 @@ fn dep_used_with_separate_features() {
         .file(
             "caller1/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "caller1"
                 version = "0.1.0"
                 authors = []
@@ -1966,7 +1966,7 @@ fn dep_used_with_separate_features() {
         .file(
             "caller2/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "caller2"
                 version = "0.1.0"
                 authors = []
@@ -2365,7 +2365,7 @@ fn member_dep_missing() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -2377,7 +2377,7 @@ fn member_dep_missing() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
 
@@ -2420,7 +2420,7 @@ fn simple_primary_package_env_var() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -2433,7 +2433,7 @@ fn simple_primary_package_env_var() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -2492,7 +2492,7 @@ fn ensure_correct_workspace_when_nested() {
             r#"
                 [workspace]
 
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -2509,7 +2509,7 @@ fn ensure_correct_workspace_when_nested() {
         .file(
             "sub/foo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []

@@ -493,7 +493,7 @@ fn test_with_lib_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -605,7 +605,7 @@ fn external_test_explicit() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -656,7 +656,7 @@ fn external_test_named_test() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -788,7 +788,7 @@ fn lib_bin_same_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1917,7 +1917,7 @@ fn example_dev_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2921,7 +2921,7 @@ fn test_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -2948,7 +2948,7 @@ fn test_all_exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -2977,7 +2977,7 @@ fn test_all_exclude_not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -3005,7 +3005,7 @@ fn test_all_exclude_glob() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -3034,7 +3034,7 @@ fn test_all_exclude_glob_not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -3209,7 +3209,7 @@ fn test_all_member_dependency_same_name() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.1.0"
 
@@ -3233,7 +3233,7 @@ fn doctest_only_with_dev_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.1.0"
 
@@ -3319,7 +3319,7 @@ fn doctest_and_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.1.0"
 
@@ -3344,7 +3344,7 @@ fn doctest_and_registry() {
         .file(
             "c/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "c"
                 version = "0.1.0"
 
@@ -3425,7 +3425,7 @@ fn cyclic_dev() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -3446,7 +3446,7 @@ fn publish_a_crate_without_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "testless"
                 version = "0.1.0"
                 exclude = ["tests/*"]
@@ -3467,7 +3467,7 @@ fn publish_a_crate_without_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -3495,7 +3495,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
         .file(
             "root/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "root"
                 version = "0.1.0"
                 authors = []
@@ -3517,7 +3517,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
         .file(
             "proc_macro_dep/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "proc_macro_dep"
                 version = "0.1.0"
                 authors = []

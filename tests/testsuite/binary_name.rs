@@ -9,7 +9,7 @@ fn gated() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name =  "foo"
                 version = "0.0.1"
 
@@ -44,7 +44,7 @@ fn binary_name1() {
             r#"
                 cargo-features = ["different-binary-name"]
 
-                [project]
+                [package]
                 name =  "foo"
                 version = "0.0.1"
 
@@ -126,7 +126,7 @@ fn binary_name2() {
             r#"
                 cargo-features = ["different-binary-name"]
 
-                [project]
+                [package]
                 name =  "foo"
                 version = "0.0.1"
 
@@ -212,7 +212,7 @@ fn check_env_vars() {
             r#"
                 cargo-features = ["different-binary-name"]
 
-                [project]
+                [package]
                 name =  "foo"
                 version = "0.0.1"
 
@@ -264,7 +264,7 @@ fn check_msg_format_json() {
             r#"
                 cargo-features = ["different-binary-name"]
 
-                [project]
+                [package]
                 name =  "foo"
                 version = "0.0.1"
 

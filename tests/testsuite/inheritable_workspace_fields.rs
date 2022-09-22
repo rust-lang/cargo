@@ -235,7 +235,7 @@ fn inherit_own_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.2.0"
             authors = []
@@ -370,7 +370,7 @@ fn inherit_own_detailed_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.2.0"
             authors = []
@@ -519,7 +519,7 @@ fn inherited_dependencies_union_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.2.0"
             authors = []
@@ -716,7 +716,7 @@ fn inherit_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
+            [package]
             workspace = ".."
             name = "bar"
             version = "0.2.0"
@@ -850,7 +850,7 @@ fn inherit_target_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
+            [package]
             workspace = ".."
             name = "bar"
             version = "0.2.0"
@@ -900,7 +900,7 @@ fn inherit_dependency_override_optional() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
+            [package]
             workspace = ".."
             name = "bar"
             version = "0.2.0"
@@ -938,7 +938,7 @@ fn inherit_dependency_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.2.0"
             authors = []
@@ -1011,7 +1011,7 @@ fn inherit_detailed_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
+            [package]
             workspace = ".."
             name = "bar"
             version = "0.2.0"
@@ -1053,7 +1053,7 @@ fn inherit_path_dependencies() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
+            [package]
             workspace = ".."
             name = "bar"
             version = "0.2.0"
