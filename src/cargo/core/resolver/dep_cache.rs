@@ -109,7 +109,7 @@ impl<'a> RegistryQueryer<'a> {
             self.registry_cache.insert(dep.clone(), Poll::Pending);
             return Poll::Pending;
         }
-        for summary in ret.iter_mut() {
+        for summary in ret.iter() {
             let mut potential_matches = self
                 .replacements
                 .iter()
