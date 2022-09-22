@@ -21,6 +21,8 @@ jobs:
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.9/mdbook-v0.4.9-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
+    - name: Update toolchain
+      run: rustup update --no-self-update stable && rustup default stable
     - name: Build API doc
       run: |
           cargo doc --document-private-items --no-deps
