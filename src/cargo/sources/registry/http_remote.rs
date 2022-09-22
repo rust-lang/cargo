@@ -19,7 +19,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::str;
-use std::task::Poll;
+use std::task::{ready, Poll};
 use std::time::Duration;
 use url::Url;
 
@@ -383,10 +383,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Load the registry config.
         if self.registry_config.is_none() && path != Path::new("config.json") {
-            match self.config()? {
-                Poll::Ready(_) => {}
-                Poll::Pending => return Poll::Pending,
-            }
+            ready!(self.config()?);
         }
 
         let mut handle = ops::http_handle(self.config)?;
@@ -515,11 +512,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
-        match self.load(Path::new(""), Path::new("config.json"), None)? {
-            Poll::Ready(LoadResponse::Data {
+        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+            LoadResponse::Data {
                 raw_data,
                 index_version: _,
-            }) => {
+            } => {
                 trace!("config loaded");
                 self.registry_config = Some(serde_json::from_slice(&raw_data)?);
                 if paths::create_dir_all(&config_json_path.parent().unwrap()).is_ok() {
@@ -529,13 +526,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
                 Poll::Ready(Ok(self.registry_config.clone()))
             }
-            Poll::Ready(LoadResponse::NotFound) => {
+            LoadResponse::NotFound => {
                 Poll::Ready(Err(anyhow::anyhow!("config.json not found in registry")))
             }
-            Poll::Ready(LoadResponse::CacheValid) => {
+            LoadResponse::CacheValid => {
                 panic!("config.json is not stored in the index cache")
             }
-            Poll::Pending => Poll::Pending,
         }
     }
 

@@ -15,7 +15,7 @@ use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
-use std::task::Poll;
+use std::task::{ready, Poll};
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are
@@ -236,13 +236,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         debug!("loading config");
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
-        match self.load(Path::new(""), Path::new("config.json"), None)? {
-            Poll::Ready(LoadResponse::Data { raw_data, .. }) => {
+        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+            LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
                 Poll::Ready(Ok(Some(serde_json::from_slice(&raw_data)?)))
             }
-            Poll::Ready(_) => Poll::Ready(Ok(None)),
-            Poll::Pending => Poll::Pending,
+            _ => Poll::Ready(Ok(None)),
         }
     }
 
