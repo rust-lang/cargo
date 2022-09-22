@@ -7,6 +7,7 @@ use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Co
 use cargo_util::{ProcessBuilder, ProcessError};
 use std::collections::BTreeMap;
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -152,7 +153,7 @@ fn find_external_subcommand(config: &Config, cmd: &str) -> Option<PathBuf> {
         .find(|file| is_executable(file))
 }
 
-fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
+fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> CliResult {
     let path = find_external_subcommand(config, cmd);
     let command = match path {
         Some(command) => command,

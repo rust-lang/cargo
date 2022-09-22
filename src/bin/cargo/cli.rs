@@ -5,6 +5,8 @@ use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Write;
 
 use super::commands;
@@ -241,20 +243,20 @@ fn expand_aliases(
             }
             (Some(_), None) => {
                 // Command is built-in and is not conflicting with alias, but contains ignored values.
-                if let Some(mut values) = args.get_many::<String>("") {
+                if let Some(values) = args.get_many::<OsString>("") {
                     return Err(anyhow::format_err!(
                         "\
 trailing arguments after built-in command `{}` are unsupported: `{}`
 
 To pass the arguments to the subcommand, remove `--`",
                         cmd,
-                        values.join(" "),
+                        values.map(|s| s.to_string_lossy()).join(" "),
                     )
                     .into());
                 }
             }
             (None, None) => {}
-            (_, Some(mut alias)) => {
+            (_, Some(alias)) => {
                 // Check if this alias is shadowing an external subcommand
                 // (binary of the form `cargo-<subcommand>`)
                 // Currently this is only a warning, but after a transition period this will become
@@ -270,7 +272,11 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     ))?;
                 }
 
-                alias.extend(args.get_many::<String>("").unwrap_or_default().cloned());
+                let mut alias = alias
+                    .into_iter()
+                    .map(|s| OsString::from(s))
+                    .collect::<Vec<_>>();
+                alias.extend(args.get_many::<OsString>("").unwrap_or_default().cloned());
                 // new_args strips out everything before the subcommand, so
                 // capture those global options now.
                 // Note that an alias to an external command will not receive
@@ -346,12 +352,12 @@ fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatch
         return exec(config, subcommand_args);
     }
 
-    let mut ext_args: Vec<&str> = vec![cmd];
+    let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
     ext_args.extend(
         subcommand_args
-            .get_many::<String>("")
+            .get_many::<OsString>("")
             .unwrap_or_default()
-            .map(String::as_str),
+            .map(OsString::as_os_str),
     );
     super::execute_external_subcommand(config, cmd, &ext_args)
 }
@@ -400,6 +406,7 @@ pub fn cli() -> Command {
     };
     Command::new("cargo")
         .allow_external_subcommands(true)
+        .allow_invalid_utf8_for_external_subcommands(true)
         .setting(AppSettings::DeriveDisplayOrder)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
