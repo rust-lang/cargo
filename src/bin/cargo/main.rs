@@ -53,6 +53,14 @@ fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str, &str)> {
     BUILTIN_ALIASES.iter().find(|alias| alias.0 == cmd)
 }
 
+/// Resolve the aliased command from the [`Config`] with a given command string.
+///
+/// The search fallback chain is:
+///
+/// 1. Get the aliased command as a string.
+/// 2. If an `Err` occurs (missing key, type mismatch, or any possible error),
+///    try to get it as an array again.
+/// 3. If still cannot find any, finds one insides [`BUILTIN_ALIASES`].
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
     let user_alias = match config.get_string(&alias_name) {

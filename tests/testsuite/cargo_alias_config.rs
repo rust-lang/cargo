@@ -21,10 +21,84 @@ fn alias_incorrect_config_type() {
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [ERROR] invalid configuration for key `alias.b-cargo-test`
 expected a list, but found a integer for [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn alias_malformed_config_string() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                b-cargo-test = `
+            "#,
+        )
+        .build();
+
+    p.cargo("b-cargo-test -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  could not parse TOML configuration in `[..]/config`
+
+Caused by:
+  [..]
+
+Caused by:
+  TOML parse error at line [..]
+    |
+  3 |                 b-cargo-test = `
+    |                                ^
+  Unexpected ```
+  Expected quoted string
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn alias_malformed_config_list() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                b-cargo-test = [1, 2]
+            "#,
+        )
+        .build();
+
+    p.cargo("b-cargo-test -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[..]/config`
+
+Caused by:
+  [..] `alias`
+
+Caused by:
+  [..] `b-cargo-test`
+
+Caused by:
+  expected string but found integer in list
+",
         )
         .run();
 }

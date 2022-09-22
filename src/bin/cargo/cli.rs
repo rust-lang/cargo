@@ -32,9 +32,6 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
     // the [alias] table).
     let config = config.get_mut();
 
-    // Global args need to be extracted before expanding aliases because the
-    // clap code for extracting a subcommand discards global options
-    // (appearing before the subcommand).
     let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
 
     if expanded_args
@@ -224,26 +221,34 @@ fn add_ssl(version_string: &mut String) {
     }
 }
 
+/// Expands aliases recursively to collect all the command line arguments.
+///
+/// [`GlobalArgs`] need to be extracted before expanding aliases because the
+/// clap code for extracting a subcommand discards global options
+/// (appearing before the subcommand).
 fn expand_aliases(
     config: &mut Config,
     args: ArgMatches,
     mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches, GlobalArgs), CliError> {
     if let Some((cmd, args)) = args.subcommand() {
-        match (
-            commands::builtin_exec(cmd),
-            super::aliased_command(config, cmd)?,
-        ) {
-            (Some(_), Some(_)) => {
+        let exec = commands::builtin_exec(cmd);
+        let aliased_cmd = super::aliased_command(config, cmd);
+
+        match (exec, aliased_cmd) {
+            (Some(_), Ok(Some(_))) => {
                 // User alias conflicts with a built-in subcommand
                 config.shell().warn(format!(
                     "user-defined alias `{}` is ignored, because it is shadowed by a built-in command",
                     cmd,
                 ))?;
             }
-            (Some(_), None) => {
-                // Command is built-in and is not conflicting with alias, but contains ignored values.
+            (Some(_), Ok(None) | Err(_)) => {
+                // Here we ignore errors from aliasing as we already favor built-in command,
+                // and alias doesn't involve in this context.
+
                 if let Some(values) = args.get_many::<OsString>("") {
+                    // Command is built-in and is not conflicting with alias, but contains ignored values.
                     return Err(anyhow::format_err!(
                         "\
 trailing arguments after built-in command `{}` are unsupported: `{}`
@@ -255,8 +260,8 @@ To pass the arguments to the subcommand, remove `--`",
                     .into());
                 }
             }
-            (None, None) => {}
-            (_, Some(alias)) => {
+            (None, Ok(None)) => {}
+            (None, Ok(Some(alias))) => {
                 // Check if this alias is shadowing an external subcommand
                 // (binary of the form `cargo-<subcommand>`)
                 // Currently this is only a warning, but after a transition period this will become
@@ -300,6 +305,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                 let (expanded_args, _) = expand_aliases(config, new_args, already_expanded)?;
                 return Ok((expanded_args, global_args));
             }
+            (None, Err(e)) => return Err(e.into()),
         }
     };
 

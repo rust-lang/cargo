@@ -80,7 +80,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        if self.config.has_key(&self.key, self.env_prefix_ok) {
+        if self.config.has_key(&self.key, self.env_prefix_ok)? {
             visitor.visit_some(self)
         } else {
             // Treat missing values as `None`.

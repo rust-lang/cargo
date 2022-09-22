@@ -1074,10 +1074,6 @@ Dotted key `ssl-version` attempted to extend non-table type (string)
 
 ",
     );
-    assert!(config
-        .get::<Option<SslVersionConfig>>("http.ssl-version")
-        .unwrap()
-        .is_none());
 }
 
 #[cargo_test]

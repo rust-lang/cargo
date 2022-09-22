@@ -682,25 +682,25 @@ impl Config {
         }
     }
 
-    fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> bool {
+    /// Check if the [`Config`] contains a given [`ConfigKey`].
+    ///
+    /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
+    fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
         if self.env.contains_key(key.as_env_key()) {
-            return true;
+            return Ok(true);
         }
-        // See ConfigMapAccess for a description of this.
         if env_prefix_ok {
             let env_prefix = format!("{}_", key.as_env_key());
             if self.env.keys().any(|k| k.starts_with(&env_prefix)) {
-                return true;
+                return Ok(true);
             }
         }
-        if let Ok(o_cv) = self.get_cv(key) {
-            if o_cv.is_some() {
-                return true;
-            }
+        if self.get_cv(key)?.is_some() {
+            return Ok(true);
         }
         self.check_environment_key_case_mismatch(key);
 
-        false
+        Ok(false)
     }
 
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
