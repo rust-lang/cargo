@@ -1,7 +1,8 @@
 use crate::git::repo;
 use crate::paths;
+use crate::publish::{create_index_line, write_to_index};
 use cargo_util::paths::append;
-use cargo_util::{registry::make_dep_path, Sha256};
+use cargo_util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::collections::{BTreeMap, HashMap};
@@ -9,7 +10,7 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::thread;
 use tar::{Builder, Header};
 use url::Url;
@@ -389,7 +390,7 @@ pub struct Package {
     v: Option<u32>,
 }
 
-type FeatureMap = BTreeMap<String, Vec<String>>;
+pub(crate) type FeatureMap = BTreeMap<String, Vec<String>>;
 
 #[derive(Clone)]
 pub struct Dependency {
@@ -637,16 +638,21 @@ impl HttpServer {
                     self.dl(&req)
                 }
             }
+            // publish
+            ("put", ["api", "v1", "crates", "new"]) => {
+                if !authorized(true) {
+                    self.unauthorized(req)
+                } else {
+                    self.publish(req)
+                }
+            }
             // The remainder of the operators in the test framework do nothing other than responding 'ok'.
             //
-            // Note: We don't need to support anything real here because the testing framework publishes crates
-            // by writing directly to the filesystem instead. If the test framework is changed to publish
-            // via the HTTP API, then this should be made more complete.
+            // Note: We don't need to support anything real here because there are no tests that
+            // currently require anything other than publishing via the http api.
 
-            // publish
-            ("put", ["api", "v1", "crates", "new"])
             // yank
-            | ("delete", ["api", "v1", "crates", .., "yank"])
+            ("delete", ["api", "v1", "crates", .., "yank"])
             // unyank
             | ("put", ["api", "v1", "crates", .., "unyank"])
             // owners
@@ -751,6 +757,72 @@ impl HttpServer {
                         format!("Last-Modified: {}", last_modified),
                     ],
                 };
+            }
+        }
+    }
+
+    fn publish(&self, req: &Request) -> Response {
+        if let Some(body) = &req.body {
+            // Get the metadata of the package
+            let (len, remaining) = body.split_at(4);
+            let json_len = u32::from_le_bytes(len.try_into().unwrap());
+            let (json, remaining) = remaining.split_at(json_len as usize);
+            let new_crate = serde_json::from_slice::<crates_io::NewCrate>(json).unwrap();
+            // Get the `.crate` file
+            let (len, remaining) = remaining.split_at(4);
+            let file_len = u32::from_le_bytes(len.try_into().unwrap());
+            let (file, _remaining) = remaining.split_at(file_len as usize);
+
+            // Write the `.crate`
+            let dst = self
+                .dl_path
+                .join(&new_crate.name)
+                .join(&new_crate.vers)
+                .join("download");
+            t!(fs::create_dir_all(dst.parent().unwrap()));
+            t!(fs::write(&dst, file));
+
+            let deps = new_crate
+                .deps
+                .iter()
+                .map(|dep| {
+                    let (name, package) = match &dep.explicit_name_in_toml {
+                        Some(explicit) => (explicit.to_string(), Some(dep.name.to_string())),
+                        None => (dep.name.to_string(), None),
+                    };
+                    serde_json::json!({
+                        "name": name,
+                        "req": dep.version_req,
+                        "features": dep.features,
+                        "default_features": true,
+                        "target": dep.target,
+                        "optional": dep.optional,
+                        "kind": dep.kind,
+                        "registry": dep.registry,
+                        "package": package,
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            let line = create_index_line(
+                serde_json::json!(new_crate.name),
+                &new_crate.vers,
+                deps,
+                &cksum(file),
+                new_crate.features,
+                false,
+                new_crate.links,
+                None,
+            );
+
+            write_to_index(&self.registry_path, &new_crate.name, line, false);
+
+            self.ok(&req)
+        } else {
+            Response {
+                code: 400,
+                headers: vec![],
+                body: b"The request was missing a body".to_vec(),
             }
         }
     }
@@ -999,27 +1071,16 @@ impl Package {
         } else {
             serde_json::json!(self.name)
         };
-        // This emulates what crates.io may do in the future.
-        let (features, features2) = split_index_features(self.features.clone());
-        let mut json = serde_json::json!({
-            "name": name,
-            "vers": self.vers,
-            "deps": deps,
-            "cksum": cksum,
-            "features": features,
-            "yanked": self.yanked,
-            "links": self.links,
-        });
-        if let Some(f2) = &features2 {
-            json["features2"] = serde_json::json!(f2);
-            json["v"] = serde_json::json!(2);
-        }
-        if let Some(v) = self.v {
-            json["v"] = serde_json::json!(v);
-        }
-        let line = json.to_string();
-
-        let file = make_dep_path(&self.name, false);
+        let line = create_index_line(
+            name,
+            &self.vers,
+            deps,
+            &cksum,
+            self.features.clone(),
+            self.yanked,
+            self.links.clone(),
+            self.v,
+        );
 
         let registry_path = if self.alternative {
             alt_registry_path()
@@ -1027,38 +1088,7 @@ impl Package {
             registry_path()
         };
 
-        // Write file/line in the index.
-        let dst = if self.local {
-            registry_path.join("index").join(&file)
-        } else {
-            registry_path.join(&file)
-        };
-        let prev = fs::read_to_string(&dst).unwrap_or_default();
-        t!(fs::create_dir_all(dst.parent().unwrap()));
-        t!(fs::write(&dst, prev + &line[..] + "\n"));
-
-        // Add the new file to the index.
-        if !self.local {
-            let repo = t!(git2::Repository::open(&registry_path));
-            let mut index = t!(repo.index());
-            t!(index.add_path(Path::new(&file)));
-            t!(index.write());
-            let id = t!(index.write_tree());
-
-            // Commit this change.
-            let tree = t!(repo.find_tree(id));
-            let sig = t!(repo.signature());
-            let parent = t!(repo.refname_to_id("refs/heads/master"));
-            let parent = t!(repo.find_commit(parent));
-            t!(repo.commit(
-                Some("HEAD"),
-                &sig,
-                &sig,
-                "Another commit",
-                &tree,
-                &[&parent]
-            ));
-        }
+        write_to_index(&registry_path, &self.name, line, self.local);
 
         cksum
     }
@@ -1277,23 +1307,5 @@ impl Dependency {
     pub fn optional(&mut self, optional: bool) -> &mut Self {
         self.optional = optional;
         self
-    }
-}
-
-fn split_index_features(mut features: FeatureMap) -> (FeatureMap, Option<FeatureMap>) {
-    let mut features2 = FeatureMap::new();
-    for (feat, values) in features.iter_mut() {
-        if values
-            .iter()
-            .any(|value| value.starts_with("dep:") || value.contains("?/"))
-        {
-            let new_values = values.drain(..).collect();
-            features2.insert(feat.clone(), new_values);
-        }
-    }
-    if features2.is_empty() {
-        (features, None)
-    } else {
-        (features, Some(features2))
     }
 }
