@@ -472,7 +472,7 @@ Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies
 `[workspace.dependencies]` definition of dependencies.
 
 ```toml
-[project]
+[package]
 name = "bar"
 version = "0.2.0"
 

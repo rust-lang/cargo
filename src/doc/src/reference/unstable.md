@@ -1083,7 +1083,7 @@ The `filename` parameter is only available in the `[[bin]]` section of the manif
 ```toml
 cargo-features = ["different-binary-name"]
 
-[project]
+[package]
 name =  "foo"
 version = "0.0.1"
 

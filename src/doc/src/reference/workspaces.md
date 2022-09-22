@@ -202,7 +202,7 @@ regex = { version = "1.6.0", default-features = false, features = ["std"] }
 
 ```toml
 # [PROJECT_DIR]/bar/Cargo.toml
-[project]
+[package]
 name = "bar"
 version = "0.2.0"
 
