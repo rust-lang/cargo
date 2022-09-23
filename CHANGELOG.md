@@ -1,20 +1,85 @@
 # Changelog
 
-## Cargo 1.65 (2022-11-03)
-[4fd148c4...HEAD](https://github.com/rust-lang/cargo/compare/4fd148c4...HEAD)
+## Cargo 1.66 (2022-12-15)
+[08250398...HEAD](https://github.com/rust-lang/cargo/compare/08250398...HEAD)
 
 ### Added
 
 ### Changed
 
-- Cargo now uses the standard library's `available_parallelism` instead of the
-  `num_cpus` crate for determining the default parallelism.
-  [#10969](https://github.com/rust-lang/cargo/pull/10969)
-
 ### Fixed
 
 ### Nightly only
 
+## Cargo 1.65 (2022-11-03)
+[4fd148c4...rust-1.65.0](https://github.com/rust-lang/cargo/compare/4fd148c4...rust-1.65.0)
+
+### Added
+
+- External subcommands can now inherit jobserver file descriptors from Cargo.
+  [#10511](https://github.com/rust-lang/cargo/pull/10511)
+- Added an API documentation for private items in cargo-the-library. See
+  <https://doc.crates.io/contrib/apidoc/cargo>.
+  [#11019](https://github.com/rust-lang/cargo/pull/11019)
+
+### Changed
+
+- Cargo now stops adding its bin path to `PATH` if it's already there.
+  [#11023](https://github.com/rust-lang/cargo/pull/11023)
+- Improved the performance of Cargo build scheduling
+  by sorting the queue of pending jobs.
+  [#11032](https://github.com/rust-lang/cargo/pull/11032)
+- Improved the performance fetching git dependencies from GitHub even
+  when using a partial hash in the `rev` field.
+  [#10807](https://github.com/rust-lang/cargo/pull/10807)
+- Cargo now uses git2 v0.15 and libgit2-sys v0.14,
+  which bring several compatibility fixes with git's new behaviors.
+  [#11004](https://github.com/rust-lang/cargo/pull/11004)
+- Registry index files are cached in a more granular way based on content hash.
+  [#11044](https://github.com/rust-lang/cargo/pull/11044)
+- Cargo now uses the standard library's `std::thread::scope` instead of the
+  `crossbeam` crate for spawning scoped threads.
+  [#10977](https://github.com/rust-lang/cargo/pull/10977)
+- Cargo now uses the standard library's `available_parallelism` instead of the
+  `num_cpus` crate for determining the default parallelism.
+  [#10969](https://github.com/rust-lang/cargo/pull/10969)
+- Cargo now guides you how to solve it when seeing an error message of
+  `rust-version` requirement not satisfied.
+  [#10891](https://github.com/rust-lang/cargo/pull/10891)
+- Cargo now tells you more about possible causes and how to fix it
+  when a subcommand cannot be found.
+  [#10924](https://github.com/rust-lang/cargo/pull/10924)
+- Cargo now lists available target names when a given Cargo target cannot be found.
+  [#10999](https://github.com/rust-lang/cargo/pull/10999)
+- `cargo update` now warns if `--precise` is given without `--package` flag.
+  This will become a hard error after a transition period.
+  [#10988](https://github.com/rust-lang/cargo/pull/10988)
+  [#11011](https://github.com/rust-lang/cargo/pull/11011)
+- `cargo bench` and `cargo test` now report a more precise test execution error
+  right after a test fails.
+  [#11028](https://github.com/rust-lang/cargo/pull/11028)
+- `cargo add` now tells you for which version the features are added.
+  [#11075](https://github.com/rust-lang/cargo/pull/11075)
+- Call out that non-ASCII crate names are not supported by Rust anymore.
+  [#11017](https://github.com/rust-lang/cargo/pull/11017)
+- Enhanced the error message when in the manifest a field is expected to be
+  an array but a string is used.
+  [#10944](https://github.com/rust-lang/cargo/pull/10944)
+
+### Fixed
+
+- Removed the restriction on file locking supports on platforms other than Linux.
+  [#10975](https://github.com/rust-lang/cargo/pull/10975)
+- Fixed incorrect OS detection by bumping os_info to 3.5.0.
+  [#10943](https://github.com/rust-lang/cargo/pull/10943)
+- Scanning the package directory now ignores errors from broken
+  but excluded symlink files.
+  [#11008](https://github.com/rust-lang/cargo/pull/11008)
+
+### Nightly
+
+- Progress indicator for sparse registries becomes more straightfoward.
+  [#11068](https://github.com/rust-lang/cargo/pull/11068)
 
 ## Cargo 1.64 (2022-09-22)
 [a5e08c47...rust-1.64.0](https://github.com/rust-lang/cargo/compare/a5e08c47...rust-1.64.0)
