@@ -419,8 +419,8 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
     cargo_features: Option<Vec<String>>,
-    package: Option<Box<TomlProject>>,
-    project: Option<Box<TomlProject>>,
+    package: Option<Box<TomlPackage>>,
+    project: Option<Box<TomlPackage>>,
     profile: Option<TomlProfiles>,
     lib: Option<TomlLibTarget>,
     bin: Option<Vec<TomlBinTarget>>,
@@ -1071,7 +1071,7 @@ pub struct TomlWorkspaceField {
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct TomlProject {
+pub struct TomlPackage {
     edition: Option<MaybeWorkspace<String>>,
     rust_version: Option<MaybeWorkspace<String>>,
     name: InternedString,
@@ -1229,7 +1229,7 @@ impl InheritableFields {
     }
 
     pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
-        readme_for_project(self.ws_root.as_path(), self.readme.clone()).map_or(
+        readme_for_package(self.ws_root.as_path(), self.readme.clone()).map_or(
             Err(anyhow!("`workspace.package.readme` was not defined")),
             |readme| {
                 let rel_path =
@@ -1321,7 +1321,7 @@ impl InheritableFields {
     }
 }
 
-impl TomlProject {
+impl TomlPackage {
     pub fn to_package_id(
         &self,
         source_id: SourceId,
@@ -1933,7 +1933,7 @@ impl TomlManifest {
                 .clone()
                 .map(|mw| mw.resolve("documentation", || inherit()?.documentation()))
                 .transpose()?,
-            readme: readme_for_project(
+            readme: readme_for_package(
                 package_root,
                 project
                     .readme
@@ -2393,8 +2393,8 @@ fn inheritable_from_path(
     }
 }
 
-/// Returns the name of the README file for a `TomlProject`.
-pub fn readme_for_project(package_root: &Path, readme: Option<StringOrBool>) -> Option<String> {
+/// Returns the name of the README file for a [`TomlPackage`].
+pub fn readme_for_package(package_root: &Path, readme: Option<StringOrBool>) -> Option<String> {
     match &readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
