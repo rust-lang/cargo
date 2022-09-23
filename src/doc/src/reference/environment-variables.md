@@ -75,9 +75,9 @@ system:
 
 #### Configuration environment variables
 
-Cargo reads environment variables for configuration values. See the
-[configuration chapter][config-env] for more details. In summary, the
-supported environment variables are:
+Cargo reads environment variables for some configuration values.
+See the [configuration chapter][config-env] for more details.
+In summary, the supported environment variables are:
 
 * `CARGO_ALIAS_<name>` — Command aliases, see [`alias`].
 * `CARGO_BUILD_JOBS` — Number of parallel jobs, see [`build.jobs`].
