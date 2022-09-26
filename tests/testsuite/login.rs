@@ -106,5 +106,15 @@ fn empty_login_token() {
 ",
         )
         .with_status(101)
-        .run()
+        .run();
+
+    cargo_process("login")
+        .arg("")
+        .with_stderr(
+            "\
+[ERROR] please provide a non-empty token
+",
+        )
+        .with_status(101)
+        .run();
 }

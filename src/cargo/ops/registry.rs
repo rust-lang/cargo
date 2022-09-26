@@ -764,13 +764,13 @@ pub fn registry_login(
                 .with_context(|| "failed to read stdin")?;
             // Automatically remove `cargo login` from an inputted token to
             // allow direct pastes from `registry.host()`/me.
-            line = line.replace("cargo login", "").trim().to_string();
-            if line.is_empty() {
-                bail!("please provide a non-empty token");
-            }
-            line
+            line.replace("cargo login", "").trim().to_string()
         }
     };
+
+    if token.is_empty() {
+        bail!("please provide a non-empty token");
+    }
 
     if let RegistryConfig::Token(old_token) = &reg_cfg {
         if old_token == &token {
