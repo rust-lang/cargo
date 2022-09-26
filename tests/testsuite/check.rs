@@ -1104,3 +1104,75 @@ fn git_manifest_package_and_project() {
         )
         .run();
 }
+
+#[cargo_test]
+fn warn_manifest_with_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] manifest at `[CWD]` contains `[project]` instead of `[package]`, this could become a hard error in the future
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_manifest_with_project() {
+    let p = project();
+    let git_project = git::new("bar", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+    });
+
+    let p = p
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar]
+                version = "0.0.1"
+                git  = '{}'
+
+            "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}

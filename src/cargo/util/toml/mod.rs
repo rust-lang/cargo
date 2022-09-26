@@ -1590,7 +1590,16 @@ impl TomlManifest {
                 project.clone()
             }
             (Some(package), None) => package.clone(),
-            (None, Some(project)) => project.clone(),
+            (None, Some(project)) => {
+                if source_id.is_path() {
+                    config.shell().warn(format!(
+                        "manifest at `{}` contains `[project]` instead of `[package]`, \
+                                this could become a hard error in the future",
+                        package_root.display()
+                    ))?;
+                }
+                project.clone()
+            }
             (None, None) => bail!("no `package` section found"),
         };
 
