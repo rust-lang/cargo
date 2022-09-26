@@ -1578,8 +1578,21 @@ impl TomlManifest {
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, config, &mut warnings, source_id.is_path())?;
 
-        let package = me.project.clone().or_else(|| me.package.clone());
-        let package = &mut package.ok_or_else(|| anyhow!("no `package` section found"))?;
+        let mut package = match (&me.package, &me.project) {
+            (Some(_), Some(project)) => {
+                if source_id.is_path() {
+                    config.shell().warn(format!(
+                        "manifest at `{}` contains both `project` and `package`, \
+                    this could become a hard error in the future",
+                        package_root.display()
+                    ))?;
+                }
+                project.clone()
+            }
+            (Some(package), None) => package.clone(),
+            (None, Some(project)) => project.clone(),
+            (None, None) => bail!("no `package` section found"),
+        };
 
         let workspace_config = match (me.workspace.as_ref(), package.workspace.as_ref()) {
             (Some(toml_config), None) => {
