@@ -90,3 +90,21 @@ fn registry_credentials() {
     assert!(check_token(TOKEN, Some(reg)));
     assert!(check_token(TOKEN2, Some(reg2)));
 }
+
+#[cargo_test]
+fn empty_login_token() {
+    let _registry = RegistryBuilder::new().build();
+    setup_new_credentials();
+
+    cargo_process("login")
+        .with_stdout("please paste the API Token found on [..]/me below")
+        .with_stdin("\t\n")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[ERROR] please provide a non-empty token
+",
+        )
+        .with_status(101)
+        .run()
+}
