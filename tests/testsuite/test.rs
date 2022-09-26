@@ -4415,7 +4415,7 @@ fn panic_abort_test_profile_inherits() {
 
 #[cargo_test]
 fn bin_env_for_test() {
-    // Test for the `CARGO_BIN_` environment variables for tests.
+    // Test for the `CARGO_BIN_EXE_` environment variables for tests.
     //
     // Note: The Unicode binary uses a `[[bin]]` definition because different
     // filesystems normalize utf-8 in different ways. For example, HFS uses
