@@ -1008,7 +1008,7 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
-    // Add `CARGO_BIN_` environment variables for building tests.
+    // Add `CARGO_BIN_EXE_` environment variables for building tests.
     if unit.target.is_test() || unit.target.is_bench() {
         for bin_target in unit
             .pkg
