@@ -19,17 +19,31 @@ guide](../guide/index.md), we specified a dependency on the `time` crate:
 time = "0.1.12"
 ```
 
-The string `"0.1.12"` is a version requirement. Although it looks like a
-specific *version* of the `time` crate, it actually specifies a *range* of
-versions and allows [SemVer] compatible updates. An update is allowed if the new
-version number does not modify the left-most non-zero digit in the major, minor,
-patch grouping. In this case, if we ran `cargo update -p time`, cargo should
-update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
-update us to `0.2.0`. If instead we had specified the version string as `1.0`,
-cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
-The version `0.0.x` is not considered compatible with any other version.
+As specified in [SemVer]
+a version identifier is composed of up to three integers separated by
+a period: `x`, `x.y`, or `x.y.z` where x is the major version, y is the minor
+version and z is the patch version.
+
+A version identifier such as the `"0.1.12"` in the above toml excerpt is interpreted
+as a [Caret requirement]. In other words, although it looks like a
+specific *version* it actually specifies a *range* of acceptable versions as described
+below.
 
 [SemVer]: https://semver.org
+
+### Caret requirement
+
+**Caret requirement** Example: `^1.2.3`
+
+Specifying with the carret is exactly equivalent to specifying without the caret
+(as `1.2.3`). In other words, the carret requiement is the default.
+
+For a caret requirement, an update is allowed if the new
+version does not modify the left-most non-zero integer in the
+full version identifier. In the case of `"0.1.12"`, if we run `cargo update -p time`, cargo
+would update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
+update us to `0.2.0`. If instead we had specified the version string as `1.0`,
+cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
 
 Here are some more examples of version requirements and the versions that would
 be allowed with them:
@@ -45,27 +59,24 @@ be allowed with them:
 0      :=  >=0.0.0, <1.0.0
 ```
 
-This compatibility convention is different from SemVer in the way it treats
-versions before 1.0.0. While SemVer says there is no compatibility before
-1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
-and `x > 0`.
+This matching strategy is different from SemVer in the way it treats
+versions before 1.0.0: While SemVer says there is no compatibility before
+1.0.0, Cargo considers `0.y.b` to be compatible with `0.y.a`, where `b ≥ a`
+and `y > 0`. The version `0.0.z` is not considered compatible with any
+other version.
 
 It is possible to further tweak the logic for selecting compatible versions
 using special operators, though it shouldn't be necessary most of the time.
 
-### Caret requirements
+### Tilde requirement
 
-**Caret requirements** are an alternative syntax for the default strategy,
-`^1.2.3` is exactly equivalent to `1.2.3`.
+**Tilde requirement** Example `~1.2.3`
 
-### Tilde requirements
-
-**Tilde requirements** specify a minimal version with some ability to update.
-If you specify a major, minor, and patch version or only a major and minor
-version, only patch-level changes are allowed. If you only specify a major
-version, then minor- and patch-level changes are allowed.
-
-`~1.2.3` is an example of a tilde requirement.
+For a tilde requirement, an update is allowed if the new version is newer and
+does not modify the right-most specified integer, unless it is a patch number.
+In other words, if you specify `x.y.z` then `x.y.b` is allowed if b>z. If you
+specify `x.y` then any `x.y.b` is allowed. If you specify `x` then any `x.a.b`
+is allowed.
 
 ```notrust
 ~1.2.3  := >=1.2.3, <1.3.0
@@ -73,12 +84,15 @@ version, then minor- and patch-level changes are allowed.
 ~1      := >=1.0.0, <2.0.0
 ```
 
-### Wildcard requirements
+### Wildcard requirement
 
-**Wildcard requirements** allow for any version where the wildcard is
-positioned.
+**Wildcard requirement** Examples: `*`, `1.*` and `1.2.*` are examples of wildcard
+requirements.
 
-`*`, `1.*` and `1.2.*` are examples of wildcard requirements.
+For a wildcard requirement, any version is allowed where the wildcard is
+positioned. There is effectively no difference between a wildcard requirement
+and a tilde requirement that ends one grouping earlier. However, a bare wildcard
+requirement `*` can specify "any" version.
 
 ```notrust
 *     := >=0.0.0
@@ -88,12 +102,9 @@ positioned.
 
 > **Note**: [crates.io] does not allow bare `*` versions.
 
-### Comparison requirements
+### Comparison requirement
 
-**Comparison requirements** allow manually specifying a version range or an
-exact version to depend on.
-
-Here are some examples of comparison requirements:
+**Comparison requirement** Examples:
 
 ```notrust
 >= 1.2.0
@@ -102,10 +113,26 @@ Here are some examples of comparison requirements:
 = 1.2.3
 ```
 
+A comparison requirement allows a match according to the operator used.
+Comparisons are performed by expanding the version number to a complete
+triple (e.g., `1` becomes `1.0.0`), and then comparing the major, minor
+and patch integers in that order, using the specified operator, until
+there is a non-equal success or all three comparisons succeed.
+
+This allows for exact version matching using `=`, or for more complex
+requirements using [Multiple requirements].
+
 ### Multiple requirements
 
-As shown in the examples above, multiple version requirements can be
-separated with a comma, e.g., `>= 1.2, < 1.5`.
+Examples:
+
+```notrust
+>= 1.2, < 1.5
+>= 2, < 2.3.13
+```
+
+Multiple requirements can be specified when separated with a comma,
+most frequently used with comparison requirements.
 
 ### Specifying dependencies from other registries
 
