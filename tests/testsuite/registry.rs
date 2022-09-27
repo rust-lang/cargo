@@ -43,7 +43,7 @@ fn simple(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -102,7 +102,7 @@ fn deps(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -153,7 +153,7 @@ fn nonexistent(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -196,7 +196,7 @@ fn wrong_case(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -242,7 +242,7 @@ fn mis_hyphenated(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -286,7 +286,7 @@ fn wrong_version(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -345,7 +345,7 @@ fn bad_cksum(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -395,7 +395,7 @@ fn update_registry(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -452,7 +452,7 @@ fn package_with_path_deps(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -520,7 +520,7 @@ fn lockfile_locks(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -569,7 +569,7 @@ fn lockfile_locks_transitively(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -622,7 +622,7 @@ fn yanks_are_not_used(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -674,7 +674,7 @@ fn relying_on_a_yank_is_bad(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -720,7 +720,7 @@ fn yanks_in_lockfiles_are_ok(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -770,7 +770,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update(cargo: fn(&Project, &str) -> Execs
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -834,7 +834,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -858,7 +858,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep(cargo: fn(&Project, &str) -> Execs) {
     p.change_file(
         "Cargo.toml",
         r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -888,7 +888,7 @@ fn update_with_lockfile_if_packages_missing(cargo: fn(&Project, &str) -> Execs) 
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -933,7 +933,7 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1040,7 +1040,7 @@ fn dev_dependency_not_used(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1125,7 +1125,7 @@ fn bad_license_file(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1158,7 +1158,7 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1171,7 +1171,7 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.0.1"
                 authors = []
@@ -1209,7 +1209,7 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
     p.change_file(
         "a/Cargo.toml",
         r#"
-        [project]
+        [package]
         name = "a"
         version = "0.0.1"
         authors = []
@@ -1257,7 +1257,7 @@ fn git_and_registry_dep(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.0.1"
                 authors = []
@@ -1273,7 +1273,7 @@ fn git_and_registry_dep(cargo: fn(&Project, &str) -> Execs) {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -1331,7 +1331,7 @@ fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1359,7 +1359,7 @@ fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1411,7 +1411,7 @@ fn fetch_downloads(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1452,7 +1452,7 @@ fn update_transitive_dependency(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1510,7 +1510,7 @@ fn update_backtracking_ok(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1569,7 +1569,7 @@ fn update_multiple_packages(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1639,7 +1639,7 @@ fn bundled_crate_in_registry(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1691,7 +1691,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug(cargo: fn(&Project, &str) -> Exec
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "ugh"
                 version = "0.5.0"
                 authors = []
@@ -1728,7 +1728,7 @@ fn use_semver(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1768,7 +1768,7 @@ fn use_semver_package_incorrectly(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "a/Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "a"
             version = "0.1.1-alpha.0"
             authors = []
@@ -1777,7 +1777,7 @@ fn use_semver_package_incorrectly(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "b/Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "b"
             version = "0.1.0"
             authors = []
@@ -1821,7 +1821,7 @@ fn only_download_relevant(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1871,7 +1871,7 @@ fn resolve_and_backtracking(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1907,7 +1907,7 @@ fn upstream_warnings_on_extra_verbose(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1935,7 +1935,7 @@ fn disallow_network_http() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1970,7 +1970,7 @@ fn disallow_network_git() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -2017,7 +2017,7 @@ fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -2030,7 +2030,7 @@ fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.5.0"
                 authors = []
@@ -2049,7 +2049,7 @@ fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
     p.change_file(
         "Cargo.toml",
         r#"
-        [project]
+        [package]
         name = "bar"
         version = "0.5.0"
         authors = []
@@ -2086,7 +2086,7 @@ fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -2099,7 +2099,7 @@ fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.5.0"
                 authors = []
@@ -2118,7 +2118,7 @@ fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
     p.change_file(
         "Cargo.toml",
         r#"
-        [project]
+        [package]
         name = "bar"
         version = "0.6.0"
         authors = []
@@ -2156,7 +2156,7 @@ fn toml_lies_but_index_is_truth(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.3.0"
                 authors = []
@@ -2172,7 +2172,7 @@ fn toml_lies_but_index_is_truth(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -2210,7 +2210,7 @@ fn vv_prints_warnings(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "fo"
                 version = "0.5.0"
                 authors = []
@@ -2245,7 +2245,7 @@ fn bad_and_or_malicious_packages_rejected(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "fo"
                 version = "0.5.0"
                 authors = []
@@ -2295,7 +2295,7 @@ fn git_init_templatedir_missing(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "fo"
                 version = "0.5.0"
                 authors = []
@@ -2369,7 +2369,7 @@ fn rename_deps_and_features(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2412,7 +2412,7 @@ fn ignore_invalid_json_lines(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2446,7 +2446,7 @@ fn readonly_registry_still_works(cargo: fn(&Project, &str) -> Execs) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2552,7 +2552,7 @@ fn package_lock_inside_package_is_overwritten() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2590,7 +2590,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2671,7 +2671,7 @@ fn http_requires_z_flag() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2706,7 +2706,7 @@ fn reach_max_unpack_size() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 

@@ -34,7 +34,7 @@ fn cargo_compile_simple_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -102,7 +102,7 @@ fn cargo_compile_git_dep_branch() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -178,7 +178,7 @@ fn cargo_compile_git_dep_tag() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -251,7 +251,7 @@ fn cargo_compile_git_dep_pull_request() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
 
@@ -291,7 +291,7 @@ fn cargo_compile_with_nested_paths() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "dep1"
                     version = "0.5.0"
@@ -333,7 +333,7 @@ fn cargo_compile_with_nested_paths() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -381,7 +381,7 @@ fn cargo_compile_with_malformed_nested_paths() {
             .file(
                 "vendor/dep3/Cargo.toml",
                 r#"
-                [project]
+                [package]
                 name = "dep3"
                 version = "0.5.0"
                 [dependencies]
@@ -396,7 +396,7 @@ fn cargo_compile_with_malformed_nested_paths() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -456,7 +456,7 @@ fn cargo_compile_with_meta_package() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -507,7 +507,7 @@ fn cargo_compile_with_short_ssh_git() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -566,7 +566,7 @@ fn two_revs_same_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
                     authors = []
@@ -642,7 +642,7 @@ fn recompilation() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -903,7 +903,7 @@ fn dep_with_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -975,7 +975,7 @@ fn dep_with_relative_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
 
@@ -1036,7 +1036,7 @@ fn dep_with_bad_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1110,7 +1110,7 @@ fn dep_with_skipped_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
                     authors = []
@@ -1145,7 +1145,7 @@ fn ambiguous_published_deps() {
                 "aaa/Cargo.toml",
                 &format!(
                     r#"
-                    [project]
+                    [package]
                     name = "bar"
                     version = "0.5.0"
                     publish = true
@@ -1157,7 +1157,7 @@ fn ambiguous_published_deps() {
                 "bbb/Cargo.toml",
                 &format!(
                     r#"
-                    [project]
+                    [package]
                     name = "bar"
                     version = "0.5.0"
                     publish = true
@@ -1172,7 +1172,7 @@ fn ambiguous_published_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1218,7 +1218,7 @@ fn two_deps_only_update_one() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1290,7 +1290,7 @@ fn stale_cached_version() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
                     authors = []
@@ -1385,7 +1385,7 @@ fn dep_with_changed_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -1491,7 +1491,7 @@ fn dev_deps_with_testing() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1609,7 +1609,7 @@ fn git_name_not_always_needed() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1652,7 +1652,7 @@ fn git_repo_changing_no_rebuild() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "p1"
                     version = "0.5.0"
                     authors = []
@@ -1692,7 +1692,7 @@ fn git_repo_changing_no_rebuild() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "p2"
                     version = "0.5.0"
                     authors = []
@@ -1728,7 +1728,7 @@ fn git_dep_build_cmd() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1748,7 +1748,7 @@ fn git_dep_build_cmd() {
             .file(
                 "bar/Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "bar"
                     version = "0.5.0"
@@ -1804,7 +1804,7 @@ fn fetch_downloads() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1839,7 +1839,7 @@ fn warnings_in_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1901,7 +1901,7 @@ fn update_ambiguous() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1948,7 +1948,7 @@ fn update_one_dep_in_repo_with_many_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2021,7 +2021,7 @@ fn switch_deps_does_not_update_transitive() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2055,7 +2055,7 @@ fn switch_deps_does_not_update_transitive() {
         "Cargo.toml",
         &format!(
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2105,7 +2105,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2155,7 +2155,7 @@ fn switch_sources() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2168,7 +2168,7 @@ fn switch_sources() {
             "b/Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "b"
                     version = "0.5.0"
                     authors = []
@@ -2197,7 +2197,7 @@ fn switch_sources() {
         "b/Cargo.toml",
         &format!(
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2228,7 +2228,7 @@ fn dont_require_submodules_are_checked_out() {
         p.file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2266,7 +2266,7 @@ fn doctest_same_name() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "a"
                     version = "0.5.0"
                     authors = []
@@ -2547,7 +2547,7 @@ fn invalid_git_dependency_manifest() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "dep1"
                     version = "0.5.0"
@@ -2575,7 +2575,7 @@ fn invalid_git_dependency_manifest() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -2621,7 +2621,7 @@ Caused by:
     |
   8 |                     categories = [\"algorithms\"]
     |                     ^
-  Duplicate key `categories` in table `project`
+  Duplicate key `categories` in table `package`
 
 ",
             path2url(&git_root),
@@ -2677,7 +2677,7 @@ fn failed_submodule_checkout() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2723,7 +2723,7 @@ fn use_the_cli() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2775,7 +2775,7 @@ fn templatedir_doesnt_cause_problems() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "fo"
                     version = "0.5.0"
                     authors = []
@@ -2823,7 +2823,7 @@ fn git_with_cli_force() {
             "Cargo.toml",
             &format!(
                 r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 edition = "2018"
@@ -3052,7 +3052,7 @@ fn default_not_master() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     [dependencies]
@@ -3092,7 +3092,7 @@ fn historical_lockfile_works() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
 
@@ -3149,7 +3149,7 @@ fn historical_lockfile_works_with_vendor() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
 
@@ -3203,7 +3203,7 @@ fn two_dep_forms() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     [dependencies]
@@ -3218,7 +3218,7 @@ fn two_dep_forms() {
             "a/Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "a"
                     version = "0.5.0"
                     [dependencies]
@@ -3474,7 +3474,7 @@ fn git_with_force_push() {
     let manifest = |extra| {
         format!(
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 edition = "2018"

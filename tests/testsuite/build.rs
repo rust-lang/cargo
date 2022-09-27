@@ -182,7 +182,7 @@ fn cargo_compile_with_invalid_manifest2() {
         .file(
             "Cargo.toml",
             "
-                [project]
+                [package]
                 foo = bar
             ",
         )
@@ -657,7 +657,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -700,7 +700,7 @@ fn cargo_compile_with_nested_deps_inferred() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -717,7 +717,7 @@ fn cargo_compile_with_nested_deps_inferred() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -763,7 +763,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -780,7 +780,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -826,7 +826,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -840,7 +840,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -890,7 +890,7 @@ fn cargo_compile_with_nested_deps_longhand() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -909,7 +909,7 @@ fn cargo_compile_with_nested_deps_longhand() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -1101,7 +1101,7 @@ fn incompatible_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -1147,7 +1147,7 @@ fn incompatible_dependencies_with_multi_semver() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -1319,7 +1319,7 @@ fn crate_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.5.1-alpha.1"
             description = "This is foo"
@@ -1477,7 +1477,7 @@ fn crate_authors_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.1-alpha.1"
                 authors = ["wycats@example.com", "neikos@example.com"]
@@ -1526,7 +1526,7 @@ fn vv_prints_rustc_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = ["escape='\"@example.com"]
@@ -1606,7 +1606,7 @@ fn many_crate_types_old_style_lib_location() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -1639,7 +1639,7 @@ fn many_crate_types_correct() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -1666,7 +1666,7 @@ fn set_both_dylib_and_cdylib_crate_types() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -1771,7 +1771,7 @@ fn lib_crate_types_conflicting_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = ["wycats@example.com"]
@@ -1798,7 +1798,7 @@ fn examples_crate_types_conflicting_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = ["wycats@example.com"]
@@ -2966,7 +2966,7 @@ fn cargo_platform_specific_dependency() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -3013,7 +3013,7 @@ fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -3054,7 +3054,7 @@ fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -3093,7 +3093,7 @@ fn bad_platform_specific_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -3123,7 +3123,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -3757,7 +3757,7 @@ fn compiler_json_error_format() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -4087,7 +4087,7 @@ fn build_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4119,7 +4119,7 @@ fn build_all_exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4152,7 +4152,7 @@ fn build_all_exclude_not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4184,7 +4184,7 @@ fn build_all_exclude_glob() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4217,7 +4217,7 @@ fn build_all_exclude_glob_not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4259,7 +4259,7 @@ fn build_all_workspace_implicit_examples() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4506,7 +4506,7 @@ fn build_all_member_dependency_same_name() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.1.0"
 
@@ -4717,7 +4717,7 @@ fn cdylib_not_lifted() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 authors = []
                 version = "0.1.0"
@@ -4755,7 +4755,7 @@ fn cdylib_final_outputs() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo-bar"
                 authors = []
                 version = "0.1.0"
@@ -4843,7 +4843,7 @@ fn deterministic_cfg_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -5110,7 +5110,7 @@ fn building_a_dependent_crate_without_bin_should_fail() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "testless"
                 version = "0.1.0"
 
@@ -5125,7 +5125,7 @@ fn building_a_dependent_crate_without_bin_should_fail() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 

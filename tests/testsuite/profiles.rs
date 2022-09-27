@@ -240,7 +240,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -256,7 +256,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -301,7 +301,7 @@ fn profile_in_virtual_manifest_works() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -480,7 +480,7 @@ fn thin_lto_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "top"
                 version = "0.5.0"
                 authors = []

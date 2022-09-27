@@ -126,7 +126,7 @@ fn cargo_build_plan_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -204,7 +204,7 @@ fn build_plan_with_dev_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []

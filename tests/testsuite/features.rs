@@ -10,7 +10,7 @@ fn invalid1() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -42,7 +42,7 @@ fn same_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -89,7 +89,7 @@ fn invalid3() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -124,7 +124,7 @@ fn invalid4() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -168,7 +168,7 @@ fn invalid5() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -200,7 +200,7 @@ fn invalid6() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -231,7 +231,7 @@ fn invalid7() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -263,7 +263,7 @@ fn invalid8() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -298,7 +298,7 @@ fn invalid9() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -326,7 +326,7 @@ fn invalid10() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -374,7 +374,7 @@ fn no_transitive_dep_feature_requirement() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -445,7 +445,7 @@ fn no_feature_doesnt_build() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -498,7 +498,7 @@ fn default_feature_pulled_in() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -554,7 +554,7 @@ fn cyclic_feature() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -578,7 +578,7 @@ fn cyclic_feature2() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -600,7 +600,7 @@ fn groups_on_groups_on_groups() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -658,7 +658,7 @@ fn many_cli_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -707,7 +707,7 @@ fn union_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -855,7 +855,7 @@ fn transitive_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -895,7 +895,7 @@ fn everything_in_the_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1144,7 +1144,7 @@ fn dep_feature_in_cmd_line() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1228,7 +1228,7 @@ fn all_features_flag_enables_all_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1273,7 +1273,7 @@ fn many_cli_features_comma_delimited() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1321,7 +1321,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1390,7 +1390,7 @@ fn only_dep_is_optional() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1419,7 +1419,7 @@ fn all_features_all_crates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1432,7 +1432,7 @@ fn all_features_all_crates() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -1514,7 +1514,7 @@ fn warn_if_default_features() {
         .file(
             "Cargo.toml",
             r#"
-               [project]
+               [package]
                name = "foo"
                version = "0.0.1"
                authors = []
@@ -1548,7 +1548,7 @@ fn no_feature_for_non_optional_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1568,7 +1568,7 @@ fn no_feature_for_non_optional_dep() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -1589,7 +1589,7 @@ fn features_option_given_twice() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1617,7 +1617,7 @@ fn multi_multi_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1646,7 +1646,7 @@ fn cli_parse_ok() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1892,7 +1892,7 @@ fn nonexistent_required_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
             [features]

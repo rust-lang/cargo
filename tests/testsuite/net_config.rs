@@ -8,7 +8,7 @@ fn net_retry_loads_from_config() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -44,7 +44,7 @@ fn net_retry_git_outputs_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []

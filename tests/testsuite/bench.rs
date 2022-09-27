@@ -329,7 +329,7 @@ fn bench_with_lib_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -452,7 +452,7 @@ fn external_bench_explicit() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -550,7 +550,7 @@ fn bench_autodiscover_2015() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -695,7 +695,7 @@ fn lib_bin_same_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1058,7 +1058,7 @@ fn test_a_bench() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 authors = []
                 version = "0.1.0"
@@ -1216,7 +1216,7 @@ fn test_bench_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 authors = []
                 version = "0.1.0"
@@ -1236,7 +1236,7 @@ fn test_bench_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 authors = []
                 version = "0.1.0"
@@ -1266,7 +1266,7 @@ fn test_bench_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 authors = []
                 version = "0.1.0"
@@ -1305,7 +1305,7 @@ fn bench_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -1358,7 +1358,7 @@ fn bench_all_exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -1403,7 +1403,7 @@ fn bench_all_exclude_glob() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -1547,7 +1547,7 @@ fn legacy_bench_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 

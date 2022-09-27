@@ -52,7 +52,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -98,7 +98,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -125,7 +125,7 @@ fn totally_wild_checksums_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -191,7 +191,7 @@ fn wrong_checksum_is_an_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -254,7 +254,7 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -320,7 +320,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -493,7 +493,7 @@ fn locked_correct_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -545,7 +545,7 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -604,7 +604,7 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -619,7 +619,7 @@ dependencies = [
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.2.0"
             "#,
@@ -670,7 +670,7 @@ dependencies = [
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -697,7 +697,7 @@ fn lock_from_the_future() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -749,7 +749,7 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -773,7 +773,7 @@ fn same_name_version_different_sources() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.1.0"
                 "#,
@@ -817,7 +817,7 @@ source = "git+{url}#{sha}"
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.1.0"
 

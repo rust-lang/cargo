@@ -1966,7 +1966,7 @@ fn rename_with_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1979,7 +1979,7 @@ fn rename_with_path_deps() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1992,7 +1992,7 @@ fn rename_with_path_deps() {
         .file(
             "a/b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2023,7 +2023,7 @@ fn move_target_directory_with_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2035,7 +2035,7 @@ fn move_target_directory_with_path_deps() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []

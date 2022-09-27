@@ -8,7 +8,7 @@ fn rust_version_satisfied() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -30,7 +30,7 @@ fn rust_version_bad_caret() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -56,7 +56,7 @@ fn rust_version_bad_pre_release() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -82,7 +82,7 @@ fn rust_version_bad_nonsense() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -108,7 +108,7 @@ fn rust_version_too_high() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -174,7 +174,7 @@ fn rust_version_older_than_edition() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []

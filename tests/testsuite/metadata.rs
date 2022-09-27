@@ -287,7 +287,7 @@ fn cargo_metadata_with_deps_and_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2287,7 +2287,7 @@ fn package_default_run() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = ["wycats@example.com"]
@@ -2307,7 +2307,7 @@ fn package_rust_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = ["wycats@example.com"]
@@ -2435,7 +2435,7 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2667,7 +2667,7 @@ fn metadata_links() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.5.0"
             links = "a"

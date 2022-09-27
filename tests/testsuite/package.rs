@@ -17,7 +17,7 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -85,7 +85,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -111,7 +111,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -251,7 +251,7 @@ fn vcs_file_collision() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
@@ -290,7 +290,7 @@ fn orig_file_collision() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
@@ -328,7 +328,7 @@ fn path_dependency_no_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -367,7 +367,7 @@ fn git_dependency_no_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -403,7 +403,7 @@ fn exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -525,7 +525,7 @@ fn include() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -577,7 +577,7 @@ fn package_git_submodule() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = ["foo@example.com"]
@@ -680,7 +680,7 @@ src/main.rs
 #[cargo_test]
 fn ignore_nested() {
     let cargo_toml = r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -814,7 +814,7 @@ fn broken_symlink() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -865,7 +865,7 @@ fn broken_but_excluded_symlink() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1022,7 +1022,7 @@ fn do_not_package_if_repository_is_dirty() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 license = "MIT"
@@ -1039,7 +1039,7 @@ fn do_not_package_if_repository_is_dirty() {
     p.change_file(
         "Cargo.toml",
         r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             license = "MIT"
@@ -1131,7 +1131,7 @@ fn generated_manifest() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1139,7 +1139,7 @@ fn generated_manifest() {
                 license = "MIT"
                 description = "foo"
 
-                [project.metadata]
+                [package.metadata]
                 foo = 'bar'
 
                 [workspace]
@@ -1203,7 +1203,7 @@ fn ignore_workspace_specifier() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -1257,7 +1257,7 @@ fn package_two_kinds_of_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1439,7 +1439,7 @@ fn package_with_select_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1468,7 +1468,7 @@ fn package_with_all_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1497,7 +1497,7 @@ fn package_no_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2071,7 +2071,7 @@ fn reserved_windows_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2240,7 +2240,7 @@ fn reproducible_output() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2331,7 +2331,7 @@ fn in_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2346,7 +2346,7 @@ fn in_workspace() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []

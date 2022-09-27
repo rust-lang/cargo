@@ -18,7 +18,7 @@ fn custom_build_script_failed() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -50,7 +50,7 @@ fn custom_build_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -67,7 +67,7 @@ fn custom_build_env_vars() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -664,7 +664,7 @@ fn custom_build_script_wrong_rustc_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -694,7 +694,7 @@ fn custom_build_script_rustc_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -708,7 +708,7 @@ fn custom_build_script_rustc_flags() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -753,7 +753,7 @@ fn custom_build_script_rustc_flags_no_space() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -767,7 +767,7 @@ fn custom_build_script_rustc_flags_no_space() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -812,7 +812,7 @@ fn links_no_build_cmd() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -843,7 +843,7 @@ fn links_duplicates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -859,7 +859,7 @@ fn links_duplicates() {
         .file(
             "a-sys/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a-sys"
                 version = "0.5.0"
                 authors = []
@@ -947,7 +947,7 @@ fn links_duplicates_deep_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -963,7 +963,7 @@ fn links_duplicates_deep_dependency() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -978,7 +978,7 @@ fn links_duplicates_deep_dependency() {
         .file(
             "a/a-sys/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a-sys"
                 version = "0.5.0"
                 authors = []
@@ -1013,7 +1013,7 @@ fn overrides_and_links() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1051,7 +1051,7 @@ fn overrides_and_links() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1086,7 +1086,7 @@ fn unused_overrides() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1118,7 +1118,7 @@ fn links_passes_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1142,7 +1142,7 @@ fn links_passes_env_vars() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1175,7 +1175,7 @@ fn only_rerun_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1211,7 +1211,7 @@ fn rebuild_continues_to_pass_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1239,7 +1239,7 @@ fn rebuild_continues_to_pass_env_vars() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1279,7 +1279,7 @@ fn testing_and_such() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1344,7 +1344,7 @@ fn propagation_of_l_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1356,7 +1356,7 @@ fn propagation_of_l_flags() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1375,7 +1375,7 @@ fn propagation_of_l_flags() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -1415,7 +1415,7 @@ fn propagation_of_l_flags_new() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1427,7 +1427,7 @@ fn propagation_of_l_flags_new() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1450,7 +1450,7 @@ fn propagation_of_l_flags_new() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -1489,7 +1489,7 @@ fn build_deps_simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1533,7 +1533,7 @@ fn build_deps_not_for_normal() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1579,7 +1579,7 @@ fn build_cmd_with_a_build_cmd() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1601,7 +1601,7 @@ fn build_cmd_with_a_build_cmd() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1657,7 +1657,7 @@ fn out_dir_is_preserved() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1737,7 +1737,7 @@ fn output_separate_lines() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1775,7 +1775,7 @@ fn output_separate_lines_new() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1817,7 +1817,7 @@ fn code_generation() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1874,7 +1874,7 @@ fn release_with_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1899,7 +1899,7 @@ fn build_script_only() {
         .file(
             "Cargo.toml",
             r#"
-                  [project]
+                  [package]
                   name = "foo"
                   version = "0.0.0"
                   authors = []
@@ -1927,7 +1927,7 @@ fn shared_dep_with_a_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1977,7 +1977,7 @@ fn transitive_dep_host() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2029,7 +2029,7 @@ fn test_a_lib_with_a_build_command() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2072,7 +2072,7 @@ fn test_dev_dep_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2085,7 +2085,7 @@ fn test_dev_dep_build_script() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2283,7 +2283,7 @@ fn test_duplicate_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -2347,7 +2347,7 @@ fn cfg_override() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2714,7 +2714,7 @@ fn flags_go_into_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2728,7 +2728,7 @@ fn flags_go_into_tests() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2740,7 +2740,7 @@ fn flags_go_into_tests() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2795,7 +2795,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2810,7 +2810,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2823,7 +2823,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2835,7 +2835,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "c/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "c"
                 version = "0.5.0"
                 authors = []
@@ -2879,7 +2879,7 @@ fn adding_an_override_invalidates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2940,7 +2940,7 @@ fn changing_an_override_invalidates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3002,7 +3002,7 @@ fn fresh_builds_possible_with_link_libs() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3054,7 +3054,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3110,7 +3110,7 @@ fn generate_good_d_files() {
         .file(
             "awoo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "awoo"
                 version = "0.5.0"
                 build = "build.rs"
@@ -3129,7 +3129,7 @@ fn generate_good_d_files() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "meow"
                 version = "0.5.0"
                 [dependencies]
@@ -3189,7 +3189,7 @@ fn generate_good_d_files_for_external_tools() {
         .file(
             "awoo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "awoo"
                 version = "0.5.0"
                 build = "build.rs"
@@ -3208,7 +3208,7 @@ fn generate_good_d_files_for_external_tools() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "meow"
                 version = "0.5.0"
                 [dependencies]
@@ -3250,7 +3250,7 @@ fn rebuild_only_on_explicit_paths() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3361,7 +3361,7 @@ fn doctest_receives_build_link_args() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3373,7 +3373,7 @@ fn doctest_receives_build_link_args() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3405,7 +3405,7 @@ fn please_respect_the_dag() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3427,7 +3427,7 @@ fn please_respect_the_dag() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3457,7 +3457,7 @@ fn non_utf8_output() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3494,7 +3494,7 @@ fn custom_target_dir() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3514,7 +3514,7 @@ fn custom_target_dir() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3534,7 +3534,7 @@ fn panic_abort_with_build_scripts() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3554,7 +3554,7 @@ fn panic_abort_with_build_scripts() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3572,7 +3572,7 @@ fn panic_abort_with_build_scripts() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -3596,7 +3596,7 @@ fn warnings_emitted() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3636,7 +3636,7 @@ fn warnings_emitted_when_build_script_panics() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3678,7 +3678,7 @@ fn warnings_hidden_for_upstream() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -3692,7 +3692,7 @@ fn warnings_hidden_for_upstream() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3737,7 +3737,7 @@ fn warnings_printed_on_vv() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -3751,7 +3751,7 @@ fn warnings_printed_on_vv() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3789,7 +3789,7 @@ fn output_shows_on_vv() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3833,7 +3833,7 @@ fn links_with_dots() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -4055,7 +4055,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep1"
                 version = "0.1.0"
                 authors = []
@@ -4076,7 +4076,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep2"
                 version = "0.1.0"
                 authors = []
@@ -4097,7 +4097,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep3"
                 version = "0.1.0"
                 authors = []
@@ -4118,7 +4118,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep4"
                 version = "0.1.0"
                 authors = []
@@ -4140,7 +4140,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -4172,7 +4172,7 @@ fn links_duplicates_with_cycle() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -4191,7 +4191,7 @@ fn links_duplicates_with_cycle() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -4204,7 +4204,7 @@ fn links_duplicates_with_cycle() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -4258,7 +4258,7 @@ fn _rename_with_link_search_path(cross: bool) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -4399,7 +4399,7 @@ fn optional_build_script_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []

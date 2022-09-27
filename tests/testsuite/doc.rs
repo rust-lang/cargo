@@ -1110,7 +1110,7 @@ fn doc_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -1246,7 +1246,7 @@ fn doc_all_member_dependency_same_name() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
 
@@ -2057,7 +2057,7 @@ fn doc_test_in_workspace() {
         .file(
             "crate-a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "crate-a"
                 version = "0.1.0"
             "#,
@@ -2073,7 +2073,7 @@ fn doc_test_in_workspace() {
         .file(
             "crate-b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "crate-b"
                 version = "0.1.0"
             "#,

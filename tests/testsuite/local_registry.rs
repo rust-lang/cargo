@@ -33,7 +33,7 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -73,7 +73,7 @@ fn not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -109,7 +109,7 @@ fn depend_on_yanked() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -152,7 +152,7 @@ fn multiple_versions() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -204,7 +204,7 @@ fn multiple_names() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -258,7 +258,7 @@ fn interdependent() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -308,7 +308,7 @@ fn path_dep_rewritten() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.1.0"
                 authors = []
@@ -326,7 +326,7 @@ fn path_dep_rewritten() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -370,7 +370,7 @@ fn invalid_dir_bad() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -429,7 +429,7 @@ fn different_directory_replacing_the_registry_is_bad() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -498,7 +498,7 @@ fn crates_io_registry_url_is_optional() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []

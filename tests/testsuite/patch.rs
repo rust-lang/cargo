@@ -1485,7 +1485,7 @@ fn replace_prerelease() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1501,7 +1501,7 @@ fn replace_prerelease() {
         .file(
             "baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "1.1.0-pre.1"
                 authors = []
@@ -1538,7 +1538,7 @@ fn patch_older() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
@@ -1551,7 +1551,7 @@ fn patch_older() {
         .file(
             "baz/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "1.0.1"
                 authors = []

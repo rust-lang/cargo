@@ -219,7 +219,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -332,7 +332,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
         .file(
             "Cargo.toml",
             &r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -435,7 +435,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
         .file(
             "Cargo.toml",
             &r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2181,7 +2181,7 @@ fn build_script_features_for_shared_dependency() {
         .file(
             "Cargo.toml",
             &r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 resolver = "2"
