@@ -35,8 +35,8 @@ below.
 
 **Caret requirement** Example: `^1.2.3`
 
-Specifying with the carret is exactly equivalent to specifying without the caret
-(as `1.2.3`). In other words, the carret requiement is the default.
+Specifying with the caret is exactly equivalent to specifying without the caret
+(as `1.2.3`). In other words, the caret requiement is the default.
 
 For a caret requirement, an update is allowed if the new
 version does not modify the left-most non-zero integer in the
