@@ -196,7 +196,7 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
-const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
+const MAX_UNPACK_SIZE: u64 = 1024 * 1024 * 1024;
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
