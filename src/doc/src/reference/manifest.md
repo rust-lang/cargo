@@ -1,7 +1,10 @@
 ## The Manifest Format
 
 The `Cargo.toml` file for each package is called its *manifest*. It is written
-in the [TOML] format. Every manifest file consists of the following sections:
+in the [TOML] format. It contains metadata that is needed to compile the package. Checkout
+the `cargo locate-project` section for more detail on how cargo finds the manifest file.
+
+Every manifest file consists of the following sections:
 
 * [`cargo-features`](unstable.md) — Unstable, nightly-only features.
 * [`[package]`](#the-package-section) — Defines a package.
