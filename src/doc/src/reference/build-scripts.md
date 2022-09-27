@@ -103,17 +103,17 @@ one detailed below.
   re-run the script.
 * [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) — Tells Cargo when
   to re-run the script.
-* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) — Passes custom flags to a
   linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
-* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) – Passes custom
+* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) — Passes custom
   flags to a linker for the binary `BIN`.
-* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
+* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) — Passes custom
   flags to a linker for binaries.
-* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) – Passes custom
+* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) — Passes custom
   flags to a linker for tests.
-* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) – Passes custom
+* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) — Passes custom
   flags to a linker for examples.
-* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) – Passes custom
+* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) — Passes custom
   flags to a linker for benchmarks.
 * [`cargo:rustc-link-lib=LIB`](#rustc-link-lib) — Adds a library to
   link.
