@@ -37,7 +37,7 @@ on `bar` will continue to work.
 
 As another example, consider a crate `bar` with published versions `0.22.0`, `0.22.1`, 
 `0.22.2`, `0.23.0` and `0.24.0`. The following table identifies the versions
-cargo could use in the absence of a lockfile for different SemVer requirement,
+cargo could use in the absence of a lockfile for different SemVer requirements,
 following a given release being yanked:
 
 | Yanked Version / SemVer requirement | `bar = "0.22.0"`                          | `bar = "=0.22.0"` | `bar = "0.23.0"` |

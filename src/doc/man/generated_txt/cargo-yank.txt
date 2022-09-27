@@ -38,7 +38,7 @@ DESCRIPTION
        As another example, consider a crate bar with published versions 0.22.0,
        0.22.1, 0.22.2, 0.23.0 and 0.24.0. The following table identifies the
        versions cargo could use in the absence of a lockfile for different
-       SemVer requirement, following a given release being yanked:
+       SemVer requirements, following a given release being yanked:
 
        +-----------------------+-----------------------+-----------+----------+
        | Yanked Version /      | bar = "0.22.0"        | bar =     | bar =    |
