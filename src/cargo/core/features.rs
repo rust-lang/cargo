@@ -661,7 +661,6 @@ unstable_cli_options!(
     jobserver_per_rustc: bool = (HIDDEN),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
-    multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
