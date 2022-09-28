@@ -34,7 +34,7 @@
 //! The steps for adding new Cargo.toml syntax are:
 //!
 //! 1. Add the cargo-features unstable gate. Search below for "look here" to
-//!    find the `features!` macro and add your feature to the list.
+//!    find the [`features!`] macro invocation and add your feature to the list.
 //!
 //! 2. Update the Cargo.toml parsing code to handle your new feature.
 //!
@@ -62,12 +62,11 @@
 //!
 //! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
 //!    optional value if you want.
-//! 2. Update the [`CliUnstable::add`][CliUnstable] function to parse the flag.
+//! 2. Update the [`CliUnstable::add`] function to parse the flag.
 //! 3. Wherever the new functionality is implemented, call
-//!    [`Config::cli_unstable`][crate::util::config::Config::cli_unstable] to
-//!    get an instance of `CliUnstable` and check if the option has been
-//!    enabled on the `CliUnstable` instance. Nightly gating is already
-//!    handled, so no need to worry about that.
+//!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
+//!    and check if the option has been enabled on the [`CliUnstable`] instance.
+//!    Nightly gating is already handled, so no need to worry about that.
 //!
 //! ## Stabilization
 //!
@@ -77,13 +76,14 @@
 //! The steps for stabilizing are roughly:
 //!
 //! 1. Update the feature to be stable, based on the kind of feature:
-//!   1. `cargo-features`: Change the feature to `stable` in the `features!`
-//!      macro below, and include the version and a URL for the documentation.
-//!   2. `-Z unstable-options`: Find the call to `fail_if_stable_opt` and
+//!   1. `cargo-features`: Change the feature to `stable` in the [`features!`]
+//!      macro invocation below, and include the version and a URL for the
+//!      documentation.
+//!   2. `-Z unstable-options`: Find the call to [`fail_if_stable_opt`] and
 //!      remove it. Be sure to update the man pages if necessary.
-//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`][CliUnstable]
-//!      to call `stabilized_warn` or `stabilized_err` and remove the field from
-//!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
+//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`] to call
+//!      `stabilized_warn` or `stabilized_err` and remove the field from
+//!      [`CliUnstable`]. Remove the `(unstable)` note in the clap help text if
 //!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
 //!    `cargo-features` from `Cargo.toml` test files if any. You can
@@ -92,6 +92,10 @@
 //! 3. Update the docs in unstable.md to move the section to the bottom
 //!    and summarize it similar to the other entries. Update the rest of the
 //!    documentation to add the new feature.
+//!
+//! [`Config::cli_unstable`]: crate::util::config::Config::cli_unstable
+//! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
+//! [`features!`]: macro.features.html
 
 use std::collections::BTreeSet;
 use std::env;
@@ -112,7 +116,47 @@ pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
 
-/// The edition of the compiler (RFC 2052)
+/// The edition of the compiler ([RFC 2052])
+///
+/// The following sections will guide you how to add and stabilize an edition.
+///
+/// ## Adding a new edition
+///
+/// - Add the next edition to the enum.
+/// - Update every match expression that now fails to compile.
+/// - Update the [`FromStr`] impl.
+/// - Update [`CLI_VALUES`] to include the new edition.
+/// - Set [`LATEST_UNSTABLE`] to Some with the new edition.
+/// - Add an unstable feature to the [`features!`] macro invocation below for the new edition.
+/// - Gate on that new feature in [`TomlManifest::to_real_manifest`].
+/// - Update the shell completion files.
+/// - Update any failing tests (hopefully there are very few).
+/// - Update unstable.md to add a new section for this new edition (see [this example]).
+///
+/// ## Stabilization instructions
+///
+/// - Set [`LATEST_UNSTABLE`] to None.
+/// - Set [`LATEST_STABLE`] to the new version.
+/// - Update [`is_stable`] to `true`.
+/// - Set the editionNNNN feature to stable in the [`features!`] macro invocation below.
+/// - Update any tests that are affected.
+/// - Update the man page for the `--edition` flag.
+/// - Update unstable.md to move the edition section to the bottom.
+/// - Update the documentation:
+///   - Update any features impacted by the edition.
+///   - Update manifest.md#the-edition-field.
+///   - Update the `--edition` flag (options-new.md).
+///   - Rebuild man pages.
+///
+/// [RFC 2052]: https://rust-lang.github.io/rfcs/2052-epochs.html
+/// [`FromStr`]: Edition::from_str
+/// [`CLI_VALUES`]: Edition::CLI_VALUES
+/// [`LATEST_UNSTABLE`]: Edition::LATEST_UNSTABLE
+/// [`LATEST_STABLE`]: Edition::LATEST_STABLE
+/// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
+/// [`is_stable`]: Edition::is_stable
+/// [`TomlManifest::to_real_manifest`]: crate::util::toml::TomlManifest::to_real_manifest
+/// [`features!`]: macro.features.html
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {
     /// The 2015 edition
@@ -123,33 +167,6 @@ pub enum Edition {
     Edition2021,
 }
 
-// Adding a new edition:
-// - Add the next edition to the enum.
-// - Update every match expression that now fails to compile.
-// - Update the `FromStr` impl.
-// - Update CLI_VALUES to include the new edition.
-// - Set LATEST_UNSTABLE to Some with the new edition.
-// - Add an unstable feature to the features! macro below for the new edition.
-// - Gate on that new feature in TomlManifest::to_real_manifest.
-// - Update the shell completion files.
-// - Update any failing tests (hopefully there are very few).
-// - Update unstable.md to add a new section for this new edition (see
-//   https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
-//   as an example).
-//
-// Stabilization instructions:
-// - Set LATEST_UNSTABLE to None.
-// - Set LATEST_STABLE to the new version.
-// - Update `is_stable` to `true`.
-// - Set the editionNNNN feature to stable in the features macro below.
-// - Update any tests that are affected.
-// - Update the man page for the --edition flag.
-// - Update unstable.md to move the edition section to the bottom.
-// - Update the documentation:
-//   - Update any features impacted by the edition.
-//   - Update manifest.md#the-edition-field.
-//   - Update the --edition flag (options-new.md).
-//   - Rebuild man pages.
 impl Edition {
     /// The latest edition that is unstable.
     ///
