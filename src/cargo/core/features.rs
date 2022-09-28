@@ -112,7 +112,46 @@ pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
 
-/// The edition of the compiler (RFC 2052)
+/// The edition of the compiler ([RFC 2052])
+///
+/// The following sections will guide you how to add and stabilize an edition.
+///
+/// ## Adding a new edition
+///
+/// - Add the next edition to the enum.
+/// - Update every match expression that now fails to compile.
+/// - Update the [`FromStr`] impl.
+/// - Update [`CLI_VALUES`] to include the new edition.
+/// - Set [`LATEST_UNSTABLE`] to Some with the new edition.
+/// - Add an unstable feature to the `features!` macro invocation below for the new edition.
+/// - Gate on that new feature in [`TomlManifest::to_real_manifest`].
+/// - Update the shell completion files.
+/// - Update any failing tests (hopefully there are very few).
+/// - Update unstable.md to add a new section for this new edition (see [this example]).
+///
+/// ## Stabilization instructions
+///
+/// - Set [`LATEST_UNSTABLE`] to None.
+/// - Set [`LATEST_STABLE`] to the new version.
+/// - Update [`is_stable`] to `true`.
+/// - Set the editionNNNN feature to stable in the `features!` macro invocation below.
+/// - Update any tests that are affected.
+/// - Update the man page for the `--edition` flag.
+/// - Update unstable.md to move the edition section to the bottom.
+/// - Update the documentation:
+///   - Update any features impacted by the edition.
+///   - Update manifest.md#the-edition-field.
+///   - Update the `--edition` flag (options-new.md).
+///   - Rebuild man pages.
+///
+/// [RFC 2052]: https://rust-lang.github.io/rfcs/2052-epochs.html
+/// [`FromStr`]: Edition::from_str
+/// [`CLI_VALUES`]: Edition::CLI_VALUES
+/// [`LATEST_UNSTABLE`]: Edition::LATEST_UNSTABLE
+/// [`LATEST_STABLE`]: Edition::LATEST_STABLE
+/// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
+/// [`is_stable`]: Edition::is_stable
+/// [`TomlManifest::to_real_manifest`]: crate::util::toml::TomlManifest::to_real_manifest
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {
     /// The 2015 edition
@@ -123,33 +162,6 @@ pub enum Edition {
     Edition2021,
 }
 
-// Adding a new edition:
-// - Add the next edition to the enum.
-// - Update every match expression that now fails to compile.
-// - Update the `FromStr` impl.
-// - Update CLI_VALUES to include the new edition.
-// - Set LATEST_UNSTABLE to Some with the new edition.
-// - Add an unstable feature to the features! macro below for the new edition.
-// - Gate on that new feature in TomlManifest::to_real_manifest.
-// - Update the shell completion files.
-// - Update any failing tests (hopefully there are very few).
-// - Update unstable.md to add a new section for this new edition (see
-//   https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
-//   as an example).
-//
-// Stabilization instructions:
-// - Set LATEST_UNSTABLE to None.
-// - Set LATEST_STABLE to the new version.
-// - Update `is_stable` to `true`.
-// - Set the editionNNNN feature to stable in the features macro below.
-// - Update any tests that are affected.
-// - Update the man page for the --edition flag.
-// - Update unstable.md to move the edition section to the bottom.
-// - Update the documentation:
-//   - Update any features impacted by the edition.
-//   - Update manifest.md#the-edition-field.
-//   - Update the --edition flag (options-new.md).
-//   - Rebuild man pages.
 impl Edition {
     /// The latest edition that is unstable.
     ///
