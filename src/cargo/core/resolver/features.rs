@@ -45,9 +45,6 @@ use std::rc::Rc;
 /// The actual discrimination happens with the `FeaturesFor` type.
 type PackageFeaturesKey = (PackageId, FeaturesFor);
 /// Map of activated features.
-///
-/// The key is `(PackageId, bool)` where the bool is `true` if these
-/// are features for a build dependency or proc-macro.
 type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
