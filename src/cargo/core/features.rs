@@ -34,7 +34,7 @@
 //! The steps for adding new Cargo.toml syntax are:
 //!
 //! 1. Add the cargo-features unstable gate. Search below for "look here" to
-//!    find the `features!` macro invocation and add your feature to the list.
+//!    find the [`features!`] macro invocation and add your feature to the list.
 //!
 //! 2. Update the Cargo.toml parsing code to handle your new feature.
 //!
@@ -76,7 +76,7 @@
 //! The steps for stabilizing are roughly:
 //!
 //! 1. Update the feature to be stable, based on the kind of feature:
-//!   1. `cargo-features`: Change the feature to `stable` in the `features!`
+//!   1. `cargo-features`: Change the feature to `stable` in the [`features!`]
 //!      macro invocation below, and include the version and a URL for the
 //!      documentation.
 //!   2. `-Z unstable-options`: Find the call to [`fail_if_stable_opt`] and
@@ -95,6 +95,7 @@
 //!
 //! [`Config::cli_unstable`]: crate::util::config::Config::cli_unstable
 //! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
+//! [`features!`]: macro.features.html
 
 use std::collections::BTreeSet;
 use std::env;
@@ -126,7 +127,7 @@ pub const SEE_CHANNELS: &str =
 /// - Update the [`FromStr`] impl.
 /// - Update [`CLI_VALUES`] to include the new edition.
 /// - Set [`LATEST_UNSTABLE`] to Some with the new edition.
-/// - Add an unstable feature to the `features!` macro invocation below for the new edition.
+/// - Add an unstable feature to the [`features!`] macro invocation below for the new edition.
 /// - Gate on that new feature in [`TomlManifest::to_real_manifest`].
 /// - Update the shell completion files.
 /// - Update any failing tests (hopefully there are very few).
@@ -137,7 +138,7 @@ pub const SEE_CHANNELS: &str =
 /// - Set [`LATEST_UNSTABLE`] to None.
 /// - Set [`LATEST_STABLE`] to the new version.
 /// - Update [`is_stable`] to `true`.
-/// - Set the editionNNNN feature to stable in the `features!` macro invocation below.
+/// - Set the editionNNNN feature to stable in the [`features!`] macro invocation below.
 /// - Update any tests that are affected.
 /// - Update the man page for the `--edition` flag.
 /// - Update unstable.md to move the edition section to the bottom.
@@ -155,6 +156,7 @@ pub const SEE_CHANNELS: &str =
 /// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
 /// [`is_stable`]: Edition::is_stable
 /// [`TomlManifest::to_real_manifest`]: crate::util::toml::TomlManifest::to_real_manifest
+/// [`features!`]: macro.features.html
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {
     /// The 2015 edition
