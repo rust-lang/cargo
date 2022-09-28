@@ -3,7 +3,6 @@ use cargo::ops::{self, TestOptions};
 
 pub fn cli() -> Command {
     subcommand("bench")
-        .trailing_var_arg(true)
         .about("Execute all benchmarks of a local package")
         .arg_quiet()
         .arg(
@@ -14,7 +13,8 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .help("Arguments for the bench binary")
-                .num_args(0..),
+                .num_args(0..)
+                .trailing_var_arg(true),
         )
         .arg_targets_all(
             "Benchmark only this package's library",

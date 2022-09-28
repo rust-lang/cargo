@@ -5,7 +5,6 @@ pub fn cli() -> Command {
     subcommand("test")
         // Subcommand aliases are handled in `aliased_command()`.
         // .alias("t")
-        .trailing_var_arg(true)
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
             Arg::new("TESTNAME")
@@ -15,7 +14,8 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .help("Arguments for the test binary")
-                .num_args(0..),
+                .num_args(0..)
+                .trailing_var_arg(true),
         )
         .arg(
             flag(

@@ -7,10 +7,14 @@ const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 
 pub fn cli() -> Command {
     subcommand("rustc")
-        .trailing_var_arg(true)
         .about("Compile a package, and pass extra options to the compiler")
         .arg_quiet()
-        .arg(Arg::new("args").num_args(0..).help("Rustc flags"))
+        .arg(
+            Arg::new("args")
+                .num_args(0..)
+                .help("Rustc flags")
+                .trailing_var_arg(true),
+        )
         .arg_package("Package to build")
         .arg_jobs()
         .arg_targets_all(
